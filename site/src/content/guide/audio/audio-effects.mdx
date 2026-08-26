@@ -4,6 +4,7 @@ description: 'Shape sound with filters and bus-level processing.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import Callout from '../../../components/Callout.astro';
 
 # Audio effects
@@ -74,12 +75,12 @@ application.audio.master.addEffect(compressor);
 
 All properties are live get/set. The `compressor.reduction` getter returns the current gain reduction in dB (always ≤ 0) — useful for live level metering:
 
-```ts
-update(delta: Seconds) {
-    const gr = this.compressor.reduction;
-    this.meterBar.height = Math.abs(gr) * 10; // scale to pixels
-}
-```
+<SourceSnippet
+  source="examples/guides/audio-effects/compressor-meter.ts"
+  region="compressor-meter"
+  language="ts"
+  title="examples/guides/audio-effects/compressor-meter.ts"
+/>
 
 ## ReverbEffect and DelayEffect
 
@@ -307,7 +308,7 @@ Four filters use `AudioWorkletProcessor` and load asynchronously. They extend `W
 A `WorkletEffect` loads its processor asynchronously — the bus rewires itself once it's ready, but until then the effect passes audio through untouched. `await effect.ready` before you rely on its output or read state from it.
 </Callout>
 
-```ts no-check
+```ts no-check -- effect-constructor tour; modulatorBus is the caller's own bus
 import { BitCrusherEffect, GranularEffect, PitchShiftEffect, VocoderEffect } from '@codexo/exojs-audio-fx';
 
 // Granular pitch shifting (0.25x to 4x)

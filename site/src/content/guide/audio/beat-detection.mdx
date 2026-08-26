@@ -4,6 +4,7 @@ description: 'Drive visuals from beat and frequency information.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import Callout from '../../../components/Callout.astro';
 
 # Beat detection
@@ -48,12 +49,12 @@ The detector runs its own FFT inside the worklet processor. No `AudioAnalyser` i
 
 Two read-only getters give you the detector's current tempo estimate:
 
-```ts
-update(delta: Seconds) {
-    const bpm = this.detector.tempo;           // 0 before lock-in
-    const confidence = this.detector.confidence; // 0..1
-}
-```
+<SourceSnippet
+  source="examples/guides/beat-detection/detector-scene.ts"
+  region="tempo-readout"
+  language="ts"
+  title="examples/guides/beat-detection/detector-scene.ts"
+/>
 
 `tempo` returns 0 until the detector has enough data to lock onto a stable beat. `confidence` rises as the beat grid stabilises. The `onTempoChange` signal fires when the detector settles on a new tempo:
 
@@ -208,11 +209,12 @@ const detector = new BeatDetector({
 
 Create one detector per scene (or share across scenes if the same source persists). Destroy it when you're done:
 
-```ts
-destroy() {
-    this.detector.destroy();
-}
-```
+<SourceSnippet
+  source="examples/guides/beat-detection/detector-scene.ts"
+  region="detector-teardown"
+  language="ts"
+  title="examples/guides/beat-detection/detector-scene.ts"
+/>
 
 `destroy()` disconnects the worklet node, clears the signal subscribers, and releases references. The worklet processor itself stays registered for the duration of the page — that's a browser-level concern, not a leak.
 

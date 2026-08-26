@@ -4,6 +4,7 @@ description: 'A short tour of what ExoJS is, where it fits, how a project is sha
 ---
 
 import Callout from '../../../components/Callout.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import NextStep from '../../../components/NextStep.astro';
 
 # What is ExoJS?
@@ -24,18 +25,12 @@ A typical ExoJS project starts with two pieces: an [`Application`](/ExoJS/en/api
 
 The application owns the runtime configuration — render backend, canvas size, asset path, frame loop. The scene loads resources, updates state, and draws each frame.
 
-```ts
-import { Application, type RenderingContext, Scene } from '@codexo/exojs';
-
-class MyScene extends Scene {
-    draw(context: RenderingContext) {
-        context.render(this.root);
-    }
-}
-
-const app = new Application({ scenes: { MyScene } });
-app.start(MyScene);
-```
+<SourceSnippet
+  source="examples/guides/what-is-exojs/minimal-app.ts"
+  region="minimal-app"
+  language="ts"
+  title="examples/guides/what-is-exojs/minimal-app.ts"
+/>
 
 From there, the same shape scales up: add sprites, split logic across multiple scenes, attach input, play audio, render effects, and move code into reusable objects as the project grows.
 

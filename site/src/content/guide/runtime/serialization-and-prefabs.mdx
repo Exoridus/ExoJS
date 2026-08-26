@@ -4,6 +4,7 @@ description: 'Serialize scenes to JSON and back, capture reusable prefabs, persi
 ---
 
 import Callout from '../../../components/Callout.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # Serialization & prefabs
 
@@ -80,22 +81,12 @@ A saved scene stores asset references as loader keys, not the assets themselves.
 
 Your own [`SceneNode`](/ExoJS/en/api/scene-node/) subclasses become serializable by registering a serializer with [`registerSerializer`](/ExoJS/en/api/serialization-registry/). The framework writes the common transform/visual fields and the type tag; your serializer only handles its own fields.
 
-```ts
-import { registerSerializer, SceneNode } from '@codexo/exojs';
-
-class Marker extends SceneNode {
-  public kind = 'spawn';
-}
-
-registerSerializer('Marker', Marker, {
-  write: node => ({ kind: node.kind }),
-  read: data => {
-    const marker = new Marker();
-    marker.kind = String(data.kind);
-    return marker;
-  },
-});
-```
+<SourceSnippet
+  source="examples/guides/serialization-and-prefabs/custom-node.ts"
+  region="custom-node"
+  language="ts"
+  title="examples/guides/serialization-and-prefabs/custom-node.ts"
+/>
 
 Extension packages register their own node types the same way through the `serializers` binding on their `Extension` descriptor.
 

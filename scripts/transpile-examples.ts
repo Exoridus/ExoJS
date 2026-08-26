@@ -36,6 +36,19 @@ const WORKER_IMPORT = /^import\s+(\w+)\s+from\s+'([^']+)\?worker';[^\S\n]*$/gm;
 export const isTranspiledExampleSource = (name: string): boolean => name.endsWith('.ts') && !name.endsWith('.d.ts') && !name.endsWith('.worker.ts');
 
 /**
+ * Example subtrees that are not playground examples and therefore get no
+ * generated `.js` sibling.
+ *
+ * `examples/guides/` holds the running programs the guide chapters narrate.
+ * They live here to be type-checked, linted and formatted as the rest of the
+ * example catalog is, but nothing executes them: the guide embeds named
+ * regions of the `.ts` source, and the playground catalog never lists them. A
+ * generated `.js` twin would be a second copy of every guide listing, and a
+ * committed `.js` shadows its `.ts` for anyone editing by search.
+ */
+const NON_EXECUTED_EXAMPLE_DIRS = new Set(['guides']);
+
+/**
  * The same `?worker` transform the bundlers run, driven directly: this
  * generator is not a bundler, so it resolves and loads through the plugin's
  * hooks itself. Going through the published plugin rather than its internals
@@ -111,6 +124,10 @@ export const transpileExampleSource = async (source: string, tsFilePath: string)
 };
 
 /** Recursively finds files under `dir` whose name matches `predicate`. */
+/**
+ * Every file under `dir` whose name satisfies `predicate`, skipping the
+ * subtrees in `NON_EXECUTED_EXAMPLE_DIRS`.
+ */
 export const findFiles = (dir: string, predicate: (file: string) => boolean): string[] => {
   const results: string[] = [];
 
@@ -118,6 +135,8 @@ export const findFiles = (dir: string, predicate: (file: string) => boolean): st
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
       const fullPath = path.join(current, entry.name);
       if (entry.isDirectory()) {
+        if (NON_EXECUTED_EXAMPLE_DIRS.has(entry.name)) continue;
+
         walk(fullPath);
       } else if (entry.isFile() && predicate(entry.name)) {
         results.push(fullPath);

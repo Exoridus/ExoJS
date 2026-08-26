@@ -4,6 +4,7 @@ description: 'Parent-child structure, transform inheritance, render order, masks
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import Callout from '../../../components/Callout.astro';
 
 # Scene graph
@@ -16,30 +17,21 @@ Two key types: [`RenderNode`](/ExoJS/en/api/render-node/) is the abstract base f
 
 Every scene starts with one container already in place — `this.root`. Adding a node via `this.addChild(...)` is shorthand for `this.root.addChild(...)`:
 
-```ts
-init() {
-    this.hero = new Sprite(this.loader.get('hero.png'));
-    this.coin = new Sprite(this.loader.get('coin.png'));
-
-    this.addChild(this.hero);
-    this.addChild(this.coin);
-}
-```
+<SourceSnippet
+  source="examples/guides/scene-graph/layers.ts"
+  region="add-children"
+  language="ts"
+  title="examples/guides/scene-graph/layers.ts"
+/>
 
 For larger scenes, build sub-containers and add nodes to them instead:
 
-```ts
-init() {
-    this.world = new Container();
-    this.hud = new Container();
-
-    this.world.addChild(new Sprite(this.loader.get('level.png')));
-    this.hud.addChild(new Sprite(this.loader.get('health-bar.png')));
-
-    this.addChild(this.world);
-    this.addChild(this.hud);
-}
-```
+<SourceSnippet
+  source="examples/guides/scene-graph/layers.ts"
+  region="layers"
+  language="ts"
+  title="examples/guides/scene-graph/layers.ts"
+/>
 
 Containers can be added, removed, and moved between parents at any time. The hierarchy is your scene's structure.
 
@@ -47,18 +39,12 @@ Containers can be added, removed, and moved between parents at any time. The hie
 
 When a parent transforms, its children move with it. If you set the parent's position to `(100, 0)` and a child's position to `(20, 0)`, the child renders at world position `(120, 0)`:
 
-```ts
-this.player = new Container();
-this.player.setPosition(100, 0);
-
-const body = new Sprite(this.loader.get('body.png'));
-const head = new Sprite(this.loader.get('head.png'));
-head.setPosition(0, -32);
-
-this.player.addChild(body);
-this.player.addChild(head);
-this.addChild(this.player);
-```
+<SourceSnippet
+  source="examples/guides/scene-graph/layers.ts"
+  region="nested-nodes"
+  language="ts"
+  title="examples/guides/scene-graph/layers.ts"
+/>
 
 Now moving `this.player` moves the head and body together. Rotating the player rotates them around the player's pivot. The same applies to scale.
 
@@ -97,11 +83,12 @@ Common uses:
 
 Children render in the order they were added. The first child drawn ends up at the back; the last child drawn ends up on top. To put a sprite in front of another, add it later — or change its position in the parent's child list:
 
-```ts
-this.world.addChild(this.background);
-this.world.addChild(this.player);    // drawn over background
-this.world.addChild(this.foreground); // drawn over player
-```
+<SourceSnippet
+  source="examples/guides/scene-graph/layers.ts"
+  region="draw-order"
+  language="ts"
+  title="examples/guides/scene-graph/layers.ts"
+/>
 
 For dynamic z-order — characters that need to layer correctly based on their y position — assign `zIndex` to each child. ExoJS resolves sibling order from `zIndex` during render-plan playback (tie-breaker: child list order), without mutating `container.children`.
 

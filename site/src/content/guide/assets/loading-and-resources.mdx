@@ -41,12 +41,12 @@ When in doubt, start with a bare path string. Reach for `Assets.from` when asset
 
 The path _is_ the identity — a bare string resolves directly to the finished asset, with its type inferred from the extension:
 
-```ts
-async load() {
-    const texture = await this.loader.load('image/hero.png');
-    this.hero = new Sprite(texture);
-}
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/scenes.ts"
+  region="load-one"
+  language="ts"
+  title="examples/guides/loading-and-resources/scenes.ts"
+/>
 
 There's no separate alias step: call `this.loader.get('image/hero.png')` again anywhere later — same string, same `Texture` instance. Leaf-capable types such as `texture`, `sound`, `json`, and `text` resolve this way from their file extension. Types that can't be inferred from a path (`music`, `video`, `bmFont`, `font`, …) need an explicit descriptor — see [`Asset.type(...)`](#dynamic-paths-and-non-seamless-types) below.
 
@@ -54,15 +54,12 @@ There's no separate alias step: call `this.loader.get('image/hero.png')` again a
 
 When you need several assets of the same type, load them in parallel and keep the returned instances:
 
-```ts
-async load() {
-    [this.hero, this.terrain, this.coin] = await Promise.all([
-        this.loader.load('image/hero.png'),
-        this.loader.load('image/terrain.png'),
-        this.loader.load('image/coin.png'),
-    ]);
-}
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/scenes.ts"
+  region="load-parallel"
+  language="ts"
+  title="examples/guides/loading-and-resources/scenes.ts"
+/>
 
 The `loader.basePath` option in `ApplicationOptions` prepends a base prefix to all relative paths, so these resolve to e.g. `assets/image/hero.png`.
 
@@ -96,21 +93,12 @@ Types that can't be inferred from a path at all need the same descriptor, even w
 
 When a scene needs different asset types, load them in parallel with `Promise.all`:
 
-```ts
-async load() {
-    [this.sky, this.ambient, this.coin, this.jump, this.levels] = await Promise.all([
-        this.loader.load('image/sky.png'),
-        this.loader.load(Asset.type('music', 'audio/ambient.ogg')),
-        this.loader.load('audio/coin.wav'),
-        this.loader.load('audio/jump.wav'),
-        this.loader.load('data/levels.json'),
-    ]);
-}
-
-init() {
-    this.sky = new Sprite(this.sky);
-}
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/scenes.ts"
+  region="load-mixed"
+  language="ts"
+  title="examples/guides/loading-and-resources/scenes.ts"
+/>
 
 Wrapping the calls in `Promise.all` lets unrelated asset categories load in parallel.
 
@@ -124,14 +112,12 @@ Build mixed groups with `Assets.from(...)`. This is the canonical catalog API; t
 
 Awaiting the catalog returns an object whose keys match the input and whose values are the resolved resource instances directly, so it destructures:
 
-```ts
-async load() {
-    const { logo, click, atlas } = await this.loader.load(SharedAssets);
-
-    this.logo  = new Sprite(logo);
-    this.click = click;
-}
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/scenes.ts"
+  region="catalog-destructured"
+  language="ts"
+  title="examples/guides/loading-and-resources/scenes.ts"
+/>
 
 No separate `get()` step is needed, though `this.loader.get('image/uv-grid-256.png')` / `this.loader.get('audio/ui-click.ogg')` still work afterward since the source path remains the identity.
 
@@ -139,44 +125,39 @@ No separate `get()` step is needed, though `this.loader.get('image/uv-grid-256.p
 
 For assets used in multiple scenes, define a named catalog with `Assets.from`:
 
-```ts
-import { Asset, Assets } from '@codexo/exojs';
-
-export const TitleAssets = Assets.from({
-  logo: 'sprites/logo.png', // bare path → Texture
-  music: Asset.type('music', 'audio/title.ogg'), // explicit non-leaf type
-  config: Asset.type<{ startLevel: string }>('json', 'data/config.json'),
-});
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/title-catalog.ts"
+  region="title-catalog"
+  language="ts"
+  title="examples/guides/loading-and-resources/title-catalog.ts"
+/>
 
 Every property is a real, usable handle _before_ any loader touches it — `TitleAssets.logo` is already a `Texture` (in the `'loading'` state), and `TitleAssets.config` is already an `AssetRef`. Load the whole catalog, then read the same properties:
 
-```ts
-async load() {
-    // Fetches every entry and heals each handle in place
-    await this.loader.load(TitleAssets);
-
-    // Same objects as before load() — now populated
-    this.logo = new Sprite(TitleAssets.logo);
-    this.startLevel = TitleAssets.config.value;
-}
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/scenes.ts"
+  region="catalog-healed"
+  language="ts"
+  title="examples/guides/loading-and-resources/scenes.ts"
+/>
 
 Typed properties on the catalog give autocomplete and type inference for free:
 
-```ts no-check
-TitleAssets.logo; // Texture
-TitleAssets.music; // AudioStream
-TitleAssets.config; // AssetRef<{ startLevel: string }>
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/title-catalog.ts"
+  region="catalog-members"
+  language="ts"
+  title="examples/guides/loading-and-resources/title-catalog.ts"
+/>
 
 `Assets` also exposes an `.entries` record for iteration and inspection. To load several existing catalogs concurrently, keep their types intact and start both queues:
 
-```ts
-async load() {
-    await Promise.all([this.loader.load(CommonAssets), this.loader.load(TitleAssets)]);
-}
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/scenes.ts"
+  region="two-catalogs"
+  language="ts"
+  title="examples/guides/loading-and-resources/scenes.ts"
+/>
 
 The key `'entries'` is reserved and will throw if you try to use it as an asset name inside an `Assets` container.
 
@@ -190,7 +171,7 @@ A composition **shares** its inputs' handles instead of copying them: `LevelAsse
 
 Two _different_ catalogs may not define the same key. That ambiguity is caught at compile time (the result types as a message naming the key) and always throws at runtime:
 
-```ts no-check
+```ts no-check -- shows the duplicate-key error Assets.compose reports, not working code
 // Assets.compose(): duplicate catalog key "ship" — two catalogs define it,
 // use Assets.extend() to override it deliberately.
 Assets.compose(LevelLocalAssets, Assets.from({ ship: 'image/other-ship.png' }));
@@ -198,7 +179,7 @@ Assets.compose(LevelLocalAssets, Assets.from({ ship: 'image/other-ship.png' }));
 
 The same catalog arriving twice along different paths — a diamond — is not a conflict and deduplicates:
 
-```ts no-check
+```ts no-check -- continues the catalog above; SharedAssets comes from it
 const Left = Assets.compose(SharedAssets, Assets.from({ tree: 'image/tree.png' }));
 const Right = Assets.compose(SharedAssets, Assets.from({ rock: 'image/rock.png' }));
 
@@ -234,25 +215,12 @@ Each queue tracks its own progress independently. The result tuple is typed: `da
 
 A practical startup pattern — show the title screen as soon as title assets are ready, while game assets continue loading in the background:
 
-```ts
-async load() {
-    const titleQueue = this.loader.load(TitleAssets);
-    const gameQueue  = this.loader.load(GameAssets);
-
-    titleQueue.onProgress.add((p) => {
-        this._titleProgress = p.loaded / p.total;
-    });
-    gameQueue.onProgress.add((p) => {
-        this._gameProgress = p.loaded / p.total;
-    });
-
-    // Title assets must be ready before init runs
-    await titleQueue;
-
-    // Game assets continue loading — await them later when entering gameplay
-    this._gameReady = gameQueue;
-}
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/scenes.ts"
+  region="queue-progress"
+  language="ts"
+  title="examples/guides/loading-and-resources/scenes.ts"
+/>
 
 ## Signals for a global loading screen
 
@@ -292,30 +260,21 @@ For leaf-capable types, the path (or an `Asset.type(...)` descriptor) identifies
 
 `LoadStateValue` is `'idle' | 'loading' | 'ready' | 'failed'` — `'idle'` is the state of a catalog leaf no loader has adopted yet.
 
-```ts
-async load() {
-    const tex = this.loader.get('image/hero.png'); // synchronous for a valid, registered suffix
-
-    if (tex.ready) {
-        // draw it
-    } else if (tex.state === 'failed') {
-        // tex still renders a visible "missing" checker texture
-    }
-
-    await tex.loaded; // Promise<this> — resolves once ready, rejects on failure
-}
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/scenes.ts"
+  region="seamless-handle"
+  language="ts"
+  title="examples/guides/loading-and-resources/scenes.ts"
+/>
 
 The same `.state` / `.ready` / `.error` / `.loaded` contract applies to `AssetRef` values such as JSON or text — read `.value` once `.ready` is `true`. A bare path yields an `AssetRef<unknown>`, so name the payload shape with `Asset.type<T>(...)` when you want to read into it:
 
-```ts
-async load() {
-    const config = this.loader.get(Asset.type<{ startLevel: string }>('json', 'data/config.json'));
-
-    await config.loaded;
-    console.log(config.value.startLevel);
-}
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/scenes.ts"
+  region="value-asset"
+  language="ts"
+  title="examples/guides/loading-and-resources/scenes.ts"
+/>
 
 `get()` returns before network work settles. A later load failure moves the handle/ref to `'failed'`, rejects its `.loaded` promise, and is reported through `this.app.loader.onError`; calling `get()` again retries and can heal that same source-keyed handle. By contrast, the awaitable returned by `load()` rejects at the call site on failure and reports the same `Error` through `this.app.loader.onError`. Invalid input or a missing type/handler is a synchronous configuration error for either API. A catalog entry's optional `parse` transform must be synchronous — if it returns a Promise (or anything else thenable), the ref it belongs to fails with an explicit error instead of silently awaiting it; do any asynchronous decoding inside the asset handler's load phase instead.
 
@@ -329,55 +288,34 @@ An asset stays in memory for as long as somebody owns it. There are three kinds 
 
 Several owners can hold the same asset at the same time. They share one fetch and one resident payload, and one owner letting go never invalidates another:
 
-```ts
-async load() {
-    const level = this.app.loader.createScope({ name: 'level-1' });
-    const hud = this.app.loader.createScope({ name: 'ui:hud' });
-
-    const font = level.get('fonts/ui.png');
-
-    hud.get('fonts/ui.png'); // the same instance — one fetch, two independent owners
-
-    level.destroy();
-    console.log(font.loadState); // 'ready' — the HUD still owns it
-
-    hud.destroy();
-    console.log(font.loadState); // 'loading' — the last owner let go
-}
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/scenes.ts"
+  region="scope-ownership"
+  language="ts"
+  title="examples/guides/loading-and-resources/scenes.ts"
+/>
 
 Create a scope whenever an asset's lifetime is shorter than the application's — a level, a streamed chunk, a UI panel, a prefetch. Every `createScope()` call returns a new owner, never an existing one: the name is a diagnostic label for `inspect()`, never an identifier, so two scopes created under the same name are still two independent owners.
 
 Scopes nest. `scope.createScope({ name })` creates a child that claims independently but cannot outlive its parent: destroying the child frees only the child's claims, while destroying the parent destroys whatever children it still has, recursively. A scope created through `this.loader.createScope(...)` inside a scene is therefore cleaned up with that scene, even if you never destroy it yourself:
 
-```ts
-async load() {
-    const world = this.loader.createScope({ name: 'world' });
-    const chunk = world.createScope({ name: 'chunk:12,8' });
-
-    await chunk.load(ChunkAssets);
-
-    chunk.destroy(); // frees only the chunk's claims
-    // the scene ending destroys `world` — and any chunk still alive under it
-}
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/scenes.ts"
+  region="nested-scopes"
+  language="ts"
+  title="examples/guides/loading-and-resources/scenes.ts"
+/>
 
 The hierarchy is a lifetime hierarchy only: it never affects asset identity or what a release frees. A child holding the same asset as its parent is two claims, not one.
 
 `scope.release(...)` drops that scope's claim on one asset; the object itself keeps its identity and heals back to `'loading'` if you `get()` the same source again. It accepts a handle, an `Asset` descriptor, a whole catalog, or a `(type, source)` pair. Releasing a valid form that scope never claimed is a harmless no-op, and releasing twice is always idempotent:
 
-```ts
-async load() {
-    const title = this.app.loader.createScope({ name: 'title' });
-    const logo = title.get('ui/logo.png');
-
-    await title.load(TitleAssets);
-
-    title.release(TitleAssets); // releases every leaf in the catalog
-    title.release(logo); // a single handle from get()
-    title.destroy(); // or just drop everything this scope still holds
-}
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/scenes.ts"
+  region="release"
+  language="ts"
+  title="examples/guides/loading-and-resources/scenes.ts"
+/>
 
 There is deliberately no way to release an application-lifetime claim: `app.loader.get(...)` means "I want this for as long as the app runs". Anything you intend to free later is acquired through a scene or a scope instead.
 
@@ -398,12 +336,12 @@ There is deliberately no way to release an application-lifetime claim: `app.load
 
 `music` and `video` assets are streamed by the browser: the loader hands the media element the resolved URL and lets it pull the file in as it plays. Nothing is buffered into memory up front, which is what makes a long track or a full-screen video affordable.
 
-```ts
-async load() {
-    const intro = await this.loader.load(Asset.type('video', 'video/intro.mp4'));
-    const theme = await this.loader.load(Asset.type('music', 'audio/theme.ogg'));
-}
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/scenes.ts"
+  region="media-load"
+  language="ts"
+  title="examples/guides/loading-and-resources/scenes.ts"
+/>
 
 A streamed asset is **ready when it can start playing**, not when it has fully arrived — the load resolves on the element's `canplay` event. Two consequences are worth internalising:
 
@@ -414,11 +352,12 @@ Streamed elements get `crossOrigin: 'anonymous'` by default. This matters for vi
 
 Ask for the complete bytes when you want ExoJS to own them — that is a separate operation, not a variant of the load:
 
-```ts
-async load() {
-    await this.app.loader.cacheSource(Asset.type('video', 'video/intro.mp4'));
-}
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/scenes.ts"
+  region="cache-source"
+  language="ts"
+  title="examples/guides/loading-and-resources/scenes.ts"
+/>
 
 `cacheSource` fetches the whole file through the loader's cache pipeline and persists it, without building an element or making anything resident. It is on the application's loader rather than a scene's: nothing it does belongs to a scope, because nothing it does is owned. That is what makes media available offline, and it is the same thing a container (`.exoa`) entry does — container bytes are already owned by the application. See [Working offline](/guide/assets/offline/).
 
@@ -452,35 +391,21 @@ The frame loop continues running while the promise is pending.
 
 Split a large project into per-phase catalogs and load each one as the player reaches it, instead of fetching everything up front. A catalog is just an `Assets.from(...)` group (see [Reusable asset references](#reusable-asset-references)):
 
-```ts
-import { Asset, Assets } from '@codexo/exojs';
-
-export const MenuAssets = Assets.from({
-  logo: 'image/logo.png',
-  music: Asset.type('music', 'audio/theme.ogg'),
-});
-
-export const Level1Assets = Assets.from({
-  tiles: 'image/level-1/tiles.png',
-  map: Asset.type<{ spawn: [number, number] }>('json', 'data/level-1.json'),
-});
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/level-catalogs.ts"
+  region="level-catalogs"
+  language="ts"
+  title="examples/guides/loading-and-resources/level-catalogs.ts"
+/>
 
 Load the menu catalog once and keep it resident, then load level catalogs as the player progresses:
 
-```ts
-// In the menu scene
-async load() {
-    await this.loader.load(MenuAssets);
-}
-
-// Later, when entering gameplay
-async _enterLevel1() {
-    await this.app.loader.load(Level1Assets);
-    this.tiles = Level1Assets.tiles;
-    this.map   = Level1Assets.map.value;
-}
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/scenes.ts"
+  region="level-handoff"
+  language="ts"
+  title="examples/guides/loading-and-resources/scenes.ts"
+/>
 
 Loading is idempotent: a catalog whose leaves are already resident resolves immediately without re-fetching, so you can call `this.app.loader.load(Level1Assets)` again from anywhere without a guard. Treat catalog names and their keys as part of your project's asset contract.
 
@@ -504,10 +429,12 @@ There is no separate bundle error type — every leaf carries its own `.state` /
 
 To fetch a catalog ahead of time without blocking the current scene, pass `{ priority: LoadPriority.Background }`. Every leaf is still claimed and heals in place, but its fetch is routed through a low-priority queue while the frame loop keeps running:
 
-```ts
-// Kick off the next level while the player is still in this one
-this.app.loader.load(Level2Assets, { priority: LoadPriority.Background });
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/scenes.ts"
+  region="background-priority"
+  language="ts"
+  title="examples/guides/loading-and-resources/scenes.ts"
+/>
 
 A backgrounded leaf is boosted to fetch immediately if something `get()`s or foreground-`load()`s it before the queue reaches it — so there's nothing to guard against. Request it in the background early, then `await this.app.loader.load(Level2Assets)` when you actually need it and it resolves as soon as the in-flight fetch finishes. `this.app.loader.awaitBackground()` resolves once the background queue has fully drained.
 
@@ -515,27 +442,21 @@ A backgrounded leaf is boosted to fetch immediately if something `get()`s or for
 
 By default the loader fetches from the network every session and keeps nothing between them — no cache is configured, and none of the caching machinery runs. To persist what was acquired across sessions, pass a store:
 
-```ts
-import { Loader, IndexedDbStore } from '@codexo/exojs';
-
-const loader = new Loader({
-  basePath: '/assets/',
-  cache: new IndexedDbStore('my-game'),
-});
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/standalone-loader.ts"
+  region="standalone-loader"
+  language="ts"
+  title="examples/guides/loading-and-resources/standalone-loader.ts"
+/>
 
 When constructing the loader through `Application`, pass `LoaderOptions` under the `loader` key:
 
-```ts
-import { Application, IndexedDbStore, type LoaderOptions } from '@codexo/exojs';
-
-const loader: LoaderOptions = {
-  basePath: '/assets/',
-  cache: new IndexedDbStore('my-game'),
-};
-
-const app = new Application({ loader });
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/loader-options.ts"
+  region="loader-options"
+  language="ts"
+  title="examples/guides/loading-and-resources/loader-options.ts"
+/>
 
 That is the whole configuration for the usual case: one store, read and written cache-first. On first load an asset is fetched from the network and written to the store; on later sessions it is read back from the store instead. Every asset type is covered, including one an extension installs at runtime — there is nothing to register and no schema to declare.
 
@@ -556,30 +477,12 @@ The source key alone is deliberately not enough: it carries no asset type, so tw
 
 Raise `layout.version` when the stored representation changes shape. Records written under the old version stop being found and are re-acquired; there is no migration path, because a cache is reconstructible by definition:
 
-```ts
-import { AssetType, jsonSourceCodec, SingleEntryLayout, type AssetFactory, type AssetSourceCodec } from '@codexo/exojs';
-
-interface WorldData {
-  readonly name: string;
-}
-
-class World {
-  public constructor(public readonly data: WorldData) {}
-}
-
-class WorldAssetType extends AssetType<WorldData, World, undefined, string> {
-  public readonly id = 'com.example.world';
-  public readonly codec = jsonSourceCodec as AssetSourceCodec<WorldData, string>;
-
-  // Raised because the codec now keeps the response text, where version 1
-  // kept the parsed object. Records written under version 1 are re-acquired.
-  public override readonly layout = SingleEntryLayout.version<string>(2);
-
-  public createFactory(): AssetFactory<WorldData, World> {
-    return { create: data => Promise.resolve(new World(data)) };
-  }
-}
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/custom-asset-type.ts"
+  region="custom-asset-type"
+  language="ts"
+  title="examples/guides/loading-and-resources/custom-asset-type.ts"
+/>
 
 ### Policies
 
@@ -596,25 +499,12 @@ A [`CachePolicy`](/ExoJS/en/api/cache-policy/) decides only the ORDER in which t
 
 Writing a policy needs nothing but the [`CacheContext`](/ExoJS/en/api/cache-context/) it is handed:
 
-```ts
-import type { CacheContext, CachePolicy } from '@codexo/exojs';
-
-class MyCacheFirstPolicy implements CachePolicy {
-  public async resolve<T>(context: CacheContext<T>): Promise<T> {
-    const cached = await context.read();
-
-    if (cached.hit) {
-      return cached.value;
-    }
-
-    const value = await context.fetch();
-
-    await context.write(value);
-
-    return value;
-  }
-}
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/cache-policy.ts"
+  region="cache-policy"
+  language="ts"
+  title="examples/guides/loading-and-resources/cache-policy.ts"
+/>
 
 A policy is never handed a factory, a codec, an asset type or a store handle. It is a stateless object and may be shared between routes and applications: everything one call needs arrives in its context.
 
@@ -628,37 +518,23 @@ A cache **miss** and a cache **failure** are different events, and stay differen
 
 Every store failure is reported on [`Loader.onCacheError`](/ExoJS/en/api/loader/) before any policy degrades it, so a store that is quietly refusing every write stays diagnosable:
 
-```ts
-import { Application } from '@codexo/exojs';
-
-const app = new Application();
-const { loader } = app;
-
-loader.onCacheError.add(error => {
-  console.warn(`cache ${error.operation} failed for ${error.store}`, error.cause);
-});
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/cache-errors.ts"
+  region="cache-errors"
+  language="ts"
+  title="examples/guides/loading-and-resources/cache-errors.ts"
+/>
 
 ### Several stores, and per-type routes
 
 For more than one tier, configure an [`AssetCache`](/ExoJS/en/api/asset-cache/):
 
-```ts
-import { Application, AssetCache, CacheRoute, IndexedDbStore, MemoryCacheStore, NetworkFirstPolicy, type LoaderOptions } from '@codexo/exojs';
-
-const persistent = new IndexedDbStore('my-game');
-
-const loader: LoaderOptions = {
-  cache: new AssetCache({
-    read: [new MemoryCacheStore(), persistent],
-    write: [persistent],
-    promote: true,
-    routes: [new CacheRoute({ types: ['com.example.config'], policy: new NetworkFirstPolicy(), stores: persistent })],
-  }),
-};
-
-const app = new Application({ loader });
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/cache-routes.ts"
+  region="cache-routes"
+  language="ts"
+  title="examples/guides/loading-and-resources/cache-routes.ts"
+/>
 
 Read stores are consulted in the order they were given and the first hit wins — never raced, so which store answered, which failure surfaced and what was promoted are the same on every run. Read and write lists are separate, so a route can read a cache shipped with the application without writing to it, and `promote: true` copies a hit from a later store into the earlier writable ones.
 
@@ -684,20 +560,12 @@ The cache above persists _loaded assets_. For **user save data** (settings, prof
 - [`IndexedDbKeyValueStore`](/ExoJS/en/api/indexed-db-key-value-store/) — IndexedDB via structured clone: large, async, stores `Blob`s and `ArrayBuffer`s natively.
 - [`MemoryStore`](/ExoJS/en/api/memory-store/) — in-memory and ephemeral, for tests and throwaway data.
 
-```ts
-import { WebStorageStore } from '@codexo/exojs';
-
-const saves = new WebStorageStore(localStorage, { prefix: 'my-game:' });
-
-await saves.set('slot-1', {
-  level: 4,
-  score: 12800,
-  options: { music: true, sfx: false },
-});
-
-const slot = await saves.get('slot-1'); // object | null
-await saves.delete('slot-1');
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/key-value-store.ts"
+  region="key-value-store"
+  language="ts"
+  title="examples/guides/loading-and-resources/key-value-store.ts"
+/>
 
 All three share one async interface, so swapping `WebStorageStore` for `IndexedDbKeyValueStore` — when a save outgrows Web Storage's ~5 MB quota or needs binary data — is a one-line change. To persist an entire scene, pair a store with [`Scene.serialize()`](/ExoJS/en/api/scene/).
 
@@ -710,39 +578,12 @@ suffixes name it, how its data is read, and how a resource is built from it.
 First extend `AssetDefinitions` via declaration merging so the type system knows
 the new type, then write the type:
 
-```ts
-import type { AssetFactory, AssetSourceCodec } from '@codexo/exojs';
-import { AssetType, textSourceCodec } from '@codexo/exojs';
-
-// 1. The resource your factory produces.
-export class HeightField {
-  public constructor(public readonly rows: readonly number[][]) {}
-}
-
-// 2. Register the type with the type system (declaration merging).
-declare module '@codexo/exojs' {
-  interface AssetDefinitions {
-    heightField: { resource: HeightField; config: { source: string }; isValue: true };
-  }
-}
-
-// 3. Describe the type. `codec` says how the data is read; `createFactory`
-//    turns it into the resource, once per application.
-export class HeightFieldAssetType extends AssetType<string, HeightField> {
-  public readonly id = 'com.example.height-field';
-  public override readonly codec: AssetSourceCodec<string> = textSourceCodec;
-
-  public createFactory(): AssetFactory<string, HeightField> {
-    return { create: source => Promise.resolve(new HeightField(parseHeightField(source))) };
-  }
-}
-
-export const heightFieldType = new HeightFieldAssetType();
-
-function parseHeightField(text: string): number[][] {
-  return text.split('\n').map(row => row.split(',').map(Number));
-}
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/height-field-type.ts"
+  region="height-field-type"
+  language="ts"
+  title="examples/guides/loading-and-resources/height-field-type.ts"
+/>
 
 The `id` is the type's permanent name: it appears in resource identities and in
 the storage namespace a persistent cache writes under, so it must survive a
@@ -768,7 +609,7 @@ makes it loadable, and it makes it loadable on that application alone - two
 applications in one process can map the same suffix to different types without
 seeing each other. Once installed, the type works everywhere the built-ins do:
 
-```ts no-check
+```ts no-check -- continues the asset type above; this belongs to a scene the block does not show
 // The type itself gives you a fully typed, loadable descriptor
 const field = await this.loader.load(heightFieldType.asset('maps/level-1.hf'));
 
@@ -782,7 +623,7 @@ const World = Assets.from({ level1: heightFieldType.asset('maps/level-1.hf') });
 the type. A bare `this.loader.load('maps/level-1.hf')` also works there once the
 type claims the suffix and the type system mirrors the mapping:
 
-```ts no-check
+```ts no-check -- abbreviated AssetType sketch; the class body is elided
 export class HeightFieldAssetType extends AssetType<string, HeightField> {
   public readonly id = 'com.example.height-field';
   public override readonly extensions = ['hf'];

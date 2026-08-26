@@ -35,7 +35,7 @@ That is what makes one `AssetCache` safe to share between two applications - eac
 
 `loader.cacheSource(asset)` acquires an asset's **source** and lets the cache keep it - without building the asset:
 
-```ts no-check -- continues the configuration above; on its own it has no app to call
+```ts no-check -- continues the configuration above; Asset and the app come from it
 await app.loader.cacheSource(Asset.type('json', 'levels/01.json'));
 await app.loader.cacheSource(Asset.type('json', 'text/dialogue.json'));
 ```
@@ -47,7 +47,7 @@ Run it where a delay is acceptable and a connection is likely: a title screen, a
 <Callout type="hint" title="Media is warmed the same way">
 Music and video are streamed by the browser while the network is available: the element owns the transfer and never holds more than it is playing, so an ordinary `load()` acquires nothing and caches nothing. `cacheSource` is you asking for the acquisition by name, so it applies to media too, from the very same descriptor:
 
-```ts no-check -- continues the configuration above; on its own it has no app to call
+```ts no-check -- continues the configuration above; Asset and the app come from it
 await app.loader.cacheSource(Asset.type('music', 'theme.mp3'));
 ```
 
@@ -57,7 +57,7 @@ Warming a source does not take streaming away. While the network is there, `load
 
 ## Go offline
 
-```ts no-check -- continues the configuration above; on its own it has no app to call
+```ts
 app.connectivity.mode = 'offline';
 ```
 
@@ -68,7 +68,7 @@ From the next acquisition on, the resolver picks a cache-only policy. That has t
 
 Streamed media follows the same rule, without the caller doing anything:
 
-```ts no-check -- continues the configuration above; on its own it has no app to call
+```ts no-check -- continues the configuration above; Asset and the app come from it
 // Online: the browser streams it from the URL.
 // Offline: the same call reads the warmed blob, or misses.
 const theme = await this.loader.load(Asset.type('music', 'theme.mp3'));

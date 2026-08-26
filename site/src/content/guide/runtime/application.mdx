@@ -4,6 +4,7 @@ description: 'How the application owns canvas, render backend, resources, input,
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import Callout from '../../../components/Callout.astro';
 
 # Application
@@ -180,18 +181,12 @@ const app = new Application({
 
 The frame loop only runs once you give the application a scene to run:
 
-```ts
-import { Application, RenderingContext, Scene } from '@codexo/exojs';
-
-class HelloScene extends Scene {
-    draw(context: RenderingContext) {
-        context.render(this.root);
-    }
-}
-
-const app = new Application({ scenes: { HelloScene } });
-app.start(HelloScene);
-```
+<SourceSnippet
+  source="examples/guides/application/start-loop.ts"
+  region="start-loop"
+  language="ts"
+  title="examples/guides/application/start-loop.ts"
+/>
 
 The `app.start(scene)` call is asynchronous — it initializes the render backend, runs the scene's `load` hook, then `init`, then drives the frame loop until you stop it. You normally don't need to await the returned promise; fire-and-forget is the common pattern.
 

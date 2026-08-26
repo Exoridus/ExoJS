@@ -22,6 +22,11 @@
   // passes the wrong shape to a shared ESLint/Vitest/Rolldown factory fails
   // here. Converting it to TypeScript is not required for that and would cost
   // more than it buys - ESLint and Prettier load it directly at runtime.
+  //
+  // `scripts/**` itself is TypeScript throughout, including the files that run
+  // with no toolchain behind them - node strips their types itself. The `.mjs`
+  // include stays anyway, so a file that reappears in that form is checked
+  // rather than silently outside the program again.
   "extends": "@codexo/exojs-config/typescript/base.json",
   "compilerOptions": {
     "lib": ["es2023"],
@@ -37,6 +42,10 @@
   // `exo-full.entry.ts` is a bundler entry, not a Node program: it re-exports
   // every extension package and is type-checked by `tsconfig.examples.json`
   // against their sources.
-  "include": ["scripts/**/*.ts", "*.config.ts", "packages/exojs-config/**/*.js"],
+  // `competitors/link.ts` is bench SETUP rather than bench code: it imports only
+  // `node:` built-ins and runs before the competitor install exists, so it
+  // belongs to this always-checked tooling program rather than to the bench
+  // package's own, which cannot be type-checked without that install.
+  "include": ["scripts/**/*.ts", "scripts/**/*.mjs", "*.config.ts", "packages/exojs-config/**/*.js", "packages/exojs-bench/competitors/*.ts"],
   "exclude": ["scripts/exo-full.entry.ts"]
 }

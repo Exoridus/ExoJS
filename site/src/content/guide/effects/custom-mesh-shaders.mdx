@@ -261,7 +261,7 @@ function reportUniformDrift(material: MeshMaterial): void {
 
 Auto-bound uniforms (`u_projection`, `u_translation`, `u_tint`, `u_texture`, `u_mesh`) are excluded from the comparison — they are intentionally declared differently across languages. Use `detectUniformDrift` in a CI check to catch typos and mismatches:
 
-```ts no-check
+```ts no-check -- a Node assertion rather than browser code; waveMaterial comes from the example above
 import assert from 'node:assert';
 
 const drift = waveMaterial.shader.detectUniformDrift();

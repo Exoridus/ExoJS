@@ -4,6 +4,7 @@ description: 'Draw procedural shapes and mesh-based geometry.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import TryIt from '../../../components/TryIt.astro';
 
 # Graphics
@@ -95,17 +96,12 @@ Each of these emits a `drawPath` call behind the scenes. The `currentPoint` prop
 
 `clear()` removes all child meshes and resets the pen state (position, colors, line width). The `Graphics` object itself stays alive. This is the right pattern for per-frame redrawing:
 
-```ts
-update(delta: Seconds) {
-    this.g.clear();
-
-    this.g.fillColor = Color.tomato;
-    for (let i = 0; i < this.values.length; i++) {
-        const h = this.values[i] * 200;
-        this.g.drawRectangle(i * 30, -h, 26, h);
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/graphics/dynamic-graphics.ts"
+  region="redraw-per-frame"
+  language="ts"
+  title="examples/guides/graphics/dynamic-graphics.ts"
+/>
 
 For shapes that do not change, create the `Graphics` once in `init` and never call `clear`. The meshes live as children and render identically each frame.
 
@@ -113,22 +109,12 @@ For shapes that do not change, create the `Graphics` once in `init` and never ca
 
 Because `Graphics` extends `Container`, it inherits position, rotation, scale, and origin. A single `Graphics` object with several drawn shapes behaves as a group — rotating the `Graphics` rotates all its shape children together:
 
-```ts
-init() {
-    this.group = new Graphics();
-    this.group.fillColor = Color.goldenrod;
-    this.group.drawCircle(-40, 0, 20);
-    this.group.drawCircle(40, 0, 20);
-    this.group.drawRectangle(-10, -15, 20, 30);
-
-    this.group.setPosition(this.app.width / 2, this.app.height / 2);
-    this.addChild(this.group);
-}
-
-update(delta: Seconds) {
-    this.group.rotate(60 * delta);
-}
-```
+<SourceSnippet
+  source="examples/guides/graphics/dynamic-graphics.ts"
+  region="shape-group"
+  language="ts"
+  title="examples/guides/graphics/dynamic-graphics.ts"
+/>
 
 ## Graphics vs. Mesh
 

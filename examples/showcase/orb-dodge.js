@@ -1,5 +1,6 @@
 // Auto-generated from orb-dodge.ts - edit the .ts source, not this file.
 import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
+// #region guide:constants
 const CANVAS_WIDTH = 1280;
 const CANVAS_HEIGHT = 720;
 const PLAYER_RADIUS = 18;
@@ -21,6 +22,7 @@ class PlayScene extends Scene {
   spawnTimer = 0;
   scoreText;
   timeText;
+  // #region guide:play-init
   init() {
     this.px = CANVAS_WIDTH / 2;
     this.py = CANVAS_HEIGHT / 2;
@@ -89,6 +91,8 @@ class PlayScene extends Scene {
       if (this.dx > 0) this.dx = 0;
     });
   }
+  // #endregion guide:play-init
+  // #region guide:spawn-orb
   spawnOrb() {
     const danger = Math.random() < 0.4;
     const side = Math.floor(Math.random() * 4);
@@ -123,6 +127,8 @@ class PlayScene extends Scene {
     this.world.addChild(gfx);
     this.orbs.push({ gfx, vx: ((tx - ox) / dist) * speed, vy: ((ty - oy) / dist) * speed, danger });
   }
+  // #endregion guide:spawn-orb
+  // #region guide:play-update
   update(delta) {
     const app = this.app;
     this.elapsed += delta;
@@ -182,11 +188,15 @@ class PlayScene extends Scene {
     this.timeText.text = `${this.elapsed.toFixed(1)} s`;
     // #endregion guide:collision-loop
   }
+  // #endregion guide:play-update
+  // #region guide:play-draw
   draw(context) {
     context.render(this.world);
     context.render(this.scoreText);
     context.render(this.timeText);
   }
+  // #endregion guide:play-draw
+  // #region guide:play-destroy
   destroy() {
     for (const orb of this.orbs) {
       orb.gfx.destroy();

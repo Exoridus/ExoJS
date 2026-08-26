@@ -58,12 +58,12 @@ Resizing the surface does not move what you already positioned. A sprite centere
 
 The example calls `layout()` every frame from `update`, which is simple and always correct. For heavier layouts, subscribe to `app.onResize` instead and recompute only when the size actually changes:
 
-```ts no-check
-init() {
-    this.layout();
-    app.onResize.add(() => this.layout());
-}
-```
+<SourceSnippet
+  source="examples/guides/resize-dpr-and-canvas/custom-sizing.ts"
+  region="relayout-on-resize"
+  language="ts"
+  title="examples/guides/resize-dpr-and-canvas/custom-sizing.ts"
+/>
 
 Either approach works — poll in `update` for small scenes, react to `onResize` when re-layout is expensive.
 
@@ -149,42 +149,12 @@ document.addEventListener('fullscreenchange', () => {
 
 `CanvasSizing` is a public base class, so a layout that none of the built-ins describe — an editor panel, a safe-area inset, a web component, a breakpoint-driven view — is a policy of your own:
 
-```ts
-import { CanvasSizing, type CanvasSizingContext } from '@codexo/exojs';
-
-class HalfHeightCanvasSizing extends CanvasSizing {
-    private observer: ResizeObserver | null = null;
-
-    override attach(context: CanvasSizingContext): void {
-        const host = context.host;
-
-        if (host === null) return;
-
-        const commit = (): void => {
-            const width = host.clientWidth;
-            const height = host.clientHeight / 2;
-
-            context.apply({
-                cssWidth: width,
-                cssHeight: height,
-                logicalWidth: context.baseWidth,
-                logicalHeight: context.baseHeight,
-                renderWidth: width,
-                renderHeight: height,
-            });
-        };
-
-        commit();
-        this.observer = new ResizeObserver(commit);
-        this.observer.observe(host);
-    }
-
-    override detach(): void {
-        this.observer?.disconnect();
-        this.observer = null;
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/resize-dpr-and-canvas/custom-sizing.ts"
+  region="custom-sizing"
+  language="ts"
+  title="examples/guides/resize-dpr-and-canvas/custom-sizing.ts"
+/>
 
 `context.apply()` is the only channel into the application: it resizes the backing store (`renderWidth × pixelRatio`), writes the CSS box, moves the logical coordinate system and dispatches `onResize`. `detach()` has to release everything `attach()` created — the application calls it when the policy is replaced and when it is destroyed.
 

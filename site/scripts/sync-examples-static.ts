@@ -38,6 +38,22 @@ const copyRecursive = (sourceDir: string, targetDir: string): void => {
   fs.cpSync(sourceDir, targetDir, { recursive: true, force: true });
 };
 
+/**
+ * The guide sources under `examples/guides/` are read at build time by
+ * `SourceSnippet`, straight from the repository. Nothing loads them over HTTP,
+ * so they are left out of the served snapshot rather than shipped as dead
+ * weight next to the runnable examples.
+ */
+const copyExamples = (sourceDir: string, targetDir: string): void => {
+  const guidesDir = path.resolve(sourceDir, 'guides');
+
+  fs.cpSync(sourceDir, targetDir, {
+    recursive: true,
+    force: true,
+    filter: source => source !== guidesDir,
+  });
+};
+
 const run = async (): Promise<void> => {
   ensureSource(sourceExamplesDir);
   ensureSource(sourceAssetsDir);
@@ -62,7 +78,7 @@ const run = async (): Promise<void> => {
   resetDir(targetExamplesDir);
   resetDir(targetAssetsDir);
 
-  copyRecursive(sourceExamplesDir, targetExamplesDir);
+  copyExamples(sourceExamplesDir, targetExamplesDir);
   copyRecursive(sourceAssetsDir, targetAssetsDir);
   copyRecursive(sourceCatalogDemoDir, targetCatalogDemoDir);
   copyRecursive(sourceCatalogTechnicalDir, targetCatalogTechnicalDir);

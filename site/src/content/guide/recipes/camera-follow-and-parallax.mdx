@@ -4,6 +4,7 @@ description: 'Create depth and motion parallax from camera and pointer movement.
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import Callout from '../../../components/Callout.astro';
 
 # Camera follow & parallax
@@ -18,33 +19,21 @@ A `View` controls what portion of the world is visible. To make the camera follo
 Snapping `view.setCenter` onto the player every frame feels rigid. Ease it instead — `cur += (target - cur) * k * dt` — so the camera trails slightly and catches up smoothly, no tween needed.
 </Callout>
 
-```ts
-init() {
-    this._view = new View(400, 300, 800, 600);
-    this.player = new Sprite(this.loader.get('image/hero.png'));
-}
-
-update(delta: Seconds) {
-    // ... move player based on input ...
-
-    // Camera follows player
-    this._view.setCenter(this.player.position.x, this.player.position.y);
-}
-
-draw(context: RenderingContext) {
-    context.render(this.worldLayer, { view: this._view });
-}
-```
+<SourceSnippet
+  source="examples/guides/camera-follow-and-parallax/camera.ts"
+  region="camera-follow"
+  language="ts"
+  title="examples/guides/camera-follow-and-parallax/camera.ts"
+/>
 
 For smooth following, lerp the camera center instead of snapping:
 
-```ts
-update(delta: Seconds) {
-    this._cameraX += (this.player.x - this._cameraX) * 5 * delta;
-    this._cameraY += (this.player.y - this._cameraY) * 5 * delta;
-    this._view.setCenter(this._cameraX, this._cameraY);
-}
-```
+<SourceSnippet
+  source="examples/guides/camera-follow-and-parallax/camera.ts"
+  region="camera-smoothing"
+  language="ts"
+  title="examples/guides/camera-follow-and-parallax/camera.ts"
+/>
 
 The multiplier controls how quickly the camera catches up. Higher values = snappier. This is a simple exponential ease — no tween needed.
 
@@ -52,30 +41,12 @@ The multiplier controls how quickly the camera catches up. Higher values = snapp
 
 For menu screens, background effects, or mouse-driven depth, offset layers proportionally to the pointer position relative to the screen center:
 
-```ts
-init() {
-    // Three layers at different depths
-    this._layers = [0.15, 0.35, 0.6].map(speed => {
-        const g = new Graphics();
-        // ... draw layer content ...
-        return { graphics: g, speed };
-    });
-
-    this._pointer = { x: 400, y: 300 };
-    this.app.input.onPointerMove.add(p => {
-        this._pointer = { x: p.x, y: p.y };
-    });
-}
-
-draw(context: RenderingContext) {
-    for (const layer of this._layers) {
-        const offsetX = (400 - this._pointer.x) * layer.speed;
-        const offsetY = (300 - this._pointer.y) * layer.speed;
-        layer.graphics.setPosition(offsetX, offsetY);
-        context.render(layer.graphics);
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/camera-follow-and-parallax/parallax.ts"
+  region="mouse-parallax"
+  language="ts"
+  title="examples/guides/camera-follow-and-parallax/parallax.ts"
+/>
 
 The speed multiplier per layer creates the illusion of depth. A background layer with `speed = 0.15` moves slowly — it feels far away. A foreground layer with `speed = 0.6` moves quickly — it feels close. The pointer offset from center (`(400 - x)`) gives direction: moving the mouse right shifts layers left, as if the "camera" moved right.
 
@@ -87,26 +58,12 @@ A layer that only fills the viewport shows its edge the moment parallax shifts i
 
 For side-scrolling games, offset background layers relative to the camera position rather than the pointer:
 
-```ts
-draw(context: RenderingContext) {
-    // Background — moves at 30% of camera speed
-    this._skyLayer.setPosition(
-        this._view.center.x * 0.3,
-        0
-    );
-    context.render(this._skyLayer, { view: this._view });
-
-    // Midground — moves at 60%
-    this._hillsLayer.setPosition(
-        this._view.center.x * 0.6,
-        0
-    );
-    context.render(this._hillsLayer, { view: this._view });
-
-    // Foreground — moves 1:1 with camera (no parallax)
-    context.render(this._worldLayer, { view: this._view });
-}
-```
+<SourceSnippet
+  source="examples/guides/camera-follow-and-parallax/parallax.ts"
+  region="scroll-parallax"
+  language="ts"
+  title="examples/guides/camera-follow-and-parallax/parallax.ts"
+/>
 
 The layer position is set relative to the camera center *before* rendering. Since the camera view is already active, the layer position offsets add to the camera transform, producing the parallax effect. The foreground layer at 1:1 has no parallax — it moves exactly with the camera.
 
@@ -114,21 +71,12 @@ The layer position is set relative to the camera center *before* rendering. Sinc
 
 Parallax layers need to be wider than the viewport, or you see edges when the camera shifts. For tiled backgrounds, draw the tile pattern across a range that extends beyond the viewport boundaries by at least the maximum parallax offset:
 
-```ts
-import { Graphics } from '@codexo/exojs';
-
-const viewW = 800;
-const maxOffset = viewW * 0.3; // 30% for the slowest layer
-const totalW = viewW + maxOffset * 2;
-const tileWidth = 128;
-const tileHeight = 600;
-const g = new Graphics();
-
-// Tile the pattern across [(-maxOffset), (viewW + maxOffset)]
-for (let x = -maxOffset; x < viewW + maxOffset; x += tileWidth) {
-    g.drawRectangle(x, 0, tileWidth, tileHeight);
-}
-```
+<SourceSnippet
+  source="examples/guides/camera-follow-and-parallax/tiling-a-parallax-layer.ts"
+  region="tiling-a-parallax-layer"
+  language="ts"
+  title="examples/guides/camera-follow-and-parallax/tiling-a-parallax-layer.ts"
+/>
 
 ## Examples
 

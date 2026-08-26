@@ -902,16 +902,16 @@ export default defineConfig([
   // same way (`no-unsafe-argument` needs type info too) - dropped rather than
   // given a real tsconfig program, since these files intentionally sit
   // outside any typed program.
-  ...nodeToolingConfig({ files: ['*.config.ts', 'eslint.config.ts', 'scripts/**/*.ts', 'scripts/**/*.mjs'] }),
+  ...nodeToolingConfig({ files: ['*.config.ts', 'eslint.config.ts', 'scripts/**/*.ts', 'scripts/**/*.mjs', 'packages/exojs-bench/competitors/*.ts'] }),
 
-  // scripts/webgpu-probe.mjs runs as a Node process that drives a Playwright
+  // scripts/webgpu-probe.ts runs as a Node process that drives a Playwright
   // page, but several of its callbacks are passed to `page.evaluate()` and
   // execute inside the browser page instead - so the same file legitimately
   // references both Node and browser globals. Layer `globals.browser` on top
   // of the Node/scripts block above just for this file, rather than widening
   // browser globals onto every `scripts/**` file.
   {
-    files: ['scripts/webgpu-probe.mjs'],
+    files: ['scripts/webgpu-probe.ts'],
     languageOptions: {
       globals: {
         ...globals.browser,
@@ -1008,6 +1008,62 @@ export default defineConfig([
     },
   },
 
+  // Guide sources (examples/guides/**) - the running programs the guide
+  // chapters embed regions of. They are authored in TypeScript and never
+  // transpiled to a `.js` twin, so unlike the rest of the example catalog the
+  // `.ts` file is what gets linted. Type-aware rules are off for the same
+  // reason they are off for example `.js`: the file belongs to
+  // `tsconfig.examples.json`, which is not the project the service resolves
+  // for it, and `typecheck:examples` already checks it with the right one.
+  {
+    files: ['examples/guides/**/*.ts'],
+    ...tseslint.configs.disableTypeChecked,
+  },
+  {
+    files: ['examples/guides/**/*.ts'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      parserOptions: { projectService: false, project: null },
+      globals: {
+        ...globals.browser,
+        ...globals.es2024,
+        // Injected typed asset catalog (see examples/shared/assets-global.d.ts).
+        assets: 'readonly',
+      },
+    },
+    plugins: {
+      'simple-import-sort': simpleImportSort,
+      'unused-imports': unusedImports,
+      unicorn,
+    },
+    rules: {
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
+      'unused-imports/no-unused-imports': 'error',
+      '@typescript-eslint/no-empty-function': 'error',
+      '@typescript-eslint/no-unused-vars': 'off',
+      // A guide listing shows the reader what to write, and stops there: the
+      // hook skeleton ignores its own `delta`, the analyser listing names the
+      // four values it demonstrates and reads none of them. Renaming those to
+      // `_delta` and `_low` would put the workaround in the documentation, so
+      // unused bindings are allowed here. A stale IMPORT is still an error -
+      // that one is drift, not narration.
+      'unused-imports/no-unused-vars': 'off',
+      curly: 'error',
+      eqeqeq: ['error', 'always', { null: 'ignore' }],
+      // The debugging chapters document logging, so a listing whose subject is
+      // `logger.warn` or a console dump of the pass inspector has to be able to
+      // show one. Nothing here executes.
+      'no-console': 'off',
+      'no-var': 'error',
+      'prefer-const': 'error',
+      'object-shorthand': 'error',
+      'prefer-template': 'error',
+      'unicorn/prefer-node-protocol': 'error',
+    },
+  },
+
   // Allow console only in the dedicated debug-layer inspector example
   {
     files: ['examples/debug-layer/signal-bus-inspector.js'],
@@ -1020,7 +1076,7 @@ export default defineConfig([
   // ship to consumers, and report progress on stdout by design - `no-console`
   // is the wrong rule here, not a violation to silence per-line.
   {
-    files: ['scripts/**/*.ts', '*.config.ts'],
+    files: ['scripts/**/*.ts', 'packages/exojs-bench/competitors/*.ts', '*.config.ts'],
     rules: {
       'no-console': 'off',
     },
@@ -1031,7 +1087,7 @@ export default defineConfig([
   // extension packages, and these trees sit outside a typed program, so they
   // take the rule on its own. The site has its own config and carries it there.
   {
-    files: ['test/**/*.{ts,tsx}', 'packages/exojs-*/test/**/*.{ts,tsx}', 'scripts/**/*.{ts,mjs}', '*.config.ts'],
+    files: ['test/**/*.{ts,tsx}', 'packages/exojs-*/test/**/*.{ts,tsx}', 'scripts/**/*.{ts,mjs}', 'packages/exojs-bench/competitors/*.ts', '*.config.ts'],
     rules: {
       'func-style': ['error', 'expression'],
     },

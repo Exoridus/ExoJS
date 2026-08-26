@@ -4,6 +4,7 @@ description: 'Capture keys, support configurable bindings, and map multiple devi
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import TryIt from '../../../components/TryIt.astro';
 import Callout from '../../../components/Callout.astro';
 
@@ -24,7 +25,7 @@ The scene's `this.inputs` registry creates bindings that are automatically dispo
 
 Each returns an `InputBinding` you can call `.unbind()` on to detach early. The `threshold` option (in ms) overrides the 300 ms default for `onTrigger`:
 
-```ts no-check
+```ts no-check -- sketch of the reader's own scene; player and togglePause are its members, not the guide's
 import { Keyboard, Scene } from '@codexo/exojs';
 
 class GameScene extends Scene {
@@ -42,27 +43,12 @@ class GameScene extends Scene {
 
 For held-key patterns — movement, continuous actions — use `onActive`/`onStop` to track a boolean flag, then consume it in `update`:
 
-```ts
-init() {
-    this.move = { left: 0, right: 0, up: 0, down: 0 };
-
-    this.inputs.onActive(Keyboard.A, () => { this.move.left  = 1; });
-    this.inputs.onStop(Keyboard.A,    () => { this.move.left  = 0; });
-    this.inputs.onActive(Keyboard.D, () => { this.move.right = 1; });
-    this.inputs.onStop(Keyboard.D,    () => { this.move.right = 0; });
-    this.inputs.onActive(Keyboard.W, () => { this.move.up    = 1; });
-    this.inputs.onStop(Keyboard.W,    () => { this.move.up    = 0; });
-    this.inputs.onActive(Keyboard.S, () => { this.move.down  = 1; });
-    this.inputs.onStop(Keyboard.S,    () => { this.move.down  = 0; });
-}
-
-update(delta: Seconds) {
-    const speed = 280 * delta;
-    const dx = (this.move.right - this.move.left) * speed;
-    const dy = (this.move.down - this.move.up) * speed;
-    this.sprite.move(dx, dy);
-}
-```
+<SourceSnippet
+  source="examples/guides/keyboard-and-actions/movement.ts"
+  region="wasd-movement"
+  language="ts"
+  title="examples/guides/keyboard-and-actions/movement.ts"
+/>
 
 ## Application-level signals
 
@@ -91,42 +77,12 @@ These are raw — no threshold, no auto-disposal. Use them for global shortcuts 
 
 The `onKeyDown` signal accepts a callback that receives the raw channel number. This is the mechanism for letting the player remap controls at runtime:
 
-```ts
-init() {
-    this.jumpChannel = Keyboard.Space;
-    this.rebindRequested = false;
-    this.jumpDirty = true;
-
-    // The rebind trigger — press J to enter rebind mode
-    this.inputs.onTrigger(Keyboard.J, () => {
-        this.rebindRequested = true;
-    });
-
-    // Capture the next keydown as the new jump binding
-    this.app.input.onKeyDown.add(channel => {
-        if (!this.rebindRequested) return;
-        this.jumpChannel = channel;
-        this.rebindRequested = false;
-        this.jumpDirty = true;
-    });
-
-    this._rebindJump();
-}
-
-_rebindJump() {
-    if (!this.jumpDirty) return;
-    this._jumpBinding?.unbind();
-    this._jumpBinding = this.inputs.onTrigger(this.jumpChannel, () => {
-        this.jumpVelocity = -260;
-    });
-    this.jumpDirty = false;
-}
-
-update(delta: Seconds) {
-    this._rebindJump();
-    // ... apply jumpVelocity ...
-}
-```
+<SourceSnippet
+  source="examples/guides/keyboard-and-actions/rebinding.ts"
+  region="runtime-rebinding"
+  language="ts"
+  title="examples/guides/keyboard-and-actions/rebinding.ts"
+/>
 
 ## Available key constants
 
@@ -207,11 +163,12 @@ ExoJS does not ship a dedicated action-map abstraction layer. Instead, the exist
 
 Every binding factory — `onTrigger`, `onStart`, `onActive`, `onStop` — accepts an array of channels. The callback fires when any channel in the array activates:
 
-```ts
-this.inputs.onTrigger([Keyboard.Space, Keyboard.J], () => {
-    this.player.jump();
-});
-```
+<SourceSnippet
+  source="examples/guides/keyboard-and-actions/movement.ts"
+  region="multi-channel-binding"
+  language="ts"
+  title="examples/guides/keyboard-and-actions/movement.ts"
+/>
 
 The callback receives the sampled value (0..1 for buttons, -1..1 for bipolar axes) from the most-active channel. For simple triggers this value is rarely needed — the important thing is that the action fires regardless of which key was pressed.
 
@@ -223,89 +180,12 @@ Per-pad bindings on `Gamepad` (`pad.onTrigger`, `pad.onActive`, etc.) coexist wi
 Scene-scoped bindings from `this.inputs` are cleaned up when the scene unloads, but `pad.onTrigger`/`pad.onActive` bindings live on the long-lived `Gamepad` and are not. Keep their `InputBinding` handles and call `unbind()` in `destroy`, or they stack up across scene changes.
 </Callout>
 
-```ts
-import { GamepadAxis, GamepadButton, Keyboard, type RenderingContext, Scene, Sprite, type Seconds } from '@codexo/exojs';
-
-class PlayerScene extends Scene {
-    private sprite!: Sprite;
-    private keys!: { left: number; right: number; up: number; down: number };
-    private stick!: { x: number; y: number };
-    private jumpImpulse!: number;
-
-    async load() {
-        await this.loader.load('image/hero.png');
-    }
-
-    init() {
-        this.sprite = new Sprite(this.loader.get('image/hero.png'))
-            .setAnchor(0.5)
-            .setPosition(400, 300);
-
-        // Keyboard state
-        this.keys = { left: 0, right: 0, up: 0, down: 0 };
-
-        // Gamepad state
-        this.stick = { x: 0, y: 0 };
-
-        // Jump impulse — either device
-        this.jumpImpulse = 0;
-
-        // --- Keyboard bindings (auto-disposed on scene unload) ---
-        this.inputs.onActive(Keyboard.A, () => { this.keys.left  = 1; });
-        this.inputs.onStop(Keyboard.A,    () => { this.keys.left  = 0; });
-        this.inputs.onActive(Keyboard.D, () => { this.keys.right = 1; });
-        this.inputs.onStop(Keyboard.D,    () => { this.keys.right = 0; });
-        this.inputs.onActive(Keyboard.W, () => { this.keys.up    = 1; });
-        this.inputs.onStop(Keyboard.W,    () => { this.keys.up    = 0; });
-        this.inputs.onActive(Keyboard.S, () => { this.keys.down  = 1; });
-        this.inputs.onStop(Keyboard.S,    () => { this.keys.down  = 0; });
-
-        this.inputs.onTrigger(Keyboard.Space, () => {
-            this.jumpImpulse = -220;
-        });
-
-        // --- Gamepad bindings (per-slot, must be unbound manually if slot changes) ---
-        const pad0 = this.app.input.getGamepad(0);
-
-        pad0.onTrigger(GamepadButton.South, () => {
-            this.jumpImpulse = -220;
-        });
-
-        pad0.onActive(GamepadAxis.LeftStickX, value => {
-            this.stick.x = value;
-        });
-        pad0.onStop(GamepadAxis.LeftStickX, () => {
-            this.stick.x = 0;
-        });
-
-        pad0.onActive(GamepadAxis.LeftStickY, value => {
-            this.stick.y = value;
-        });
-        pad0.onStop(GamepadAxis.LeftStickY, () => {
-            this.stick.y = 0;
-        });
-    }
-
-    update(delta: Seconds) {
-        // Best input wins: prefer the device with the larger magnitude
-        const keyX = this.keys.right - this.keys.left;
-        const keyY = this.keys.down - this.keys.up;
-
-        const moveX = Math.abs(this.stick.x) > Math.abs(keyX) ? this.stick.x : keyX;
-        const moveY = Math.abs(this.stick.y) > Math.abs(keyY) ? this.stick.y : keyY;
-
-        this.sprite.move(moveX * 260 * delta, moveY * 260 * delta);
-
-        // Jump physics (same impulse source for both devices)
-        this.sprite.move(0, this.jumpImpulse * delta);
-        this.jumpImpulse = Math.min(0, this.jumpImpulse + 800 * delta);
-    }
-
-    draw(context: RenderingContext) {
-        context.render(this.sprite);
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/keyboard-and-actions/player-scene.ts"
+  region="two-device-scene"
+  language="ts"
+  title="examples/guides/keyboard-and-actions/player-scene.ts"
+/>
 
 The "best input wins" logic — `Math.abs(this.stick.x) > Math.abs(keyX)` — picks whichever device is being used more actively at any given moment. A player can transition from keyboard to gamepad mid-frame without any state discontinuity.
 
@@ -313,48 +193,12 @@ The "best input wins" logic — `Math.abs(this.stick.x) > Math.abs(keyX)` — pi
 
 A clean pattern for larger projects is to centralise input state in a small plain object and let each device category write into it:
 
-```ts
-init() {
-    // One source of truth for movement intent
-    this.move = { x: 0, y: 0 };
-    this.actions = { jump: 0, interact: 0, pause: 0 };
-
-    // Keyboard writes into move / actions
-    this.inputs.onActive(Keyboard.A, () => { this.move.x = -1; });
-    this.inputs.onStop(Keyboard.A,    () => { if (this.move.x === -1) this.move.x = 0; });
-    this.inputs.onActive(Keyboard.D, () => { this.move.x = 1; });
-    this.inputs.onStop(Keyboard.D,    () => { if (this.move.x === 1) this.move.x = 0; });
-
-    this.inputs.onTrigger(Keyboard.Space, () => { this.actions.jump = 1; });
-    this.inputs.onTrigger(Keyboard.Escape, () => { this.actions.pause = 1; });
-
-    // Gamepad writes into the same move / actions
-    const pad = this.app.input.getGamepad(0);
-    pad.onActive(GamepadAxis.LeftStickX, v => { this.move.x = v; });
-    pad.onStop(GamepadAxis.LeftStickX,   () => { this.move.x = 0; });
-    pad.onActive(GamepadAxis.LeftStickY, v => { this.move.y = v; });
-    pad.onStop(GamepadAxis.LeftStickY,   () => { this.move.y = 0; });
-
-    pad.onTrigger(GamepadButton.South, () => { this.actions.jump = 1; });
-    pad.onTrigger(GamepadButton.Start, () => { this.actions.pause = 1; });
-
-    // Consume actions once in update, then reset
-}
-
-update(delta: Seconds) {
-    if (this.actions.pause) {
-        this.togglePause();       // pauses/resumes via app.scenes + shows/hides the pause overlay on scene.ui
-        this.actions.pause = 0;
-    }
-
-    if (this.actions.jump && this.player.onGround) {
-        this.player.velocity.y = -400;
-    }
-    this.actions.jump = 0;
-
-    this.player.move(this.move.x * 260 * delta, this.move.y * 260 * delta);
-}
-```
+<SourceSnippet
+  source="examples/guides/keyboard-and-actions/movement.ts"
+  region="shared-intent"
+  language="ts"
+  title="examples/guides/keyboard-and-actions/movement.ts"
+/>
 
 This keeps input handling in one location, makes it easy to add a third device (touch controls, arcade stick), and avoids scattered `onTrigger` callbacks that directly call game logic.
 
@@ -362,25 +206,12 @@ This keeps input handling in one location, makes it easy to add a third device (
 
 Scene-scoped bindings (`this.inputs.onTrigger(...)`) are automatically disposed when the scene's `destroy` runs. Per-pad bindings (`pad.onTrigger(...)`) are not — they live on the `Gamepad` instance, which outlives any single scene. Store per-pad bindings in an array and unbind them in `destroy`:
 
-```ts
-init() {
-    this._padBindings = [];
-    const pad = this.app.input.getGamepad(0);
-
-    this._padBindings.push(
-        pad.onTrigger(GamepadButton.South, () => this.player.jump()),
-        pad.onActive(GamepadAxis.LeftStickX, v => { this.move.x = v; }),
-        pad.onStop(GamepadAxis.LeftStickX, () => { this.move.x = 0; }),
-    );
-}
-
-destroy() {
-    for (const binding of this._padBindings) {
-        binding.unbind();
-    }
-    this._padBindings.length = 0;
-}
-```
+<SourceSnippet
+  source="examples/guides/keyboard-and-actions/gamepad-bindings.ts"
+  region="pad-binding-lifetime"
+  language="ts"
+  title="examples/guides/keyboard-and-actions/gamepad-bindings.ts"
+/>
 
 ## Named actions
 
@@ -388,40 +219,12 @@ Wiring listeners by hand is fine for a couple of keys. Once a control scheme has
 a name for each thing the player can do — and each of those can come from the
 keyboard *or* the pad — describe it instead with an `ActionMap`:
 
-```ts
-import { ActionMap, AxisAction, ButtonAction, GamepadAxis, GamepadButton, Keyboard, PointerButton, Scene, type Vector, VectorAction } from '@codexo/exojs';
-
-class GameScene extends Scene {
-    // Your own game object — anything exposing these three methods.
-    declare player: { jump(): void; steer(amount: number): void; move(direction: Vector): void };
-
-    controls = new ActionMap({
-        jump: new ButtonAction([Keyboard.Space, GamepadButton.South]),
-        attack: new ButtonAction([PointerButton.Primary, GamepadButton.West]),
-        steer: new AxisAction([
-            GamepadAxis.LeftStickX,
-            { negative: Keyboard.A, positive: Keyboard.D },
-        ]),
-        move: new VectorAction([
-            { x: GamepadAxis.LeftStickX, y: GamepadAxis.LeftStickY },
-            { up: Keyboard.W, down: Keyboard.S, left: Keyboard.A, right: Keyboard.D },
-        ]),
-    });
-
-    init() {
-        this.inputs.attach(this.controls);
-    }
-
-    update() {
-        if (this.controls.jump.pressed) {
-            this.player.jump();
-        }
-
-        this.player.steer(this.controls.steer.value);
-        this.player.move(this.controls.move.value);
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/keyboard-and-actions/action-map.ts"
+  region="action-map"
+  language="ts"
+  title="examples/guides/keyboard-and-actions/action-map.ts"
+/>
 
 Attaching through `this.inputs` ties the map to the scene: it is detached when
 the scene ends, and its actions are reset across a suspend so a key held while
@@ -512,34 +315,12 @@ the only form that may be written to disk. They carry no gamepad slot, no browse
 device index, and no enum number, so a save file survives a new build, a
 different browser, and a controller plugged into a different port.
 
-```ts
-import { ActionMap, BindingProfile, ButtonAction, Keyboard, Scene } from '@codexo/exojs';
-
-class RebindScene extends Scene {
-    controls = new ActionMap({
-        jump: new ButtonAction(Keyboard.Space),
-        crouch: new ButtonAction(Keyboard.ControlLeft),
-    });
-
-    init() {
-        this.inputs.attach(this.controls);
-
-        const saved = localStorage.getItem('bindings');
-
-        if (saved !== null) {
-            this.controls.applyProfile(BindingProfile.fromJSON(JSON.parse(saved)));
-        }
-    }
-
-    rebindJump(key: Keyboard) {
-        this.controls.rebind('jump', key);
-
-        const profile = new BindingProfile().set('jump', this.controls.jump.serialize());
-
-        localStorage.setItem('bindings', JSON.stringify(profile));
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/keyboard-and-actions/binding-profile.ts"
+  region="binding-profile"
+  language="ts"
+  title="examples/guides/keyboard-and-actions/binding-profile.ts"
+/>
 
 A few properties are worth knowing:
 
@@ -566,33 +347,12 @@ A pause menu should take the keys it needs and leave the rest alone. That is wha
 an `InputScope` is: one or more action maps that, while pushed, own the controls
 they bind.
 
-```ts
-import { ActionMap, ButtonAction, InputScope, Keyboard, Scene, VectorAction } from '@codexo/exojs';
-
-class GameplayScene extends Scene {
-    controls = new ActionMap({
-        jump: new ButtonAction(Keyboard.Space),
-        move: new VectorAction({ up: Keyboard.W, down: Keyboard.S, left: Keyboard.A, right: Keyboard.D }),
-    });
-
-    menu = new InputScope(new ActionMap({
-        close: new ButtonAction(Keyboard.Escape),
-        confirm: new ButtonAction(Keyboard.Space),
-    }));
-
-    init() {
-        this.inputs.attach(this.controls);
-    }
-
-    openMenu() {
-        this.inputs.pushScope(this.menu);
-    }
-
-    closeMenu() {
-        this.inputs.popScope(this.menu);
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/keyboard-and-actions/input-scope.ts"
+  region="input-scope"
+  language="ts"
+  title="examples/guides/keyboard-and-actions/input-scope.ts"
+/>
 
 While the menu scope is pushed, `Space` reaches only `confirm` — `jump` sees
 neither the value nor the press edge, so it cannot reconstruct one. `W`/`A`/`S`/`D`

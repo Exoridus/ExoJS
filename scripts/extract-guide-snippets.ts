@@ -1,23 +1,25 @@
 /**
- * Extracts TypeScript/JavaScript code blocks from guide MDX files and writes
- * them as standalone .ts files into the snippet output directory for
- * typechecking via `pnpm typecheck:guides`.
+ * Extracts TypeScript/JavaScript code blocks from guide MDX files into the
+ * snippet output directory for typechecking via `pnpm typecheck:guides`.
  *
  * Skip conventions (applied inside the guide MDX source):
- *   - Fence with `no-check` meta:  ```ts no-check
- *     Marks the block as intentionally untypeable - partial snippets, prose
- *     illustrations, or temporarily stale API. Use sparingly.
- *   - Blocks without any `import` statement, that are also not recognized as
- *     a bare method/fragment (see below), are skipped automatically as
- *     partial/context-free snippets (object literals, mid-expression
- *     fragments, etc.).
+ *   - Fence with `no-check` meta:  ```ts no-check -- <reason>
+ *     Marks the block as intentionally untypeable - prose illustrations,
+ *     deliberately wrong code, values only the reader owns. The reason is
+ *     required; `check-guide-no-check-reasons.ts` enforces it.
+ *   - A block that is neither module-shaped nor bare-shaped (an object literal
+ *     on its own, a fragment cut mid-expression) is counted as `partial` and
+ *     checked by nothing.
  *
  * Two extraction strategies:
  *
- * 1. STANDALONE - a block with its own `import` line(s), not shaped like a
- *    bare class-method body. Written verbatim to its own output file, one
- *    file per block (`isStandaloneSnippet`, unchanged from the original
- *    extractor).
+ * 1. PAGE - every module-shaped block of one page, concatenated in page order
+ *    into a single module (`guide-page-module.ts`). A guide chapter narrates
+ *    one running example down the page: block 1 loads a map, block 4 reads a
+ *    property off it, block 9 converts it. Checked one file per block, all of
+ *    them but the first were a wall of "Cannot find name 'map'", which is why
+ *    so many carried `no-check` instead of a type-check. Concatenated, each
+ *    block is checked against the real type the earlier block produced.
  *
  * 2. BARE - a block with no import, whose first real line either looks like
  *    a class-method declaration (`update(delta) {`, `async load(loader) {`)
@@ -98,6 +100,7 @@ import {
   writePartialBaseline,
 } from './guide-partial-baseline.ts';
 import { parseFences } from './guide-fences.ts';
+import { buildPageModule, type PageBlock } from './guide-page-module.ts';
 
 const REPO_ROOT = join(import.meta.dirname, '..');
 const GUIDE_DIR = join(REPO_ROOT, 'site', 'src', 'content', 'guide');
@@ -143,13 +146,24 @@ const TOPLEVEL_KEYWORD_RE = /^(?:class|function|const|let|var|export|type|interf
 // spliced verbatim as a class member.
 const CONTROL_KEYWORDS = new Set(['if', 'for', 'while', 'switch', 'try', 'catch', 'else', 'do', 'function', 'return', 'with']);
 
-// Variable names that guide authors typically reference from surrounding
-// prose context without re-declaring in the snippet itself.
-// Note: `backend` and `context` are intentionally excluded - they appear as
-// named method parameters inside class bodies, not as external context vars.
-// `app` is included because standalone snippets always declare it explicitly
-// via `const app = new Application(...)`.
-const CONTEXT_VAR_RE = /\b(loader|delta|texture|sheet|spritesheetJson|app)\b/g;
+// Values a guide page reads without ever declaring them, because the prose
+// introduced them: the scene's `loader`, the frame `delta`, the `app` itself.
+// The page module declares these instead of reporting them, which is the
+// established convention for guide narrative - but with their real types, not
+// `any`. A page that opens with `const map = await loader.load(...)` and spends
+// the rest of its length reading members off `map` would otherwise be reading
+// members off `any`, and `any` type-checks whatever the guide claims, including
+// a property the engine dropped two releases ago.
+//
+// Every OTHER unresolved name stays a hard error - that is the typo and the
+// stale-API signal this gate exists for.
+const PAGE_CONTEXT_VARS = {
+  loader: "import('@codexo/exojs').Loader",
+  app: "import('@codexo/exojs').Application",
+  scene: "import('@codexo/exojs').Scene",
+  texture: "import('@codexo/exojs').Texture",
+  delta: 'number',
+};
 
 // Reserved words and common ambient globals excluded when scanning BARE
 // blocks for free identifiers that need a fallback `var x;` declaration
@@ -295,68 +309,6 @@ const RESERVED_OR_GLOBAL = new Set([
   'OmitThisParameter',
   'ThisType',
 ]);
-
-// Collects all top-level declared names (const/let/var/function/class) in
-// a body, excluding import bindings.
-const topLevelDeclaredNames = (body: string): Set<string> => {
-  const names = new Set<string>();
-  for (const line of body.split('\n')) {
-    const m = line.match(/^(?:const|let|var)\s+(\{[^}]+\}|\[?[\w$]+)/);
-    if (m) {
-      // Destructuring or simple binding - just add everything that looks like a name
-      for (const name of m[1].matchAll(/[\w$]+/g)) names.add(name[0]);
-    }
-    const fm = line.match(/^(?:function|class)\s+([\w$]+)/);
-    if (fm) names.add(fm[1]);
-  }
-  return names;
-};
-
-/**
- * Returns true when a code block is self-contained enough to be written to a
- * standalone .ts/.js file and type-checked without a surrounding class or
- * lifecycle context.
- *
- * A block is standalone when it:
- *   1. Has at least one `import` statement, AND
- *   2. Its first real code line is NOT a bare class method (`init(loader) {`),
- *      AND
- *   3. Its first real code line does NOT start with `this.` (top-level
- *      property reference - context only available inside a class method), AND
- *   4. It does NOT reference common lifecycle/context variables (like `loader`,
- *      `delta`, `texture`) that are never declared within the snippet itself.
- */
-const isStandaloneSnippet = (body: string): boolean => {
-  if (!/^import\s/m.test(body)) return false;
-
-  const firstCodeLine = firstRealCodeLine(body);
-  if (!firstCodeLine) return false;
-
-  // Bare class method (e.g. `init(loader) {`).
-  if (BARE_METHOD_RE.test(firstCodeLine) && !TOPLEVEL_KEYWORD_RE.test(firstCodeLine)) return false;
-
-  // Top-level `this.x` - property reference outside any class body.
-  if (firstCodeLine.startsWith('this.')) return false;
-
-  // Uses a common lifecycle / context variable that isn't declared within the
-  // snippet itself (e.g. `loader.get(...)` without a `const loader = ...`).
-  // Skip this check for full-module snippets that contain a class body:
-  // method parameters (e.g. `init(loader)`, `update(delta)`) are scoped
-  // inside methods and are not external context variables.
-  // Important: do NOT use CONTEXT_VAR_RE.test() + matchAll() on the same
-  // regex instance - the /g flag's lastIndex state causes missed matches.
-  // body.matchAll() always starts from position 0 on a fresh copy.
-  const hasClassBody = /\bclass\s+\w/.test(body);
-  if (!hasClassBody) {
-    const codeOnly = stripStringsAndComments(body);
-    const declared = topLevelDeclaredNames(codeOnly);
-    for (const m of codeOnly.matchAll(CONTEXT_VAR_RE)) {
-      if (!declared.has(m[1])) return false;
-    }
-  }
-
-  return true;
-};
 
 const firstRealCodeLine = (body: string): string | undefined => {
   return body
@@ -747,11 +699,14 @@ const files = walkMdx(GUIDE_DIR).filter(file => {
 
   return folder !== undefined && FOLDER_FILTER.includes(folder);
 });
-let extracted = 0;
+let pageFiles = 0;
+let pageBlocksTotal = 0;
 let skippedMeta = 0;
 let skippedPartial = 0;
 let bareFiles = 0;
 let bareBlocksTotal = 0;
+/** `<SourceSnippet/>` references whose region does not resolve. */
+const brokenSnippetRefs: string[] = [];
 /** Guide-relative MDX path → `partial` blocks seen in it, for the budget gate. */
 const partialsByFile = new Map<string, number>();
 
@@ -761,8 +716,19 @@ for (const file of files) {
   const slug = rel.replace(/\.(mdx?|tsx?)$/, '').replaceAll('/', '__');
   partialsByFile.set(rel, 0);
 
+  // A page embeds its program by region name. A name that no longer resolves -
+  // the region renamed, the file moved, the markers dropped - fails the site
+  // build with the page it broke, but only once someone builds the site. Fail
+  // here instead, where the guide's other checks already run.
+  for (const ref of parseSourceSnippetRefs(content)) {
+    if (tryExtractSnippetRegion(ref.source, ref.region) === null) {
+      brokenSnippetRefs.push(`${rel}: region "${ref.region}" in ${ref.source}`);
+    }
+  }
+
   let blockIndex = 0;
   const bareBodies: string[] = [];
+  const pageBlocks: PageBlock[] = [];
   // Every ts/js block on the page - including no-check, standalone, and
   // partial ones - feeds the page-wide field mining (see mineAssignedFields).
   const allCodeBodies: string[] = [];
@@ -779,33 +745,44 @@ for (const file of files) {
       continue;
     }
 
-    if (isStandaloneSnippet(body)) {
-      // ts/typescript/tsx blocks → .ts (full TypeScript syntax allowed).
-      // js/javascript blocks    → .js (allowJs mode; class properties inferred
-      //                               from assignments, no false positives).
-      const isTs = lang === 'ts' || lang === 'typescript' || lang === 'tsx';
-      const ext = isTs ? 'ts' : 'js';
-      const outName = `${slug}__block${blockIndex}.${ext}`;
-      const header = `// guide: ${rel} | block ${blockIndex}\n`;
-      writeFileSync(join(OUT_DIR, outName), header + body);
-      extracted++;
-      blockIndex++;
-      continue;
-    }
+    const firstCodeLine = firstRealCodeLine(body);
+    const hasImport = /^import\s/m.test(body);
 
-    // No import, and not shaped like a bare method/fragment either - a
-    // partial snippet (object literal, mid-expression fragment, etc.) that
-    // still cannot be usefully type-checked. Leave it skipped, as before.
-    if (!/^import\s/m.test(body)) {
-      const firstCodeLine = firstRealCodeLine(body);
-      if (firstCodeLine && isBareWrappable(firstCodeLine)) {
+    // A class-method body or a `this.` fragment shown without its class: the
+    // BARE path splices it into the page's example class. A block shaped that
+    // way but carrying imports belongs to neither path and stays partial.
+    if (firstCodeLine && isBareWrappable(firstCodeLine)) {
+      if (!hasImport) {
         bareBodies.push(body);
         continue;
       }
+
+      skippedPartial++;
+      partialsByFile.set(rel, (partialsByFile.get(rel) ?? 0) + 1);
+      continue;
     }
 
-    skippedPartial++;
-    partialsByFile.set(rel, (partialsByFile.get(rel) ?? 0) + 1);
+    // Everything else is module-shaped and joins the page module, which reads
+    // the page the way the page reads it: in order, with what earlier blocks
+    // established still in scope. `buildPageModule` rejects what does not parse
+    // as a module - an object literal on its own, a fragment cut mid-expression
+    // - and those stay partial.
+    pageBlocks.push({ body, index: blockIndex });
+    blockIndex++;
+  }
+
+  if (pageBlocks.length > 0) {
+    const page = buildPageModule(pageBlocks, PAGE_CONTEXT_VARS);
+
+    skippedPartial += page.rejected.length;
+    partialsByFile.set(rel, (partialsByFile.get(rel) ?? 0) + page.rejected.length);
+
+    if (page.accepted.length > 0) {
+      const header = `// guide: ${rel} | blocks ${page.accepted.join(', ')}\n`;
+      writeFileSync(join(OUT_DIR, `${slug}__page.ts`), header + page.source);
+      pageFiles++;
+      pageBlocksTotal += page.accepted.length;
+    }
   }
 
   if (bareBodies.length === 0) continue;
@@ -923,11 +900,18 @@ for (const file of files) {
   writeFileSync(join(OUT_DIR, `${slug}__bare.ts`), fileText);
 }
 
-const total = extracted + skippedMeta + skippedPartial + bareBlocksTotal;
+const total = pageBlocksTotal + skippedMeta + skippedPartial + bareBlocksTotal;
 console.log(
-  `guide-snippets: ${extracted} extracted, ${bareBlocksTotal} bare (merged into ${bareFiles} file(s)), ` +
+  `guide-snippets: ${pageBlocksTotal} page block(s) (merged into ${pageFiles} file(s)), ${bareBlocksTotal} bare (merged into ${bareFiles} file(s)), ` +
     `${skippedMeta} no-check, ${skippedPartial} partial (${total} total blocks)`,
 );
+
+if (brokenSnippetRefs.length > 0) {
+  console.error(
+    `\nguide-snippets: ${brokenSnippetRefs.length} embedded region(s) do not resolve:\n` + brokenSnippetRefs.map(entry => `  - ${entry}`).join('\n'),
+  );
+  process.exit(1);
+}
 
 // ---------------------------------------------------------------------------
 // Partial-block budget

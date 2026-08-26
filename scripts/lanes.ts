@@ -2,7 +2,7 @@
  * Run only the validation lanes a working copy's changes actually require.
  *
  * The path-to-lane decision is not made here: it comes from
- * `scripts/ci/select-lanes.mjs`, the same module the CI detector job uses, so a
+ * `scripts/ci/select-lanes.ts`, the same module the CI detector job uses, so a
  * local run and a pull request agree by construction. What this script adds is
  * the two things CI gets for free - the changed-file list (from git rather than
  * from `dorny/paths-filter`) and a concrete command per lane.
@@ -23,7 +23,7 @@
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
-import { effectiveLanes, selectAreas } from './ci/select-lanes.mjs';
+import { effectiveLanes, selectAreas } from './ci/select-lanes.ts';
 
 /**
  * Which lane an entry belongs to. `'always'` covers the checks CI runs on every

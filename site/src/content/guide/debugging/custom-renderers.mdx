@@ -4,6 +4,7 @@ description: 'Extend rendering with custom passes and backend-specific logic.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import Callout from '../../../components/Callout.astro';
 
 # Custom renderers
@@ -20,44 +21,12 @@ The distinction: a custom renderer controls *when* and *how* things are drawn. A
 Reach for `CallbackRenderPass` for almost all custom draw work — it slots into the normal pipeline and hands you the high-level `RenderingContext`. Drop to raw `backend.device` only when no pass primitive can express what you need.
 </Callout>
 
-```ts
-import { CallbackRenderPass, Color, Graphics, RenderingContext, RenderNodePass, RenderPipeline, Scene, Sprite, type Seconds } from '@codexo/exojs';
-
-class CustomPassScene extends Scene {
-    private back!: Sprite;
-    private front!: Sprite;
-    private between!: Graphics;
-    private pipeline!: RenderPipeline;
-    private angle = 0;
-
-    override init(): void {
-        this.back = new Sprite(this.loader.get('image/hero.png')).setAnchor(0.5).setPosition(280, 300);
-        this.front = new Sprite(this.loader.get('image/hero.png')).setAnchor(0.5).setPosition(520, 300);
-        this.between = new Graphics();
-
-        this.pipeline = new RenderPipeline()
-            .addPass(new RenderNodePass(this.back, { clear: Color.black })) // draws behind the pass
-            .addPass(
-                new CallbackRenderPass((context) => {
-                    this.between.clear();
-                    this.between.lineWidth = 8;
-                    this.between.lineColor = new Color(130, 240, 170);
-                    this.between.drawArc(400, 300, 120, this.angle, this.angle + Math.PI * 1.3);
-                    this.between.render(context.backend); // low-level draw via context.backend
-                }),
-            ) // draws between sprites
-            .addPass(new RenderNodePass(this.front)); // draws on top
-    }
-
-    override update(delta: Seconds): void {
-        this.angle += delta * 2.2;
-    }
-
-    override draw(context: RenderingContext): void {
-        this.pipeline.execute(context);
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/custom-renderers/custom-pass-scene.ts"
+  region="custom-pass-scene"
+  language="ts"
+  title="examples/guides/custom-renderers/custom-pass-scene.ts"
+/>
 
 The pipeline runs its passes in order, so the callback's draws land exactly where you place the pass — here, between the two sprite passes. Use `CallbackRenderPass` for procedural geometry (arcs, connectors, debug lines between objects), for rendering non-scene-graph content, or for inserting a filter step at a specific point in the frame.
 
@@ -65,26 +34,12 @@ The pipeline runs its passes in order, so the callback's draws land exactly wher
 
 Beneath the high-level, context-aware pass tree sits `BackendRenderPass` — an interface for a single backend-only command. Its one method, `execute(backend)`, receives the `RenderBackend` directly (no camera, not a frame phase). Implement it when a custom pass needs raw backend access — custom shaders, backend-specific draw logic — and run it via `backend.execute(pass)`:
 
-```ts
-import { CallbackRenderPass, RenderPipeline } from '@codexo/exojs';
-import type { BackendRenderPass } from '@codexo/exojs';
-import type { RenderBackend } from '@codexo/exojs/renderer-sdk';
-
-class MyBackendPass implements BackendRenderPass {
-    public execute(backend: RenderBackend): void {
-        // Raw, backend-specific draw work issued through `backend`. A pass that
-        // owns the whole frame like this normally runs with `autoClear: false`,
-        // so its own clear is the only one.
-        backend.clear();
-    }
-}
-
-const backendPass = new MyBackendPass();
-
-// Bridge a BackendRenderPass into a high-level RenderPipeline by wrapping it in a
-// CallbackRenderPass and running it through context.backend:
-const pipeline = new RenderPipeline().addPass(new CallbackRenderPass((context) => context.backend.execute(backendPass)));
-```
+<SourceSnippet
+  source="examples/guides/custom-renderers/backend-pass.ts"
+  region="backend-pass"
+  language="ts"
+  title="examples/guides/custom-renderers/backend-pass.ts"
+/>
 
 A `RenderPipeline` composes high-level `RenderPass` objects (`RenderNodePass`, `CallbackRenderPass`, nested pipelines), not `BackendRenderPass` directly. To run a `BackendRenderPass` inside a pipeline, wrap it in a `CallbackRenderPass` and call `context.backend.execute(pass)` — the bridge shown above. For most custom rendering you never need this layer; `CallbackRenderPass` is the intended escape hatch.
 
@@ -92,8 +47,8 @@ A `RenderPipeline` composes high-level `RenderPass` objects (`RenderNodePass`, `
 
 When you need full GPU control — raw pipeline creation, custom vertex buffers, compute dispatches — access `WebGpuBackend` directly through `app.backend`. This is the escape hatch: you bypass ExoJS drawable types and renderer pipelines entirely, working at the WebGPU API level:
 
-```ts no-check
-import { WebGpuBackend } from '@codexo/exojs';
+```ts no-check -- sketch of a caller-owned renderer; its fields are assigned in an untyped constructor
+import { WebGpuBackend } from '@codexo/exojs/renderer-sdk';
 
 class CustomTriangleRenderer {
     constructor(backend) {

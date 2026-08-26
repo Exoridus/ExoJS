@@ -4,6 +4,7 @@ description: 'Pause scene updates while keeping clear visual context for players
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import Callout from '../../../components/Callout.astro';
 
 # Pause menu
@@ -18,85 +19,12 @@ One scene, one UI layer. The pause overlay (a `Panel` + `Label`) lives on `scene
 `app.tweens` keeps advancing even while the scene is paused — only `update()` and scene-level systems freeze. That is what lets a blur ramp or menu transition animate smoothly over the frozen world.
 </Callout>
 
-```ts
-import {
-    Application, BlurFilter, Color, Keyboard, Label, Panel,
-    type RenderingContext, Scene, SceneAvailability, Sprite, type Seconds,
-} from '@codexo/exojs';
-
-class GameScene extends Scene {
-    private player!: Sprite;
-    private blur!: BlurFilter;
-    private pausePanel!: Panel;
-    private pauseLabel!: Label;
-
-    override init(): void {
-        // Background — the engine clears to this before every `draw`.
-        this.app.clearColor.set(20, 24, 34);
-
-        this.player = new Sprite(this.loader.get('image/hero.png'));
-        this.addChild(this.player);
-        // ... game setup ...
-
-        this.blur = new BlurFilter({ radius: 0, quality: 2 });
-
-        // Pause overlay on the UI layer, hidden until paused.
-        this.pausePanel = new Panel({ width: 420, height: 140, cornerRadius: 18, color: new Color(0, 0, 0, 0.6) });
-        this.pausePanel.anchorIn(this.ui, 'center');
-        this.pausePanel.visible = false;
-        this.ui.addChild(this.pausePanel);
-
-        this.pauseLabel = new Label('PAUSED', { fontSize: 56, fontWeight: 'bold' });
-        this.pauseLabel.anchorIn(this.ui, 'center');
-        this.pauseLabel.visible = false;
-        this.ui.addChild(this.pauseLabel);
-
-        // `SceneAvailability.Always` keeps this binding live in both Active and Paused —
-        // otherwise a 'active'-only binding (the default) would stop firing
-        // the moment the scene pauses, and Escape could never resume it.
-        this.inputs.onTrigger(Keyboard.Escape, () => this.togglePause(), { when: SceneAvailability.Always });
-    }
-
-    override update(_delta: Seconds): void {
-        // Not called while paused — the director skips update() + systems.
-        // ... normal game logic ...
-    }
-
-    override draw(context: RenderingContext): void {
-        context.render(this.root);
-    }
-
-    override destroy(): void {
-        this.root.clearFilters();
-        super.destroy();
-    }
-
-    private togglePause(): void {
-        const pausing = !this.paused;
-
-        if (pausing) {
-            this.app.scenes.pause();
-        } else {
-            this.app.scenes.resume();
-        }
-
-        this.pausePanel.visible = pausing;
-        this.pauseLabel.visible = pausing;
-
-        if (pausing) {
-            this.blur.radius = 0;
-            this.root.filters = [this.blur];
-            this.app.tweens.create(this.blur).to({ radius: 6 }, 0.35).start();
-        } else {
-            this.root.clearFilters();
-        }
-    }
-}
-
-const app = new Application({ scenes: { GameScene } /* , ...other options */ });
-
-await app.start(GameScene);
-```
+<SourceSnippet
+  source="examples/guides/pause-menu/pause-scene.ts"
+  region="pause-scene"
+  language="ts"
+  title="examples/guides/pause-menu/pause-scene.ts"
+/>
 
 <Callout type="warning" title="Clear filters in destroy">
 Any filter you set in `init` or `togglePause` — the `BlurFilter` here — must be cleared in `destroy`. Otherwise it stays attached to `scene.root` and bleeds into the next scene after `app.scenes.change(...)`.
@@ -125,20 +53,12 @@ The `destroy` hook clears the blur filter from `scene.root`. Without this, the f
 
 If the pause menu offers options like "Return to main menu" or "Quit", use `app.scenes.change(...)` to navigate away — it unloads the current scene and loads the next one, optionally with a fade transition:
 
-```ts
-import { Application, Button, FadeSceneTransition, Scene } from '@codexo/exojs';
-
-class MainMenuScene extends Scene {}
-
-const app = new Application({ scenes: { MainMenuScene } });
-const resumeButton = new Button({ label: 'Resume' });
-const mainMenuButton = new Button({ label: 'Main menu' });
-
-resumeButton.onClick.add(() => app.scenes.resume());
-mainMenuButton.onClick.add(() => {
-    void app.scenes.change(MainMenuScene, { transition: new FadeSceneTransition() });
-});
-```
+<SourceSnippet
+  source="examples/guides/pause-menu/menu-buttons.ts"
+  region="menu-buttons"
+  language="ts"
+  title="examples/guides/pause-menu/menu-buttons.ts"
+/>
 
 ## Examples
 

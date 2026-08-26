@@ -4,6 +4,7 @@ description: 'Bridge audio analysis and beat-detection state into the render pip
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import Callout from '../../../components/Callout.astro';
 
 # Audio-reactive visualization
@@ -24,33 +25,12 @@ Both the analyser and the beat detector connect as parallel taps. They never aff
 
 An `AudioAnalyser` wraps a Web Audio `AnalyserNode` and exposes frequency and time-domain data. You point it at a source, then call its getters each frame:
 
-```ts
-import { Asset, AudioStream, Scene, TextureFormat } from '@codexo/exojs';
-import type { Seconds } from '@codexo/exojs';
-import { AudioAnalyser } from '@codexo/exojs-audio-fx';
-
-class VisualizerScene extends Scene {
-    private music!: AudioStream;
-    private analyser!: AudioAnalyser;
-    private spectrum!: Uint8Array;
-
-    async load() {
-        this.music = await this.loader.load(Asset.type('music', 'audio/track.ogg'));
-    }
-
-    init() {
-        this.app.audio.play(this.music, { loop: true });
-
-        // Tap the bus the track plays through.
-        this.analyser = new AudioAnalyser({ fftSize: 1024 });
-        this.analyser.source = this.app.audio.music;
-    }
-
-    update(delta: Seconds) {
-        this.spectrum = this.analyser.getSpectrum();
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/audio-reactive-visualization/visualizer-scene.ts"
+  region="visualizer-scene"
+  language="ts"
+  title="examples/guides/audio-reactive-visualization/visualizer-scene.ts"
+/>
 
 You can also pass `source` as a constructor option: `new AudioAnalyser({ source: app.audio.music, fftSize: 1024 })`. Either form works; the setter is useful when you need to switch sources at runtime. To analyse a single track in isolation, keep the `Voice` from `play()` and pass that instead of the bus.
 
@@ -69,20 +49,12 @@ The raw FFT returns N bins linearly spaced from 0 Hz to the Nyquist frequency (h
 
 The mel and log methods accept an optional `bands` parameter (default 32) and frequency range (`fMin`/`fMax`, default 20 Hz to 20 kHz, clamped to Nyquist). The filterbanks are built once per `(bands, fMin, fMax, fftSize)` combination and cached on the analyser instance — subsequent calls at the same parameters are just a weighted sum.
 
-```ts
-update(delta: Seconds) {
-    const mel32 = this.analyser.getSpectrumMel(null, { bands: 32 });
-    // mel32[0] is the lowest mel band, mel32[31] is the highest
-
-    const log64 = this.analyser.getSpectrumLog(null, { bands: 64 });
-    // log64[b] covers ~1/64 of the log2(fMax/fMin) octave range
-
-    // Quick band energy without building a filterbank
-    const bass = this.analyser.getBandEnergy(20, 250);
-    const { low, mid, high } = this.analyser.getLowMidHigh();
-    const overall = this.analyser.getRms();
-}
-```
+<SourceSnippet
+  source="examples/guides/audio-reactive-visualization/spectrum-bands.ts"
+  region="spectrum-bands"
+  language="ts"
+  title="examples/guides/audio-reactive-visualization/spectrum-bands.ts"
+/>
 
 ## Beat-driven animation: polling vs. events
 
@@ -90,23 +62,12 @@ update(delta: Seconds) {
 
 The event signals — `onBeat`, `onDownbeat`, `onBarStart`, `onTempoChange` — fire when the worklet processor detects a beat and dispatches a message to the main thread. Use them for one-shot side effects: spawning a particle burst, triggering a screen flash, advancing a sequencer:
 
-```ts
-import { Scene } from '@codexo/exojs';
-import { BeatDetector } from '@codexo/exojs-audio-fx';
-
-class BeatReactiveScene extends Scene {
-    private detector!: BeatDetector;
-    private flash = 0;
-
-    init() {
-        this.detector = new BeatDetector({ source: this.app.audio.music });
-        this.detector.onBeat.add(() => {
-            // Spawn particles or trigger another one-shot effect here.
-            this.flash = 0.3;
-        });
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/audio-reactive-visualization/beat-reactive.ts"
+  region="beat-reactive"
+  language="ts"
+  title="examples/guides/audio-reactive-visualization/beat-reactive.ts"
+/>
 
 For continuous animation — something that smoothly decays between beats rather than snapping — use the polling getters inside `update`:
 
@@ -120,28 +81,12 @@ For continuous animation — something that smoothly decays between beats rather
 
 These are all pure derivations from the detector's internal state — they do not allocate, do not fire events, and are safe to call every frame:
 
-```ts
-update(delta: Seconds) {
-    const beat = this.detector.pulse;
-    const downbeat = this.detector.barPulse;
-
-    // Smoothly scale a sprite on every beat
-    this.sprite.setScale(1 + beat * 0.25);
-
-    // Brighter tint on the downbeat
-    const greenBlue = Math.round(255 * (1 - 0.4 * downbeat));
-    this.sprite.tint = new Color(255, greenBlue, greenBlue, 1);
-
-    // Flash white exactly on beat
-    if (this.detector.justBeat) {
-        this.sprite.tint = Color.white;
-    }
-
-    // Animate something on 16th notes
-    const sub = this.detector.subdivisionPhase(4);
-    if (sub < 0.05) this.sixteenthFlash = 0.1;
-}
-```
+<SourceSnippet
+  source="examples/guides/audio-reactive-visualization/beat-visuals.ts"
+  region="beat-visuals"
+  language="ts"
+  title="examples/guides/audio-reactive-visualization/beat-visuals.ts"
+/>
 
 Tune the envelope shapes with the mutable public fields `pulseHalfLife`, `barPulseHalfLife`, and `justBeatWindow`. Smaller values give snappier responses; larger values give longer afterglow.
 
@@ -161,37 +106,12 @@ A scrolling spectrogram rewrites just one column per frame. `commitRect(x, y, wi
 
 A simple scrolling spectrogram:
 
-```ts
-init() {
-    this.analyser = new AudioAnalyser({ fftSize: 512 });
-    this.analyser.source = this.app.audio.music;
-
-    this.specTex = new DataTexture({
-        width: 256,    // scroll history in columns
-        height: 64,    // one row per mel band
-        format: TextureFormat.R8,
-    });
-
-    this.specSprite = new Sprite(this.specTex);
-    this.specSprite.setAnchor(0, 1);
-    this.specSprite.setPosition(0, this.app.height);
-
-    this.col = 0;
-}
-
-update(delta: Seconds) {
-    const bands = this.analyser.getSpectrumMel(null, { bands: 64 });
-    const buf = this.specTex.buffer;
-
-    // Write one column of spectrum data
-    for (let row = 0; row < 64; row++) {
-        buf[row * 256 + this.col] = bands[row];
-    }
-
-    this.specTex.commitRect(this.col, 0, 1, 64);
-    this.col = (this.col + 1) % 256;
-}
-```
+<SourceSnippet
+  source="examples/guides/audio-reactive-visualization/spectrogram.ts"
+  region="spectrogram"
+  language="ts"
+  title="examples/guides/audio-reactive-visualization/spectrogram.ts"
+/>
 
 For ring-buffer patterns where only the newest column changes, `commitRect(col, 0, 1, 64)` uploads just that one-pixel-wide column — cheaper than uploading the whole texture every frame.
 
@@ -199,74 +119,12 @@ For ring-buffer patterns where only the newest column changes, `commitRect(col, 
 
 Here is a complete scene that combines an analyser-driven bar graph with beat-triggered background color changes:
 
-```ts
-import { Asset, Application, AudioStream,
-    Color, Graphics, Scene } from '@codexo/exojs';
-import type { RenderingContext, Seconds } from '@codexo/exojs';
-import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
-
-class AudioReactiveScene extends Scene {
-    private music!: AudioStream;
-    private analyser!: AudioAnalyser;
-    private detector!: BeatDetector;
-    private bars!: Graphics;
-
-    async load() {
-        this.music = await this.loader.load(Asset.type('music', 'audio/track.ogg'));
-    }
-
-    init() {
-        const { width, height } = this.app;
-
-        this.app.audio.play(this.music, { loop: true });
-
-        // Both taps read the music bus the track plays through.
-        this.analyser = new AudioAnalyser({ source: this.app.audio.music, fftSize: 512 });
-        this.detector = new BeatDetector({ source: this.app.audio.music });
-
-        this.bars = new Graphics();
-        this.addChild(this.bars);
-
-        // The engine clears to this colour before `draw` runs, and
-        // `app.clearColor` is the backend's live instance — so mutating it is
-        // all it takes to animate the background.
-        this.app.clearColor.set(20, 24, 30, 1);
-    }
-
-    update(delta: Seconds) {
-        const bands = this.analyser.getSpectrumMel(null, { bands: 32 });
-        const { width, height } = this.app;
-        const barW = width / bands.length;
-
-        this.bars.clear();
-        for (let i = 0; i < bands.length; i++) {
-            const h = (bands[i] / 255) * height;
-            const t = i / Math.max(1, bands.length - 1);
-            this.bars.fillColor = new Color(
-                Math.round(255 * t),
-                Math.round(200 - 120 * t),
-                Math.round(255 - 180 * t),
-                1,
-            );
-            this.bars.drawRectangle(
-                i * barW, height - h,
-                barW - 1, h,
-            );
-        }
-
-        // Pulse the background on beat
-        this.app.clearColor.set(20, 24, Math.round(30 + this.detector.pulse * 60), 1);
-    }
-
-    draw(context: RenderingContext) {
-        context.render(this.bars);
-    }
-}
-
-const app = new Application({ scenes: { AudioReactiveScene }, canvas: { width: 800, height: 600, mount: document.body } });
-
-app.start(AudioReactiveScene);
-```
+<SourceSnippet
+  source="examples/guides/audio-reactive-visualization/full-visualizer.ts"
+  region="full-visualizer"
+  language="ts"
+  title="examples/guides/audio-reactive-visualization/full-visualizer.ts"
+/>
 
 ## Timing semantics
 

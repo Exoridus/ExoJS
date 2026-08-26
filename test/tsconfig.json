@@ -40,6 +40,12 @@
     "declaration": false,
     "declarationMap": false,
     "sourceMap": false,
+    // Several specs import the shared ESLint/Vitest/Rolldown presets from
+    // `@codexo/exojs-config`, which are plain ESM annotated with JSDoc because
+    // the tools that consume them load them at runtime. They are type-checked
+    // in `tsconfig.scripts.json`, which owns them; here they only have to be
+    // importable. This is the sole reason the test program overrides
+    // base.json's `allowJs: false` - no file under `test/` is JavaScript.
     "allowJs": true,
     "verbatimModuleSyntax": false,
     "isolatedModules": false,

@@ -3,41 +3,18 @@ title: 'Chords & sequences'
 description: 'Define simultaneous shortcuts and ordered command patterns on top of the frame-accurate action journal.'
 ---
 
+import SourceSnippet from '../../../components/SourceSnippet.astro';
+
 # Chords & sequences
 
 `ChordAction` and `SequenceAction` extend the named action layer for controls that need more than one button. They consume the same ordered input batches as `ButtonAction`, so several steps that happen between two frame boundaries are still observed in their real source-event order.
 
-```ts
-import { ActionMap, ChordAction, Scene, SequenceAction } from '@codexo/exojs';
-
-class GameScene extends Scene {
-    // Your own game objects — anything exposing these methods.
-    declare game: { save(): void };
-    declare player: { specialAttack(): void };
-
-    controls = new ActionMap({
-        save: new ChordAction('Control+S'),
-        special: new SequenceAction('Down>Down+Right>Right>A', {
-            maxGap: 250,
-            timeout: 1_200,
-        }),
-    });
-
-    init() {
-        this.inputs.attach(this.controls);
-    }
-
-    update() {
-        if (this.controls.save.pressed) {
-            this.game.save();
-        }
-
-        if (this.controls.special.triggered) {
-            this.player.specialAttack();
-        }
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/chords-and-sequences/combo-scene.ts"
+  region="chords-and-sequences"
+  language="ts"
+  title="examples/guides/chords-and-sequences/combo-scene.ts"
+/>
 
 `+` means simultaneous channels in one step; `>` advances to the next step; `|` alternates between whole alternatives within one step — see "Alternation" below. A single atomic platform batch never invents ordering: `A` and `B` entering together does not satisfy `A>B` — see below.
 

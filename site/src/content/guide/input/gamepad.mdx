@@ -4,6 +4,7 @@ description: 'Read controller input and support multiple connected gamepads.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import TryIt from '../../../components/TryIt.astro';
 import Callout from '../../../components/Callout.astro';
 
@@ -186,22 +187,12 @@ Aggregate channels are bipolar — they preserve the full signed range and apply
 
 Not every controller has every button or axis. A detached Joy-Con has no right stick; a basic pad has no paddles. Use `hasChannel()` to gate optional bindings:
 
-```ts
-init() {
-    const pad = this.app.input.getGamepad(0);
-    if (pad.hasChannel(GamepadAxis.RightStickX)) {
-        pad.onActive(GamepadAxis.RightStickX, value => {
-            this.camera.rotate(value * 2);
-        });
-    }
-
-    if (pad.hasChannel(GamepadButton.Paddle1)) {
-        pad.onActive(GamepadButton.Paddle1, value => {
-            this.player.dash();
-        });
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/gamepad/capability-probe.ts"
+  region="capability-probe"
+  language="ts"
+  title="examples/guides/gamepad/capability-probe.ts"
+/>
 
 Binding to a channel the pad doesn't declare is harmless — the listener simply never fires — but `hasChannel()` lets you offer alternative controls or skip setup entirely.
 
@@ -211,24 +202,12 @@ An action binds the semantic control — `GamepadButton.South`, not "player 2's
 South". Which physical pad it reads from is the owning `ActionMap`'s runtime
 context:
 
-```ts
-import { ActionMap, ButtonAction, GamepadAxis, GamepadButton, Scene, VectorAction } from '@codexo/exojs';
-
-const createPlayerActions = () => ({
-    jump: new ButtonAction(GamepadButton.South),
-    move: new VectorAction({ x: GamepadAxis.LeftStickX, y: GamepadAxis.LeftStickY }),
-});
-
-class VersusScene extends Scene {
-    init() {
-        const p1 = new ActionMap(createPlayerActions(), { gamepad: this.inputs.getGamepad(0) });
-        const p2 = new ActionMap(createPlayerActions(), { gamepad: this.inputs.getGamepad(1) });
-
-        this.inputs.attach(p1);
-        this.inputs.attach(p2);
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/gamepad/versus.ts"
+  region="two-players"
+  language="ts"
+  title="examples/guides/gamepad/versus.ts"
+/>
 
 The two maps are completely independent, and neither binding mentions a slot —
 which is exactly why both players can share one saved control scheme. A pad is
@@ -301,22 +280,12 @@ automatically if the browser turns out to normalise that device after all.
 
 The Web Gamepad API exposes dual-rumble actuators on most modern controllers. Check support and trigger effects:
 
-```ts
-init() {
-    const pad = this.app.input.getGamepad(0);
-    if (pad.canVibrate) {
-        pad.vibrate({
-            duration: 200,           // ms
-            weakMagnitude: 0.5,     // low-frequency rumble 0..1
-            strongMagnitude: 0.8,   // high-frequency rumble 0..1
-            startDelay: 0,
-        });
-    }
-
-    // Stop rumble early
-    pad.stopVibration();
-}
-```
+<SourceSnippet
+  source="examples/guides/gamepad/capability-probe.ts"
+  region="vibration"
+  language="ts"
+  title="examples/guides/gamepad/capability-probe.ts"
+/>
 
 `vibrate()` is async and resolves when the effect finishes or is cancelled. Call `stopVibration()` to cut a running effect short (e.g. when the player releases a trigger). Both methods are silent no-ops on unsupported hardware.
 
@@ -336,19 +305,12 @@ Per-pad bindings are the typical choice for game logic — the player number map
 
 The `gamepads` array is populated before `init` runs, but the browser's gamepad API only reports connected pads after a button press on some platforms (a browser security restriction). In `init`, check `app.input.connectedGamepads`; if empty, wait for the `onGamepadConnected` signal:
 
-```ts
-init() {
-    const pad = this.app.input.firstConnectedGamepad;
-
-    if (pad) {
-        this.bindPad(pad);
-    }
-
-    this.app.input.onGamepadConnected.add(p => {
-        if (!this._activePad) this.bindPad(p);
-    });
-}
-```
+<SourceSnippet
+  source="examples/guides/gamepad/capability-probe.ts"
+  region="hotplug"
+  language="ts"
+  title="examples/guides/gamepad/capability-probe.ts"
+/>
 
 ## Examples
 

@@ -4,6 +4,7 @@ description: 'How scenes split runtime work, switch with transitions, layer a UI
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import TryIt from '../../../components/TryIt.astro';
 import Callout from '../../../components/Callout.astro';
 
@@ -17,24 +18,12 @@ The split between application and scene matters: the application is the long-liv
 
 A scene is a class that extends `Scene`. Override the hooks you need; leave the rest at their defaults:
 
-```ts
-import { RenderingContext, Scene, type Seconds } from '@codexo/exojs';
-
-class TitleScene extends Scene {
-    init() {
-        // build state
-    }
-
-    update(delta: Seconds) {
-        // per-frame logic
-    }
-
-    draw(context: RenderingContext) {
-        // per-frame rendering
-        context.render(this.root);
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/scenes-and-lifecycle/title-scene.ts"
+  region="scene-hooks"
+  language="ts"
+  title="examples/guides/scenes-and-lifecycle/title-scene.ts"
+/>
 
 The application calls these hooks for you. You don't wire up `requestAnimationFrame` or manage your own loop — the scene tells the engine what to do at each phase, the engine schedules it.
 
@@ -44,14 +33,12 @@ Scene structure stays in your code. State lives on `this`, organized however you
 
 Register the scene's constructor and hand it to `app.start`; the application takes over:
 
-```ts
-import { Application, Scene } from '@codexo/exojs';
-
-class TitleScene extends Scene {}
-
-const app = new Application({ scenes: { TitleScene } });
-app.start(TitleScene);
-```
+<SourceSnippet
+  source="examples/guides/scenes-and-lifecycle/title-scene.ts"
+  region="run-a-scene"
+  language="ts"
+  title="examples/guides/scenes-and-lifecycle/title-scene.ts"
+/>
 
 From this point on, the application runs the scene's `update` and `draw` once per frame.
 
@@ -59,19 +46,12 @@ From this point on, the application runs the scene's `update` and `draw` once pe
 
 Most non-trivial projects have more than one scene. The application owns a scene director (`app.scenes`) that drives the active scene. Use `change` to swap in a new scene, and register scene constructors up front so `change` knows which classes are valid targets:
 
-```ts
-import { Application, FadeSceneTransition, Scene } from '@codexo/exojs';
-
-class GameScene extends Scene {}
-
-const app = new Application({ scenes: { GameScene } });
-
-// Replace the active scene with a fresh instance
-await app.scenes.change(GameScene);
-
-// Replace with a fade transition
-await app.scenes.change(GameScene, { transition: new FadeSceneTransition() });
-```
+<SourceSnippet
+  source="examples/guides/scenes-and-lifecycle/scene-switching.ts"
+  region="scene-switching"
+  language="ts"
+  title="examples/guides/scenes-and-lifecycle/scene-switching.ts"
+/>
 
 `change` ends the current scene — running `unload` and `destroy` — and starts a fresh instance of the target. The optional `transition` option (a `SceneTransition` instance, e.g. `FadeSceneTransition`) adds a brief cross-fade so the cut is not jarring.
 
@@ -81,23 +61,12 @@ For a typical app: a `MenuScene` calls `this.app.scenes.change(GameScene)` when 
 
 Every scene has a built-in `scene.ui` layer that sits screen-fixed above the scene's world content. Nodes added to `scene.ui` are always rendered on top — no explicit render call in `draw` required — and they are anchored relative to the canvas, not the world.
 
-```ts
-import { Label, ProgressBar, Scene } from '@codexo/exojs';
-
-class GameScene extends Scene {
-    private healthBar!: ProgressBar;
-
-    init() {
-        const title = new Label('Score: 0', { fontSize: 22 });
-        title.anchorIn(this.ui, 'top-left', 18, 14);
-        this.ui.addChild(title);
-
-        this.healthBar = new ProgressBar({ width: 240, height: 12, value: 1 });
-        this.healthBar.anchorIn(this.ui, 'top-left', 18, 48);
-        this.ui.addChild(this.healthBar);
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/scenes-and-lifecycle/hud-layer.ts"
+  region="scene-ui"
+  language="ts"
+  title="examples/guides/scenes-and-lifecycle/hud-layer.ts"
+/>
 
 `anchorIn(this.ui, anchor, offsetX, offsetY)` positions a node relative to a named corner or edge of the UI container. Available anchors: `'top-left'`, `'top'`, `'top-right'`, `'left'`, `'center'`, `'right'`, `'bottom-left'`, `'bottom'`, `'bottom-right'`. The offsets are in pixels.
 
@@ -109,41 +78,12 @@ To freeze a scene without leaving it — the canonical pause menu — call `app.
 
 A pause overlay is just nodes on `scene.ui` that you show and hide in response to the state change:
 
-```ts
-import { Keyboard, Label, Panel, Scene } from '@codexo/exojs';
-
-class GameScene extends Scene {
-    private pausePanel!: Panel;
-    private pauseLabel!: Label;
-
-    init() {
-        // Pause overlay — hidden until paused
-        this.pausePanel = new Panel({ width: 360, height: 120, cornerRadius: 12 });
-        this.pausePanel.anchorIn(this.ui, 'center');
-        this.pausePanel.visible = false;
-        this.ui.addChild(this.pausePanel);
-
-        this.pauseLabel = new Label('PAUSED', { fontSize: 48, fontWeight: 'bold' });
-        this.pauseLabel.anchorIn(this.ui, 'center');
-        this.pauseLabel.visible = false;
-        this.ui.addChild(this.pauseLabel);
-
-        this.inputs.onTrigger(Keyboard.Escape, () => this.togglePause());
-    }
-
-    togglePause() {
-        if (this.app.scenes.paused) {
-            this.app.scenes.resume();
-        } else {
-            this.app.scenes.pause();
-        }
-
-        const paused = this.app.scenes.paused;
-        this.pausePanel.visible = paused;
-        this.pauseLabel.visible = paused;
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/scenes-and-lifecycle/pause-overlay.ts"
+  region="pause-overlay"
+  language="ts"
+  title="examples/guides/scenes-and-lifecycle/pause-overlay.ts"
+/>
 
 Because `draw` still runs while paused, the world stays visible behind the overlay. Tweens and app-level systems that do not belong to the scene (for example, a blur tween running on `this.tweens`) continue animating while the scene is frozen.
 
@@ -175,18 +115,12 @@ You override the hooks you need. Empty hooks like `update` and `draw` do nothing
 
 The `load` hook is the async setup hook. Use it to register everything the scene needs and await the loader:
 
-```ts
-import { Scene } from '@codexo/exojs';
-
-class GameScene extends Scene {
-    async load() {
-        await Promise.all([
-            this.loader.load('image/hero.png'),
-            this.loader.load('image/ground.png'),
-        ]);
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/scenes-and-lifecycle/load-assets.ts"
+  region="load-hook"
+  language="ts"
+  title="examples/guides/scenes-and-lifecycle/load-assets.ts"
+/>
 
 The application doesn't call `init` until this promise resolves, so by the time you reach `init` everything you declared is ready.
 
@@ -194,14 +128,12 @@ The application doesn't call `init` until this promise resolves, so by the time 
 
 The `init` hook is where you create the scene's actual objects. Read a previously-loaded asset via `this.loader`:
 
-```ts
-init() {
-    this.hero = new Sprite(this.loader.get('image/hero.png'));
-    this.hero.setAnchor(0.5);
-    this.hero.setPosition(400, 300);
-    this.addChild(this.hero);
-}
-```
+<SourceSnippet
+  source="examples/guides/scenes-and-lifecycle/game-scene.ts"
+  region="init-hook"
+  language="ts"
+  title="examples/guides/scenes-and-lifecycle/game-scene.ts"
+/>
 
 The `init` hook runs once per scene-start. If you start the scene again later it runs again on the new instance, not on the old one.
 
@@ -209,11 +141,12 @@ The `init` hook runs once per scene-start. If you start the scene again later it
 
 `update` runs once per real frame, so its `delta` varies with the display's refresh rate and any hitches. `fixedUpdate` is the other logic hook: the engine runs it a constant number of times per second — independent of frame rate — before `update`:
 
-```ts
-fixedUpdate(delta: Seconds) {
-    this.world.step(delta);
-}
-```
+<SourceSnippet
+  source="examples/guides/scenes-and-lifecycle/game-scene.ts"
+  region="fixed-update"
+  language="ts"
+  title="examples/guides/scenes-and-lifecycle/game-scene.ts"
+/>
 
 Behind the scenes, the application accumulates each frame's elapsed time and drains it in fixed-size chunks — `1 / 60` s by default, configurable via `fixedTimeStep` (seconds) on the `Application` constructor options:
 
@@ -237,19 +170,12 @@ Because `fixedUpdate` calls don't line up one-to-one with rendered frames, there
 
 **`frameAlpha` is not applied automatically** — the scene graph never interpolates itself. It exists for you to read and use if you want smooth visual motion between fixed steps: keep the previous and current fixed-step positions and lerp between them by `frameAlpha` when you draw.
 
-```ts
-fixedUpdate() {
-    this.hero.prevX = this.hero.x;
-    this.world.step(1 / 60); // moves the body; the binding updates this.hero.x
-}
-
-draw(context: RenderingContext) {
-    const alpha = this.app.frameAlpha;
-    const renderX = this.hero.prevX + (this.hero.x - this.hero.prevX) * alpha;
-    this.hero.setPosition(renderX, this.hero.y);
-    context.render(this.root);
-}
-```
+<SourceSnippet
+  source="examples/guides/scenes-and-lifecycle/frame-alpha.ts"
+  region="frame-alpha"
+  language="ts"
+  title="examples/guides/scenes-and-lifecycle/frame-alpha.ts"
+/>
 
 If you don't need buttery-smooth motion, ignore `frameAlpha` — most scenes never touch it. It matters once the fixed step is coarser than the display's frame rate (say `fixedTimeStep: 1 / 30` on a 144 Hz screen), where skipping interpolation shows up as visible stutter on fast-moving objects.
 
@@ -257,11 +183,12 @@ If you don't need buttery-smooth motion, ignore `frameAlpha` — most scenes nev
 
 The `update` hook runs once per frame, before `draw`. The argument carries the elapsed time since the previous frame:
 
-```ts
-update(delta: Seconds) {
-    this.hero.rotate(120 * delta);
-}
-```
+<SourceSnippet
+  source="examples/guides/scenes-and-lifecycle/game-scene.ts"
+  region="update-hook"
+  language="ts"
+  title="examples/guides/scenes-and-lifecycle/game-scene.ts"
+/>
 
 Multiplying by `delta` keeps motion frame-rate independent. The same code runs identically at 60 fps and 144 fps.
 
@@ -269,11 +196,12 @@ Multiplying by `delta` keeps motion frame-rate independent. The same code runs i
 
 This is the hook with the most surprising default: **`draw` does nothing if you don't override it.** The engine never auto-traverses the scene graph for you.
 
-```ts
-draw(context: RenderingContext) {
-    context.render(this.root);
-}
-```
+<SourceSnippet
+  source="examples/guides/scenes-and-lifecycle/game-scene.ts"
+  region="draw-hook"
+  language="ts"
+  title="examples/guides/scenes-and-lifecycle/game-scene.ts"
+/>
 
 The `this.root` container is the scene's structural anchor — every node you add via `this.addChild(...)` is reachable from there. Calling `context.render(this.root)` walks the tree and draws every visible node in order.
 
@@ -283,15 +211,12 @@ ExoJS never auto-renders the tree. If `draw` is missing or omits `context.render
 
 The trade-off is that you can render selectively when you need to:
 
-```ts
-draw(context: RenderingContext) {
-    context.render(this.world);
-
-    if (this.showHud) {
-        context.render(this.hud);
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/scenes-and-lifecycle/selective-draw.ts"
+  region="selective-draw"
+  language="ts"
+  title="examples/guides/scenes-and-lifecycle/selective-draw.ts"
+/>
 
 For most scenes, one `context.render(this.root)` after `clear` is the right pattern. Reach for selective rendering when you have a reason — debug overlays you toggle, layers that sometimes skip a frame, render-to-texture targets.
 
@@ -301,17 +226,12 @@ When a frame grows into a sequence of distinct phases — render the world, capt
 
 Scenes receive input through `this.inputs`, which proxies to the application's input manager. Register bindings in `init`:
 
-```ts
-init() {
-    this.inputs.onTrigger(Keyboard.Space, () => {
-        this.player.jump();
-    });
-
-    this.inputs.onTrigger(Keyboard.Escape, () => {
-        this.togglePause();
-    });
-}
-```
+<SourceSnippet
+  source="examples/guides/scenes-and-lifecycle/game-scene.ts"
+  region="scene-input"
+  language="ts"
+  title="examples/guides/scenes-and-lifecycle/game-scene.ts"
+/>
 
 Bindings created on `this.inputs` are automatically disposed when the scene is destroyed — no manual cleanup required.
 

@@ -21,6 +21,7 @@ class LoadingProgressWithShaderScene extends Scene {
   private ring!: Sprite;
   private filter!: ShaderFilter;
 
+  // #region guide:progress-ring
   override init(): void {
     const app = this.app;
     const { width, height } = app;
@@ -41,6 +42,8 @@ class LoadingProgressWithShaderScene extends Scene {
     this.filter.setUniform('uProgress', this.progress.v);
     this.label.text = `${(this.progress.v * 100) | 0}%`;
   }
+
+  // #endregion guide:progress-ring
 
   override draw(context: RenderingContext): void {
     context.render(this.ring);

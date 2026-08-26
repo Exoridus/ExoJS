@@ -4,6 +4,7 @@ description: 'Render image-based content from textures, sheets, SVG, and video.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import TryIt from '../../../components/TryIt.astro';
 
 # Sprites
@@ -14,27 +15,12 @@ A [`Sprite`](/ExoJS/en/api/sprite/) is the primary drawable for textured quads â
 
 A sprite needs a texture. The shortest path from file to visible quad:
 
-```ts
-import { Scene, Sprite } from '@codexo/exojs';
-import type { RenderingContext } from '@codexo/exojs';
-
-class MyScene extends Scene {
-    private hero!: Sprite;
-
-    async load() {
-        await this.loader.load('image/hero.png');
-    }
-
-    init() {
-        this.hero = new Sprite(this.loader.get('image/hero.png'));
-        this.addChild(this.hero);
-    }
-
-    draw(context: RenderingContext) {
-        context.render(this.root);
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/sprites/hero-scene.ts"
+  region="hero-scene"
+  language="ts"
+  title="examples/guides/sprites/hero-scene.ts"
+/>
 
 The sprite's rendered size defaults to the texture's pixel dimensions. The sprite draws a quad from `(0, 0)` to `(texture.width, texture.height)` in local space.
 
@@ -44,16 +30,12 @@ A sprite's position places its anchor point in the parent's coordinate space. By
 
 `setAnchor(0.5)` centers the anchor at the sprite's middle, making `setPosition(400, 300)` place the sprite's center at `(400, 300)`:
 
-```ts
-init() {
-    const { width, height } = this.app;
-
-    this.hero = new Sprite(this.loader.get('image/hero.png'));
-    this.hero.setAnchor(0.5);
-    this.hero.setPosition(width / 2, height / 2);
-    this.addChild(this.hero);
-}
-```
+<SourceSnippet
+  source="examples/guides/sprites/hero-scene.ts"
+  region="anchor-center"
+  language="ts"
+  title="examples/guides/sprites/hero-scene.ts"
+/>
 
 `setAnchor(x, y)` accepts two arguments for separate horizontal and vertical anchors. A value of 0 is left/top, 0.5 is center, 1 is right/bottom.
 
@@ -61,10 +43,12 @@ init() {
 
 `sprite.width` and `sprite.height` report the rendered pixel dimensions (texture frame size multiplied by absolute scale). Setting them adjusts the scale to match:
 
-```ts
-this.hero.width = 64;  // scale.x becomes 64 / textureFrame.width
-this.hero.height = 64; // scale.y becomes 64 / textureFrame.height
-```
+<SourceSnippet
+  source="examples/guides/sprites/hero-scene.ts"
+  region="size-from-scale"
+  language="ts"
+  title="examples/guides/sprites/hero-scene.ts"
+/>
 
 `setScale(x, y)` sets raw scale factors. A scale of `(2, 2)` doubles the sprite's visual size; `(-1, 1)` mirrors it horizontally.
 

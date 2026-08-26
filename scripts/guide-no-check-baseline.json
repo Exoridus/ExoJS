@@ -1,29 +1,4 @@
 {
   "note": "Per-guide budget of `no-check` code blocks with no recorded reason (```ts no-check -- <reason>). A no-check block silences the guide typecheck gate entirely, so a bare no-check with nothing after it must be spending down this frozen, file-scoped budget, not a fresh, unreviewed decision. The count may only go down; both an increase and an un-recorded decrease fail `pnpm typecheck:guides:no-check`. Run `pnpm typecheck:guides:no-check:update-baseline` to record a decrease (adding a reason, or removing the block, both shrink it). A guide with no such blocks is absent from this file.",
-  "files": {
-    "assets/aseprite.mdx": 6,
-    "assets/ldtk.mdx": 9,
-    "assets/loading-and-resources.mdx": 5,
-    "assets/tiled-maps.mdx": 13,
-    "audio/audio-basics.mdx": 1,
-    "audio/audio-effects.mdx": 1,
-    "audio/spatial-audio.mdx": 1,
-    "debugging/authoring-extensions.mdx": 3,
-    "debugging/custom-renderers.mdx": 1,
-    "effects/custom-mesh-shaders.mdx": 1,
-    "effects/filters.mdx": 2,
-    "effects/particles.mdx": 4,
-    "getting-started/resize-dpr-and-canvas.mdx": 1,
-    "input/keyboard-and-actions.mdx": 1,
-    "integrations/react.mdx": 6,
-    "physics/joints-and-dynamics.mdx": 2,
-    "physics/physics-basics.mdx": 2,
-    "recipes/build-orb-dodge.mdx": 1,
-    "recipes/cinematics.mdx": 4,
-    "recipes/gameplay-collision.mdx": 1,
-    "rendering/animation.mdx": 1,
-    "rendering/immediate-mode.mdx": 5,
-    "shipping/deployment.mdx": 2,
-    "shipping/troubleshooting.mdx": 3
-  }
+  "files": {}
 }

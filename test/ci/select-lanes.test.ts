@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { effectiveLanes, selectAreas } from '../../scripts/ci/select-lanes.mjs';
+import { effectiveLanes, selectAreas } from '../../scripts/ci/select-lanes.ts';
 
 // Deterministic coverage for the CI path-to-lane policy. The logic under test is
-// scripts/ci/select-lanes.mjs - the SAME module the "Detect changes" job in
+// scripts/ci/select-lanes.ts - the SAME module the "Detect changes" job in
 // .github/workflows/_ci-checks.yml runs - so these assertions exercise the real
 // lane-selection decision, not a copy of it.
 

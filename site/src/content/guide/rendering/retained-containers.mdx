@@ -4,6 +4,7 @@ description: 'Declare a large, mostly-static subtree as a RetainedContainer so i
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import Callout from '../../../components/Callout.astro';
 
 # Retained containers
@@ -45,24 +46,12 @@ const decor = new RetainedContainer();
 
 Fill it once with static children, add it to your scene, and move only the group:
 
-```ts
-init() {
-    this.decor = new RetainedContainer();
-
-    for (const tile of this.level.decorTiles) {
-        const sprite = new Sprite(this.atlas);
-        sprite.setPosition(tile.x, tile.y);
-        this.decor.addChild(sprite);
-    }
-}
-
-draw(context: RenderingContext) {
-    // Panning the camera over the world is ONE group-matrix update — no
-    // descendant transform is recomputed, no child is re-collected.
-    this.decor.setPosition(-this.cameraX, -this.cameraY);
-    context.render(this.decor);
-}
-```
+<SourceSnippet
+  source="examples/guides/retained-containers/decor-layer.ts"
+  region="retained-layer"
+  language="ts"
+  title="examples/guides/retained-containers/decor-layer.ts"
+/>
 
 ## Transform semantics: group-local space
 
@@ -74,14 +63,12 @@ The speed comes from a deliberate trade: descendants of an engaged group resolve
 
 For a true world-space position or orientation of a node inside the group — picking, spatial audio, physics, any math against nodes outside the group — use [`getWorldTransform()`](/ExoJS/en/api/scene-node/), which composes through the group boundary and returns the real world matrix:
 
-```ts
-update() {
-    // getBounds() here is group-local. For a real world position, compose
-    // through the boundary:
-    const worldMatrix = this.enemyInsideGroup.getWorldTransform();
-    this.enemyVoice.setPosition(worldMatrix.tx, worldMatrix.ty);
-}
-```
+<SourceSnippet
+  source="examples/guides/retained-containers/decor-layer.ts"
+  region="group-local-bounds"
+  language="ts"
+  title="examples/guides/retained-containers/decor-layer.ts"
+/>
 
 <Callout type="warning" title="getBounds() inside a group is group-local">
 This is the one behavioural surprise of the tier. If you read a child's `getBounds()` and expect world coordinates, you will be off by the group's transform. `getWorldTransform()` is the escape hatch, and it is exact — it accounts for group engage/disengage flips too.

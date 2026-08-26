@@ -42,7 +42,7 @@ const nodeArgs = (count: number): string[] => [
   '--max-old-space-size=8192',
   '--conditions=@codexo/exojs-source',
   '--import',
-  './scripts/glsl-register.mjs',
+  './scripts/glsl-register.ts',
   '--import',
   'tsx/esm',
   CELL,

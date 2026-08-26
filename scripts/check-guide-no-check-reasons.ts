@@ -13,18 +13,18 @@
  * reason", frozen at the count measured when this gate shipped - see
  * `guide-no-check-baseline.json`.
  *
- * Deliberately NOT a hard "every no-check needs a reason, starting today"
- * rule: none of the pre-existing no-check blocks carried one yet when this
- * gate was written, and retrofitting all of them is follow-up work, not this
- * gate (converting guide content is explicitly out of scope here). Instead:
+ * The budget shape survives the retrofit that emptied it, because it is what
+ * makes the rule enforceable in both directions:
  *   - A NEW no-check-without-reason block pushes its file's count over the
  *     recorded budget -> ratchet regression -> fails, exactly like `partial`.
  *   - Giving an EXISTING no-check block a reason removes it from the count,
  *     shrinking the budget -> improvement -> `--update-baseline` records it.
- *   - A no-check block WITH a reason never counts against the budget at all,
- *     new or old - so the practical effect is "a no-check needs a reason
- *     unless you are (knowingly) spending down inherited, reviewed debt in
- *     that same file."
+ *   - A no-check block WITH a reason never counts against the budget at all.
+ *
+ * Every no-check block in the guide now carries a reason, so the baseline is
+ * empty and the practical rule is the hard one: a no-check needs a reason.
+ * A file reappears in the baseline only if someone deliberately records new
+ * reason-less debt there.
  *
  * This does not replace `extract-guide-snippets.ts`'s own `no-check` handling
  * (a plain `meta.includes('no-check')` check) - a reason sits right after

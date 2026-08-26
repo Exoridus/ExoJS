@@ -4,6 +4,7 @@ description: 'Add feedback cues that make interaction feel responsive.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import Callout from '../../../components/Callout.astro';
 
 # Game feel
@@ -18,28 +19,12 @@ When the player takes damage, flash the sprite red for a fraction of a second an
 `Drawable.tint` multiplies the drawable's own output in the sprite shader — no render target, no extra pass. Reach for `ColorMatrixFilter` when the flash has to cover a whole subtree as one image, or when it is more than a multiply.
 </Callout>
 
-```ts
-init() {
-    this.player = new Sprite(this.loader.get('image/hero.png'));
-    this.flashColor = Color.white.clone();
-
-    this.onDamage = new Signal();
-    this.onDamage.add(() => {
-        // Flash red instantly
-        this.flashColor.set(255, 80, 80, 1);
-        // Tween back to white over 200ms
-        this.app.tweens.create(this.flashColor)
-            .to({ r: 255, g: 255, b: 255 }, 0.2)
-            .start();
-    });
-}
-
-update() {
-    // The tween moves the Color; handing it to setTint is what tells the
-    // renderer about it — mutating a live Color in place notifies nobody.
-    this.player.setTint(this.flashColor);
-}
-```
+<SourceSnippet
+  source="examples/guides/game-feel/damage-flash.ts"
+  region="damage-flash"
+  language="ts"
+  title="examples/guides/game-feel/damage-flash.ts"
+/>
 
 The key insight: the tint multiplies the sprite's rendered output. White (`[255, 255, 255, 1]`) is identity — no tint. Red mutes green and blue. The tween interpolates the `r`, `g`, `b` components of the `Color` object back to 255 over 200ms, producing a smooth recovery.
 
@@ -47,15 +32,12 @@ The key insight: the tint multiplies the sprite's rendered output. White (`[255,
 
 `View.shake(intensity, durationMs, { frequency, decay })` is the simplest feedback effect in ExoJS. Fire it on any dramatic event:
 
-```ts
-this.app.input.onPointerTap.add(pointer => {
-    // Position the burst at the click location (relative to system position)
-    this.burstPos.set(pointer.x - this.particles.position.x, pointer.y - this.particles.position.y);
-    this.burst.reset();
-    // Shake the view: 22px intensity, 280ms, 26Hz oscillation, with decay
-    this.view.shake(22, 280, { frequency: 26, decay: true });
-});
-```
+<SourceSnippet
+  source="examples/guides/game-feel/screen-shake.ts"
+  region="screen-shake"
+  language="ts"
+  title="examples/guides/game-feel/screen-shake.ts"
+/>
 
 Combine it with a particle burst for a complete explosion feel — particles provide the visual debris, the shake provides the impact. The shake displaces the view center; the particles render inside that view, so they move with the shake. The effect is coherent: the whole scene rattles.
 
@@ -63,29 +45,12 @@ Combine it with a particle burst for a complete explosion feel — particles pro
 
 Tweens are the workhorse of game feel. A few reusable patterns:
 
-```ts
-// Scale punch — grow on hit, settle back
-this.app.tweens.create(this.sprite.scale)
-    .to({ x: 1.4, y: 1.4 }, 0.08)
-    .yoyo()
-    .repeat(1)
-    .easing(Ease.cubicOut)
-    .start();
-
-// Tilt wobble — oscillate rotation
-this.app.tweens.create(this.sprite)
-    .to({ rotation: 8 }, 0.06)
-    .easing(Ease.cubicOut)
-    .yoyo()
-    .repeat(2)
-    .start();
-
-// Fade flash — full white overlay that fades out
-this.overlay.tint.a = 1;
-this.app.tweens.create(this.overlay.tint)
-    .to({ a: 0 }, 0.3)
-    .start();
-```
+<SourceSnippet
+  source="examples/guides/game-feel/damage-flash.ts"
+  region="tween-punch"
+  language="ts"
+  title="examples/guides/game-feel/damage-flash.ts"
+/>
 
 Each pattern is fire-and-forget — call `.start()` inside an event handler and the tween runs to completion. No per-frame tracking, no cleanup. The existing tween manager handles all active tweens each frame.
 
@@ -93,28 +58,12 @@ Each pattern is fire-and-forget — call `.start()` inside an event handler and 
 
 For held actions — thrust, charging, spinning up — continuous feedback creates presence:
 
-```ts
-update(delta: Seconds) {
-    const thrustMag = Math.hypot(this.thrust.x, this.thrust.y);
-
-    if (thrustMag > 0.05) {
-        // Particles trail behind the ship
-        this.rate.value = 900 * thrustMag;
-        this.particles.setPosition(
-            this.ship.x - Math.cos(this.angle) * 28,
-            this.ship.y - Math.sin(this.angle) * 28,
-        );
-
-        // Audio hum scales with thrust
-        this.engine.volume = 0.08 + thrustMag * 0.32;
-    } else {
-        this.rate.value = 0;
-        this.engine.volume = 0;
-    }
-
-    this.particles.update(delta);
-}
-```
+<SourceSnippet
+  source="examples/guides/game-feel/thrust.ts"
+  region="thrust-feedback"
+  language="ts"
+  title="examples/guides/game-feel/thrust.ts"
+/>
 
 A `RateSpawn` with a `Constant` rate lets you dynamically change `rate.value` each frame — the spawn module reads the current value, not a snapshot. The engine hum is a `Voice` from `this.app.audio.play(new AudioGenerator({ type: 'sawtooth', frequency: 90 }), { volume: 0 })`, with `this.engine.volume` tied to thrust magnitude each frame. The combined effect: moving produces particles and sound; stopping kills both. The player *feels* the connection between input and response.
 
