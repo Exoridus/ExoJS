@@ -25,3 +25,5 @@ export const spawner = new MapObjectSpawner<GameContext, Enemy | Chest>({
   },
 });
 // #endregion guide:object-spawner
+
+export { Chest, Enemy };

@@ -4,6 +4,7 @@ description: 'Play sounds and music with reliable runtime controls.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import TryIt from '../../../components/TryIt.astro';
 import Callout from '../../../components/Callout.astro';
 
@@ -27,30 +28,12 @@ Use `Sound` when you need many overlapping instances of the same short clip. Use
 
 Both types are loaded through the `Loader`, like textures, then played through `app.audio`:
 
-```ts
-import { Asset, AudioStream, Scene, Sound } from '@codexo/exojs';
-import type { Voice } from '@codexo/exojs';
-
-class AudioScene extends Scene {
-    private laser!: Sound;
-    private theme!: AudioStream;
-    private themeVoice!: Voice;
-
-    async load() {
-        const [laser, theme] = await Promise.all([
-            this.loader.load('audio/laser.ogg'),
-            this.loader.load(Asset.type('music', 'audio/theme.ogg')),
-        ]);
-        this.laser = laser;
-        this.theme = theme;
-    }
-
-    init() {
-        // Playing returns a live Voice — keep it to control this instance.
-        this.themeVoice = this.app.audio.play(this.theme, { loop: true, volume: 0.6 });
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/audio-basics/audio-scene.ts"
+  region="audio-scene"
+  language="ts"
+  title="examples/guides/audio-basics/audio-scene.ts"
+/>
 
 A `Sound` is a data descriptor that holds a decoded buffer; each `app.audio.play(sound)` creates an independent pooled `Voice`, so overlapping concurrent playback is just multiple voices. An `AudioStream` has one `HTMLAudioElement` and therefore one playhead — playing it again stops the previous voice and returns a fresh one.
 

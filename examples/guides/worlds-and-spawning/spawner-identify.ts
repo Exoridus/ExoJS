@@ -9,3 +9,5 @@ export const eliteAware = new MapObjectSpawner<void, Enemy>(
   { identify: object => `${object.kind}:${String(object.properties.variant)}` },
 );
 // #endregion guide:custom-identify
+
+export { Enemy };

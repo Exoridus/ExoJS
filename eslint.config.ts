@@ -1043,11 +1043,13 @@ export default defineConfig([
       'unused-imports/no-unused-imports': 'error',
       '@typescript-eslint/no-empty-function': 'error',
       '@typescript-eslint/no-unused-vars': 'off',
-      // A guide listing shows the hook signature the reader has to write, so a
-      // skeleton whose body ignores its own `delta` is the point rather than an
-      // oversight - renaming it `_delta` would put the workaround in the
-      // documentation. Unused module-level values are still reported.
-      'unused-imports/no-unused-vars': ['error', { args: 'none', varsIgnorePattern: '^_' }],
+      // A guide listing shows the reader what to write, and stops there: the
+      // hook skeleton ignores its own `delta`, the analyser listing names the
+      // four values it demonstrates and reads none of them. Renaming those to
+      // `_delta` and `_low` would put the workaround in the documentation, so
+      // unused bindings are allowed here. A stale IMPORT is still an error -
+      // that one is drift, not narration.
+      'unused-imports/no-unused-vars': 'off',
       curly: 'error',
       eqeqeq: ['error', 'always', { null: 'ignore' }],
       'no-console': 'error',

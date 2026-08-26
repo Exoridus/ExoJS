@@ -4,6 +4,7 @@ description: 'Shape sound with filters and bus-level processing.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import Callout from '../../../components/Callout.astro';
 
 # Audio effects
@@ -74,12 +75,12 @@ application.audio.master.addEffect(compressor);
 
 All properties are live get/set. The `compressor.reduction` getter returns the current gain reduction in dB (always ≤ 0) — useful for live level metering:
 
-```ts
-update(delta: Seconds) {
-    const gr = this.compressor.reduction;
-    this.meterBar.height = Math.abs(gr) * 10; // scale to pixels
-}
-```
+<SourceSnippet
+  source="examples/guides/audio-effects/compressor-meter.ts"
+  region="compressor-meter"
+  language="ts"
+  title="examples/guides/audio-effects/compressor-meter.ts"
+/>
 
 ## ReverbEffect and DelayEffect
 

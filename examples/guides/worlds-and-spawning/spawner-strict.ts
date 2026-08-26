@@ -6,3 +6,5 @@ class Enemy extends Container {}
 
 export const strict = new MapObjectSpawner<void, Enemy>({ Enemy: () => new Enemy() }, { unknown: 'error' });
 // #endregion guide:unknown-error
+
+export { Enemy };
