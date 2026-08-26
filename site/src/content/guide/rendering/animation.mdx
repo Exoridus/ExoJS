@@ -4,6 +4,7 @@ description: 'Animate transforms and values with tweens and frame updates.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # Animation
 
@@ -19,18 +20,12 @@ All three can coexist in one scene. Use tweens for UI transitions and canned mot
 
 A [`Tween`](/ExoJS/en/api/tween/) interpolates numeric properties on any target object from their current value to configured end values over a duration in seconds. Create one through `app.tweens.create(target)`, configure it fluently, and call `start()`:
 
-```ts
-init() {
-    this.sprite = new Sprite(this.loader.get('image/hero.png'));
-    this.sprite.setAnchor(0.5);
-    this.sprite.setPosition(100, 300);
-
-    this.app.tweens.create(this.sprite.position)
-        .to({ x: 700 }, 1.5)
-        .easing(Ease.cubicInOut)
-        .start();
-}
-```
+<SourceSnippet
+  source="examples/guides/animation/tween-scene.ts"
+  region="tween-init"
+  language="ts"
+  title="examples/guides/animation/tween-scene.ts"
+/>
 
 Start values are captured lazily on the first update after `start()`, so you can configure a tween in `init` and mutate the target between construction and `start()` without affecting the baseline.
 
@@ -184,14 +179,12 @@ Reach for `.chain()` when you already have two tween references and just need on
 
 Calling `start()` on an active tween restarts it from zero. To replace a running animation cleanly, stop the old tween and start a new one on the same target:
 
-```ts
-// Interrupt the current move and slide to a new position
-this._activeTween?.stop();
-this._activeTween = this.app.tweens.create(this.sprite.position)
-    .to({ x: this._newTarget }, 0.3)
-    .easing(Ease.cubicOut)
-    .start();
-```
+<SourceSnippet
+  source="examples/guides/animation/tween-scene.ts"
+  region="tween-interrupt"
+  language="ts"
+  title="examples/guides/animation/tween-scene.ts"
+/>
 
 ### Only numeric properties interpolate
 
@@ -297,18 +290,12 @@ Playback advances by itself. Once the sprite is part of the scene tree, the engi
 `AnimationManager` (`app.animations`) ticks every playing `AnimatedSprite` once per frame — there is
 nothing to call from your own `update`:
 
-```ts
-import { AnimatedSprite, Scene } from '@codexo/exojs';
-
-class Level extends Scene {
-    private player!: AnimatedSprite;
-
-    override init(): void {
-        this.addChild(this.player);
-        this.player.play('walk'); // advances automatically from here on
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/animation/tween-scene.ts"
+  region="animated-sprite-scene"
+  language="ts"
+  title="examples/guides/animation/tween-scene.ts"
+/>
 
 A sprite you never add to the tree — one drawn immediate-mode via `context.render(sprite)` — has no
 owning application to reach, so drive it yourself with `update(deltaSeconds)`. The argument is

@@ -4,6 +4,7 @@ description: 'Render into intermediate textures and reuse those outputs in scene
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # Render targets
 
@@ -38,23 +39,12 @@ Default sampler settings — linear filtering, clamp-to-edge wrapping, premultip
 
 Set the render target on the backend, draw normally, then restore the canvas:
 
-```ts
-init() {
-    const backend = this.app.backend;
-
-    this.offscreen = new RenderTexture(256, 256);
-
-    // Redirect rendering to the off-screen target
-    backend.setRenderTarget(this.offscreen);
-
-    backend.clear();
-    this.someSprite.render(backend);
-    this.someContainer.render(backend);
-
-    // Restore the canvas
-    backend.setRenderTarget(null);
-}
-```
+<SourceSnippet
+  source="examples/guides/render-targets/offscreen.ts"
+  region="render-offscreen"
+  language="ts"
+  title="examples/guides/render-targets/offscreen.ts"
+/>
 
 Everything between `setRenderTarget(rt)` and `setRenderTarget(null)` draws into the `RenderTexture` instead of the canvas. The `clear()` call clears the render texture, not the canvas. After restoring the canvas, the `RenderTexture` holds the result as a sampled texture.
 
@@ -62,12 +52,12 @@ Everything between `setRenderTarget(rt)` and `setRenderTarget(null)` draws into 
 
 Once drawn, a `RenderTexture` can be assigned to any `Sprite`:
 
-```ts
-this.display = new Sprite(this.offscreen);
-this.display.setPosition(400, 300);
-this.display.setAnchor(0.5);
-this.addChild(this.display);
-```
+<SourceSnippet
+  source="examples/guides/render-targets/offscreen.ts"
+  region="display-target"
+  language="ts"
+  title="examples/guides/render-targets/offscreen.ts"
+/>
 
 The sprite displays the off-screen render as its texture. You can position, scale, rotate, tint, and filter it like any other sprite.
 
@@ -75,20 +65,12 @@ The sprite displays the off-screen render as its texture. You can position, scal
 
 The render-to-texture step typically happens once during `init` for static content, or inside `draw` for content that changes per frame:
 
-```ts
-draw(context: RenderingContext) {
-    // 1. Draw game world into the off-screen target
-    context.backend.setRenderTarget(this.offscreen);
-    context.backend.clear();
-    this.worldLayer.render(context.backend);
-    context.backend.setRenderTarget(null);
-
-    // 2. Draw the main scene — the off-screen result is now a texture.
-    //    The canvas itself was already cleared before `draw` ran.
-    context.render(this.display);
-    context.render(this.hud);
-}
-```
+<SourceSnippet
+  source="examples/guides/render-targets/offscreen.ts"
+  region="two-pass-draw"
+  language="ts"
+  title="examples/guides/render-targets/offscreen.ts"
+/>
 
 When a `RenderTexture` is used as the active render target, draw calls write into it directly. You do not need to call `updateSource()` after `setRenderTarget(null)`.
 
@@ -112,30 +94,12 @@ The `setSize()` method changes the texture dimensions. `powerOfTwo` reports whet
 
 **Cached layers.** Render a complex, static container once into a `RenderTexture`, then display the result as a sprite. Subsequent frames skip the container's render tree entirely — one texture draw instead of N child draws:
 
-```ts
-init() {
-    this.buildComplexScene(); // builds this.staticLayer
-
-    this.cache = new RenderTexture(
-        Math.ceil(this.staticLayer.width),
-        Math.ceil(this.staticLayer.height),
-    );
-
-    const backend = this.app.backend;
-    backend.setRenderTarget(this.cache);
-    backend.clear();
-    this.staticLayer.render(backend);
-    backend.setRenderTarget(null);
-
-    this.cachedSprite = new Sprite(this.cache);
-    this.staticLayer.visible = false;
-}
-
-draw(context: RenderingContext) {
-    context.render(this.cachedSprite);
-    // ... dynamic content on top ...
-}
-```
+<SourceSnippet
+  source="examples/guides/render-targets/offscreen.ts"
+  region="cache-static-layer"
+  language="ts"
+  title="examples/guides/render-targets/offscreen.ts"
+/>
 
 **Mini-maps.** Render the full world from a zoomed-out view into a small `RenderTexture`, then display it scaled down in a corner sprite.
 

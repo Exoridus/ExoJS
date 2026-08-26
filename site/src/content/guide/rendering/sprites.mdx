@@ -4,6 +4,7 @@ description: 'Render image-based content from textures, sheets, SVG, and video.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import TryIt from '../../../components/TryIt.astro';
 
 # Sprites
@@ -14,27 +15,12 @@ A [`Sprite`](/ExoJS/en/api/sprite/) is the primary drawable for textured quads â
 
 A sprite needs a texture. The shortest path from file to visible quad:
 
-```ts
-import { Scene, Sprite } from '@codexo/exojs';
-import type { RenderingContext } from '@codexo/exojs';
-
-class MyScene extends Scene {
-    private hero!: Sprite;
-
-    async load() {
-        await this.loader.load('image/hero.png');
-    }
-
-    init() {
-        this.hero = new Sprite(this.loader.get('image/hero.png'));
-        this.addChild(this.hero);
-    }
-
-    draw(context: RenderingContext) {
-        context.render(this.root);
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/sprites/hero-scene.ts"
+  region="hero-scene"
+  language="ts"
+  title="examples/guides/sprites/hero-scene.ts"
+/>
 
 The sprite's rendered size defaults to the texture's pixel dimensions. The sprite draws a quad from `(0, 0)` to `(texture.width, texture.height)` in local space.
 

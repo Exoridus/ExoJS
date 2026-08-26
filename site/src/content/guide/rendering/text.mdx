@@ -4,6 +4,7 @@ description: 'Control layout, styling, and visual effects for runtime text.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # Text
 
@@ -38,31 +39,23 @@ label.style.fillColor = Color.tomato; // shader-side colour only — no atlas wo
 
 System fonts (Arial, Times New Roman, etc.) work immediately. For custom web fonts, load one via `Asset.type('font', ...)` in the scene's `load` hook — fonts aren't a seamless type, so a bare path isn't enough; an explicit descriptor is required even for a literal path, and `family` is a required option:
 
-```ts
-async load() {
-    await this.loader.load(Asset.type('font', 'font/MyFont.woff2', { family: 'MyFont' }));
-}
-
-init() {
-    this.title = new Text('Custom Font', {
-        fontFamily: 'MyFont',
-        fontSize: 48,
-        fillColor: Color.white,
-    });
-}
-```
+<SourceSnippet
+  source="examples/guides/text/custom-font.ts"
+  region="font-by-family"
+  language="ts"
+  title="examples/guides/text/custom-font.ts"
+/>
 
 Loading resolves to a `FontFace`, registered with the document's `document.fonts` set. Once loaded, it becomes available to all `Text` instances via the `fontFamily` style property.
 
 You can also hand the loaded face to the node directly through the `font` style option. `Text` registers it with `document.fonts` itself and rebuilds once it is ready, which removes the ordering requirement between loading and construction:
 
-```ts
-async load() {
-    const face = await this.loader.load(Asset.type('font', 'font/MyFont.woff2', { family: 'MyFont' }));
-
-    this.title = new Text('Custom Font', { font: face, fontSize: 48 });
-}
-```
+<SourceSnippet
+  source="examples/guides/text/custom-font.ts"
+  region="font-by-face"
+  language="ts"
+  title="examples/guides/text/custom-font.ts"
+/>
 
 `font` takes precedence over `fontFamily` when both are set.
 
@@ -170,13 +163,12 @@ A center-aligned text node at `(400, 20)` centers its glyphs horizontally around
 
 As a `Drawable`, `Text` carries position, rotation, scale, origin, and anchor like any other scene node. You can rotate text, tint the whole node, apply filters, and add it to a container — but not add children to it:
 
-```ts
-this.hud = new Container();
-this.scoreLabel = new Text('Score: 0', { fillColor: Color.white, fontSize: 24 });
-this.scoreLabel.setPosition(10, 10);
-this.hud.addChild(this.scoreLabel);
-this.addChild(this.hud);
-```
+<SourceSnippet
+  source="examples/guides/text/custom-font.ts"
+  region="hud-label"
+  language="ts"
+  title="examples/guides/text/custom-font.ts"
+/>
 
 The glyph geometry is not a child node — it lives on the `Text` itself as per-atlas-page quad data the text renderer consumes. Nothing you assign lays the text out on the spot: assigning `text.text`, `text.layout` or a whole new `text.style`, and mutating `style` fields (e.g. `text.style.fillColor = ...`), all just mark the geometry stale. Any number of changes in one frame coalesce into **at most one layout pass**, which runs the moment something reads the node — its bounds, its measurements, or the renderer's collect phase, whichever comes first. Assigning the same string is a no-op, so changing the text every frame only costs a pass on the frames it actually changes. `text.syncDirty()` forces the pass early, but you rarely need it: every read resolves on its own.
 
@@ -191,14 +183,12 @@ A laid-out string has **two honest sizes**, and picking the wrong one is the usu
 
 Use the advance to size a panel around a label or to position something next to it:
 
-```ts
-this.label = new Text('Ready', { fontSize: 24 });
-
-this.backdrop = new Panel({
-    width: this.label.textBounds.width + 16,
-    height: this.label.textBounds.height + 8,
-});
-```
+<SourceSnippet
+  source="examples/guides/text/custom-font.ts"
+  region="text-bounds"
+  language="ts"
+  title="examples/guides/text/custom-font.ts"
+/>
 
 Both reads resolve a pending layout pass first, so the number you get always reflects the changes you have made — including a style mutation on the line above.
 

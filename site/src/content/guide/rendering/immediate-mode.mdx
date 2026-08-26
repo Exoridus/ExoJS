@@ -4,6 +4,7 @@ description: 'Draw procedural geometry without a scene node using drawGeometry, 
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # Immediate-mode rendering
 
@@ -69,22 +70,12 @@ Build the geometry once in `Scene.init` and keep it — it carries no transform,
 
 `drawGeometry(geometry, transform, options?)` draws the geometry with `transform` as its raw world matrix. The matrix is taken verbatim as `a, b, c, d, tx, ty` — there is no position / rotation / scale / origin composition the way a node would apply. You build the world matrix yourself, which is the point: full control, zero overhead.
 
-```ts
-draw(context: RenderingContext) {
-    // A row of the same triangle, each at a different position, rotation,
-    // and scale. Each call is its own flush and its own draw call.
-    for (let i = 0; i < 5; i++) {
-        const angle = this.elapsed + i;
-        const cos = Math.cos(angle) * 1.5;
-        const sin = Math.sin(angle) * 1.5;
-        const x = 200 + i * 160;
-
-        // Row-major affine: a, b, tx, c, d, ty.
-        this.transform.set(cos, -sin, x, sin, cos, 360);
-        context.drawGeometry(this.triangle, this.transform, { tint: this.tints[i] });
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/immediate-mode/draw-calls.ts"
+  region="draw-geometry"
+  language="ts"
+  title="examples/guides/immediate-mode/draw-calls.ts"
+/>
 
 The optional third argument carries a `tint` ([`Color`](/ExoJS/en/api/color/)) multiplied into the vertex colors, a custom `material` (must target `'mesh'`), and a `view` override. Each `drawGeometry` is flushed immediately, so it lands in call order relative to the surrounding `render` and `drawGeometry` calls — a shape drawn later layers on top. Because it flushes per call, `drawGeometry` is best for a handful of shapes; for many like items, batch them.
 
@@ -109,22 +100,12 @@ const batch = new RenderBatch(sparkGeometry);
 
 Each frame, rebuild the instances and submit the batch. `clear` resets the instance count but **keeps** the pooled per-instance storage, so a steady-state batch allocates nothing across frames. `add` **copies** the transform and tint, so you can reuse one scratch `Matrix` for every instance:
 
-```ts
-draw(context: RenderingContext) {
-    this.batch.clear();
-    for (const spark of this.sparks) {
-        const x = this.centerX + Math.cos(spark.angle) * spark.radius;
-        const y = this.centerY + Math.sin(spark.angle) * spark.radius;
-
-        // One scratch matrix, rewritten and copied into the batch per instance.
-        this.scratch.set(spark.scale, 0, x, 0, spark.scale, y);
-        this.batch.add(this.scratch, spark.tint);
-    }
-
-    // Every instance ships as ONE instanced draw call.
-    context.drawBatch(this.batch);
-}
-```
+<SourceSnippet
+  source="examples/guides/immediate-mode/draw-calls.ts"
+  region="draw-batch"
+  language="ts"
+  title="examples/guides/immediate-mode/draw-calls.ts"
+/>
 
 Two things worth knowing:
 

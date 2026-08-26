@@ -4,6 +4,7 @@ description: 'Leave width and height off a TileLayer and let a ChunkStreamer kee
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import Callout from '../../../components/Callout.astro';
 
 # Infinite maps
@@ -38,38 +39,12 @@ Because there is no finite extent, there is nothing to clamp a camera to. Do not
 
 A `ChunkStreamer` watches a `View` and keeps the chunks near it resident: chunks that scroll into range are requested from a `ChunkSource` and installed, chunks that scroll far enough away are evicted. It touches only the layer's data — the tilemap scene node reacts to adopt/evict on its own — so it has no rendering dependency. Construct one with the layer, a source, and the view, then tick it once per frame from your update loop:
 
-```ts
-import { View } from '@codexo/exojs';
-import { ChunkStreamer, createSampledChunkSource, TileLayer } from '@codexo/exojs-tilemap';
-
-const terrain = new TileLayer({ id: 1, name: 'terrain', tileWidth: 64, tileHeight: 64, tilesets: [] });
-const view = new View(0, 0, 1280, 720);
-
-// Any ChunkSource works; the next section builds a real procedural one. This
-// placeholder leaves every chunk empty.
-const source = createSampledChunkSource(terrain, {
-    sample: () => 0,
-    mapValueToTile: () => null,
-});
-
-// loadRadius / unloadRadius are a hysteresis band (defaults 1 / 2). The gap
-// between them prevents load/unload thrashing when the view sits on a chunk
-// boundary. unloadRadius must be >= loadRadius or the constructor throws.
-const streamer = new ChunkStreamer(terrain, source, view, {
-    loadRadius: 2,
-    unloadRadius: 3,
-    maxChunkLoadsPerFrame: 8,
-});
-
-// Tick from update(). The very first call loads the whole initial wanted set
-// unbudgeted, so the starting screen never pops in; every later call is
-// capped at maxChunkLoadsPerFrame (default 8).
-streamer.update();
-
-// On teardown, destroy() evicts exactly the chunks this instance loaded —
-// nothing that predated it or another source installed. Idempotent.
-streamer.destroy();
-```
+<SourceSnippet
+  source="examples/guides/infinite-maps/chunk-streaming.ts"
+  region="chunk-streaming"
+  language="ts"
+  title="examples/guides/infinite-maps/chunk-streaming.ts"
+/>
 
 Chunks within `loadRadius` chunk-units (Chebyshev distance) of the visible range are loaded; own-resident chunks beyond `unloadRadius` are evicted. The `maxChunkLoadsPerFrame` budget spreads the cost of a fast camera across frames rather than loading an unbounded burst in one — with the deliberate exception of the first `update()`, which loads everything the starting view wants at once. The streamer tracks only its _own_ resident set, so several sources can coexist on one layer without fighting over each other's chunks.
 
