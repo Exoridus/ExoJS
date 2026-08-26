@@ -250,8 +250,8 @@ class PlayScene extends Scene {
     this.world?.destroy();
     super.destroy();
   }
-}
   // #endregion guide:play-destroy
+}
 
 // #region guide:game-over-scene
 interface GameOverData {
