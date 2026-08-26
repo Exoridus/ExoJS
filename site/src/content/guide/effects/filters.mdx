@@ -114,51 +114,12 @@ filter.setLut(differentLutTexture);
 
 `ShaderFilter` takes a fragment shader source per language and an optional uniforms map. It renders a fullscreen quad and executes the shader against the filter input texture, picking the source the active backend speaks:
 
-```ts no-check -- the shader sources are inline text and the update hook belongs to a scene the block does not show
-import { ShaderFilter } from '@codexo/exojs';
-
-const waveFilter = new ShaderFilter({
-    glsl: {
-        fragment: `
-            #version 300 es
-            precision mediump float;
-            uniform sampler2D uTexture;
-            uniform float uTime;
-            in vec2 vUv;
-            out vec4 fragColor;
-
-            void main() {
-                vec2 uv = vUv;
-                uv.y += sin(uv.x * 12.0 + uTime * 3.0) * 0.03;
-                fragColor = texture(uTexture, uv);
-            }
-        `,
-    },
-    wgsl: `
-        struct Uniforms { uTime: f32 };
-
-        @group(0) @binding(1) var uTexture: texture_2d<f32>;
-        @group(0) @binding(2) var uSampler: sampler;
-        @group(1) @binding(0) var<uniform> uniforms: Uniforms;
-
-        @fragment
-        fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
-            var uv = vUv;
-            uv.y += sin(uv.x * 12.0 + uniforms.uTime * 3.0) * 0.03;
-            return textureSample(uTexture, uSampler, uv);
-        }
-    `,
-    uniforms: { uTime: 0 },
-});
-
-sprite.filters = [waveFilter];
-
-// Update uniforms per frame
-update(delta) {
-    this._time += delta;
-    waveFilter.setUniform('uTime', this._time);
-}
-```
+<SourceSnippet
+  source="examples/guides/filters/wave-filter.ts"
+  region="wave-filter"
+  language="ts"
+  title="examples/guides/filters/wave-filter.ts"
+/>
 
 Both sources are optional on their own, but a filter is only portable when it carries both: `backend: 'auto'` decides which backend an application ends up on, and a filter missing that backend's language throws `ShaderFilterBackendError` the moment it is attached — before it compiles anything. Ask `filter.supports(backendType)` if you want to check first.
 

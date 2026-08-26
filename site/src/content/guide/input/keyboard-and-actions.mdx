@@ -25,21 +25,12 @@ The scene's `this.inputs` registry creates bindings that are automatically dispo
 
 Each returns an `InputBinding` you can call `.unbind()` on to detach early. The `threshold` option (in ms) overrides the 300 ms default for `onTrigger`:
 
-```ts no-check -- sketch of the reader's own scene; player and togglePause are its members, not the guide's
-import { Keyboard, Scene } from '@codexo/exojs';
-
-class GameScene extends Scene {
-    init() {
-        this.inputs.onTrigger(Keyboard.Space, () => {
-            this.player.jump();
-        });
-
-        this.inputs.onTrigger(Keyboard.Escape, () => {
-            this.togglePause();
-        }, { threshold: 200 });
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/keyboard-and-actions/trigger-threshold.ts"
+  region="trigger-threshold"
+  language="ts"
+  title="examples/guides/keyboard-and-actions/trigger-threshold.ts"
+/>
 
 For held-key patterns — movement, continuous actions — use `onActive`/`onStop` to track a boolean flag, then consume it in `update`:
 
