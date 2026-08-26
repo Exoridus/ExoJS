@@ -5,7 +5,7 @@
 #                 + guides + examples + extension packages), lint:all,
 #                 format:check, docs:api:check and the site gates. Then the test
 #                 lanes the pushed range actually requires, chosen by
-#                 `scripts/ci/select-lanes.mjs` — the same module CI's detector
+#                 `scripts/ci/select-lanes.ts` — the same module CI's detector
 #                 job uses, so the two agree by construction. `--tests-only`
 #                 drops the gate lanes verify:quick just ran, so nothing runs
 #                 twice.

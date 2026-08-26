@@ -27,6 +27,12 @@
   // with no toolchain behind them - node strips their types itself. The `.mjs`
   // include stays anyway, so a file that reappears in that form is checked
   // rather than silently outside the program again.
+  //
+  // `.mts` / `.cts` are listed for the same reason, and they need listing:
+  // TypeScript's `*.ts` glob does not match them, so a module-variant file was
+  // outside this program while looking like ordinary TypeScript to a reader -
+  // the one shape `lint:js-files` cannot catch either, because it is not
+  // JavaScript.
   "extends": "@codexo/exojs-config/typescript/base.json",
   "compilerOptions": {
     "lib": ["es2023"],
@@ -46,6 +52,14 @@
   // `node:` built-ins and runs before the competitor install exists, so it
   // belongs to this always-checked tooling program rather than to the bench
   // package's own, which cannot be type-checked without that install.
-  "include": ["scripts/**/*.ts", "scripts/**/*.mjs", "*.config.ts", "packages/exojs-config/**/*.js", "packages/exojs-bench/competitors/*.ts"],
+  "include": [
+    "scripts/**/*.ts",
+    "scripts/**/*.mts",
+    "scripts/**/*.cts",
+    "scripts/**/*.mjs",
+    "*.config.ts",
+    "packages/exojs-config/**/*.js",
+    "packages/exojs-bench/competitors/*.ts"
+  ],
   "exclude": ["scripts/exo-full.entry.ts"]
 }
