@@ -142,7 +142,12 @@ checked against the same program state, so prefer one file per chapter.
 These sources are part of the example catalog for tooling — `typecheck:examples`,
 ESLint and Prettier cover them — but not for the playground: they get no
 generated `.js` sibling, no `examples.json` entry, and are left out of the
-served example snapshot. A listing that is a fragment (a method body shown
+served example snapshot. The one exception is the React chapter: its
+listings live in `packages/exojs-react/examples/guides/*.tsx`, because React
+resolves through that package's own `node_modules` and the root package
+deliberately carries no `react` dependency. The package's `typecheck` script
+and its ESLint config cover them; `<SourceSnippet source>` is repo-root
+relative either way. A listing that is a fragment (a method body shown
 without its class, a value only the reader owns) stays a fenced block in the
 MDX; `pnpm typecheck:guides` checks those.
 

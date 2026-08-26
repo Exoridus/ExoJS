@@ -17,6 +17,7 @@
  *
  * Typecheck coverage:
  *   - examples/* → typecheck:examples
+ *   - packages/exojs-react/examples/* → the package's own typecheck script
  *   - packages/create-exo-app/templates/* → verify:create-exo-app
  *   - site/src/snippets/* → typecheck:guides (included via tsconfig.guides.json)
  */
