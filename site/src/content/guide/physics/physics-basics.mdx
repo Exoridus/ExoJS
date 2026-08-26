@@ -275,7 +275,7 @@ If you'd rather position things yourself, skip the binding and read the body's
 transform after each step — `body.x`, `body.y` (world position) and `body.angle`
 (radians):
 
-```ts no-check -- two-line sync fragment; sprite and body come from the loop above
+```ts no-check -- two-line sync fragment; sprite, body and MathUtils all come from the example above
 sprite.setPosition(body.x, body.y);
 sprite.setRotation(MathUtils.radiansToDegrees(body.angle));
 ```

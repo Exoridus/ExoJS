@@ -15,7 +15,7 @@ The model is deliberately small and **add-only**: an extension can only *contrib
 
 An [`Extension`](/ExoJS/en/api/extension/) is a plain, immutable descriptor. It holds **no** `Application`, backend, GPU, or loader instances — only *bindings* that describe how to build those things later. The registry reads it exactly once, at `Application` construction, and never touches it on a hot path.
 
-```ts no-check -- annotated Extension template; every field is a placeholder
+```ts
 import type { Extension } from '@codexo/exojs/extensions';
 
 const myExtension: Extension = {

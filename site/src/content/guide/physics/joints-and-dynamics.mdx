@@ -225,7 +225,7 @@ const world = new PhysicsWorld({
 Per body, opt a single body out with `allowSleep = false` (it, and its whole island, stay
 awake), read `isSleeping`, or force it awake with `wake()`:
 
-```ts no-check -- property tour of a body; member reads with no surrounding scope
+```ts
 body.allowSleep = false; // this body — and its island — never sleeps
 const resting = body.isSleeping; // true once it has come to rest
 body.wake(); // force it awake (e.g. before applying a scripted impulse)

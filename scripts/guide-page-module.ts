@@ -28,10 +28,12 @@
  *    type.
  *
  *  - **Values the prose owns.** `loader`, `app` and friends are introduced in
- *    prose and never declared in any block. They are declared `any`, the same
- *    convention the bare-block path already uses; every other unresolved name
- *    stays a hard error, because that is the typo/staleness signal this gate
- *    exists for.
+ *    prose and never declared in any block. They are declared with their REAL
+ *    engine types rather than `any`: a page that opens with
+ *    `const map = await loader.load(...)` would otherwise spend the rest of its
+ *    length reading members off `any`, which type-checks whatever the guide
+ *    claims. Every other unresolved name stays a hard error, because that is
+ *    the typo/staleness signal this gate exists for.
  *
  * A block that does not parse as a module (an object literal shown on its own,
  * a fragment cut mid-expression) is rejected here and stays a `partial` block
@@ -238,7 +240,7 @@ export interface PageModule {
  * a page use without ever declaring - they are declared `any` when a page reads
  * one it never introduced.
  */
-export const buildPageModule = (blocks: readonly PageBlock[], contextVars: readonly string[]): PageModule => {
+export const buildPageModule = (blocks: readonly PageBlock[], contextVars: Readonly<Record<string, string>>): PageModule => {
   const imports = new Map<string, ModuleImport>();
   const declarations = new Map<string, string>();
   const bodies: string[] = [];
@@ -350,11 +352,14 @@ export const buildPageModule = (blocks: readonly PageBlock[], contextVars: reado
   const imported = [...imports.values()].flatMap(entry => [...entry.defaults, ...entry.namespaces, ...entry.named.keys()]);
   const known = new Set([...declarations.keys(), ...imported]);
   const used = bodies.join('\n');
-  const ambient = contextVars
-    .filter(name => !known.has(name) && new RegExp(`(?<![.\\w$])${name}(?![\\w$])`).test(used))
-    .map(name => `declare const ${name}: any;`);
+  const ambient = Object.entries(contextVars)
+    .filter(([name]) => !known.has(name) && new RegExp(`(?<![.\\w$])${name}(?![\\w$])`).test(used))
+    .map(([name, type]) => `declare const ${name}: ${type};`);
 
-  const sections = [importLines.join('\n'), ambient.join('\n'), used].filter(section => section.length > 0);
+  // A page whose blocks import nothing is still a module: top-level `await` is
+  // legal only in one, and several pages open with an awaited load.
+  const moduleMarker = importLines.length === 0 ? ['export {};'] : [];
+  const sections = [importLines.join('\n'), ambient.join('\n'), used, ...moduleMarker].filter(section => section.length > 0);
 
   return { source: `${sections.join('\n\n')}\n`, accepted, rejected };
 };

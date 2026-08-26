@@ -148,10 +148,22 @@ const CONTROL_KEYWORDS = new Set(['if', 'for', 'while', 'switch', 'try', 'catch'
 
 // Values a guide page reads without ever declaring them, because the prose
 // introduced them: the scene's `loader`, the frame `delta`, the `app` itself.
-// The page module declares these `any` rather than reporting them, which is the
-// established convention for guide narrative. Every OTHER unresolved name stays
-// a hard error - that is the typo and the stale-API signal this gate exists for.
-const PAGE_CONTEXT_VARS = ['loader', 'delta', 'texture', 'app', 'scene'];
+// The page module declares these instead of reporting them, which is the
+// established convention for guide narrative - but with their real types, not
+// `any`. A page that opens with `const map = await loader.load(...)` and spends
+// the rest of its length reading members off `map` would otherwise be reading
+// members off `any`, and `any` type-checks whatever the guide claims, including
+// a property the engine dropped two releases ago.
+//
+// Every OTHER unresolved name stays a hard error - that is the typo and the
+// stale-API signal this gate exists for.
+const PAGE_CONTEXT_VARS = {
+  loader: "import('@codexo/exojs').Loader",
+  app: "import('@codexo/exojs').Application",
+  scene: "import('@codexo/exojs').Scene",
+  texture: "import('@codexo/exojs').Texture",
+  delta: 'number',
+};
 
 // Reserved words and common ambient globals excluded when scanning BARE
 // blocks for free identifiers that need a fallback `var x;` declaration

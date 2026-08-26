@@ -113,7 +113,7 @@ Asset load failures typically produce network errors in the browser's developer 
 
 **Vite `public/` path confusion.** Files in `public/` are served from the site root. A file at `public/assets/bunny.png` is available at `/assets/bunny.png`, not `public/assets/bunny.png`. Reference it without the `public/` prefix:
 
-```ts no-check -- path comparison; loader comes from the application above
+```ts
 await loader.load('assets/bunny.png'); // correct
 await loader.load('public/assets/bunny.png'); // wrong
 ```

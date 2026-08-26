@@ -64,7 +64,7 @@ A spawn module creates new particles each frame. Two built-in spawners cover the
 
 **`RateSpawn`** — continuous emission at a configurable rate (particles per second):
 
-```ts no-check -- continues the system above; system comes from it
+```ts
 import { Vector } from '@codexo/exojs';
 import { ConeDirection, Constant, RateSpawn, Range } from '@codexo/exojs-particles';
 
@@ -78,7 +78,7 @@ system.addSpawnModule(new RateSpawn({
 
 **`BurstSpawn`** — named bursts at scheduled times, with optional looping:
 
-```ts no-check -- continues the system above; system comes from it
+```ts
 import { Vector } from '@codexo/exojs';
 import { BurstSpawn, ConeDirection, Constant, Range } from '@codexo/exojs-particles';
 
@@ -129,7 +129,7 @@ A system takes the WGSL compute path when the backend is WebGPU and every update
 
 The frequently-used update modules:
 
-```ts no-check -- continues the system above; system comes from it
+```ts
 import { Color } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
