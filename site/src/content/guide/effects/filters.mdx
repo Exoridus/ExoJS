@@ -4,6 +4,7 @@ description: 'Stack shader and color effects to control final image style.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import Callout from '../../../components/Callout.astro';
 
 # Filters
@@ -205,23 +206,12 @@ sprite.filters = [new BlurFilter({ radius: 8 }), new BlurFilter({ radius: 4 })];
 
 Filters that only recolour what they are handed — `ColorMatrixFilter`, `LutFilter`, most custom shader filters — preserve their input bounds and need to do nothing. A custom filter that samples away from its own fragment should override `getOutputBounds` so its result is not clipped:
 
-```ts
-import { Filter, type ReadonlyRectangle, type Rectangle } from '@codexo/exojs';
-
-class GlowFilter extends Filter {
-  public constructor(public spread: number) {
-    super();
-  }
-
-  public override getOutputBounds(input: ReadonlyRectangle, output: Rectangle): void {
-    output.set(input.x - this.spread, input.y - this.spread, input.width + this.spread * 2, input.height + this.spread * 2);
-  }
-
-  public apply(): void {
-    // ...the glow passes
-  }
-}
-```
+<SourceSnippet
+  source="examples/guides/filters/glow-filter.ts"
+  region="custom-filter"
+  language="ts"
+  title="examples/guides/filters/glow-filter.ts"
+/>
 
 The edges move independently, so an effect that only reaches one way — a drop shadow — declares exactly that, and one that reduces its output declares that instead.
 

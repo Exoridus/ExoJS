@@ -10,3 +10,5 @@ class HelloScene extends Scene {
 const app = new Application({ scenes: { HelloScene } });
 app.start(HelloScene);
 // #endregion guide:start-loop
+
+export { HelloScene };

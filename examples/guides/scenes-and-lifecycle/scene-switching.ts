@@ -11,3 +11,5 @@ await app.scenes.change(GameScene);
 // Replace with a fade transition
 await app.scenes.change(GameScene, { transition: new FadeSceneTransition() });
 // #endregion guide:scene-switching
+
+export { GameScene };

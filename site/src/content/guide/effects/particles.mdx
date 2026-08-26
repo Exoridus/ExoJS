@@ -4,6 +4,7 @@ description: 'Spawn and tune particle systems for environmental and reactive eff
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import Callout from '../../../components/Callout.astro';
 
 # Particles
@@ -194,28 +195,12 @@ system.addDeathModule(new SpawnOnDeath(
 
 A custom death module receives that same information as a `ParticleDeathContext` — position, velocity, rotation, scale, colour and timing at the moment of death:
 
-```ts
-import { DeathModule, type ParticleDeathContext, type ParticleSystem } from '@codexo/exojs-particles';
-
-class SplashOnDeath extends DeathModule {
-    private readonly ripples: ParticleSystem;
-
-    constructor(ripples: ParticleSystem) {
-        super();
-        this.ripples = ripples;
-    }
-
-    override onDeath(_system: ParticleSystem, death: ParticleDeathContext): void {
-        const ripple = this.ripples.emit();
-
-        if (ripple) {
-            ripple.position.set(death.x, death.y);
-            ripple.velocity.set(death.velocityX * 0.25, death.velocityY * 0.25);
-            ripple.lifetime = 0.6;
-        }
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/particles/death-module.ts"
+  region="splash-on-death"
+  language="ts"
+  title="examples/guides/particles/death-module.ts"
+/>
 
 The context is a snapshot, not a view into the system: it is the same on both backends, stays valid for the whole callback, and carries no slot index because the slot may already hold a different particle by the time the callback runs. Delivery is exactly once per expired particle, but not necessarily in the frame it expired — a GPU-simulated death arrives with its readback, typically one frame later. Readbacks overlap, so frames that each report deaths do not queue behind one another; when the device falls far enough behind, deaths wait on the GPU and arrive with a later batch, still in the order they happened. Exactly-once holds while those waiting deaths fit the system's capacity; past that the excess is dropped instead of stalling the frame, and a development build warns once per system.
 
@@ -223,22 +208,12 @@ The context is a snapshot, not a view into the system: it is the same on both ba
 
 `ParticleSystem` is a `Drawable` — it renders itself when you call `context.render(system)` in `draw`. Call `system.update(delta)` in your scene's `update`:
 
-```ts
-import { type RenderingContext, Scene, type Seconds } from '@codexo/exojs';
-import { ParticleSystem } from '@codexo/exojs-particles';
-
-class ParticleScene extends Scene {
-    private system!: ParticleSystem;
-
-    override update(delta: Seconds): void {
-        this.system.update(delta);
-    }
-
-    override draw(context: RenderingContext): void {
-        context.render(this.system);
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/particles/particle-scene.ts"
+  region="particle-scene"
+  language="ts"
+  title="examples/guides/particles/particle-scene.ts"
+/>
 
 The update loop runs spawn modules, advances particle state (velocity integration, elapsed time), runs update modules, compacts dead particles, and — in GPU mode — uploads dirty slots and dispatches the compute shader. `render()` draws the system as a single instanced draw call, regardless of particle count.
 
@@ -246,20 +221,12 @@ The update loop runs spawn modules, advances particle state (velocity integratio
 
 Particles are addressed by named channel, never by raw slot. A module receives the channels it needs and indexes them itself:
 
-```ts
-import { type ParticleBatch, UpdateModule } from '@codexo/exojs-particles';
-
-class Sway extends UpdateModule {
-    override apply(particles: ParticleBatch, dt: number): void {
-        const { x: velX } = particles.velocity;
-        const { elapsed } = particles.timing;
-
-        for (let i = 0; i < particles.count; i++) {
-            velX[i] += Math.sin(elapsed[i] * 8) * 250 * dt;
-        }
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/particles/update-module.ts"
+  region="sway-module"
+  language="ts"
+  title="examples/guides/particles/update-module.ts"
+/>
 
 The channels are `position`, `velocity`, `scale` (each `.x` / `.y`), `rotation` (`.angle` / `.speed`), `timing` (`.elapsed` / `.lifetime`), `color` (packed `0xAABBGGRR`) and `frame`. Each is the simulation's own storage, so writing moves the particle. Indices `[0, particles.count)` are the range worth visiting; `particles.isAlive(i)` skips the holes a GPU-mode system can leave behind.
 

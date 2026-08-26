@@ -4,6 +4,7 @@ description: 'Build multi-pass render flows for bloom, trails, and mirror effect
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import Callout from '../../../components/Callout.astro';
 
 # Post-processing
@@ -16,38 +17,12 @@ The building blocks — `RenderTexture` and `Filter` — are covered in their ow
 
 The minimal pattern: render your scene into a `RenderTexture`, apply a filter, display the result. Build the pipeline once in `init`, then run it each frame with `pipeline.execute(context)`:
 
-```ts
-import { BlurFilter, CallbackRenderPass, Color, Container, RenderNodePass, RenderingContext, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
-
-class PostProcessScene extends Scene {
-    private sceneRt!: RenderTexture;
-    private blurredRt!: RenderTexture;
-    private blur!: BlurFilter;
-    private worldLayer!: Container;
-    private final!: Sprite;
-    private pipeline!: RenderPipeline;
-
-    override init(): void {
-        this.sceneRt = new RenderTexture(800, 600);
-        this.blurredRt = new RenderTexture(800, 600);
-        this.blur = new BlurFilter({ radius: 4, quality: 2 });
-        this.worldLayer = new Container();
-        this.final = new Sprite(this.blurredRt);
-
-        this.pipeline = new RenderPipeline()
-            // 1. Render the full scene into sceneRt
-            .addPass(new RenderNodePass(this.worldLayer, { target: this.sceneRt, clear: Color.black }))
-            // 2. Apply blur: sceneRt → filter → blurredRt
-            .addPass(new CallbackRenderPass((context) => this.blur.apply(context.backend, this.sceneRt, this.blurredRt)))
-            // 3. Display the result on the canvas
-            .addPass(new RenderNodePass(this.final, { clear: Color.black }));
-    }
-
-    override draw(context: RenderingContext): void {
-        this.pipeline.execute(context);
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/post-processing/blur-pipeline.ts"
+  region="blur-pipeline"
+  language="ts"
+  title="examples/guides/post-processing/blur-pipeline.ts"
+/>
 
 A [`RenderNodePass`](/ExoJS/en/api/render-node-pass/) renders a scene subtree; with a `target` it redirects that output into the texture (and `clear` clears the target first). A [`CallbackRenderPass`](/ExoJS/en/api/callback-render-pass/) runs an arbitrary callback that receives the [`RenderingContext`](/ExoJS/en/api/rendering-context/) — here it issues the filter step via `context.backend`. `filter.apply(backend, inputRt, outputRt)` reads from one `RenderTexture` and writes filtered output to another. The pipeline runs its passes in order when you call `pipeline.execute(context)`.
 
@@ -59,65 +34,12 @@ That pipeline is already three passes — scene render, blur, composite. Post-pr
 
 Bloom requires two renderings of the same scene: one at normal brightness (the base), one with only the bright parts tinted and blurred (the glow). The glow is composited additively over the base. Because the same sprite is drawn twice with different tints, each off-screen step is a `CallbackRenderPass` that sets the tint before rendering:
 
-```ts
-import { BlendModes, BlurFilter, CallbackRenderPass, Color, RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
-
-class BloomScene extends Scene {
-    private baseRt!: RenderTexture;
-    private glowRt!: RenderTexture;
-    private blurredRt!: RenderTexture;
-    private bunny!: Sprite;
-    private baseSprite!: Sprite;
-    private glowSprite!: Sprite;
-    private blur!: BlurFilter;
-    private pipeline!: RenderPipeline;
-
-    override init(): void {
-        this.baseRt = new RenderTexture(800, 600);
-        this.glowRt = new RenderTexture(800, 600);
-        this.blurredRt = new RenderTexture(800, 600);
-
-        this.bunny = new Sprite(this.loader.get('image/bunny.png')).setAnchor(0.5);
-        this.baseSprite = new Sprite(this.baseRt);
-        this.glowSprite = new Sprite(this.blurredRt)
-            .setTint(new Color(255, 255, 255, 0.8))
-            .setBlendMode(BlendModes.Additive);
-
-        this.blur = new BlurFilter({ radius: 10, quality: 2 });
-
-        this.pipeline = new RenderPipeline()
-            // Pass 1: base scene at normal tint, into baseRt
-            .addPass(
-                new CallbackRenderPass(
-                    (context) => {
-                        this.bunny.setTint(Color.white);
-                        context.render(this.bunny);
-                    },
-                    { target: this.baseRt, clear: Color.black },
-                ),
-            )
-            // Pass 2: glow scene — same geometry, bright warm tint, into glowRt
-            .addPass(
-                new CallbackRenderPass(
-                    (context) => {
-                        this.bunny.setTint(new Color(255, 230, 190));
-                        context.render(this.bunny);
-                    },
-                    { target: this.glowRt, clear: Color.black },
-                ),
-            )
-            // Pass 3: blur the glow
-            .addPass(new CallbackRenderPass((context) => this.blur.apply(context.backend, this.glowRt, this.blurredRt)))
-            // Composite: base + blurred glow (additive)
-            .addPass(new RenderNodePass(this.baseSprite, { clear: Color.black }))
-            .addPass(new RenderNodePass(this.glowSprite));
-    }
-
-    override draw(context: RenderingContext): void {
-        this.pipeline.execute(context);
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/post-processing/bloom-pipeline.ts"
+  region="bloom-pipeline"
+  language="ts"
+  title="examples/guides/post-processing/bloom-pipeline.ts"
+/>
 
 The two glow/base passes each set a tint on the shared `bunny` sprite, then render it — using `CallbackRenderPass` rather than `RenderNodePass` precisely because they need to mutate the node before drawing. The key insight: the glow pass renders the same geometry with a bright tint. Only the bright regions survive into the blurred glow — the dark regions have near-zero contribution. The additive blend mode prevents the glow from over-brightening the base.
 
@@ -125,44 +47,12 @@ The two glow/base passes each set a tint on the shared `bunny` sprite, then rend
 
 Instead of a single filter, pass the output through a chain — one `CallbackRenderPass` per filter step, bracketed by a scene render and a composite:
 
-```ts
-import { BlurFilter, CallbackRenderPass, Color, ColorMatrixFilter, Graphics, RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
-
-class FilterChainScene extends Scene {
-    private scene!: Graphics;
-    private sceneRt!: RenderTexture;
-    private tmpRt!: RenderTexture;
-    private outRt!: RenderTexture;
-    private blur!: BlurFilter;
-    private color!: ColorMatrixFilter;
-    private final!: Sprite;
-    private pipeline!: RenderPipeline;
-
-    override init(): void {
-        this.scene = new Graphics();
-        this.sceneRt = new RenderTexture(800, 600);
-        this.tmpRt = new RenderTexture(800, 600);
-        this.outRt = new RenderTexture(800, 600);
-        this.blur = new BlurFilter({ radius: 6, quality: 2 });
-        this.color = new ColorMatrixFilter().tint(new Color(140, 190, 255));
-        this.final = new Sprite(this.outRt);
-
-        this.pipeline = new RenderPipeline()
-            // Render scene → sceneRt
-            .addPass(new RenderNodePass(this.scene, { target: this.sceneRt, clear: Color.black }))
-            // sceneRt → blur → tmpRt
-            .addPass(new CallbackRenderPass((context) => this.blur.apply(context.backend, this.sceneRt, this.tmpRt)))
-            // tmpRt → color → outRt
-            .addPass(new CallbackRenderPass((context) => this.color.apply(context.backend, this.tmpRt, this.outRt)))
-            // Display outRt
-            .addPass(new RenderNodePass(this.final, { clear: Color.black }));
-    }
-
-    override draw(context: RenderingContext): void {
-        this.pipeline.execute(context);
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/post-processing/nested-passes.ts"
+  region="nested-passes"
+  language="ts"
+  title="examples/guides/post-processing/nested-passes.ts"
+/>
 
 Each `filter.apply()` call is one additional render pass. For a chain of N filters you need N `RenderTexture` instances (or fewer if you reuse them for subsequent steps — the engine reuses render target memory across filter passes internally when filters are on a `RenderNode`, but explicit `filter.apply()` calls require explicit texture management).
 
@@ -170,43 +60,12 @@ Each `filter.apply()` call is one additional render pass. For a chain of N filte
 
 Reuse a render target as its own input to create motion trails. The feedback pass deliberately omits `clear`, so the decayed previous frame accumulates instead of being wiped:
 
-```ts
-import { CallbackRenderPass, Color, RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
-
-class TrailScene extends Scene {
-    private feedbackRt!: RenderTexture;
-    private decay!: Sprite;
-    private hero!: Sprite;
-    private final!: Sprite;
-    private pipeline!: RenderPipeline;
-
-    override init(): void {
-        this.feedbackRt = new RenderTexture(800, 600);
-        this.decay = new Sprite(this.feedbackRt)
-            .setTint(new Color(255, 255, 255, 0.93)); // 93% opaque = 7% fade per frame
-        this.hero = new Sprite(this.loader.get('image/hero.png')).setAnchor(0.5);
-        this.final = new Sprite(this.feedbackRt);
-
-        this.pipeline = new RenderPipeline()
-            // Draw the previous frame (at 93% opacity) plus the hero on top — no clear, so it accumulates
-            .addPass(
-                new CallbackRenderPass(
-                    (context) => {
-                        context.render(this.decay);
-                        context.render(this.hero);
-                    },
-                    { target: this.feedbackRt },
-                ),
-            )
-            // Display the result
-            .addPass(new RenderNodePass(this.final, { clear: Color.black }));
-    }
-
-    override draw(context: RenderingContext): void {
-        this.pipeline.execute(context);
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/post-processing/trail-pipeline.ts"
+  region="trail-pipeline"
+  language="ts"
+  title="examples/guides/post-processing/trail-pipeline.ts"
+/>
 
 Each frame, the previous frame's image fades slightly (the decay sprite's alpha=0.93), and the hero's current position is drawn on top. After several frames, older positions fade away while newer ones remain visible — a self-erasing trail. The same technique works for light streaks, ghost images, and feedback-based shader effects.
 

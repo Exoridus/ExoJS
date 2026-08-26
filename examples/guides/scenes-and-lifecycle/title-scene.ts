@@ -21,3 +21,5 @@ class TitleScene extends Scene {
 const app = new Application({ scenes: { TitleScene } });
 app.start(TitleScene);
 // #endregion guide:run-a-scene
+
+export { TitleScene };

@@ -14,3 +14,5 @@ registerSerializer('Marker', Marker, {
   },
 });
 // #endregion guide:custom-node
+
+export { Marker };
