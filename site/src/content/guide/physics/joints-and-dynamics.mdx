@@ -20,11 +20,12 @@ contacts in the sub-step loop. The pattern is always the same: construct the joi
 then register it with `world.addJoint(...)`. Remove it with `world.removeJoint(joint)`,
 which wakes both bodies so they respond to the lost constraint.
 
-```ts no-check -- continues the world setup above; bodyA, bodyB and anchor come from it
-const joint = world.addJoint(new RevoluteJoint({ bodyA, bodyB, anchor }));
-// ...later...
-world.removeJoint(joint);
-```
+<SourceSnippet
+  source="examples/guides/joints-and-dynamics/joint-lifecycle.ts"
+  region="joint-lifecycle"
+  language="ts"
+  title="examples/guides/joints-and-dynamics/joint-lifecycle.ts"
+/>
 
 Many joints take a `hertz` (and `dampingRatio`) pair: leaving `hertz` at `0` makes the
 constraint **rigid**, while `hertz > 0` turns it into a **damped spring** at that

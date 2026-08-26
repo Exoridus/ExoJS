@@ -153,24 +153,12 @@ if (hero.intersectsWith(box)) {
 
 For scenes with many objects, pair-wise collision checks against every other object are O(n²). A [`Quadtree`](/ExoJS/en/api/quadtree/) reduces the search space:
 
-```ts no-check -- continues the collision example; Rectangle, player and the enemy list come from it
-import { Quadtree } from '@codexo/exojs';
-
-const tree = new Quadtree(new Rectangle(0, 0, 800, 600), 8, 5);
-
-// Insert objects each frame
-for (const enemy of this.enemies) {
-    tree.insert({ bounds: enemy.getBounds(), payload: enemy });
-}
-
-// Query nearby objects
-const nearby = tree.queryRect(player.getBounds());
-for (const item of nearby) {
-    if (player.intersectsWith(item.payload)) {
-        resolveCollision(player, item.payload);
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/gameplay-collision/quadtree.ts"
+  region="quadtree"
+  language="ts"
+  title="examples/guides/gameplay-collision/quadtree.ts"
+/>
 
 `Quadtree.insert(item)` auto-subdivides when a quadrant exceeds `maxItems` (default 8). `queryRect(rect)` returns all items whose bounds overlap the query rectangle. `queryPoint(x, y)` returns items containing the point. The `maxDepth` parameter (default 5) limits subdivision depth.
 
