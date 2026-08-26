@@ -13,7 +13,7 @@ class PointerToWorldScene extends Scene {
   private markers!: Graphics;
   private cursor = { x: 0, y: 0 };
   private world = { x: 0, y: 0 };
-  private markerWorld: Array<{ x: number; y: number }> = [];
+  private markerWorld: { x: number; y: number }[] = [];
   private elapsed = 0;
   private userZoom = 1;
   private hud!: ReturnType<typeof mountControls>;

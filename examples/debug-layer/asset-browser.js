@@ -134,7 +134,7 @@ class AssetBrowserScene extends Scene {
   // front; every other one loads on first visit (see ensureCategory), so
   // the browser becomes interactive quickly instead of downloading the
   // whole catalog before the first frame.
-  assetLoader = null;
+  assetLoader;
   loadedCats = new Set();
   loadingCats = new Set();
   async load() {
@@ -348,8 +348,9 @@ class AssetBrowserScene extends Scene {
     const cat = CATEGORIES.find(c => c.id === this.cat);
     const v = getCategoryData(cat?.catKey ?? '')[this.key];
     if (typeof v === 'string') return v;
-    if (v && typeof v.image === 'string') return v.image;
-    if (v && typeof v.audio === 'string') return v.audio;
+    const record = v;
+    if (typeof record?.image === 'string') return record.image;
+    if (typeof record?.audio === 'string') return record.audio;
     return '';
   }
   typeLabel() {

@@ -7,8 +7,8 @@ import {
   Keyboard,
   type RenderingContext,
   Scene,
-  Text,
   type Seconds,
+  Text,
 } from '@codexo/exojs';
 
 // #region guide:constants

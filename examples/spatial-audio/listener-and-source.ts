@@ -1,5 +1,5 @@
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Sound, Text } from '@codexo/exojs';
 import type { RenderingContext, Spatializable, Voice } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Sound, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 // Spatial parameters tuned to the canvas so attenuation is visible across the

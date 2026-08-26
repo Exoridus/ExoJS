@@ -7,15 +7,15 @@ import {
   type RenderingContext,
   ScaleModes,
   Scene,
-  Sprite,
   type Seconds,
+  Sprite,
 } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
 
 // Every public blend mode, in enum order, paired with a display name.
-const BLEND_MODES: Array<{ mode: BlendModes; name: string }> = [
+const BLEND_MODES: { mode: BlendModes; name: string }[] = [
   { mode: BlendModes.Normal, name: 'Normal' },
   { mode: BlendModes.Additive, name: 'Additive' },
   { mode: BlendModes.Subtract, name: 'Subtract' },

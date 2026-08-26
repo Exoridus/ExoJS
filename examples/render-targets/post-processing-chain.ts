@@ -11,8 +11,8 @@ import {
   RenderPipeline,
   RenderTexture,
   Scene,
-  Sprite,
   type Seconds,
+  Sprite,
 } from '@codexo/exojs';
 
 class PostProcessingChainScene extends Scene {

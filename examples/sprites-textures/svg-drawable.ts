@@ -1,4 +1,4 @@
-import { Application, Asset, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, SvgAsset, Texture } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, Texture } from '@codexo/exojs';
 
 class SvgDrawableScene extends Scene {
   private texture!: Texture;

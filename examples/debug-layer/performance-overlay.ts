@@ -1,4 +1,4 @@
-import { Application, Color, Container, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, Sprite, type Seconds } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, type Seconds, Sprite } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 
 class PerformanceOverlayScene extends Scene {

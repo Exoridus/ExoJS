@@ -16,7 +16,7 @@
 //
 // It is NOT part of the engine public API and is unavailable in consumer apps.
 
-type ExampleAssetCatalog = {
+interface ExampleAssetCatalog {
     readonly demo: {
         readonly textures: {
             readonly particleFlame: 'demo/textures/particle-flame.png';
@@ -216,7 +216,7 @@ type ExampleAssetCatalog = {
             readonly primaryRamp: 'technical/color/primary-ramp.png';
         };
     };
-};
+}
 
 declare global {
     const assets: ExampleAssetCatalog;

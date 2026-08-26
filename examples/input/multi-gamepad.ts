@@ -1,10 +1,21 @@
-import { Application, Color, FixedResolutionCanvasSizing, GamepadAxis, type RenderingContext, Scene, Sprite, Text, type Seconds } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  type Gamepad,
+  GamepadAxis,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  Sprite,
+  Text,
+} from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const tints = [new Color(255, 140, 140), new Color(140, 255, 170), new Color(150, 180, 255), new Color(255, 230, 140)];
 
 interface Player {
-  pad: any;
+  pad: Gamepad;
   sprite: Sprite;
   move: { x: number; y: number };
 }
@@ -14,7 +25,7 @@ interface Player {
 // only *connected* pads are moved and drawn, and an empty canvas shows a
 // "connect a controller" prompt instead of a row of motionless ships.
 class MultiGamepadScene extends Scene {
-  private players: Array<Player> = [];
+  private players: Player[] = [];
   private hasPad = false;
   private connectPrompt!: Text;
   private hud!: ReturnType<typeof mountControls>;

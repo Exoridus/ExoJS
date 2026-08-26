@@ -9,14 +9,14 @@ import {
   Rectangle,
   type RenderingContext,
   Scene,
+  type Seconds,
   Sprite,
   Spritesheet,
   type SpritesheetData,
   TextureRegion,
-  type Seconds,
   View,
 } from '@codexo/exojs';
-import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileSet, type TileMapView } from '@codexo/exojs-tilemap';
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, type TileMapView, TileSet } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Core @codexo/exojs-tilemap API, with no on-disk map format involved: a

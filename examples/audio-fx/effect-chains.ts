@@ -11,9 +11,9 @@ import {
   LowpassFilter,
   type RenderingContext,
   Scene,
+  type Seconds,
   type Sound,
   Text,
-  type Seconds,
 } from '@codexo/exojs';
 import {
   AudioAnalyser,
@@ -51,13 +51,13 @@ interface Stage {
 interface Chain {
   name: string;
   note: string;
-  stages: Array<Stage>;
+  stages: Stage[];
 }
 
 // Ten fixed chains. Order matters inside each one: the chain is wired
 // front-to-back, so a filter placed before a distortion shapes what the
 // distortion has to work with, not what it produced.
-const CHAINS: Array<Chain> = [
+const CHAINS: Chain[] = [
   {
     name: 'Telephone',
     note: 'Band-limit first, then saturate what is left',
@@ -197,7 +197,7 @@ class EffectChainsScene extends Scene {
   private readonly spectrum = new Uint8Array(BANDS);
 
   /** The effects currently inserted on the master bus, in chain order. */
-  private active: Array<AudioEffect> = [];
+  private active: AudioEffect[] = [];
   private index = 0;
   private bypassed = false;
   private preparing = false;
@@ -206,9 +206,9 @@ class EffectChainsScene extends Scene {
   private gfx!: Graphics;
   private title!: Text;
   private subtitle!: Text;
-  private slotNames: Array<Text> = [];
-  private slotDetails: Array<Text> = [];
-  private arrows: Array<Text> = [];
+  private slotNames: Text[] = [];
+  private slotDetails: Text[] = [];
+  private arrows: Text[] = [];
   private tapPrompt!: Text;
   private hud!: ReturnType<typeof mountControls>;
 

@@ -1,5 +1,5 @@
 import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
-import { getLdtkIntGridValueAt, LdtkMap, ldtkExtension } from '@codexo/exojs-ldtk';
+import { getLdtkIntGridValueAt, ldtkExtension, LdtkMap } from '@codexo/exojs-ldtk';
 import { TileMapNode } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 

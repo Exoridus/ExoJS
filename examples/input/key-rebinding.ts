@@ -6,8 +6,8 @@ import {
   Color,
   FixedResolutionCanvasSizing,
   Graphics,
-  inputToken,
   type InputToken,
+  inputToken,
   Keyboard,
   type RenderingContext,
   Scene,
@@ -104,7 +104,7 @@ class KeyRebindingScene extends Scene {
     return this.controls.jump.channels.map(inputToken)[0];
   }
 
-  private hudControls(): Array<{ keys: string; action: string }> {
+  private hudControls(): { keys: string; action: string }[] {
     return [
       { keys: keyName(this.jumpToken()), action: 'jump' },
       { keys: 'J', action: 'rebind jump' },

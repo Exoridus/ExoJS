@@ -5,9 +5,9 @@ import {
   FixedResolutionCanvasSizing,
   type RenderingContext,
   Scene,
+  type Seconds,
   Spritesheet,
   type SpritesheetData,
-  type Seconds,
 } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
@@ -60,7 +60,7 @@ class SpritesheetFramesScene extends Scene {
     this.updateHud();
   }
 
-  private walkFrames(): Array<string> {
+  private walkFrames(): string[] {
     return [`character_${this.character}_walk_a`, `character_${this.character}_walk_b`];
   }
 

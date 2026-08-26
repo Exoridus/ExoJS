@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Texture, type Seconds } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Seconds, Texture } from '@codexo/exojs';
 import {
   AlphaFadeOverLifetime,
   ApplyForce,
@@ -13,6 +13,25 @@ import {
   UpdateModule,
   VectorRange,
 } from '@codexo/exojs-particles';
+
+/** One emitter's tuning, as `buildSystem` reads it. */
+interface EmitterConfig {
+  x: number;
+  y: number;
+  rate: number;
+  force: { x: number; y: number };
+  scaleStart: number;
+  palette: Color[];
+  positionRangeX: number;
+  positionRangeY: number;
+  velocityRangeX: number;
+  velocityMinY: number;
+  velocityMaxY: number;
+  scaleMin: number;
+  rotationMax: number;
+  lifetimeMin: number;
+  lifetimeMax: number;
+}
 
 class TintCycle extends UpdateModule {
   private palette: Color[];
@@ -107,7 +126,7 @@ class ParticleStressScene extends Scene {
     );
   }
 
-  private buildSystem(config: any): { instance: ParticleSystem; baseX: number; baseY: number } {
+  private buildSystem(config: EmitterConfig): { instance: ParticleSystem; baseX: number; baseY: number } {
     const system = new ParticleSystem(this.sharedTexture, { capacity: 4096 });
 
     system.setPosition(config.x, config.y);

@@ -1,4 +1,4 @@
-import { Application, Asset, Assets, Color, Container, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, type Seconds } from '@codexo/exojs';
+import { Application, Asset, Assets, Color, Container, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Seconds, Sprite } from '@codexo/exojs';
 
 class ContainersScene extends Scene {
   private rainbow!: Sprite;

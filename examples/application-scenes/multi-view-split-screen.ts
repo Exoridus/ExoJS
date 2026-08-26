@@ -6,9 +6,9 @@ import {
   Keyboard,
   type RenderingContext,
   Scene,
+  type Seconds,
   Sprite,
   Texture,
-  type Seconds,
   View,
 } from '@codexo/exojs';
 

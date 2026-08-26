@@ -8,8 +8,8 @@ import {
   ProgressBar,
   type RenderingContext,
   Scene,
-  Stack,
   type Seconds,
+  Stack,
 } from '@codexo/exojs';
 
 /**

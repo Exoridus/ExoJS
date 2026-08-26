@@ -1,5 +1,5 @@
+import type { RenderingContext, Spatializable, Voice } from '@codexo/exojs';
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, type Seconds, Sound, Text } from '@codexo/exojs';
-import type { RenderingContext, Spatializable, Time, Voice } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 // Orbit + attenuation tuned to the wide canvas so the readout reflects what you

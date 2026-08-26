@@ -5,11 +5,11 @@ import {
   FixedResolutionCanvasSizing,
   type RenderingContext,
   Scene,
+  type Seconds,
   Sprite,
   Spritesheet,
   type SpritesheetData,
   SystemOrder,
-  type Seconds,
   Vector,
 } from '@codexo/exojs';
 import { BoxShape, type PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';

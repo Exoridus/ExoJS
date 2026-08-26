@@ -7,27 +7,28 @@ import {
   Keyboard,
   type RenderingContext,
   Scene,
+  type Seconds,
   Sprite,
   Spritesheet,
   type SpritesheetData,
   TextureRegion,
-  type Seconds,
   View,
 } from '@codexo/exojs';
 import {
-  ChunkStreamer,
   type ChunkSource,
+  ChunkStreamer,
   createSampledChunkSource,
   createWorkerSampledChunkSource,
   TILE_TRANSFORM_IDENTITY,
   TileLayer,
   TileMap,
   tilemapExtension,
-  TileSet,
   type TileMapView,
+  TileSet,
 } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 import { fbm } from '@examples/terrain-noise';
+
 import terrainWorkerSource from './worker-streamed-terrain.worker.ts?worker';
 
 // The same infinite, procedurally generated world as "Infinite Procedural

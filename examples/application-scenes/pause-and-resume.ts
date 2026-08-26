@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, Sprite, Text, type Seconds } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, type Seconds, Sprite, Text } from '@codexo/exojs';
 
 class PauseResumeScene extends Scene {
   private sprite!: Sprite;

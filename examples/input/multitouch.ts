@@ -25,7 +25,7 @@ interface Touch {
 
 class MultitouchScene extends Scene {
   private graphics!: Graphics;
-  private labels: Array<Text> = [];
+  private labels: Text[] = [];
   private pointers = new Map<number, Touch>();
   private hud!: ReturnType<typeof mountControls>;
 

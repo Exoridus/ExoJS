@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, Rectangle, type RenderingContext, Scene, Sprite, type Seconds } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Rectangle, type RenderingContext, Scene, type Seconds, Sprite } from '@codexo/exojs';
 
 const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
 

@@ -9,8 +9,8 @@ import {
   RenderPipeline,
   RenderTexture,
   Scene,
-  Sprite,
   type Seconds,
+  Sprite,
   View,
 } from '@codexo/exojs';
 

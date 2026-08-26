@@ -6,9 +6,9 @@ import {
   Rectangle,
   type RenderingContext,
   Scene,
+  type Seconds,
   Sprite,
   Texture,
-  type Seconds,
 } from '@codexo/exojs';
 
 const GRID_COLUMNS = 50;

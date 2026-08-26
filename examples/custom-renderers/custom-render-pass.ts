@@ -8,8 +8,8 @@ import {
   RenderNodePass,
   RenderPipeline,
   Scene,
-  Sprite,
   type Seconds,
+  Sprite,
 } from '@codexo/exojs';
 
 class CustomRenderPassScene extends Scene {

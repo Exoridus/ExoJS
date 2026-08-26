@@ -1,16 +1,4 @@
-import {
-  Application,
-  Asset,
-  Color,
-  FixedResolutionCanvasSizing,
-  Keyboard,
-  type RenderingContext,
-  Scene,
-  Sprite,
-  Texture,
-  type Seconds,
-  Video,
-} from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, type Seconds, Sprite, Video } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 // Every video in the asset catalog, switchable at runtime with the number

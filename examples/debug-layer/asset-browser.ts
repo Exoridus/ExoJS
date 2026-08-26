@@ -3,20 +3,17 @@ import {
   Application,
   AudioStream,
   Color,
-  FontAsset,
   Graphics,
-  Json,
   type Pausable,
   type RenderingContext,
   Scene,
+  type Seconds,
   type Seekable,
-  type SpritesheetData,
   Sprite,
   Spritesheet,
-  SvgAsset,
+  type SpritesheetData,
   Text,
   Texture,
-  type Seconds,
   type Voice,
 } from '@codexo/exojs';
 
@@ -26,6 +23,23 @@ import {
 function getCategoryData(catKey: string): Record<string, unknown> {
   if (catKey === 'technical') return assets.technical as unknown as Record<string, unknown>;
   return (assets.demo as unknown as Record<string, Record<string, unknown>>)[catKey] ?? {};
+}
+
+// Catalog entries are heterogeneous by category, and `getCategoryData` hands
+// them back as `unknown` because the key is dynamic. These name the two shapes
+// the loading paths below actually read.
+interface ImagePairEntry {
+  image: string;
+  data: string;
+}
+
+interface AudioPairEntry {
+  audio: string;
+  data: string;
+}
+
+interface SoundSpriteData {
+  sprites: Record<string, { start: number; duration: number }>;
 }
 
 // Union of the tileset catalog entry shapes - every entry declares
@@ -147,7 +161,7 @@ class AssetBrowserScene extends Scene {
   bgSprites = new Map<string, Sprite>();
   cursorSprites = new Map<string, Sprite>();
   tilesetSprites = new Map<string, Sprite>();
-  soundSpriteData = new Map<string, any>();
+  soundSpriteData = new Map<string, SoundSpriteData>();
   vendorData = new Map<string, VendorManifest>();
 
   animG: Graphics | null = null;
@@ -191,7 +205,7 @@ class AssetBrowserScene extends Scene {
   // front; every other one loads on first visit (see ensureCategory), so
   // the browser becomes interactive quickly instead of downloading the
   // whole catalog before the first frame.
-  private assetLoader: any = null;
+  private assetLoader!: Scene['loader'];
   loadedCats = new Set<string>();
   loadingCats = new Set<string>();
 
@@ -242,8 +256,8 @@ class AssetBrowserScene extends Scene {
         await Promise.all(
           Object.entries(assets.demo.sprites ?? {}).map(async ([k, entry]) => {
             const [tex, data] = await Promise.all([
-              loader.load(Asset.type('texture', (entry as any).image)),
-              loader.load(Asset.type<SpritesheetData>('json', (entry as any).data)),
+              loader.load(Asset.type('texture', (entry as ImagePairEntry).image)),
+              loader.load(Asset.type<SpritesheetData>('json', (entry as ImagePairEntry).data)),
             ]);
             const ss = new Spritesheet(tex, data);
             this.sprSheets.set(k, ss);
@@ -256,8 +270,8 @@ class AssetBrowserScene extends Scene {
         await Promise.all(
           Object.entries(assets.demo.spritesheets ?? {}).map(async ([k, entry]) => {
             const [tex, data] = await Promise.all([
-              loader.load(Asset.type('texture', (entry as any).image)),
-              loader.load(Asset.type<SpritesheetData>('json', (entry as any).data)),
+              loader.load(Asset.type('texture', (entry as ImagePairEntry).image)),
+              loader.load(Asset.type<SpritesheetData>('json', (entry as ImagePairEntry).data)),
             ]);
             const ss = new Spritesheet(tex, data);
             this.sshSheets.set(k, ss);
@@ -280,8 +294,8 @@ class AssetBrowserScene extends Scene {
         await Promise.all(
           Object.entries(assets.demo.inputPrompts ?? {}).map(async ([k, entry]) => {
             const [tex, data] = await Promise.all([
-              loader.load(Asset.type('texture', (entry as any).image)),
-              loader.load(Asset.type<SpritesheetData>('json', (entry as any).data)),
+              loader.load(Asset.type('texture', (entry as ImagePairEntry).image)),
+              loader.load(Asset.type<SpritesheetData>('json', (entry as ImagePairEntry).data)),
             ]);
             const ss = new Spritesheet(tex, data);
             this.inpSheets.set(k, ss);
@@ -318,8 +332,8 @@ class AssetBrowserScene extends Scene {
         await Promise.all(
           Object.entries(assets.demo.soundSprites ?? {}).map(async ([k, entry]) => {
             const [audio, data] = await Promise.all([
-              loader.load(Asset.type('music', (entry as any).audio)),
-              loader.load(Asset.type('json', (entry as any).data)),
+              loader.load(Asset.type('music', (entry as AudioPairEntry).audio)),
+              loader.load(Asset.type<SoundSpriteData>('json', (entry as AudioPairEntry).data)),
             ]);
             this.soundSpriteAudio.set(k, audio);
             this.soundSpriteData.set(k, data);
@@ -377,7 +391,7 @@ class AssetBrowserScene extends Scene {
       case 'tilesets': {
         await Promise.all(
           Object.entries(assets.demo.tilesets ?? {}).map(async ([k, entry]) => {
-            const s = new Sprite(await loader.load(Asset.type('texture', (entry as any).image)));
+            const s = new Sprite(await loader.load(Asset.type('texture', (entry as ImagePairEntry).image)));
             s.setAnchor(0.5);
             this.tilesetSprites.set(k, s);
           }),
@@ -424,10 +438,11 @@ class AssetBrowserScene extends Scene {
       return (assets.technical as unknown as Record<string, Record<string, string>>)[subcat]?.[itemKey] ?? '';
     }
     const cat = CATEGORIES.find(c => c.id === this.cat);
-    const v = getCategoryData(cat?.catKey ?? '')[this.key] as any;
+    const v = getCategoryData(cat?.catKey ?? '')[this.key];
     if (typeof v === 'string') return v;
-    if (v && typeof v.image === 'string') return v.image;
-    if (v && typeof v.audio === 'string') return v.audio;
+    const record = v as Partial<ImagePairEntry & AudioPairEntry> | undefined;
+    if (typeof record?.image === 'string') return record.image;
+    if (typeof record?.audio === 'string') return record.audio;
     return '';
   }
 
@@ -995,7 +1010,7 @@ class AssetBrowserScene extends Scene {
 
     let y = by + 64;
     for (const [name, info] of Object.entries(sprites)) {
-      this.txtMeta.text = `${name}  start:${(info as any).start.toFixed(3)}s  dur:${(info as any).duration.toFixed(3)}s`;
+      this.txtMeta.text = `${name}  start:${info.start.toFixed(3)}s  dur:${info.duration.toFixed(3)}s`;
       this.txtMeta.setPosition(PREVIEW_X + 30, y);
       context.render(this.txtMeta);
       y += 20;

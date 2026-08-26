@@ -7,8 +7,8 @@ import {
   Graphics,
   type RenderingContext,
   Scene,
-  Text,
   type Seconds,
+  Text,
   type Voice,
 } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';

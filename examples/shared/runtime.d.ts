@@ -37,10 +37,10 @@ export interface ExampleRuntimeMeta {
    * example, and replaces the canvas with an unmet-capabilities overlay
    * if any entry is `false`.
    */
-  capabilities?: Array<Capability>;
-  notes?: Array<string>;
+  capabilities?: Capability[];
+  notes?: string[];
   unsupportedNote?: string;
-  tags?: Array<string>;
+  tags?: string[];
   section?: string;
   order?: number;
   status?: string;
@@ -64,7 +64,7 @@ export type OverlayCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-r
 
 /** A single controls-legend entry: which key(s) trigger which action. */
 export interface ControlHint {
-  keys?: string | Array<string>;
+  keys?: string | string[];
   action?: string;
 }
 
@@ -72,7 +72,7 @@ export interface ControlHint {
 export interface ControlsHandle {
   element: HTMLElement;
   setStatus(text: string): void;
-  setControls(list: Array<ControlHint>): void;
+  setControls(list: ControlHint[]): void;
   setHint(text: string): void;
   dispose(): void;
 }
@@ -87,7 +87,7 @@ export interface ControlPanelHandle {
   element: HTMLElement;
   addSlider(options: { label: string; min?: number; max?: number; step?: number; value?: number; onChange?: (value: number) => void }): ControlBinding<number>;
   addToggle(options: { label: string; value?: boolean; onChange?: (value: boolean) => void }): ControlBinding<boolean>;
-  addCycle(options: { label: string; options: Array<string>; index?: number; onChange?: (index: number, value: string) => void }): ControlBinding<number>;
+  addCycle(options: { label: string; options: string[]; index?: number; onChange?: (index: number, value: string) => void }): ControlBinding<number>;
   addButton(options: { label: string; onClick?: () => void }): { element: HTMLButtonElement };
   dispose(): void;
 }
@@ -99,13 +99,7 @@ export function showInfo(element: HTMLElement, title: string, detail: string, is
 export function formatErrorMessage(error: unknown): string;
 
 /** Mount a non-blocking title + controls-legend + status overlay. */
-export function mountControls(options?: {
-  title?: string;
-  controls?: Array<ControlHint>;
-  status?: string;
-  hint?: string;
-  corner?: OverlayCorner;
-}): ControlsHandle;
+export function mountControls(options?: { title?: string; controls?: ControlHint[]; status?: string; hint?: string; corner?: OverlayCorner }): ControlsHandle;
 
 /** Mount a predictable DOM control panel (sliders/toggles/cycles/buttons). */
 export function mountControlPanel(options?: { title?: string; corner?: OverlayCorner }): ControlPanelHandle;

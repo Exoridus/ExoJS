@@ -15,7 +15,7 @@ const waypointFractions = [
 
 class TweenFromArrayScene extends Scene {
   private sprite!: Sprite;
-  private waypoints: Array<{ x: number; y: number }> = [];
+  private waypoints: { x: number; y: number }[] = [];
 
   override init(): void {
     const app = this.app;

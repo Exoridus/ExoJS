@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, Sound, Text, type Seconds } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, type Seconds, Sound, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const DETUNE_RANGE = 200; // ± cents

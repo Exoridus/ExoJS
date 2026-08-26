@@ -9,8 +9,8 @@ import {
   RenderPipeline,
   RenderTexture,
   Scene,
-  Sprite,
   type Seconds,
+  Sprite,
 } from '@codexo/exojs';
 
 class MinimapWithMaskScene extends Scene {
