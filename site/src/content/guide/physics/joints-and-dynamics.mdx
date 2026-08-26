@@ -4,6 +4,7 @@ description: 'Connect physics bodies with distance, revolute, weld, prismatic, w
 ---
 
 import Callout from '../../../components/Callout.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # Joints, sleeping & CCD
 
@@ -35,34 +36,23 @@ so they travel with the bodies afterwards.
 A [`DistanceJoint`](/ExoJS/en/api/distance-joint/) holds two anchor points a fixed
 `length` apart — a rigid rod by default, or a spring with `hertz > 0`:
 
-```ts
-import { BoxShape, DistanceJoint, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
-
-const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
-const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
-const bob = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 150 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
-
-// Rigid rod: holds the bob exactly 100px from the anchor.
-world.addJoint(new DistanceJoint({ bodyA: anchor, bodyB: bob, length: 100 }));
-
-// Or a soft spring that sags and bobs under gravity:
-world.addJoint(new DistanceJoint({ bodyA: anchor, bodyB: bob, length: 100, hertz: 2.5, dampingRatio: 1 }));
-```
+<SourceSnippet
+  source="examples/guides/joints-and-dynamics/distance-joint.ts"
+  region="distance-joint"
+  language="ts"
+  title="examples/guides/joints-and-dynamics/distance-joint.ts"
+/>
 
 Specifying `minLength` and/or `maxLength` turns it into a **rope/limit**: the bodies move
 freely while the separation is within the band and the joint only engages (rigidly) at the
 bounds:
 
-```ts
-import { BoxShape, DistanceJoint, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
-
-const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
-const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
-const bob = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 50 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
-
-// A rope: the bob falls freely until it reaches 100px, then the rope holds.
-world.addJoint(new DistanceJoint({ bodyA: anchor, bodyB: bob, maxLength: 100 }));
-```
+<SourceSnippet
+  source="examples/guides/joints-and-dynamics/distance-limits.ts"
+  region="distance-limits"
+  language="ts"
+  title="examples/guides/joints-and-dynamics/distance-limits.ts"
+/>
 
 ### Revolute joints
 
@@ -70,26 +60,12 @@ A [`RevoluteJoint`](/ExoJS/en/api/revolute-joint/) pins a shared `anchor` point 
 bodies — a hinge they rotate freely about. Enable a **motor** to drive the relative
 angular velocity, or a **limit** to clamp the swing:
 
-```ts
-import { BoxShape, PhysicsBody, PhysicsWorld, RevoluteJoint } from '@codexo/exojs-physics';
-
-const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
-const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
-const arm = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 70, y: 0 }, colliders: [{ shape: new BoxShape(100, 10) }] }));
-
-// A free hinge at the origin — the arm swings under gravity.
-world.addJoint(new RevoluteJoint({ bodyA: anchor, bodyB: arm, anchor: { x: 0, y: 0 } }));
-
-// A powered hinge — a motor driving it toward 5 rad/s, capped torque:
-world.addJoint(
-  new RevoluteJoint({ bodyA: anchor, bodyB: arm, anchor: { x: 0, y: 0 }, enableMotor: true, motorSpeed: 5, maxMotorTorque: 1e8 }),
-);
-
-// A limited hinge — the relative angle is clamped to ±45°:
-world.addJoint(
-  new RevoluteJoint({ bodyA: anchor, bodyB: arm, anchor: { x: 0, y: 0 }, enableLimit: true, lowerAngle: -Math.PI / 4, upperAngle: Math.PI / 4 }),
-);
-```
+<SourceSnippet
+  source="examples/guides/joints-and-dynamics/revolute-joint.ts"
+  region="revolute-joint"
+  language="ts"
+  title="examples/guides/joints-and-dynamics/revolute-joint.ts"
+/>
 
 ### Weld joints
 
@@ -97,15 +73,12 @@ A [`WeldJoint`](/ExoJS/en/api/weld-joint/) rigidly locks the relative position *
 orientation of two bodies, so they move as one rigid body. Both locks default to rigid;
 set `linearHertz` / `angularHertz` for a springy weld:
 
-```ts
-import { BoxShape, PhysicsBody, PhysicsWorld, WeldJoint } from '@codexo/exojs-physics';
-
-const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
-const a = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
-const b = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 24, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
-
-world.addJoint(new WeldJoint({ bodyA: a, bodyB: b }));
-```
+<SourceSnippet
+  source="examples/guides/joints-and-dynamics/weld-joint.ts"
+  region="weld-joint"
+  language="ts"
+  title="examples/guides/joints-and-dynamics/weld-joint.ts"
+/>
 
 ### Prismatic joints
 
@@ -114,28 +87,12 @@ one axis** relative to another — perpendicular translation and rotation are lo
 takes an `axis` (normalised internally) and supports a linear motor (`maxMotorForce`) and
 translation limits:
 
-```ts
-import { BoxShape, PhysicsBody, PhysicsWorld, PrismaticJoint } from '@codexo/exojs-physics';
-
-const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
-const rail = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
-const slider = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
-
-world.addJoint(
-  new PrismaticJoint({
-    bodyA: rail,
-    bodyB: slider,
-    anchor: { x: 0, y: 0 },
-    axis: { x: 1, y: 0 }, // slide horizontally
-    enableMotor: true,
-    motorSpeed: 100,
-    maxMotorForce: 1e8,
-    enableLimit: true,
-    lowerTranslation: 0,
-    upperTranslation: 200,
-  }),
-);
-```
+<SourceSnippet
+  source="examples/guides/joints-and-dynamics/prismatic-joint.ts"
+  region="prismatic-joint"
+  language="ts"
+  title="examples/guides/joints-and-dynamics/prismatic-joint.ts"
+/>
 
 ### Wheel joints
 
@@ -143,27 +100,12 @@ A [`WheelJoint`](/ExoJS/en/api/wheel-joint/) is the vehicle primitive: the wheel
 **spin**, sprung along a **suspension axis** (a soft spring via `hertz` / `dampingRatio`),
 and locked **laterally**. A rotation motor drives it:
 
-```ts
-import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld, WheelJoint } from '@codexo/exojs-physics';
-
-const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
-const chassis = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(120, 20) }] }));
-const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 30 }, colliders: [{ shape: new CircleShape(10) }] }));
-
-world.addJoint(
-  new WheelJoint({
-    bodyA: chassis,
-    bodyB: wheel,
-    anchor: { x: 0, y: 30 },
-    axis: { x: 0, y: 1 }, // suspension travels vertically
-    hertz: 5,
-    dampingRatio: 0.7,
-    enableMotor: true,
-    motorSpeed: 20,
-    maxMotorTorque: 1e6,
-  }),
-);
-```
+<SourceSnippet
+  source="examples/guides/joints-and-dynamics/wheel-joint.ts"
+  region="wheel-joint"
+  language="ts"
+  title="examples/guides/joints-and-dynamics/wheel-joint.ts"
+/>
 
 ### Mouse joints
 
@@ -171,15 +113,12 @@ A [`MouseJoint`](/ExoJS/en/api/mouse-joint/) softly pulls a single body's grab p
 a movable `target` — the cursor-drag primitive. It is a single-body constraint; reassign
 `target` each frame to drag, and bound the pull with `maxForce` (so heavy bodies lag):
 
-```ts
-import { BoxShape, MouseJoint, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
-
-const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
-const body = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
-
-const drag = world.addJoint(new MouseJoint({ body, target: { x: 0, y: 0 }, hertz: 5, dampingRatio: 0.7, maxForce: 10000 }));
-drag.target = { x: 50, y: -30 }; // update from the pointer position each frame
-```
+<SourceSnippet
+  source="examples/guides/joints-and-dynamics/mouse-joint.ts"
+  region="mouse-joint"
+  language="ts"
+  title="examples/guides/joints-and-dynamics/mouse-joint.ts"
+/>
 
 Both jointed bodies share one **sleep island**, so a jointed pair sleeps and wakes
 together — which brings us to sleeping.
@@ -210,26 +149,22 @@ are not solved and never delay sleep.
 
 It is on by default; tune it through `PhysicsWorld` options:
 
-```ts
-import { PhysicsWorld } from '@codexo/exojs-physics';
-
-const world = new PhysicsWorld({
-  gravity: { x: 0, y: 1000 },
-  enableSleeping: true, // default; set false to never sleep
-  sleepLinearVelocity: 5, // px/s — at or below this a body is a sleep candidate
-  sleepAngularVelocity: 0.06, // rad/s
-  timeToSleep: 0.5, // seconds below the thresholds before sleeping
-});
-```
+<SourceSnippet
+  source="examples/guides/joints-and-dynamics/sleeping.ts"
+  region="sleeping"
+  language="ts"
+  title="examples/guides/joints-and-dynamics/sleeping.ts"
+/>
 
 Per body, opt a single body out with `allowSleep = false` (it, and its whole island, stay
 awake), read `isSleeping`, or force it awake with `wake()`:
 
-```ts
-body.allowSleep = false; // this body — and its island — never sleeps
-const resting = body.isSleeping; // true once it has come to rest
-body.wake(); // force it awake (e.g. before applying a scripted impulse)
-```
+<SourceSnippet
+  source="examples/guides/joints-and-dynamics/sleeping.ts"
+  region="never-sleep"
+  language="ts"
+  title="examples/guides/joints-and-dynamics/sleeping.ts"
+/>
 
 ## Continuous collision (bullet mode)
 
@@ -239,20 +174,12 @@ projectiles, flag the body as a **bullet** (`isBullet`) and it is swept along it
 each step against every other body; if the sweep would cross a surface, the body is clamped
 just short of it and its velocity is resolved about the surface normal:
 
-```ts
-import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
-
-const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
-
-// A thin wall the projectile would otherwise skip over.
-world.add(new PhysicsBody({ type: 'static', position: { x: 200, y: 0 }, colliders: [{ shape: new BoxShape(4, 400) }] }));
-
-// A fast bullet — swept each step so it stops at the wall instead of tunnelling.
-const bullet = world.add(
-  new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, isBullet: true, colliders: [{ shape: new CircleShape(6) }] }),
-);
-bullet.linearVelocityX = 6000; // ~100px per fixed step — far more than the 4px wall is thick
-```
+<SourceSnippet
+  source="examples/guides/joints-and-dynamics/bullet-bodies.ts"
+  region="bullet-bodies"
+  language="ts"
+  title="examples/guides/joints-and-dynamics/bullet-bodies.ts"
+/>
 
 `isBullet` is a plain flag you can toggle at runtime (`bullet.isBullet = true`). The impact
 response is a **velocity reflect** about the true surface normal: a non-bouncy body slides
@@ -283,21 +210,12 @@ conditional friction and per-pair material overrides live.
 A world has at most one modifier — it mutates simulation state, so a multi-listener signal
 would make the result depend on registration order:
 
-```ts
-import { PhysicsWorld } from '@codexo/exojs-physics';
-
-const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
-
-world.contactModifier = contact => {
-  // Ice: no friction wherever the icy collider is involved.
-  if (contact.colliderA.isSensor || contact.colliderB.isSensor) {
-    return;
-  }
-
-  contact.friction = 0;
-  contact.restitution = 0.1;
-};
-```
+<SourceSnippet
+  source="examples/guides/joints-and-dynamics/contact-modifier.ts"
+  region="contact-modifier"
+  language="ts"
+  title="examples/guides/joints-and-dynamics/contact-modifier.ts"
+/>
 
 `enabled`, `friction` and `restitution` are the three controls. Everything else on the
 contact — the two colliders, the two bodies, the A→B normal, the manifold point count and
@@ -318,30 +236,12 @@ stale impulse.
 That is the whole of a one-way platform. Sample the direction of travel at the start of the
 step and ignore the contact while the character is moving upward:
 
-```ts
-import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
-
-const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
-const platform = world.add(
-  new PhysicsBody({ type: 'static', position: { x: 0, y: 300 }, colliders: [{ shape: new BoxShape(400, 10) }] }),
-);
-const player = world.add(
-  new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 100 }, colliders: [{ shape: new BoxShape(20, 40) }] }),
-);
-
-let jumpingUp = false;
-
-world.contactModifier = contact => {
-  const involvesPlatform = contact.bodyA === platform || contact.bodyB === platform;
-
-  if (involvesPlatform && jumpingUp) {
-    contact.enabled = false;
-  }
-};
-
-// In your update, before stepping the world:
-jumpingUp = player.linearVelocityY < -10;
-```
+<SourceSnippet
+  source="examples/guides/joints-and-dynamics/one-way-platform.ts"
+  region="one-way-platform"
+  language="ts"
+  title="examples/guides/joints-and-dynamics/one-way-platform.ts"
+/>
 
 <Callout type="warning" title="Sample velocity before the step, not inside the modifier">
 Reading `player.linearVelocityY` *inside* the callback looks equivalent but is not: the solver's push-out gives a resting body a hair of upward velocity, which flips the rule on and off every step and leaves the character sunk into the platform. Decide once per step from the state you already have.

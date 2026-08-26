@@ -4,6 +4,7 @@ description: 'Add 2D rigid-body physics with the @codexo/exojs-physics library: 
 ---
 
 import Callout from '../../../components/Callout.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # Physics basics
 
@@ -31,11 +32,12 @@ Unlike [Tiled](/ExoJS/en/guide/assets/tiled-maps/) or
 peer dependency; you construct a [`PhysicsWorld`](/ExoJS/en/api/physics-world/)
 directly and step it yourself:
 
-```ts
-import { PhysicsWorld } from '@codexo/exojs-physics';
-
-const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
-```
+<SourceSnippet
+  source="examples/guides/physics-basics/world-setup.ts"
+  region="world-setup"
+  language="ts"
+  title="examples/guides/physics-basics/world-setup.ts"
+/>
 
 The world holds **no module-level state**, so any number of worlds run in complete
 isolation — one per scene, or several side by side. Gravity is in px/s² with **+Y
@@ -56,29 +58,12 @@ Construct a body freely, then hand it to `world.add(...)`. Colliders can be pass
 as plain option objects in `colliders: [...]` — you don't have to build a `Collider`
 instance yourself:
 
-```ts
-import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
-
-const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
-
-// A static floor: an immovable body with a single box collider.
-world.add(
-  new PhysicsBody({
-    type: 'static',
-    position: { x: 0, y: 400 },
-    colliders: [{ shape: new BoxShape(800, 40) }],
-  }),
-);
-
-// A dynamic crate that falls onto the floor.
-const crate = world.add(
-  new PhysicsBody({
-    type: 'dynamic',
-    position: { x: 0, y: 0 },
-    colliders: [{ shape: new BoxShape(32, 32), density: 1, friction: 0.5, restitution: 0.1 }],
-  }),
-);
-```
+<SourceSnippet
+  source="examples/guides/physics-basics/box-body.ts"
+  region="box-body"
+  language="ts"
+  title="examples/guides/physics-basics/box-body.ts"
+/>
 
 `world.add(...)` returns the body, so you can keep a reference (`crate` above) to read
 its position or drive it later. Collider material is set per collider:
@@ -94,19 +79,12 @@ Four shapes enclose an area and therefore carry mass:
 geometry, never a polygon approximation — and
 [`PolygonShape(points)`](/ExoJS/en/api/polygon-shape/) for a convex outline:
 
-```ts
-import { CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
-
-const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
-
-const ball = world.add(
-  new PhysicsBody({
-    type: 'dynamic',
-    position: { x: 0, y: -200 },
-    colliders: [{ shape: new CircleShape(12), density: 1, restitution: 0.6 }],
-  }),
-);
-```
+<SourceSnippet
+  source="examples/guides/physics-basics/circle-body.ts"
+  region="circle-body"
+  language="ts"
+  title="examples/guides/physics-basics/circle-body.ts"
+/>
 
 ### Boundary shapes for level geometry
 
@@ -122,28 +100,12 @@ never snags on a seam, and the whole chain stays **one** collider: one entry in
 `world.colliders`, one `collisionStart`, one query result, however many of its edges
 are touched.
 
-```ts
-import { CapsuleShape, ChainShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
-
-const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
-
-// A hillside. Drawn left to right, so it is solid from above.
-world.add(
-  new PhysicsBody({
-    type: 'static',
-    position: { x: 0, y: 0 },
-    colliders: [{ shape: new ChainShape([{ x: -400, y: 0 }, { x: 0, y: 40 }, { x: 400, y: 0 }]) }],
-  }),
-);
-
-world.add(
-  new PhysicsBody({
-    type: 'dynamic',
-    position: { x: -200, y: -100 },
-    colliders: [{ shape: new CapsuleShape(0, -12, 0, 12, 8), density: 1 }],
-  }),
-);
-```
+<SourceSnippet
+  source="examples/guides/physics-basics/capsule-and-chain.ts"
+  region="capsule-and-chain"
+  language="ts"
+  title="examples/guides/physics-basics/capsule-and-chain.ts"
+/>
 
 A chain is **one-sided**: the vertex order decides which side is solid, and a body
 may pass through it from behind — which is what makes it the right shape for ground
@@ -163,28 +125,12 @@ right hook to step it. `fixedUpdate(delta)` runs zero or more times per frame wi
 constant `delta` — exactly what a stable simulation wants. Leave camera, UI and purely
 visual work in `update`; put `world.step(...)` in `fixedUpdate`:
 
-```ts
-import { Scene, type Seconds } from '@codexo/exojs';
-import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
-
-class GameScene extends Scene {
-  private readonly world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
-
-  public override init(): void {
-    this.world.add(
-      new PhysicsBody({
-        type: 'static',
-        position: { x: 0, y: 400 },
-        colliders: [{ shape: new BoxShape(800, 40) }],
-      }),
-    );
-  }
-
-  public override fixedUpdate(delta: Seconds): void {
-    this.world.step(delta);
-  }
-}
-```
+<SourceSnippet
+  source="examples/guides/physics-basics/physics-scene.ts"
+  region="physics-scene"
+  language="ts"
+  title="examples/guides/physics-basics/physics-scene.ts"
+/>
 
 The fixed-step size is the application's `fixedTimeStep` (seconds, default `1 / 60`):
 
@@ -244,32 +190,22 @@ A body is pure simulation — it has no visual. To draw it, link it to a `Drawab
 each `step`, the binding writes the body's **position and rotation** onto the node
 (the body's angle is radians; the node's rotation is set in degrees for you):
 
-```ts
-import { Sprite } from '@codexo/exojs';
-import { CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
-
-const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
-const sprite = new Sprite(null);
-
-const body = world.add(
-  new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new CircleShape(12) }] }),
-);
-
-world.bind(body, sprite); // sprite now tracks the body every step
-```
+<SourceSnippet
+  source="examples/guides/physics-basics/sprite-binding.ts"
+  region="sprite-binding"
+  language="ts"
+  title="examples/guides/physics-basics/sprite-binding.ts"
+/>
 
 `world.attach(node, def)` is the one-call shortcut for the common case — it creates a
 body with a single collider, adds it and binds it in one go:
 
-```ts
-import { Sprite } from '@codexo/exojs';
-import { CircleShape, PhysicsWorld } from '@codexo/exojs-physics';
-
-const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
-const sprite = new Sprite(null);
-
-world.attach(sprite, { type: 'dynamic', position: { x: 0, y: 0 }, shape: new CircleShape(12), restitution: 0.5 });
-```
+<SourceSnippet
+  source="examples/guides/physics-basics/binding-options.ts"
+  region="binding-options"
+  language="ts"
+  title="examples/guides/physics-basics/binding-options.ts"
+/>
 
 If you'd rather position things yourself, skip the binding and read the body's
 transform after each step — `body.x`, `body.y` (world position) and `body.angle`
@@ -292,14 +228,12 @@ Every body brackets its most recent fixed step with `previousX`/`previousY`/
 `previousAngle` and `x`/`y`/`angle`. Turn on `interpolation` and bindings place the
 node between them instead of snapping to the latest one:
 
-```ts
-import { CircleShape, PhysicsWorld } from '@codexo/exojs-physics';
-
-const world = new PhysicsWorld({
-  gravity: { x: 0, y: 1000 },
-  interpolation: true,
-});
-```
+<SourceSnippet
+  source="examples/guides/physics-basics/solver-tuning.ts"
+  region="solver-tuning"
+  language="ts"
+  title="examples/guides/physics-basics/solver-tuning.ts"
+/>
 
 That is enough when you drive the world yourself with `world.step(delta)` — the
 world owns the accumulator, so it already knows the leftover fraction.
@@ -338,49 +272,12 @@ the destination instead of sweeping across the jump.
 Putting it together — a static floor, a dynamic ball bound to a sprite, stepped from
 `fixedUpdate`:
 
-```ts
-import { type RenderingContext, Scene, Sprite, type Seconds } from '@codexo/exojs';
-import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
-
-class DropScene extends Scene {
-  private readonly world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
-  private ball!: Sprite;
-
-  public override async load(): Promise<void> {
-    await this.loader.load('image/ball.png');
-  }
-
-  public override init(): void {
-    // Static floor — an immovable body, no sprite needed.
-    this.world.add(
-      new PhysicsBody({
-        type: 'static',
-        position: { x: 0, y: 360 },
-        colliders: [{ shape: new BoxShape(800, 40) }],
-      }),
-    );
-
-    // Dynamic ball: a sprite plus a body + circle collider, linked by `attach`.
-    this.ball = new Sprite(this.loader.get('image/ball.png'));
-    this.addChild(this.ball);
-
-    this.world.attach(this.ball, {
-      type: 'dynamic',
-      position: { x: 0, y: -200 },
-      shape: new CircleShape(12),
-      restitution: 0.5,
-    });
-  }
-
-  public override fixedUpdate(delta: Seconds): void {
-    this.world.step(delta);
-  }
-
-  public override draw(context: RenderingContext): void {
-    context.render(this.root);
-  }
-}
-```
+<SourceSnippet
+  source="examples/guides/physics-basics/drop-scene.ts"
+  region="drop-scene"
+  language="ts"
+  title="examples/guides/physics-basics/drop-scene.ts"
+/>
 
 The ball falls under gravity, hits the floor, bounces a few times (restitution `0.5`)
 and settles. Because the body is bound to the sprite, the sprite follows automatically —
