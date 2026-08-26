@@ -89,7 +89,7 @@ first time it reaches that package. Bootstrap it ahead of time instead:
    `manifest.ts`, `prepare.ts`, `run.ts`, the `verify-*` gates and the
    external-consumer smoke all derive from. Then mirror it in the two places that
    cannot import that TS module: add its directory to `RUNTIME_PACKAGES` in
-   `scripts/ci/select-lanes.mjs`, and add its `--filter` to the build/typecheck/pack
+   `scripts/ci/select-lanes.ts`, and add its `--filter` to the build/typecheck/pack
    steps in `.github/workflows/_ci-checks.yml` and the build step in `release.yml`
    (`verify:release-matrix` enforces the `release.yml` build lines, so a forgotten
    one fails CI rather than silently skipping the package).

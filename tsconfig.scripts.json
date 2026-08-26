@@ -23,11 +23,10 @@
   // here. Converting it to TypeScript is not required for that and would cost
   // more than it buys - ESLint and Prettier load it directly at runtime.
   //
-  // `scripts/ci/select-lanes.mjs` is in the program for the same reason, and
-  // stays `.mjs` for a hard one rather than a preference: the CI detector job
-  // runs it with the runner's ambient node before any install, so it must be
-  // executable with no toolchain at all. `checkJs` gives it the same checking
-  // a `.ts` file would get.
+  // `scripts/**` itself is TypeScript throughout, including the files that run
+  // with no toolchain behind them - node strips their types itself. The `.mjs`
+  // include stays anyway, so a file that reappears in that form is checked
+  // rather than silently outside the program again.
   "extends": "@codexo/exojs-config/typescript/base.json",
   "compilerOptions": {
     "lib": ["es2023"],

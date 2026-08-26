@@ -9,7 +9,7 @@
  * Auto-wired (string-edit, idempotent):
  *   - scripts/release/lockstep-packages.ts  (LOCKSTEP_PACKAGES entry - the SoT
  *     every release script derives from: cut/manifest/prepare/run/verify-*)
- *   - scripts/ci/select-lanes.mjs           (RUNTIME_PACKAGES entry)
+ *   - scripts/ci/select-lanes.ts           (RUNTIME_PACKAGES entry)
  *   - pnpm-workspace.yaml                    (explicit member list, not a glob)
  *
  * NOT auto-wired (enumerated YAML / a different runtime / a manual bootstrap) -
@@ -413,21 +413,21 @@ const wired: string[] = [];
   wired.push('scripts/release/lockstep-packages.ts (LOCKSTEP_PACKAGES)');
 }
 
-// 2. scripts/ci/select-lanes.mjs - append the directory to RUNTIME_PACKAGES.
+// 2. scripts/ci/select-lanes.ts - append the directory to RUNTIME_PACKAGES.
 {
-  const lanesPath = resolve(rootDir, 'scripts/ci/select-lanes.mjs');
+  const lanesPath = resolve(rootDir, 'scripts/ci/select-lanes.ts');
   const src = readFileSync(lanesPath, 'utf8');
   const dirName = `exojs-${name}`;
   if (src.includes(`'${dirName}'`)) {
-    wired.push('scripts/ci/select-lanes.mjs (already present)');
+    wired.push('scripts/ci/select-lanes.ts (already present)');
   } else {
     const arrayStart = src.indexOf('const RUNTIME_PACKAGES = [');
-    if (arrayStart === -1) throw new Error('RUNTIME_PACKAGES array not found in select-lanes.mjs');
+    if (arrayStart === -1) throw new Error('RUNTIME_PACKAGES array not found in select-lanes.ts');
     const closeIdx = src.indexOf('];', arrayStart);
-    if (closeIdx === -1) throw new Error('RUNTIME_PACKAGES closing not found in select-lanes.mjs');
+    if (closeIdx === -1) throw new Error('RUNTIME_PACKAGES closing not found in select-lanes.ts');
     const updated = `${src.slice(0, closeIdx)}  '${dirName}',\n${src.slice(closeIdx)}`;
     writeFileSync(lanesPath, updated, 'utf8');
-    wired.push('scripts/ci/select-lanes.mjs (RUNTIME_PACKAGES)');
+    wired.push('scripts/ci/select-lanes.ts (RUNTIME_PACKAGES)');
   }
 }
 

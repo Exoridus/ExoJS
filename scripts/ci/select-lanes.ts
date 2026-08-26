@@ -1,4 +1,3 @@
-// @ts-check
 import { pathToFileURL } from 'node:url';
 
 /**
@@ -6,15 +5,17 @@ import { pathToFileURL } from 'node:url';
  * set of changed files must trigger.
  *
  * Consumed by:
- *   - the "Detect changes" job in .github/workflows/_ci-checks.yml (run with the
- *     runner's ambient `node`, no `pnpm install`); and
+ *   - the "Detect changes" job in .github/workflows/_ci-checks.yml (plain
+ *     `node`, no `pnpm install`); and
  *   - test/ci/select-lanes.test.ts, which asserts representative changed-file
  *     sets against `selectAreas` / `effectiveLanes`.
  *
- * Written as dependency-free ESM (`.mjs`) on purpose: the detector job runs this
- * with the runner's ambient `node` BEFORE any dependency install, so it must not
- * import anything outside `node:` built-ins. Keep it that way - adding a runtime
- * import here would force a `pnpm install` into the always-on detector job.
+ * Dependency-free ESM on purpose: the detector job runs this BEFORE any
+ * dependency install, so it must not import anything outside `node:` built-ins.
+ * Keep it that way - adding a runtime import here would force a `pnpm install`
+ * into the always-on detector job. For the same reason the syntax has to stay
+ * erasable (no enums, no parameter properties): node strips the types itself,
+ * and there is no compiler in that job to fall back on.
  *
  * Background / the defect this prevents:
  * a PR touching only `packages/exojs-tilemap/**` or `packages/exojs-tiled/**`
@@ -25,22 +26,28 @@ import { pathToFileURL } from 'node:url';
  * validation set - not just the docs/site lane.
  */
 
-/**
- * @typedef {{ engine: boolean, site: boolean, audioFx: boolean, tilemapWorker: boolean }} LaneAreas
- * @typedef {{
- *   typecheck: boolean,
- *   lint: boolean,
- *   unit: boolean,
- *   coverage: boolean,
- *   browserWebgl2: boolean,
- *   browserWebgpu: boolean,
- *   browserFirefox: boolean,
- *   browserAudio: boolean,
- *   browserTilemapWorker: boolean,
- *   packageVerify: boolean,
- *   siteBuild: boolean,
- * }} EffectiveLanes
- */
+/** The validation areas a changed-file set maps onto. */
+export interface LaneAreas {
+  engine: boolean;
+  site: boolean;
+  audioFx: boolean;
+  tilemapWorker: boolean;
+}
+
+/** The concrete CI lanes those areas enable. */
+export interface EffectiveLanes {
+  typecheck: boolean;
+  lint: boolean;
+  unit: boolean;
+  coverage: boolean;
+  browserWebgl2: boolean;
+  browserWebgpu: boolean;
+  browserFirefox: boolean;
+  browserAudio: boolean;
+  browserTilemapWorker: boolean;
+  packageVerify: boolean;
+  siteBuild: boolean;
+}
 
 /**
  * Runtime workspace packages whose CODE participates in the engine validation
@@ -56,8 +63,7 @@ import { pathToFileURL } from 'node:url';
  *
  * Adding a new runtime extension package == add its directory name here. Keep in
  * sync with `LOCKSTEP_PACKAGES` in scripts/release/lockstep-packages.ts (this
- * file is dependency-free ESM and runs before any install, so it cannot import
- * that TS module).
+ * file runs before any install, so it cannot import that module).
  */
 const RUNTIME_PACKAGES = [
   'exojs-build',
@@ -77,16 +83,14 @@ const RUNTIME_PACKAGES = [
  * Documentation-only files inside a package. A change limited to these must NOT
  * drag in the expensive engine lanes - it still triggers the docs/site lane via
  * the `site` area, because package READMEs feed the generated package API pages.
- * @param {string} file
  */
-const isPackageDocPath = file => /^packages\/[^/]+\/(README\.md|CHANGELOG\.md|LICENSE)$/.test(file);
+const isPackageDocPath = (file: string): boolean => /^packages\/[^/]+\/(README\.md|CHANGELOG\.md|LICENSE)$/.test(file);
 
 /**
  * Engine area: core runtime code, shared root tooling, and runtime-package CODE.
  * Gates the unit/coverage, package-build-and-verify and browser lanes.
- * @param {string} file
  */
-const isEnginePath = file => {
+const isEnginePath = (file: string): boolean => {
   // Core engine source, in-repo tests (incl. the browser/perf suites that import
   // package source through the vitest aliases), and repo automation scripts.
   if (file.startsWith('src/')) return true;
@@ -118,9 +122,8 @@ const isEnginePath = file => {
  * defines the browser-audio project, the shared config preset, the root
  * manifest/lockfile/workspace, and any workflow change). A change anywhere else
  * in the engine does NOT drag in the browser-audio lane.
- * @param {string} file
  */
-const isAudioFxPath = file => {
+const isAudioFxPath = (file: string): boolean => {
   if (file.startsWith('.github/workflows/')) return true;
   if (file === 'vitest.config.ts') return true;
   if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') return true;
@@ -134,9 +137,8 @@ const isAudioFxPath = file => {
  * WorkerSampledChunkSource's real-Worker round trip in headless Chromium
  * (jsdom implements neither Worker nor URL.createObjectURL). Narrow gate,
  * same reasoning as isAudioFxPath: expensive relative to its blast radius.
- * @param {string} file
  */
-const isTilemapWorkerPath = file => {
+const isTilemapWorkerPath = (file: string): boolean => {
   if (file.startsWith('.github/workflows/')) return true;
   if (file === 'vitest.config.ts') return true;
   if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') return true;
@@ -150,9 +152,8 @@ const isTilemapWorkerPath = file => {
  * Gates the site-build lane. Mirrors (and intentionally keeps) the prior `site`
  * filter: every `packages/**` change - docs included - can affect generated docs
  * or example builds.
- * @param {string} file
  */
-const isSitePath = file => {
+const isSitePath = (file: string): boolean => {
   if (file.startsWith('site/')) return true;
   if (file.startsWith('examples/')) return true;
   if (file.startsWith('packages/')) return true;
@@ -164,10 +165,8 @@ const isSitePath = file => {
 
 /**
  * Classify a list of changed files into the effective validation areas.
- * @param {readonly string[]} changedFiles
- * @returns {LaneAreas}
  */
-export const selectAreas = changedFiles => {
+export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
   let engine = false;
   let site = false;
   let audioFx = false;
@@ -194,10 +193,8 @@ export const selectAreas = changedFiles => {
  *     merely `continue-on-error`, i.e. non-blocking, in the workflow);
  *   - site-build gates on `site`;
  *   - the browser-audio lane gates on `audioFx` (a narrow subset of engine).
- * @param {LaneAreas} areas
- * @returns {EffectiveLanes}
  */
-export const effectiveLanes = areas => {
+export const effectiveLanes = (areas: LaneAreas): EffectiveLanes => {
   const { engine, site, audioFx, tilemapWorker } = areas;
   return {
     typecheck: true,
@@ -217,10 +214,8 @@ export const effectiveLanes = areas => {
 /**
  * Parse the changed-file list emitted by dorny/paths-filter (`list-files: json`)
  * - tolerant of an empty value or a newline-delimited list.
- * @param {string | undefined} raw
- * @returns {string[]}
  */
-const parseChangedFiles = raw => {
+const parseChangedFiles = (raw: string | undefined): string[] => {
   const text = (raw ?? '').trim();
   if (text === '') return [];
   if (text.startsWith('[')) {
@@ -245,7 +240,7 @@ const parseChangedFiles = raw => {
  * area runs: a push to main, a tag release (via release.yml) or a manual
  * dispatch is always validated in full, never partially.
  */
-const main = () => {
+const main = (): void => {
   const eventName = process.env['EVENT_NAME'] ?? '';
   const areas =
     eventName === 'pull_request'
@@ -259,7 +254,7 @@ const main = () => {
   process.stdout.write(`engine=${areas.engine}\nsite=${areas.site}\naudioFx=${areas.audioFx}\ntilemapWorker=${areas.tilemapWorker}\n`);
 };
 
-// Only run the CLI when executed directly (`node scripts/ci/select-lanes.mjs`),
+// Only run the CLI when executed directly (`node scripts/ci/select-lanes.ts`),
 // never when imported by the test suite.
 const invokedPath = process.argv[1];
 if (invokedPath && import.meta.url === pathToFileURL(invokedPath).href) {

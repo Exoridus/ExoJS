@@ -51,12 +51,12 @@ jobs:
 
       # On pull requests, list every changed file (dorny/paths-filter resolves
       # the base / merge-base robustly) and hand the list to
-      # scripts/ci/select-lanes.mjs, which decides the effective lanes. Pushes to
+      # scripts/ci/select-lanes.ts, which decides the effective lanes. Pushes to
       # main, tag releases (via release.yml) and manual dispatches skip this step;
       # select-lanes then runs every lane, so a release is never partially
       # checked.
       #
-      # The path-to-lane mapping lives in scripts/ci/select-lanes.mjs — NOT in
+      # The path-to-lane mapping lives in scripts/ci/select-lanes.ts — NOT in
       # this YAML — so it is a single source of truth that
       # test/ci/select-lanes.test.ts can assert deterministically.
       - name: List changed files
@@ -69,14 +69,22 @@ jobs:
             all:
               - '**'
 
+      # select-lanes.ts is TypeScript that node type-strips on its own, so this
+      # job needs a node that does that unflagged (>= 22.18) — pinned here to the
+      # same version every other job uses rather than inherited from whatever the
+      # runner image happens to ship. Node only, no cache and no install: the
+      # detector stays dependency-free and always-on.
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+
       - name: Decide effective lanes
         id: decide
         env:
           EVENT_NAME: ${{ github.event_name }}
           CHANGED_FILES: ${{ steps.changed.outputs.all_files }}
-        # Dependency-free ESM, run with the runner's ambient node — deliberately
-        # no pnpm install in this always-on detector job.
-        run: node scripts/ci/select-lanes.mjs >> "$GITHUB_OUTPUT"
+        run: node scripts/ci/select-lanes.ts >> "$GITHUB_OUTPUT"
 
   typecheck:
     name: Typecheck

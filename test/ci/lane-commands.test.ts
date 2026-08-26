@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { effectiveLanes } from '../../scripts/ci/select-lanes.mjs';
+import { effectiveLanes } from '../../scripts/ci/select-lanes.ts';
 import { LOCAL_LANES } from '../../scripts/lanes';
 
 /**

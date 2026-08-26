@@ -12,7 +12,7 @@
  *   - `.github/workflows/release.yml` / `_ci-checks.yml` build/typecheck/pack
  *     steps (YAML, enumerated `--filter`s; release.yml build lines are asserted
  *     by `verify:release-matrix`).
- *   - `scripts/ci/select-lanes.mjs` RUNTIME_PACKAGES (dependency-free ESM that
+ *   - `scripts/ci/select-lanes.ts` RUNTIME_PACKAGES (dependency-free ESM that
  *     runs before any install, so it cannot import this TS module).
  *   - `site/scripts/sync-exo-vendor.ts` / `full-zip.ts` vendor tree - a smaller,
  *     site-owned set (the offline examples site only embeds packages it uses).
