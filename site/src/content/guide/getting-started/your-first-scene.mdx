@@ -19,18 +19,12 @@ This chapter builds one from scratch: a single sprite, centered on the canvas, r
 
 The smallest viable scene has just a `draw` method. The application calls it every frame; the scene tells the backend what to put on screen:
 
-```ts
-import { Application, type RenderingContext, Scene } from '@codexo/exojs';
-
-class HelloScene extends Scene {
-    draw(context: RenderingContext) {
-        context.render(this.root);
-    }
-}
-
-const app = new Application({ scenes: { HelloScene }, canvas: { width: 800, height: 600 } });
-app.start(HelloScene);
-```
+<SourceSnippet
+  source="examples/guides/your-first-scene/minimal-scene.ts"
+  region="minimal-scene"
+  language="ts"
+  title="examples/guides/your-first-scene/minimal-scene.ts"
+/>
 
 The canvas is already painted with the application's `clearColor` before `draw` runs — the engine clears every frame, so a scene never has to open with a clear of its own. Pass `autoClear: false` to `Application` if you want the previous frame to remain instead.
 
