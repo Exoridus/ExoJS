@@ -4,6 +4,7 @@ description: 'Work with pointer events across mouse and touch-compatible devices
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import Callout from '../../../components/Callout.astro';
 
 # Mouse and pointer
@@ -53,14 +54,12 @@ The pointer's `position` is in canvas-local design space — `(0, 0)` is the top
 
 `Pointer.X`, `Pointer.Y`, and `Pointer.Active` are channel constants that always reference the primary pointer (normally the mouse, or the first finger to touch). These can be used with the binding API just like keyboard channels:
 
-```ts
-this.inputs.onActive(Pointer.Active, () => {
-    this.isPointing = true;
-});
-this.inputs.onStop(Pointer.Active, () => {
-    this.isPointing = false;
-});
-```
+<SourceSnippet
+  source="examples/guides/mouse-and-pointer/pointer-scenes.ts"
+  region="pointer-active"
+  language="ts"
+  title="examples/guides/mouse-and-pointer/pointer-scenes.ts"
+/>
 
 The signal-style API (`app.input.onPointerMove`) is typically more ergonomic for pointer input than the binding API, since pointer data includes position, pressure, and tilt — not just an active/inactive boolean.
 
@@ -68,46 +67,21 @@ The signal-style API (`app.input.onPointerMove`) is typically more ergonomic for
 
 Each pointer gets a slot index (0–15). Per-slot channel constants let you track individual fingers for multi-touch:
 
-```ts
-import { Pointer, Scene } from '@codexo/exojs';
-
-class TouchScene extends Scene {
-    private touchX = 0;
-
-    override init(): void {
-        // Slot 1 (second finger)
-        this.inputs.onActive(Pointer.Slot1X, value => {
-            this.touchX = value * this.app.width;
-        });
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/mouse-and-pointer/pointer-scenes.ts"
+  region="pointer-slots"
+  language="ts"
+  title="examples/guides/mouse-and-pointer/pointer-scenes.ts"
+/>
 
 For most multi-touch use cases, tracking pointer instances by ID via the signal API is simpler:
 
-```ts
-init() {
-    this.pointers = new Map();
-
-    this.app.input.onPointerDown.add(p => {
-        this.pointers.set(p.id, { x: p.x, y: p.y });
-    });
-
-    this.app.input.onPointerMove.add(p => {
-        if (this.pointers.has(p.id)) {
-            this.pointers.set(p.id, { x: p.x, y: p.y });
-        }
-    });
-
-    this.app.input.onPointerUp.add(p => {
-        this.pointers.delete(p.id);
-    });
-
-    this.app.input.onPointerCancel.add(p => {
-        this.pointers.delete(p.id);
-    });
-}
-```
+<SourceSnippet
+  source="examples/guides/mouse-and-pointer/pointer-scenes.ts"
+  region="multi-touch"
+  language="ts"
+  title="examples/guides/mouse-and-pointer/pointer-scenes.ts"
+/>
 
 ## Gesture recognition
 
@@ -164,16 +138,12 @@ For raw canvas backing-store pixels — e.g. an off-screen render target at a di
 
 A `Sprite` (or any `RenderNode`) can be made interactive and draggable directly:
 
-```ts
-init() {
-    this.sprite = new Sprite(this.loader.get('image/hero.png'));
-    this.sprite.setAnchor(0.5);
-    this.sprite.setPosition(400, 300);
-
-    this.sprite.interactive = true;  // respond to pointer events
-    this.sprite.draggable = true;    // enable drag behavior
-}
-```
+<SourceSnippet
+  source="examples/guides/mouse-and-pointer/pointer-scenes.ts"
+  region="draggable-sprite"
+  language="ts"
+  title="examples/guides/mouse-and-pointer/pointer-scenes.ts"
+/>
 
 Setting `interactive = true` makes the sprite participate in hit testing. Setting `draggable = true` lets the user drag it with the pointer — the engine handles pointer tracking and position updates.
 
