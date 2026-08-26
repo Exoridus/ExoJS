@@ -4,6 +4,7 @@ description: 'Diagnose and fix the most common ExoJS problems: blank canvas, API
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import Callout from '../../../components/Callout.astro';
 
 # Troubleshooting
@@ -41,11 +42,12 @@ A blank or black canvas usually means one of the following:
 
 **`context.render()` is missing from `draw`.** The engine clears the frame for you, but it never renders your scene graph for you — `draw` has to say what to draw:
 
-```ts
-draw(context: RenderingContext) {
-    context.render(this.root);
-}
-```
+<SourceSnippet
+  source="examples/guides/troubleshooting/draw-hook.ts"
+  region="draw-root"
+  language="ts"
+  title="examples/guides/troubleshooting/draw-hook.ts"
+/>
 
 Without `context.render(this.root)`, the frame is cleared and nothing else happens, so the canvas stays a flat `clearColor`.
 
@@ -69,11 +71,12 @@ draw(backend) {
 
 The current API passes a render context, not a bare backend, and renders nodes through the context rather than calling `render` on the node itself. The manual clear is gone too — the engine clears each frame before `draw` runs:
 
-```ts
-draw(context: RenderingContext) {
-    context.render(this.root);
-}
-```
+<SourceSnippet
+  source="examples/guides/troubleshooting/draw-hook.ts"
+  region="draw-root"
+  language="ts"
+  title="examples/guides/troubleshooting/draw-hook.ts"
+/>
 
 Current constructor options are grouped under `canvas`, `loader`, `rendering`, and `input`; see the [Application guide](/ExoJS/en/guide/runtime/application/#construction) for the supported shape.
 
