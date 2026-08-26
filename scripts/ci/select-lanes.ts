@@ -32,6 +32,7 @@ export interface LaneAreas {
   site: boolean;
   audioFx: boolean;
   tilemapWorker: boolean;
+  exampleCatalog: boolean;
 }
 
 /** The concrete CI lanes those areas enable. */
@@ -47,6 +48,7 @@ export interface EffectiveLanes {
   browserTilemapWorker: boolean;
   packageVerify: boolean;
   siteBuild: boolean;
+  exampleSmoke: boolean;
 }
 
 /**
@@ -148,6 +150,37 @@ const isTilemapWorkerPath = (file: string): boolean => {
 };
 
 /**
+ * Example-catalog area: the playground catalog itself and the machinery that
+ * puts it in front of a browser. Gates the example-smoke lane, which boots
+ * every catalog entry in headless Chromium.
+ *
+ * Nothing else in CI executes an example. `typecheck:examples` compiles the
+ * sources, `examples:sync:check` compares the generated `.js` twins against
+ * them, and the site build only has to render the pages that link them - an
+ * example whose scene throws on start passes all three and still ships a black
+ * canvas.
+ *
+ * Narrow on purpose, and narrower than `site`: the lane drives a real browser
+ * over the whole catalog, so an unrelated site page or a package README must
+ * not pull it in. Engine paths are deliberately NOT in this set either - they
+ * run the browser rendering lanes, which cover the same runtime on a suite
+ * built for it.
+ */
+const isExampleCatalogPath = (file: string): boolean => {
+  if (file.startsWith('.github/workflows/')) return true;
+  if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') return true;
+  // The catalog sources, their generated `.js` twins, the example assets, and
+  // `examples.json` - the manifest the harness iterates.
+  if (file.startsWith('examples/')) return true;
+  // The harness, the page it loads every example through, and the generator
+  // that copies the catalog into the site the harness serves.
+  if (file === 'site/scripts/smoke-examples.ts') return true;
+  if (file === 'site/scripts/sync-examples-static.ts') return true;
+  if (file === 'site/public/preview.html') return true;
+  return false;
+};
+
+/**
  * Site area: anything that can change the generated examples site / API docs.
  * Gates the site-build lane. Mirrors (and intentionally keeps) the prior `site`
  * filter: every `packages/**` change - docs included - can affect generated docs
@@ -171,6 +204,7 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
   let site = false;
   let audioFx = false;
   let tilemapWorker = false;
+  let exampleCatalog = false;
   for (const raw of changedFiles) {
     // Normalise Windows separators and trim stray whitespace/blank entries.
     const file = String(raw).replace(/\\/g, '/').trim();
@@ -179,9 +213,10 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
     if (!site && isSitePath(file)) site = true;
     if (!audioFx && isAudioFxPath(file)) audioFx = true;
     if (!tilemapWorker && isTilemapWorkerPath(file)) tilemapWorker = true;
-    if (engine && site && audioFx && tilemapWorker) break;
+    if (!exampleCatalog && isExampleCatalogPath(file)) exampleCatalog = true;
+    if (engine && site && audioFx && tilemapWorker && exampleCatalog) break;
   }
-  return { engine, site, audioFx, tilemapWorker };
+  return { engine, site, audioFx, tilemapWorker, exampleCatalog };
 };
 
 /**
@@ -192,10 +227,13 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
  *     (the WebGPU + Firefox browser lanes still run when engine is true; they are
  *     merely `continue-on-error`, i.e. non-blocking, in the workflow);
  *   - site-build gates on `site`;
- *   - the browser-audio lane gates on `audioFx` (a narrow subset of engine).
+ *   - the browser-audio lane gates on `audioFx` (a narrow subset of engine);
+ *   - example-smoke gates on `exampleCatalog` (a narrow subset of site) and
+ *     additionally waits for site-build, because it smokes that job's artifact
+ *     rather than building the site a second time.
  */
 export const effectiveLanes = (areas: LaneAreas): EffectiveLanes => {
-  const { engine, site, audioFx, tilemapWorker } = areas;
+  const { engine, site, audioFx, tilemapWorker, exampleCatalog } = areas;
   return {
     typecheck: true,
     lint: true,
@@ -208,6 +246,7 @@ export const effectiveLanes = (areas: LaneAreas): EffectiveLanes => {
     browserTilemapWorker: tilemapWorker,
     packageVerify: engine,
     siteBuild: site,
+    exampleSmoke: exampleCatalog,
   };
 };
 
@@ -245,13 +284,15 @@ const main = (): void => {
   const areas =
     eventName === 'pull_request'
       ? selectAreas(parseChangedFiles(process.env['CHANGED_FILES']))
-      : { engine: true, site: true, audioFx: true, tilemapWorker: true };
+      : { engine: true, site: true, audioFx: true, tilemapWorker: true, exampleCatalog: true };
 
   // Human-readable trace to the job log (stderr keeps it out of $GITHUB_OUTPUT).
   process.stderr.write(
-    `select-lanes: event=${eventName || 'unknown'} engine=${areas.engine} site=${areas.site} audioFx=${areas.audioFx} tilemapWorker=${areas.tilemapWorker}\n`,
+    `select-lanes: event=${eventName || 'unknown'} engine=${areas.engine} site=${areas.site} audioFx=${areas.audioFx} tilemapWorker=${areas.tilemapWorker} exampleCatalog=${areas.exampleCatalog}\n`,
   );
-  process.stdout.write(`engine=${areas.engine}\nsite=${areas.site}\naudioFx=${areas.audioFx}\ntilemapWorker=${areas.tilemapWorker}\n`);
+  process.stdout.write(
+    `engine=${areas.engine}\nsite=${areas.site}\naudioFx=${areas.audioFx}\ntilemapWorker=${areas.tilemapWorker}\nexampleCatalog=${areas.exampleCatalog}\n`,
+  );
 };
 
 // Only run the CLI when executed directly (`node scripts/ci/select-lanes.ts`),

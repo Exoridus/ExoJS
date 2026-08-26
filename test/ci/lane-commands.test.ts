@@ -25,7 +25,14 @@ const repoRoot = resolve(import.meta.dirname!, '../..');
  */
 const INTENTIONALLY_LOCAL_ONLY_IN_CI = new Set(['coverage', 'browserFirefox', 'packageVerify']);
 
-const allLaneKeys = Object.keys(effectiveLanes({ engine: true, site: true, audioFx: true, tilemapWorker: true }));
+const allLaneKeys = Object.keys(effectiveLanes({ engine: true, site: true, audioFx: true, tilemapWorker: true, exampleCatalog: true }));
+
+/**
+ * The package scripts a lane runs. A lane may chain steps with `&&` - the
+ * example smoke serves the site build's output, so locally the build is part
+ * of the lane - and every step named in it has to exist.
+ */
+const laneScripts = (command: readonly string[]): string[] => command.filter((part, index) => command[index - 1] === 'pnpm');
 
 const packageScripts = (): Record<string, string> => {
   const manifest = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8')) as { scripts: Record<string, string> };
@@ -61,16 +68,24 @@ describe('local lane commands', () => {
     const scripts = packageScripts();
 
     for (const lane of LOCAL_LANES) {
-      const [runner, script] = lane.command;
+      expect(lane.command[0]).toBe('pnpm');
 
-      expect(runner).toBe('pnpm');
-      expect(Object.keys(scripts)).toContain(script);
+      const named = laneScripts(lane.command);
+
+      expect(named.length).toBeGreaterThan(0);
+
+      for (const script of named) {
+        expect(Object.keys(scripts)).toContain(script);
+      }
     }
   });
 
   it('marks every browser-driven lane so --quick can skip it', () => {
     for (const lane of LOCAL_LANES) {
-      const drivesBrowser = lane.command.some(part => part.startsWith('test:browser'));
+      // `test:examples:smoke` drives a real Chromium too - it boots the whole
+      // example catalog - so the flag has to follow what a lane actually does,
+      // not just the `test:browser*` naming the vitest projects happen to use.
+      const drivesBrowser = laneScripts(lane.command).some(script => script.startsWith('test:browser') || script === 'test:examples:smoke');
 
       expect(lane.browser ?? false).toBe(drivesBrowser);
     }
