@@ -2,5 +2,7 @@ import { Scene } from '@codexo/exojs';
 
 // #region guide:scene-registry
 export class TitleScene extends Scene {}
-export class GameScene extends Scene {}
+export class GameScene extends Scene {
+  public score = 0;
+}
 // #endregion guide:scene-registry
