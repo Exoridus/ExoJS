@@ -1038,12 +1038,15 @@ export default defineConfig([
     },
   },
 
-  // Two files in the tree are outside `tsconfig.examples.json` on purpose - the
-  // Monaco-only shim, and the worker source the generator inlines - so a named
-  // project cannot parse them. They keep the service-free setup, which means
-  // giving up the catalog's one type-aware rule for these two files.
+  // Three files in the tree are unreachable through `tsconfig.examples.json`, so
+  // a named project cannot parse them: the Monaco-only shim and the worker
+  // source the generator inlines are outside the program on purpose, and
+  // `runtime.d.ts` is inside the include glob but never lands in the program -
+  // TypeScript resolves that module through the `runtime.ts` it is generated
+  // from and drops the declaration twin. They keep the service-free setup, which
+  // means giving up the catalog's one type-aware rule for these three files.
   {
-    files: ['examples/**/*.worker.ts', 'examples/shared/editor-support.d.ts'],
+    files: ['examples/**/*.worker.ts', 'examples/shared/editor-support.d.ts', 'examples/shared/runtime.d.ts'],
     languageOptions: {
       parserOptions: { projectService: false, project: null },
     },
