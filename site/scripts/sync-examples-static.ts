@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { renderAssetsGlobalDts } from '../../scripts/generate-examples-global-dts.ts';
+import { renderRuntimeDts } from '../../scripts/generate-examples-runtime-dts.ts';
 import { transpileTypescriptExamples } from '../../scripts/transpile-examples.ts';
 import { assets } from '../../examples/assets/assets.js';
 import { rawAssets } from '../../examples/assets/catalog.js';
@@ -74,6 +75,14 @@ const run = async (): Promise<void> => {
   const globalDtsPath = path.resolve(sourceExamplesDir, 'shared', 'assets-global.d.ts');
   fs.writeFileSync(globalDtsPath, renderAssetsGlobalDts(assets as unknown as Record<string, unknown>), 'utf8');
   console.log(`[examples:sync] Generated ${globalDtsPath}`);
+
+  // The Playground editor resolves `@examples/runtime` through a declaration
+  // file it fetches from the served snapshot, so the shared helper kit needs one
+  // beside its implementation. Emitted rather than hand-written: a second copy
+  // of the same signatures is free to drift from the code the examples run.
+  const runtimeDtsPath = path.resolve(sourceExamplesDir, 'shared', 'runtime.d.ts');
+  fs.writeFileSync(runtimeDtsPath, renderRuntimeDts(repositoryRoot), 'utf8');
+  console.log(`[examples:sync] Generated ${runtimeDtsPath}`);
 
   resetDir(targetExamplesDir);
   resetDir(targetAssetsDir);

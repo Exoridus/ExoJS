@@ -6,7 +6,7 @@
   // The runtime example smoke (site/scripts/smoke-examples.ts) only catches
   // crashes and missing canvases - stale TextStyle keys like `fill`, `stroke`,
   // or `wordWrap` are silently ignored at runtime, so they slip through. This
-  // config type-checks the example `.js` sources against the engine's own source
+  // config type-checks the example sources against the engine's own source
   // types (no build required: `@codexo/exojs` maps to `src/index.ts`), so the
   // editor-visible "`fill` does not exist in TextStyleOptions" diagnostics also
   // fail `pnpm typecheck:examples`.
@@ -23,13 +23,14 @@
   // accessed before the scene is attached).
   //
   // Scope: the full example catalog plus `scripts/exo-full.entry.ts`. Every
-  // `.js` under `examples/` is type-checked against the engine source types, so
-  // stale TextStyle keys are caught catalog-wide. The full-bundle entry is the
+  // authored `.ts` under `examples/` is type-checked against the engine source
+  // types, so stale TextStyle keys are caught catalog-wide. The full-bundle entry is the
   // same kind of program - a named re-export surface resolved against every
   // extension package's source - and the production build only compiles it when
   // EXOJS_FULL_BUNDLE=1, so without it here a stale named export is visible only
-  // in the CI build lane. `examples/shared/runtime.d.ts` supplies the
-  // playground-only globals (`window.assets`, `__EXAMPLE_META__`).
+  // in the CI build lane. `examples/shared/runtime.ts` supplies the shared
+  // helper kit and the playground-only globals (`window.assets`,
+  // `__EXAMPLE_META__`).
   //
   // The generated `.js` siblings are NOT in this program. They are transpiled
   // from the `.ts` beside them by `examples:sync` and committed so a release
@@ -44,18 +45,11 @@
   // emitted file carries code the `.ts` does not, and dropping it would leave
   // that code unchecked.
   //
-  // `examples/shared/runtime.js` stays out for a different reason: it is
-  // authored rather than generated, but what every consumer resolves is its
-  // hand-written `runtime.d.ts`, and the file itself is not checked under the
-  // previous include either. Putting it in the program reports ~30 implicit
-  // `any`s that have always been there, which is its own change and not this
-  // one.
-  //
   // `examples/shared/editor-support.d.ts` is deliberately NOT included: it is a
   // Monaco-only extra-lib that re-declares `Json`/`TextAsset`/etc. inside
   // `declare module '@codexo/exojs'`, which collides with the real source
-  // exports here (duplicate-identifier). Its permissive Scene/Loader shims are
-  // unnecessary for `.js` sources - checked JS infers `this._x` fields directly.
+  // exports here (duplicate-identifier). Its permissive Scene/Loader shims exist
+  // for the editor's JavaScript view, which is not this program.
   //
   // The entire example catalog type-checks against the engine source types with
   // zero per-example excludes. The former stale-API clusters (two-argument
@@ -79,16 +73,10 @@
       "@codexo/exojs-physics/debug": ["./packages/exojs-physics/src/debug/index.ts"],
       "@codexo/exojs-tilemap-physics": ["./packages/exojs-tilemap-physics/src/index.ts"],
       "@codexo/exojs-audio-fx": ["./packages/exojs-audio-fx/src/index.ts"],
-      "@examples/runtime": ["./examples/shared/runtime.d.ts"],
+      "@examples/runtime": ["./examples/shared/runtime.ts"],
       "@examples/terrain-noise": ["./examples/shared/terrain-noise.ts"]
     }
   },
-  "include": [
-    "examples/**/*.ts",
-    "examples/tilemap/worker-streamed-terrain.js",
-    "examples/shared/runtime.d.ts",
-    "scripts/exo-full.entry.ts",
-    "src/typings.d.ts"
-  ],
+  "include": ["examples/**/*.ts", "examples/tilemap/worker-streamed-terrain.js", "scripts/exo-full.entry.ts", "src/typings.d.ts"],
   "exclude": ["examples/shared/editor-support.d.ts", "examples/**/*.worker.ts"]
 }
