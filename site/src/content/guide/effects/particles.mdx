@@ -181,15 +181,12 @@ Other available update modules: `RotateOverLifetime`, `VelocityOverLifetime`, `A
 
 A death module fires once per particle when its lifetime expires. The only built-in death module is `SpawnOnDeath`:
 
-```ts no-check -- continues the system above; system, childSystem and childBurst come from it
-import { SpawnOnDeath } from '@codexo/exojs-particles';
-
-system.addDeathModule(new SpawnOnDeath(
-    childSystem,     // target ParticleSystem
-    childBurst,       // SpawnModule that spawns into childSystem
-    3                 // spawn childBurst.apply(...) this many times
-));
-```
+<SourceSnippet
+  source="examples/guides/particles/spawn-on-death.ts"
+  region="spawn-on-death"
+  language="ts"
+  title="examples/guides/particles/spawn-on-death.ts"
+/>
 
 `SpawnOnDeath` forwards the dying particle's position to the child system's spawn, so each child burst appears at the parent's death location.
 

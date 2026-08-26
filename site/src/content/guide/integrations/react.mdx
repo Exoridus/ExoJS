@@ -45,15 +45,12 @@ both.
 
 `useExoApplication(options?, onReady?)` returns the app and a ref to attach to your own canvas:
 
-```tsx no-check -- JSX; the snippet extractor writes .ts files and the guide program carries no JSX or React types
-import { useExoApplication } from '@codexo/exojs-react';
-
-function Game() {
-  const { app, canvasRef } = useExoApplication({ canvas: { width: 800, height: 600 } });
-  // `app` is null until the canvas is mounted; render it however you like.
-  return <canvas ref={canvasRef} className="game-surface" />;
-}
-```
+<SourceSnippet
+  source="packages/exojs-react/examples/guides/headless-hook.tsx"
+  region="headless-hook"
+  language="tsx"
+  title="packages/exojs-react/examples/guides/headless-hook.tsx"
+/>
 
 The hook returns `{ app, canvasRef }`: `app` is the `Application` (or `null` until the canvas
 mounts and the app is created), and `canvasRef` is a stable ref you attach to the `<canvas>` the
@@ -93,20 +90,12 @@ With no `canvas.sizing` the engine only ever writes the base resolution onto the
 the app via context so descendants (HUD, the scene API) can reach it. Because the wrapper is
 positioned, absolutely-positioned children sit over the canvas with no extra setup.
 
-```tsx no-check -- JSX; the snippet extractor writes .ts files and the guide program carries no JSX or React types
-import { ExoCanvas } from '@codexo/exojs-react';
-
-function Game() {
-  return (
-    <ExoCanvas
-      options={{ canvas: { width: 1280, height: 720 } }}
-      style={{ width: 1280, height: 720 }}
-    >
-      <div style={{ position: 'absolute', top: 8, left: 8 }}>HUD overlay</div>
-    </ExoCanvas>
-  );
-}
-```
+<SourceSnippet
+  source="packages/exojs-react/examples/guides/exo-canvas.tsx"
+  region="exo-canvas"
+  language="tsx"
+  title="packages/exojs-react/examples/guides/exo-canvas.tsx"
+/>
 
 Props:
 
@@ -135,30 +124,18 @@ The scene classes you reference are ordinary ExoJS scenes — the React layer on
 one is active:
 
 <SourceSnippet
-  source="examples/guides/react/scene-registry.ts"
+  source="packages/exojs-react/examples/guides/scenes.ts"
   region="scene-registry"
   language="ts"
-  title="examples/guides/react/scene-registry.ts"
+  title="packages/exojs-react/examples/guides/scenes.ts"
 />
 
-```tsx no-check -- JSX; the snippet extractor writes .ts files and the guide program carries no JSX or React types
-import { FadeSceneTransition } from '@codexo/exojs';
-import { ExoCanvas, Scenes, Scene } from '@codexo/exojs-react';
-import { TitleScene, GameScene } from './scenes';
-
-function Game({ screen }: { screen: 'title' | 'game' }) {
-  return (
-    <ExoCanvas options={{ canvas: { width: 1280, height: 720 } }} style={{ width: 1280, height: 720 }}>
-      <Scenes active={screen} transition={new FadeSceneTransition({ duration: 300 })}>
-        <Scene name="title" component={TitleScene} />
-        <Scene name="game" component={GameScene}>
-          <Hud />
-        </Scene>
-      </Scenes>
-    </ExoCanvas>
-  );
-}
-```
+<SourceSnippet
+  source="packages/exojs-react/examples/guides/scene-switching.tsx"
+  region="scene-switching"
+  language="tsx"
+  title="packages/exojs-react/examples/guides/scene-switching.tsx"
+/>
 
 Each `<Scene>` takes a unique `name`, the scene `component` class to instantiate, and optional
 `children` that render as the active scene's overlay. The `transition` (a `SceneTransition`
@@ -174,16 +151,12 @@ name="...">` declarations if you see the warning.
 `useActiveScene()` reads the live scene instance from the nearest `<Scenes>`, so an overlay can
 react to scene state:
 
-```tsx no-check -- JSX; the snippet extractor writes .ts files and the guide program carries no JSX or React types
-import { useActiveScene } from '@codexo/exojs-react';
-import type { GameScene } from './scenes';
-
-function Hud() {
-  const scene = useActiveScene<GameScene>();
-  if (scene === null) return null;
-  return <div style={{ position: 'absolute', top: 8, left: 8 }}>Score: {scene.score}</div>;
-}
-```
+<SourceSnippet
+  source="packages/exojs-react/examples/guides/active-scene-hud.tsx"
+  region="active-scene-hud"
+  language="tsx"
+  title="packages/exojs-react/examples/guides/active-scene-hud.tsx"
+/>
 
 For the simplest case — a single scene with no switching — use `useScene(SceneClass, deps?)`
 instead. It instantiates and activates one scene, returning the instance once it is live (or
@@ -203,58 +176,24 @@ Any component rendered inside `<ExoCanvas>` can read the running app:
 alone does not make a component re-render. Pair `useExoApp()` with `useSignal()` to subscribe
 to `app.onFrame` and re-render on every dispatch:
 
-```tsx no-check -- JSX; the snippet extractor writes .ts files and the guide program carries no JSX or React types
-import { useExoApp, useSignal } from '@codexo/exojs-react';
-
-function FrameCounter() {
-  const app = useExoApp(); // throws if rendered outside <ExoCanvas>
-  const frameCount = useSignal(app.onFrame, () => app.frameCount);
-  return <span>Frame: {frameCount}</span>;
-}
-```
+<SourceSnippet
+  source="packages/exojs-react/examples/guides/frame-counter.tsx"
+  region="frame-counter"
+  language="tsx"
+  title="packages/exojs-react/examples/guides/frame-counter.tsx"
+/>
 
 ## End-to-end
 
 A small app that hosts the canvas, switches between two scenes with a fade, and overlays React
 HUD on the active scene:
 
-```tsx no-check -- JSX; the snippet extractor writes .ts files and the guide program carries no JSX or React types
-import { useState } from 'react';
-import { FadeSceneTransition } from '@codexo/exojs';
-import { ExoCanvas, Scenes, Scene, useActiveScene } from '@codexo/exojs-react';
-import { TitleScene, GameScene } from './scenes';
-
-function Hud() {
-  const scene = useActiveScene();
-  return (
-    <div style={{ position: 'absolute', top: 8, left: 8, color: 'white' }}>
-      {scene?.constructor.name}
-    </div>
-  );
-}
-
-export function App() {
-  const [screen, setScreen] = useState<'title' | 'game'>('title');
-
-  return (
-    <ExoCanvas
-      options={{ canvas: { width: 1280, height: 720 } }}
-      style={{ width: 1280, height: 720 }}
-    >
-      <Scenes active={screen} transition={new FadeSceneTransition({ duration: 300 })}>
-        <Scene name="title" component={TitleScene}>
-          <button style={{ position: 'absolute', inset: 0 }} onClick={() => setScreen('game')}>
-            Start
-          </button>
-        </Scene>
-        <Scene name="game" component={GameScene}>
-          <Hud />
-        </Scene>
-      </Scenes>
-    </ExoCanvas>
-  );
-}
-```
+<SourceSnippet
+  source="packages/exojs-react/examples/guides/end-to-end.tsx"
+  region="end-to-end"
+  language="tsx"
+  title="packages/exojs-react/examples/guides/end-to-end.tsx"
+/>
 
 React owns the screen state and the HUD; ExoJS owns the canvas, the renderer, and the per-frame
 loop. The two stay cleanly separated.

@@ -17,6 +17,7 @@ import { defineConfig } from 'eslint/config';
 import prettier from 'eslint-config-prettier';
 
 const SOURCE = ['src/**/*.{ts,tsx}'];
+const EXAMPLES = ['examples/**/*.{ts,tsx}'];
 const TESTS = ['test/**/*.{ts,tsx}'];
 
 export default defineConfig([
@@ -60,6 +61,30 @@ export default defineConfig([
     files: ['src/Scenes.tsx'],
     rules: {
       '@eslint-react/no-unused-props': 'off',
+    },
+  },
+
+  // Guide sources (examples/guides/**) - the listings the React chapter embeds
+  // regions of. They are React code, so the React policy governs them.
+  ...reactConfig({ files: EXAMPLES, tsconfigRootDir: import.meta.dirname }),
+  {
+    files: EXAMPLES,
+    languageOptions: {
+      // Named project rather than the project service: the service resolves the
+      // nearest `tsconfig.json`, which is the package's own program over
+      // `src/**` and does not contain these files. The React rules that need
+      // type information - `no-implicit-key` among them - fail to load without
+      // a program, so pointing at the right one is what keeps them on.
+      parserOptions: { projectService: false, project: './tsconfig.examples.json', tsconfigRootDir: import.meta.dirname },
+    },
+    rules: {
+      // A listing names what it demonstrates and stops there: the headless-hook
+      // listing destructures both `app` and `canvasRef` because the chapter's
+      // point is that the hook returns both. Renaming to `_app` would put the
+      // workaround in the documentation. A stale IMPORT is still an error -
+      // that one is drift, not narration.
+      '@typescript-eslint/no-unused-vars': 'off',
+      'unused-imports/no-unused-vars': 'off',
     },
   },
 

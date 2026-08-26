@@ -164,14 +164,12 @@ fraction into the next call. That means both of these are correct:
   pattern — ExoJS's physics package implements the accumulator half of it for
   you; you only need to feed it a delta, fixed or not.
 
-```ts no-check -- class-method fragment shown with its modifiers but without its class
-public override update(delta: Seconds): void {
-  // Also valid: world.step owns its own accumulator, so a raw variable delta
-  // from requestAnimationFrame still yields deterministic, frame-rate
-  // independent physics — you don't have to build your own accumulator.
-  this.world.step(delta);
-}
-```
+<SourceSnippet
+  source="examples/guides/physics-basics/variable-step.ts"
+  region="variable-step"
+  language="ts"
+  title="examples/guides/physics-basics/variable-step.ts"
+/>
 
 One visible consequence: because bound sprites are written once per
 `world.step` call (once per rendered frame), a display refresh rate *above*
@@ -211,10 +209,12 @@ If you'd rather position things yourself, skip the binding and read the body's
 transform after each step — `body.x`, `body.y` (world position) and `body.angle`
 (radians):
 
-```ts no-check -- two-line sync fragment; sprite, body and MathUtils all come from the example above
-sprite.setPosition(body.x, body.y);
-sprite.setRotation(MathUtils.radiansToDegrees(body.angle));
-```
+<SourceSnippet
+  source="examples/guides/physics-basics/manual-sync.ts"
+  region="manual-sync"
+  language="ts"
+  title="examples/guides/physics-basics/manual-sync.ts"
+/>
 
 ## Smoothing motion between fixed steps
 

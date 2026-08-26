@@ -81,3 +81,5 @@ class CinematicScene extends Scene {
   }
 }
 // #endregion guide:cinematic-scene
+
+export { CinematicScene };

@@ -4,6 +4,7 @@ description: 'Load Tiled (.tmj) tilemaps as assets through the official @codexo/
 ---
 
 import Callout from '../../../components/Callout.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # Tiled maps
 
@@ -313,26 +314,12 @@ Wang sets — Tiled's terrain/auto-tile definitions — parse onto `TiledTileset
 it to a layer with `autoTile` (a full-layer pass) or `refreshCell` (an incremental, single-cell
 update) from `@codexo/exojs-tilemap`:
 
-```ts no-check -- continues the load above; map and the painted cell coordinates come from it
-import { tiledWangSetToWangSet } from '@codexo/exojs-tiled';
-import { autoTile, refreshCell } from '@codexo/exojs-tilemap';
-
-const tileMap = map.toTileMap();
-const [ground] = tileMap.layers;
-
-// wangSets live on the parsed TiledTileset, keyed by the runtime tileset's
-// index within `layer.tilesets` (0 here — the layer's only tileset).
-const [wangSetData] = map.tilesets[0].wangSets;
-const wangSet = tiledWangSetToWangSet(wangSetData, 0);
-
-// Re-derive every autotiled variant across the whole layer, e.g. after
-// generating terrain procedurally:
-autoTile(ground, wangSet);
-
-// Or, after painting a single cell, refresh just that cell and its eight
-// neighbours instead of re-running autoTile over the whole layer:
-refreshCell(ground, tx, ty, wangSet);
-```
+<SourceSnippet
+  source="examples/guides/tiled-maps/wang-sets.ts"
+  region="wang-sets"
+  language="ts"
+  title="examples/guides/tiled-maps/wang-sets.ts"
+/>
 
 `tiledWangSetToWangSet` handles Tiled's `'corner'` (blob-style, 8-neighbour) and `'edge'`
 (4-neighbour) wangset types; `'mixed'` wangsets interleave both semantics in a way that can't be

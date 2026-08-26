@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "_comment": "Type-checks the guide listings under examples/guides/**. They live in this package rather than in the repository's own example catalog because React resolves through this package's node_modules - the root package carries no react dependency, and adding one for six documentation listings would put React in every consumer-facing program. `paths` is redeclared in full (extends replaces the key rather than merging it) so a listing can import `@codexo/exojs-react` by name, exactly as a reader's application does.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // A listing names what it demonstrates. `useExoApplication` returns both
+    // `app` and `canvasRef`, and the chapter's point is that both exist - a
+    // listing that destructured only the half it goes on to use would document
+    // the hook worse. The same relaxation the repository's guide sources carry.
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "paths": {
+      "@codexo/exojs": ["../../src/index.ts"],
+      "@codexo/exojs-react": ["./src/index.ts"]
+    }
+  },
+  "include": ["examples/**/*", "../../src/typings.d.ts"],
+  "exclude": ["dist", "node_modules"]
+}
