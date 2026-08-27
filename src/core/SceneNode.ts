@@ -28,6 +28,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import type { View } from '#rendering/View';
 
 import { Bounds } from './Bounds';
+import { DirtyChannel, nodeDirtyIndex } from './NodeDirtyIndex';
 import { nextNodeRevision, NodeRevision } from './NodeRevision';
 import type { Stage } from './Stage';
 
@@ -630,24 +631,6 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   /**
-   * @internal - the nearest enclosing retained transform group
-   * is notified when a descendant's OWN transform moves, so it can patch that
-   * node's group-owned transform row in place (O(1)) instead of re-collecting
-   * the whole subtree. No-op on a plain node; {@link RetainedContainer}
-   * overrides it to enqueue the row on its fragment.
-   */
-  public _enqueueDirtyTransformRow(_node: RenderNode): void {}
-
-  /**
-   * @internal - the render-root counterpart of {@link _enqueueDirtyTransformRow}:
-   * a descendant's own transform moved, and this node may own an automatic
-   * render-root representation with that node's row baked into its recording.
-   * No-op on a plain node and on any node that never served as a render root;
-   * {@link RenderNode} forwards it to its representation when one exists.
-   */
-  public _enqueueRetainedRootRow(_node: RenderNode): void {}
-
-  /**
    * Whether this node opts back OUT of a parent transform-group boundary and
    * resolves world-space transforms. Overridden by RenderNode for
    * barrier-effect nodes (filters/mask/clip/cacheAsTexture), whose effect
@@ -1167,14 +1150,17 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   private _transformWalkEpoch = 0;
 
   /**
-   * @internal - dirty-transform-row dedup stamp: the enclosing group's
-   * dirty-row epoch at the last time this node was enqueued. Compared against
-   * that group's current epoch to skip a second push in the same collect cycle
-   * (see {@link RetainedGroupFragment.enqueueDirtyTransformRow}). The epoch is a
-   * globally unique monotonic value, so a stale stamp can never falsely match a
-   * different cycle - a false dedup would drop a move (stale render).
+   * @internal - {@link NodeDirtyIndex} bookkeeping: the generation this node was
+   * last marked in and the slot it took in that generation's bucket (a second
+   * mark in the same generation folds into that slot), plus the mark sequence
+   * of the most recent mark - this node's own change revision, and what a
+   * consumer's cursor is compared against. Only the index reads or writes these.
    */
-  public _dirtyRowStamp = 0;
+  public _dirtyMarkGeneration = -1;
+  /** @internal - see {@link _dirtyMarkGeneration}. */
+  public _dirtyMarkSlot = -1;
+  /** @internal - see {@link _dirtyMarkGeneration}. */
+  public _dirtyMarkSequence = 0;
 
   /**
    * @internal - mark this node's content dirty and propagate the stamp up to
@@ -1286,52 +1272,28 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   /**
-   * Hand this node to every consumer that owns a baked copy of its transform
-   * row, so each can fast-patch that row instead of re-collecting.
+   * Record that this node's transform moved, for every consumer that owns a
+   * baked copy of its row.
    *
-   * Two kinds of consumer, one walk:
-   *
-   * - The nearest enclosing transform-group boundary - and only the nearest:
-   *   that group owns this node's group-local row, and an outer group recorded
-   *   the inner one as a nested boundary, not as rows of its own.
-   * - EVERY ancestor that owns an automatic render-root representation. Roots
-   *   may overlap (`render(world)` alongside `render(world.hud)`) and there is
-   *   no exclusive owner slot, so the walk cannot stop at the first one. A
-   *   representation whose fragment holds no recording ignores the call.
+   * One entry in the shared index, not a walk. A moved node cannot know which
+   * retained products recorded it - render roots may overlap
+   * (`render(world)` alongside `render(world.hud)`), a transform-group boundary
+   * may sit between them, and there is no exclusive owner slot - so offering
+   * the node to each consumer meant climbing the whole ancestor chain on every
+   * single mutation. Each consumer now resolves the marks it cares about
+   * against the row map it already keeps, and the ones it recorded cost it a
+   * map hit rather than the mutator a walk.
    *
    * Runs on every own-transform mutation, so it must not allocate - and
-   * short-circuits to a single pair of count checks while neither consumer kind
-   * exists anywhere.
+   * short-circuits to a single pair of count checks while no consumer of either
+   * kind exists anywhere.
    */
   private _notifyEnclosingRetainedGroup(): void {
     if (transformGroupBoundaryCount === 0 && retainedRenderRootCount === 0) {
       return;
     }
 
-    const node = this as unknown as RenderNode;
-    let boundaryNotified = transformGroupBoundaryCount === 0;
-    let ancestor: Container | null = this._parentNode;
-
-    while (ancestor !== null) {
-      if (!boundaryNotified && ancestor._isTransformGroupBoundary) {
-        ancestor._enqueueDirtyTransformRow(node);
-        boundaryNotified = true;
-      }
-
-      if (retainedRenderRootCount > 0) {
-        ancestor._enqueueRetainedRootRow(node);
-      }
-
-      // Both consumers found nothing left to visit: a boundary was notified and
-      // no representation can be above it either, because a fragment that
-      // contains a boundary records it as a live re-dispatch and owns no rows
-      // below it. Walking on would be pure cost.
-      if (boundaryNotified && retainedRenderRootCount === 0) {
-        return;
-      }
-
-      ancestor = ancestor.parent;
-    }
+    nodeDirtyIndex.mark(this, DirtyChannel.Transform);
   }
 
   private _setPositionDirty(): void {

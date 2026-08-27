@@ -1588,6 +1588,23 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   an open pass first, an extra submit). 1024 quads is 24 KiB and covers
   normal text scenes in a single allocation, in both `WebGpuTextRenderer` and
   `WebGl2TextRenderer`.
+- **A moved node writes one entry instead of climbing its ancestor chain.**
+  Every own-transform mutation used to walk from the node to the scene root,
+  offering the moved row to the enclosing transform group and to every render
+  root above it, because a moved node cannot know which retained products
+  recorded it. That walk ran on every `setPosition` in a scene with any
+  retention live. The engine now keeps one changed-record index: a mutation
+  marks the node once, and each retained product pulls the marks it cares about
+  against the row map it already keeps - a recorded node costs it a map hit
+  rather than the mutator a walk.
+
+  The index is bounded by construction, which is what separates it from a
+  change journal: a node marked a thousand times in a frame holds one entry,
+  ordering comes from the node's own mark sequence, and the marks live in a
+  ring of eight generations. A product that has not looked for longer than that
+  is told so and rebuilds, rather than being handed a partial answer. Nothing
+  is marked at all while no retained consumer exists.
+
 - **A root drawn to two render targets in one frame keeps its retention.** A
   captured product is compiled for the target it was recorded against, and a
   root held exactly one. Drawing the same root into a `RenderTexture` and onto

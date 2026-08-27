@@ -1,3 +1,4 @@
+import { DirtyChannel, nodeDirtyIndex } from '#core/NodeDirtyIndex';
 import type { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -116,28 +117,61 @@ export const tryPatchRetainedTransformRow = (
 };
 
 /**
- * Rewrite each queued node's snapshotted screen AABB in its captured draw record.
+ * Visit every node whose transform moved since `fragment` last accounted for
+ * one and that `owns` claims. `false` means the index no longer covers the
+ * fragment's cursor, or `visit` abandoned the walk - either way the caller
+ * cannot treat the channel as settled.
+ *
+ * The ownership test is the caller's, because the two consumers draw the
+ * boundary differently: a {@link RetainedContainer} owns the moves whose
+ * NEAREST enclosing boundary it is (a move below a nested group belongs to that
+ * group's rows, not to its own), while a render root owns every move in its
+ * subtree. Marks outside the caller's subtree belong to another consumer and
+ * are skipped without being looked at twice.
+ * @internal
+ */
+export const forEachMovedNode = (fragment: RetainedGroupFragment, owns: (node: RenderNode) => boolean, visit: (node: RenderNode) => boolean): boolean =>
+  nodeDirtyIndex.readSince(fragment.transformCursor, DirtyChannel.Transform, node => {
+    const moved = node as unknown as RenderNode;
+
+    return !owns(moved) || visit(moved);
+  });
+
+/** Whether `node` lies anywhere below `ancestor`. */
+export const isUnder = (node: RenderNode, ancestor: RenderNode): boolean => {
+  let parent = node.parent;
+
+  while (parent !== null) {
+    if ((parent as unknown as RenderNode) === ancestor) {
+      return true;
+    }
+
+    parent = parent.parent;
+  }
+
+  return false;
+};
+
+/**
+ * Rewrite a moved node's snapshotted screen AABB in its captured draw record.
  * A record whose extent is one move out of date is not a rendering error by
  * itself - the replay re-derives nothing from it - but the optimizer reads it to
  * decide whether a batch run may be reordered past an intervening draw, and a
  * stale extent can hide a real overlap.
  */
-const refreshRetainedDrawBounds = (fragment: RetainedGroupFragment): void => {
-  for (let index = 0; index < fragment.dirtyTransformRowCount; index++) {
-    const node = fragment.dirtyTransformRowAt(index);
-    const record = fragment.recordedDraw(node as unknown as Drawable);
+const refreshRetainedDrawBounds = (fragment: RetainedGroupFragment, node: RenderNode): void => {
+  const record = fragment.recordedDraw(node as unknown as Drawable);
 
-    if (record === undefined) {
-      continue;
-    }
-
-    const bounds = node.getBounds();
-
-    record.minX = bounds.left;
-    record.minY = bounds.top;
-    record.maxX = bounds.right;
-    record.maxY = bounds.bottom;
+  if (record === undefined) {
+    return;
   }
+
+  const bounds = node.getBounds();
+
+  record.minX = bounds.left;
+  record.minY = bounds.top;
+  record.maxX = bounds.right;
+  record.maxY = bounds.bottom;
 };
 
 /**
@@ -149,15 +183,27 @@ const refreshRetainedDrawBounds = (fragment: RetainedGroupFragment): void => {
  * correct, O(entries), the rare path. Without a patchable recording there is
  * nothing to reconcile and the queue is simply drained.
  *
- * `isEligible` is the caller's own membership rule: a {@link RetainedContainer}
- * admits only its DIRECT children (deeper nodes are not in its patch contract),
- * the render-root representation admits every recorded node.
+ * Two caller rules, and they are not the same question. `owns` says which
+ * marked moves are this fragment's business at all - one below a nested
+ * transform group belongs to that group's rows, one outside the subtree to
+ * another consumer entirely, and both are skipped. `isEligible` says which of
+ * the moves it does own may be patched: a {@link RetainedContainer} admits only
+ * its DIRECT children, because a deeper node's row is recorded but its group-
+ * local basis runs through an intermediate container the patch does not
+ * re-derive; the render-root representation admits every recorded node. An
+ * owned move that is not eligible drops the recording rather than being
+ * skipped - it is a real change to a product that cannot express it.
  *
  * Returns `false` when the recording was dropped - the caller must then treat its
  * product as stale for this frame.
  * @internal
  */
-export const reconcileRetainedTransformRows = (fragment: RetainedGroupFragment, backend: RenderBackend, isEligible: (node: RenderNode) => boolean): boolean => {
+export const reconcileRetainedTransformRows = (
+  fragment: RetainedGroupFragment,
+  backend: RenderBackend,
+  owns: (node: RenderNode) => boolean,
+  isEligible: (node: RenderNode) => boolean,
+): boolean => {
   const set = fragment.instructions;
 
   if (!set?.hasRecording) {
@@ -166,11 +212,16 @@ export const reconcileRetainedTransformRows = (fragment: RetainedGroupFragment, 
     // tier) or the fragment sits on entry replay. Both re-read each node's live
     // transform, so there is no row to patch. Only the RECORD's snapshotted
     // screen AABB is stale, and the optimizer's reorder-safety test reads it -
-    // refresh those, drain, and report the moves as accounted for.
-    refreshRetainedDrawBounds(fragment);
-    fragment.clearDirtyTransformRows();
+    // refresh those and report the moves as accounted for.
+    const complete = forEachMovedNode(fragment, owns, node => {
+      refreshRetainedDrawBounds(fragment, node);
 
-    return true;
+      return true;
+    });
+
+    fragment.markTransformsSeen();
+
+    return complete;
   }
 
   const bundle = set.ownedBundle;
@@ -182,7 +233,7 @@ export const reconcileRetainedTransformRows = (fragment: RetainedGroupFragment, 
     // live transforms; without this the stale rows would keep being spliced and
     // the moved node would render frozen.
     set.invalidate();
-    fragment.clearDirtyTransformRows();
+    fragment.markTransformsSeen();
 
     return false;
   }
@@ -194,23 +245,22 @@ export const reconcileRetainedTransformRows = (fragment: RetainedGroupFragment, 
   // store row (see RetainedGroupFragment.recordedRowBase).
   const base = fragment.recordedRowBase();
   const patchableBundle = bundle as PatchableRetainedGroupBundle;
-  let patched = true;
 
-  refreshRetainedDrawBounds(fragment);
+  const patched = forEachMovedNode(fragment, owns, node => {
+    refreshRetainedDrawBounds(fragment, node);
 
-  for (let index = 0; index < fragment.dirtyTransformRowCount; index++) {
-    const node = fragment.dirtyTransformRowAt(index);
+    return isEligible(node) && tryPatchRetainedTransformRow(node, fragment, patchableBundle, backend, base);
+  });
 
-    if (!isEligible(node) || !tryPatchRetainedTransformRow(node, fragment, patchableBundle, backend, base)) {
-      // Ineligible: drop the baked recording. Validation now fails, so the caller
-      // falls back to entry replay (live transforms) and re-records this frame.
-      set.invalidate();
-      patched = false;
-      break;
-    }
+  if (!patched) {
+    // A move this fragment owns but cannot patch - not a recorded draw, or the
+    // index no longer covers the cursor. Drop the baked recording: validation
+    // now fails, so the caller falls back to entry replay (live transforms) and
+    // re-records this frame.
+    set.invalidate();
   }
 
-  fragment.clearDirtyTransformRows();
+  fragment.markTransformsSeen();
 
   return patched;
 };

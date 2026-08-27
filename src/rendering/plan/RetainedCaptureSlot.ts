@@ -2,12 +2,13 @@ import { Bounds } from '#core/Bounds';
 import { type ReadonlyRectangle, Rectangle } from '#math/Rectangle';
 import type { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import type { RenderNode } from '#rendering/RenderNode';
 import type { View } from '#rendering/View';
 
 import { CaptureThrashSuppressor, CaptureVerdict } from './CaptureThrashSuppressor';
 import type { ScopeEntry } from './RenderScope';
 import { RetainedGroupFragment } from './RetainedGroupFragment';
-import { reconcileRetainedTransformRows } from './retainedTransformRowPatch';
+import { forEachMovedNode, isUnder, reconcileRetainedTransformRows } from './retainedTransformRowPatch';
 
 /** The render target a product was compiled against (backend-owned identity). */
 export type RenderTargetIdentity = RenderBackend['renderTarget'];
@@ -192,7 +193,7 @@ export class RetainedCaptureSlot {
    *
    * The queue is fed from a live capture onward, one tier earlier than a group's
    * - a group only needs it on the recorded tier, whereas the root needs the
-   * queue as its PROOF that every move was accounted for. Without that proof one
+   * marks as its PROOF that every move was accounted for. Without that proof one
    * frame earlier, a scene that moves something every frame would never reach the
    * clean frame it has to record on.
    *
@@ -200,21 +201,29 @@ export class RetainedCaptureSlot {
    * group does not have to face, since it suppresses culling inside itself and
    * is culled as a whole - live in {@link _canReconcileMovedNodes}.
    */
-  public reconcileTransform(transformRevision: number, view: View, backend: RenderBackend): boolean {
-    if (!this.fragment.hasDirtyTransformRows()) {
-      // Nothing queued. Either nothing moved (revisions agree), or a move
-      // happened while no recording was live - the enqueue gate skips those, so
-      // there is no proof the queue saw everything and the frame re-collects.
-      return this._transformRevision === transformRevision;
+  public reconcileTransform(transformRevision: number, view: View, backend: RenderBackend, root: RenderNode): boolean {
+    if (this._transformRevision === transformRevision) {
+      // Nothing below this root moved since the capture, whatever else the
+      // index may hold for other roots.
+      return true;
     }
 
-    if (!this._canReconcileMovedNodes(view)) {
+    if (!this.fragment.transformMarksProvable) {
+      // The index no longer covers this product's cursor, so the marks cannot
+      // prove the moves were all seen - which is the same answer a queue gave
+      // when a move happened while no recording was live.
+      return false;
+    }
+
+    const owns = (node: RenderNode): boolean => isUnder(node, root);
+
+    if (!this._canReconcileMovedNodes(view, owns)) {
       this._dropRecording();
 
       return false;
     }
 
-    if (!reconcileRetainedTransformRows(this.fragment, backend, () => true)) {
+    if (!reconcileRetainedTransformRows(this.fragment, backend, owns, () => true)) {
       return false;
     }
 
@@ -224,7 +233,7 @@ export class RetainedCaptureSlot {
   }
 
   /**
-   * Whether every queued move can be applied to the captured product, growing
+   * Whether every marked move can be applied to the captured product, growing
    * the kept-union by each moved node's CURRENT cull rect on the way.
    *
    * Two rejections, one per direction a move can break the selection:
@@ -243,20 +252,18 @@ export class RetainedCaptureSlot {
    *   different and this cannot go wrong: an out-of-view node that is still
    *   drawn is clipped, not wrong.
    */
-  private _canReconcileMovedNodes(view: View): boolean {
+  private _canReconcileMovedNodes(view: View, owns: (node: RenderNode) => boolean): boolean {
     const viewRect = view.getBounds();
     const insideCaptureRect = this._viewFitsCaptureCullRect(view);
 
-    for (let index = 0; index < this.fragment.dirtyTransformRowCount; index++) {
-      const node = this.fragment.dirtyTransformRowAt(index);
-
+    return forEachMovedNode(this.fragment, owns, node => {
       if (this._culledDuringCapture && this.fragment.recordedDraw(node as unknown as Drawable) === undefined) {
         return false;
       }
 
       if (!node.cullable) {
         // Never culled: its position cannot change the selection.
-        continue;
+        return true;
       }
 
       const rect = node.cullArea ?? node.getBounds();
@@ -267,19 +274,19 @@ export class RetainedCaptureSlot {
 
       this._keptBounds.addRect(rect);
       this._keptEmpty = false;
-    }
 
-    return true;
+      return true;
+    });
   }
 
   /**
-   * Give up the recorded tier without giving up the capture: the queue is
-   * drained so no stale row survives, and dropping the recording closes the
-   * enqueue gate so nothing accumulates until the next collect re-records.
+   * Give up the recorded tier without giving up the capture: the cursor moves
+   * up so no stale mark is re-read, and dropping the recording sends the next
+   * frame through entry replay with live transforms.
    */
   private _dropRecording(): void {
     this.fragment.instructions?.invalidate();
-    this.fragment.clearDirtyTransformRows();
+    this.fragment.markTransformsSeen();
   }
 
   /** The active capture was replayed at least once - it earned its keep. */

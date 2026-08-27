@@ -114,32 +114,6 @@ export class RetainedContainer extends Container {
     this._getStage()?.interaction._notifyTransformGroupMoved(this);
   }
 
-  /**
-   * The descendant transform-move seam: a descendant's own transform moved. Queue
-   * its row on the fragment; {@link _collectContent} patches the queued rows in
-   * place on a content/structure-clean frame instead of re-collecting. The
-   * group's OWN move does not route here - {@link _markOwnTransformDirty}
-   * above handles it as a one-matrix group move.
-   *
-   * Gated on a live committed recording: only the recorded-instruction
-   * tier ever consumes a queued row. On every tier without one - entry
-   * replay, and a recording-less group (e.g. an escaped-branch group, whose
-   * `_fragment.dispose()` drops any recording) - transforms are re-read live
-   * and {@link _reconcileTransformRows} would just drain the queue unread on
-   * the next collect. Skipping the enqueue there is free: nothing else
-   * observes the queue between now and that drain. (A recording backend
-   * lacking patch support DOES still enqueue here -
-   * `hasRecording` is true - and {@link _reconcileTransformRows} is the one
-   * that drops the recording and falls back to entry replay.)
-   */
-  public override _enqueueDirtyTransformRow(node: RenderNode): void {
-    if (this._fragment.instructions?.hasRecording !== true) {
-      return;
-    }
-
-    this._fragment.enqueueDirtyTransformRow(node);
-  }
-
   // ── Group-local bounds aggregate cache ──────────────────────────────────
   // The group-local child aggregate only changes when the SUBTREE changes,
   // which the content/structure revisions already key exactly - a group move
@@ -278,7 +252,7 @@ export class RetainedContainer extends Container {
       // dirties. The recorded instruction set's baked transform rows are stale
       // for those nodes - patch the changed rows in place (O(k)), or drop the
       // recording so entry replay re-reads live transforms this frame.
-      if (this._fragment.hasDirtyTransformRows()) {
+      if (this._fragment.hasUnseenTransformMarks()) {
         this._reconcileTransformRows(builder.backend);
       }
 
@@ -348,15 +322,40 @@ export class RetainedContainer extends Container {
   }
 
   /**
-   * Reconcile the queued transform-only moves against the recorded
-   * instruction set before replay. Only DIRECT drawable children are in this
-   * group's patch contract - a move nested below a sub-container drops the
-   * recording, so the frame entry-replays with live transforms and re-records.
-   * The mechanics live in {@link reconcileRetainedTransformRows}; the render-root
-   * representation shares them with a wider eligibility rule.
+   * Reconcile the marked transform-only moves against the recorded instruction
+   * set before replay.
+   *
+   * This group owns a move exactly when it is the NEAREST enclosing boundary:
+   * a move below a nested group belongs to that group's own rows, and one
+   * outside this subtree belongs to another consumer entirely. Of the moves it
+   * does own, only DIRECT drawable children are in its patch contract - a
+   * deeper one has no row here, so the recording is dropped and the frame
+   * entry-replays with live transforms and re-records. The mechanics live in
+   * {@link reconcileRetainedTransformRows}; the render-root representation
+   * shares them with a wider ownership rule.
    */
   private _reconcileTransformRows(backend: RenderBackend): void {
-    reconcileRetainedTransformRows(this._fragment, backend, node => node.parent === this);
+    reconcileRetainedTransformRows(
+      this._fragment,
+      backend,
+      node => this._ownsMove(node),
+      node => (node.parent as unknown as RetainedContainer) === this,
+    );
+  }
+
+  /** Whether this group is the nearest transform-group boundary above `node`. */
+  private _ownsMove(node: RenderNode): boolean {
+    let parent = node.parent;
+
+    while (parent !== null) {
+      if (parent._isTransformGroupBoundary) {
+        return (parent as unknown as RetainedContainer) === this;
+      }
+
+      parent = parent.parent;
+    }
+
+    return false;
   }
 
   /**

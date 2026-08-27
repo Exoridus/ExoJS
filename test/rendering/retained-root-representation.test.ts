@@ -472,13 +472,13 @@ describe('automatic render-root representation: nested RetainedContainer', () =>
     expect(rootSetOf(root)).toBeNull();
 
     // The group's own row-patch seam is still live, which is the whole point of
-    // deferring: it only enqueues while it holds a committed recording.
+    // deferring: the move below it is the group's to account for, not the root's.
     const leaf = group.children[0]!;
 
-    fragmentOf(group).clearDirtyTransformRows();
+    fragmentOf(group).markTransformsSeen();
     leaf.setPosition(3, 3);
 
-    expect(fragmentOf(group).hasDirtyTransformRows()).toBe(true);
+    expect(fragmentOf(group).hasUnseenTransformMarks()).toBe(true);
 
     root.destroy();
     backend.destroy();

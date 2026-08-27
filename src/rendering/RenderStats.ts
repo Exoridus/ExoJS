@@ -1,3 +1,5 @@
+import { nodeDirtyIndex } from '#core/NodeDirtyIndex';
+
 /**
  * Per-frame rendering counters collected by the backend each tick.
  * Expose live performance data for debugging and profiling tools.
@@ -114,6 +116,11 @@ export const createRenderStats = (): RenderStats => ({
  * read 0 after the first frame.
  */
 export const resetRenderStats = (stats: RenderStats): RenderStats => {
+  // The dirty index counts in frames, and this is where a frame begins. Opening
+  // a generation per render instead would rotate the window several times in a
+  // frame that draws more than one root and push every consumer out of it.
+  nodeDirtyIndex.advance();
+
   stats.frame++;
   stats.submittedNodes = 0;
   stats.culledNodes = 0;

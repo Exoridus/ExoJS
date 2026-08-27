@@ -1,3 +1,4 @@
+import { DirtyChannel, nodeDirtyIndex } from '#core/NodeDirtyIndex';
 import type { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -76,7 +77,6 @@ export type RetainedFragmentEntry = RetainedFragmentDraw | RetainedFragmentGroup
  * - can never equal a fragment's current epoch, making a false dedup (a dropped
  * move → stale render) impossible.
  */
-let nextDirtyRowEpoch = 1;
 
 /**
  * Whole-command-range fragment cache for one {@link RetainedContainer}.
@@ -142,28 +142,18 @@ export class RetainedGroupFragment {
   // Computed with the row map; -1 when there are no draws.
   private _rowMinIndex = -1;
 
-  // Nodes whose OWN transform moved since the last collect, pushed by
-  // the SceneNode seam through the enclosing group. A plain array (not a Set),
-  // held with an explicit LOGICAL length: the per-frame reset rewinds
-  // `_dirtyRowCount` and leaves the physical array alone, so the next frame
-  // overwrites the slots it already has.
+  // The dirty-index mark sequence this fragment's baked transform rows are
+  // current as of. Everything marked up to it has either been patched in or was
+  // read live by the capture that set it; a later mark is a move this fragment
+  // has not accounted for yet.
   //
-  // `length = 0` would be wrong here, not merely different. V8 hands the
-  // backing store back on a shrink to zero, so the refill re-grows from empty
-  // through the whole doubling sequence - measured at ~27 bytes per queued node
-  // per frame, which made this queue the single largest allocation in a scene
-  // where every node moves (28.6 KB/frame at 1000 nodes). Dedup is O(1) via a
-  // per-node epoch stamp keyed on `_dirtyRowEpoch` - a globally unique value
-  // bumped on every reset, so a stale stamp never falsely dedups.
-  //
-  // Slots at or beyond `_dirtyRowCount` keep whatever node they last held.
-  // That retains nothing a live subtree does not already retain, and it cannot
-  // outlive a node's removal: removing a child moves the subtree's structure
-  // revision, and the next build therefore recaptures or invalidates - both of
-  // which drop the references through {@link _dropDirtyTransformRows}.
-  private readonly _dirtyTransformRows: RenderNode[] = [];
-  private _dirtyRowCount = 0;
-  private _dirtyRowEpoch = nextDirtyRowEpoch++;
+  // A cursor rather than a queue of its own. Holding one queue per fragment
+  // meant every mutation had to be offered to every fragment above the moved
+  // node, and each of them had to keep and grow an array; the index keeps one
+  // entry per changed node per generation regardless of how many fragments read
+  // it. Starts at -1, which no sequence reaches, so a fragment that never
+  // accounted for anything is unprovable rather than silently up to date.
+  private _transformCursor = -1;
 
   /** Snapshot policy for nested transform groups - see {@link _snapshotInto}. */
   private _deferTransformGroups = false;
@@ -254,57 +244,35 @@ export class RetainedGroupFragment {
     return currentMin;
   }
 
-  /** Record that `node`'s own transform moved (from the SceneNode seam). */
-  public enqueueDirtyTransformRow(node: RenderNode): void {
-    // O(1) dedup: skip a repeat push in the same cycle without scanning.
-    if (node._dirtyRowStamp === this._dirtyRowEpoch) {
-      return;
-    }
-
-    node._dirtyRowStamp = this._dirtyRowEpoch;
-
-    const index = this._dirtyRowCount++;
-
-    if (index < this._dirtyTransformRows.length) {
-      this._dirtyTransformRows[index] = node;
-    } else {
-      this._dirtyTransformRows.push(node);
-    }
-  }
-
-  /** `true` when at least one transform-only move is queued for this frame. */
-  public hasDirtyTransformRows(): boolean {
-    return this._dirtyRowCount > 0;
-  }
-
-  /** How many moved nodes are queued for this frame. */
-  public get dirtyTransformRowCount(): number {
-    return this._dirtyRowCount;
-  }
-
-  /** Queued moved node `index` (insertion order, deduped); callers hold `index < dirtyTransformRowCount`. */
-  public dirtyTransformRowAt(index: number): RenderNode {
-    return this._dirtyTransformRows[index]!;
-  }
-
-  /** Drop the queue - after patching them, or after a full re-collect subsumed them. */
-  public clearDirtyTransformRows(): void {
-    // Rewinding the logical length keeps the backing store for the next frame
-    // (see the field comment); a fresh epoch invalidates every prior dedup
-    // stamp in O(1).
-    this._dirtyRowCount = 0;
-    this._dirtyRowEpoch = nextDirtyRowEpoch++;
+  /**
+   * The mark sequence this fragment's baked rows are current as of, or `-1`
+   * while it has never accounted for anything. Passed to
+   * {@link NodeDirtyIndex.readSince} to enumerate the moves since.
+   */
+  public get transformCursor(): number {
+    return this._transformCursor;
   }
 
   /**
-   * Drop the queue AND its references - the structural counterpart of
-   * {@link clearDirtyTransformRows}, for the two paths that follow a change in
-   * what the subtree contains. Keeping the backing store across those would let
-   * a removed node stay reachable through a slot nothing will overwrite again.
+   * Every move marked so far is accounted for - after patching the rows, after
+   * a capture read them live, or after a re-collect subsumed them.
    */
-  private _dropDirtyTransformRows(): void {
-    this._dirtyTransformRows.length = 0;
-    this.clearDirtyTransformRows();
+  public markTransformsSeen(): void {
+    this._transformCursor = nodeDirtyIndex.sequence;
+  }
+
+  /**
+   * Whether a move this fragment has not accounted for has been marked since.
+   * `false` also when the index no longer covers the cursor, in which case the
+   * caller must treat the channel as unproven rather than as quiet.
+   */
+  public hasUnseenTransformMarks(): boolean {
+    return nodeDirtyIndex.hasMarksSince(this._transformCursor, DirtyChannel.Transform);
+  }
+
+  /** Whether the index still covers everything since this fragment's cursor. */
+  public get transformMarksProvable(): boolean {
+    return nodeDirtyIndex.covers(this._transformCursor);
   }
 
   /** The group's instruction set, or `null` if recording was never armed. */
@@ -419,7 +387,7 @@ export class RetainedGroupFragment {
     this._rowMap = null;
     // A full (re)capture reads every child's current transform: any queued
     // transform-only moves are subsumed and must not double-patch afterwards.
-    this._dropDirtyTransformRows();
+    this.markTransformsSeen();
 
     this._entryCount = this._snapshotInto(this._entries, entries, entryCount);
 
@@ -441,7 +409,7 @@ export class RetainedGroupFragment {
     this._entries.length = 0;
     this._entryCount = 0;
     this._rowMap = null;
-    this._dropDirtyTransformRows();
+    this.markTransformsSeen();
     this._thrash.reset();
     this._recordableFor = null;
     this._instructions?.invalidate();

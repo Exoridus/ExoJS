@@ -118,26 +118,12 @@ export class RetainedRootRepresentation {
     return this._capture.fragment;
   }
 
-  /**
-   * Offer a moved descendant's baked transform row to every product that holds
-   * one, not only to the one this frame draws: a product compiled for another
-   * target is replayed on a later draw and would otherwise replay the position
-   * the node has left.
-   */
-  public enqueueDirtyTransformRow(node: RenderNode): void {
-    for (const slot of this._captureSlots) {
-      if (slot.fragment.hasCapture) {
-        slot.fragment.enqueueDirtyTransformRow(node);
-      }
-    }
-  }
-
   public isCleanIgnoringTransform(contentRevision: number, structureRevision: number, ancestryStamp: number, view: View): boolean {
     return this._capture.isCleanIgnoringTransform(contentRevision, structureRevision, ancestryStamp, view);
   }
 
-  public reconcileTransform(transformRevision: number, view: View, backend: RenderBackend): boolean {
-    return this._capture.reconcileTransform(transformRevision, view, backend);
+  public reconcileTransform(transformRevision: number, view: View, backend: RenderBackend, root: RenderNode): boolean {
+    return this._capture.reconcileTransform(transformRevision, view, backend, root);
   }
 
   public markReplayed(): void {

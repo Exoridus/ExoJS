@@ -555,19 +555,6 @@ export abstract class RenderNode extends SceneNode {
     return this._retainedRoot;
   }
 
-  /**
-   * @internal - the descendant transform-move seam for the automatic root
-   * representation. Gated on a live CAPTURE, not on a live recording as
-   * {@link RetainedContainer._enqueueDirtyTransformRow} is: the root treats a
-   * queued move as its proof that the transform channel is accounted for, and
-   * that proof has to exist one tier earlier. Without it a scene that moves
-   * something every frame would never see the clean frame it needs to record in
-   * the first place, and would stay on plain collect forever.
-   */
-  public override _enqueueRetainedRootRow(node: RenderNode): void {
-    this._retainedRoot?.enqueueDirtyTransformRow(node);
-  }
-
   /** @internal */
   protected _collectContent(_builder: RenderPlanBuilder): void {
     // Overridden by Drawable/Container.

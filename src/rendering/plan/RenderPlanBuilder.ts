@@ -1018,7 +1018,7 @@ export class RenderPlanBuilder {
     // which is what keeps a partly-dynamic scene on the recorded tier.
     if (
       representation.isCleanIgnoringTransform(contentRevision, structureRevision, ancestryStamp, view) &&
-      representation.reconcileTransform(transformRevision, view, backend)
+      representation.reconcileTransform(transformRevision, view, backend, node)
     ) {
       const set = representation.fragment.instructions;
 
