@@ -87,9 +87,16 @@ export const textureSeamlessAdapter: SeamlessAdapter<Texture> = {
     const expected = presizes.get(handle);
 
     presizes.delete(handle);
-    // Transplant ONLY the decoded source - the handle keeps the per-handle
+    // Transplant ONLY the decoded payload - the handle keeps the per-handle
     // sampler state applied at createPlaceholder (do NOT copy the donor's).
-    handle.setSource(donor.source);
+    // Either kind of payload can arrive: an asset variant may resolve one
+    // logical source to a compressed container on one device and an image on
+    // another, and a caller holding the handle must not have to care.
+    if (donor.compressed !== null) {
+      handle.setCompressed(donor.compressed);
+    } else {
+      handle.setSource(donor.source);
+    }
 
     if (expected !== undefined && (handle.width !== expected.width || handle.height !== expected.height)) {
       logger.warn(`Texture pre-size (${expected.width}×${expected.height}) does not match the loaded payload (${handle.width}×${handle.height}).`, {
@@ -112,6 +119,10 @@ export const textureSeamlessAdapter: SeamlessAdapter<Texture> = {
     // on its next bind, which may never come for a handle nothing is
     // currently drawing. releaseGpu() frees the backend's GPU texture now.
     handle.setSource(null);
+    // `setSource(null)` is a no-op on a handle whose payload was compressed -
+    // its source was already null - so the payload has to be dropped explicitly
+    // or an evicted handle would keep reporting the content it just released.
+    handle.setCompressed(null);
     handle.releaseGpu();
     handle._loadState.begin();
   },

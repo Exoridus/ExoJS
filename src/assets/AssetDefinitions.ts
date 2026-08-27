@@ -159,6 +159,7 @@ export interface ExtensionKindMap {
   webp: 'texture';
   avif: 'texture';
   gif: 'texture';
+  ktx2: 'texture';
   ogg: 'sound';
   mp3: 'sound';
   wav: 'sound';
