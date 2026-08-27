@@ -1,3 +1,5 @@
+import { assert } from '#core/dev';
+
 import { triangulate } from './triangulate';
 import { TAU } from './utils';
 import { Vector } from './Vector';
@@ -56,6 +58,11 @@ export const buildPath = (points: number[], width: number): MeshGeometryData => 
   if (points.length < 4) {
     throw new Error('At least two X/Y pairs are required to build a line.');
   }
+
+  // A trailing unpaired coordinate is read as the second half of a point that
+  // does not exist, which turns the last segment into NaN vertices - geometry
+  // that neither throws nor draws.
+  assert(points.length % 2 === 0, 'buildPath: points must hold (x, y) pairs, so its length must be even.');
 
   const lineWidth = width / 2;
   const firstPoint = new Vector(points[0], points[1]);

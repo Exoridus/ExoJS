@@ -289,3 +289,11 @@ test('output length is always a multiple of 3', () => {
     expect(result.length % 3).toBe(0);
   }
 });
+
+// ---------------------------------------------------------------------------
+// 10. An odd vertex count is a caller error the return value cannot report
+// ---------------------------------------------------------------------------
+
+test('rejects an odd-length vertex list instead of dropping the trailing coordinate', () => {
+  expect(() => triangulate([0, 0, 10, 0, 5, 10, 3])).toThrow('length must be even');
+});
