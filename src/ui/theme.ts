@@ -69,7 +69,7 @@ export interface UISkin {
  * One skin per state. Only `normal` is required - {@link resolveUISkin} falls
  * back to it for every state a set does not define.
  */
-export type UISkinSet = { readonly normal: UISkin } & { readonly [State in Exclude<UIWidgetState, 'normal'>]?: UISkin };
+export type UISkinSet = { readonly normal: UISkin } & Partial<Readonly<Record<Exclude<UIWidgetState, 'normal'>, UISkin>>>;
 
 /**
  * A themed surface. Roles are per painted surface, not per widget class: a
@@ -78,21 +78,29 @@ export type UISkinSet = { readonly normal: UISkin } & { readonly [State in Exclu
 export type UIThemeRole = 'panel' | 'button' | 'label' | 'progressBarTrack' | 'progressBarFill';
 
 /** Skins for every role, as resolved for a widget. */
-export type UITheme = { readonly [Role in UIThemeRole]: UISkinSet };
+export type UITheme = Readonly<Record<UIThemeRole, UISkinSet>>;
 
 /** Skin fields to override; an omitted field keeps the inherited one. */
 export type UISkinPatch = Partial<UISkin>;
 
 /** Per-state skin overrides. */
-export type UISkinSetPatch = { readonly [State in UIWidgetState]?: UISkinPatch };
+export type UISkinSetPatch = Partial<Readonly<Record<UIWidgetState, UISkinPatch>>>;
 
 /**
  * Theme overrides applied on top of an inherited theme. Fields are replaced
  * whole: naming `background` replaces the entire descriptor, since blending
  * half a fill into a nine-slice has no meaning. Single-property tweaks belong
- * on the widget (`panel.color = ...`), not in a theme patch.
+ * on the widget (`panel.setFill({ color })`), not in a theme patch.
  */
-export type UIThemePatch = { readonly [Role in UIThemeRole]?: UISkinSetPatch };
+export type UIThemePatch = Partial<Readonly<Record<UIThemeRole, UISkinSetPatch>>>;
+
+/** Fill properties to override on a widget's background; omitted ones keep the skin's value. */
+export interface UIFillPatch {
+  readonly color?: Color;
+  readonly borderColor?: Color;
+  readonly borderWidth?: number;
+  readonly cornerRadius?: number;
+}
 
 const zeroInsets: UIInsets = { left: 0, top: 0, right: 0, bottom: 0 };
 
@@ -135,6 +143,31 @@ export const defaultUITheme: UITheme = {
   },
 };
 
+const neutralFill: UIFillBackground = fill(new Color(0, 0, 0, 0), 0, new Color(0, 0, 0, 0), 0);
+
+/**
+ * Apply a widget's fill overrides on top of the background its skin provides.
+ * A patched skin that does not paint a fill (a nine-slice, or nothing) becomes
+ * one: the caller asked for a colour, so they get a colour.
+ *
+ * @internal
+ */
+export const applyUIFillPatch = (background: UIBackground, patch: UIFillPatch | null): UIBackground => {
+  if (patch === null) {
+    return background;
+  }
+
+  const base = background.kind === 'fill' ? background : neutralFill;
+
+  return {
+    kind: 'fill',
+    color: patch.color ?? base.color,
+    borderColor: patch.borderColor ?? base.borderColor,
+    borderWidth: patch.borderWidth ?? base.borderWidth,
+    cornerRadius: patch.cornerRadius ?? base.cornerRadius,
+  };
+};
+
 /** The skin a state paints with, falling back to `normal` where undefined. */
 export const resolveUISkin = (set: UISkinSet, state: UIWidgetState): UISkin => set[state] ?? set.normal;
 
@@ -145,7 +178,7 @@ const mergeSkin = (base: UISkin, patch: UISkinPatch): UISkin => ({
 });
 
 const mergeSkinSet = (base: UISkinSet, patch: UISkinSetPatch): UISkinSet => {
-  const merged: { normal: UISkin } & { [State in Exclude<UIWidgetState, 'normal'>]?: UISkin } = { ...base };
+  const merged: { normal: UISkin } & Partial<Record<Exclude<UIWidgetState, 'normal'>, UISkin>> = { ...base };
 
   for (const state of Object.keys(patch) as UIWidgetState[]) {
     const skinPatch = patch[state];
@@ -206,7 +239,7 @@ if (__DEV__) {
   };
 
   for (const set of Object.values(defaultUITheme)) {
-    for (const stateSkin of Object.values(set) as UISkin[]) {
+    for (const stateSkin of Object.values(set)) {
       freezeBackground(stateSkin.background);
 
       if (stateSkin.text.fillColor !== undefined) {

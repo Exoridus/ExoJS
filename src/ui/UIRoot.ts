@@ -1,8 +1,8 @@
 import { Signal } from '#core/Signal';
 import type { RenderingContext } from '#rendering/RenderingContext';
 
-import { ThemedContainer } from './ThemedContainer';
 import type { UITheme } from './theme';
+import { ThemedContainer } from './ThemedContainer';
 
 /**
  * Root of a scene's screen-fixed UI layer. Reached through {@link Scene.ui};

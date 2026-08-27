@@ -846,7 +846,7 @@ describe('serialization — UI widgets', () => {
     const restored = deserializeTree(data) as Panel;
     expect(restored.uiWidth).toBe(120);
     expect(restored.borderWidth).toBe(2);
-    const userChildren = restored.children.filter(child => child !== restored.background);
+    const userChildren = restored.children.filter(child => child !== restored.backgroundNode);
     expect(userChildren).toHaveLength(1);
     expect(userChildren[0].name).toBe('content');
   });

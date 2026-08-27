@@ -84,6 +84,36 @@ export const serializeStyle = (style: {
 };
 
 /** Rebuild {@link TextStyleOptions} from serialized style data, or `undefined`. */
+/**
+ * Serialize a partial text style - a widget's own style overrides - writing
+ * exactly the fields it names, so a widget that takes its style from a theme
+ * round-trips as "no override" instead of baking that theme's values in. A
+ * `FontFace` has no serialized form and is skipped.
+ */
+export const serializeStyleOptions = (options: TextStyleOptions | null): Record<string, unknown> | undefined => {
+  if (options === null) {
+    return undefined;
+  }
+
+  const out: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(options)) {
+    if (value === undefined || key === 'font') {
+      continue;
+    }
+
+    if (value instanceof Color) {
+      out[key] = colorToArray(value);
+    } else if (Array.isArray(value)) {
+      out[key] = (value as unknown[]).map(entry => (entry instanceof Color ? colorToArray(entry) : entry));
+    } else {
+      out[key] = value;
+    }
+  }
+
+  return Object.keys(out).length > 0 ? out : undefined;
+};
+
 export const deserializeStyleOptions = (data: unknown): TextStyleOptions | undefined => {
   if (typeof data !== 'object' || data === null) {
     return undefined;

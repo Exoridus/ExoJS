@@ -1,9 +1,9 @@
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 
-import { ThemedContainer } from './ThemedContainer';
 import type { UISkin, UITheme, UIThemePatch, UIThemeRole, UIWidgetState } from './theme';
 import { createUITheme, resolveUISkin } from './theme';
+import { ThemedContainer } from './ThemedContainer';
 import type { UIRoot } from './UIRoot';
 
 /** Anchor position of a widget within its container's box. */
