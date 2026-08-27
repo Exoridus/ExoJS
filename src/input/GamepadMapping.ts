@@ -1,3 +1,5 @@
+import { assert } from '#core/dev';
+
 import type { GamepadAxis } from './GamepadAxis';
 import type { GamepadAxisChannel } from './GamepadAxis';
 import type { GamepadButton } from './GamepadButton';
@@ -93,6 +95,18 @@ export class GamepadMapping {
   public readonly promptLabels: ReadonlyMap<GamepadPromptControl, string> | undefined;
 
   public constructor(data: GamepadMappingData) {
+    if (__DEV__) {
+      // Every control writes into one channel slot per frame, so two controls
+      // on the same channel overwrite each other in mapping order: the pad
+      // reports whichever ran last and the other control looks dead.
+      const seen = new Set<number>();
+
+      for (const control of [...data.buttons, ...data.axes]) {
+        assert(!seen.has(control.channel), `GamepadMapping: two controls write to the same channel (${control.channel}); each channel may be declared once.`);
+        seen.add(control.channel);
+      }
+    }
+
     this.family = data.family;
     this.layout = data.layout ?? GamepadMappingLayout.Standard;
     this.buttons = data.buttons;

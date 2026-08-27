@@ -278,6 +278,17 @@ describe('custom devices', () => {
     expect(GamepadPromptLayouts.getControlLabels(mapping).get('ButtonSouth')).toBe('Trigger');
   });
 
+  test('rejects two controls on the same channel - one would silently overwrite the other every frame', () => {
+    expect(
+      () =>
+        new GamepadMapping({
+          family: GamepadMappingFamily.ArcadeStick,
+          buttons: [new GamepadButton(0, GamepadButton.South), new GamepadButton(1, GamepadButton.South)],
+          axes: [],
+        }),
+    ).toThrow('two controls write to the same channel');
+  });
+
   test('layout defaults to standard when the data omits it', () => {
     const mapping = new GamepadMapping({ family: GamepadMappingFamily.ArcadeStick, buttons: [], axes: [] });
 
