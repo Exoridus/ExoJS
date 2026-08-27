@@ -1,6 +1,8 @@
 import { Signal } from '#core/Signal';
-import { Container } from '#rendering/Container';
 import type { RenderingContext } from '#rendering/RenderingContext';
+
+import { ThemedContainer } from './ThemedContainer';
+import type { UITheme } from './theme';
 
 /**
  * Root of a scene's screen-fixed UI layer. Reached through {@link Scene.ui};
@@ -15,13 +17,40 @@ import type { RenderingContext } from '#rendering/RenderingContext';
  *
  * Add widgets with `scene.ui.addChild(...)`. The {@link UIRoot.onResize} signal
  * fires whenever the screen size changes, so anchored widgets can re-layout.
+ *
+ * The root also carries the layer's {@link UIRoot.theme}: widgets resolve their
+ * skins from the nearest themed ancestor, so assigning a theme here restyles
+ * every widget below that does not override it.
  */
-export class UIRoot extends Container {
+export class UIRoot extends ThemedContainer {
   /** Fires with `(width, height)` whenever the screen size changes. */
   public readonly onResize = new Signal<[width: number, height: number]>();
 
   private _screenWidth = 0;
   private _screenHeight = 0;
+
+  /**
+   * Base theme for every widget in this layer. Widgets override parts of it
+   * per subtree with `Widget.setTheme`; there is no global theme, so two UI
+   * layers can carry different ones. Assigning restyles the whole layer at
+   * once - every widget below repaints and re-lays out.
+   */
+  public override get theme(): UITheme {
+    return this._theme;
+  }
+
+  public override set theme(value: UITheme) {
+    if (this._theme !== value) {
+      this._theme = value;
+      this._cascadeTheme();
+    }
+  }
+
+  /** @internal - a UI layer's theme is assigned, never inherited, so there is nothing to re-resolve here. */
+  public override _refreshTheme(): void {
+    // A UIRoot owns its theme outright; the cascade stops descending only into
+    // its children, which it pushes itself when the theme is assigned.
+  }
 
   /** Screen width the UI is laid out against, in logical pixels. */
   public get screenWidth(): number {

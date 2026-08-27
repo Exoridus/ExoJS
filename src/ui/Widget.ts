@@ -1,6 +1,9 @@
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 
+import { ThemedContainer } from './ThemedContainer';
+import type { UISkin, UITheme, UIThemePatch, UIThemeRole, UIWidgetState } from './theme';
+import { createUITheme, resolveUISkin } from './theme';
 import type { UIRoot } from './UIRoot';
 
 /** Anchor position of a widget within its container's box. */
@@ -31,12 +34,21 @@ const anchorFactors = (anchor: WidgetAnchor): readonly [number, number] => {
  * (independent of child bounds / scale), an `enabled` flag, and optional
  * screen-edge anchoring that re-applies on resize.
  *
- * Subclasses redraw size-dependent content in {@link Widget._relayout} and
- * react to enable/disable in {@link Widget._onEnabledChanged}.
+ * Widgets read their look from the theme of the nearest themed ancestor - the
+ * layer's {@link UIRoot}, or any widget above them that set overrides with
+ * {@link Widget.setTheme}.
+ *
+ * Subclasses paint in {@link Widget._repaint}, place size-dependent content in
+ * {@link Widget._relayout}, and react to enable/disable in
+ * {@link Widget._onEnabledChanged}.
  */
-export abstract class Widget extends Container {
+export abstract class Widget extends ThemedContainer {
   protected _uiWidth = 0;
   protected _uiHeight = 0;
+  /** The state this widget's skins are resolved for; see {@link Widget._setSkinState}. */
+  protected _skinState: UIWidgetState = 'normal';
+  private _themePatch: UIThemePatch | null = null;
+  private _inheritedTheme: UITheme = this._theme;
   private _enabled = true;
   private _effectiveEnabled = true;
   private _uiAnchor: WidgetAnchor | null = null;
@@ -65,12 +77,26 @@ export abstract class Widget extends Container {
     if (this._uiWidth !== w || this._uiHeight !== h) {
       this._uiWidth = w;
       this._uiHeight = h;
-      this._relayout();
-
-      if (this._uiAnchorRoot !== null) {
-        this._applyAnchor(this._uiAnchorRoot.screenWidth, this._uiAnchorRoot.screenHeight);
-      }
+      this._invalidateLayout();
     }
+
+    return this;
+  }
+
+  /** This widget's own theme overrides, or `null` when it purely inherits. */
+  public get themeOverrides(): UIThemePatch | null {
+    return this._themePatch;
+  }
+
+  /**
+   * Override parts of the inherited theme for this widget and its descendants.
+   * `null` clears the override. Repaints and re-lays out every widget in the
+   * subtree that the change reaches - skin insets are layout input, so a theme
+   * change is never paint-only.
+   */
+  public setTheme(patch: UIThemePatch | null): this {
+    this._themePatch = patch;
+    this._refreshTheme(true);
 
     return this;
   }
@@ -141,9 +167,63 @@ export abstract class Widget extends Container {
     this.setPosition(ax * (containerWidth - this._uiWidth) + this._uiAnchorOffsetX, ay * (containerHeight - this._uiHeight) + this._uiAnchorOffsetY);
   }
 
-  /** Redraw size-dependent content (background, child positions). Override in subclasses. */
+  /**
+   * Redraw this widget's own painted surfaces for the current size and skin.
+   * Override in subclasses that draw a background.
+   */
+  protected _repaint(): void {
+    // Overridden by subclasses that paint a sized surface.
+  }
+
+  /**
+   * Re-place size-dependent content and repaint. Override in subclasses that
+   * position children; call `super._relayout()` to keep the repaint.
+   */
   protected _relayout(): void {
-    // Overridden by subclasses that draw a sized background.
+    this._repaint();
+  }
+
+  /**
+   * Repaint without re-laying out - for a change that cannot move anything,
+   * such as a colour or a state flip. Applied immediately, not batched.
+   */
+  protected _invalidatePaint(): void {
+    this._repaint();
+  }
+
+  /**
+   * Re-lay out and repaint, then re-apply screen anchoring. This is the right
+   * invalidation for anything a skin's insets or a font size can move, and for
+   * every size change.
+   */
+  protected _invalidateLayout(): void {
+    this._relayout();
+
+    if (this._uiAnchorRoot !== null) {
+      this._applyAnchor(this._uiAnchorRoot.screenWidth, this._uiAnchorRoot.screenHeight);
+    }
+  }
+
+  /** The skin `role` paints with in this widget's current state. */
+  protected _skin(role: UIThemeRole): UISkin {
+    return resolveUISkin(this._theme[role], this._skinState);
+  }
+
+  /** Switch the state skins resolve for, repainting when it actually changes. */
+  protected _setSkinState(state: UIWidgetState): void {
+    if (this._skinState !== state) {
+      this._skinState = state;
+      this._invalidatePaint();
+    }
+  }
+
+  /**
+   * React to a resolved-theme change. The default re-lays out and repaints;
+   * override to re-read skin values that are cached elsewhere first, then call
+   * `super._onThemeChanged()`.
+   */
+  protected _onThemeChanged(): void {
+    this._invalidateLayout();
   }
 
   /**
@@ -153,6 +233,31 @@ export abstract class Widget extends Container {
    */
   protected _onEnabledChanged(_effectiveEnabled: boolean): void {
     // Overridden by interactive subclasses (e.g. Button dimming).
+  }
+
+  /**
+   * @internal - re-resolve {@link ThemedContainer.theme} from the nearest
+   * themed ancestor and this widget's own overrides, then push the same
+   * recompute into every themed descendant.
+   */
+  public override _refreshTheme(force = false): void {
+    const inherited = this._resolveInheritedTheme();
+
+    if (!force && inherited === this._inheritedTheme) {
+      return;
+    }
+
+    this._inheritedTheme = inherited;
+
+    const next = this._themePatch === null ? inherited : createUITheme(this._themePatch, inherited);
+
+    if (next === this._theme && !force) {
+      return;
+    }
+
+    this._theme = next;
+    this._onThemeChanged();
+    this._cascadeTheme();
   }
 
   /**
@@ -215,6 +320,7 @@ export abstract class Widget extends Container {
   public override _setParent(parent: Container | null): void {
     super._setParent(parent);
     this._refreshEffectiveEnabled();
+    this._refreshTheme();
   }
 
   public override destroy(): void {
