@@ -1,6 +1,7 @@
 import { expectTypeOf } from 'vitest';
 
 import { Asset } from '#assets/Asset';
+import { AssetNetworkError } from '#assets/AssetNetworkError';
 import { Assets } from '#assets/Assets';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, LoadPriority } from '#assets/Loader';
@@ -317,7 +318,11 @@ describe('Loader seamless get (Texture)', () => {
 
     const handle = loader.get('gone.png');
 
-    await expect(handle.loaded).rejects.toThrow('Failed to load');
+    // The transport failure reaches the caller as itself: an AssetNetworkError
+    // already names the URL and carries the status, and re-wrapping it would
+    // take the branch away from an offline-capable caller.
+    await expect(handle.loaded).rejects.toThrow(AssetNetworkError);
+    await expect(handle.loaded).rejects.toThrow('Failed to fetch "gone.png" (404 Not Found).');
     expect(handle.loadState).toBe('failed');
     expect(handle.source).toBe(Texture.missing.source);
     expect(loader._peekResource(Texture, 'gone.png')).toBeNull();

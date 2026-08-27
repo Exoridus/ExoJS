@@ -4,7 +4,9 @@ import { unrestrictedNetwork } from '#core/Connectivity';
 import type { AssetCache } from './AssetCache';
 import { AssetCacheError } from './AssetCacheError';
 import { AssetCacheMissError } from './AssetCacheMissError';
+import { AssetDecodeError } from './AssetDecodeError';
 import type { AssetFactoryContext } from './AssetFactory';
+import { AssetNetworkError } from './AssetNetworkError';
 import type { AssetSourceCodec, SourceCodecContext } from './AssetSourceCodec';
 import type { AnyAssetType, AssetRequest } from './AssetType';
 import type { AssetTypeRegistry } from './AssetTypeRegistry';
@@ -258,22 +260,33 @@ export class AssetDecoder {
    * Wraps a construction failure in the "which asset, from where" envelope
    * callers see.
    *
-   * Three kinds of failure are rethrown unwrapped, because the envelope would
-   * cost more than it adds. A cancellation would lose the `AbortError` name the
-   * residency dispatches on to tell a deliberate cancel from a genuine failure.
-   * A cache miss and a store failure are already named, carry the namespace and
-   * source they concern, and are the errors an offline-capable caller
-   * dispatches on - `instanceof AssetCacheMissError` is how "not cached" is
-   * told from "could not load", and wrapping it takes that away.
+   * Failures that are already named are rethrown unwrapped, because the
+   * envelope would cost more than it adds. A cancellation would lose the
+   * `AbortError` name the residency dispatches on to tell a deliberate cancel
+   * from a genuine failure. A cache miss, a store failure and a transport
+   * failure carry the namespace, source or URL they concern and are the errors
+   * an offline-capable caller dispatches on - `instanceof AssetCacheMissError`
+   * is how "not cached" is told from "could not load", and wrapping it takes
+   * that away.
+   *
+   * A decode failure is the one case that gains from the envelope and must
+   * still survive as its own type, so it is rebuilt rather than replaced:
+   * "these bytes are broken" is only actionable together with which asset they
+   * belonged to.
    */
   private _describeFailure(asset: CanonicalAsset, error: unknown): unknown {
-    if (isAbortError(error) || error instanceof AssetCacheMissError || error instanceof AssetCacheError) {
+    if (isAbortError(error) || error instanceof AssetCacheMissError || error instanceof AssetCacheError || error instanceof AssetNetworkError) {
       return error;
     }
 
     const message = error instanceof Error ? error.message : String(error);
+    const envelope = `Failed to load "${asset.source}" from "${this._resolveUrl(asset.source)}": ${message}`;
 
-    return new Error(`Failed to load "${asset.source}" from "${this._resolveUrl(asset.source)}": ${message}`, { cause: error });
+    if (error instanceof AssetDecodeError) {
+      return new AssetDecodeError({ message: envelope, assetType: error.assetType ?? undefined, cause: error });
+    }
+
+    return new Error(envelope, { cause: error });
   }
 
   /**

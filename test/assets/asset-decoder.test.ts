@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from 'vitest';
 
 import { AssetCache } from '#assets/AssetCache';
 import type { AssetConstructor } from '#assets/AssetConstructor';
+import { AssetDecodeError } from '#assets/AssetDecodeError';
 import { AssetDecoder } from '#assets/AssetDecoder';
 import { AssetTypeRegistry } from '#assets/AssetTypeRegistry';
 import type { CacheContext } from '#assets/CachePolicy';
@@ -90,6 +91,27 @@ describe('AssetDecoder', () => {
       /Failed to load "hero.png" from "hero.png": bad payload/,
     );
     expect(storeResource).not.toHaveBeenCalled();
+  });
+
+  test('_dispatchFetch keeps a decode failure its own type while adding the "which asset" envelope', async () => {
+    const { decoder, typeRegistry, canonical } = createDecoder();
+
+    typeRegistry.installAll([
+      testAssetType<string, string>({
+        id: 'typeA',
+        token: TypeA,
+        acquires: false,
+        create: async () => {
+          throw new AssetDecodeError({ message: 'not a PNG', assetType: 'typeA' });
+        },
+      }),
+    ]);
+
+    const promise = decoder._dispatchFetch(canonical(TypeA, 'hero.png'), undefined, undefined, fakeScope);
+
+    await expect(promise).rejects.toBeInstanceOf(AssetDecodeError);
+    await expect(promise).rejects.toThrow(/Failed to load "hero.png" from "hero.png": not a PNG/);
+    await expect(promise).rejects.toMatchObject({ assetType: 'typeA' });
   });
 
   test('_dispatchFetch rejects with a clear error when no type is installed for the token', async () => {
