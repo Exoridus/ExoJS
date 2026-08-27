@@ -225,7 +225,7 @@ export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry
   /**
    * The colour every frame starts from. Applied by the engine's own per-frame
    * clear (see {@link ApplicationOptions.autoClear}) and readable/assignable
-   * later as {@link Application.clearColor}. Default: cornflower blue.
+   * later as {@link Application.clearColor}. Default: opaque black.
    */
   clearColor?: Color;
   /**
@@ -761,7 +761,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       }
 
       this.options = {
-        clearColor: appSettings.clearColor ?? Color.cornflowerBlue,
+        clearColor: appSettings.clearColor ?? Color.black,
         autoClear: appSettings.autoClear ?? true,
         backend: appSettings.backend ?? defaultBackendConfig,
         canvas: {
