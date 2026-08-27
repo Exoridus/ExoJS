@@ -21,8 +21,8 @@ Use `Graphics` when you need shapes that are defined in code rather than loaded 
 import { Color, Graphics } from '@codexo/exojs';
 
 const g = new Graphics();
-g.fillColor = Color.tomato;
-g.lineColor = Color.darkRed;
+g.fillColor = new Color(0xff6347);
+g.lineColor = new Color(0x8b0000);
 g.lineWidth = 3;
 
 g.drawRectangle(0, 0, 120, 80);
@@ -36,12 +36,37 @@ import { Color, Graphics } from '@codexo/exojs';
 
 const g = new Graphics();
 
-g.fillColor = Color.tomato;
+g.fillColor = new Color(0xff6347);
 g.drawCircle(0, 0, 30);
 
-g.fillColor = Color.steelBlue;
+g.fillColor = new Color(0x4682b4);
 g.drawRectangle(40, -20, 60, 40);
 ```
+
+## Writing a color
+
+`Color` takes four spellings, and which one to reach for follows from whether alpha belongs in the literal:
+
+```ts
+import { Color } from '@codexo/exojs';
+
+new Color(0xff6347); // packed 0xRRGGBB, opaque
+new Color(0xff6347, 0.5); // packed, with alpha as its own argument
+new Color(255, 99, 71, 0.5); // channel by channel: RGB 0..255, alpha 0..1
+Color.fromHex('#ff6347cc'); // #RGB, #RGBA, #RRGGBB or #RRGGBBAA, alpha last
+```
+
+A **number is always `0xRRGGBB` and never carries alpha.** That is not a limitation of the parser but of the number: JavaScript keeps no leading zeros, so `0x00FF00FF` (opaque green, read as RGBA) and `0xFF00FF` (magenta, read as RGB) are the *same* value at runtime and cannot be told apart. A string still carries its own length, so `'#00ff00ff'` is unambiguous — put alpha in a string, or pass it separately.
+
+`Color.from(value, alpha?)` accepts any of those plus another `Color` or a plain `{ r, g, b, a }`, which is what a config or a serialized document usually holds. In a loop, prefer `color.setHex(...)` — it overwrites in place instead of allocating.
+
+The named constants are the eight corners of the RGB cube plus the two transparent ends:
+
+`Color.black`, `Color.red`, `Color.green`, `Color.blue`, `Color.cyan`, `Color.magenta`, `Color.yellow`, `Color.white`, `Color.transparentBlack`, `Color.transparentWhite`, and `Color.transparent` (CSS `transparent`, the same value as `transparentBlack`).
+
+Anything else is a value rather than a name — write `new Color(0x6495ed)`, not a lookup. These instances are shared, so `clone()` before mutating one.
+
+Going the other way, `toRgb()` gives back the `0xRRGGBB` the constructor takes, and `toHex(alpha?)` the string form. `toRgba8()` is a different thing despite the similar name: one RGBA8 texel as a little-endian `Uint32` for GPU upload, written `0xAABBGGRR`. Do not feed it back into `Color.from`.
 
 ## Built-in shapes
 
