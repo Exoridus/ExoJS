@@ -37,6 +37,8 @@ import type { RenderStats } from '#rendering/RenderStats';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RenderTexturePool } from '#rendering/RenderTexturePool';
+import { compressedPayloadOf } from '#rendering/texture/compressedPayload';
+import { compressedBlockLayout, compressedBlocksAcross, compressedBlocksDown, type CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
@@ -47,6 +49,7 @@ import { createCanvas } from '#rendering/utils';
 import type { View } from '#rendering/View';
 
 import { WebGpuBackdropBlendCompositor } from './WebGpuBackdropBlendCompositor';
+import { readWebgpuCompressedFormats, type WebgpuCompressedFormatSupport, webgpuCompressedTextureFeatures } from './webgpuCompressedFormat';
 import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
 import { WebGpuMeshRenderer } from './WebGpuMeshRenderer';
 import { WebGpuPassCoordinator } from './WebGpuPassCoordinator';
@@ -80,6 +83,13 @@ interface ManagedWebGpuTextureState {
   width: number;
   height: number;
   mipLevelCount: number;
+  /**
+   * The GPU format the texture object was created with. A texture handle can
+   * change format across its life - an empty loader handle becomes either a
+   * managed RGBA8 upload or a compressed payload - and a format is fixed at
+   * creation, so this is what decides whether the object has to be rebuilt.
+   */
+  format: GPUTextureFormat;
   hasContent: boolean;
   /** GPU bytes currently booked for this texture's storage with the resource accountant. */
   accountedBytes: number;
@@ -226,6 +236,12 @@ export class WebGpuBackend implements RenderBackend {
   private _mipmapSampler: GPUSampler | null = null;
   private _context: GPUCanvasContext | null = null;
   private _device: GPUDevice | null = null;
+  /**
+   * Compressed-format table of the granted device. Empty until the device
+   * exists, so a format query made before initialization reports nothing
+   * supported rather than claiming a family the device may never carry.
+   */
+  private _compressedFormats: WebgpuCompressedFormatSupport = { formats: [], gpuFormats: new Map() };
   private _format: GPUTextureFormat | null = null;
   // `copyExternalImageToTexture` from a <canvas> source: `null` while unknown
   // (never probed yet), `true`/`false` once the one-off probe below resolves.
@@ -356,6 +372,10 @@ export class WebGpuBackend implements RenderBackend {
     const limits = (this._device as { limits?: GPUSupportedLimits } | null)?.limits;
 
     return limits?.maxTextureDimension2D ?? WEBGPU_DEFAULT_MAX_TEXTURE_DIMENSION_2D;
+  }
+
+  public get supportedTextureFormats(): readonly CompressedTextureFormat[] {
+    return this._compressedFormats.formats;
   }
 
   public get device(): GPUDevice {
@@ -1102,6 +1122,7 @@ export class WebGpuBackend implements RenderBackend {
     this._context?.unconfigure();
     this._context = null;
     this._device = null;
+    this._compressedFormats = { formats: [], gpuFormats: new Map() };
     this._format = null;
     this._initializePromise = null;
     this._clearRequested = false;
@@ -1932,6 +1953,13 @@ export class WebGpuBackend implements RenderBackend {
       // that way (float RenderTextures default to nearest, so this is a bonus).
       const floatFeatures = (['float32-filterable', 'float32-blendable'] as const).filter(feature => adapter.features?.has(feature) ?? false);
 
+      // Compressed-format families are optional features, and a device only
+      // carries what the request asked for - so an adapter that supports BC
+      // still yields a device that rejects a BC texture unless it is requested
+      // here. Filtering against the adapter first keeps the request satisfiable:
+      // asking for a family the adapter lacks fails the whole `requestDevice`.
+      const compressedFeatures = webgpuCompressedTextureFeatures.filter(feature => adapter.features?.has(feature) ?? false);
+
       // The sprite batcher sizes its multi-texture bind-group layout from the
       // GRANTED device limits (resolveSpriteBatchTextureSlots): request up to
       // the 32-slot ceiling when the adapter offers more than the spec base of
@@ -1952,8 +1980,8 @@ export class WebGpuBackend implements RenderBackend {
 
       const descriptor: GPUDeviceDescriptor = {};
 
-      if (floatFeatures.length > 0) {
-        descriptor.requiredFeatures = floatFeatures;
+      if (floatFeatures.length > 0 || compressedFeatures.length > 0) {
+        descriptor.requiredFeatures = [...floatFeatures, ...compressedFeatures];
       }
 
       if (Object.keys(requiredLimits).length > 0) {
@@ -2014,6 +2042,7 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     this._device = device;
+    this._compressedFormats = readWebgpuCompressedFormats(device);
 
     // Surface uncaptured GPU errors (validation / OOM / internal) through
     // onRenderError. Re-installed automatically after device-loss recovery
@@ -2241,6 +2270,7 @@ export class WebGpuBackend implements RenderBackend {
     this._context?.unconfigure();
     this._context = null;
     this._device = null;
+    this._compressedFormats = { formats: [], gpuFormats: new Map() };
     this._format = null;
     this._initializePromise = null;
     this._hasPresentedFrame = false;
@@ -2383,13 +2413,14 @@ export class WebGpuBackend implements RenderBackend {
     let state = this._textureStates.get(texture);
 
     if (!state) {
+      const format = this._getGpuTextureFormat(texture);
       const gpuTexture = this.device.createTexture({
         label: 'backend:texture',
         size: {
           width: Math.max(texture.width, 1),
           height: Math.max(texture.height, 1),
         },
-        format: this._getGpuTextureFormat(texture),
+        format,
         mipLevelCount: this._getMipLevelCount(texture),
         usage: this._getTextureUsage(texture),
       });
@@ -2410,6 +2441,7 @@ export class WebGpuBackend implements RenderBackend {
         width: texture.width,
         height: texture.height,
         mipLevelCount,
+        format,
         hasContent: false,
         accountedBytes: 0,
         partialUploadScratch: null,
@@ -2605,11 +2637,17 @@ export class WebGpuBackend implements RenderBackend {
   private _syncTexture(texture: Texture | RenderTexture): ManagedWebGpuTextureState {
     assertLiveTexture(texture);
 
-    if (!(texture instanceof RenderTexture) && !(texture instanceof DataTexture) && (texture.source === null || texture.width === 0 || texture.height === 0)) {
+    if (
+      !(texture instanceof RenderTexture) &&
+      !(texture instanceof DataTexture) &&
+      texture.compressed === null &&
+      (texture.source === null || texture.width === 0 || texture.height === 0)
+    ) {
       throw new Error('WebGPU sprite rendering requires a texture with a valid source and non-zero dimensions.');
     }
 
     const state = this._getTextureState(texture);
+    const compressedPayload = compressedPayloadOf(texture);
     const textureVersion = texture instanceof RenderTexture ? texture.textureVersion : texture.version;
     const mipLevelCount = this._getMipLevelCount(texture);
     const nonFilterable = this._isNonFilterable(texture);
@@ -2621,7 +2659,9 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     if (state.version !== textureVersion) {
-      if (state.width !== texture.width || state.height !== texture.height || state.mipLevelCount !== mipLevelCount) {
+      const gpuFormat = this._getGpuTextureFormat(texture);
+
+      if (state.width !== texture.width || state.height !== texture.height || state.mipLevelCount !== mipLevelCount || state.format !== gpuFormat) {
         state.texture.destroy();
 
         const resizedTexture = this.device.createTexture({
@@ -2630,7 +2670,7 @@ export class WebGpuBackend implements RenderBackend {
             width: texture.width,
             height: texture.height,
           },
-          format: this._getGpuTextureFormat(texture),
+          format: gpuFormat,
           mipLevelCount,
           usage: this._getTextureUsage(texture),
         });
@@ -2640,6 +2680,7 @@ export class WebGpuBackend implements RenderBackend {
         state.width = texture.width;
         state.height = texture.height;
         state.mipLevelCount = mipLevelCount;
+        state.format = gpuFormat;
         state.hasContent = false;
         // Free the previous storage before booking the new size (no transient spike).
         state.accountedBytes = this._accountant.reallocate(state.accountedBytes, this._estimateTextureBytes(texture, mipLevelCount));
@@ -2704,6 +2745,28 @@ export class WebGpuBackend implements RenderBackend {
             { width: region.width, height: region.height },
           );
           this._accountant.recordTextureUpload(region.width * region.height * bytesPerPixel);
+        }
+
+        state.hasContent = true;
+      } else if (compressedPayload !== null) {
+        const { format: compressedFormat, levels } = compressedPayload;
+        const { blockWidth, blockHeight, bytesPerBlock } = compressedBlockLayout(compressedFormat);
+
+        for (const [mipLevel, level] of levels.entries()) {
+          const blocksAcross = compressedBlocksAcross(compressedFormat, level.width);
+          const blocksDown = compressedBlocksDown(compressedFormat, level.height);
+
+          // `bytesPerRow` counts BLOCK rows, not texel rows, and the write extent
+          // is padded up to whole blocks - a 5x5 ASTC 4x4 level is a 2x2 block
+          // grid. Passing the texel width here would under-run the driver's read
+          // by the block size and corrupt every level.
+          this.device.queue.writeTexture(
+            { texture: state.texture, mipLevel },
+            level.data,
+            { bytesPerRow: blocksAcross * bytesPerBlock, rowsPerImage: blocksDown },
+            { width: blocksAcross * blockWidth, height: blocksDown * blockHeight },
+          );
+          this._accountant.recordTextureUpload(level.data.byteLength);
         }
 
         state.hasContent = true;
@@ -2952,10 +3015,31 @@ export class WebGpuBackend implements RenderBackend {
     if (texture instanceof RenderTexture) {
       return webgpuColorTextureFormat(texture.format);
     }
+    const compressed = compressedPayloadOf(texture);
+
+    if (compressed !== null) {
+      const gpuFormat = this._compressedFormats.gpuFormats.get(compressed.format);
+      if (gpuFormat === undefined) {
+        throw new RenderError({
+          code: 'unsupported-format',
+          backendType: RenderBackendType.WebGpu,
+          message: `This device cannot sample the compressed texture format "${compressed.format}". Declare an asset variant this device supports, or check backend.supportedTextureFormats before constructing the texture.`,
+        });
+      }
+      return gpuFormat;
+    }
     return managedTextureFormat;
   }
 
   private _getTextureUsage(texture: Texture | RenderTexture): number {
+    // RENDER_ATTACHMENT exists purely so `_generateMipmaps` can render into the
+    // smaller levels. A compressed format is not renderable at all, so asking
+    // for it would fail texture creation outright - and there is nothing to
+    // generate, because the chain arrives complete.
+    if (compressedPayloadOf(texture) !== null) {
+      return GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING;
+    }
+
     const mipmapUsage = this._getMipLevelCount(texture) > 1 ? GPUTextureUsage.RENDER_ATTACHMENT : 0;
 
     if (texture instanceof RenderTexture) {
@@ -3008,6 +3092,14 @@ export class WebGpuBackend implements RenderBackend {
       return dataTextureBytesPerPixel(format);
     }
 
+    const compressed = compressedPayloadOf(texture);
+
+    if (compressed !== null) {
+      const { blockWidth, blockHeight, bytesPerBlock } = compressedBlockLayout(compressed.format);
+
+      return bytesPerBlock / (blockWidth * blockHeight);
+    }
+
     return MANAGED_TEXTURE_BYTES_PER_PIXEL;
   }
 
@@ -3017,6 +3109,15 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   private _getMipLevelCount(texture: Texture | RenderTexture): number {
+    // A compressed payload carries whatever chain the container shipped; the GPU
+    // cannot derive one from compressed blocks, so `generateMipMap` says nothing
+    // about it and the level count comes from the levels themselves.
+    const compressed = compressedPayloadOf(texture);
+
+    if (compressed !== null) {
+      return compressed.levels.length;
+    }
+
     if (!texture.generateMipMap) {
       return 1;
     }

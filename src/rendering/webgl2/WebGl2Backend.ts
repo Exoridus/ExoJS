@@ -29,7 +29,7 @@ import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { InstanceDataView } from '#rendering/RenderBatch';
 import type { Renderer } from '#rendering/Renderer';
 import { RendererRegistry } from '#rendering/RendererRegistry';
-import type { RenderError } from '#rendering/RenderError';
+import { RenderError } from '#rendering/RenderError';
 import type { RenderStats } from '#rendering/RenderStats';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
@@ -42,6 +42,8 @@ import {
   type TransformTextureLayout,
   transformTextureRect,
 } from '#rendering/shader/transformTextureLayout';
+import { compressedPayloadOf } from '#rendering/texture/compressedPayload';
+import type { CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
@@ -51,6 +53,7 @@ import { BlendModes, type ColorTextureFormat, TextureFormat } from '#rendering/t
 import type { View } from '#rendering/View';
 
 import { WebGl2BackdropBlendCompositor } from './WebGl2BackdropBlendCompositor';
+import { probeWebgl2CompressedFormats, type Webgl2CompressedFormatSupport } from './webgl2CompressedFormat';
 import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
 import { WebGl2MeshRenderer } from './WebGl2MeshRenderer';
 import { WebGl2PassCoordinator } from './WebGl2PassCoordinator';
@@ -302,6 +305,13 @@ export class WebGl2Backend implements RenderBackend {
   // with GL_INVALID_VALUE and leave every transform fetch reading an incomplete
   // texture (a black frame). Re-read after a context restore.
   private _maxTextureSize = 0;
+  /**
+   * Compressed-format table of the live context, rebuilt whenever the context
+   * is - a restored context re-enables its extensions from scratch, and a stale
+   * table would hand `compressedTexImage2D` an internal format the new context
+   * never enabled.
+   */
+  private _compressedFormats: Webgl2CompressedFormatSupport = { formats: [], internalFormats: new Map() };
   /** The application's `canvas.pixelRatio`, sanitized once - see {@link surfacePixelRatio}. */
   private readonly _surfacePixelRatio: number;
   private _renderTarget: RenderTarget;
@@ -386,6 +396,7 @@ export class WebGl2Backend implements RenderBackend {
     // enable call; without it, RGBA16F/RGBA32F are not color-renderable in WebGL2.
     this._floatRenderable = this._context.getExtension('EXT_color_buffer_float') !== null;
     this._maxTextureSize = this._context.getParameter(this._context.MAX_TEXTURE_SIZE) as number;
+    this._compressedFormats = probeWebgl2CompressedFormats(this._context);
 
     // Grab the lose-context extension up front so a later restore can act on the
     // live instance (see the field comment). `null` on backends that don't
@@ -463,6 +474,10 @@ export class WebGl2Backend implements RenderBackend {
 
   public get maxTextureSize(): number {
     return this._maxTextureSize;
+  }
+
+  public get supportedTextureFormats(): readonly CompressedTextureFormat[] {
+    return this._compressedFormats.formats;
   }
 
   public get clearColor(): Color {
@@ -2020,6 +2035,7 @@ export class WebGl2Backend implements RenderBackend {
     // being color-renderable until this is re-fetched on the fresh context.
     this._floatRenderable = gl.getExtension('EXT_color_buffer_float') !== null;
     this._maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
+    this._compressedFormats = probeWebgl2CompressedFormats(gl);
     // Drop the cached transform layout: it was derived from the LOST context's
     // limit, and the restored one may report a different one.
     this._transformTextureLayout = null;
@@ -2594,6 +2610,7 @@ export class WebGl2Backend implements RenderBackend {
    */
   private _syncTextureUpload(texture: Texture | RenderTexture, state: ManagedTextureState, version: number): ManagedTextureState {
     const gl = this._context;
+    const compressedPayload = compressedPayloadOf(texture);
 
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, texture.premultiplyAlpha);
 
@@ -2695,6 +2712,30 @@ export class WebGl2Backend implements RenderBackend {
         gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, texture.width, texture.height, info.format, info.type, texture.source);
         this._accountant.recordTextureUpload(texture.width * texture.height * info.bytesPerPixel);
       }
+    } else if (compressedPayload !== null) {
+      const { format, levels } = compressedPayload;
+      const internalFormat = this._compressedFormats.internalFormats.get(format);
+
+      if (internalFormat === undefined) {
+        throw new RenderError({
+          code: 'unsupported-format',
+          backendType: RenderBackendType.WebGl2,
+          message: `This context cannot sample the compressed texture format "${format}". Declare an asset variant this device supports, or check backend.supportedTextureFormats before constructing the texture.`,
+        });
+      }
+
+      let uploadedBytes = 0;
+
+      for (const [level, { data, width, height }] of levels.entries()) {
+        gl.compressedTexImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, 0, data);
+        uploadedBytes += data.byteLength;
+      }
+
+      // Booked from the payload rather than through `_bookTextureStorage`: that
+      // helper derives its size from a bytes-per-pixel figure and a synthesized
+      // mip count, and a compressed chain knows both exactly.
+      state.accountedBytes = this._accountant.reallocate(state.accountedBytes, uploadedBytes);
+      this._accountant.recordTextureUpload(uploadedBytes);
     } else if (texture.source) {
       if (state.version === -1 || state.width !== texture.width || state.height !== texture.height) {
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);

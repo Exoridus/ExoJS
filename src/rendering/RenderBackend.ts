@@ -5,6 +5,7 @@ import type { Rectangle } from '#math/Rectangle';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { Mesh } from '#rendering/mesh/Mesh';
 import type { InstanceDataView } from '#rendering/RenderBatch';
+import type { CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import type { ColorTextureFormat } from '#rendering/types';
@@ -67,6 +68,22 @@ export interface RenderBackend {
    * refuse.
    */
   readonly maxTextureSize: number;
+
+  /**
+   * Block-compressed texture formats this device can sample, most preferred
+   * first, or empty when it supports none.
+   *
+   * Availability is per device and per backend: desktop GPUs implement the BC
+   * family, mobile GPUs ETC2 and ASTC, and WebGPU only carries a family that was
+   * requested when the device was created. The order is the engine's own
+   * preference ranking, identical on both backends, and is what
+   * {@link AssetVariantProfile} selection ranks candidates by.
+   *
+   * Read it to decide what to ship or construct; binding a {@link CompressedTexture}
+   * in a format absent from this list throws a {@link RenderError} with code
+   * `'unsupported-format'`.
+   */
+  readonly supportedTextureFormats: readonly CompressedTextureFormat[];
 
   /**
    * Dispatched when the backend detects a GPU error that does not surface as a
