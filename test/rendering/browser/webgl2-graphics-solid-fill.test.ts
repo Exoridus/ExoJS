@@ -83,9 +83,9 @@ describe('Graphics solid fill WebGL2 browser', () => {
     try {
       render(backend, graphics);
 
-      // Inside the rectangle: solid fill color (Color.green is (0, 128, 0)).
-      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [0, 128, 0, 255]);
-      expectPixelNear(readWebGl2Pixel(backend, 10, 10), [0, 128, 0, 255]);
+      // Inside the rectangle: solid fill color (Color.green is the cube corner, (0, 255, 0)).
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 10, 10), [0, 255, 0, 255]);
       // Outside the rectangle: clear color.
       expectPixelNear(readWebGl2Pixel(backend, 2, 2), [0, 0, 0, 255]);
       expectPixelNear(readWebGl2Pixel(backend, 62, 62), [0, 0, 0, 255]);
