@@ -284,15 +284,28 @@ export interface AttachOptions {
  * touching this public surface.
  *
  * **Operating envelope.** The soft solver trades a little accuracy for
- * robustness, so it has a few documented limits - each stays finite/stable and
- * each is pinned by a gate in `dynamics.test.ts`:
- * - **Mass ratio** - resting stacks are slop-accurate up to ~100:1. Beyond that
- *   the velocity-capped soft push-out (`maxBiasVelocity`) lets the lighter body
- *   settle progressively deeper (≈6px at 500:1, fully through a thin floor by
- *   ~5000:1) - always finite, never exploding.
+ * robustness, so it has a few documented limits - each stays finite and stable,
+ * and each is pinned by a gate in `dynamics.test.ts` or
+ * `contact-push-out.test.ts`:
+ * - **Resting contacts** settle within a small, fixed tolerance. A face contact
+ *   settles at exactly that tolerance; a single-point contact settles slightly
+ *   deeper, and that gap grows with acceleration. Very high accelerations
+ *   eventually exceed what the push-out can resolve within a step, at which
+ *   point the contact holds a slightly deeper resting depth instead of the
+ *   tolerance - keep gravity in the range ordinary 2D games use.
+ * - **Mass ratio** - contacts between bodies of very different mass degrade
+ *   gradually rather than at a fixed ratio. What sets the practical limit is how
+ *   thick the supporting geometry is relative to the lighter body, not the ratio
+ *   alone: a light body squeezed against a boundary thinner than itself is the
+ *   case that fails first, and it fails by sinking through.
+ * - **Scale-relative behaviour** - the solver's tolerances are absolute lengths,
+ *   so a very small shape sees them as a large fraction of itself, and a very
+ *   large one as a negligible one. Keep the shapes of one world within a couple
+ *   of orders of magnitude of each other.
  * - **CCD is opt-in and translation-only** - detection runs once per fixed
- *   step, so an ordinary body that travels farther than an obstacle's thickness
- *   in one step tunnels straight through it (it stays finite). Flag fast
+ *   step, so an ordinary body that crosses more than roughly half a barrier's
+ *   total thickness within one step may end up on the wrong side of it, either
+ *   passing through or being resolved out of the far face. Flag fast
  *   projectiles with {@link PhysicsBody.isBullet}: each of the body's colliders
  *   is then shape-cast along the step's motion (an exact translation-only sweep
  *   of the full shape, not just the centre) and clamped at the first impact.

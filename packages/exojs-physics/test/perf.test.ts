@@ -116,18 +116,24 @@ describe('physics dynamics performance', () => {
 
     console.log(`${(bytesPerStep / 1024).toFixed(2)} KB/step allocation (sampling profiler)`);
 
-    // Sharp gate: the ContactGraph iterators + broad-phase/contact sorts are
-    // now allocation-free (forEach with a bound method instead of entry-tuple
-    // destructuring; an in-place heap sort instead of Array.prototype.sort's temp
-    // buffer), dropping the steady-state rate ~810 → ~484 KB/step. The remainder
-    // is not poolable garbage: it is V8 double-boxing + sampler misattribution in
-    // the scalar float hot loops (the solver block LCP and narrow-phase clip are
-    // verified allocation-free - see _solveNormalBlock/collide), removable only by
-    // an invasive typed-array solver rewrite (post-1.0 follow-up). Measured ~484
-    // KB/step (±1, very stable); the gate sits at 600 KB - tight enough that
-    // reverting that reuse (≈810) trips it, with headroom for cross-machine V8
-    // boxing variance.
-    expect(bytesPerStep).toBeLessThan(600 * 1024);
+    // Sharp gate. The step constructs no per-step objects of its own: the
+    // ContactGraph iterators and the broad-phase/contact sorts reuse their
+    // storage (forEach with a bound method instead of entry-tuple destructuring,
+    // an in-place heap sort instead of Array.prototype.sort's temp buffer), and
+    // constraints, manifolds and contact records are pooled.
+    //
+    // What remains is V8 boxing a double that crosses a call the optimiser
+    // declined to inline. That is not misattribution and it is not fixed
+    // wholesale: whether a given call is inlined depends on the shape of the
+    // caller, so the same scene can pay it in one solver path and not in another.
+    // The paths where it was measured apply their results in place instead.
+    // Removing the rest means a typed-array solver rewrite (post-1.0 follow-up).
+    //
+    // Measured ~117 KB/step for this scene. The gate sits at 250 KB: enough
+    // headroom for cross-machine inlining variance, tight enough that
+    // reintroducing per-step garbage on the scale this scene used to carry
+    // (~484 KB/step) trips it.
+    expect(bytesPerStep).toBeLessThan(250 * 1024);
   });
 
   it('5,000-mostly-sleeping field: sleeping sharply cuts step time', () => {

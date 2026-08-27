@@ -251,6 +251,46 @@ Reading `player.linearVelocityY` *inside* the callback looks equivalent but is n
 The modifier never sees sensor overlaps — a sensor produces no contact to solve. Use
 `onSensorEnter`/`onSensorExit` for those.
 
+## What the solver is built for
+
+ExoJS Physics ships **one** solver configuration, tuned for plausible, stable, cheap game
+physics. It is not a scientific integrator, and it does not grow a quality switch: the
+advanced options you already met — `subStepCount`, `contactHertz`, `dampingRatio`,
+`fixedDelta`, `enableSleeping`, `isBullet` — are the whole tuning surface.
+
+That default has a shape worth knowing, because it decides whether a scene will look
+right or merely finite:
+
+**Inside the envelope.** Gravity and accelerations in the range ordinary 2D games use.
+Shapes within a couple of orders of magnitude of each other. Mass differences up to
+roughly two orders of magnitude inside one pile of touching bodies. Stacks tens of
+bodies tall. Fast bodies flagged `isBullet`. Here a visible failure is a bug, not a
+limit — report it.
+
+**Degraded but stable.** Push any of those further and accuracy gets visibly worse
+while the simulation stays finite: resting contacts sit deeper, a squeezed light body
+sinks into what supports it, a tall stack under a heavy load compresses. Nothing
+explodes, nothing freezes half-buried, but it stops looking convincing.
+
+**Out of scope.** Guaranteed non-penetration, mass ratios in the thousands against thin
+geometry, rotation-only continuous collision, shapes spanning many orders of magnitude
+in one world, or a result that has to match an offline reference. These are jobs for a
+specialised engine, and ExoJS deliberately lets them go rather than growing a mode for
+them.
+
+Four behaviours follow from the design, and knowing them explains most surprises:
+
+| Behaviour | What you see |
+|---|---|
+| Contacts rest inside a small tolerance | Bodies overlap their support by a fraction of a px, on purpose — that overlap is what keeps the contact alive between steps. A single-point contact (a ball, a capsule end) rests slightly deeper than a flat one, and the gap grows with gravity. |
+| Detection is discrete | A body that crosses more than roughly half a barrier's thickness in one fixed step can end up on the wrong side of it. That is what `isBullet` exists for. |
+| The sweep is translation-only | A body whose *rotation* alone carries it past an obstacle within one step is not swept, `isBullet` or not. |
+| Tolerances are absolute lengths | A 2 px shape experiences the same slop as a 200 px one, so tiny bodies look mushy while huge ones look exact. Scale the world, not the tolerance. |
+
+<Callout type="note" title="Mass ratio is about thickness, not the ratio">
+A heavy body resting on a light one degrades gradually. What decides whether it degrades or fails is how thick the supporting geometry is compared to the lighter body: a light body pressed against a boundary thinner than itself is the case that gives way first, and it gives way by sinking through. Give thin platforms a collider thicker than the smallest body that will ever be pressed against them.
+</Callout>
+
 ## Where to go next
 
 - **API reference:** [`DistanceJoint`](/ExoJS/en/api/distance-joint/),

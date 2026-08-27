@@ -20,13 +20,15 @@ export const contactSlop = 0.25;
  * apart.
  *
  * The value is empirical, not derived: a face contact converges to exactly one
- * slop at any gravity, but a single-point contact settles a little deeper, and
- * that offset grows with gravity (0.28 px at 1 000 px/s², 0.53 px at 10 000,
- * 0.67 px at 15 000). Three slops clears that envelope for the gravity range
- * the engine is tuned for while staying far below the failure it gates, which
- * starts at several px. Past roughly 15 000 px/s² the two converge and sleep is
- * delayed; well before that the solver itself stops resolving single-point
- * contacts at all, which is a separate limitation.
+ * slop at any gravity, but a single-point contact rests one static spring
+ * deflection deeper, and that offset grows with gravity (0.28 px at
+ * 1 000 px/s², 0.53 px at 10 000, 0.67 px at 15 000). Three slops clears that
+ * envelope for the gravity range the engine is tuned for while staying far
+ * below the failure it gates, which starts at several px. Beyond roughly
+ * 15 000 px/s² the push-out cap binds and the resting depth stops following
+ * the deflection law, settling into a narrow limit cycle just below this
+ * tolerance instead - so sleep is delayed there rather than granted to an
+ * embedded body.
  * @internal
  */
 export const sleepPenetrationTolerance = 3 * contactSlop;

@@ -16,7 +16,11 @@ const maxConditionNumber = 1000;
 /**
  * Per-contact velocity constraint (1-2 points), computed once per **frame** in
  * {@link ContactSolver.prepare} and reused across all sub-steps and passes.
- * Pooled and reused across frames, so steady-state stepping allocates nothing.
+ * Pooled and reused across frames, so a steady-state step constructs no
+ * constraint of its own. It is not allocation-free in the wider sense: a double
+ * handed to a function the optimiser declines to inline is boxed on the heap for
+ * the duration of that call, which is why the hot paths below apply their
+ * results in place instead of through helpers.
  */
 class ContactConstraint {
   public record!: ContactRecord;
@@ -56,6 +60,12 @@ class ContactConstraint {
   public readonly relativeVelocity = [0, 0];
   /** Push-out target normal velocity for the current pass (set per pass from the live separation). */
   public readonly velocityBias = [0, 0];
+  /**
+   * Whether the point's push-out target was clamped to `maxBiasVelocity` this
+   * pass. A clamped target is no longer the spring response the soft scaling
+   * models, so the single-point solve drops that scaling while it holds.
+   */
+  public readonly biasClamped = [false, false];
 
   // 2-point block: the contact matrix `K` and its inverse (set only when the
   // manifold has two points and `K` is well-conditioned; else sequential).
@@ -88,8 +98,9 @@ class ContactConstraint {
  * 2×2 block LCP** (Box2D-style), which propagates stack loads far better than
  * solving the points sequentially; the block path carries the soft push-out as
  * its velocity target (hard mass scale), while single-point contacts use the full
- * soft mass/impulse scaling. Accumulated impulses are written back to each
- * {@link ContactRecord} for warm-starting the next frame.
+ * soft mass/impulse scaling for as long as their push-out target stays inside
+ * the cap, and the hard scale once it is clamped. Accumulated impulses are
+ * written back to each {@link ContactRecord} for warm-starting the next frame.
  *
  * Internal to {@link NativePhysicsBackend}; not part of the public surface.
  */
@@ -342,8 +353,10 @@ export class ContactSolver {
       // Push out only the penetration beyond the slop, capped - leaving the slop
       // keeps the contact overlapping so the narrow phase does not drop it.
       const excess = -currentSeparation(constraint, i) - contactSlop;
+      const target = useBias && excess > 0 ? constraint.biasRate * excess : 0;
 
-      constraint.velocityBias[i] = useBias && excess > 0 ? Math.min(constraint.biasRate * excess, maxBiasVelocity) : 0;
+      constraint.velocityBias[i] = Math.min(target, maxBiasVelocity);
+      constraint.biasClamped[i] = target > maxBiasVelocity;
     }
 
     // Normal before friction (Box2D-v3 order): friction's Coulomb cone clamps to
@@ -388,14 +401,19 @@ export class ContactSolver {
    * pushes out the penetration and bleeds a little stored impulse (the damped
    * spring). The relax pass passes `useBias=false`, collapsing it to the hard
    * `−normalMass·vn` (no bias, full mass, no impulse decay).
+   *
+   * A point whose push-out target was clamped to `maxBiasVelocity` is solved
+   * with the hard scale as well: the soft scaling models a spring, and once the
+   * target is capped the point would otherwise reach only a fraction of an
+   * already limited push-out. That deficit grows with the load, so past the
+   * acceleration at which the cap binds the contact would sink without bound
+   * instead of settling into a slightly deeper limit cycle.
    */
   private _solveNormalSequential(constraint: ContactConstraint, useBias: boolean): void {
     const bodyA = constraint.bodyA;
     const bodyB = constraint.bodyB;
     const nx = constraint.nx;
     const ny = constraint.ny;
-    const massScale = useBias ? constraint.massScale : 1;
-    const impulseScale = useBias ? constraint.impulseScale : 0;
 
     for (let i = 0; i < constraint.pointCount; i++) {
       const rAx = n(constraint.rotAx, i);
@@ -404,6 +422,14 @@ export class ContactSolver {
       const rBy = n(constraint.rotBy, i);
       const vn = normalVelocity(bodyA, bodyB, rAx, rAy, rBx, rBy, nx, ny);
       const oldNormal = n(constraint.record.normalImpulse, i);
+      // A clamped push-out target is a fixed velocity goal, not a spring
+      // response: scaling it down by `massScale` would leave the point short of
+      // a target that is already capped, and the deficit is what removes the
+      // fixpoint once the cap binds. Solve those points hard, as the two-point
+      // block path always does.
+      const clamped = constraint.biasClamped[i] ?? false;
+      const massScale = useBias && !clamped ? constraint.massScale : 1;
+      const impulseScale = useBias && !clamped ? constraint.impulseScale : 0;
       const impulse = -n(constraint.normalMass, i) * massScale * (vn - n(constraint.velocityBias, i)) - impulseScale * oldNormal;
       const newNormal = Math.max(0, oldNormal + impulse);
       const deltaNormal = newNormal - oldNormal;
@@ -437,56 +463,52 @@ export class ContactSolver {
     // Case 1 - both points active: x = −K⁻¹·b.
     let x1 = -(constraint.invK11 * bx + constraint.invK12 * by);
     let x2 = -(constraint.invK12 * bx + constraint.invK22 * by);
+    let solved = x1 >= 0 && x2 >= 0;
 
-    if (x1 >= 0 && x2 >= 0) {
-      this._applyBlock(constraint, x1 - a1, x2 - a2);
-      constraint.record.normalImpulse[0] = x1;
-      constraint.record.normalImpulse[1] = x2;
-
-      return;
+    if (!solved) {
+      // Case 2 - only point 1 active (x2 = 0).
+      x1 = -n(constraint.normalMass, 0) * bx;
+      x2 = 0;
+      solved = x1 >= 0 && constraint.k12 * x1 + by >= 0;
     }
 
-    // Case 2 - only point 1 active (x2 = 0).
-    x1 = -n(constraint.normalMass, 0) * bx;
-    x2 = 0;
-
-    if (x1 >= 0 && constraint.k12 * x1 + by >= 0) {
-      this._applyBlock(constraint, x1 - a1, x2 - a2);
-      constraint.record.normalImpulse[0] = x1;
-      constraint.record.normalImpulse[1] = x2;
-
-      return;
+    if (!solved) {
+      // Case 3 - only point 2 active (x1 = 0).
+      x1 = 0;
+      x2 = -n(constraint.normalMass, 1) * by;
+      solved = x2 >= 0 && constraint.k12 * x2 + bx >= 0;
     }
 
-    // Case 3 - only point 2 active (x1 = 0).
-    x1 = 0;
-    x2 = -n(constraint.normalMass, 1) * by;
+    if (!solved) {
+      // Case 4 - neither active (separating). Only valid when both residuals are
+      // non-negative; otherwise no corner applies and the impulses stay put.
+      if (bx < 0 || by < 0) {
+        return;
+      }
 
-    if (x2 >= 0 && constraint.k12 * x2 + bx >= 0) {
-      this._applyBlock(constraint, x1 - a1, x2 - a2);
-      constraint.record.normalImpulse[0] = x1;
-      constraint.record.normalImpulse[1] = x2;
-
-      return;
+      x1 = 0;
+      x2 = 0;
     }
 
-    // Case 4 - neither active (separating). Only valid when both residuals are non-negative.
-    if (bx >= 0 && by >= 0) {
-      this._applyBlock(constraint, -a1, -a2);
-      constraint.record.normalImpulse[0] = 0;
-      constraint.record.normalImpulse[1] = 0;
-    }
-  }
+    // Applied here rather than through a helper: the deltas are freshly computed
+    // doubles, and passing them across a call the optimiser declines to inline
+    // boxes each one on the heap for the duration of the call.
+    const d1 = x1 - a1;
+    const d2 = x2 - a2;
+    const jx = (d1 + d2) * nx;
+    const jy = (d1 + d2) * ny;
+    const torqueA = (n(constraint.rotAx, 0) * ny - n(constraint.rotAy, 0) * nx) * d1 + (n(constraint.rotAx, 1) * ny - n(constraint.rotAy, 1) * nx) * d2;
+    const torqueB = (n(constraint.rotBx, 0) * ny - n(constraint.rotBy, 0) * nx) * d1 + (n(constraint.rotBx, 1) * ny - n(constraint.rotBy, 1) * nx) * d2;
 
-  /** Apply the two-point block impulse deltas `(d1, d2)` along the normal at both contact points. */
-  private _applyBlock(constraint: ContactConstraint, d1: number, d2: number): void {
-    const bodyA = constraint.bodyA;
-    const bodyB = constraint.bodyB;
-    const nx = constraint.nx;
-    const ny = constraint.ny;
+    bodyA.linearVelocityX -= jx * bodyA.invMass;
+    bodyA.linearVelocityY -= jy * bodyA.invMass;
+    bodyA.angularVelocity -= torqueA * bodyA.invInertia;
+    bodyB.linearVelocityX += jx * bodyB.invMass;
+    bodyB.linearVelocityY += jy * bodyB.invMass;
+    bodyB.angularVelocity += torqueB * bodyB.invInertia;
 
-    applyImpulse(bodyA, bodyB, n(constraint.rotAx, 0), n(constraint.rotAy, 0), n(constraint.rotBx, 0), n(constraint.rotBy, 0), d1 * nx, d1 * ny);
-    applyImpulse(bodyA, bodyB, n(constraint.rotAx, 1), n(constraint.rotAy, 1), n(constraint.rotBx, 1), n(constraint.rotBy, 1), d2 * nx, d2 * ny);
+    constraint.record.normalImpulse[0] = x1;
+    constraint.record.normalImpulse[1] = x2;
   }
 
   private _acquire(): ContactConstraint {
