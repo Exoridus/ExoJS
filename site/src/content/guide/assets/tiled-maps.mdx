@@ -184,13 +184,13 @@ chest.y; // 24
 <Callout type="pitfall" title="Rotation still pivots about the Tiled anchor">
 Tiled rotates a tile object's image about its alignment anchor, not about the bounding box
 corner. A tile object with a non-zero `rotation` therefore pivots about the anchor even though
-`x`/`y` now report the corner — recover the anchor with `tiledObjectAnchorOffset` if you need the
+`x`/`y` now report the corner — recover the anchor with `getTiledObjectAnchorOffset` if you need the
 exact pivot.
 </Callout>
 
 The two helpers behind this are exported for when you work with the parsed source model directly:
 `resolveTiledObjectAlignment(tileset.objectAlignment, map.orientation)` applies Tiled's
-orientation-dependent default, and `tiledObjectAnchorOffset(alignment, width, height)` returns the
+orientation-dependent default, and `getTiledObjectAnchorOffset(alignment, width, height)` returns the
 anchor's offset from the corner.
 
 ## Text objects

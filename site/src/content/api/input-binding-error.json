@@ -1,0 +1,199 @@
+{
+  "title": "InputBindingError",
+  "description": "Raised when serialized binding data cannot be read: a profile whose shape or version this build does not understand, a binding whose kind does not match the action it is applied to, or a token no control carries. Rebindings are persisted by the game and come back as untrusted input, so this is the one input failure a caller acts on at runtime rather than fixes in source: catch it, discard the saved profile, fall back to the declared defaults. Programmer errors - an action claimed by two maps, a reserved action name, a malformed pattern string written in code - stay a plain `Error` so a `catch` around a profile load does not swallow them.",
+  "symbol": "InputBindingError",
+  "kind": "class",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Raised when serialized binding data cannot be read: a profile whose shape or version this build does not understand, a binding whose kind does not match the action it is applied to, or a token no control carries.",
+        "Rebindings are persisted by the game and come back as untrusted input, so this is the one input failure a caller acts on at runtime rather than fixes in source: catch it, discard the saved profile, fall back to the declared defaults. Programmer errors - an action claimed by two maps, a reserved action name, a malformed pattern string written in code - stay a plain `Error` so a `catch` around a profile load does not swallow them."
+      ],
+      "importLine": "import { InputBindingError } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(message: string): InputBindingError",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "message",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputBindingError",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "message",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "InputBindingError",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "cause",
+          "signature": "cause?: unknown",
+          "signatureTokens": [
+            {
+              "text": "cause",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "message",
+          "signature": "message: string",
+          "signatureTokens": [
+            {
+              "text": "message",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "stack",
+          "signature": "stack?: string",
+          "signatureTokens": [
+            {
+              "text": "stack",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/actions/InputBindingError.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/InputBindingError.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/actions/InputBindingError.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/InputBindingError.ts"
+}

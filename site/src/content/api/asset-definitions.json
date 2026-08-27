@@ -730,7 +730,7 @@
         },
         {
           "name": "sound",
-          "signature": "sound: { config: { playbackOptions?: Partial<PlaybackOptions>; poolSize?: number; source: string; sprites?: Readonly<Record<string, AudioSpriteClip>> }; resource: Sound }",
+          "signature": "sound: { config: { playbackOptions?: Partial<PlaybackOptions>; poolSize?: number; source: string; sprites?: Readonly<Record<string, AudioSpriteClip>> | string }; resource: Sound }",
           "signatureTokens": [
             {
               "text": "sound",
@@ -871,6 +871,14 @@
             {
               "text": ">",
               "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
             },
             {
               "text": " }",

@@ -17,6 +17,53 @@ release and includes intentional breaking changes; see **Changed** and
 
 ### Added
 
+- **Audio sprite tables can live in a sidecar file.** `sprites` on a `sound`
+  asset now also accepts a source string naming a JSON sidecar that holds the
+  same `{ name: { start, end, loop? } }` map, so a table a tool produced no
+  longer has to be pasted into code:
+
+  ```ts
+  Assets.from({ sfx: { type: 'sound', source: 'sfx.ogg', sprites: 'sfx.sprites.json' } });
+  ```
+
+  The sidecar is loaded through the sound's own dependency scope - it is claimed
+  and released with the sound, the way `LdtkProject` claims its atlases - so one
+  asset is configured, not two. Its source resolves against the loader's base
+  path like any other asset source, _not_ relative to the audio file. A
+  malformed sheet fails the load with an `AssetDecodeError` naming the sidecar,
+  including a window only the decoded buffer's duration can reject.
+
+  Deliberately **not** added: a converter for foreign atlas formats.
+  `audiosprite` and Howler store `[offsetMs, durationMs]` tuples in formats that
+  are not even a shared file layout; that conversion belongs in a build step,
+  once, not in the loader on every load.
+
+- **Three error classes where callers were told to match on message text.** The
+  asset layer already reported cache and network failures as narrowable types,
+  and everything else in `audio`, `input`, `math` and the untyped remainder of
+  `assets` threw a bare `Error`. An error now gets its own class when a consumer
+  branches on it and acts differently, which is what these three do:
+
+  | Class                   | Raised for                                                                                                                | What the caller does                                               |
+  | ----------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+  | `AudioUnsupportedError` | No `AudioContext`, `OfflineAudioContext` or `getUserMedia` in this environment                                            | Disable audio outright - it will not work later either             |
+  | `InputBindingError`     | A saved binding profile whose shape, version, kind or tokens this build cannot read                                       | Discard the save, fall back to the declared defaults               |
+  | `AssetDecodeError`      | Bytes that arrived intact but cannot be decoded - a malformed container, rejected XML, undecodable audio, an empty buffer | Drop the asset; unlike a transport failure, retrying will not help |
+
+  `AudioInput.open()` still passes the browser's own `DOMException` through
+  unwrapped when `getUserMedia` exists but fails: its `name`
+  (`NotAllowedError`, `NotFoundError`) is the standard signal to branch on, and
+  hiding it behind an engine class would be a loss.
+
+  Programmer errors deliberately stay a plain `Error` - an action claimed by two
+  `ActionMap`s, a reserved action name, a malformed pattern written in source -
+  so a `catch` around a profile load does not swallow a bug.
+
+  Written down alongside them: a **failure-diagnostics policy** in
+  `CONTRIBUTING.md` covering when to reach for `assert`/`assertDefined`,
+  `invariant`, or a typed error class, and the argument-evaluation trap that
+  makes a formatted assert message allocate in production.
+
 - **A world runtime and a map object spawner — levels stream, authored objects become
   entities.** Both map adapters stopped at data. LDtk modelled a world as an array of converted
   levels: `__neighbours` was not parsed at all, world placement survived only as two numbers in
@@ -724,6 +771,52 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
 
 ### Fixed
 
+- **The rendering-parity matrix now proves correctness somewhere, not only
+  agreement.** `oracle` was the matrix's own strongest evidence class and
+  appeared zero times in the checked-in evidence: every property compared a
+  rendering against another rendering, so two backends computing a colour the
+  same wrong way agreed perfectly and a backend computing it wrongly every time
+  was perfectly deterministic.
+
+  A scene can now declare an oracle - expected pixels derived on the CPU from
+  its own inputs - and a new `oracle-agreement` property checks them per
+  backend. Four scenes carry one, covering exactly the class a traced pixel
+  cannot reach, where the output is computed rather than sampled: premultiplied
+  source-over, additive blending, a colour-matrix channel swap, and a linear
+  gradient ramp. Where a pixel already traces back to its source texel the gap
+  was never open - that is a renderer-independent expectation already - so no
+  blanket oracle mandate was added.
+
+- **Two empty frames no longer count as cross-backend parity.** An empty frame
+  is byte-identical to another empty frame, so a scene that drew nothing filled
+  its parity row with a `traced` claim about nothing. `renders-something`
+  reported the same fact in its own row, but the misleading row was the parity
+  one, so emptiness is now a precondition of the comparison rather than a
+  neighbouring property's business.
+
+- **A typed asset failure no longer loses its class on the way out of the
+  loader.** `AssetDecoder` wrapped every failure except a cancellation, a cache
+  miss and a store failure in a plain `Error` carrying the original as `cause`.
+  An `AssetNetworkError` - documented as narrowable and carrying `status` /
+  `statusText` - therefore never reached a caller as itself. It is now rethrown
+  unwrapped, and an `AssetDecodeError` is rebuilt rather than replaced, so it
+  keeps its type _and_ gains the "which asset, from where" envelope.
+
+- **Attaching the same audio effect twice built a feedback loop.**
+  `AudioBus.addEffect` and `Voice.addEffect` pushed the effect a second time and
+  rewired the chain, connecting the effect's output back into its own input. The
+  dev build now asserts; production ignores the second attach.
+
+- **A `GamepadMapping` with two controls on one channel silently dropped one of
+  them.** Every control writes into one channel slot per frame, so the pad
+  reported whichever ran last while the other looked dead. The constructor
+  asserts in the dev build.
+
+- **`triangulate()` and `buildPath()` accepted an odd-length coordinate list.**
+  The trailing value was dropped or read as half of a point that does not exist,
+  producing NaN vertices or a silently different polygon than the caller
+  described. Both now assert that the length is even.
+
 - **A single-point contact under very high acceleration sank without bound.** The two-point
   block solve reaches its push-out target exactly, so a face contact rests at the contact slop
   at any gravity. A single-point contact — a ball, a capsule end, a corner — was solved with the
@@ -884,6 +977,20 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
   device while measuring `NEU-S4`.
 
 ### Changed
+
+- **BREAKING - three noun-only function exports are renamed.** A noun reads as a
+  value at the call site and hides that it has to be called:
+
+  | Before                    | After                        |
+  | ------------------------- | ---------------------------- |
+  | `tiledObjectAnchorOffset` | `getTiledObjectAnchorOffset` |
+  | `wgslFieldLayout`         | `getWgslFieldLayout`         |
+  | `wgslUniformByteSize`     | `getWgslUniformByteSize`     |
+
+  The package prefix stays: the full IIFE build is one flat `window.Exo` object
+  across every package, so it is the only marker of where a symbol came from.
+  This is the whole rename - the rule now written down in `CONTRIBUTING.md`
+  reshapes existing API only where a change touches it anyway.
 
 - **BREAKING — canvas sizing is a policy object, not a mode string.**
   `CanvasSizingMode` named five modes along three different technical axes at

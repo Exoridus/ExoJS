@@ -1,5 +1,6 @@
 import { Asset } from '#assets/Asset';
 import { CONTAINER_HEADER_SIZE, CONTAINER_MAGIC, type ContainerInput, encodeContainer, parseContainer } from '#assets/AssetContainer';
+import { AssetDecodeError } from '#assets/AssetDecodeError';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { materializeAssetTypes } from '#extensions/materialize';
@@ -288,5 +289,8 @@ describe('Loader.loadContainer', () => {
     const loader = createCoreLoader();
 
     await expect(loader.loadContainer('bad.exoa')).rejects.toThrow(/Invalid asset container/);
+    // Broken bytes stay broken: the caller has to drop the container, not retry
+    // it, so the failure keeps its own type instead of a generic Error.
+    await expect(loader.loadContainer('bad.exoa')).rejects.toBeInstanceOf(AssetDecodeError);
   });
 });

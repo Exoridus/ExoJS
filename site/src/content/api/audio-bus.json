@@ -227,7 +227,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Append a effect to the end of the chain (before the pan stage). The chain is rebuilt in place; existing audio routes through the new effect on the next frame. Attaching does not transfer ownership: the caller keeps it and must destroy() the effect once it is no longer used anywhere. Neither AudioBus.removeEffect nor AudioBus.destroy destroys it. A no-op once the bus has been AudioBus.destroyed - without this guard the effect would silently accumulate in the (otherwise unused) internal list forever."
+          "description": "Append a effect to the end of the chain (before the pan stage). The chain is rebuilt in place; existing audio routes through the new effect on the next frame. Attaching does not transfer ownership: the caller keeps it and must destroy() the effect once it is no longer used anywhere. Neither AudioBus.removeEffect nor AudioBus.destroy destroys it. A no-op once the bus has been AudioBus.destroyed - without this guard the effect would silently accumulate in the (otherwise unused) internal list forever. Attaching the same effect twice is a caller error: the rebuilt chain would wire the effect's output back into its own input, producing a feedback loop. The dev build asserts; production ignores the second attach."
         },
         {
           "name": "destroy",

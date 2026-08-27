@@ -1,3 +1,5 @@
+import { AssetDecodeError } from './AssetDecodeError';
+
 interface FileType {
   mimeType: string;
   pattern: number[];
@@ -131,13 +133,13 @@ const matchesWebmVideo = (arrayBuffer: ArrayBuffer): boolean => {
  * MIDI, AIFF, AVI, and AU). Falls back to `"text/plain"` when no pattern
  * matches.
  *
- * Throws if `arrayBuffer` contains no data.
+ * Throws {@link AssetDecodeError} when `arrayBuffer` contains no data.
  */
 export const determineMimeType = (arrayBuffer: ArrayBuffer): string => {
   const header = new Uint8Array(arrayBuffer);
 
   if (header.length === 0) {
-    throw new Error('Cannot determine mime type: No data.');
+    throw new AssetDecodeError({ message: 'Cannot determine mime type: the buffer is empty.' });
   }
 
   for (const type of fileTypes) {

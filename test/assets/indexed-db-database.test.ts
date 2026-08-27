@@ -56,7 +56,7 @@ describe('IndexedDbDatabase', () => {
 
     const { IndexedDbDatabase } = await import('#assets/IndexedDbDatabase');
 
-    expect(() => new IndexedDbDatabase('unsupported-db')).toThrow('This browser does not support indexedDB!');
+    expect(() => new IndexedDbDatabase('unsupported-db')).toThrow('This host provides no IndexedDB, so no database can be opened.');
   });
 
   describe('connect()', () => {

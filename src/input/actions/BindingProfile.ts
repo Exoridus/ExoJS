@@ -1,3 +1,4 @@
+import { InputBindingError } from './InputBindingError';
 import type { SerializedActionBinding } from './serialization';
 
 /** Wire format {@link BindingProfile.toJSON} produces and {@link BindingProfile.fromJSON} accepts. */
@@ -80,30 +81,30 @@ export class BindingProfile {
    * profile is applied to a map, since only the map knows which action kind
    * each entry has to fit.
    *
-   * @throws {Error} If `data` is not a profile of a version this build
+   * @throws {InputBindingError} If `data` is not a profile of a version this build
    * understands, or an entry is not a `{ kind, binding }` pair. A malformed
    * save is reported rather than partially honoured.
    */
   public static fromJSON(data: unknown): BindingProfile {
     if (data === null || typeof data !== 'object') {
-      throw new Error('BindingProfile: expected a serialized profile object.');
+      throw new InputBindingError('BindingProfile: expected a serialized profile object.');
     }
 
     const { version, overrides } = data as Partial<BindingProfileData>;
 
     if (version !== currentVersion) {
-      throw new Error(`BindingProfile: unsupported profile version ${String(version)} (this build reads version ${currentVersion}).`);
+      throw new InputBindingError(`BindingProfile: unsupported profile version ${String(version)} (this build reads version ${currentVersion}).`);
     }
 
     if (overrides === undefined || typeof overrides !== 'object') {
-      throw new Error('BindingProfile: a serialized profile needs an "overrides" object.');
+      throw new InputBindingError('BindingProfile: a serialized profile needs an "overrides" object.');
     }
 
     const profile = new BindingProfile();
 
     for (const [action, binding] of Object.entries(overrides)) {
       if (binding === null || typeof binding !== 'object' || typeof binding.kind !== 'string' || !('binding' in binding)) {
-        throw new Error(`BindingProfile: the override for "${action}" is not a { kind, binding } pair.`);
+        throw new InputBindingError(`BindingProfile: the override for "${action}" is not a { kind, binding } pair.`);
       }
 
       profile.set(action, binding);

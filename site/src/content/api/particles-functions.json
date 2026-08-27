@@ -76,11 +76,11 @@
           "description": "Create a Particles extension with custom configuration. Returns an application-local descriptor - safe to pass to one Application only. For shared use, prefer particlesExtension."
         },
         {
-          "name": "wgslFieldLayout",
-          "signature": "wgslFieldLayout(type: WgslPrimitive): { align: number; size: number }",
+          "name": "getWgslFieldLayout",
+          "signature": "getWgslFieldLayout(type: WgslPrimitive): { align: number; size: number }",
           "signatureTokens": [
             {
-              "text": "wgslFieldLayout",
+              "text": "getWgslFieldLayout",
               "kind": "name"
             },
             {
@@ -155,11 +155,11 @@
           "description": "Per-WGSL-primitive size and alignment in bytes."
         },
         {
-          "name": "wgslUniformByteSize",
-          "signature": "wgslUniformByteSize(fields: readonly WgslUniformField[]): number",
+          "name": "getWgslUniformByteSize",
+          "signature": "getWgslUniformByteSize(fields: readonly WgslUniformField[]): number",
           "signatureTokens": [
             {
-              "text": "wgslUniformByteSize",
+              "text": "getWgslUniformByteSize",
               "kind": "name"
             },
             {

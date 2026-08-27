@@ -94,7 +94,7 @@ export class IndexedDbStore implements CacheStore {
     const options = typeof nameOrOptions === 'string' ? { name: nameOrOptions } : nameOrOptions;
 
     if (!supportsIndexedDb) {
-      throw new Error('IndexedDbStore requires a host with IndexedDB support.');
+      throw new AssetCacheError({ operation: 'connect', message: 'IndexedDbStore requires a host with IndexedDB support.', store: options.name });
     }
 
     this._name = options.name;

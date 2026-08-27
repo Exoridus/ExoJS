@@ -9,6 +9,7 @@ import { AxisAction } from '#input/actions/AxisAction';
 import { BindingProfile } from '#input/actions/BindingProfile';
 import { ButtonAction } from '#input/actions/ButtonAction';
 import { ChordAction } from '#input/actions/ChordAction';
+import { InputBindingError } from '#input/actions/InputBindingError';
 import { SequenceAction } from '#input/actions/SequenceAction';
 import type { ActionSample, ChannelEvent } from '#input/actions/types';
 import { VectorAction } from '#input/actions/VectorAction';
@@ -205,6 +206,26 @@ describe('binding serialization', () => {
     const profile = new BindingProfile().set('crouch', { kind: 'button', binding: ['keyboard.key-c'] });
 
     expect(() => map.applyProfile(profile)).toThrow(/does not declare/);
+  });
+
+  test('reports every unreadable-save failure as InputBindingError, so a load can fall back to defaults', () => {
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    expect(() => BindingProfile.fromJSON(null)).toThrow(InputBindingError);
+    expect(() => BindingProfile.fromJSON({ version: 2, overrides: {} })).toThrow(InputBindingError);
+    expect(() => map.applyProfile(new BindingProfile().set('jump', { kind: 'button', binding: ['keyboard.hyperspace'] }))).toThrow(InputBindingError);
+    expect(() => map.applyProfile(new BindingProfile().set('jump', { kind: 'axis', binding: [{ direct: 'gamepad.axis.left-stick-x' }] }))).toThrow(
+      InputBindingError,
+    );
+    expect(() => map.applyProfile(new BindingProfile().set('crouch', { kind: 'button', binding: ['keyboard.key-c'] }))).toThrow(InputBindingError);
+  });
+
+  test('leaves a programmer error a plain Error, so a catch around a profile load does not swallow it', () => {
+    const shared = new ButtonAction(Keyboard.Space);
+    const map = new ActionMap({ jump: shared });
+
+    expect(() => (map as unknown as { rebind(name: string, binding: unknown): void }).rebind('nope', Keyboard.J)).not.toThrow(InputBindingError);
+    expect(() => new ActionMap({ other: shared })).not.toThrow(InputBindingError);
   });
 });
 

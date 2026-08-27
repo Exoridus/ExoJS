@@ -1,3 +1,4 @@
+import { AssetDecodeError } from '#assets/AssetDecodeError';
 import { parseXmlDocument } from '#assets/factories/parseXml';
 
 describe('parseXmlDocument', () => {
@@ -11,6 +12,7 @@ describe('parseXmlDocument', () => {
 
   test('throws with a clear message on malformed XML', () => {
     expect(() => parseXmlDocument('<root><unclosed></root>')).toThrow('XML parse error');
+    expect(() => parseXmlDocument('<root><unclosed></root>')).toThrow(AssetDecodeError);
   });
 
   test('falls back to "unknown error" when the detected parsererror element has no text content', () => {

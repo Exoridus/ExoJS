@@ -1,3 +1,4 @@
+import { assert } from '#core/dev';
 import type { SceneNode } from '#core/SceneNode';
 import { Signal } from '#core/Signal';
 import { clamp, degreesToRadians } from '#math/utils';
@@ -170,8 +171,22 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     this._connectOutput();
   }
 
+  /**
+   * Append an effect to this voice's chain.
+   *
+   * Attaching the same effect twice is a caller error: the rebuilt chain would
+   * wire the effect's output back into its own input, producing a feedback
+   * loop. The dev build asserts; production ignores the second attach.
+   */
   public addEffect(effect: AudioEffect): this {
     if (this._ended) return this;
+
+    if (this._effects.includes(effect)) {
+      assert(false, 'Voice.addEffect: this effect is already attached to the voice.');
+
+      return this;
+    }
+
     this._effects.push(effect);
     this._rebuildEffectChain();
     return this;

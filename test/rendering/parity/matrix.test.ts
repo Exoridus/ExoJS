@@ -10,10 +10,12 @@
 
 import { crossBackendParity } from './properties/crossBackendParity';
 import { determinism } from './properties/determinism';
+import { oracleAgreement } from './properties/oracleAgreement';
 import { rendersSomething } from './properties/rendersSomething';
 import { runParityMatrix } from './runner';
 import { clippingScenes } from './scenes/clipping';
 import { colourScenes } from './scenes/colour';
+import { computedColourScenes } from './scenes/computedColour';
 import { graphicsScenes } from './scenes/graphics';
 import { meshScenes } from './scenes/mesh';
 import { nineSliceScenes } from './scenes/nineSlice';
@@ -37,12 +39,13 @@ const scenes: readonly Scene[] = [
   ...transformScenes,
   ...graphicsScenes,
   ...colourScenes,
+  ...computedColourScenes,
   ...clippingScenes,
   ...textScenes,
   ...tilemapScenes,
   ...particleScenes,
 ];
 
-const properties: readonly Property[] = [crossBackendParity, determinism, rendersSomething];
+const properties: readonly Property[] = [crossBackendParity, determinism, rendersSomething, oracleAgreement];
 
 runParityMatrix(scenes, properties);

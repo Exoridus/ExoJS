@@ -11,7 +11,7 @@ const toBuffer = (bytes: number[]): ArrayBuffer => {
 
 describe('determineMimeType', () => {
   test('throws when the buffer is empty', () => {
-    expect(() => determineMimeType(new ArrayBuffer(0))).toThrow('Cannot determine mime type: No data.');
+    expect(() => determineMimeType(new ArrayBuffer(0))).toThrow('Cannot determine mime type: the buffer is empty.');
   });
 
   test('detects PNG by its magic bytes', () => {

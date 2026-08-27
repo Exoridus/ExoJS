@@ -31,6 +31,39 @@ export type { EvidenceClass, EvidenceRow, SupportState } from './evidenceSink';
  */
 export type FixtureKind = 'self-describing' | 'colour-modified' | 'opaque-solid' | 'interpolated';
 
+/** One pixel whose value follows from the scene's own inputs, not from a previous run. */
+export interface OracleSample {
+  /** Canvas coordinates of the pixel to read. */
+  readonly x: number;
+  readonly y: number;
+  /** Expected RGBA in 0..255, computed on the CPU from the scene's inputs. */
+  readonly expect: readonly [number, number, number, number];
+  /** What this pixel is, in the scene's own terms - read back on failure. */
+  readonly describe: string;
+}
+
+/**
+ * An independent expectation for a scene, which is what separates correctness
+ * from agreement: two backends that compute the same colour wrongly still match
+ * each other, and no comparison between them can say so.
+ *
+ * Only worth declaring where the expected value is genuinely derivable - a
+ * blend of two known colours, a colour matrix applied to a known input, a stop
+ * interpolated along a gradient. A hardcoded table read off a previous run is a
+ * golden image with extra steps and does not belong here.
+ */
+export interface SceneOracle {
+  /** Why these pixels are computable without a renderer. Ends up in the evidence note. */
+  readonly reason: string;
+  /**
+   * Largest per-channel deviation the arithmetic itself permits, in 8-bit
+   * steps. Covers quantisation on the way through an 8-bit render target and
+   * the rounding of a premultiply, never a disagreement about what to compute.
+   */
+  readonly tolerance: number;
+  readonly samples: () => readonly OracleSample[];
+}
+
 export interface Scene {
   /** Stable identifier, `feature/variant` by convention. Used as the matrix key. */
   readonly name: string;
@@ -70,6 +103,12 @@ export interface Scene {
    * renderer would be worse than no row at all.
    */
   readonly wireRenderers?: (backend: RenderBackend) => void;
+  /**
+   * Expected pixel values derived from this scene's own inputs. Declaring one
+   * is what lets the scene reach `oracle` evidence; without it the scene can
+   * only be compared against another rendering of itself.
+   */
+  readonly oracle?: SceneOracle;
 }
 
 /** What a property observed. `support` and `evidence` are deliberately separate axes. */

@@ -6,6 +6,8 @@ export type { AssetCacheErrorOptions, AssetCacheOperation } from './AssetCacheEr
 export { AssetCacheError } from './AssetCacheError';
 export { AssetCacheMissError } from './AssetCacheMissError';
 export type { AssetConstructor } from './AssetConstructor';
+export type { AssetDecodeErrorOptions } from './AssetDecodeError';
+export { AssetDecodeError } from './AssetDecodeError';
 export type {
   AnyAssetConfig,
   AssetDefinitions,
@@ -92,6 +94,7 @@ export type { MusicAssetOptions } from '#assets/factories/MusicFactory';
 export type { CsvAssetOptions } from '#assets/factories/parseCsv';
 export type { SubtitleFormat } from '#assets/factories/parseSubtitles';
 export type { SoundAssetOptions } from '#assets/factories/SoundFactory';
+export type { SoundSpriteSheet } from '#assets/factories/soundSprites';
 export type { SvgAssetOptions } from '#assets/factories/SvgFactory';
 export type { TextureAssetOptions } from '#assets/factories/TextureFactory';
 export type { VideoAssetOptions } from '#assets/factories/VideoFactory';

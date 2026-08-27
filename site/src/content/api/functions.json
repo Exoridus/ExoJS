@@ -854,7 +854,7 @@
           ],
           "params": [],
           "returnType": "AudioContext",
-          "description": "Return the global singleton AudioContext, creating it if it does not yet exist. Also starts interaction-unlock monitoring so the context will resume on the first user gesture. Throws if AudioContext is not available in the current environment."
+          "description": "Return the global singleton AudioContext, creating it if it does not yet exist. Also starts interaction-unlock monitoring so the context will resume on the first user gesture. Throws AudioUnsupportedError when the environment provides no AudioContext."
         },
         {
           "name": "getOfflineAudioContext",

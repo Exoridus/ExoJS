@@ -1,3 +1,5 @@
+import { assert } from '#core/dev';
+
 /**
  * Triangulate a simple 2D polygon by ear-clipping.
  *
@@ -15,6 +17,11 @@
  * @returns triangle index list (length is multiple of 3)
  */
 export const triangulate = (vertices: ArrayLike<number>): Uint32Array => {
+  // An odd length is a caller error that cannot be reported by the return
+  // value: the trailing coordinate is dropped and the result looks like a
+  // successful triangulation of a polygon the caller never described.
+  assert(vertices.length % 2 === 0, 'triangulate: vertices must hold (x, y) pairs, so its length must be even.');
+
   const n = vertices.length >> 1;
 
   if (n < 3) {

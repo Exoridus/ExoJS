@@ -3,6 +3,7 @@ import { resolveGamepadSlotChannel } from '#input/types';
 
 import type { GamepadSlot } from './ActionBase';
 import { ActionBase, channelFromToken, channelsFromTokens, tokensFromChannels } from './ActionBase';
+import { InputBindingError } from './InputBindingError';
 import type { SerializedActionBinding, SerializedAxisEntry } from './serialization';
 import type { ActionOptions, ActionSample, AtLeastOne, OneOrMany } from './types';
 import { sampleStrongest, toChannels } from './types';
@@ -62,7 +63,7 @@ const serializeEntry = (binding: ResolvedAxisBinding): SerializedAxisEntry => {
 
 const deserializeEntry = (entry: unknown): AxisBinding => {
   if (entry === null || typeof entry !== 'object') {
-    throw new Error('AxisAction: every serialized binding entry must be an object.');
+    throw new InputBindingError('AxisAction: every serialized binding entry must be an object.');
   }
 
   const { direct, negative, positive } = entry as SerializedAxisEntry;
@@ -77,7 +78,7 @@ const deserializeEntry = (entry: unknown): AxisBinding => {
   };
 
   if (composite.negative === undefined && composite.positive === undefined) {
-    throw new Error('AxisAction: a serialized binding entry needs a "direct" token or a "negative"/"positive" group.');
+    throw new InputBindingError('AxisAction: a serialized binding entry needs a "direct" token or a "negative"/"positive" group.');
   }
 
   return composite as AxisBinding;
@@ -129,11 +130,11 @@ export class AxisAction extends ActionBase<OneOrMany<AxisBinding>> {
   /** @internal */
   public override _deserialize(data: SerializedActionBinding): OneOrMany<AxisBinding> {
     if (data.kind !== 'axis') {
-      throw new Error(`AxisAction: cannot apply a "${data.kind}" binding.`);
+      throw new InputBindingError(`AxisAction: cannot apply a "${data.kind}" binding.`);
     }
 
     if (!Array.isArray(data.binding)) {
-      throw new Error('AxisAction: a serialized axis binding must be an array of entries.');
+      throw new InputBindingError('AxisAction: a serialized axis binding must be an array of entries.');
     }
 
     return (data.binding as readonly unknown[]).map(deserializeEntry);

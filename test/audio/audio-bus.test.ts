@@ -234,6 +234,18 @@ describe('AudioBus', () => {
     bus.destroy();
   });
 
+  test('addEffect refuses the same effect twice - a second attach would feed the effect its own output', () => {
+    const bus = new AudioBus('duplicate-effect');
+    const filter = new StubFilter();
+
+    bus.addEffect(filter);
+
+    expect(() => bus.addEffect(filter)).toThrow('already attached to the bus');
+
+    bus.removeEffect(filter);
+    bus.destroy();
+  });
+
   // 7. fadeIn / fadeOut schedule ramps
   test('fadeIn(500) schedules linearRamp on outputNode', () => {
     const spy = spyOnBusCreation();

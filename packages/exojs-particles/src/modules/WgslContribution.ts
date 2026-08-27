@@ -77,12 +77,12 @@ export interface WgslContribution {
  *
  * Used by the codegen to size the system's combined uniform buffer.
  */
-export const wgslUniformByteSize = (fields: readonly WgslUniformField[]): number => {
+export const getWgslUniformByteSize = (fields: readonly WgslUniformField[]): number => {
   let offset = 0;
   let maxAlign = 4;
 
   for (const field of fields) {
-    const { size, align } = wgslFieldLayout(field.type);
+    const { size, align } = getWgslFieldLayout(field.type);
 
     offset = Math.ceil(offset / align) * align;
     offset += size;
@@ -93,7 +93,7 @@ export const wgslUniformByteSize = (fields: readonly WgslUniformField[]): number
 };
 
 /** Per-WGSL-primitive size and alignment in bytes. */
-export const wgslFieldLayout = (type: WgslPrimitive): { size: number; align: number } => {
+export const getWgslFieldLayout = (type: WgslPrimitive): { size: number; align: number } => {
   switch (type) {
     case 'f32':
     case 'i32':

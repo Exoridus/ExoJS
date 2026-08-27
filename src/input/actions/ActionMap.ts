@@ -7,6 +7,7 @@ import type { AxisAction, AxisBinding } from './AxisAction';
 import type { BindingProfile } from './BindingProfile';
 import type { ButtonAction, ButtonBinding } from './ButtonAction';
 import type { ChordAction, ChordBinding } from './ChordAction';
+import { InputBindingError } from './InputBindingError';
 import type { SequenceAction, SequenceBinding } from './SequenceAction';
 import type { SerializedActionBinding } from './serialization';
 import type { ActionSample, OneOrMany } from './types';
@@ -273,7 +274,7 @@ class ActionMapBase<T extends ActionRecord> {
    * declared default - which is what lets a build add a new action without an
    * older save file freezing it.
    *
-   * @throws {Error} If an override names an action this map does not declare,
+   * @throws {InputBindingError} If an override names an action this map does not declare,
    * its kind does not match that action, or it contains an unknown input token.
    */
   public applyProfile(profile: BindingProfile | null): void {
@@ -285,7 +286,7 @@ class ActionMapBase<T extends ActionRecord> {
         const action = this._byName.get(name);
 
         if (action === undefined) {
-          throw new Error(`ActionMap: the profile overrides "${name}", which this map does not declare.`);
+          throw new InputBindingError(`ActionMap: the profile overrides "${name}", which this map does not declare.`);
         }
 
         changes.push([action, action._deserialize(profile.get(name)!)]);

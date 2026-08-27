@@ -11,6 +11,7 @@ export { ButtonAction } from './ButtonAction';
 export { ButtonLikeAction } from './ButtonLikeAction';
 export type { ChordBinding } from './ChordAction';
 export { ChordAction } from './ChordAction';
+export { InputBindingError } from './InputBindingError';
 export { InputScope } from './InputScope';
 export type { InputAlternation, InputChord, InputSequence, ValidatedChordBinding, ValidatedSequenceBinding } from './pattern';
 export type { SequenceActionOptions, SequenceBinding } from './SequenceAction';

@@ -7,7 +7,7 @@ import { fillShaderSource, reflectComputeBindings, WebGpuComputePipeline, WebGpu
 
 import type { UpdateModule } from '#modules/UpdateModule';
 import type { WgslContribution, WgslUniformField } from '#modules/WgslContribution';
-import { wgslUniformByteSize } from '#modules/WgslContribution';
+import { getWgslUniformByteSize } from '#modules/WgslContribution';
 import type { ParticleSystem } from '#ParticleSystem';
 
 import particleSimulateWgsl from './wgsl/particle-simulate.wgsl';
@@ -247,7 +247,7 @@ export class ParticleGpuState {
     for (const m of modules) {
       const c = m.wgsl!();
       const fields = c.uniforms ?? [];
-      const size = wgslUniformByteSize(fields);
+      const size = getWgslUniformByteSize(fields);
 
       uniformOffset = Math.ceil(uniformOffset / 16) * 16;
 

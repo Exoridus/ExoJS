@@ -466,3 +466,9 @@ describe('buildRoundedRectangle', () => {
     expect(data.points[1]).toBeCloseTo(data.points[last - 1]);
   });
 });
+
+describe('buildPath - argument checks', () => {
+  test('rejects an odd-length point list, which would build the last segment from NaN', () => {
+    expect(() => buildPath([0, 0, 10, 10, 20], 4)).toThrow('length must be even');
+  });
+});
