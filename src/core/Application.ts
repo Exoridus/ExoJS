@@ -2196,6 +2196,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private async initializeBackend(): Promise<void> {
     try {
       await this._backend.initialize();
+      this.publishAssetVariantProfile();
     } catch (error) {
       if (this.options.backend?.type !== 'auto' || this._backendType !== 'webgpu') {
         throw error;
@@ -2226,7 +2227,24 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._rendering.resize(this._logicalWidth, this._logicalHeight);
 
       await this._backend.initialize();
+      this.publishAssetVariantProfile();
     }
+  }
+
+  /**
+   * Hand the loader what the initialized backend can actually accept, so a
+   * variant rule can pick a compressed format or a density per device.
+   *
+   * Runs after every successful backend initialization, the WebGPU-to-WebGL2
+   * fallback included: the two backends do not support the same format families,
+   * and a profile left over from the abandoned attempt would offer files the live
+   * backend refuses.
+   */
+  private publishAssetVariantProfile(): void {
+    this.loader.variants.profile = {
+      textureFormats: this._backend.supportedTextureFormats,
+      resolution: this._backend.rootResolution,
+    };
   }
 
   /**

@@ -14,6 +14,7 @@ import { type AssetInspection, AssetResidency, type AssetResidencySignals } from
 import { _normalizeEntry, type Assets, AssetsImpl, type InferAssetsProperties } from './Assets';
 import type { AnyAssetType } from './AssetType';
 import { AssetTypeRegistry } from './AssetTypeRegistry';
+import { AssetVariantSet } from './AssetVariants';
 import type { CacheLayout } from './CacheLayout';
 import type { CacheStore } from './CacheStore';
 import { type AssetLocator, type CanonicalAsset, canonicalizeSource, type ResourceKey, resourceKey, type SourceKey, sourceKey } from './canonicalKey';
@@ -175,22 +176,28 @@ export class Loader {
    * {@link onError}.
    */
   private _resolveBarePath(input: string): { type: AssetTypeName; source: string; ctor: AssetConstructor } {
-    const type = this._typeRegistry._resolveTypeForPath(input);
+    // Variant selection runs ahead of the type lookup, so the type follows the
+    // file this device actually gets. A rule may legitimately swap a `.png` for a
+    // `.ktx2`, and inferring the type from the name the caller wrote would then
+    // hand compressed-container bytes to the image decoder.
+    const source = this.variants.resolve(input);
+    const named = source === input ? `"${input}"` : `"${source}" (selected as a variant of "${input}")`;
+    const type = this._typeRegistry._resolveTypeForPath(source);
 
     if (type === undefined) {
       throw new Error(
-        `Loader: no installed asset type claims any extension of "${input}". Install a type that does, map the suffix with ` +
-          `loader.registerType(extension, type), or name the type explicitly with Asset.type(type, "${input}").`,
+        `Loader: no installed asset type claims any extension of ${named}. Install a type that does, map the suffix with ` +
+          `loader.registerType(extension, type), or name the type explicitly with Asset.type(type, "${source}").`,
       );
     }
 
     const ctor = this._typeRegistry.resolveTypeName(type);
 
     if (ctor === undefined) {
-      throw new Error(`Loader: no asset type "${type}" is installed on this application (inferred from "${input}").`);
+      throw new Error(`Loader: no asset type "${type}" is installed on this application (inferred from ${named}).`);
     }
 
-    return { type, source: input, ctor };
+    return { type, source, ctor };
   }
 
   /**
@@ -204,21 +211,27 @@ export class Loader {
    * @internal
    */
   public _canonicalize(type: AssetConstructor, source: string, options?: unknown): CanonicalAsset {
-    const locator = canonicalizeSource(this._decoder.basePath, source);
+    // Variant selection happens here, ahead of the locator, so identity is keyed
+    // on the file this device actually fetches. Resolving it any later would let
+    // two devices share one cache entry whose contents depend on which of them
+    // filled it, and would leave a reference the asset itself carries resolving
+    // against a path that was never loaded.
+    const selected = this.variants.resolve(source);
+    const locator = canonicalizeSource(this._decoder.basePath, selected);
     // The resource discriminator is deliberately absent from the source key: two
     // resources that differ only in how one download is interpreted must resolve
     // to one acquisition, or the same bytes would be fetched once per
     // interpretation. The reverse containment is structural - the resource key is
     // built ON the source key - so distinct source data can never share a
     // resident resource even if a type forgets to repeat the distinction.
-    const acquired = sourceKey(locator, this._typeRegistry._sourceDiscriminator(type, source, options));
+    const acquired = sourceKey(locator, this._typeRegistry._sourceDiscriminator(type, selected, options));
 
     return {
-      key: resourceKey(this._typeRegistry._typeIdentity(type), acquired, this._typeRegistry._identityDiscriminator(type, source, options)),
+      key: resourceKey(this._typeRegistry._typeIdentity(type), acquired, this._typeRegistry._identityDiscriminator(type, selected, options)),
       sourceKey: acquired,
       locator,
       type,
-      source,
+      source: selected,
     };
   }
 
@@ -364,6 +377,17 @@ export class Loader {
    * - the cache is handed a per-acquisition sink rather than subscribing to one.
    */
   public readonly onCacheError = new Signal<[error: AssetCacheError]>();
+
+  /**
+   * Per-device selection between several files standing for one logical source -
+   * a texture shipped once per compressed format family, once per display
+   * density, or both.
+   *
+   * Empty by default, so a loader nobody configures resolves every source to
+   * itself. The {@link Application} publishes the device profile here once its
+   * render backend is up.
+   */
+  public readonly variants = new AssetVariantSet();
 
   public constructor(options: LoaderOptions = {}) {
     const cache = options.cache;
