@@ -8,6 +8,21 @@ import type { SceneNode } from './SceneNode';
 export const enum DirtyChannel {
   /** The node's own transform moved; its baked row is out of date. */
   Transform = 1 << 0,
+  /**
+   * The node's visual content changed in a way a recorded product cannot
+   * express by rewriting a row - a different texture, geometry, blend mode,
+   * filter, or visibility. A consumer that sees one has to rebuild.
+   */
+  Content = 1 << 1,
+  /**
+   * Only the node's tint changed. Split out of {@link Content} because it is
+   * the one content change a recorded product CAN express in place: tint lives
+   * in a per-row store parallel to the transform rows, so the change is a row
+   * write rather than a re-record. A tint write marks this channel and not
+   * `Content`, which is what lets a consumer tell "only tints moved" from
+   * "something changed that I cannot patch".
+   */
+  Tint = 1 << 2,
 }
 
 /**
@@ -112,26 +127,25 @@ class NodeDirtyIndex {
    */
   public mark(node: SceneNode, channels: number): void {
     const bucket = this._buckets[this._slot]!;
+    const live = node._dirtyMarkGeneration >= 0 ? this._buckets[node._dirtyMarkGeneration % RETAINED_GENERATIONS]! : null;
+    const held = live !== null && live.generation === node._dirtyMarkGeneration && live.nodes[node._dirtyMarkSlot] === node;
 
     node._dirtyMarkSequence = ++this._sequence;
 
-    if (node._dirtyMarkGeneration === this._generation) {
-      bucket.channels[node._dirtyMarkSlot] = bucket.channels[node._dirtyMarkSlot]! | channels;
-
+    // Repeating the SAME channels keeps the entry and only moves the sequence
+    // on: a node written a thousand times in a frame stays one entry, which is
+    // what makes this an index rather than a journal.
+    if (held && node._dirtyMarkGeneration === this._generation && live.channels[node._dirtyMarkSlot] === channels) {
       return;
     }
 
-    // Retire the entry an earlier retained generation may still hold for this
-    // node, so the window carries exactly one live entry per node. Without it a
-    // node marked in two retained generations would be visited twice by one
-    // read, and a consumer that writes on every visit - a renderer patching its
-    // own private row - would do the work twice.
-    if (node._dirtyMarkGeneration >= 0) {
-      const previous = this._buckets[node._dirtyMarkGeneration % RETAINED_GENERATIONS]!;
-
-      if (previous.generation === node._dirtyMarkGeneration && previous.nodes[node._dirtyMarkSlot] === node) {
-        previous.channels[node._dirtyMarkSlot] = 0;
-      }
+    // Different channels, or an older generation: retire the entry that is
+    // still standing and open a new one. Retiring matters twice over - a node
+    // left in two buckets would be visited twice by one read, and an entry
+    // whose mask had accumulated both a content change and a later tint could
+    // no longer say which of them a given cursor is looking at.
+    if (held) {
+      live.channels[node._dirtyMarkSlot] = 0;
     }
 
     const slot = bucket.count++;
@@ -167,7 +181,7 @@ class NodeDirtyIndex {
    * older retained generation held for it, so the window never carries the same
    * node twice.
    */
-  public readSince(sequence: number, channels: number, visit: (node: SceneNode) => boolean): boolean {
+  public readSince(sequence: number, channels: number, visit: (node: SceneNode, marked: number) => boolean): boolean {
     if (!this.covers(sequence)) {
       return false;
     }
@@ -182,7 +196,9 @@ class NodeDirtyIndex {
       for (let index = 0; index < bucket.count; index++) {
         const node = bucket.nodes[index]!;
 
-        if ((bucket.channels[index]! & channels) !== 0 && node._dirtyMarkSequence > sequence && !visit(node)) {
+        const marked = bucket.channels[index]!;
+
+        if ((marked & channels) !== 0 && node._dirtyMarkSequence > sequence && !visit(node, marked)) {
           return false;
         }
       }

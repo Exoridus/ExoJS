@@ -1017,6 +1017,7 @@ export class RenderPlanBuilder {
     // descendant move patches its baked row in place instead of invalidating,
     // which is what keeps a partly-dynamic scene on the recorded tier.
     if (
+      representation.reconcileContent(contentRevision, node) &&
       representation.isCleanIgnoringTransform(contentRevision, structureRevision, ancestryStamp, view) &&
       representation.reconcileTransform(transformRevision, view, backend, node)
     ) {

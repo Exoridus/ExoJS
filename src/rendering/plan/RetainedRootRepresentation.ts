@@ -118,6 +118,10 @@ export class RetainedRootRepresentation {
     return this._capture.fragment;
   }
 
+  public reconcileContent(contentRevision: number, root: RenderNode): boolean {
+    return this._capture.reconcileContent(contentRevision, root);
+  }
+
   public isCleanIgnoringTransform(contentRevision: number, structureRevision: number, ancestryStamp: number, view: View): boolean {
     return this._capture.isCleanIgnoringTransform(contentRevision, structureRevision, ancestryStamp, view);
   }

@@ -1,3 +1,4 @@
+import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
@@ -36,10 +37,16 @@ interface PatchCall {
   readonly localRow: number;
 }
 
+interface TintPatchCall {
+  readonly localRow: number;
+  readonly rgba: readonly number[];
+}
+
 interface Harness {
   readonly backend: RenderBackend;
   readonly events: string[];
   readonly patches: PatchCall[];
+  readonly tintPatches: TintPatchCall[];
 }
 
 // File-local fake backend (repo convention keeps test harnesses file-local). It
@@ -49,6 +56,7 @@ const createPatchingBackend = (): Harness => {
   const renderTarget = new RenderTarget(800, 600, true);
   const events: string[] = [];
   const patches: PatchCall[] = [];
+  const tintPatches: TintPatchCall[] = [];
   const pending: string[] = [];
   const activeCaptures: RetainedInstructionSet[] = [];
 
@@ -57,6 +65,9 @@ const createPatchingBackend = (): Harness => {
     transformRowBase: 0,
     _patchTransformRow(localRow: number): void {
       patches.push({ localRow });
+    },
+    _patchTintRow(localRow: number, bytes: Uint8Array): void {
+      tintPatches.push({ localRow, rgba: [...bytes] });
     },
   };
 
@@ -179,7 +190,7 @@ const createPatchingBackend = (): Harness => {
     },
   } as unknown as RenderBackend;
 
-  return { backend, events, patches };
+  return { backend, events, patches, tintPatches };
 };
 
 const playFrame = (root: RenderNode, backend: RenderBackend): void => {
@@ -202,6 +213,7 @@ const reachSpliceTier = (root: RenderNode, harness: Harness): void => {
   playFrame(root, harness.backend);
   harness.events.length = 0;
   harness.patches.length = 0;
+  harness.tintPatches.length = 0;
 };
 
 describe('recorded row base spans nested draws', () => {
@@ -463,6 +475,125 @@ describe('automatic render-root representation: incremental transform rows', () 
     expect(harness.patches).toHaveLength(2);
 
     world.destroy();
+    harness.backend.destroy();
+  });
+});
+
+describe('automatic render-root representation: incremental tint rows', () => {
+  test('a tint change rewrites one row and keeps the recording', () => {
+    // The change this exists for: a tint written every frame - a hit flash, a
+    // selection highlight, a fade - used to throw the whole recorded product
+    // away on every frame it happened.
+    const harness = createPatchingBackend();
+    const root = new Container();
+    const leaf = new RecordableLeaf('a');
+
+    root.addChild(leaf);
+    reachSpliceTier(root, harness);
+
+    harness.events.length = 0;
+    leaf.setTint(new Color(255, 0, 0, 0.5));
+    playFrame(root, harness.backend);
+
+    expect(harness.tintPatches).toEqual([{ localRow: 0, rgba: [255, 0, 0, 128] }]);
+    expect(harness.patches).toEqual([]); // nothing moved
+    expect(harness.events).toEqual(['replay:a']); // recorded tier held
+  });
+
+  test('k tint changes cost k row writes, not a re-record', () => {
+    const harness = createPatchingBackend();
+    const root = new Container();
+    const first = new RecordableLeaf('a');
+    const second = new RecordableLeaf('b');
+    const third = new RecordableLeaf('c');
+
+    root.addChild(first);
+    root.addChild(second);
+    root.addChild(third);
+    reachSpliceTier(root, harness);
+
+    harness.events.length = 0;
+    first.setTint(new Color(1, 2, 3));
+    third.setTint(new Color(4, 5, 6));
+    playFrame(root, harness.backend);
+
+    expect(harness.tintPatches.map(patch => patch.localRow)).toEqual([0, 2]);
+    expect(harness.events).toEqual(['replay:a,b,c']);
+  });
+
+  test('the same node tinted twice between frames is written once', () => {
+    const harness = createPatchingBackend();
+    const root = new Container();
+    const leaf = new RecordableLeaf('a');
+
+    root.addChild(leaf);
+    reachSpliceTier(root, harness);
+
+    leaf.setTint(new Color(1, 1, 1));
+    leaf.setTint(new Color(9, 9, 9));
+    playFrame(root, harness.backend);
+
+    expect(harness.tintPatches).toEqual([{ localRow: 0, rgba: [9, 9, 9, 255] }]);
+  });
+
+  test('a content change that is NOT a tint still rebuilds', () => {
+    // The other half of the channel split: a texture, geometry or blend-mode
+    // change decides which batch a node belongs to, and no row write says that.
+    const harness = createPatchingBackend();
+    const root = new Container();
+    const leaf = new RecordableLeaf('a');
+
+    root.addChild(leaf);
+    reachSpliceTier(root, harness);
+
+    harness.events.length = 0;
+    leaf.invalidateContent();
+    playFrame(root, harness.backend);
+
+    expect(harness.tintPatches).toEqual([]);
+    expect(harness.events).toContain('flush:a'); // re-collected, not replayed
+  });
+
+  test('a tint change on a node the product never recorded rebuilds instead of writing a stray row', () => {
+    const harness = createPatchingBackend();
+    const root = new Container();
+    const recorded = new RecordableLeaf('a');
+    const outsider = new RecordableLeaf('b');
+
+    root.addChild(recorded);
+    reachSpliceTier(root, harness);
+
+    // Added after the capture, so it has no row in this product. Its own
+    // structure change already forces a rebuild; the tint must not be written
+    // against whatever row index the map happens not to hold.
+    root.addChild(outsider);
+    harness.events.length = 0;
+    outsider.setTint(new Color(3, 3, 3));
+    playFrame(root, harness.backend);
+
+    expect(harness.tintPatches).toEqual([]);
+  });
+
+  test('a tint change under ANOTHER root does not touch this product', () => {
+    const harness = createPatchingBackend();
+    const world = new Container();
+    const other = new Container();
+    const mine = new RecordableLeaf('a');
+    const theirs = new RecordableLeaf('b');
+
+    world.addChild(mine);
+    other.addChild(theirs);
+    reachSpliceTier(world, harness);
+    reachSpliceTier(other, harness);
+
+    harness.tintPatches.length = 0;
+    theirs.setTint(new Color(7, 7, 7));
+    playFrame(world, harness.backend);
+
+    expect(harness.tintPatches).toEqual([]);
+
+    world.destroy();
+    other.destroy();
     harness.backend.destroy();
   });
 });

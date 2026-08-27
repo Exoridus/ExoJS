@@ -1,4 +1,5 @@
 import { Color } from '#core/Color';
+import { DirtyChannel } from '#core/NodeDirtyIndex';
 import { registerRetainedRenderRoot, SceneNode, unregisterRetainedRenderRoot } from '#core/SceneNode';
 import { Signal } from '#core/Signal';
 import type { InteractionEvent, InteractionEventType } from '#input/InteractionEvent';
@@ -678,6 +679,20 @@ export abstract class RenderNode extends SceneNode {
    */
   public invalidateContent(): this {
     this._markContentDirty();
+
+    return this;
+  }
+
+  /**
+   * @internal - cache invalidation for a change whose ONLY visual effect is
+   * this node's tint. Content-dirties exactly as {@link invalidateCache} does,
+   * so every consumer that cannot patch a tint still rebuilds; the difference
+   * is the channel it marks, which is what lets a retained product recognise a
+   * tint-only delta and rewrite the row instead of the product.
+   */
+  public _invalidateTint(): this {
+    this._cacheDirty = true;
+    this._markContentDirty(DirtyChannel.Tint);
 
     return this;
   }

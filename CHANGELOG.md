@@ -1588,6 +1588,26 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   an open pass first, an extra submit). 1024 quads is 24 KiB and covers
   normal text scenes in a single allocation, in both `WebGpuTextRenderer` and
   `WebGl2TextRenderer`.
+- **A tint change rewrites one row instead of throwing the recording away.**
+  Tinting per frame - a hit flash, a selection highlight, a fade - used to
+  invalidate the whole retained product on every frame it happened, because a
+  tint is a content change and content changes rebuild. Tint lives in a
+  per-row store parallel to the transform rows, though, so it is the one
+  content change a recorded product can express in place. A tint write now
+  marks its own channel in the changed-record index, and a product whose only
+  change since it last looked is tints writes those rows (`_patchTintRow` on
+  both backends) and replays.
+
+  Everything else still rebuilds, deliberately: a different texture, geometry
+  or blend mode decides which batch a node belongs to, and no row write says
+  that. The split is what makes the question answerable - "only tints changed"
+  is a property of the marks rather than a guess from a revision that every
+  kind of change bumps.
+
+  Writing through the `tint` instance in place (`sprite.tint.r = 8`) still
+  bypasses the setter and is not observed at all; assign a colour, or call
+  `invalidateContent()` after mutating one.
+
 - **A moved node writes one entry instead of climbing its ancestor chain.**
   Every own-transform mutation used to walk from the node to the scene root,
   offering the moved row to the enclosing transform group and to every render

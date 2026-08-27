@@ -135,11 +135,17 @@ export class Drawable extends RenderNode {
   /**
    * Set the tint colour by copying `color` into the internal {@link Color} instance.
    * Invalidates the render cache so the change is picked up on the next frame.
+   *
+   * A retained product recognises a tint-only change and rewrites the affected
+   * row rather than re-recording, so tinting per frame stays cheap. Writing
+   * through the returned {@link tint} instance instead (`sprite.tint.r = 8`)
+   * bypasses that entirely and is not observed at all - assign a colour, or
+   * call {@link RenderNode.invalidateContent} after mutating in place.
    */
   public setTint(color: Color): this {
     if (color) {
       this._tint.copy(color);
-      this.invalidateCache();
+      this._invalidateTint();
     }
 
     return this;

@@ -8,7 +8,7 @@ import type { View } from '#rendering/View';
 import { CaptureThrashSuppressor, CaptureVerdict } from './CaptureThrashSuppressor';
 import type { ScopeEntry } from './RenderScope';
 import { RetainedGroupFragment } from './RetainedGroupFragment';
-import { forEachMovedNode, isUnder, reconcileRetainedTransformRows } from './retainedTransformRowPatch';
+import { forEachMovedNode, isUnder, reconcileRetainedTintRows, reconcileRetainedTransformRows } from './retainedTransformRowPatch';
 
 /** The render target a product was compiled against (backend-owned identity). */
 export type RenderTargetIdentity = RenderBackend['renderTarget'];
@@ -93,6 +93,36 @@ export class RetainedCaptureSlot {
   private _observedTransform = -1;
   private _observedView: View | null = null;
   private _observedViewUpdateId = -1;
+
+  /**
+   * Settle the CONTENT channel for a frame whose content revision moved:
+   * `true` means the product still describes the subtree and may go on to the
+   * key check, `false` that the frame must rebuild.
+   *
+   * A tint change is the one content change that does not have to invalidate.
+   * It lives in a per-row store parallel to the transform rows, so the product
+   * can be corrected in place exactly as a move is - which matters because
+   * tinting per frame (a hit flash, a selection highlight, a fade) is an
+   * ordinary thing to do and used to throw the whole recording away every
+   * frame it happened.
+   *
+   * Everything else still rebuilds, and deliberately: a different texture,
+   * geometry or blend mode changes which batch a node belongs to, and no row
+   * write expresses that.
+   */
+  public reconcileContent(contentRevision: number, root: RenderNode): boolean {
+    if (this._contentRevision === contentRevision) {
+      return true;
+    }
+
+    if (!this._hasCapture || !reconcileRetainedTintRows(this.fragment, node => isUnder(node, root))) {
+      return false;
+    }
+
+    this._contentRevision = contentRevision;
+
+    return true;
+  }
 
   /**
    * Whether the captured product can be replayed as-is this frame.

@@ -154,6 +154,11 @@ export class RetainedGroupFragment {
   // it. Starts at -1, which no sequence reaches, so a fragment that never
   // accounted for anything is unprovable rather than silently up to date.
   private _transformCursor = -1;
+  // The same for the content channel: what this fragment has accounted for of
+  // the tint rows it baked. Separate from the transform cursor because the two
+  // channels are settled by different frames - a product may replay a move
+  // without a tint having changed, and the other way round.
+  private _contentCursor = -1;
 
   /** Snapshot policy for nested transform groups - see {@link _snapshotInto}. */
   private _deferTransformGroups = false;
@@ -259,6 +264,16 @@ export class RetainedGroupFragment {
    */
   public markTransformsSeen(): void {
     this._transformCursor = nodeDirtyIndex.sequence;
+  }
+
+  /** The mark sequence this fragment's baked tint rows are current as of. */
+  public get contentCursor(): number {
+    return this._contentCursor;
+  }
+
+  /** Every content-channel mark so far is accounted for - patched in, or read live. */
+  public markContentSeen(): void {
+    this._contentCursor = nodeDirtyIndex.sequence;
   }
 
   /**
@@ -388,6 +403,7 @@ export class RetainedGroupFragment {
     // A full (re)capture reads every child's current transform: any queued
     // transform-only moves are subsumed and must not double-patch afterwards.
     this.markTransformsSeen();
+    this.markContentSeen();
 
     this._entryCount = this._snapshotInto(this._entries, entries, entryCount);
 
@@ -410,6 +426,7 @@ export class RetainedGroupFragment {
     this._entryCount = 0;
     this._rowMap = null;
     this.markTransformsSeen();
+    this.markContentSeen();
     this._thrash.reset();
     this._recordableFor = null;
     this._instructions?.invalidate();

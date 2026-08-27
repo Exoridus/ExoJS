@@ -1182,9 +1182,13 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * stale ancestor. N same-path mutations between two reads cost
    * O(depth + N) stamps instead of O(N * depth).
    */
-  protected _markContentDirty(): void {
+  protected _markContentDirty(channels: number = DirtyChannel.Content): void {
     const revision = nextNodeRevision();
     const epoch = dirtyWalkEpoch;
+
+    if (transformGroupBoundaryCount > 0 || retainedRenderRootCount > 0) {
+      nodeDirtyIndex.mark(this, channels);
+    }
 
     this._nodeRevision.touchContent(revision);
     this._contentWalkEpoch = epoch;

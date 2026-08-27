@@ -2,7 +2,7 @@ import { DirtyChannel, nodeDirtyIndex } from '#core/NodeDirtyIndex';
 import type { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
-import { packTransformRow, TRANSFORM_FLOATS_PER_ROW } from '#rendering/TransformBuffer';
+import { packTintRow, packTransformRow, TRANSFORM_FLOATS_PER_ROW, TRANSFORM_TINT_BYTES_PER_ROW } from '#rendering/TransformBuffer';
 
 import type { RetainedGroupFragment } from './RetainedGroupFragment';
 import type { RetainedGroupBundle } from './RetainedInstructionSet';
@@ -60,6 +60,9 @@ const hasOwnTransformRowPatch = (renderer: unknown): renderer is OwnTransformRow
  * under churn.
  */
 const patchRowScratch = new Float32Array(TRANSFORM_FLOATS_PER_ROW);
+
+/** Reused scratch for one patched tint row, filled and consumed inside a single patch call. */
+const patchTintScratch = new Uint8Array(TRANSFORM_TINT_BYTES_PER_ROW);
 
 /**
  * Patch one moved node's recorded transform row, or return `false` when it is
@@ -263,4 +266,70 @@ export const reconcileRetainedTransformRows = (
   fragment.markTransformsSeen();
 
   return patched;
+};
+
+/**
+ * Reconcile the content-channel marks against the fragment's baked tint rows.
+ *
+ * `true` means the product still describes the subtree: either every marked
+ * change it owns was a tint it could write into its own row store, or the
+ * fragment holds no recording and the entry replay re-reads each tint live.
+ * `false` means at least one owned change is not expressible in place - a
+ * different texture or geometry, a node the capture never recorded, a recording
+ * whose backend has no tint patch, or a cursor the index no longer covers - and
+ * the caller must rebuild.
+ *
+ * The channel split is what makes the question answerable at all. A tint write
+ * marks `Tint` and every other content change marks `Content`, so "only tints
+ * changed" is a property of the marks rather than a guess from a revision that
+ * both kinds of change bump.
+ * @internal
+ */
+export const reconcileRetainedTintRows = (fragment: RetainedGroupFragment, owns: (node: RenderNode) => boolean): boolean => {
+  const set = fragment.instructions;
+  const bundle = set?.hasRecording === true ? set.ownedBundle : null;
+  const patchable = bundle !== null && typeof bundle._patchTintRow === 'function' && bundle.transformRowBase !== undefined;
+  const base = fragment.recordedRowBase();
+
+  const applied = nodeDirtyIndex.readSince(fragment.contentCursor, DirtyChannel.Content | DirtyChannel.Tint, (node, marked) => {
+    const changed = node as unknown as RenderNode;
+
+    if (!owns(changed)) {
+      return true;
+    }
+
+    if ((marked & DirtyChannel.Content) !== 0) {
+      // Not a tint-only change: nothing in a recorded product expresses a new
+      // texture, geometry or blend mode without re-recording it.
+      return false;
+    }
+
+    if (bundle === null) {
+      // No recording: the entry replay re-emits the draw and reads the live
+      // tint, so there is no baked row to correct.
+      return true;
+    }
+
+    if (!patchable) {
+      return false;
+    }
+
+    const drawable = changed as unknown as Drawable;
+    const rowIndex = fragment.recordedRowIndex(drawable);
+
+    if (rowIndex === undefined) {
+      return false;
+    }
+
+    packTintRow(patchTintScratch, 0, drawable.tint);
+    bundle._patchTintRow!(rowIndex - base, patchTintScratch);
+
+    return true;
+  });
+
+  if (applied) {
+    fragment.markContentSeen();
+  }
+
+  return applied;
 };

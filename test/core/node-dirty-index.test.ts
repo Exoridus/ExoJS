@@ -83,6 +83,31 @@ describe('NodeDirtyIndex', () => {
     node.destroy();
   });
 
+  test('a content change and a later tint stay apart, so a cursor between them sees only the tint', () => {
+    // The distinction the whole channel split exists for: a retained product
+    // has to tell "only tints changed since I looked" from "something changed
+    // that I cannot patch", and folding both into one entry's mask would make
+    // every tint after any content change unpatchable.
+    const node = new Container();
+    const seen: number[] = [];
+
+    nodeDirtyIndex.mark(node, DirtyChannel.Content);
+
+    const between = nodeDirtyIndex.sequence;
+
+    nodeDirtyIndex.mark(node, DirtyChannel.Tint);
+
+    nodeDirtyIndex.readSince(between, DirtyChannel.Content | DirtyChannel.Tint, (_node, marked) => {
+      seen.push(marked);
+
+      return true;
+    });
+
+    expect(seen).toEqual([DirtyChannel.Tint]);
+
+    node.destroy();
+  });
+
   test('marks are filtered by channel', () => {
     const moved = new Container();
     const before = nodeDirtyIndex.sequence;
