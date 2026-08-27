@@ -385,6 +385,24 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   }
 
   /**
+   * Fast patch: overwrite one group-local tint row in place and mark ONLY that
+   * row's texel for upload. Same contract as {@link _patchTransformRow} on the
+   * parallel store - no generation bump, out-of-range rows ignored - and the
+   * reason the two stores are separate: a tint change and a move touch
+   * different bytes, so neither pays for the other's upload.
+   */
+  public _patchTintRow(localRow: number, bytes: Uint8Array): void {
+    if (this._tintTexture === null || this._tintBytes === null || this._transformLayout === null || localRow < 0 || localRow >= this._transformRowCount) {
+      return;
+    }
+
+    const rect = tintTextureRect(this._transformLayout, localRow, 1, this._rectScratch);
+
+    this._tintBytes.set(bytes, localRow * tintBytesPerRow);
+    this._tintTexture.commitRect(rect.x, rect.y, rect.width, rect.height);
+  }
+
+  /**
    * CPU-side vertex re-bake patch, for a renderer that bakes world
    * positions into its instance bytes rather than reading a shared-transform
    * row live (Text on WebGL2, the confirmed ANGLE/D3D11 vertex-texel-fetch

@@ -28,7 +28,16 @@
 import { afterEach, describe, expect, test } from 'vitest';
 
 import type { ServedBy } from './cullMarginProbe';
-import { beginProbeFrame, buildScrollingWorld, endProbeFrame, installTierProbe, SCROLLING_WORLD, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from './cullMarginProbe';
+import {
+  beginProbeFrame,
+  buildScrollingWorld,
+  captureCullRectOf,
+  endProbeFrame,
+  installTierProbe,
+  SCROLLING_WORLD,
+  VIEWPORT_HEIGHT,
+  VIEWPORT_WIDTH,
+} from './cullMarginProbe';
 import type { WebGl2Harness } from './harness';
 import { createWebGl2Harness } from './harness';
 
@@ -145,12 +154,9 @@ const marginRatio = (): number => {
   render(fixture);
 
   const view = fixture.harness.view.getBounds();
-  const representation = (fixture.scene.root as unknown as { _retainedRootRepresentation(): unknown })._retainedRootRepresentation() as {
-    _captureCullRect: { width: number };
-    _hasCaptureCullRect: boolean;
-  };
+  const cullRect = captureCullRectOf(fixture.scene.root);
 
-  return representation._hasCaptureCullRect ? (representation._captureCullRect.width - view.width) / (2 * view.width) : 0;
+  return cullRect === null ? 0 : (cullRect.width - view.width) / (2 * view.width);
 };
 
 const setCenter =

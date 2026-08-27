@@ -1610,6 +1610,58 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   an open pass first, an extra submit). 1024 quads is 24 KiB and covers
   normal text scenes in a single allocation, in both `WebGpuTextRenderer` and
   `WebGl2TextRenderer`.
+- **A tint change rewrites one row instead of throwing the recording away.**
+  Tinting per frame - a hit flash, a selection highlight, a fade - used to
+  invalidate the whole retained product on every frame it happened, because a
+  tint is a content change and content changes rebuild. Tint lives in a
+  per-row store parallel to the transform rows, though, so it is the one
+  content change a recorded product can express in place. A tint write now
+  marks its own channel in the changed-record index, and a product whose only
+  change since it last looked is tints writes those rows (`_patchTintRow` on
+  both backends) and replays.
+
+  Everything else still rebuilds, deliberately: a different texture, geometry
+  or blend mode decides which batch a node belongs to, and no row write says
+  that. The split is what makes the question answerable - "only tints changed"
+  is a property of the marks rather than a guess from a revision that every
+  kind of change bumps.
+
+  Writing through the `tint` instance in place (`sprite.tint.r = 8`) still
+  bypasses the setter and is not observed at all; assign a colour, or call
+  `invalidateContent()` after mutating one.
+
+- **A moved node writes one entry instead of climbing its ancestor chain.**
+  Every own-transform mutation used to walk from the node to the scene root,
+  offering the moved row to the enclosing transform group and to every render
+  root above it, because a moved node cannot know which retained products
+  recorded it. That walk ran on every `setPosition` in a scene with any
+  retention live. The engine now keeps one changed-record index: a mutation
+  marks the node once, and each retained product pulls the marks it cares about
+  against the row map it already keeps - a recorded node costs it a map hit
+  rather than the mutator a walk.
+
+  The index is bounded by construction, which is what separates it from a
+  change journal: a node marked a thousand times in a frame holds one entry,
+  ordering comes from the node's own mark sequence, and the marks live in a
+  ring of eight generations. A product that has not looked for longer than that
+  is told so and rebuilds, rather than being handed a partial answer. Nothing
+  is marked at all while no retained consumer exists.
+
+- **A root drawn to two render targets in one frame keeps its retention.** A
+  captured product is compiled for the target it was recorded against, and a
+  root held exactly one. Drawing the same root into a `RenderTexture` and onto
+  the screen within the same frame - a minimap, a portal, a mirror, a
+  post-processing source - therefore had each draw discard the other's product
+  and capture again, every frame, with no steady state to settle into. Measured
+  on a 2000-leaf scrolling world with the indexed tier refused: all 20 draws of
+  a 10-frame window missed their keys and walked the scene graph (28 809 nodes
+  culled), against 0 for the same scene drawn twice to a single target. A root
+  now holds one product per render target, at most two, evicting the least
+  recently used one beyond that - the screen plus one offscreen target is the
+  case that recurs every frame, and each product is a full instruction set plus
+  its recorded entries. A third target in one frame re-captures exactly as
+  before. Roots served by the indexed slot tier were never affected: that tier
+  is keyed on the backend alone.
 
 ### Fixed
 

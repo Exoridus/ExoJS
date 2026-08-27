@@ -1,10 +1,8 @@
-import { Bounds } from '#core/Bounds';
 import { type ReadonlyRectangle, Rectangle } from '#math/Rectangle';
-import type { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import type { RenderNode } from '#rendering/RenderNode';
 import type { View } from '#rendering/View';
 
-import { CaptureThrashSuppressor, CaptureVerdict } from './CaptureThrashSuppressor';
 import { DerivedRootProduct } from './DerivedRootProduct';
 import {
   type PersistentSlotBackend,
@@ -15,11 +13,18 @@ import {
 } from './PersistentSlotDraw';
 import { RenderRootSource } from './RenderRootSource';
 import type { ScopeEntry } from './RenderScope';
-import { RetainedGroupFragment } from './RetainedGroupFragment';
-import { reconcileRetainedTransformRows } from './retainedTransformRowPatch';
+import { type RenderTargetIdentity, RetainedCaptureSlot } from './RetainedCaptureSlot';
+import type { RetainedGroupFragment } from './RetainedGroupFragment';
 
-/** The render target a product was compiled against (backend-owned identity). */
-type RenderTargetIdentity = RenderBackend['renderTarget'];
+/**
+ * Products one root may hold at once. Two, and not as a first guess: a slot
+ * carries a full instruction set plus the recorded entries behind it, which is
+ * the dominant memory position for a large root, and "the screen plus one
+ * offscreen target" covers the cases that recur every frame - minimap, portal,
+ * mirror, post-processing source. A third target in the same frame falls back
+ * to re-capturing, which is what every target did before the set existed.
+ */
+const MAX_CAPTURE_SLOTS = 2;
 
 /**
  * The automatic persistent render representation of one **render root** - the
@@ -37,7 +42,9 @@ type RenderTargetIdentity = RenderBackend['renderTarget'];
  * - the root's own global-transform stamp - a render root is not a closed
  *   dependency boundary, so an ancestor ABOVE it moving must invalidate even
  *   though it stamps none of the root's revisions;
- * - the backend's render target - compiled products are pass/target-specific;
+ * - the backend's render target - compiled products are pass/target-specific,
+ *   so a root drawn to more than one target holds one product per target (see
+ *   {@link selectCaptureSlot});
  * - the view SELECTION (see {@link isClean}) - per-child culling is view
  *   dependent even though the captured records are not.
  *
@@ -48,52 +55,121 @@ type RenderTargetIdentity = RenderBackend['renderTarget'];
  * @internal
  */
 export class RetainedRootRepresentation {
-  public readonly fragment = new RetainedGroupFragment();
-
-  private _hasCapture = false;
-  private _contentRevision = -1;
-  private _structureRevision = -1;
-  private _transformRevision = -1;
-  private _ancestryStamp = -1;
-  private _backend: RenderBackend | null = null;
-  private _target: RenderTargetIdentity | null = null;
-  private _view: View | null = null;
-  private _viewUpdateId = -1;
+  /**
+   * The products this root holds, most recently used first, one per
+   * (backend, render target) pair. Kept as a short array rather than a map: it
+   * is at most {@link MAX_CAPTURE_SLOTS} long, so a linear scan is the whole
+   * lookup and the order doubles as the eviction order.
+   */
+  private readonly _captureSlots: RetainedCaptureSlot[] = [new RetainedCaptureSlot()];
+  /** The slot the current draw reads and writes; see {@link selectCaptureSlot}. */
+  private _capture: RetainedCaptureSlot = this._captureSlots[0]!;
 
   /**
-   * Whether the capturing collect dropped at least one node on the view test.
-   * A capture that culled nothing can be replayed under any view that still
-   * contains {@link _keptBounds}; a capture that culled something can only be
-   * replayed under a view inside {@link _captureCullRect}, because outside that
-   * rect a previously-culled node may have entered the view and no index exists
-   * to find it.
-   */
-  private _culledDuringCapture = true;
-  /** Union of the rects the view test compared for every kept, cullable node. */
-  private readonly _keptBounds = new Bounds();
-  private _keptEmpty = true;
-  /**
-   * The rect the capturing collect actually culled against - the view rect grown
-   * by the capture margin (`RenderPlanBuilder.cullRect`). Every node the capture
-   * dropped lies outside it, so any view still INSIDE it selects the same nodes
-   * and the product replays unchanged.
-   */
-  private readonly _captureCullRect = new Rectangle();
-  private _hasCaptureCullRect = false;
-  /**
-   * Whether the capturing collect READ the view - i.e. produced content that is
-   * a function of the camera, not merely positioned by it.
+   * Point this representation at the product held for `backend` drawing into
+   * `target`, evicting the least recently used one when a new pair arrives and
+   * the set is full. Call once per draw, before anything else on the capture
+   * tier is asked or told.
    *
-   * Such a capture may only be replayed under the very same view. Both view
-   * tolerances below reason about the SELECTION of nodes (what a cull test would
-   * have dropped), and that reasoning is sound only while each node's recorded
-   * draw is what a fresh collect would produce again. A node that rebuilds its
-   * geometry from `view.center` breaks that premise: replaying it paints the
-   * camera position it was captured at. `ImageLayerNode` and `TileLayerNode` do
-   * exactly this, and contract 9 of the architecture freeze reserves the right
-   * for any node, which is why this is observed rather than declared.
+   * Everything from here to {@link commitCapture} then reads one product and is
+   * unaware of the others, which is what keeps the tier's reasoning about views,
+   * cull rects and thrash unchanged from when there was a single field.
    */
-  private _viewDependentCapture = false;
+  public selectCaptureSlot(backend: RenderBackend, target: RenderTargetIdentity | null): void {
+    const slots = this._captureSlots;
+
+    for (let index = 0; index < slots.length; index++) {
+      const slot = slots[index]!;
+
+      if (slot.matchesKey(backend, target)) {
+        this._promote(index);
+        this._capture = slot;
+
+        return;
+      }
+    }
+
+    // An untouched slot has a null key and matches nothing, so the first draw of
+    // a root lands here and simply claims it.
+    const reused = slots.length < MAX_CAPTURE_SLOTS && slots[0]!.hasCapture ? this._addSlot() : slots[slots.length - 1]!;
+
+    reused.retarget(backend, target);
+    this._promote(slots.indexOf(reused));
+    this._capture = reused;
+  }
+
+  /** Move the slot at `index` to the front of the eviction order. */
+  private _promote(index: number): void {
+    if (index > 0) {
+      this._captureSlots.unshift(...this._captureSlots.splice(index, 1));
+    }
+  }
+
+  private _addSlot(): RetainedCaptureSlot {
+    const slot = new RetainedCaptureSlot();
+
+    this._captureSlots.push(slot);
+
+    return slot;
+  }
+
+  /** The product the selected slot holds - the recorded entries and instruction set. */
+  public get fragment(): RetainedGroupFragment {
+    return this._capture.fragment;
+  }
+
+  public reconcileContent(contentRevision: number, root: RenderNode): boolean {
+    return this._capture.reconcileContent(contentRevision, root);
+  }
+
+  public isCleanIgnoringTransform(contentRevision: number, structureRevision: number, ancestryStamp: number, view: View): boolean {
+    return this._capture.isCleanIgnoringTransform(contentRevision, structureRevision, ancestryStamp, view);
+  }
+
+  public reconcileTransform(transformRevision: number, view: View, backend: RenderBackend, root: RenderNode): boolean {
+    return this._capture.reconcileTransform(transformRevision, view, backend, root);
+  }
+
+  public markReplayed(): void {
+    this._capture.markReplayed();
+  }
+
+  public shouldSuppressCapture(contentRevision: number, structureRevision: number, transformRevision: number, view: View): boolean {
+    return this._capture.shouldSuppressCapture(contentRevision, structureRevision, transformRevision, view);
+  }
+
+  public beginCapture(cullRect: ReadonlyRectangle): void {
+    this._capture.beginCapture(cullRect);
+  }
+
+  public noteViewRead(): void {
+    this._capture.noteViewRead();
+  }
+
+  public noteKept(rect: ReadonlyRectangle): void {
+    this._capture.noteKept(rect);
+  }
+
+  public noteKeptCoords(minX: number, minY: number, maxX: number, maxY: number): void {
+    this._capture.noteKeptCoords(minX, minY, maxX, maxY);
+  }
+
+  public noteCulled(): void {
+    this._capture.noteCulled();
+  }
+
+  public commitCapture(
+    contentRevision: number,
+    structureRevision: number,
+    transformRevision: number,
+    ancestryStamp: number,
+    view: View,
+    backend: RenderBackend,
+    entries: readonly ScopeEntry[],
+    entryCount: number,
+  ): void {
+    this._capture.commitCapture(contentRevision, structureRevision, transformRevision, ancestryStamp, view, backend, entries, entryCount);
+  }
 
   /**
    * The persistent items this root can re-select from, or `null` while it has
@@ -169,92 +245,6 @@ export class RetainedRootRepresentation {
    * next view change would reach the same conclusion at the same cost.
    */
   private _sourceUnbuildable = false;
-
-  // Thrash suppression over the FULL key (see `shouldSuppressCapture`). The
-  // state machine is shared with a group's fragment; only the key is this
-  // tier's own, and it is the wider of the two.
-  private readonly _thrash = new CaptureThrashSuppressor();
-  private _observedContent = -1;
-  private _observedStructure = -1;
-  private _observedTransform = -1;
-  private _observedView: View | null = null;
-  private _observedViewUpdateId = -1;
-
-  /**
-   * Whether the captured product can be replayed as-is this frame.
-   *
-   * The revision/identity keys are exact compares. The view key is not, and it
-   * has two independent ways to pass, because the captured records - world-space
-   * bounds, material keys, baked transform rows - carry no view state of their
-   * own (the recorded batches resolve projection live at replay):
-   *
-   * - **The view still fits the capture's cull rect.** Every node the capture
-   *   dropped was outside that rect, hence outside this view too; every node it
-   *   kept is still drawn, and any that no longer meets the view is clipped
-   *   rather than wrong. This is the case that survives a moving camera over a
-   *   scene with off-screen content - the margin exists to make it common.
-   * - **Nothing was culled and the view still contains every kept node.** Then
-   *   the selection is trivially the whole subtree and stays that way. This one
-   *   also covers a view that GREW past the capture rect (a zoom-out), which the
-   *   first test cannot.
-   */
-  public isCleanIgnoringTransform(
-    contentRevision: number,
-    structureRevision: number,
-    ancestryStamp: number,
-    view: View,
-    backend: RenderBackend,
-    target: RenderTargetIdentity | null,
-  ): boolean {
-    if (!this.matchesNonViewKeys(contentRevision, structureRevision, ancestryStamp, backend, target)) {
-      return false;
-    }
-
-    if (this._view === view && this._viewUpdateId === view.updateId) {
-      return true;
-    }
-
-    if (this._viewDependentCapture) {
-      // The view moved and the capture is a function of it: neither tolerance
-      // applies, because both only argue about which nodes a cull test admits.
-      return false;
-    }
-
-    if (this._viewFitsCaptureCullRect(view)) {
-      return true;
-    }
-
-    if (this._culledDuringCapture) {
-      return false;
-    }
-
-    return this._keptEmpty || view.getBounds().containsRect(this._keptBounds.getRect());
-  }
-
-  /**
-   * Every key except the view: whether the captured product still describes the
-   * same subtree, compiled for the same backend and target.
-   *
-   * Split out from {@link isCleanIgnoringTransform} because the view key is the
-   * only one of the six that is not an exact compare, and reading the exact half
-   * on its own is what makes the tolerant half legible.
-   */
-  public matchesNonViewKeys(
-    contentRevision: number,
-    structureRevision: number,
-    ancestryStamp: number,
-    backend: RenderBackend,
-    target: RenderTargetIdentity | null,
-  ): boolean {
-    return (
-      this._hasCapture &&
-      this._contentRevision === contentRevision &&
-      this._structureRevision === structureRevision &&
-      this._ancestryStamp === ancestryStamp &&
-      this._backend === backend &&
-      this._target === target
-    );
-  }
 
   /** The persistent items, or `null` while this root has never built any. */
   public get source(): RenderRootSource | null {
@@ -442,268 +432,18 @@ export class RetainedRootRepresentation {
     this._sourceUnbuildable = true;
   }
 
-  /** Whether this view lies entirely inside the rect the capture culled against. */
-  private _viewFitsCaptureCullRect(view: View): boolean {
-    return this._hasCaptureCullRect && this._captureCullRect.containsRect(view.getBounds());
-  }
-
-  /**
-   * Settle the transform channel for a frame whose other keys already match:
-   * `true` means the product may be replayed, `false` that the frame must
-   * re-collect.
-   *
-   * Transform-only descendant moves are the one change class that does NOT
-   * invalidate here. The moved nodes arrive through the same seam a
-   * {@link RetainedContainer} uses, and their baked rows are patched in place
-   * (O(k)) rather than re-derived - which is what keeps a scene with a few
-   * percent of moving nodes on the recorded tier.
-   *
-   * The queue is fed from a live capture onward, one tier earlier than a group's
-   * - a group only needs it on the recorded tier, whereas the root needs the
-   * queue as its PROOF that every move was accounted for. Without that proof one
-   * frame earlier, a scene that moves something every frame would never reach the
-   * clean frame it has to record on.
-   *
-   * The guards that make that sound against per-child view culling - which a
-   * group does not have to face, since it suppresses culling inside itself and
-   * is culled as a whole - live in {@link _canReconcileMovedNodes}.
-   */
-  public reconcileTransform(transformRevision: number, view: View, backend: RenderBackend): boolean {
-    if (!this.fragment.hasDirtyTransformRows()) {
-      // Nothing queued. Either nothing moved (revisions agree), or a move
-      // happened while no recording was live - the enqueue gate skips those, so
-      // there is no proof the queue saw everything and the frame re-collects.
-      return this._transformRevision === transformRevision;
-    }
-
-    if (!this._canReconcileMovedNodes(view)) {
-      this._dropRecording();
-
-      return false;
-    }
-
-    if (!reconcileRetainedTransformRows(this.fragment, backend, () => true)) {
-      return false;
-    }
-
-    this._transformRevision = transformRevision;
-
-    return true;
-  }
-
-  /**
-   * Whether every queued move can be applied to the captured product, growing
-   * the kept-union by each moved node's CURRENT cull rect on the way.
-   *
-   * Two rejections, one per direction a move can break the selection:
-   *
-   * - **A moved node the capture never recorded, on a capture that culled.** It
-   *   is not in the product, so it may be one of the culled ones - and it may
-   *   have just moved INTO the view, which replay would silently omit. Patching
-   *   cannot help: there is no row to patch. (On the recorded tier the row patch
-   *   would catch this too, but the entry-replay tier has no such check, and
-   *   this must hold on both.) When the capture culled nothing, every visible
-   *   node is in the product and no such node exists.
-   * - **A moved node that left the view, when only the kept-union rule is
-   *   carrying validity.** Replaying would keep drawing it where a real collect
-   *   would have dropped it - which matters because that rule's whole premise is
-   *   that nothing was culled. Under the capture-rect rule the premise is
-   *   different and this cannot go wrong: an out-of-view node that is still
-   *   drawn is clipped, not wrong.
-   */
-  private _canReconcileMovedNodes(view: View): boolean {
-    const viewRect = view.getBounds();
-    const insideCaptureRect = this._viewFitsCaptureCullRect(view);
-
-    for (let index = 0; index < this.fragment.dirtyTransformRowCount; index++) {
-      const node = this.fragment.dirtyTransformRowAt(index);
-
-      if (this._culledDuringCapture && this.fragment.recordedDraw(node as unknown as Drawable) === undefined) {
-        return false;
-      }
-
-      if (!node.cullable) {
-        // Never culled: its position cannot change the selection.
-        continue;
-      }
-
-      const rect = node.cullArea ?? node.getBounds();
-
-      if (!insideCaptureRect && !viewRect.intersectsWith(rect)) {
-        return false;
-      }
-
-      this._keptBounds.addRect(rect);
-      this._keptEmpty = false;
-    }
-
-    return true;
-  }
-
-  /**
-   * Give up the recorded tier without giving up the capture: the queue is
-   * drained so no stale row survives, and dropping the recording closes the
-   * enqueue gate so nothing accumulates until the next collect re-records.
-   */
-  private _dropRecording(): void {
-    this.fragment.instructions?.invalidate();
-    this.fragment.clearDirtyTransformRows();
-  }
-
-  /** The active capture was replayed at least once - it earned its keep. */
-  public markReplayed(): void {
-    this._thrash.markReplayed();
-    this.fragment.markReplayed();
-  }
-
-  /**
-   * Decide, on a frame whose key check already failed, whether the snapshot
-   * should be skipped. Mutates the suppression state machine; call exactly once
-   * per such frame, before collecting. Returns `true` to skip the capture.
-   *
-   * Same shape as {@link RetainedGroupFragment.shouldSuppressCapture} but keyed
-   * on the FULL root key including the view: without the view in the observed
-   * tuple, a panning camera over a partly-culled scene would alternate between
-   * suppressed and recovered forever instead of settling.
-   */
-  public shouldSuppressCapture(contentRevision: number, structureRevision: number, transformRevision: number, view: View): boolean {
-    const keyUnchanged =
-      this._observedContent === contentRevision &&
-      this._observedStructure === structureRevision &&
-      this._observedTransform === transformRevision &&
-      this._observedView === view &&
-      this._observedViewUpdateId === view.updateId;
-    const verdict = this._thrash.evaluate(this._hasCapture, keyUnchanged);
-
-    if (verdict === CaptureVerdict.Capture) {
-      return false;
-    }
-
-    if (verdict === CaptureVerdict.InvalidateAndSuppress) {
-      this.invalidate();
-      this._thrash.suppress();
-    }
-
-    this._observe(contentRevision, structureRevision, transformRevision, view);
-
-    return true;
-  }
-
-  /**
-   * Arm cull-union accumulation for the collect that is about to run, and record
-   * the rect that collect will cull against - the view's rect plus the capture
-   * margin, which is what later lets a moved view be judged in O(1).
-   */
-  public beginCapture(cullRect: ReadonlyRectangle): void {
-    this._keptBounds.reset();
-    this._keptEmpty = true;
-    this._culledDuringCapture = false;
-    this._viewDependentCapture = false;
-    this._captureCullRect.set(cullRect.x, cullRect.y, cullRect.width, cullRect.height);
-    this._hasCaptureCullRect = true;
-  }
-
-  /**
-   * The collect being captured read the view (see {@link _viewDependentCapture}).
-   * Called from `RenderPlanBuilder`'s public view getter, so it fires for any
-   * node - engine or third-party - without one having to declare itself.
-   */
-  public noteViewRead(): void {
-    this._viewDependentCapture = true;
-  }
-
-  /** A node passed the view test; `rect` is exactly what `inView` compared. */
-  public noteKept(rect: ReadonlyRectangle): void {
-    this._keptBounds.addRect(rect);
-    this._keptEmpty = false;
-  }
-
-  /**
-   * {@link noteKept} for a caller that holds the compared extent as four numbers
-   * rather than a rectangle - the source selection, whose items store it that
-   * way. Materialising a `Rectangle` per item just to hand it over would cost
-   * more than the fold.
-   */
-  public noteKeptCoords(minX: number, minY: number, maxX: number, maxY: number): void {
-    this._keptBounds.addCoords(minX, minY).addCoords(maxX, maxY);
-    this._keptEmpty = false;
-  }
-
-  /** A node was dropped by the view test - the capture is view-locked. */
-  public noteCulled(): void {
-    this._culledDuringCapture = true;
-  }
-
-  /** Snapshot the root scope's entries and key the capture. */
-  public commitCapture(
-    contentRevision: number,
-    structureRevision: number,
-    transformRevision: number,
-    ancestryStamp: number,
-    view: View,
-    backend: RenderBackend,
-    target: RenderTargetIdentity | null,
-    entries: readonly ScopeEntry[],
-    entryCount: number,
-  ): void {
-    // `true`: nested transform groups are recorded as live re-dispatches, so a
-    // `RetainedContainer` under a render root keeps its own retention tier
-    // untouched (see the snapshot policy in `RetainedGroupFragment`).
-    this.fragment.capture(contentRevision, structureRevision, backend, entries, entryCount, true);
-
-    this._contentRevision = contentRevision;
-    this._structureRevision = structureRevision;
-    this._transformRevision = transformRevision;
-    this._ancestryStamp = ancestryStamp;
-    this._view = view;
-    this._viewUpdateId = view.updateId;
-    this._backend = backend;
-    this._target = target;
-    this._hasCapture = true;
-    this._thrash.markCaptured();
-  }
-
-  /**
-   * Drop the capture and its recording; the GPU bundle is kept (grow-only).
-   *
-   * The SOURCE deliberately survives. It is keyed on the node's own revisions
-   * and validates itself, so it stays correct across anything that invalidates a
-   * capture - and the loudest caller here is capture suppression, where the
-   * frame that just lost its capture is exactly the one that most needs a cheap
-   * path to fall back to.
-   */
-  public invalidate(): void {
-    this.fragment.invalidate();
-    this._hasCapture = false;
-    this._thrash.reset();
-    this._keptBounds.reset();
-    this._keptEmpty = true;
-    this._culledDuringCapture = true;
-    this._viewDependentCapture = false;
-    this._hasCaptureCullRect = false;
-    this._view = null;
-    this._backend = null;
-    this._target = null;
-  }
-
-  /** Release the capture AND the retained GPU resources (node destroy). */
+  /** Release every product AND the retained GPU resources (node destroy). */
   public dispose(): void {
     this.releasePersistentSlots();
-    this.invalidate();
-    this.fragment.dispose();
+
+    for (const slot of this._captureSlots) {
+      slot.dispose();
+    }
+
     this._source?.invalidate();
     this._source = null;
     this._derivedProduct?.release();
     this._derivedProduct = null;
     this._sourceUnbuildable = false;
-    this._keptBounds.destroy();
-  }
-
-  private _observe(contentRevision: number, structureRevision: number, transformRevision: number, view: View): void {
-    this._observedContent = contentRevision;
-    this._observedStructure = structureRevision;
-    this._observedTransform = transformRevision;
-    this._observedView = view;
-    this._observedViewUpdateId = view.updateId;
   }
 }

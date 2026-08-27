@@ -1,4 +1,5 @@
 import { Color } from '#core/Color';
+import { DirtyChannel } from '#core/NodeDirtyIndex';
 import { registerRetainedRenderRoot, SceneNode, unregisterRetainedRenderRoot } from '#core/SceneNode';
 import { Signal } from '#core/Signal';
 import type { InteractionEvent, InteractionEventType } from '#input/InteractionEvent';
@@ -555,25 +556,6 @@ export abstract class RenderNode extends SceneNode {
     return this._retainedRoot;
   }
 
-  /**
-   * @internal - the descendant transform-move seam for the automatic root
-   * representation. Gated on a live CAPTURE, not on a live recording as
-   * {@link RetainedContainer._enqueueDirtyTransformRow} is: the root treats a
-   * queued move as its proof that the transform channel is accounted for, and
-   * that proof has to exist one tier earlier. Without it a scene that moves
-   * something every frame would never see the clean frame it needs to record in
-   * the first place, and would stay on plain collect forever.
-   */
-  public override _enqueueRetainedRootRow(node: RenderNode): void {
-    const representation = this._retainedRoot;
-
-    if (!representation?.fragment.hasCapture) {
-      return;
-    }
-
-    representation.fragment.enqueueDirtyTransformRow(node);
-  }
-
   /** @internal */
   protected _collectContent(_builder: RenderPlanBuilder): void {
     // Overridden by Drawable/Container.
@@ -697,6 +679,20 @@ export abstract class RenderNode extends SceneNode {
    */
   public invalidateContent(): this {
     this._markContentDirty();
+
+    return this;
+  }
+
+  /**
+   * @internal - cache invalidation for a change whose ONLY visual effect is
+   * this node's tint. Content-dirties exactly as {@link invalidateCache} does,
+   * so every consumer that cannot patch a tint still rebuilds; the difference
+   * is the channel it marks, which is what lets a retained product recognise a
+   * tint-only delta and rewrite the row instead of the product.
+   */
+  public _invalidateTint(): this {
+    this._cacheDirty = true;
+    this._markContentDirty(DirtyChannel.Tint);
 
     return this;
   }

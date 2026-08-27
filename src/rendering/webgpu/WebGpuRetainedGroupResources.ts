@@ -442,6 +442,21 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   }
 
   /**
+   * Fast patch: overwrite one group-local tint slot in place. Same contract as
+   * {@link _patchTransformRow} on the parallel store - no generation bump,
+   * out-of-range slots and a lost device ignored - and the reason the two
+   * stores are separate: a tint change and a move touch different bytes, so
+   * neither pays for the other's upload.
+   */
+  public _patchTintRow(localRow: number, bytes: Uint8Array): void {
+    if (this._tintBuffer === null || this._patchDevice === null || localRow < 0 || localRow >= this._transformRowCount) {
+      return;
+    }
+
+    this._patchDevice.queue.writeBuffer(this._tintBuffer, localRow * retainedTintSlotBytes, bytes.buffer, bytes.byteOffset, retainedTintSlotBytes);
+  }
+
+  /**
    * The bind group(0) pairing the group UBO with the group transform storage
    * (and, for a renderer that reads per-instance tint - sprite - the tint
    * storage too), against the calling renderer's own uniform layout. Cached;

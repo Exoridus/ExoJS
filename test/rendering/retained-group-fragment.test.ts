@@ -1,3 +1,4 @@
+import { DirtyChannel, nodeDirtyIndex } from '#core/NodeDirtyIndex';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { type DrawCommand, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
@@ -133,74 +134,34 @@ describe('RetainedGroupFragment', () => {
     sprite.destroy();
   });
 
-  test('dirty-transform-row queue dedups moved nodes and clears', () => {
+  test('the transform cursor separates what a fragment has accounted for from what it has not', () => {
+    // The fragment keeps no queue of its own any more: it keeps the point in
+    // the shared index it has caught up to, and everything marked after that is
+    // still owed to it.
     const fragment = new RetainedGroupFragment();
     const a = new Drawable();
-    const b = new Drawable();
 
-    expect(fragment.hasDirtyTransformRows()).toBe(false);
+    fragment.markTransformsSeen();
 
-    fragment.enqueueDirtyTransformRow(a);
-    fragment.enqueueDirtyTransformRow(a); // same node twice — deduped
-    fragment.enqueueDirtyTransformRow(b);
+    expect(fragment.hasUnseenTransformMarks()).toBe(false);
 
-    expect(fragment.hasDirtyTransformRows()).toBe(true);
-    expect(fragment.dirtyTransformRowCount).toBe(2);
-    expect(fragment.dirtyTransformRowAt(0)).toBe(a);
-    expect(fragment.dirtyTransformRowAt(1)).toBe(b);
+    nodeDirtyIndex.mark(a, DirtyChannel.Transform);
 
-    fragment.clearDirtyTransformRows();
+    expect(fragment.hasUnseenTransformMarks()).toBe(true);
 
-    expect(fragment.hasDirtyTransformRows()).toBe(false);
+    fragment.markTransformsSeen();
+
+    expect(fragment.hasUnseenTransformMarks()).toBe(false);
 
     a.destroy();
-    b.destroy();
   });
 
-  test('a cleared queue reports only what was queued after it, never the slots it kept', () => {
-    // The reset rewinds a logical length and keeps the backing array, so the
-    // records of the previous cycle are still physically in it. Nothing may see
-    // them: the count is the contract.
+  test('a fragment that never accounted for anything is unprovable rather than quietly up to date', () => {
+    // A fresh cursor cannot claim that nothing moved: it has no evidence either
+    // way, and the caller has to re-collect instead of replaying.
     const fragment = new RetainedGroupFragment();
-    const a = new Drawable();
-    const b = new Drawable();
-    const c = new Drawable();
 
-    fragment.enqueueDirtyTransformRow(a);
-    fragment.enqueueDirtyTransformRow(b);
-    fragment.clearDirtyTransformRows();
-
-    fragment.enqueueDirtyTransformRow(c);
-
-    expect(fragment.dirtyTransformRowCount).toBe(1);
-    expect(fragment.dirtyTransformRowAt(0)).toBe(c);
-
-    a.destroy();
-    b.destroy();
-    c.destroy();
-  });
-
-  test('invalidate() releases the queue references so a dropped node can GC', async () => {
-    // The per-frame reset deliberately keeps its slots (that is what makes the
-    // refill allocation-free), so the structural paths - invalidate and capture -
-    // are what has to hand the references back.
-    const fragment = new RetainedGroupFragment();
-    // Queued, cleared and released inside a scope that ends here, so the only
-    // reference that could keep the node alive is the fragment's own slot.
-    const ref = ((): WeakRef<Drawable> => {
-      const node = new Drawable();
-
-      fragment.enqueueDirtyTransformRow(node);
-      fragment.clearDirtyTransformRows();
-      fragment.invalidate();
-      node.destroy();
-
-      return new WeakRef(node);
-    })();
-
-    await forceGc();
-
-    expect(ref.deref()).toBeUndefined();
+    expect(fragment.transformMarksProvable).toBe(false);
   });
 
   test('invalidate() clears the capture', () => {

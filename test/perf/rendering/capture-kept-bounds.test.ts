@@ -29,7 +29,7 @@ import { Sprite } from '#rendering/sprite/Sprite';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import type { ServedBy } from './cullMarginProbe';
-import { beginProbeFrame, endProbeFrame, installTierProbe, refusePersistentSlots } from './cullMarginProbe';
+import { beginProbeFrame, endProbeFrame, hasCaptureCullRect, installTierProbe, refusePersistentSlots } from './cullMarginProbe';
 import { makeTextures } from './fixtures';
 import type { WebGl2Harness } from './harness';
 import { createWebGl2Harness } from './harness';
@@ -88,14 +88,7 @@ const render = (harness: WebGl2Harness, root: Container): { submitted: number; s
 };
 
 /** Whether the capture's own cull rect could still be carrying the frame. */
-const viewFitsCaptureRect = (root: Container): boolean => {
-  const representation = (root as unknown as { _retainedRootRepresentation(): unknown })._retainedRootRepresentation() as {
-    _captureCullRect: { containsRect(rect: unknown): boolean };
-    _hasCaptureCullRect: boolean;
-  };
-
-  return representation._hasCaptureCullRect;
-};
+const viewFitsCaptureRect = (root: Container): boolean => hasCaptureCullRect(root);
 
 afterEach(() => {
   for (const { harness, root } of live.splice(0)) {
