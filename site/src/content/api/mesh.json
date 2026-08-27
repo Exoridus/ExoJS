@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 94,
+  "memberCount": 95,
   "counts": {
     "constructors": 1,
     "methods": 36,
-    "properties": 43,
+    "properties": 44,
     "events": 14
   },
   "sections": [
@@ -2215,8 +2215,29 @@
           "description": "Number of indices to draw: indices.length for indexed meshes, vertexCount otherwise."
         },
         {
+          "name": "indexFormat",
+          "signature": "indexFormat: MeshIndexFormat",
+          "signatureTokens": [
+            {
+              "text": "indexFormat",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MeshIndexFormat",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Width the index stream is drawn with, 'uint16' unless the mesh needs more. Derived once at construction from the authored index array - or, for a non-indexed mesh, from how many vertices its synthesized indices have to address. Both backends read this rather than re-deriving it, so a mesh can never be uploaded as one width and drawn as the other."
+        },
+        {
           "name": "indices",
-          "signature": "indices: Uint16Array<ArrayBufferLike> | null",
+          "signature": "indices: MeshIndexArray | null",
           "signatureTokens": [
             {
               "text": "indices",
@@ -2227,20 +2248,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Uint16Array",
+              "text": "MeshIndexArray",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ArrayBufferLike",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             },
             {
               "text": " | ",

@@ -380,11 +380,12 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
           'draw procedural geometry without a scene node via drawGeometry',
           'instance thousands of like items as one draw call with RenderBatch',
           'drive a batch with a custom material and your own per-instance attributes',
+          'pick an index width, and know which one the engine picks for you',
           'know when immediate rendering beats the retained scene graph',
         ],
         prerequisites: ['rendering/graphics'],
         examples: ['geometry-graphics/immediate-mode-rendering'],
-        apiLinks: ['rendering-context', 'render-batch', 'geometry', 'mesh-material', 'shader-source', 'matrix', 'color'],
+        apiLinks: ['rendering-context', 'render-batch', 'geometry', 'mesh', 'mesh-material', 'shader-source', 'matrix', 'color'],
       },
       {
         slug: 'retained-containers',

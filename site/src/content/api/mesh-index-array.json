@@ -1,0 +1,71 @@
+{
+  "title": "MeshIndexArray",
+  "description": "The typed-array kinds a mesh index stream can be supplied as.",
+  "symbol": "MeshIndexArray",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The typed-array kinds a mesh index stream can be supplied as."
+      ],
+      "importLine": "import { MeshIndexArray } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "MeshIndexArray",
+          "signature": "Uint16Array | Uint32Array",
+          "signatureTokens": [
+            {
+              "text": "Uint16Array",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint32Array",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/mesh/meshIndices.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/mesh/meshIndices.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/mesh/meshIndices.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/mesh/meshIndices.ts"
+}
