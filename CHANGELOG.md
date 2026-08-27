@@ -724,6 +724,27 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
 
 ### Fixed
 
+- **A single-point contact under very high acceleration sank without bound.** The two-point
+  block solve reaches its push-out target exactly, so a face contact rests at the contact slop
+  at any gravity. A single-point contact — a ball, a capsule end, a corner — was solved with the
+  soft mass scale on top of a push-out target that is already capped, so it reached only a
+  fraction of a limited correction. Below the acceleration at which the cap binds that deficit is
+  the spring deflection the soft solver is supposed to have; above it, the contact had no
+  equilibrium at all and the body sank through its collider. Push-out targets that hit the cap
+  are now solved with the hard mass scale, as the block path always was: resting depths below the
+  cap are unchanged to four decimals, and above it the contact settles into a narrow band just
+  under the sleep tolerance instead of diverging. A light body squeezed under a 1000:1 load also
+  stops drifting and settles, where it previously wandered for as long as the scene ran.
+
+- **The block contact solve allocated on every call.** Passing freshly computed impulse deltas to
+  a helper the optimiser declines to inline boxes each one on the heap for the duration of the
+  call. In a settled 200-box scene that was three quarters of the engine's whole steady-state
+  allocation rate — 343 B per body per step, against 66 B for the same scene built from circles,
+  which never took that path. The block path now applies its result in place: 84 B per body per
+  step for the same scene, with the solver frame gone from the allocation profile entirely and
+  step time ~2 % better. The physics allocation gate moves from 600 KB/step to 250 KB/step
+  accordingly.
+
 - **Every real LDtk file failed validation.** LDtk writes an unset optional as an explicit
   `null` rather than omitting the key, and the validator only tolerated `undefined`. A project
   that does not save levels separately emits `"externalRelPath": null` on every level, and any
