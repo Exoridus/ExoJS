@@ -17,6 +17,32 @@ release and includes intentional breaking changes; see **Changed** and
 
 ### Added
 
+- **Three error classes where callers were told to match on message text.** The
+  asset layer already reported cache and network failures as narrowable types,
+  and everything else in `audio`, `input`, `math` and the untyped remainder of
+  `assets` threw a bare `Error`. An error now gets its own class when a consumer
+  branches on it and acts differently, which is what these three do:
+
+  | Class                   | Raised for                                                                                                                | What the caller does                                               |
+  | ----------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+  | `AudioUnsupportedError` | No `AudioContext`, `OfflineAudioContext` or `getUserMedia` in this environment                                            | Disable audio outright - it will not work later either             |
+  | `InputBindingError`     | A saved binding profile whose shape, version, kind or tokens this build cannot read                                       | Discard the save, fall back to the declared defaults               |
+  | `AssetDecodeError`      | Bytes that arrived intact but cannot be decoded - a malformed container, rejected XML, undecodable audio, an empty buffer | Drop the asset; unlike a transport failure, retrying will not help |
+
+  `AudioInput.open()` still passes the browser's own `DOMException` through
+  unwrapped when `getUserMedia` exists but fails: its `name`
+  (`NotAllowedError`, `NotFoundError`) is the standard signal to branch on, and
+  hiding it behind an engine class would be a loss.
+
+  Programmer errors deliberately stay a plain `Error` - an action claimed by two
+  `ActionMap`s, a reserved action name, a malformed pattern written in source -
+  so a `catch` around a profile load does not swallow a bug.
+
+  Written down alongside them: a **failure-diagnostics policy** in
+  `CONTRIBUTING.md` covering when to reach for `assert`/`assertDefined`,
+  `invariant`, or a typed error class, and the argument-evaluation trap that
+  makes a formatted assert message allocate in production.
+
 - **A world runtime and a map object spawner — levels stream, authored objects become
   entities.** Both map adapters stopped at data. LDtk modelled a world as an array of converted
   levels: `__neighbours` was not parsed at all, world placement survived only as two numbers in
@@ -723,6 +749,29 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
   `unregister`, and no scene-level scope.
 
 ### Fixed
+
+- **A typed asset failure no longer loses its class on the way out of the
+  loader.** `AssetDecoder` wrapped every failure except a cancellation, a cache
+  miss and a store failure in a plain `Error` carrying the original as `cause`.
+  An `AssetNetworkError` - documented as narrowable and carrying `status` /
+  `statusText` - therefore never reached a caller as itself. It is now rethrown
+  unwrapped, and an `AssetDecodeError` is rebuilt rather than replaced, so it
+  keeps its type _and_ gains the "which asset, from where" envelope.
+
+- **Attaching the same audio effect twice built a feedback loop.**
+  `AudioBus.addEffect` and `Voice.addEffect` pushed the effect a second time and
+  rewired the chain, connecting the effect's output back into its own input. The
+  dev build now asserts; production ignores the second attach.
+
+- **A `GamepadMapping` with two controls on one channel silently dropped one of
+  them.** Every control writes into one channel slot per frame, so the pad
+  reported whichever ran last while the other looked dead. The constructor
+  asserts in the dev build.
+
+- **`triangulate()` and `buildPath()` accepted an odd-length coordinate list.**
+  The trailing value was dropped or read as half of a point that does not exist,
+  producing NaN vertices or a silently different polygon than the caller
+  described. Both now assert that the length is even.
 
 - **A single-point contact under very high acceleration sank without bound.** The two-point
   block solve reaches its push-out target exactly, so a face contact rests at the contact slop
