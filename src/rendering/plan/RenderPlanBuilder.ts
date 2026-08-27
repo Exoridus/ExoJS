@@ -998,6 +998,12 @@ export class RenderPlanBuilder {
 
     const ancestryStamp = node._globalTransformStamp;
 
+    // Settle WHICH product this draw is about before anything reads or writes
+    // one: the same root drawn into a render texture and onto the screen in the
+    // same frame holds one product per target, and every check below is about
+    // the selected one.
+    representation.selectCaptureSlot(backend, target);
+
     // Persistent-indexed tier, ABOVE the capture decision. A root whose source
     // the backend can serve from slot-addressed stores does not produce entries
     // at all: the frame either re-issues the order stream the last selection
@@ -1011,7 +1017,7 @@ export class RenderPlanBuilder {
     // descendant move patches its baked row in place instead of invalidating,
     // which is what keeps a partly-dynamic scene on the recorded tier.
     if (
-      representation.isCleanIgnoringTransform(contentRevision, structureRevision, ancestryStamp, view, backend, target) &&
+      representation.isCleanIgnoringTransform(contentRevision, structureRevision, ancestryStamp, view) &&
       representation.reconcileTransform(transformRevision, view, backend)
     ) {
       const set = representation.fragment.instructions;
@@ -1081,7 +1087,6 @@ export class RenderPlanBuilder {
       ancestryStamp,
       view,
       backend,
-      target,
       this._peekCurrentScopeEntries(),
       this._peekCurrentScopeEntryCount(),
     );

@@ -565,13 +565,7 @@ export abstract class RenderNode extends SceneNode {
    * the first place, and would stay on plain collect forever.
    */
   public override _enqueueRetainedRootRow(node: RenderNode): void {
-    const representation = this._retainedRoot;
-
-    if (!representation?.fragment.hasCapture) {
-      return;
-    }
-
-    representation.fragment.enqueueDirtyTransformRow(node);
+    this._retainedRoot?.enqueueDirtyTransformRow(node);
   }
 
   /** @internal */

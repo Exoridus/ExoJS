@@ -1588,6 +1588,21 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   an open pass first, an extra submit). 1024 quads is 24 KiB and covers
   normal text scenes in a single allocation, in both `WebGpuTextRenderer` and
   `WebGl2TextRenderer`.
+- **A root drawn to two render targets in one frame keeps its retention.** A
+  captured product is compiled for the target it was recorded against, and a
+  root held exactly one. Drawing the same root into a `RenderTexture` and onto
+  the screen within the same frame - a minimap, a portal, a mirror, a
+  post-processing source - therefore had each draw discard the other's product
+  and capture again, every frame, with no steady state to settle into. Measured
+  on a 2000-leaf scrolling world with the indexed tier refused: all 20 draws of
+  a 10-frame window missed their keys and walked the scene graph (28 809 nodes
+  culled), against 0 for the same scene drawn twice to a single target. A root
+  now holds one product per render target, at most two, evicting the least
+  recently used one beyond that - the screen plus one offscreen target is the
+  case that recurs every frame, and each product is a full instruction set plus
+  its recorded entries. A third target in one frame re-captures exactly as
+  before. Roots served by the indexed slot tier were never affected: that tier
+  is keyed on the backend alone.
 
 ### Fixed
 

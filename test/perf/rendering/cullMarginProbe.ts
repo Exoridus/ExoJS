@@ -458,10 +458,25 @@ export const endProbeFrame = (root: RenderNode): ServedBy => {
 export const sourceItemCount = (root: RenderNode): number =>
   (root as unknown as { _retainedRootRepresentation(): RetainedRootRepresentation })._retainedRootRepresentation().source?.itemCount ?? 0;
 
+/**
+ * The cull-rect fields of the capture slot the root last drew from.
+ *
+ * Two hops, because the representation holds one product per render target and
+ * the rect belongs to the product: reaching for `_captureCullRect` on the
+ * representation itself finds nothing.
+ */
+const activeCaptureSlot = (root: RenderNode): { _captureCullRect: ReadonlyRectangle; _hasCaptureCullRect: boolean } => {
+  const representation = (root as unknown as { _retainedRootRepresentation(): RetainedRootRepresentation })._retainedRootRepresentation();
+
+  return (representation as unknown as { _capture: { _captureCullRect: ReadonlyRectangle; _hasCaptureCullRect: boolean } })._capture;
+};
+
+/** Whether the root's active capture recorded a cull rect at all. */
+export const hasCaptureCullRect = (root: RenderNode): boolean => activeCaptureSlot(root)._hasCaptureCullRect;
+
 /** The rect the last capture culled against, or `null` while there is none. */
 export const captureCullRectOf = (root: RenderNode): ReadonlyRectangle | null => {
-  const representation = (root as unknown as { _retainedRootRepresentation(): RetainedRootRepresentation })._retainedRootRepresentation();
-  const internals = representation as unknown as { _captureCullRect: ReadonlyRectangle; _hasCaptureCullRect: boolean };
+  const slot = activeCaptureSlot(root);
 
-  return internals._hasCaptureCullRect ? internals._captureCullRect : null;
+  return slot._hasCaptureCullRect ? slot._captureCullRect : null;
 };
