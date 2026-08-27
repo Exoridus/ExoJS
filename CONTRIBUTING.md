@@ -267,6 +267,86 @@ Prefer a plain string union over an enum when there is no need to reference the
 members as values — `CanvasSizingMode` is a union, not an enum, because callers
 only ever write the literal.
 
+## Failure diagnostics: `assert`, `invariant`, typed error
+
+Every runtime failure the engine reports goes through one of three tools, and
+which one is right follows from a single question: **what kind of failure is
+this, and who can act on it?**
+
+| Tool                       | Use it for                                               | In production                                    |
+| -------------------------- | -------------------------------------------------------- | ------------------------------------------------ |
+| `assert` / `assertDefined` | Diagnosing misuse the type system cannot express         | stripped — the body is dead code under `__DEV__` |
+| `invariant`                | A contract breach that would corrupt state or memory     | always on, always throws                         |
+| Typed error class          | The environment: fetch, decode, device, serialized input | always on                                        |
+
+**Misuse belongs at `assert`.** Calling `play()` on a sprite name that was never
+defined, registering the same bus twice, reading a lazily created node before its
+subsystem finished initializing — all of these are programmer errors with a fix
+in the caller's source, and the dev build is where that fix gets found. Shipping
+the check into production would be a guardrail against user error, which the
+engine deliberately does not do; the dev build is exactly the place that rule
+points to. `assert` is not the weaker option here, it is the correct one.
+
+**`invariant` is the exception, not the upgrade.** Use it only where continuing
+past the broken condition would corrupt engine state, hand out a dangling
+resource, or write outside a buffer — cases where throwing in production is
+strictly better than the alternative. A misuse that merely produces a wrong
+picture does not qualify.
+
+**A typed error is for input the caller did not write.** A file that failed to
+fetch, bytes that failed to decode, a device that refused a limit, a serialized
+binding profile written by a newer build. The caller cannot fix these in source;
+they can only branch at runtime — retry, fall back, tell the user — which is why
+these stay on in production and carry a class.
+
+### When a failure earns its own error class
+
+The axis is **what the caller does**, not where the failure came from. An error
+gets its own class when a consumer branches on it and acts differently; an error
+that only ever gets logged does not need one. Do not build a taxonomy per
+subsystem: grouping by origin produces one base class per subsystem and answers a
+question no caller asks.
+
+The asset layer is the template. `AssetCacheError`, `AssetCacheMissError` and
+`AssetNetworkError` exist because callers act on them differently, and
+`AssetNetworkError` carries `status`/`statusText` because HTTP 404 and HTTP 503
+lead to different handling. `AssetDecoder` branches on them with `instanceof`.
+
+Carry the data the branch needs on the class — a status code, an offending id, a
+version number — and keep it `readonly`. Name the class after the failure, not
+the subsystem.
+
+### The argument-evaluation trap
+
+JavaScript evaluates arguments before entering the function, so the arguments of
+a stripped `assert` still run in production:
+
+```ts
+// The template literal allocates in production, even though the body is gone.
+assert(index < length, `index ${index} is out of bounds (${length})`);
+```
+
+For a trivial comparison and a short message that cost is negligible and the
+inline form is preferred. For anything that formats a string from several values,
+calls a function, or allocates an object, wrap the call so the arguments never
+run in production:
+
+```ts
+if (__DEV__) {
+  assert(isValidLayout(layout), `layout ${describeLayout(layout)} is not renderable`);
+}
+```
+
+A validation with side effects must always be wrapped this way — otherwise the
+production build keeps the effect and loses the check.
+
+### Not a sweep
+
+This policy governs new code and the sites a change already touches. The engine
+carries several hundred pre-existing `throw new Error` calls, `rendering` alone
+most of them; they are migrated subsystem by subsystem where misuse is silent
+today, not swept in bulk.
+
 ## Distribution
 
 - npm packages are **modular and self-contained**: `@codexo/exojs` ships Core only;
