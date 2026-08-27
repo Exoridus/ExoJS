@@ -864,7 +864,7 @@ describe('serialization — UI widgets', () => {
     const restored = deserializeTree(data) as Button;
     expect(restored.label).toBe('Play');
     expect(restored.uiWidth).toBe(100);
-    expect(restored.colors.normal.r).toBe(10);
+    expect(restored.colors.normal?.r).toBe(10);
     expect(restored.enabled).toBe(false);
   });
 
@@ -877,7 +877,7 @@ describe('serialization — UI widgets', () => {
 
     const restored = deserializeTree(data) as ProgressBar;
     expect(restored.value).toBeCloseTo(0.42);
-    expect(restored.fillColor.g).toBe(2);
+    expect(restored.fillColor?.g).toBe(2);
   });
 
   it('round-trips a Stack (options + items)', () => {

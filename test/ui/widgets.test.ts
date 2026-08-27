@@ -265,8 +265,8 @@ describe('ProgressBar', () => {
   test('exposes trackColor, fillColor, cornerRadius getters', () => {
     const bar = new ProgressBar({ trackColor: new Color(1, 2, 3, 1), fillColor: new Color(4, 5, 6, 1), cornerRadius: 6 });
 
-    expect(bar.trackColor.r).toBe(1);
-    expect(bar.fillColor.r).toBe(4);
+    expect(bar.trackColor?.r).toBe(1);
+    expect(bar.fillColor?.r).toBe(4);
     expect(bar.cornerRadius).toBe(6);
   });
 
