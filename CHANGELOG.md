@@ -1626,6 +1626,10 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   is a property of the marks rather than a guess from a revision that every
   kind of change bumps.
 
+  Tinting something the frame does not draw - a node the capture culled, or one
+  added after it - writes nothing and rebuilds nothing either: a colour that
+  reaches no recorded draw cannot change the picture.
+
   Writing through the `tint` instance in place (`sprite.tint.r = 8`) still
   bypasses the setter and is not observed at all; assign a colour, or call
   `invalidateContent()` after mutating one.

@@ -46,12 +46,18 @@ interface DirtyBucket {
   generation: number;
   /** Mark sequence when this generation opened - the window test reads it. */
   firstSequence: number;
+  /**
+   * Highest mark sequence written into this bucket - the skip test reads it. A
+   * reader whose cursor is at or past it has already seen everything here, and
+   * scanning the entries would only re-derive that one comparison at a time.
+   */
+  lastSequence: number;
   count: number;
   readonly nodes: SceneNode[];
   readonly channels: number[];
 }
 
-const createBucket = (): DirtyBucket => ({ generation: -1, firstSequence: 0, count: 0, nodes: [], channels: [] });
+const createBucket = (): DirtyBucket => ({ generation: -1, firstSequence: 0, lastSequence: 0, count: 0, nodes: [], channels: [] });
 
 /**
  * The changed-record index: which nodes changed since a given point, in time
@@ -109,6 +115,7 @@ class NodeDirtyIndex {
 
     bucket.generation = this._generation;
     bucket.firstSequence = this._sequence;
+    bucket.lastSequence = this._sequence;
     bucket.count = 0;
 
     const oldestGeneration = this._generation - RETAINED_GENERATIONS + 1;
@@ -131,6 +138,7 @@ class NodeDirtyIndex {
     const held = live !== null && live.generation === node._dirtyMarkGeneration && live.nodes[node._dirtyMarkSlot] === node;
 
     node._dirtyMarkSequence = ++this._sequence;
+    bucket.lastSequence = this._sequence;
 
     // Repeating the SAME channels keeps the entry and only moves the sequence
     // on: a node written a thousand times in a frame stays one entry, which is
@@ -189,7 +197,12 @@ class NodeDirtyIndex {
     for (let step = Math.max(0, this._generation - RETAINED_GENERATIONS + 1); step <= this._generation; step++) {
       const bucket = this._buckets[step % RETAINED_GENERATIONS]!;
 
-      if (bucket.generation !== step) {
+      // A generation whose newest mark is already accounted for holds nothing
+      // for this reader. Skipping it whole is what keeps a read proportional to
+      // what changed since the cursor rather than to everything the window
+      // still remembers - with a consumer that looks every frame, only the
+      // current generation is ever scanned.
+      if (bucket.generation !== step || bucket.lastSequence <= sequence) {
         continue;
       }
 
@@ -231,6 +244,7 @@ class NodeDirtyIndex {
     for (const bucket of this._buckets) {
       bucket.generation = -1;
       bucket.firstSequence = 0;
+      bucket.lastSequence = 0;
       bucket.count = 0;
       bucket.nodes.length = 0;
       bucket.channels.length = 0;

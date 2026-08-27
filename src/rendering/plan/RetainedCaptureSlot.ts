@@ -1,6 +1,5 @@
 import { Bounds } from '#core/Bounds';
 import { type ReadonlyRectangle, Rectangle } from '#math/Rectangle';
-import type { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
 import type { View } from '#rendering/View';
@@ -286,8 +285,8 @@ export class RetainedCaptureSlot {
     const viewRect = view.getBounds();
     const insideCaptureRect = this._viewFitsCaptureCullRect(view);
 
-    return forEachMovedNode(this.fragment, owns, node => {
-      if (this._culledDuringCapture && this.fragment.recordedDraw(node as unknown as Drawable) === undefined) {
+    return forEachMovedNode(this.fragment, owns, (node, record) => {
+      if (this._culledDuringCapture && record === undefined) {
         return false;
       }
 
