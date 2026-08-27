@@ -4,7 +4,7 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
 import { packTintRow, packTransformRow, TRANSFORM_FLOATS_PER_ROW, TRANSFORM_TINT_BYTES_PER_ROW } from '#rendering/TransformBuffer';
 
-import type { RetainedGroupFragment } from './RetainedGroupFragment';
+import type { RetainedFragmentDraw, RetainedGroupFragment } from './RetainedGroupFragment';
 import type { RetainedGroupBundle } from './RetainedInstructionSet';
 
 /**
@@ -80,7 +80,7 @@ const patchTintScratch = new Uint8Array(TRANSFORM_TINT_BYTES_PER_ROW);
  */
 export const tryPatchRetainedTransformRow = (
   node: RenderNode,
-  fragment: RetainedGroupFragment,
+  record: RetainedFragmentDraw | undefined,
   bundle: PatchableRetainedGroupBundle,
   backend: RenderBackend,
   base: number,
@@ -101,15 +101,15 @@ export const tryPatchRetainedTransformRow = (
     }
   }
 
-  const nodeIndex = fragment.recordedRowIndex(drawable);
-
   // A recorded draw may be pixel-snapped in either mode: its patched row carries
   // the raw transform plus the snap flag (packTransformRow) and the shader rounds
   // the device origin (and, in geometry mode, the quad edges), so the row stays
   // view-independent and fully recordable.
-  if (nodeIndex === undefined) {
+  if (record === undefined) {
     return false;
   }
+
+  const nodeIndex = record.nodeIndex;
 
   // Transform-only patch: tint is not part of this row (it lives in the bundle's
   // separate tint texture) and a moved node's tint does not change.
@@ -121,23 +121,40 @@ export const tryPatchRetainedTransformRow = (
 
 /**
  * Visit every node whose transform moved since `fragment` last accounted for
- * one and that `owns` claims. `false` means the index no longer covers the
- * fragment's cursor, or `visit` abandoned the walk - either way the caller
- * cannot treat the channel as settled.
+ * one and that this fragment has to answer for. `false` means the index no
+ * longer covers the fragment's cursor, or `visit` abandoned the walk - either
+ * way the caller cannot treat the channel as settled.
  *
- * The ownership test is the caller's, because the two consumers draw the
- * boundary differently: a {@link RetainedContainer} owns the moves whose
- * NEAREST enclosing boundary it is (a move below a nested group belongs to that
- * group's rows, not to its own), while a render root owns every move in its
- * subtree. Marks outside the caller's subtree belong to another consumer and
- * are skipped without being looked at twice.
+ * **A recorded draw is answered by the row map alone.** That is the whole
+ * economy of pulling instead of pushing: the common mark is a node this
+ * fragment drew, and recognising it costs one map lookup rather than the walk
+ * from the node up to this consumer. The walk only runs for a mark the map does
+ * not know, where the answer decides between "below me but not in my product"
+ * (the caller has to deal with it) and "someone else's subtree" (skip).
+ *
+ * `owns` is the caller's, because the two consumers draw that boundary
+ * differently: a {@link RetainedContainer} owns the moves whose NEAREST
+ * enclosing boundary it is - one below a nested group belongs to that group's
+ * rows - while a render root owns every move in its subtree.
  * @internal
  */
-export const forEachMovedNode = (fragment: RetainedGroupFragment, owns: (node: RenderNode) => boolean, visit: (node: RenderNode) => boolean): boolean =>
+export const forEachMovedNode = (
+  fragment: RetainedGroupFragment,
+  owns: (node: RenderNode) => boolean,
+  visit: (node: RenderNode, record: RetainedFragmentDraw | undefined) => boolean,
+): boolean =>
   nodeDirtyIndex.readSince(fragment.transformCursor, DirtyChannel.Transform, node => {
     const moved = node as unknown as RenderNode;
+    const record = fragment.recordedDraw(moved as unknown as Drawable);
 
-    return !owns(moved) || visit(moved);
+    // The record is handed to the visitor rather than looked up again: it
+    // answers ownership, the bounds refresh and the row index in one lookup,
+    // and this runs once per changed node per consumer per frame.
+    if (record === undefined && !owns(moved)) {
+      return true;
+    }
+
+    return visit(moved, record);
   });
 
 /** Whether `node` lies anywhere below `ancestor`. */
@@ -162,9 +179,7 @@ export const isUnder = (node: RenderNode, ancestor: RenderNode): boolean => {
  * decide whether a batch run may be reordered past an intervening draw, and a
  * stale extent can hide a real overlap.
  */
-const refreshRetainedDrawBounds = (fragment: RetainedGroupFragment, node: RenderNode): void => {
-  const record = fragment.recordedDraw(node as unknown as Drawable);
-
+const refreshRetainedDrawBounds = (node: RenderNode, record: RetainedFragmentDraw | undefined): void => {
   if (record === undefined) {
     return;
   }
@@ -216,8 +231,8 @@ export const reconcileRetainedTransformRows = (
     // transform, so there is no row to patch. Only the RECORD's snapshotted
     // screen AABB is stale, and the optimizer's reorder-safety test reads it -
     // refresh those and report the moves as accounted for.
-    const complete = forEachMovedNode(fragment, owns, node => {
-      refreshRetainedDrawBounds(fragment, node);
+    const complete = forEachMovedNode(fragment, owns, (node, record) => {
+      refreshRetainedDrawBounds(node, record);
 
       return true;
     });
@@ -249,10 +264,10 @@ export const reconcileRetainedTransformRows = (
   const base = fragment.recordedRowBase();
   const patchableBundle = bundle as PatchableRetainedGroupBundle;
 
-  const patched = forEachMovedNode(fragment, owns, node => {
-    refreshRetainedDrawBounds(fragment, node);
+  const patched = forEachMovedNode(fragment, owns, (node, record) => {
+    refreshRetainedDrawBounds(node, record);
 
-    return isEligible(node) && tryPatchRetainedTransformRow(node, fragment, patchableBundle, backend, base);
+    return isEligible(node) && tryPatchRetainedTransformRow(node, record, patchableBundle, backend, base);
   });
 
   if (!patched) {
@@ -293,8 +308,13 @@ export const reconcileRetainedTintRows = (fragment: RetainedGroupFragment, owns:
 
   const applied = nodeDirtyIndex.readSince(fragment.contentCursor, DirtyChannel.Content | DirtyChannel.Tint, (node, marked) => {
     const changed = node as unknown as RenderNode;
+    const drawable = changed as unknown as Drawable;
+    const rowIndex = fragment.recordedRowIndex(drawable);
 
-    if (!owns(changed)) {
+    // Same economy as the transform channel: a change to something this
+    // fragment drew is recognised by the row map, and only a mark the map does
+    // not know needs the walk to decide whether it is even ours.
+    if (rowIndex === undefined && !owns(changed)) {
       return true;
     }
 
@@ -314,11 +334,14 @@ export const reconcileRetainedTintRows = (fragment: RetainedGroupFragment, owns:
       return false;
     }
 
-    const drawable = changed as unknown as Drawable;
-    const rowIndex = fragment.recordedRowIndex(drawable);
-
     if (rowIndex === undefined) {
-      return false;
+      // Owned, but this product has no row for it: the capture culled it, or it
+      // arrived after the capture. Either way its colour cannot reach these
+      // pixels - a node that arrived also moved the structure revision, which
+      // the key check refuses on its own - so there is nothing to correct and
+      // nothing to rebuild for. Tinting something off-screen is an ordinary
+      // thing for a game to do every frame.
+      return true;
     }
 
     packTintRow(patchTintScratch, 0, drawable.tint);

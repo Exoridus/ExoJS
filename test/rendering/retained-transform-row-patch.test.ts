@@ -554,7 +554,7 @@ describe('automatic render-root representation: incremental tint rows', () => {
     expect(harness.events).toContain('flush:a'); // re-collected, not replayed
   });
 
-  test('a tint change on a node the product never recorded rebuilds instead of writing a stray row', () => {
+  test('a tint change on a node the product never recorded writes nothing and forces nothing', () => {
     const harness = createPatchingBackend();
     const root = new Container();
     const recorded = new RecordableLeaf('a');
@@ -563,15 +563,43 @@ describe('automatic render-root representation: incremental tint rows', () => {
     root.addChild(recorded);
     reachSpliceTier(root, harness);
 
-    // Added after the capture, so it has no row in this product. Its own
-    // structure change already forces a rebuild; the tint must not be written
-    // against whatever row index the map happens not to hold.
+    // Added after the capture, so it has no row in this product. The tint must
+    // not be written against a row index the map does not hold - and it must
+    // not force a rebuild either, because a colour that reaches no recorded
+    // draw cannot change these pixels. The structure change this particular
+    // node brought with it is what rebuilds the frame, on its own key.
     root.addChild(outsider);
     harness.events.length = 0;
     outsider.setTint(new Color(3, 3, 3));
     playFrame(root, harness.backend);
 
     expect(harness.tintPatches).toEqual([]);
+  });
+
+  test('tinting a node the capture CULLED keeps the product instead of rebuilding it', () => {
+    // Found by measuring: a scene tinting off-screen nodes alternated collect
+    // and replay forever, because an owned tint with no recorded row was read
+    // as "cannot express this" rather than "cannot matter here".
+    const harness = createPatchingBackend();
+    const root = new Container();
+    const onScreen = new RecordableLeaf('a');
+    const offScreen = new RecordableLeaf('b');
+
+    offScreen.cullable = true;
+    offScreen.setPosition(100_000, 100_000);
+    root.addChild(onScreen);
+    root.addChild(offScreen);
+    reachSpliceTier(root, harness);
+
+    harness.events.length = 0;
+    offScreen.setTint(new Color(3, 3, 3));
+    playFrame(root, harness.backend);
+
+    expect(harness.tintPatches).toEqual([]);
+    expect(harness.events).toEqual(['replay:a']); // held the recorded tier
+
+    root.destroy();
+    harness.backend.destroy();
   });
 
   test('a tint change under ANOTHER root does not touch this product', () => {
