@@ -1,3 +1,4 @@
+import { AssetDecodeError } from '#assets/AssetDecodeError';
 import type { AssetFactory, AssetFactoryContext } from '#assets/AssetFactory';
 import { decodeAudioData } from '#audio/audio-context';
 import { type AudioSpriteClip, Sound } from '#audio/Sound';
@@ -32,7 +33,9 @@ export class SoundFactory implements AssetFactory<ArrayBuffer, Sound, SoundAsset
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
 
-      throw new Error(`Failed to decode audio data: ${message} (if loaded as the wrong asset type, this file may not be an audio format at all).`, {
+      throw new AssetDecodeError({
+        message: `Failed to decode audio data: ${message} (if loaded as the wrong asset type, this file may not be an audio format at all).`,
+        assetType: 'sound',
         cause: error,
       });
     }

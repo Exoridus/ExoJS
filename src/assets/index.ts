@@ -6,6 +6,8 @@ export type { AssetCacheErrorOptions, AssetCacheOperation } from './AssetCacheEr
 export { AssetCacheError } from './AssetCacheError';
 export { AssetCacheMissError } from './AssetCacheMissError';
 export type { AssetConstructor } from './AssetConstructor';
+export type { AssetDecodeErrorOptions } from './AssetDecodeError';
+export { AssetDecodeError } from './AssetDecodeError';
 export type {
   AnyAssetConfig,
   AssetDefinitions,

@@ -1,3 +1,5 @@
+import { AssetDecodeError } from './AssetDecodeError';
+
 /**
  * Binary asset container (`.exoa`) - format constants, reader, and writer.
  *
@@ -135,7 +137,7 @@ export const encodeContainer = (inputs: readonly ContainerInput[]): ArrayBuffer 
 type Fail = (detail: string) => never;
 
 const fail: Fail = detail => {
-  throw new Error(`Invalid asset container: ${detail}.`);
+  throw new AssetDecodeError({ message: `Invalid asset container: ${detail}.`, assetType: 'container' });
 };
 
 const readEntry = (value: unknown, i: number, dataLength: number): ContainerEntry => {

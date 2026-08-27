@@ -60,7 +60,7 @@ export class IndexedDbDatabase implements Database {
     migrations?: Record<number, (db: IDBDatabase, transaction: IDBTransaction) => boolean>,
   ) {
     if (!supportsIndexedDb) {
-      throw new Error('This browser does not support indexedDB!');
+      throw new AssetCacheError({ operation: 'connect', message: 'This host provides no IndexedDB, so no database can be opened.', store: name });
     }
 
     this.name = name;
@@ -224,6 +224,9 @@ export class IndexedDbDatabase implements Database {
         const migration = this._migrations[target];
 
         if (migration !== undefined && !migration(database, transaction)) {
+          // Left a plain Error on purpose: it is raised inside the IndexedDB
+          // upgrade handler, and `openIndexedDb` already wraps whatever escapes
+          // there into an AssetCacheError naming the database.
           throw new Error(`The migration to database version ${target} reported failure.`);
         }
       }

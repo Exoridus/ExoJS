@@ -1,9 +1,11 @@
+import { AssetDecodeError } from '#assets/AssetDecodeError';
+
 /**
  * Parses XML markup into a {@link Document} via the browser's `DOMParser`.
  *
- * Throws when the parser reports a malformed document; `DOMParser` signals that
- * by returning a document containing a `<parsererror>` element rather than by
- * throwing, so the check cannot be skipped.
+ * Throws {@link AssetDecodeError} when the parser reports a malformed document;
+ * `DOMParser` signals that by returning a document containing a `<parsererror>`
+ * element rather than by throwing, so the check cannot be skipped.
  * @internal
  */
 export const parseXmlDocument = (source: string): Document => {
@@ -11,7 +13,7 @@ export const parseXmlDocument = (source: string): Document => {
   const parseError = document.querySelector('parsererror');
 
   if (parseError) {
-    throw new Error(`XML parse error: ${parseError.textContent.trim() || 'unknown error'}`);
+    throw new AssetDecodeError({ message: `XML parse error: ${parseError.textContent.trim() || 'unknown error'}` });
   }
 
   return document;

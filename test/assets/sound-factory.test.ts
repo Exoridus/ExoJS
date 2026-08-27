@@ -1,3 +1,4 @@
+import { AssetDecodeError } from '#assets/AssetDecodeError';
 import { SoundFactory } from '#assets/factories/SoundFactory';
 import { Sound } from '#audio/Sound';
 
@@ -96,5 +97,7 @@ describe('SoundFactory', () => {
       'Failed to decode audio data: corrupt audio data (if loaded as the wrong asset type, this file may not be an audio format at all).',
     );
     await expect(promise).rejects.toMatchObject({ cause: decodeError });
+    await expect(promise).rejects.toBeInstanceOf(AssetDecodeError);
+    await expect(promise).rejects.toMatchObject({ assetType: 'sound' });
   });
 });
