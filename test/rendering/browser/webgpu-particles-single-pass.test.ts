@@ -166,7 +166,7 @@ const createTintedSystem = (texture: Texture, color: RgbaTuple, x: number, y: nu
   const system = new ParticleSystem(texture, { capacity: 4 });
   const particle = system.emit()!;
 
-  particle.color = new Color(color[0], color[1], color[2]).toRgba();
+  particle.color = new Color(color[0], color[1], color[2]).toRgba8();
   system.setPosition(x, y);
 
   return system;
@@ -299,7 +299,7 @@ describe('WebGPU particle single-pass frame', () => {
 
       const particle = gpuSystem.emit()!;
 
-      particle.color = new Color(particleColors[0]![0], particleColors[0]![1], particleColors[0]![2]).toRgba();
+      particle.color = new Color(particleColors[0]![0], particleColors[0]![1], particleColors[0]![2]).toRgba8();
       particle.lifetime = 100;
       gpuSystem.setPosition(15, 40);
 

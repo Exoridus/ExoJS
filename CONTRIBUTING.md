@@ -285,8 +285,14 @@ _is_, not from where the implementation happens to sit.
   static ties the value to an object the tree shaker cannot take apart, so a
   caller who wants one number drags the whole class into the bundle.
 
-Two carve-outs, both deliberate and not to be "unified":
+Three carve-outs, all deliberate and not to be "unified":
 
+- **Named constructors** stay static members of the type they construct:
+  `Color.from`, `Color.fromHex`, `Assets.from`. The factory rule above is about
+  standalone builders, whose only tie to a type is their return value; a named
+  constructor belongs to its type the way its instance methods do, is discovered
+  through it, and reads as an alternative to `new`. Pixi, Three and Excalibur all
+  place them this way.
 - **React hooks** stay free `use*` functions. That is React's convention, not a
   deviation from this one.
 - **The package prefix in a name stays**, even where it stutters against the

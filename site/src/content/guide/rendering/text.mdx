@@ -32,7 +32,7 @@ import { Color, Text } from '@codexo/exojs';
 const label = new Text('Hello', { fillColor: Color.black, fontSize: 24 });
 
 label.style.fontSize = 32;            // re-lays out the glyphs on the next draw
-label.style.fillColor = Color.tomato; // shader-side colour only — no atlas work
+label.style.fillColor = new Color(0xff6347); // shader-side colour only — no atlas work
 ```
 
 ## Font loading
@@ -91,7 +91,7 @@ import { Color, Text } from '@codexo/exojs';
 
 const banner = new Text('Level Up', {
     fontSize: 48,
-    gradientColors: [Color.white, Color.tomato], // white on top, tomato at the bottom
+    gradientColors: [Color.white, new Color(0xff6347)], // white on top, tomato at the bottom
 });
 ```
 

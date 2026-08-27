@@ -6,7 +6,7 @@ export class Player extends Graphics {
   public constructor() {
     super();
     // Circle drawn at local origin so the node position is the visual center
-    this.fillColor = Color.tomato;
+    this.fillColor = new Color(0xff6347);
     this.drawCircle(0, 0, 20);
   }
 }

@@ -13,7 +13,7 @@ class SpriteStressScene extends Scene {
     this.spriteLayer = new Container();
     this.spriteLayer.setPosition(width / 2, height / 2);
     const frameChoices = [new Rectangle(0, 0, 64, 64), new Rectangle(64, 0, 64, 64), new Rectangle(0, 64, 64, 64), new Rectangle(64, 64, 64, 64)];
-    const tintPalette = [Color.white, Color.skyBlue, Color.gold, Color.hotPink, Color.mediumSpringGreen, Color.orange];
+    const tintPalette = [Color.white, new Color(0x87ceeb), new Color(0xffd700), new Color(0xff69b4), new Color(0x00fa9a), new Color(0xffa500)];
     let index = 0;
     for (let row = 0; row < GRID_ROWS; row++) {
       for (let column = 0; column < GRID_COLUMNS; column++) {

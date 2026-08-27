@@ -102,9 +102,9 @@ describe('WebGPU Graphics solid fill', () => {
 
       const readPixel = readWebGpuPixels(backend, canvasSize);
 
-      // Inside the rectangle: solid fill color (Color.green is (0, 128, 0)).
-      expectPixelNear(readPixel(32, 32), [0, 128, 0, 255]);
-      expectPixelNear(readPixel(10, 10), [0, 128, 0, 255]);
+      // Inside the rectangle: solid fill color (Color.green is the cube corner, (0, 255, 0)).
+      expectPixelNear(readPixel(32, 32), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(10, 10), [0, 255, 0, 255]);
       // Outside the rectangle: clear color.
       expectPixelNear(readPixel(2, 2), [0, 0, 0, 255]);
       expectPixelNear(readPixel(62, 62), [0, 0, 0, 255]);

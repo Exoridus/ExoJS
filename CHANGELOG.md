@@ -17,6 +17,33 @@ release and includes intentional breaking changes; see **Changed** and
 
 ### Added
 
+- **`Color` takes packed numbers and hex strings.** A number is read as
+  `0xRRGGBB`, with alpha as its own argument; a string may be any of the four
+  CSS forms, alpha last:
+
+  ```ts
+  new Color(0xff6347); // packed, opaque
+  new Color(0xff6347, 0.5); // packed, with alpha
+  Color.fromHex('#f63'); // #RGB, #RGBA, #RRGGBB, #RRGGBBAA
+  Color.from(value, alpha?); // any of those, plus a Color or { r, g, b, a }
+  ```
+
+  The channel form is untouched: three or more arguments still mean
+  `(r, g, b, a?)`. Only a call with one or two arguments takes the packed
+  reading, and there were none in this repository.
+
+  A number deliberately stops at six digits. JavaScript keeps no leading zeros,
+  so `0x00FF00FF` (opaque green as RGBA) and `0xFF00FF` (magenta as RGB) are the
+  _same_ value at runtime, and `0x000000FF` (opaque black) is indistinguishable
+  from `0x0000FF` (blue). Any "wider than `0xFFFFFF` means RGBA" heuristic
+  silently misreads every colour whose red channel is zero. A string keeps its
+  length and has no such problem.
+
+  New alongside them: `color.setHex(value, alpha?)` overwrites in place for
+  loops where the factory's allocation would land in the frame budget, and
+  `Color.toRgb()` returns the `0xRRGGBB` the constructor accepts, so the two
+  round-trip.
+
 - **Audio sprite tables can live in a sidecar file.** `sprites` on a `sound`
   asset now also accepts a source string naming a JSON sidecar that holds the
   same `{ name: { start, end, loop? } }` map, so a table a tool produced no
@@ -977,6 +1004,39 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
   device while measuring `NEU-S4`.
 
 ### Changed
+
+- **BREAKING - `Color` keeps eleven named constants instead of 142.** The class
+  predefined every CSS named colour as a shared static. They cost 1.6 kB gzip in
+  the bundle, cannot be tree-shaken (a `static readonly` is part of one class
+  initializer, so an app that uses only `Color.red` shipped all 142 - measured),
+  and the engine itself used eight of them.
+
+  What remains is the eight corners of the RGB cube plus both transparent ends:
+  `black`, `red`, `green`, `blue`, `cyan`, `magenta`, `yellow`, `white`,
+  `transparentBlack`, `transparentWhite`, and `transparent` as CSS `transparent`
+  (defined as `rgba(0, 0, 0, 0)`, so it is the same value as `transparentBlack`).
+  Anything else is a value, not a vocabulary item: `new Color(0x6495ed)`.
+
+  For scale: Pixi has no named colour statics at all, Phaser none, Excalibur 24.
+
+  **`Color.green` changes value.** It was CSS green (`#008000`) and is now the
+  cube corner (`#00ff00`, CSS `lime`). Code that read `Color.green` and expected
+  the darker shade needs `new Color(0x008000)`.
+
+- **BREAKING - `Color.toRgba()` is now `Color.toRgba8()`.** Every caller writes
+  it into a `Uint32Array` row, and that is what it is: one RGBA8 texel as a
+  little-endian `Uint32`, matching `TextureFormat.Rgba8`. The old name invited
+  reading it as a colour literal, which it is not - written out it is
+  `0xAABBGGRR`, the reverse of the `0xRRGGBB` the constructor takes. Use
+  `toRgb()` when a literal is what you want.
+
+- **BREAKING - `Color.toString()` no longer takes a `prefixed` argument.** The
+  unprefixed and alpha-carrying forms moved to `toHex(alpha?, prefixed?)`;
+  `toString()` stays the six-digit CSS form, so a colour can still be handed
+  straight to a canvas or style property.
+
+- **The default clear colour is opaque black**, not cornflower blue. The old
+  default was inherited from XNA's new-project template.
 
 - **BREAKING - three noun-only function exports are renamed.** A noun reads as a
   value at the call site and hides that it has to be called:

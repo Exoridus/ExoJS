@@ -124,7 +124,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The colour every frame starts from. Applied by the engine's own per-frame clear (see ApplicationOptions.autoClear) and readable/assignable later as Application.clearColor. Default: cornflower blue."
+          "description": "The colour every frame starts from. Applied by the engine's own per-frame clear (see ApplicationOptions.autoClear) and readable/assignable later as Application.clearColor. Default: opaque black."
         },
         {
           "name": "connectivity",

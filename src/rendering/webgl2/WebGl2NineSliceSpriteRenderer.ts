@@ -103,7 +103,7 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
 
     const texture = sprite.texture;
     const blendMode = sprite.blendMode;
-    const tintRgba = sprite.tint.toRgba();
+    const tintRgba = sprite.tint.toRgba8();
 
     const command = backend.activeDrawCommand;
     const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(sprite);

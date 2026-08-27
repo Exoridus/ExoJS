@@ -25,7 +25,7 @@ class TintCycle extends UpdateModule {
     const { elapsed } = particles.timing;
     for (let i = 0; i < particles.count; i++) {
       if (elapsed[i] === 0) {
-        color[i] = this.palette[this.next++ % this.palette.length].toRgba();
+        color[i] = this.palette[this.next++ % this.palette.length].toRgba8();
       }
     }
   }
@@ -45,7 +45,7 @@ class ParticleStressScene extends Scene {
         rate: 240,
         force: { x: 10, y: 120 },
         scaleStart: 0.94,
-        palette: [Color.orange, Color.tomato, Color.gold, Color.mistyRose],
+        palette: [new Color(0xffa500), new Color(0xff6347), new Color(0xffd700), new Color(0xffe4e1)],
         positionRangeX: 28,
         positionRangeY: 12,
         velocityRangeX: 90,
@@ -64,7 +64,7 @@ class ParticleStressScene extends Scene {
         rate: 320,
         force: { x: 0, y: 150 },
         scaleStart: 0.88,
-        palette: [Color.skyBlue, Color.deepSkyBlue, Color.mediumTurquoise, Color.white],
+        palette: [new Color(0x87ceeb), new Color(0x00bfff), new Color(0x48d1cc), Color.white],
         positionRangeX: 38,
         positionRangeY: 16,
         velocityRangeX: 130,
@@ -83,7 +83,7 @@ class ParticleStressScene extends Scene {
         rate: 240,
         force: { x: -12, y: 118 },
         scaleStart: 0.92,
-        palette: [Color.violet, Color.hotPink, Color.deepPink, Color.plum],
+        palette: [new Color(0xee82ee), new Color(0xff69b4), new Color(0xff1493), new Color(0xdda0dd)],
         positionRangeX: 26,
         positionRangeY: 10,
         velocityRangeX: 95,

@@ -59,7 +59,7 @@ import { Application, Color } from '@codexo/exojs';
 const app = new Application();
 
 function onLowHealth(isLow: boolean) {
-    app.clearColor = isLow ? Color.darkRed : Color.cornflowerBlue;
+    app.clearColor = isLow ? new Color(0x8b0000) : new Color(0x6495ed);
 }
 ```
 

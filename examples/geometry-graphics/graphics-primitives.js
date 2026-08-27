@@ -12,16 +12,16 @@ class GraphicsPrimitivesScene extends Scene {
     this.sceneRoot = new Container();
     this.sceneRoot.setPosition(width / 2, height / 2);
     this.panel = new Graphics();
-    this.panel.fillColor = Color.darkSlateBlue;
+    this.panel.fillColor = new Color(0x483d8b);
     this.panel.drawRectangle(-190, -130, 380, 260);
     this.circle = new Graphics();
-    this.circle.fillColor = Color.tomato;
+    this.circle.fillColor = new Color(0xff6347);
     this.circle.drawCircle(-92, -6, 48);
     this.diamond = new Graphics();
-    this.diamond.fillColor = Color.goldenrod;
+    this.diamond.fillColor = new Color(0xdaa520);
     this.diamond.drawPolygon([0, -70, 70, 0, 0, 70, -70, 0]);
     this.star = new Graphics();
-    this.star.fillColor = Color.mediumSeaGreen;
+    this.star.fillColor = new Color(0x3cb371);
     this.star.drawStar(108, 12, 5, 58, 26, -18);
     this.sceneRoot.addChild(this.panel, this.circle, this.diamond, this.star);
   }
@@ -46,7 +46,7 @@ const app = new Application({
     mount: document.body,
     sizing: new FixedResolutionCanvasSizing(),
   },
-  clearColor: Color.midnightBlue,
+  clearColor: new Color(0x191970),
   backend: { type: 'webgpu' },
 });
 app.start(GraphicsPrimitivesScene).catch(() => {
