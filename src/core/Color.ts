@@ -32,8 +32,9 @@ const expandShorthand = (digits: string): string => (digits.length > 4 ? digits 
  * transparent ends as shared static instances (`Color.black`, `Color.magenta`,
  * `Color.transparent`, ...). These instances are shared on purpose - do not
  * mutate them; {@link Color.clone} first if you need a mutable starting point.
- * Any other color is written as a value: `new Color(0x6495ed)`,
- * `Color.fromHex('#6495ed')`, or channel by channel.
+ * Development builds freeze them, so writing to one throws there and passes
+ * unnoticed in production. Any other color is written as a value:
+ * `new Color(0x6495ed)`, `Color.fromHex('#6495ed')`, or channel by channel.
  *
  * Internally caches the packed RGBA32 representation and a normalized
  * `Float32Array` for upload to GPU buffers; both are invalidated on
@@ -299,4 +300,34 @@ export class Color implements Cloneable<Color> {
   public static readonly transparentWhite = new Color(255, 255, 255, 0);
   /** CSS `transparent`, which is defined as `rgba(0, 0, 0, 0)` - the same instance as {@link Color.transparentBlack}. */
   public static readonly transparent = Color.transparentBlack;
+
+  // Dev builds freeze the shared corners so a stray `Color.white.set(...)` fails
+  // at the mutation rather than silently repainting every other reader of the
+  // same instance. Both lazy caches have to be filled before the freeze: a
+  // frozen instance cannot take the `_rgba` / `_array` write that `toRgba8()`
+  // and `toArray()` perform on their first call, so an unwarmed corner would
+  // throw on a plain read instead. The freeze does not extend to the
+  // `Float32Array` that `toArray()` hands out - that array stays shared and
+  // writable, as its own documentation says.
+  static {
+    if (__DEV__) {
+      for (const color of [
+        Color.black,
+        Color.red,
+        Color.green,
+        Color.blue,
+        Color.cyan,
+        Color.magenta,
+        Color.yellow,
+        Color.white,
+        Color.transparentBlack,
+        Color.transparentWhite,
+      ]) {
+        color.toRgba8();
+        color.toArray();
+
+        Object.freeze(color);
+      }
+    }
+  }
 }

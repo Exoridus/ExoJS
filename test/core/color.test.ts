@@ -201,3 +201,51 @@ describe('Color — named constants', () => {
     expect(Color.transparentWhite.toRgb()).toBe(0xffffff);
   });
 });
+
+// The shared corners are frozen under `__DEV__`, which vitest defines as true.
+// A production build leaves them writable; these expectations describe the dev
+// build only.
+describe('Color — the shared corners are frozen in dev builds', () => {
+  test('every corner is frozen, including the transparent ends', () => {
+    for (const color of [
+      Color.black,
+      Color.red,
+      Color.green,
+      Color.blue,
+      Color.cyan,
+      Color.magenta,
+      Color.yellow,
+      Color.white,
+      Color.transparentBlack,
+      Color.transparentWhite,
+    ]) {
+      expect(Object.isFrozen(color)).toBe(true);
+    }
+  });
+
+  test('mutating a corner throws instead of repainting every other reader', () => {
+    expect(() => Color.white.set(0, 0, 0)).toThrow(TypeError);
+    expect(() => (Color.black.r = 255)).toThrow(TypeError);
+    expect(() => Color.red.setHex('#00ff00')).toThrow(TypeError);
+    expect(() => Color.blue.copy(Color.green)).toThrow(TypeError);
+
+    expect(Color.white.toRgb()).toBe(0xffffff);
+    expect(Color.black.toRgb()).toBe(0x000000);
+    expect(Color.red.toRgb()).toBe(0xff0000);
+    expect(Color.blue.toRgb()).toBe(0x0000ff);
+  });
+
+  test('the lazy caches are warm, so reading a corner still works', () => {
+    expect(Color.magenta.toRgba8()).toBe(0xffff00ff);
+    expect([...Color.yellow.toArray()]).toEqual([255, 255, 0, 1]);
+    expect([...Color.yellow.toArray(true)]).toEqual([1, 1, 0, 1]);
+  });
+
+  test('a clone of a corner is an ordinary mutable color', () => {
+    const color = Color.white.clone();
+
+    expect(Object.isFrozen(color)).toBe(false);
+    expect(color.set(0, 0, 0).toRgb()).toBe(0x000000);
+    expect(Color.white.toRgb()).toBe(0xffffff);
+  });
+});

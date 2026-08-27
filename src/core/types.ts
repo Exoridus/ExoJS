@@ -46,6 +46,31 @@ export type Mutable<T> = {
 };
 
 /**
+ * Marks every property of `T` `readonly`, recursively: nested objects, arrays,
+ * tuples, `Map` and `Set` are all rewritten, so a descriptor handed to a caller
+ * can be typed as read-only in one annotation instead of one `readonly` per
+ * level. Arrays become `readonly T[]` (no `push`, no index assignment), tuples
+ * keep their arity, and primitives pass through unchanged.
+ *
+ * This is a type-level guarantee only; nothing is frozen at runtime.
+ *
+ * Use it for **data** - configuration, descriptors, theme and style records,
+ * anything a caller reads but must not write. It is not the right tool for a
+ * class instance: the mapped type drops private fields, so `DeepReadonly<Color>`
+ * is not assignable to `Color`, and methods are passed through callable, which
+ * means an instance mutator such as `set()` still type-checks and still mutates.
+ * A class that must not be written to needs `Object.freeze` under `__DEV__`
+ * instead, the way {@link Color}'s shared corners do it.
+ */
+export type DeepReadonly<T> = T extends (...args: never[]) => unknown
+  ? T
+  : T extends ReadonlyMap<infer Key, infer Value>
+    ? ReadonlyMap<DeepReadonly<Key>, DeepReadonly<Value>>
+    : T extends ReadonlySet<infer Value>
+      ? ReadonlySet<DeepReadonly<Value>>
+      : { readonly [Key in keyof T]: DeepReadonly<T[Key]> };
+
+/**
  * Anything the rendering pipeline can sample as a texture source: a loaded
  * image, a canvas of either kind, a playing video, a decoded bitmap, a decoded
  * video frame, or `null` when no source has been assigned yet.

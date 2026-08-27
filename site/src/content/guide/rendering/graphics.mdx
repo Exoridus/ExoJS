@@ -64,7 +64,7 @@ The named constants are the eight corners of the RGB cube plus the two transpare
 
 `Color.black`, `Color.red`, `Color.green`, `Color.blue`, `Color.cyan`, `Color.magenta`, `Color.yellow`, `Color.white`, `Color.transparentBlack`, `Color.transparentWhite`, and `Color.transparent` (CSS `transparent`, the same value as `transparentBlack`).
 
-Anything else is a value rather than a name — write `new Color(0x6495ed)`, not a lookup. These instances are shared, so `clone()` before mutating one.
+Anything else is a value rather than a name — write `new Color(0x6495ed)`, not a lookup. These instances are shared, so `clone()` before mutating one; a development build freezes them and throws on the write, a production build does not.
 
 Going the other way, `toRgb()` gives back the `0xRRGGBB` the constructor takes, and `toHex(alpha?)` the string form. `toRgba8()` is a different thing despite the similar name: one RGBA8 texel as a little-endian `Uint32` for GPU upload, written `0xAABBGGRR`. Do not feed it back into `Color.from`.
 

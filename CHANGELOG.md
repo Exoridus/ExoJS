@@ -44,6 +44,28 @@ release and includes intentional breaking changes; see **Changed** and
   `Color.toRgb()` returns the `0xRRGGBB` the constructor accepts, so the two
   round-trip.
 
+- **The shared `Color` corners are frozen in development builds.** `Color.white`
+  and the other named constants have always been shared instances, so a
+  `Color.white.set(...)` anywhere repainted every other reader of the same
+  value. Writing to one now throws in a development build and is unchanged in
+  production, where the freeze is compiled out. Clone first when a named colour
+  is the starting point for a mutable one:
+
+  ```ts
+  const tint = Color.white.clone().set(255, 200, 200);
+  ```
+
+  The `Float32Array` returned by `toArray()` is deliberately not covered: it is
+  a shared, writable buffer, as its own documentation states.
+
+- **`DeepReadonly<T>` — `readonly` applied at every level.** The recursive
+  counterpart to the existing `Mutable<T>`, for descriptor and configuration
+  data handed to a caller who may read it but must not write it. Nested
+  objects, arrays, tuples, `Map` and `Set` are all rewritten; primitives pass
+  through. It is a type-level guarantee only, and it is meant for data, not for
+  class instances — a mapped type drops private fields and leaves methods
+  callable, so a frozen instance still needs `Object.freeze`.
+
 - **Audio sprite tables can live in a sidecar file.** `sprites` on a `sound`
   asset now also accepts a source string naming a JSON sidecar that holds the
   same `{ name: { start, end, loop? } }` map, so a table a tool produced no

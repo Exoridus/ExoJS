@@ -208,7 +208,10 @@ See `src/core/BuildInfo.ts` for the public runtime API (`buildInfo`).
 
 Express immutability in the type. `readonly` and `readonly T[]` cost nothing at
 runtime and catch the mistake at the call site, which is where it is cheapest to
-fix. Reach for `Object.freeze` only when the type cannot carry the guarantee.
+fix. For a descriptor whose nested levels must be read-only too, `DeepReadonly<T>`
+(`src/core/types.ts`) applies the modifier recursively rather than one level per
+annotation; it is for data, and it cannot lock down a class instance. Reach for
+`Object.freeze` only when the type cannot carry the guarantee.
 
 Two cases justify it:
 
@@ -223,7 +226,10 @@ Two cases justify it:
 
 Everywhere else, prefer `readonly` in the type and, if a runtime check is worth
 having, gate the freeze on `__DEV__` — the pattern `TextureRegion` uses on its
-own instances. Production then pays nothing while development still fails loudly.
+own instances, and `Color` on its shared named constants. Production then pays
+nothing while development still fails loudly. A class whose freeze covers lazily
+built caches has to warm them first: a frozen instance cannot take the write its
+own first read would perform.
 
 Never freeze per-frame: `RenderPlanPlayer` deliberately skips a per-draw
 `Object.freeze` for exactly this reason, and that decision should stay the norm

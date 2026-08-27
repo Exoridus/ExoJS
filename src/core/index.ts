@@ -98,6 +98,7 @@ export { FadeSceneTransition, type FadeSceneTransitionOptions } from './transiti
 export { type SlideDirection, type SlideMode, SlideSceneTransition, type SlideSceneTransitionOptions } from './transitions/SlideSceneTransition';
 export type {
   Cloneable,
+  DeepReadonly,
   Destroyable,
   HasBoundingBox,
   MediaCrossOrigin,
