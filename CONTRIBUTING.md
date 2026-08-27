@@ -267,6 +267,41 @@ Prefer a plain string union over an enum when there is no need to reference the
 members as values — `CanvasSizingMode` is a union, not an enum, because callers
 only ever write the literal.
 
+## Free function or class member?
+
+A public symbol's shape is an API decision, so decide it from what the symbol
+_is_, not from where the implementation happens to sit.
+
+- **Class** when there is object identity, an own lifecycle, ownership, or
+  several operations over shared state: `TileColliderStreamer`, `InputScope`,
+  `LoaderScope`. If two calls only make sense against the same instance, that
+  instance is the API.
+- **Free function** for pure transformations, for policy and lookup callbacks,
+  and for **factories**. A factory stays a free function whether it returns a
+  function, a plain object or an instance - `createSampledChunkSource` returns a
+  `ChunkSource` object and is still a function, because nothing about the call
+  needs an object of its own.
+- **Constants stay free value exports**, never `static readonly` on a class. A
+  static ties the value to an object the tree shaker cannot take apart, so a
+  caller who wants one number drags the whole class into the bundle.
+
+Two carve-outs, both deliberate and not to be "unified":
+
+- **React hooks** stay free `use*` functions. That is React's convention, not a
+  deviation from this one.
+- **The package prefix in a name stays**, even where it stutters against the
+  package name on an ESM import (`tiledObjectAnchorOffset` in
+  `@codexo/exojs-tiled`). The full IIFE build is one flat `window.Exo` object
+  across every package, and there the prefix is the only marker of where a
+  symbol came from.
+
+Name a function for what it does: a verb first (`resolveTiledObjectAlignment`,
+`getWebGpuBlendState`, `createSampledChunkSource`). A noun-only export reads as a
+value at the call site and hides that it has to be called.
+
+Existing API is reshaped only where a change touches it anyway. This rule is not
+a licence for a rename campaign.
+
 ## Failure diagnostics: `assert`, `invariant`, typed error
 
 Every runtime failure the engine reports goes through one of three tools, and
