@@ -1,3 +1,4 @@
+import { assert } from '#core/dev';
 import { clamp } from '#math/utils';
 
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
@@ -139,9 +140,20 @@ export class AudioBus {
    * A no-op once the bus has been {@link AudioBus.destroy}ed - without this
    * guard the effect would silently accumulate in the (otherwise unused)
    * internal list forever.
+   *
+   * Attaching the same effect twice is a caller error: the rebuilt chain would
+   * wire the effect's output back into its own input, producing a feedback
+   * loop. The dev build asserts; production ignores the second attach.
    */
   public addEffect(effect: AudioEffect): this {
     if (this._destroyed) return this;
+
+    if (this._effects.includes(effect)) {
+      assert(false, 'AudioBus.addEffect: this effect is already attached to the bus.');
+
+      return this;
+    }
+
     this._effects.push(effect);
     this._rebuildEffectChain();
     return this;

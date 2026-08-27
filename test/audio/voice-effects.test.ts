@@ -87,6 +87,19 @@ describe('Voice — per-voice effects', () => {
     sound.destroy();
   });
 
+  test('addEffect refuses the same effect twice - a second attach would feed the effect its own output', () => {
+    const manager = new AudioManager();
+    const sound = new Sound(makeBufferStub());
+    const voice = manager.play(sound);
+    const fx = makeStubEffect();
+
+    voice.addEffect(fx);
+
+    expect(() => voice.addEffect(fx)).toThrow('already attached to the voice');
+
+    sound.destroy();
+  });
+
   test('addEffect returns the voice for chaining', () => {
     const manager = new AudioManager();
     const sound = new Sound(makeBufferStub());
