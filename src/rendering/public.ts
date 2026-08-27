@@ -69,6 +69,8 @@ export { ShaderSource } from '#rendering/material/ShaderSource';
 export { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 export type { MeshOptions } from '#rendering/mesh/Mesh';
 export { Mesh } from '#rendering/mesh/Mesh';
+export type { MeshIndexArray, MeshIndexFormat } from '#rendering/mesh/meshIndices';
+export { maxUint16VertexCount, meshIndexBytes, meshIndexFormatFor } from '#rendering/mesh/meshIndices';
 export { Graphics } from '#rendering/primitives/Graphics';
 export { INSTANCE_TRANSFORM_GLSL, INSTANCE_TRANSFORM_WGSL } from '#rendering/shader/instanceContract';
 export type { ShaderProgram } from '#rendering/shader/Shader';

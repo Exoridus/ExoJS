@@ -6,6 +6,8 @@ import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { Material } from '#rendering/material/Material';
 import type { Mesh } from '#rendering/mesh/Mesh';
+import type { MeshIndexArray, MeshIndexFormat } from '#rendering/mesh/meshIndices';
+import { createIndexArray, meshIndexBytes } from '#rendering/mesh/meshIndices';
 import type { DrawCommand } from '#rendering/plan/RenderCommand';
 import type { InstanceDataView } from '#rendering/RenderBatch';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -58,12 +60,17 @@ export const instancedMeshShaderSource: string = instancedMeshShaderSourceModule
 const vertexStrideBytes = 20;
 const wordsPerVertex = vertexStrideBytes / 4;
 /**
- * Byte size of `indexCount` uint16 indices, rounded up to 4. `GPUQueue.writeBuffer`
- * rejects byte counts and offsets that are not a multiple of 4, so index sub-ranges
- * within the shared buffer are laid out on 4-byte boundaries - which also satisfies
- * `setIndexBuffer`'s weaker 2-byte offset requirement.
+ * Byte size of `indexCount` indices of `format`, rounded up to 4.
+ *
+ * `GPUQueue.writeBuffer` rejects byte counts and offsets that are not a multiple
+ * of 4, so index sub-ranges within the shared buffer are laid out on 4-byte
+ * boundaries. That also satisfies `setIndexBuffer`'s per-format offset
+ * requirement for BOTH widths at once, which is what lets 16- and 32-bit meshes
+ * share one buffer in one flush - the alternative, packing each width tightly,
+ * would put a uint32 block on a 2-byte boundary the moment an odd uint16 block
+ * preceded it.
  */
-const alignIndexBytes = (indexCount: number): number => (indexCount * Uint16Array.BYTES_PER_ELEMENT + 3) & ~3;
+const alignIndexBytes = (indexCount: number, format: MeshIndexFormat): number => (indexCount * meshIndexBytes(format) + 3) & ~3;
 
 const tintByteLength = 32; // vec4 tint + vec4 flags (only flags.x used)
 const transformUniformByteLength = 128; // mat3x3<f32> projection (48B) + mat3x3<f32> group (48B) + vec4<f32> flags (16B) + vec4<f32> snap viewport (16B)
@@ -86,6 +93,7 @@ interface MeshDrawCall {
   vertexCount: number;
   indexByteOffset: number;
   indexCount: number;
+  indexFormat: MeshIndexFormat;
   customDrawIndex: number; // index within the per-shader custom queue, -1 for default
 }
 
@@ -137,6 +145,8 @@ interface GeometryCacheEntry {
   vertexBuffer: GPUBuffer;
   indexBuffer: GPUBuffer;
   indexCount: number;
+  /** Width `indexBuffer` holds; every draw and every replay of it binds this format. */
+  indexFormat: MeshIndexFormat;
   readonly disposeListener: () => void;
   // The geometry version currently resident in the buffers; re-uploaded on
   // mismatch so dynamic/stream geometry reaches the GPU via Geometry.invalidate().
@@ -170,7 +180,10 @@ interface CustomShaderResources {
   vertexData: ArrayBuffer;
   vertexFloatView: Float32Array;
   vertexUintView: Uint32Array;
-  indexData: Uint16Array;
+  /** Index staging, viewed at both widths so one buffer carries a mixed-width flush. */
+  indexData: ArrayBuffer;
+  indexU16: Uint16Array;
+  indexU32: Uint32Array;
   // Mesh-uniform UBO (proj/trans/tint), one slot per draw, dynamic offset.
   meshUniformBuffer: GPUBuffer | null;
   meshUniformBufferCapacity: number;
@@ -188,7 +201,8 @@ interface CustomShaderResources {
   // Per-frame state, reset in flush().
   drawCount: number;
   totalVertices: number;
-  totalIndices: number;
+  /** Sum of this frame's per-draw index blocks, each already 4-byte aligned. */
+  totalIndexBytes: number;
 }
 
 const meshUniformAlignment = 256;
@@ -352,7 +366,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   private readonly _customIndexCursors = new Map<Material, number>();
   private _float32View: Float32Array = new Float32Array(this._vertexData);
   private _uint32View: Uint32Array = new Uint32Array(this._vertexData);
-  private _packedIndexData: Uint16Array = new Uint16Array(0);
+  private _indexStaging: ArrayBuffer = new ArrayBuffer(0);
+  private _indexStagingU16: Uint16Array = new Uint16Array(this._indexStaging);
+  private _indexStagingU32: Uint32Array = new Uint32Array(this._indexStaging);
   private _drawCallCount = 0;
 
   public render(mesh: Mesh): void {
@@ -388,6 +404,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // it so the default path uses the right value.
     const premultiplySample = backend.shouldPremultiplyTextureSample(meshTexture);
     const indexCount = mesh.indexCount;
+    const indexFormat = mesh.indexFormat;
 
     let customDrawIndex = -1;
 
@@ -396,7 +413,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       customDrawIndex = resources.drawCount;
       resources.drawCount++;
       resources.totalVertices += vertexCount;
-      resources.totalIndices += indexCount;
+      resources.totalIndexBytes += alignIndexBytes(indexCount, indexFormat);
     }
 
     // Plan offsets within the shared (default) or per-shader (custom) buffers;
@@ -413,6 +430,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       vertexCount,
       indexByteOffset: 0,
       indexCount,
+      indexFormat,
       customDrawIndex,
     };
 
@@ -555,7 +573,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       pass.setVertexBuffer(2, this._instancedAttributeArena.buffer, attributeByteOffset);
     }
 
-    pass.setIndexBuffer(staticGeometry.indexBuffer, 'uint16');
+    pass.setIndexBuffer(staticGeometry.indexBuffer, staticGeometry.indexFormat);
     pass.drawIndexed(staticGeometry.indexCount, count);
 
     this._ownDrawsPass = active;
@@ -660,7 +678,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // the CPU staging arrays stay flush-local and only the GPU buffers carry the
     // whole pass.
     let defaultVertices = 0;
-    let defaultIndices = 0;
+    // Byte cursor, not an element count: two draws in one flush may carry
+    // different index widths, so element arithmetic cannot express the layout.
+    let defaultIndexBytes = 0;
     // Reused, and cleared rather than rebuilt: a frame with no custom-material
     // mesh never touches them, and rebuilding two Maps per flush is pure churn
     // in a scene that flushes often.
@@ -677,16 +697,16 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
       if (dc.customShader === null) {
         dc.vertexByteOffset = defaultVertices * vertexStrideBytes;
-        dc.indexByteOffset = defaultIndices * Uint16Array.BYTES_PER_ELEMENT;
+        dc.indexByteOffset = defaultIndexBytes;
         defaultVertices += dc.vertexCount;
-        defaultIndices += dc.indexCount;
+        defaultIndexBytes += alignIndexBytes(dc.indexCount, dc.indexFormat);
       } else {
         const vCursor = customVertexCursors.get(dc.customShader) ?? 0;
         const iCursor = customIndexCursors.get(dc.customShader) ?? 0;
         dc.vertexByteOffset = vCursor * vertexStrideBytes;
-        dc.indexByteOffset = iCursor * Uint16Array.BYTES_PER_ELEMENT;
+        dc.indexByteOffset = iCursor;
         customVertexCursors.set(dc.customShader, vCursor + dc.vertexCount);
-        customIndexCursors.set(dc.customShader, iCursor + dc.indexCount);
+        customIndexCursors.set(dc.customShader, iCursor + alignIndexBytes(dc.indexCount, dc.indexFormat));
       }
     }
 
@@ -695,7 +715,6 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const customDraws = this._totalCustomDraws();
     const defaultDrawCalls = this._drawCallCount - customDraws;
     const defaultVertexBytes = defaultVertices * vertexStrideBytes;
-    const defaultIndexBytes = alignIndexBytes(defaultIndices);
     // Upper bounds: not every draw call becomes an instanced batch, and each
     // instanced batch takes one uniform slot plus one node index per instance.
     const nodeIndexBytes = this._drawCallCount * Uint32Array.BYTES_PER_ELEMENT;
@@ -746,7 +765,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // Phase 2: ensure capacities for the pass totals (default path). The staging
     // arrays are sized to this flush; the GPU buffers to the pre-split targets.
     this._ensureVertexCapacity(defaultVertices, targetVertexBytes);
-    this._ensureIndexCapacity(defaultIndices, targetIndexBytes);
+    this._ensureIndexCapacity(defaultIndexBytes, targetIndexBytes);
     this._ensureUniformCapacity(targetUniformSlots);
     this._ensureInstancedUniformCapacity(targetInstancedUniformSlots);
     // Every instanced batch in this pass gets a distinct node-index sub-range;
@@ -776,14 +795,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         // Default path: CPU-bake transform into vertex positions.
         this._writeMeshVertices(backend, dc.mesh, dc.vertexByteOffset / vertexStrideBytes, /* bake */ true);
 
-        if (dc.mesh.indices !== null) {
-          this._packedIndexData.set(dc.mesh.indices, dc.indexByteOffset / Uint16Array.BYTES_PER_ELEMENT);
-        } else {
-          const start = dc.indexByteOffset / Uint16Array.BYTES_PER_ELEMENT;
-          for (let j = 0; j < dc.indexCount; j++) {
-            this._packedIndexData[start + j] = j;
-          }
-        }
+        this._packIndices(dc, dc.indexFormat === 'uint32' ? this._indexStagingU32 : this._indexStagingU16);
 
         // Pack tint+flags for default path. Color RGB channels are 0..255; the
         // shader multiplies the sampled texel by this tint, so normalize to
@@ -818,7 +830,6 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
       // Pack vertices/indices in local space (no CPU bake).
       let vWritten = 0;
-      let iWritten = 0;
       let drawCursor = 0;
 
       for (let i = 0; i < this._drawCallCount; i++) {
@@ -828,30 +839,17 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
         this._writeMeshVerticesIntoBuffer(dc.mesh, vWritten, resources.vertexFloatView, resources.vertexUintView);
 
-        if (dc.mesh.indices !== null) {
-          resources.indexData.set(dc.mesh.indices, iWritten);
-        } else {
-          for (let j = 0; j < dc.indexCount; j++) {
-            resources.indexData[iWritten + j] = j;
-          }
-        }
+        this._packIndices(dc, dc.indexFormat === 'uint32' ? resources.indexU32 : resources.indexU16);
 
         // Write mesh-uniform slot (proj/trans/tint) with dynamic offset.
         this._writeCustomMeshUniform(material, resources, drawCursor, dc.mesh, backend);
 
         vWritten += dc.vertexCount;
-        iWritten += dc.indexCount;
         drawCursor++;
       }
 
       device.queue.writeBuffer(resources.vertexBuffer!, 0, resources.vertexData, 0, resources.totalVertices * vertexStrideBytes);
-      device.queue.writeBuffer(
-        resources.indexBuffer!,
-        0,
-        resources.indexData.buffer,
-        resources.indexData.byteOffset,
-        (resources.totalIndices * Uint16Array.BYTES_PER_ELEMENT + 3) & ~3,
-      );
+      device.queue.writeBuffer(resources.indexBuffer!, 0, resources.indexData, 0, resources.totalIndexBytes);
 
       // Refresh the user uniform UBO from the material - uploaded only when the
       // uniform values actually changed since the last frame.
@@ -862,7 +860,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // flush's sub-range within the pass.
     if (defaultVertices > 0) {
       device.queue.writeBuffer(this._vertexBuffer!, vertexBase, this._vertexData, 0, defaultVertexBytes);
-      device.queue.writeBuffer(this._indexBuffer!, indexBase, this._packedIndexData.buffer, this._packedIndexData.byteOffset, defaultIndexBytes);
+      device.queue.writeBuffer(this._indexBuffer!, indexBase, this._indexStaging, 0, defaultIndexBytes);
     }
     if (defaultUniformData !== null) {
       device.queue.writeBuffer(this._uniformBuffer!, uniformSlotBase * this._uniformAlignment, defaultUniformData, 0, defaultUniformBytes);
@@ -950,7 +948,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
           pass.setVertexBuffer(0, staticGeometry.vertexBuffer);
           pass.setVertexBuffer(1, instanceNodeIndexBuffer, nodeIndexByteOffset);
-          pass.setIndexBuffer(staticGeometry.indexBuffer, 'uint16');
+          pass.setIndexBuffer(staticGeometry.indexBuffer, staticGeometry.indexFormat);
           pass.drawIndexed(staticGeometry.indexCount, batchLength);
 
           backend.stats.batches++;
@@ -1012,7 +1010,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         }
 
         pass.setVertexBuffer(0, this._vertexBuffer, vertexBase + dc.vertexByteOffset);
-        pass.setIndexBuffer(this._indexBuffer!, 'uint16', indexBase + dc.indexByteOffset);
+        pass.setIndexBuffer(this._indexBuffer!, dc.indexFormat, indexBase + dc.indexByteOffset);
         pass.drawIndexed(dc.indexCount);
 
         defaultDrawCursor++;
@@ -1062,7 +1060,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         }
 
         pass.setVertexBuffer(0, resources.vertexBuffer, dc.vertexByteOffset);
-        pass.setIndexBuffer(resources.indexBuffer!, 'uint16', dc.indexByteOffset);
+        pass.setIndexBuffer(resources.indexBuffer!, dc.indexFormat, dc.indexByteOffset);
         pass.drawIndexed(dc.indexCount);
 
         pass.popDebugGroup();
@@ -1887,7 +1885,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     pass.setBindGroup(1, textureBindGroup);
     pass.setVertexBuffer(0, geometry.vertexBuffer);
     pass.setVertexBuffer(1, bundle.instanceBuffer, payload.byteOffset);
-    pass.setIndexBuffer(geometry.indexBuffer, 'uint16');
+    pass.setIndexBuffer(geometry.indexBuffer, geometry.indexFormat);
     pass.drawIndexed(geometry.indexCount, payload.instanceCount);
 
     state.drawsInPass = active;
@@ -2067,6 +2065,28 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     return descriptor;
   }
 
+  /**
+   * Write one draw call's index block into `target` at its planned byte offset.
+   *
+   * `target` must be the view matching `dc.indexFormat`: the offset is a byte
+   * offset into the shared staging buffer, and dividing it by the wrong element
+   * size would land the block on top of a neighbour.
+   */
+  private _packIndices(dc: MeshDrawCall, target: Uint16Array | Uint32Array): void {
+    const start = dc.indexByteOffset / target.BYTES_PER_ELEMENT;
+    const indices = dc.mesh.indices;
+
+    if (indices !== null) {
+      target.set(indices, start);
+
+      return;
+    }
+
+    for (let j = 0; j < dc.indexCount; j++) {
+      target[start + j] = j;
+    }
+  }
+
   private _getOrCreateGeometryEntry(mesh: Mesh): GeometryCacheEntry {
     const geometry = mesh.geometry;
 
@@ -2119,6 +2139,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       vertexBuffer,
       indexBuffer,
       indexCount: mesh.indexCount,
+      indexFormat: packed.indexFormat,
       disposeListener,
       version: geometry.version,
     };
@@ -2131,14 +2152,18 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   // Pack a mesh into fresh CPU-side vertex/index arrays in the shared layout.
   // One extra index element is allocated when indexCount is odd so the GPU
   // buffer and writeBuffer byte count round up to 4 without a buffer overread.
-  private _packGeometry(mesh: Mesh): { vertexData: ArrayBuffer; indexData: Uint16Array; alignedIndexByteLen: number } {
+  private _packGeometry(mesh: Mesh): { vertexData: ArrayBuffer; indexData: MeshIndexArray; indexFormat: MeshIndexFormat; alignedIndexByteLen: number } {
     const vertexData = new ArrayBuffer(mesh.vertexCount * vertexStrideBytes);
     const vertexFloatView = new Float32Array(vertexData);
     const vertexUintView = new Uint32Array(vertexData);
 
     this._writeMeshVerticesIntoBuffer(mesh, 0, vertexFloatView, vertexUintView);
 
-    const indexData = new Uint16Array(mesh.indexCount + (mesh.indexCount & 1));
+    const indexFormat = mesh.indexFormat;
+    const alignedIndexByteLen = alignIndexBytes(mesh.indexCount, indexFormat);
+    // Sized from the ALIGNED byte length, so `writeBuffer`'s 4-byte multiple is
+    // covered by real backing rather than by an overread past the array.
+    const indexData = createIndexArray(indexFormat, alignedIndexByteLen / meshIndexBytes(indexFormat));
 
     if (mesh.indices !== null) {
       indexData.set(mesh.indices, 0);
@@ -2148,11 +2173,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       }
     }
 
-    return {
-      vertexData,
-      indexData,
-      alignedIndexByteLen: (mesh.indexCount * Uint16Array.BYTES_PER_ELEMENT + 3) & ~3,
-    };
+    return { vertexData, indexData, indexFormat, alignedIndexByteLen };
   }
 
   /**
@@ -2187,6 +2208,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     device.queue.writeBuffer(entry.indexBuffer, 0, packed.indexData.buffer, packed.indexData.byteOffset, packed.alignedIndexByteLen);
 
     entry.indexCount = mesh.indexCount;
+    entry.indexFormat = packed.indexFormat;
     entry.version = entry.geometry.version;
   }
 
@@ -2217,17 +2239,15 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     }
   }
 
-  /** Staging/GPU split as in {@link _ensureVertexCapacity}. */
-  private _ensureIndexCapacity(indexCount: number, requiredBytes = alignIndexBytes(indexCount)): void {
-    // GPUQueue.writeBuffer requires the byte count to be a multiple of 4.
-    // Round up: odd Uint16 counts (e.g. a 3-index triangle) would otherwise
-    // produce 6-byte writes which the WebGPU validation layer rejects.
-    const stagingBytes = alignIndexBytes(indexCount);
-
-    if (this._packedIndexData.length * Uint16Array.BYTES_PER_ELEMENT < stagingBytes) {
-      this._packedIndexData = new Uint16Array(
-        Math.max(stagingBytes / Uint16Array.BYTES_PER_ELEMENT, this._packedIndexData.length === 0 ? 2 : this._packedIndexData.length * 2),
-      );
+  /**
+   * Staging/GPU split as in {@link _ensureVertexCapacity}, both sized in BYTES -
+   * a flush may mix index widths, so an element count no longer describes it.
+   */
+  private _ensureIndexCapacity(stagingBytes: number, requiredBytes = stagingBytes): void {
+    if (this._indexStaging.byteLength < stagingBytes) {
+      this._indexStaging = new ArrayBuffer(Math.max(stagingBytes, this._indexStaging.byteLength === 0 ? 4 : this._indexStaging.byteLength * 2));
+      this._indexStagingU16 = new Uint16Array(this._indexStaging);
+      this._indexStagingU32 = new Uint32Array(this._indexStaging);
     }
 
     if (requiredBytes > this._indexBufferCapacity) {
@@ -2296,7 +2316,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     for (const resources of this._customShaders.values()) {
       resources.drawCount = 0;
       resources.totalVertices = 0;
-      resources.totalIndices = 0;
+      resources.totalIndexBytes = 0;
     }
   }
 
@@ -2351,8 +2371,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     });
 
     const initialVertexCount = 64;
-    const initialIndexCount = 192;
+    const initialIndexBytes = 192 * Uint16Array.BYTES_PER_ELEMENT;
     const vertexData = new ArrayBuffer(initialVertexCount * vertexStrideBytes);
+    const indexData = new ArrayBuffer(initialIndexBytes);
 
     resources = {
       shaderModule,
@@ -2370,7 +2391,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       vertexData,
       vertexFloatView: new Float32Array(vertexData),
       vertexUintView: new Uint32Array(vertexData),
-      indexData: new Uint16Array(initialIndexCount),
+      indexData,
+      indexU16: new Uint16Array(indexData),
+      indexU32: new Uint32Array(indexData),
       meshUniformBuffer: null,
       meshUniformBufferCapacity: 0,
       meshUniformBindGroup: null,
@@ -2380,7 +2403,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       meshTextureBindGroups: new WeakMap(),
       drawCount: 0,
       totalVertices: 0,
-      totalIndices: 0,
+      totalIndexBytes: 0,
     };
 
     this._customShaders.set(material, resources);
@@ -2418,10 +2441,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       });
     }
 
-    // Index buffer - capacity must be 4-byte aligned for GPUQueue.writeBuffer.
-    const indexBytes = (resources.totalIndices * Uint16Array.BYTES_PER_ELEMENT + 3) & ~3;
-    if (resources.indexData.length * Uint16Array.BYTES_PER_ELEMENT < indexBytes) {
-      resources.indexData = new Uint16Array(Math.max(indexBytes / Uint16Array.BYTES_PER_ELEMENT, resources.indexData.length * 2));
+    // Index buffer - every per-draw block is already 4-byte aligned, so the total is too.
+    const indexBytes = resources.totalIndexBytes;
+    if (resources.indexData.byteLength < indexBytes) {
+      resources.indexData = new ArrayBuffer(Math.max(indexBytes, resources.indexData.byteLength * 2 || 4));
+      resources.indexU16 = new Uint16Array(resources.indexData);
+      resources.indexU32 = new Uint32Array(resources.indexData);
     }
     if (indexBytes > resources.indexBufferCapacity) {
       resources.indexBuffer?.destroy();

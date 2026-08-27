@@ -35,6 +35,8 @@ export interface MockWebGpuEnvironment {
   /** Number of render pipelines synchronously created (async prewarm excluded). */
   syncPipelineCount(): number;
   drawIndexedCount(): number;
+  /** Format and byte offset of every `setIndexBuffer` call, in call order. */
+  indexBufferBindings(): ReadonlyArray<{ readonly format: string; readonly offset: number }>;
   restore(): void;
 }
 
@@ -56,12 +58,15 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   const writeBufferLabels: string[] = [];
   const createBufferLabels: string[] = [];
   const writeTextureData: ArrayBufferView[] = [];
+  const indexBufferBindings: Array<{ format: string; offset: number }> = [];
 
   const pass = {
     setPipeline: (): void => {},
     setBindGroup: (): void => {},
     setVertexBuffer: (): void => {},
-    setIndexBuffer: (): void => {},
+    setIndexBuffer: (_buffer: unknown, format: string, offset = 0): void => {
+      indexBufferBindings.push({ format, offset });
+    },
     setScissorRect: (): void => {},
     pushDebugGroup: (): void => {},
     popDebugGroup: (): void => {},
@@ -161,6 +166,7 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     writeTextureData: () => writeTextureData,
     syncPipelineCount: () => syncPipelineCount,
     drawIndexedCount: () => drawIndexedCount,
+    indexBufferBindings: () => indexBufferBindings,
     restore: (): void => {
       if (previousGpu) {
         Object.defineProperty(navigator, 'gpu', previousGpu);

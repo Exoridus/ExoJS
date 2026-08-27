@@ -57,9 +57,13 @@ export interface WebgpuCompressedFormatSupport {
  */
 export const readWebgpuCompressedFormats = (device: GPUDevice): WebgpuCompressedFormatSupport => {
   const gpuFormats = new Map<CompressedTextureFormat, GPUTextureFormat>();
+  // Optional-chained like the adapter reads in the backend: a stand-in device
+  // (a probe, a test double) carries no feature set, and the honest answer for
+  // one is "no compressed formats" rather than a throw during initialization.
+  const features = (device as { features?: GPUSupportedFeatures }).features;
 
   for (const { feature, formats } of families) {
-    if (!device.features.has(feature)) {
+    if (features?.has(feature) !== true) {
       continue;
     }
 

@@ -125,6 +125,21 @@ export class WebGl2VertexArrayObject {
     return this;
   }
 
+  /**
+   * Retarget the element type {@link draw} reports for the already-bound index
+   * buffer.
+   *
+   * Deliberately does NOT bump {@link version}: the type is read at draw time,
+   * not baked into the VAO's attribute state, so treating it as a layout change
+   * would make a shared dynamic VAO re-specify every attribute pointer on every
+   * draw whose index width differs from the last one.
+   */
+  public setIndexType(type: IndexElementTypes): this {
+    this._indexType = type;
+
+    return this;
+  }
+
   public clear(): this {
     this._attributes.length = 0;
     this._indexBuffer = null;

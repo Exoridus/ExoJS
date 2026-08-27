@@ -3,12 +3,14 @@ import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { Material, UniformValue } from '#rendering/material/Material';
 import type { Mesh } from '#rendering/mesh/Mesh';
+import type { MeshIndexArray, MeshIndexFormat } from '#rendering/mesh/meshIndices';
+import { createIndexArray } from '#rendering/mesh/meshIndices';
 import { type DrawCommand, RenderEntryKind } from '#rendering/plan/RenderCommand';
 import type { InstanceDataView } from '#rendering/RenderBatch';
 import { Shader } from '#rendering/shader/Shader';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
-import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
+import { BlendModes, BufferTypes, BufferUsage, IndexElementTypes, RenderingPrimitives } from '#rendering/types';
 
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import fragmentSource from './glsl/mesh.frag';
@@ -61,6 +63,9 @@ interface PendingMeshDraw {
   supportsInstancing: boolean;
 }
 
+/** WebGL2 element type for a mesh index width. */
+const glIndexType = (format: MeshIndexFormat): IndexElementTypes => (format === 'uint32' ? IndexElementTypes.UnsignedInt : IndexElementTypes.UnsignedShort);
+
 interface GeometryCacheEntry {
   readonly geometry: Geometry;
   readonly vertexBuffer: WebGl2RenderBuffer;
@@ -70,6 +75,8 @@ interface GeometryCacheEntry {
   readonly vaos: Map<Shader, Map<string, WebGl2VertexArrayObject>>;
   readonly disposeListener: () => void;
   indexCount: number;
+  /** Index width the buffer currently holds; every VAO cached here draws with it. */
+  indexFormat: MeshIndexFormat;
   // The geometry version the buffers currently hold. Re-packed on mismatch, so
   // dynamic/stream geometry reaches the GPU via Geometry.invalidate(). The
   // buffer objects themselves are reused, which keeps the cached VAOs valid.
@@ -134,6 +141,14 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   private _float32View: Float32Array = new Float32Array(this._vertexData);
   private _uint32View: Uint32Array = new Uint32Array(this._vertexData);
   private _indexData: Uint16Array = new Uint16Array(initialIndexCapacity);
+  /**
+   * 32-bit staging, allocated only once a mesh actually needs it. Kept separate
+   * from the 16-bit array rather than replacing it: the common mesh is far below
+   * the 16-bit ceiling, and promoting the shared scratch on first sight of a wide
+   * mesh would double the upload bytes of every mesh after it for the rest of the
+   * session.
+   */
+  private _indexData32: Uint32Array = new Uint32Array(0);
   private _nodeIndexData: Uint32Array = new Uint32Array(initialNodeIndexCapacity);
   // Initial (empty) backing data for the shared divisor-1 instance buffer; a
   // draw uploads the packed prefix of the RenderBatch's own storage directly.
@@ -463,18 +478,23 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     this._setBlendMode(draw.blendMode, backend);
     this._bindInstancedShaderState(draw.shader, draw.texture, draw.material, backend, nodeIndex);
 
+    const indexFormat = draw.mesh.indexFormat;
+
     this._ensureVertexCapacity(draw.mesh.vertexCount);
-    this._ensureIndexCapacity(draw.mesh.indexCount);
+    this._ensureIndexCapacity(draw.mesh.indexCount, indexFormat);
     this._ensureNodeIndexCapacity(1);
 
+    const indexScratch = this._indexScratch(indexFormat);
+
     this._packVertices(draw.mesh, 0);
-    this._packIndices(draw.mesh, 0);
+    this._packIndices(draw.mesh, 0, indexScratch);
 
     this._nodeIndexData[0] = nodeIndex >>> 0;
 
+    connection.dynamicVao.setIndexType(glIndexType(indexFormat));
     backend.bindVertexArrayObject(connection.dynamicVao);
     connection.dynamicVertexBuffer.upload(this._float32View, 0, draw.mesh.vertexCount * vertexStrideWords);
-    connection.dynamicIndexBuffer.upload(this._indexData, 0, draw.mesh.indexCount);
+    connection.dynamicIndexBuffer.upload(indexScratch, 0, draw.mesh.indexCount);
     connection.dynamicNodeIndexBuffer.upload(this._nodeIndexData, 0, 1);
     connection.dynamicVao.drawInstanced(draw.mesh.indexCount, 0, 1, RenderingPrimitives.Triangles);
 
@@ -580,15 +600,21 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       this._bindCustomUniforms(shader, draw.material, backend);
     }
 
+    const indexFormat = mesh.indexFormat;
+
     this._ensureVertexCapacity(mesh.vertexCount);
-    this._ensureIndexCapacity(mesh.indexCount);
+    this._ensureIndexCapacity(mesh.indexCount, indexFormat);
+
+    const indexScratch = this._indexScratch(indexFormat);
+
     this._packVertices(mesh, 0);
-    this._packIndices(mesh, 0);
+    this._packIndices(mesh, 0, indexScratch);
 
     shader.sync();
+    connection.dynamicVao.setIndexType(glIndexType(indexFormat));
     backend.bindVertexArrayObject(connection.dynamicVao);
     connection.dynamicVertexBuffer.upload(this._float32View, 0, mesh.vertexCount * vertexStrideWords);
-    connection.dynamicIndexBuffer.upload(this._indexData, 0, mesh.indexCount);
+    connection.dynamicIndexBuffer.upload(indexScratch, 0, mesh.indexCount);
     this._bindBaseTextureSampler(backend, draw.material);
     connection.dynamicVao.draw(mesh.indexCount, 0, RenderingPrimitives.Triangles);
     this._unbindBaseTextureSampler(backend, draw.material);
@@ -712,7 +738,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     const shader = this._defaultShader;
 
     vao
-      .addIndex(geometry.indexBuffer)
+      .addIndex(geometry.indexBuffer, glIndexType(geometry.indexFormat))
       .addAttribute(geometry.vertexBuffer, shader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
       .addAttribute(geometry.vertexBuffer, shader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
       .addAttribute(geometry.vertexBuffer, shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, vertexStrideBytes, 16)
@@ -882,7 +908,8 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
 
     this._packVertices(mesh, 0, floatView, uintView);
 
-    const indexData = new Uint16Array(indexCount);
+    const indexFormat = mesh.indexFormat;
+    const indexData = createIndexArray(indexFormat, indexCount);
 
     this._packIndices(mesh, 0, indexData);
 
@@ -930,6 +957,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       vaos: new Map(),
       disposeListener,
       indexCount,
+      indexFormat,
       version: geometry.version,
     };
 
@@ -953,13 +981,26 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
 
     this._packVertices(mesh, 0, floatView, uintView);
 
-    const indexData = new Uint16Array(indexCount);
+    const indexData = createIndexArray(mesh.indexFormat, indexCount);
 
     this._packIndices(mesh, 0, indexData);
 
     entry.vertexBuffer.upload(floatView);
     entry.indexBuffer.upload(indexData);
     entry.indexCount = indexCount;
+    // A re-pack may cross the 16-bit ceiling in either direction, and every VAO
+    // cached against this entry draws with the type set at its creation - so a
+    // changed width has to be pushed onto all of them, not just recorded here.
+    if (entry.indexFormat !== mesh.indexFormat) {
+      entry.indexFormat = mesh.indexFormat;
+
+      for (const perLayout of entry.vaos.values()) {
+        for (const vao of perLayout.values()) {
+          vao.setIndexType(glIndexType(mesh.indexFormat));
+        }
+      }
+    }
+
     entry.version = entry.geometry.version;
   }
 
@@ -1000,7 +1041,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     // declared-but-unread inputs at link time, so a custom batch shader that
     // ignores texcoords or vertex colors simply has no such attribute to bind.
     // Skipping those keeps the interleaved layout's offsets untouched.
-    const vao = new WebGl2VertexArrayObject().addIndex(entry.indexBuffer);
+    const vao = new WebGl2VertexArrayObject().addIndex(entry.indexBuffer, glIndexType(entry.indexFormat));
     const geometryAttributes = [
       { name: 'a_position', type: gl.FLOAT, normalized: false, offset: 0 },
       { name: 'a_texcoord', type: gl.FLOAT, normalized: false, offset: 8 },
@@ -1074,7 +1115,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     }
   }
 
-  private _packIndices(mesh: Mesh, indexStart: number, target: Uint16Array = this._indexData): void {
+  private _packIndices(mesh: Mesh, indexStart: number, target: MeshIndexArray): void {
     const indexCount = mesh.indexCount;
 
     if (mesh.indices !== null) {
@@ -1101,16 +1142,24 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     this._uint32View = new Uint32Array(this._vertexData);
   }
 
-  private _ensureIndexCapacity(indexCount: number): void {
-    if (indexCount <= this._indexCapacity) {
-      return;
+  private _ensureIndexCapacity(indexCount: number, format: MeshIndexFormat): void {
+    if (indexCount > this._indexCapacity) {
+      while (this._indexCapacity < indexCount) {
+        this._indexCapacity *= 2;
+      }
+
+      this._indexData = new Uint16Array(this._indexCapacity);
+      this._indexData32 = this._indexData32.length === 0 ? this._indexData32 : new Uint32Array(this._indexCapacity);
     }
 
-    while (this._indexCapacity < indexCount) {
-      this._indexCapacity *= 2;
+    if (format === 'uint32' && this._indexData32.length < this._indexCapacity) {
+      this._indexData32 = new Uint32Array(this._indexCapacity);
     }
+  }
 
-    this._indexData = new Uint16Array(this._indexCapacity);
+  /** The staging array a draw of `format` packs into. */
+  private _indexScratch(format: MeshIndexFormat): MeshIndexArray {
+    return format === 'uint32' ? this._indexData32 : this._indexData;
   }
 
   private _ensureNodeIndexCapacity(instanceCount: number): void {
@@ -1197,14 +1246,14 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       },
       draw: (vao: WebGl2VertexArrayObject, size: number, start: number, type: number): void => {
         if (vao.indexBuffer) {
-          gl.drawElements(type, size, gl.UNSIGNED_SHORT, start);
+          gl.drawElements(type, size, vao.indexType, start);
         } else {
           gl.drawArrays(type, start, size);
         }
       },
       drawInstanced: (vao: WebGl2VertexArrayObject, count: number, start: number, instanceCount: number, type: number): void => {
         if (vao.indexBuffer) {
-          gl.drawElementsInstanced(type, count, gl.UNSIGNED_SHORT, start, instanceCount);
+          gl.drawElementsInstanced(type, count, vao.indexType, start, instanceCount);
         } else {
           gl.drawArraysInstanced(type, start, count, instanceCount);
         }

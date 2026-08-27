@@ -159,18 +159,23 @@ describe('Mesh', () => {
     ).toThrow(/multiple of 3/);
   });
 
-  test('rejects non-indexed meshes beyond the 16-bit implicit-index range', () => {
-    const largestTriangleListVertexCount = 0xffff;
-    const overflowingTriangleListVertexCount = 0x10002;
-    const overflowingGeometry = new Geometry({
+  test('a non-indexed mesh past the 16-bit range widens its implicit indices instead of failing', () => {
+    // The former guard rejected these outright. The limit is gone: the implicit
+    // indices simply widen, because they are synthesized and nothing else about
+    // the mesh has to change.
+    // Both multiples of 3, as a non-indexed triangle list must be: 65 535 is the
+    // largest such count a 16-bit index reaches, 65 538 the first past it.
+    const largestUint16VertexCount = 0xffff;
+    const wideVertexCount = 0x10002;
+    const wideGeometry = new Geometry({
       attributes: [{ name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 }],
-      vertexData: new Float32Array(overflowingTriangleListVertexCount * 2),
+      vertexData: new Float32Array(wideVertexCount * 2),
       stride: 8,
     });
 
-    expect(() => new Mesh({ vertices: new Float32Array(largestTriangleListVertexCount * 2) })).not.toThrow();
-    expect(() => new Mesh({ vertices: new Float32Array(overflowingTriangleListVertexCount * 2) })).toThrow(/16-bit implicit-index limit of 65536 vertices/);
-    expect(() => new Mesh({ geometry: overflowingGeometry })).toThrow(/16-bit implicit-index limit of 65536 vertices/);
+    expect(new Mesh({ vertices: new Float32Array(largestUint16VertexCount * 2) }).indexFormat).toBe('uint16');
+    expect(new Mesh({ vertices: new Float32Array(wideVertexCount * 2) }).indexFormat).toBe('uint32');
+    expect(new Mesh({ geometry: wideGeometry }).indexFormat).toBe('uint32');
   });
 
   test('texture setter swaps the bound texture', () => {
