@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 63,
+  "memberCount": 66,
   "counts": {
     "constructors": 0,
-    "methods": 34,
-    "properties": 29,
+    "methods": 36,
+    "properties": 30,
     "events": 0
   },
   "sections": [
@@ -548,6 +548,74 @@
           "params": [],
           "returnType": "GamepadMapping",
           "description": "Nintendo Switch Pro Controller over USB or Bluetooth. Index 17 is the Capture button (SWITCH_PRO_BUTTON_CAPTURE == BUTTON_INDEX_COUNT); Home maps to Guide, Minus/Plus to Select/Start. Some browsers only recognise the controller after it has been paired through Steam or a dedicated driver."
+        },
+        {
+          "name": "createUITheme",
+          "signature": "createUITheme(patch: UIThemePatch, base: UITheme): UITheme",
+          "signatureTokens": [
+            {
+              "text": "createUITheme",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "patch",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIThemePatch",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "base",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UITheme",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UITheme",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "patch",
+              "type": "UIThemePatch",
+              "optional": false
+            },
+            {
+              "name": "base",
+              "type": "UITheme",
+              "optional": false
+            }
+          ],
+          "returnType": "UITheme",
+          "description": "Resolve patch against base, role by role and state by state. Roles the patch does not name keep the base object itself, so an unchanged theme stays identical by reference - which is what makes a cascade refresh a pointer comparison rather than a deep diff."
         },
         {
           "name": "createXboxGamepadMapping",
@@ -1673,6 +1741,74 @@
           "description": "Advance the frame counter and zero all per-frame accumulators in place. Call once at the start of each render tick before recording new data. Note: RenderStats.gpuMemoryBytes is intentionally **not** reset here. It is a running total of live GPU resources owned by the backend's resource accountant, which persists across frames; zeroing it each tick would make it read 0 after the first frame."
         },
         {
+          "name": "resolveUISkin",
+          "signature": "resolveUISkin(set: UISkinSet, state: UIWidgetState): UISkin",
+          "signatureTokens": [
+            {
+              "text": "resolveUISkin",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "set",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UISkinSet",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "state",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIWidgetState",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UISkin",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "set",
+              "type": "UISkinSet",
+              "optional": false
+            },
+            {
+              "name": "state",
+              "type": "UIWidgetState",
+              "optional": false
+            }
+          ],
+          "returnType": "UISkin",
+          "description": "The skin a state paints with, falling back to normal where undefined."
+        },
+        {
           "name": "serializeCacheRecordKey",
           "signature": "serializeCacheRecordKey(key: CacheRecordKey): string",
           "signatureTokens": [
@@ -2016,6 +2152,27 @@
           "params": [],
           "returnType": null,
           "description": "The built-in csv asset type."
+        },
+        {
+          "name": "defaultUITheme",
+          "signature": "defaultUITheme: UITheme",
+          "signatureTokens": [
+            {
+              "text": "defaultUITheme",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UITheme",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The theme a UI layer uses until one is assigned. It reproduces the widgets' built-in look, so assigning a patch changes only what the patch names."
         },
         {
           "name": "fontType",

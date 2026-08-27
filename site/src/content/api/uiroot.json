@@ -1,16 +1,16 @@
 {
   "title": "UIRoot",
-  "description": "Root of a scene's screen-fixed UI layer. Reached through Scene.ui; you do not construct it directly. Unlike Scene.root, the UI layer is **auto-rendered** by the SceneDirector after `Scene.draw()`, through the RenderingContext.screenView - so its children live in screen space (origin top-left, `0..width` × `0..height`) and never scroll with the camera. Pointer hit-testing and keyboard focus are routed to UI nodes in that same screen space, ahead of the world layer. Add widgets with `scene.ui.addChild(...)`. The UIRoot.onResize signal fires whenever the screen size changes, so anchored widgets can re-layout.",
+  "description": "Root of a scene's screen-fixed UI layer. Reached through Scene.ui; you do not construct it directly. Unlike Scene.root, the UI layer is **auto-rendered** by the SceneDirector after `Scene.draw()`, through the RenderingContext.screenView - so its children live in screen space (origin top-left, `0..width` × `0..height`) and never scroll with the camera. Pointer hit-testing and keyboard focus are routed to UI nodes in that same screen space, ahead of the world layer. Add widgets with `scene.ui.addChild(...)`. The UIRoot.onResize signal fires whenever the screen size changes, so anchored widgets can re-layout. The root also carries the layer's UIRoot.theme: widgets resolve their skins from the nearest themed ancestor, so assigning a theme here restyles every widget below that does not override it.",
   "symbol": "UIRoot",
   "kind": "class",
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 96,
+  "memberCount": 99,
   "counts": {
     "constructors": 1,
-    "methods": 41,
-    "properties": 39,
+    "methods": 43,
+    "properties": 40,
     "events": 15
   },
   "sections": [
@@ -21,7 +21,8 @@
       "paragraphs": [
         "Root of a scene's screen-fixed UI layer. Reached through Scene.ui; you do not construct it directly.",
         "Unlike Scene.root, the UI layer is **auto-rendered** by the SceneDirector after `Scene.draw()`, through the RenderingContext.screenView - so its children live in screen space (origin top-left, `0..width` × `0..height`) and never scroll with the camera. Pointer hit-testing and keyboard focus are routed to UI nodes in that same screen space, ahead of the world layer.",
-        "Add widgets with `scene.ui.addChild(...)`. The UIRoot.onResize signal fires whenever the screen size changes, so anchored widgets can re-layout."
+        "Add widgets with `scene.ui.addChild(...)`. The UIRoot.onResize signal fires whenever the screen size changes, so anchored widgets can re-layout.",
+        "The root also carries the layer's UIRoot.theme: widgets resolve their skins from the nearest themed ancestor, so assigning a theme here restyles every widget below that does not override it."
       ],
       "importLine": "import { UIRoot } from '@codexo/exojs'",
       "sourceLink": null
@@ -68,6 +69,64 @@
       "id": "methods",
       "title": "Methods",
       "members": [
+        {
+          "name": "_cascadeTheme",
+          "signature": "_cascadeTheme(): void",
+          "signatureTokens": [
+            {
+              "text": "_cascadeTheme",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Push a theme refresh into every themed descendant."
+        },
+        {
+          "name": "_resolveInheritedTheme",
+          "signature": "_resolveInheritedTheme(): UITheme",
+          "signatureTokens": [
+            {
+              "text": "_resolveInheritedTheme",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UITheme",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "UITheme",
+          "description": "The nearest themed ancestor's theme, or the built-in default when this node has none."
+        },
         {
           "name": "[iterator]",
           "signature": "[iterator](): IterableIterator<RenderNode>",
@@ -2789,6 +2848,27 @@
           "params": [],
           "returnType": null,
           "description": "Vertical skew angle in degrees. Shears the node along the Y axis (positive values lean the left edge downward). Combines correctly with rotation and scale."
+        },
+        {
+          "name": "theme",
+          "signature": "theme: UITheme",
+          "signatureTokens": [
+            {
+              "text": "theme",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UITheme",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Base theme for every widget in this layer. Widgets override parts of it per subtree with Widget.setTheme; there is no global theme, so two UI layers can carry different ones. Assigning restyles the whole layer at once - every widget below repaints and re-lays out."
         },
         {
           "name": "top",

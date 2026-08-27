@@ -1,0 +1,151 @@
+{
+  "title": "UISkinSet",
+  "description": "One skin per state. Only `normal` is required - resolveUISkin falls back to it for every state a set does not define.",
+  "symbol": "UISkinSet",
+  "kind": "type",
+  "subsystem": "ui",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One skin per state. Only `normal` is required - resolveUISkin falls back to it for every state a set does not define."
+      ],
+      "importLine": "import { UISkinSet } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "UISkinSet",
+          "signature": "{ normal: UISkin } & Partial<Readonly<Record<Exclude<UIWidgetState, \"normal\">, UISkin>>>",
+          "signatureTokens": [
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "normal",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UISkin",
+              "kind": "type"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Exclude",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIWidgetState",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"normal\"",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UISkin",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/ui/theme.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/theme.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/ui/theme.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/theme.ts"
+}

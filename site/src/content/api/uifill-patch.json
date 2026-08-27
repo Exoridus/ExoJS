@@ -1,16 +1,16 @@
 {
-  "title": "PanelOptions",
-  "description": "",
-  "symbol": "PanelOptions",
+  "title": "UIFillPatch",
+  "description": "Fill properties to override on a widget's background; omitted ones keep the skin's value.",
+  "symbol": "UIFillPatch",
   "kind": "interface",
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 4,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 7,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -18,39 +18,16 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [],
-      "importLine": "import { PanelOptions } from '@codexo/exojs'",
+      "paragraphs": [
+        "Fill properties to override on a widget's background; omitted ones keep the skin's value."
+      ],
+      "importLine": "import { UIFillPatch } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
       "id": "properties",
       "title": "Properties",
       "members": [
-        {
-          "name": "background",
-          "signature": "background?: UIBackground",
-          "signatureTokens": [
-            {
-              "text": "background",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "UIBackground",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Whole-background override, e.g. a nine-slice skin, replacing the theme's."
-        },
         {
           "name": "borderColor",
           "signature": "borderColor?: Color",
@@ -74,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Border color override (only drawn when borderWidth > 0)."
+          "description": ""
         },
         {
           "name": "borderWidth",
@@ -124,7 +101,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fill color override. Default: the theme's panel fill."
+          "description": ""
         },
         {
           "name": "cornerRadius",
@@ -132,56 +109,6 @@
           "signatureTokens": [
             {
               "text": "cornerRadius",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "height",
-          "signature": "height?: number",
-          "signatureTokens": [
-            {
-              "text": "height",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "width",
-          "signature": "width?: number",
-          "signatureTokens": [
-            {
-              "text": "width",
               "kind": "name"
             },
             {
@@ -213,11 +140,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/ui/Panel.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Panel.ts"
+        "label": "src/ui/theme.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/theme.ts"
       }
     }
   ],
-  "sourcePath": "src/ui/Panel.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Panel.ts"
+  "sourcePath": "src/ui/theme.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/theme.ts"
 }

@@ -1,0 +1,95 @@
+{
+  "title": "UIWidgetState",
+  "description": "Visual state a widget paints in. A widget that tracks no interaction stays on `'normal'`; states a skin set leaves undefined fall back to `'normal'`.",
+  "symbol": "UIWidgetState",
+  "kind": "type",
+  "subsystem": "ui",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Visual state a widget paints in. A widget that tracks no interaction stays on `'normal'`; states a skin set leaves undefined fall back to `'normal'`."
+      ],
+      "importLine": "import { UIWidgetState } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "UIWidgetState",
+          "signature": "\"disabled\" | \"focused\" | \"hover\" | \"normal\" | \"pressed\"",
+          "signatureTokens": [
+            {
+              "text": "\"disabled\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"focused\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"hover\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"normal\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"pressed\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/ui/theme.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/theme.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/ui/theme.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/theme.ts"
+}

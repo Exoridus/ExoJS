@@ -1,16 +1,16 @@
 {
-  "title": "PanelOptions",
-  "description": "",
-  "symbol": "PanelOptions",
+  "title": "UINineSliceBackground",
+  "description": "Textured background drawn as a nine-slice, so corners stay pixel-perfect while edges and center fill the widget's layout size.",
+  "symbol": "UINineSliceBackground",
   "kind": "interface",
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 5,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 7,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -18,8 +18,10 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [],
-      "importLine": "import { PanelOptions } from '@codexo/exojs'",
+      "paragraphs": [
+        "Textured background drawn as a nine-slice, so corners stay pixel-perfect while edges and center fill the widget's layout size."
+      ],
+      "importLine": "import { UINineSliceBackground } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -27,11 +29,11 @@
       "title": "Properties",
       "members": [
         {
-          "name": "background",
-          "signature": "background?: UIBackground",
+          "name": "border",
+          "signature": "border?: Partial<NineSliceInsets> | number",
           "signatureTokens": [
             {
-              "text": "background",
+              "text": "border",
               "kind": "name"
             },
             {
@@ -43,57 +45,48 @@
               "kind": "punctuation"
             },
             {
-              "text": "UIBackground",
+              "text": "Partial",
               "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Whole-background override, e.g. a nine-slice skin, replacing the theme's."
-        },
-        {
-          "name": "borderColor",
-          "signature": "borderColor?: Color",
-          "signatureTokens": [
-            {
-              "text": "borderColor",
-              "kind": "name"
             },
             {
-              "text": "?",
+              "text": "<",
               "kind": "punctuation"
             },
             {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Color",
+              "text": "NineSliceInsets",
               "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Border color override (only drawn when borderWidth > 0)."
-        },
-        {
-          "name": "borderWidth",
-          "signature": "borderWidth?: number",
-          "signatureTokens": [
-            {
-              "text": "borderWidth",
-              "kind": "name"
             },
             {
-              "text": "?",
+              "text": ">",
               "kind": "punctuation"
             },
             {
-              "text": ": ",
+              "text": " | ",
               "kind": "punctuation"
             },
             {
               "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Destination border widths; defaults to slices (1:1 corners)."
+        },
+        {
+          "name": "kind",
+          "signature": "kind: \"nineSlice\"",
+          "signatureTokens": [
+            {
+              "text": "kind",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"nineSlice\"",
               "kind": "keyword"
             }
           ],
@@ -102,11 +95,11 @@
           "description": ""
         },
         {
-          "name": "color",
-          "signature": "color?: Color",
+          "name": "modes",
+          "signature": "modes?: NineSliceModes",
           "signatureTokens": [
             {
-              "text": "color",
+              "text": "modes",
               "kind": "name"
             },
             {
@@ -118,28 +111,44 @@
               "kind": "punctuation"
             },
             {
-              "text": "Color",
+              "text": "NineSliceModes",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Fill color override. Default: the theme's panel fill."
+          "description": ""
         },
         {
-          "name": "cornerRadius",
-          "signature": "cornerRadius?: number",
+          "name": "slices",
+          "signature": "slices: Partial<NineSliceInsets> | number",
           "signatureTokens": [
             {
-              "text": "cornerRadius",
+              "text": "slices",
               "kind": "name"
             },
             {
-              "text": "?",
+              "text": ": ",
               "kind": "punctuation"
             },
             {
-              "text": ": ",
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NineSliceInsets",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
               "kind": "punctuation"
             },
             {
@@ -149,52 +158,31 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Source-texture slice widths, in texels."
         },
         {
-          "name": "height",
-          "signature": "height?: number",
+          "name": "texture",
+          "signature": "texture: Texture | TextureRegion",
           "signatureTokens": [
             {
-              "text": "height",
+              "text": "texture",
               "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
             },
             {
               "text": ": ",
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "width",
-          "signature": "width?: number",
-          "signatureTokens": [
-            {
-              "text": "width",
-              "kind": "name"
+              "text": "Texture",
+              "kind": "type"
             },
             {
-              "text": "?",
+              "text": " | ",
               "kind": "punctuation"
             },
             {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
+              "text": "TextureRegion",
+              "kind": "type"
             }
           ],
           "params": [],
@@ -213,11 +201,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/ui/Panel.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Panel.ts"
+        "label": "src/ui/theme.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/theme.ts"
       }
     }
   ],
-  "sourcePath": "src/ui/Panel.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Panel.ts"
+  "sourcePath": "src/ui/theme.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/theme.ts"
 }

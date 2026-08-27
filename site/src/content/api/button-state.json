@@ -1,0 +1,87 @@
+{
+  "title": "ButtonState",
+  "description": "The states a button paints in.",
+  "symbol": "ButtonState",
+  "kind": "type",
+  "subsystem": "ui",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The states a button paints in."
+      ],
+      "importLine": "import { ButtonState } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ButtonState",
+          "signature": "\"disabled\" | \"hover\" | \"normal\" | \"pressed\"",
+          "signatureTokens": [
+            {
+              "text": "\"disabled\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"hover\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"normal\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"pressed\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/ui/Button.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Button.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/ui/Button.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Button.ts"
+}

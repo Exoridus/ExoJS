@@ -1,0 +1,107 @@
+{
+  "title": "UIThemePatch",
+  "description": "Theme overrides applied on top of an inherited theme. Fields are replaced whole: naming `background` replaces the entire descriptor, since blending half a fill into a nine-slice has no meaning. Single-property tweaks belong on the widget (`panel.setFill({ color })`), not in a theme patch.",
+  "symbol": "UIThemePatch",
+  "kind": "type",
+  "subsystem": "ui",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Theme overrides applied on top of an inherited theme. Fields are replaced whole: naming `background` replaces the entire descriptor, since blending half a fill into a nine-slice has no meaning. Single-property tweaks belong on the widget (`panel.setFill({ color })`), not in a theme patch."
+      ],
+      "importLine": "import { UIThemePatch } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "UIThemePatch",
+          "signature": "Partial<Readonly<Record<UIThemeRole, UISkinSetPatch>>>",
+          "signatureTokens": [
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIThemeRole",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UISkinSetPatch",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/ui/theme.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/theme.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/ui/theme.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/theme.ts"
+}

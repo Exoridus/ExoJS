@@ -1,16 +1,16 @@
 {
-  "title": "PanelOptions",
-  "description": "",
-  "symbol": "PanelOptions",
+  "title": "UIFillBackground",
+  "description": "Vector background: a rounded rectangle with an optional stroked border.",
+  "symbol": "UIFillBackground",
   "kind": "interface",
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 5,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 7,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -18,8 +18,10 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [],
-      "importLine": "import { PanelOptions } from '@codexo/exojs'",
+      "paragraphs": [
+        "Vector background: a rounded rectangle with an optional stroked border."
+      ],
+      "importLine": "import { UIFillBackground } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -27,43 +29,14 @@
       "title": "Properties",
       "members": [
         {
-          "name": "background",
-          "signature": "background?: UIBackground",
-          "signatureTokens": [
-            {
-              "text": "background",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "UIBackground",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Whole-background override, e.g. a nine-slice skin, replacing the theme's."
-        },
-        {
           "name": "borderColor",
-          "signature": "borderColor?: Color",
+          "signature": "borderColor: Color",
           "signatureTokens": [
             {
               "text": "borderColor",
               "kind": "name"
             },
             {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
               "text": ": ",
               "kind": "punctuation"
             },
@@ -74,21 +47,17 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Border color override (only drawn when borderWidth > 0)."
+          "description": ""
         },
         {
           "name": "borderWidth",
-          "signature": "borderWidth?: number",
+          "signature": "borderWidth: number",
           "signatureTokens": [
             {
               "text": "borderWidth",
               "kind": "name"
             },
             {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
               "text": ": ",
               "kind": "punctuation"
             },
@@ -99,19 +68,15 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Border thickness in pixels; 0 draws no border."
         },
         {
           "name": "color",
-          "signature": "color?: Color",
+          "signature": "color: Color",
           "signatureTokens": [
             {
               "text": "color",
               "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -124,21 +89,17 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fill color override. Default: the theme's panel fill."
+          "description": ""
         },
         {
           "name": "cornerRadius",
-          "signature": "cornerRadius?: number",
+          "signature": "cornerRadius: number",
           "signatureTokens": [
             {
               "text": "cornerRadius",
               "kind": "name"
             },
             {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
               "text": ": ",
               "kind": "punctuation"
             },
@@ -149,51 +110,22 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Corner radius in pixels, clamped to half the widget's smaller side."
         },
         {
-          "name": "height",
-          "signature": "height?: number",
+          "name": "kind",
+          "signature": "kind: \"fill\"",
           "signatureTokens": [
             {
-              "text": "height",
+              "text": "kind",
               "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
             },
             {
               "text": ": ",
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "width",
-          "signature": "width?: number",
-          "signatureTokens": [
-            {
-              "text": "width",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
+              "text": "\"fill\"",
               "kind": "keyword"
             }
           ],
@@ -213,11 +145,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/ui/Panel.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Panel.ts"
+        "label": "src/ui/theme.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/theme.ts"
       }
     }
   ],
-  "sourcePath": "src/ui/Panel.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Panel.ts"
+  "sourcePath": "src/ui/theme.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/theme.ts"
 }
