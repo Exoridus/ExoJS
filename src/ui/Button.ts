@@ -1,11 +1,14 @@
-import { Color } from '#core/Color';
+import type { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
 import type { KeyEvent } from '#input/KeyEvent';
 import { Keyboard } from '#input/types';
-import { Graphics } from '#rendering/primitives/Graphics';
 import { Text } from '#rendering/text/Text';
+import type { TextStyleOptions } from '#rendering/text/TextStyle';
 
+import type { UIBackground, UIFillPatch, UIWidgetState } from './theme';
+import { applyUIFillPatch, resolveUISkin } from './theme';
 import { Widget } from './Widget';
+import { WidgetBackground } from './WidgetBackground';
 
 export interface ButtonOptions {
   width?: number;
@@ -21,41 +24,65 @@ export interface ButtonOptions {
   fontSize?: number;
 }
 
-type ButtonState = 'normal' | 'hover' | 'pressed' | 'disabled';
+/** The states a button paints in. */
+export type ButtonState = 'normal' | 'hover' | 'pressed' | 'disabled';
+
+const buttonStates: readonly ButtonState[] = ['normal', 'hover', 'pressed', 'disabled'];
+
+const fillColorOf = (background: UIBackground): Color | null => (background.kind === 'fill' ? background.color : null);
 
 /**
  * Clickable button with a rounded background, a centered label, hover/pressed
  * visual states, and keyboard activation (Enter / Space while focused).
  * Listen to {@link Button.onClick} for activation.
+ *
+ * The button paints the `button` role of its inherited theme, one skin per
+ * state. Constructor options and the setters below are per-button overrides on
+ * top of that skin.
  */
 export class Button extends Widget {
   /** Fires when the button is activated by click, tap, or Enter/Space. */
   public readonly onClick = new Signal<[Button]>();
 
-  private readonly _background = new Graphics();
+  private readonly _surface = new WidgetBackground(this, 0);
   private readonly _label: Text;
-  private readonly _colors: Record<ButtonState, Color>;
-  private readonly _cornerRadius: number;
-  private _state: ButtonState = 'normal';
+  private readonly _backgrounds: Partial<Record<UIWidgetState, UIBackground>> = {};
+  private readonly _fills: Partial<Record<UIWidgetState, UIFillPatch>> = {};
+  private _textStyle: TextStyleOptions | null = null;
+  /** The skin text object last pushed into the label, for a cheap identity check per paint. */
+  private _appliedText: TextStyleOptions | null = null;
   private _pointerInside = false;
 
   public constructor(options: ButtonOptions = {}) {
     super();
 
-    this._colors = {
-      normal: (options.color ?? new Color(54, 120, 220, 1)).clone(),
-      hover: (options.hoverColor ?? new Color(74, 140, 240, 1)).clone(),
-      pressed: (options.pressedColor ?? new Color(40, 96, 180, 1)).clone(),
-      disabled: (options.disabledColor ?? new Color(70, 76, 90, 1)).clone(),
+    const perState: Partial<Record<ButtonState, Color>> = {
+      ...(options.color !== undefined && { normal: options.color }),
+      ...(options.hoverColor !== undefined && { hover: options.hoverColor }),
+      ...(options.pressedColor !== undefined && { pressed: options.pressedColor }),
+      ...(options.disabledColor !== undefined && { disabled: options.disabledColor }),
     };
-    this._cornerRadius = options.cornerRadius ?? 8;
-    this._label = new Text(options.label ?? '', {
-      fillColor: options.textColor ?? Color.white,
-      fontSize: options.fontSize ?? 16,
-      align: 'center',
-    });
 
-    this.addChild(this._background);
+    for (const state of buttonStates) {
+      const color = perState[state];
+      const patch: { -readonly [Key in keyof UIFillPatch]: UIFillPatch[Key] } = {};
+
+      if (color !== undefined) patch.color = color.clone();
+      if (options.cornerRadius !== undefined) patch.cornerRadius = options.cornerRadius;
+
+      if (Object.keys(patch).length > 0) this._fills[state] = patch;
+    }
+
+    if (options.textColor !== undefined || options.fontSize !== undefined) {
+      this._textStyle = {
+        ...(options.textColor !== undefined && { fillColor: options.textColor }),
+        ...(options.fontSize !== undefined && { fontSize: options.fontSize }),
+      };
+    }
+
+    this._appliedText = resolveUISkin(this.theme.button, 'normal').text;
+    this._label = new Text(options.label ?? '', { ...this._appliedText, ...this._textStyle });
+
     this.addChild(this._label);
 
     this.interactive = true;
@@ -81,14 +108,41 @@ export class Button extends Widget {
     this._positionLabel();
   }
 
-  /** The per-state fill colours (`normal` / `hover` / `pressed` / `disabled`). */
-  public get colors(): Readonly<Record<'normal' | 'hover' | 'pressed' | 'disabled', Color>> {
-    return this._colors;
+  /** The {@link Text} node drawing the label, for advanced styling. */
+  public get labelNode(): Text {
+    return this._label;
   }
 
-  /** Corner radius in pixels. */
+  /** The state the button currently paints in. */
+  public get state(): ButtonState {
+    return this._skinState as ButtonState;
+  }
+
+  /** The background painted in `state`: this button's overrides over its skin. */
+  public backgroundIn(state: UIWidgetState = this._skinState): UIBackground {
+    return this._backgrounds[state] ?? applyUIFillPatch(resolveUISkin(this.theme.button, state).background, this._fills[state] ?? null);
+  }
+
+  /** The per-state fill colours; `null` for a state that does not paint a fill. */
+  public get colors(): Readonly<Record<ButtonState, Color | null>> {
+    return {
+      normal: fillColorOf(this.backgroundIn('normal')),
+      hover: fillColorOf(this.backgroundIn('hover')),
+      pressed: fillColorOf(this.backgroundIn('pressed')),
+      disabled: fillColorOf(this.backgroundIn('disabled')),
+    };
+  }
+
+  /** The fill overrides carried for `state`, or `null` when it takes its skin as is. */
+  public fillOverridesIn(state: UIWidgetState = 'normal'): UIFillPatch | null {
+    return this._fills[state] ?? null;
+  }
+
+  /** Corner radius in pixels of the normal state; `0` when it paints no fill. */
   public get cornerRadius(): number {
-    return this._cornerRadius;
+    const background = this.backgroundIn('normal');
+
+    return background.kind === 'fill' ? background.cornerRadius : 0;
   }
 
   /** Label fill colour. */
@@ -99,6 +153,52 @@ export class Button extends Widget {
   /** Label font size in pixels. */
   public get fontSize(): number {
     return this._label.style.fontSize;
+  }
+
+  /** The text-style overrides this button carries, or `null` when it takes the skin's. */
+  public get textStyleOverrides(): TextStyleOptions | null {
+    return this._textStyle;
+  }
+
+  /**
+   * Override fill properties for one state on top of its skin. `null` drops
+   * that state's overrides.
+   */
+  public setFill(patch: UIFillPatch | null, state: UIWidgetState = 'normal'): this {
+    if (patch === null) {
+      delete this._fills[state];
+    } else {
+      this._fills[state] = { ...this._fills[state], ...patch };
+    }
+
+    this._invalidatePaint();
+
+    return this;
+  }
+
+  /** Replace one state's whole background descriptor; `null` restores the skin's. */
+  public setBackground(background: UIBackground | null, state: UIWidgetState = 'normal'): this {
+    if (background === null) {
+      delete this._backgrounds[state];
+    } else {
+      this._backgrounds[state] = background;
+    }
+
+    this._invalidateLayout();
+
+    return this;
+  }
+
+  /**
+   * Override label text style on top of the skin's; `null` returns to it.
+   * Layout-invalidating - the label is re-measured and re-centered.
+   */
+  public setTextStyle(style: TextStyleOptions | null): this {
+    this._textStyle = style === null ? null : { ...this._textStyle, ...style };
+    this._appliedText = null;
+    this._invalidateLayout();
+
+    return this;
   }
 
   private readonly _onPointerOver = (): void => {
@@ -113,8 +213,7 @@ export class Button extends Widget {
 
   private readonly _onPointerDown = (): void => {
     if (this.effectiveEnabled) {
-      this._state = 'pressed';
-      this._draw();
+      this._setSkinState('pressed');
     }
   };
 
@@ -149,8 +248,7 @@ export class Button extends Widget {
       state = 'hover';
     }
 
-    this._state = state;
-    this._draw();
+    this._setSkinState(state);
   }
 
   protected override _onEnabledChanged(effectiveEnabled: boolean): void {
@@ -158,27 +256,45 @@ export class Button extends Widget {
     this._refreshState();
   }
 
+  protected override _repaint(): void {
+    this._applyTextStyle();
+    this._surface.apply(this.backgroundIn(), this._uiWidth, this._uiHeight);
+  }
+
   protected override _relayout(): void {
-    this._draw();
+    super._relayout();
     this._positionLabel();
   }
 
-  private _draw(): void {
-    const g = this._background;
+  /**
+   * Push the current state's text style into the label, skipping the re-style
+   * and re-measure when the skin is handing out the same style object it did
+   * last time - which is the common case for a state flip.
+   */
+  private _applyTextStyle(): void {
+    const skinText = resolveUISkin(this.theme.button, this._skinState).text;
 
-    g.clear();
-
-    if (this._uiWidth <= 0 || this._uiHeight <= 0) {
+    if (skinText === this._appliedText) {
       return;
     }
 
-    g.fillColor = this._colors[this._state];
-    g.drawRoundedRectangle(0, 0, this._uiWidth, this._uiHeight, this._cornerRadius);
+    this._appliedText = skinText;
+    this._label.style = { ...skinText, ...this._textStyle };
+    this._positionLabel();
   }
 
+  /** Center the label in the content box the skin's insets leave. */
   private _positionLabel(): void {
+    const insets = resolveUISkin(this.theme.button, this._skinState).insets;
     const bounds = this._label.getLocalBounds();
+    const contentWidth = this._uiWidth - insets.left - insets.right;
+    const contentHeight = this._uiHeight - insets.top - insets.bottom;
 
-    this._label.setPosition((this._uiWidth - bounds.width) / 2, (this._uiHeight - bounds.height) / 2);
+    this._label.setPosition(insets.left + (contentWidth - bounds.width) / 2, insets.top + (contentHeight - bounds.height) / 2);
+  }
+
+  public override destroy(): void {
+    this._surface.destroy();
+    super.destroy();
   }
 }

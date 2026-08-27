@@ -846,7 +846,7 @@ describe('serialization — UI widgets', () => {
     const restored = deserializeTree(data) as Panel;
     expect(restored.uiWidth).toBe(120);
     expect(restored.borderWidth).toBe(2);
-    const userChildren = restored.children.filter(child => child !== restored.background);
+    const userChildren = restored.children.filter(child => child !== restored.backgroundNode);
     expect(userChildren).toHaveLength(1);
     expect(userChildren[0].name).toBe('content');
   });
@@ -864,7 +864,7 @@ describe('serialization — UI widgets', () => {
     const restored = deserializeTree(data) as Button;
     expect(restored.label).toBe('Play');
     expect(restored.uiWidth).toBe(100);
-    expect(restored.colors.normal.r).toBe(10);
+    expect(restored.colors.normal?.r).toBe(10);
     expect(restored.enabled).toBe(false);
   });
 
@@ -877,7 +877,7 @@ describe('serialization — UI widgets', () => {
 
     const restored = deserializeTree(data) as ProgressBar;
     expect(restored.value).toBeCloseTo(0.42);
-    expect(restored.fillColor.g).toBe(2);
+    expect(restored.fillColor?.g).toBe(2);
   });
 
   it('round-trips a Stack (options + items)', () => {

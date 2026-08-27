@@ -5,14 +5,27 @@ import { Panel } from '#ui/Panel';
 import { ProgressBar } from '#ui/ProgressBar';
 import { ScrollContainer, type ScrollDirection } from '#ui/ScrollContainer';
 import { Stack } from '#ui/Stack';
+import type { UIFillPatch } from '#ui/theme';
 import { UIRoot } from '#ui/UIRoot';
 
 import type { NodeSerializer } from './NodeSerializer';
 import { asSerializedNode } from './read';
 import type { SerializationRegistry } from './SerializationRegistry';
-import { arrayToColor, colorToArray, compact, deserializeStyleOptions, serializeStyle } from './serializerHelpers';
+import { arrayToColor, colorToArray, compact, deserializeStyleOptions, serializeStyleOptions } from './serializerHelpers';
 
 const num = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
+
+/** The fields a widget's fill overrides contribute, omitting what it does not override. */
+const serializeFill = (fill: UIFillPatch | null): Record<string, unknown> => ({
+  ...(fill?.color !== undefined && { color: colorToArray(fill.color) }),
+  ...(fill?.borderColor !== undefined && { borderColor: colorToArray(fill.borderColor) }),
+  ...(fill?.borderWidth !== undefined && { borderWidth: fill.borderWidth }),
+  ...(fill?.cornerRadius !== undefined && { cornerRadius: fill.cornerRadius }),
+});
+
+/** Just the colour of a fill override, under the key the widget's options use for it. */
+const serializeFillColor = (key: string, fill: UIFillPatch | null): Record<string, unknown> =>
+  fill?.color !== undefined ? { [key]: colorToArray(fill.color) } : {};
 
 // Widget composition note: widgets own internal children (a Label's Text, a
 // Panel's background Graphics, a ScrollContainer's content Container, etc.) that
@@ -21,13 +34,18 @@ const num = (value: unknown): number | undefined => (typeof value === 'number' &
 // round-trip; for ScrollContainer those live one level down, inside `content`.
 // Anchoring (anchorIn) references a UIRoot and is not serialized; the resolved
 // position still round-trips via the common fields.
+//
+// Style: only a widget's OWN overrides round-trip, never the values it resolved
+// from a theme - otherwise loading a scene under a different theme would replay
+// the theme it was saved under. Whole-background overrides (`setBackground`)
+// are skipped as well: a texture reference has no serialized form here.
 
 // ── Label ────────────────────────────────────────────────────────────────────
 
 const labelSerializer: NodeSerializer<Label> = {
   write(node) {
     const out: Record<string, unknown> = { text: node.text };
-    const style = serializeStyle(node.textNode.style);
+    const style = serializeStyleOptions(node.textStyleOverrides);
 
     if (style !== undefined) out.style = style;
     if (!node.enabled) out.enabled = false;
@@ -47,18 +65,16 @@ const labelSerializer: NodeSerializer<Label> = {
 
 const panelSerializer: NodeSerializer<Panel> = {
   write(node, ctx) {
+    const fill = node.fillOverrides;
     const out: Record<string, unknown> = {
       width: node.uiWidth,
       height: node.uiHeight,
-      color: colorToArray(node.color),
-      borderColor: colorToArray(node.borderColor),
-      borderWidth: node.borderWidth,
-      cornerRadius: node.cornerRadius,
+      ...serializeFill(fill),
     };
 
     if (!node.enabled) out.enabled = false;
 
-    const userChildren = node.children.filter(child => child !== node.background);
+    const userChildren = node.children.filter(child => child !== node.backgroundNode);
     if (userChildren.length > 0) out.children = userChildren.map(child => ctx.writeNode(child));
 
     return out;
@@ -93,18 +109,21 @@ const panelSerializer: NodeSerializer<Panel> = {
 
 const buttonSerializer: NodeSerializer<Button> = {
   write(node) {
+    const normal = node.fillOverridesIn('normal');
     const out: Record<string, unknown> = {
       width: node.uiWidth,
       height: node.uiHeight,
       label: node.label,
-      cornerRadius: node.cornerRadius,
-      color: colorToArray(node.colors.normal),
-      hoverColor: colorToArray(node.colors.hover),
-      pressedColor: colorToArray(node.colors.pressed),
-      disabledColor: colorToArray(node.colors.disabled),
-      textColor: colorToArray(node.textColor),
-      fontSize: node.fontSize,
+      ...serializeFill(normal),
+      ...serializeFillColor('hoverColor', node.fillOverridesIn('hover')),
+      ...serializeFillColor('pressedColor', node.fillOverridesIn('pressed')),
+      ...serializeFillColor('disabledColor', node.fillOverridesIn('disabled')),
     };
+
+    const style = node.textStyleOverrides;
+
+    if (style?.fillColor !== undefined) out.textColor = colorToArray(style.fillColor);
+    if (style?.fontSize !== undefined) out.fontSize = style.fontSize;
 
     if (!node.enabled) out.enabled = false;
 
@@ -136,13 +155,14 @@ const buttonSerializer: NodeSerializer<Button> = {
 
 const progressBarSerializer: NodeSerializer<ProgressBar> = {
   write(node) {
+    const { track, bar } = node.fillOverrides;
     const out: Record<string, unknown> = {
       width: node.uiWidth,
       height: node.uiHeight,
       value: node.value,
-      trackColor: colorToArray(node.trackColor),
-      fillColor: colorToArray(node.fillColor),
-      cornerRadius: node.cornerRadius,
+      ...serializeFillColor('trackColor', track),
+      ...serializeFillColor('fillColor', bar),
+      ...(track?.cornerRadius !== undefined && { cornerRadius: track.cornerRadius }),
     };
 
     if (!node.enabled) out.enabled = false;

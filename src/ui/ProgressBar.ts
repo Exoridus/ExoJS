@@ -1,8 +1,10 @@
-import { Color } from '#core/Color';
+import type { Color } from '#core/Color';
 import { clamp } from '#math/utils';
-import { Graphics } from '#rendering/primitives/Graphics';
 
+import type { UIBackground, UIFillPatch } from './theme';
+import { applyUIFillPatch } from './theme';
 import { Widget } from './Widget';
+import { WidgetBackground } from './WidgetBackground';
 
 export interface ProgressBarOptions {
   width?: number;
@@ -16,26 +18,27 @@ export interface ProgressBarOptions {
 
 /**
  * Horizontal progress / health bar. {@link ProgressBar.value} is the fill
- * fraction in `[0, 1]`; setting it redraws only the fill.
+ * fraction in `[0, 1]`; setting it redraws only the bar.
+ *
+ * The two surfaces are themed independently: the groove paints the
+ * `progressBarTrack` role, the bar `progressBarFill`.
  */
 export class ProgressBar extends Widget {
-  private readonly _track = new Graphics();
-  private readonly _fill = new Graphics();
-  private readonly _trackColor: Color;
-  private readonly _fillColor: Color;
-  private readonly _cornerRadius: number;
+  private readonly _track = new WidgetBackground(this, 0);
+  private readonly _bar = new WidgetBackground(this, 1);
+  private _trackBackground: UIBackground | null = null;
+  private _barBackground: UIBackground | null = null;
+  private _trackFill: UIFillPatch | null = null;
+  private _barFill: UIFillPatch | null = null;
   private _value: number;
 
   public constructor(options: ProgressBarOptions = {}) {
     super();
 
     this._value = clamp(options.value ?? 0, 0, 1);
-    this._trackColor = (options.trackColor ?? new Color(255, 255, 255, 0.16)).clone();
-    this._fillColor = (options.fillColor ?? new Color(80, 220, 120, 1)).clone();
-    this._cornerRadius = options.cornerRadius ?? 4;
+    this._trackFill = fillPatchFrom(options.trackColor, options.cornerRadius);
+    this._barFill = fillPatchFrom(options.fillColor, options.cornerRadius);
 
-    this.addChild(this._track);
-    this.addChild(this._fill);
     this.setSize(options.width ?? 200, options.height ?? 12);
   }
 
@@ -49,55 +52,100 @@ export class ProgressBar extends Widget {
 
     if (this._value !== next) {
       this._value = next;
-      this._drawFill();
+      this._paintBar();
     }
   }
 
-  /** Track (background) colour. */
-  public get trackColor(): Color {
-    return this._trackColor;
+  /** The background painted behind the bar. */
+  public get trackBackground(): UIBackground {
+    return this._trackBackground ?? applyUIFillPatch(this._skin('progressBarTrack').background, this._trackFill);
   }
 
-  /** Fill (foreground) colour. */
-  public get fillColor(): Color {
-    return this._fillColor;
+  /** The background painted for the filled portion. */
+  public get barBackground(): UIBackground {
+    return this._barBackground ?? applyUIFillPatch(this._skin('progressBarFill').background, this._barFill);
   }
 
-  /** Corner radius in pixels. */
+  /** Track colour, or `null` when the track does not paint a fill. */
+  public get trackColor(): Color | null {
+    const background = this.trackBackground;
+
+    return background.kind === 'fill' ? background.color : null;
+  }
+
+  /** Bar colour, or `null` when the bar does not paint a fill. */
+  public get fillColor(): Color | null {
+    const background = this.barBackground;
+
+    return background.kind === 'fill' ? background.color : null;
+  }
+
+  /** Corner radius in pixels of the track; `0` when it paints no fill. */
   public get cornerRadius(): number {
-    return this._cornerRadius;
+    const background = this.trackBackground;
+
+    return background.kind === 'fill' ? background.cornerRadius : 0;
   }
 
-  protected override _relayout(): void {
-    this._drawTrack();
-    this._drawFill();
+  /** The fill overrides carried by the track and the bar, `null` where none. */
+  public get fillOverrides(): { readonly track: UIFillPatch | null; readonly bar: UIFillPatch | null } {
+    return { track: this._trackFill, bar: this._barFill };
   }
 
-  private _drawTrack(): void {
-    const g = this._track;
+  /** Override fill properties of the track on top of its skin; `null` drops them. */
+  public setTrackFill(patch: UIFillPatch | null): this {
+    this._trackFill = patch === null ? null : { ...this._trackFill, ...patch };
+    this._invalidatePaint();
 
-    g.clear();
-
-    if (this._uiWidth <= 0 || this._uiHeight <= 0) {
-      return;
-    }
-
-    g.fillColor = this._trackColor;
-    g.drawRoundedRectangle(0, 0, this._uiWidth, this._uiHeight, this._cornerRadius);
+    return this;
   }
 
-  private _drawFill(): void {
-    const g = this._fill;
+  /** Override fill properties of the bar on top of its skin; `null` drops them. */
+  public setBarFill(patch: UIFillPatch | null): this {
+    this._barFill = patch === null ? null : { ...this._barFill, ...patch };
+    this._invalidatePaint();
 
-    g.clear();
+    return this;
+  }
 
-    const width = this._uiWidth * this._value;
+  /** Replace the track's whole background descriptor; `null` restores the skin's. */
+  public setTrackBackground(background: UIBackground | null): this {
+    this._trackBackground = background;
+    this._invalidateLayout();
 
-    if (width <= 0 || this._uiHeight <= 0) {
-      return;
-    }
+    return this;
+  }
 
-    g.fillColor = this._fillColor;
-    g.drawRoundedRectangle(0, 0, width, this._uiHeight, Math.min(this._cornerRadius, width / 2));
+  /** Replace the bar's whole background descriptor; `null` restores the skin's. */
+  public setBarBackground(background: UIBackground | null): this {
+    this._barBackground = background;
+    this._invalidateLayout();
+
+    return this;
+  }
+
+  protected override _repaint(): void {
+    this._track.apply(this.trackBackground, this._uiWidth, this._uiHeight);
+    this._paintBar();
+  }
+
+  private _paintBar(): void {
+    this._bar.apply(this.barBackground, this._uiWidth * this._value, this._uiHeight);
+  }
+
+  public override destroy(): void {
+    this._track.destroy();
+    this._bar.destroy();
+    super.destroy();
   }
 }
+
+/** The fill overrides a colour and radius pair asks for, or `null` for none. */
+const fillPatchFrom = (color: Color | undefined, cornerRadius: number | undefined): UIFillPatch | null => {
+  const patch: { -readonly [Key in keyof UIFillPatch]: UIFillPatch[Key] } = {};
+
+  if (color !== undefined) patch.color = color.clone();
+  if (cornerRadius !== undefined) patch.cornerRadius = cornerRadius;
+
+  return Object.keys(patch).length > 0 ? patch : null;
+};

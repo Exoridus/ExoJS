@@ -2,16 +2,21 @@ import { Color } from '#core/Color';
 import { KeyEvent } from '#input/KeyEvent';
 import { Keyboard } from '#input/types';
 import { Rectangle } from '#math/Rectangle';
+import { Container } from '#rendering/Container';
 import { Graphics } from '#rendering/primitives/Graphics';
+import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import type { GlyphInfo } from '#rendering/text/types';
+import type { Texture } from '#rendering/texture/Texture';
 import { Button } from '#ui/Button';
 import { Label } from '#ui/Label';
 import { Panel } from '#ui/Panel';
 import { ProgressBar } from '#ui/ProgressBar';
 import { Stack } from '#ui/Stack';
+import type { UITheme } from '#ui/theme';
+import { createUITheme } from '#ui/theme';
 import { UIRoot } from '#ui/UIRoot';
 
 // Text (used by Label/Button) needs a glyph atlas; inject a deterministic mock
@@ -66,14 +71,15 @@ describe('Panel', () => {
     expect(panel.borderWidth).toBe(0);
   });
 
-  test('exposes background, color, borderColor, borderWidth, cornerRadius getters', () => {
+  test('exposes its painted node and the fill values in effect', () => {
     const color = new Color(10, 20, 30, 1);
     const borderColor = new Color(1, 2, 3, 1);
     const panel = new Panel({ width: 100, height: 50, color, borderColor, borderWidth: 3, cornerRadius: 12 });
 
-    expect(panel.background).toBeInstanceOf(Graphics);
-    expect(panel.color.r).toBe(10);
-    expect(panel.borderColor.r).toBe(1);
+    expect(panel.backgroundNode).toBeInstanceOf(Graphics);
+    expect(panel.background.kind).toBe('fill');
+    expect(panel.color?.r).toBe(10);
+    expect(panel.borderColor?.r).toBe(1);
     expect(panel.borderWidth).toBe(3);
     expect(panel.cornerRadius).toBe(12);
   });
@@ -259,8 +265,8 @@ describe('ProgressBar', () => {
   test('exposes trackColor, fillColor, cornerRadius getters', () => {
     const bar = new ProgressBar({ trackColor: new Color(1, 2, 3, 1), fillColor: new Color(4, 5, 6, 1), cornerRadius: 6 });
 
-    expect(bar.trackColor.r).toBe(1);
-    expect(bar.fillColor.r).toBe(4);
+    expect(bar.trackColor?.r).toBe(1);
+    expect(bar.fillColor?.r).toBe(4);
     expect(bar.cornerRadius).toBe(6);
   });
 
@@ -392,5 +398,122 @@ describe('Stack', () => {
     expect(gfx.position.x).toBe(0);
     expect(stack.uiWidth).toBe(40);
     expect(stack.uiHeight).toBe(20);
+  });
+});
+
+// ── Skins, themes and controlled setters ─────────────────────────────────────
+
+const textureStub = (): Texture =>
+  ({
+    width: 128,
+    height: 64,
+    version: 1,
+    source: null,
+    addDestroyListener: () => undefined,
+    removeDestroyListener: () => undefined,
+  }) as unknown as Texture;
+
+const themeWith = (color: Color): UITheme =>
+  createUITheme({ panel: { normal: { background: { kind: 'fill', color, borderColor: Color.black, borderWidth: 0, cornerRadius: 2 } } } });
+
+describe('widget skins', () => {
+  test('a panel paints the theme it inherits and follows a later theme change', () => {
+    const root = new UIRoot();
+    const panel = new Panel({ width: 40, height: 20 });
+
+    root.addChild(panel);
+    root.theme = themeWith(new Color(9, 8, 7, 1));
+
+    expect(panel.color?.r).toBe(9);
+    expect(panel.cornerRadius).toBe(2);
+    expect(panel.backgroundNode).toBeInstanceOf(Graphics);
+  });
+
+  test('a panel override wins over the theme and repaints', () => {
+    const root = new UIRoot();
+    const panel = new Panel({ width: 40, height: 20 });
+
+    root.addChild(panel);
+    root.theme = themeWith(new Color(9, 8, 7, 1));
+    panel.setFill({ color: new Color(1, 1, 1, 1) });
+
+    expect(panel.color?.r).toBe(1);
+    expect(panel.fillOverrides?.color?.r).toBe(1);
+
+    panel.setFill(null);
+
+    expect(panel.color?.r).toBe(9);
+  });
+
+  test('a texture skin swaps the painted node and keeps it below the content', () => {
+    const panel = new Panel({ width: 40, height: 20 });
+    const content = new Container();
+
+    panel.addChild(content);
+    panel.setBackground({ kind: 'nineSlice', texture: textureStub(), slices: 4 });
+
+    expect(panel.backgroundNode).toBeInstanceOf(NineSliceSprite);
+    expect(panel.children[0]).toBe(panel.backgroundNode);
+
+    panel.setBackground(null);
+
+    expect(panel.backgroundNode).toBeInstanceOf(Graphics);
+    expect(panel.children[0]).toBe(panel.backgroundNode);
+  });
+
+  test('a button resolves a skin per state and overrides one state at a time', () => {
+    const button = new Button({ width: 80, height: 30 });
+
+    expect(button.state).toBe('normal');
+    expect(button.colors.hover?.r).toBe(74);
+
+    button.setFill({ color: new Color(3, 3, 3, 1) }, 'hover');
+
+    expect(button.colors.hover?.r).toBe(3);
+    expect(button.colors.normal?.r).toBe(54);
+  });
+
+  test('a disabled button paints its disabled skin', () => {
+    const button = new Button({ width: 80, height: 30 });
+
+    button.enabled = false;
+
+    expect(button.state).toBe('disabled');
+    expect(button.colors.disabled?.r).toBe(70);
+  });
+
+  test('a button follows the theme text style and re-centers the label', () => {
+    const root = new UIRoot();
+    const button = new Button({ width: 80, height: 30, label: 'Go' });
+
+    root.addChild(button);
+    root.theme = createUITheme({ button: { normal: { text: { fontSize: 32 } } } });
+
+    expect(button.fontSize).toBe(32);
+  });
+
+  test('a label takes its style from the theme and re-measures on an override', () => {
+    const root = new UIRoot();
+    const label = new Label('Score');
+
+    root.addChild(label);
+    root.theme = createUITheme({ label: { normal: { text: { fontSize: 40 } } } });
+
+    expect(label.textNode.style.fontSize).toBe(40);
+
+    label.setTextStyle({ fontSize: 8 });
+
+    expect(label.textNode.style.fontSize).toBe(8);
+    expect(label.textStyleOverrides?.fontSize).toBe(8);
+  });
+
+  test('a progress bar themes its track and its bar independently', () => {
+    const bar = new ProgressBar({ width: 100, height: 10, value: 0.5 });
+
+    bar.setTrackFill({ color: new Color(2, 2, 2, 1) });
+
+    expect(bar.trackColor?.r).toBe(2);
+    expect(bar.fillColor?.r).toBe(80);
+    expect(bar.fillOverrides.bar).toBeNull();
   });
 });

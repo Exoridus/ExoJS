@@ -1,16 +1,16 @@
 {
   "title": "Button",
-  "description": "Clickable button with a rounded background, a centered label, hover/pressed visual states, and keyboard activation (Enter / Space while focused). Listen to Button.onClick for activation.",
+  "description": "Clickable button with a rounded background, a centered label, hover/pressed visual states, and keyboard activation (Enter / Space while focused). Listen to Button.onClick for activation. The button paints the `button` role of its inherited theme, one skin per state. Constructor options and the setters below are per-button overrides on top of that skin.",
   "symbol": "Button",
   "kind": "class",
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 108,
+  "memberCount": 127,
   "counts": {
     "constructors": 1,
-    "methods": 46,
-    "properties": 46,
+    "methods": 60,
+    "properties": 51,
     "events": 15
   },
   "sections": [
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Clickable button with a rounded background, a centered label, hover/pressed visual states, and keyboard activation (Enter / Space while focused). Listen to Button.onClick for activation."
+        "Clickable button with a rounded background, a centered label, hover/pressed visual states, and keyboard activation (Enter / Space while focused). Listen to Button.onClick for activation.",
+        "The button paints the `button` role of its inherited theme, one skin per state. Constructor options and the setters below are per-button overrides on top of that skin."
       ],
       "importLine": "import { Button } from '@codexo/exojs'",
       "sourceLink": null
@@ -153,6 +154,93 @@
           "description": ""
         },
         {
+          "name": "_cascadeTheme",
+          "signature": "_cascadeTheme(): void",
+          "signatureTokens": [
+            {
+              "text": "_cascadeTheme",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Push a theme refresh into every themed descendant."
+        },
+        {
+          "name": "_invalidateLayout",
+          "signature": "_invalidateLayout(): void",
+          "signatureTokens": [
+            {
+              "text": "_invalidateLayout",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Re-lay out and repaint, then re-apply screen anchoring. This is the right invalidation for anything a skin's insets or a font size can move, and for every size change."
+        },
+        {
+          "name": "_invalidatePaint",
+          "signature": "_invalidatePaint(): void",
+          "signatureTokens": [
+            {
+              "text": "_invalidatePaint",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Repaint without re-laying out - for a change that cannot move anything, such as a colour or a state flip. Applied immediately, not batched."
+        },
+        {
           "name": "_onEnabledChanged",
           "signature": "_onEnabledChanged(effectiveEnabled: boolean): void",
           "signatureTokens": [
@@ -200,6 +288,35 @@
           "description": "React to an effectiveEnabled change - fired whenever it flips, whether the widget's own enabled flag changed or an ancestor widget's did. Override in subclasses."
         },
         {
+          "name": "_onThemeChanged",
+          "signature": "_onThemeChanged(): void",
+          "signatureTokens": [
+            {
+              "text": "_onThemeChanged",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "React to a resolved-theme change. The default re-lays out and repaints; override to re-read skin values that are cached elsewhere first, then call super._onThemeChanged()."
+        },
+        {
           "name": "_relayout",
           "signature": "_relayout(): void",
           "signatureTokens": [
@@ -226,7 +343,159 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Redraw size-dependent content (background, child positions). Override in subclasses."
+          "description": "Re-place size-dependent content and repaint. Override in subclasses that position children; call super._relayout() to keep the repaint."
+        },
+        {
+          "name": "_repaint",
+          "signature": "_repaint(): void",
+          "signatureTokens": [
+            {
+              "text": "_repaint",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Redraw this widget's own painted surfaces for the current size and skin. Override in subclasses that draw a background."
+        },
+        {
+          "name": "_resolveInheritedTheme",
+          "signature": "_resolveInheritedTheme(): UITheme",
+          "signatureTokens": [
+            {
+              "text": "_resolveInheritedTheme",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UITheme",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "UITheme",
+          "description": "The nearest themed ancestor's theme, or the built-in default when this node has none."
+        },
+        {
+          "name": "_setSkinState",
+          "signature": "_setSkinState(state: UIWidgetState): void",
+          "signatureTokens": [
+            {
+              "text": "_setSkinState",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "state",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIWidgetState",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "state",
+              "type": "UIWidgetState",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Switch the state skins resolve for, repainting when it actually changes."
+        },
+        {
+          "name": "_skin",
+          "signature": "_skin(role: UIThemeRole): UISkin",
+          "signatureTokens": [
+            {
+              "text": "_skin",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "role",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIThemeRole",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UISkin",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "role",
+              "type": "UIThemeRole",
+              "optional": false
+            }
+          ],
+          "returnType": "UISkin",
+          "description": "The skin role paints with in this widget's current state."
         },
         {
           "name": "[iterator]",
@@ -546,6 +815,53 @@
           "description": "Anchor this widget within root's screen box at anchor, offset by (offsetX, offsetY). The position is recomputed whenever the screen resizes. E.g. widget.anchorIn(scene.ui, 'bottom-right', -20, -20) pins it to the bottom-right corner with a 20px margin."
         },
         {
+          "name": "backgroundIn",
+          "signature": "backgroundIn(state: UIWidgetState): UIBackground",
+          "signatureTokens": [
+            {
+              "text": "backgroundIn",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "state",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIWidgetState",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIBackground",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "state",
+              "type": "UIWidgetState",
+              "optional": false
+            }
+          ],
+          "returnType": "UIBackground",
+          "description": "The background painted in state: this button's overrides over its skin."
+        },
+        {
           "name": "blur",
           "signature": "blur(): this",
           "signatureTokens": [
@@ -754,6 +1070,61 @@
           "params": [],
           "returnType": "void",
           "description": "Destroy this container and every node beneath it. Ownership is by containment: detaching a subtree only unlinks it, so the descendants' GPU-backed resources (cached textures, filters, render textures) and signal listeners would outlive the tree that owned them and leak on every scene change."
+        },
+        {
+          "name": "fillOverridesIn",
+          "signature": "fillOverridesIn(state: UIWidgetState): UIFillPatch | null",
+          "signatureTokens": [
+            {
+              "text": "fillOverridesIn",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "state",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIWidgetState",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIFillPatch",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "state",
+              "type": "UIWidgetState",
+              "optional": false
+            }
+          ],
+          "returnType": "UIFillPatch | null",
+          "description": "The fill overrides carried for state, or null when it takes its skin as is."
         },
         {
           "name": "focus",
@@ -1670,6 +2041,82 @@
           "description": ""
         },
         {
+          "name": "setBackground",
+          "signature": "setBackground(background: UIBackground | null, state: UIWidgetState): this",
+          "signatureTokens": [
+            {
+              "text": "setBackground",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "background",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIBackground",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "state",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIWidgetState",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "background",
+              "type": "UIBackground | null",
+              "optional": false
+            },
+            {
+              "name": "state",
+              "type": "UIWidgetState",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Replace one state's whole background descriptor; null restores the skin's."
+        },
+        {
           "name": "setChildIndex",
           "signature": "setChildIndex(child: RenderNode, index: number): this",
           "signatureTokens": [
@@ -1736,6 +2183,82 @@
           ],
           "returnType": "this",
           "description": ""
+        },
+        {
+          "name": "setFill",
+          "signature": "setFill(patch: UIFillPatch | null, state: UIWidgetState): this",
+          "signatureTokens": [
+            {
+              "text": "setFill",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "patch",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIFillPatch",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "state",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIWidgetState",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "patch",
+              "type": "UIFillPatch | null",
+              "optional": false
+            },
+            {
+              "name": "state",
+              "type": "UIWidgetState",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Override fill properties for one state on top of its skin. null drops that state's overrides."
         },
         {
           "name": "setOrigin",
@@ -2123,6 +2646,216 @@
           ],
           "returnType": "this",
           "description": ""
+        },
+        {
+          "name": "setTextStyle",
+          "signature": "setTextStyle(style: TextStyleOptions | null): this",
+          "signatureTokens": [
+            {
+              "text": "setTextStyle",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "style",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextStyleOptions",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "style",
+              "type": "TextStyleOptions | null",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Override label text style on top of the skin's; null returns to it. Layout-invalidating - the label is re-measured and re-centered."
+        },
+        {
+          "name": "setTheme",
+          "signature": "setTheme(patch: Partial<Readonly<Record<UIThemeRole, Partial<Readonly<Record<UIWidgetState, Partial<UISkin>>>>>>> | null): this",
+          "signatureTokens": [
+            {
+              "text": "setTheme",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "patch",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIThemeRole",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIWidgetState",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UISkin",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "patch",
+              "type": "Partial<Readonly<Record<UIThemeRole, Partial<Readonly<Record<UIWidgetState, Partial<UISkin>>>>>>> | null",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Override parts of the inherited theme for this widget and its descendants. null clears the override. Repaints and re-lays out every widget in the subtree that the change reaches - skin insets are layout input, so a theme change is never paint-only."
         },
         {
           "name": "swapChildren",
@@ -2682,7 +3415,7 @@
         },
         {
           "name": "colors",
-          "signature": "colors: Readonly<Record<\"disabled\" | \"hover\" | \"normal\" | \"pressed\", Color>>",
+          "signature": "colors: Readonly<Record<ButtonState, Color | null>>",
           "signatureTokens": [
             {
               "text": "colors",
@@ -2709,32 +3442,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"disabled\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"hover\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"normal\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"pressed\"",
-              "kind": "keyword"
+              "text": "ButtonState",
+              "kind": "type"
             },
             {
               "text": ", ",
@@ -2743,6 +3452,14 @@
             {
               "text": "Color",
               "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
             },
             {
               "text": ">",
@@ -2755,7 +3472,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The per-state fill colours (normal / hover / pressed / disabled)."
+          "description": "The per-state fill colours; null for a state that does not paint a fill."
         },
         {
           "name": "cornerRadius",
@@ -2776,7 +3493,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Corner radius in pixels."
+          "description": "Corner radius in pixels of the normal state; 0 when it paints no fill."
         },
         {
           "name": "cullable",
@@ -3030,6 +3747,27 @@
           "description": ""
         },
         {
+          "name": "labelNode",
+          "signature": "labelNode: Text",
+          "signatureTokens": [
+            {
+              "text": "labelNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Text",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The Text node drawing the label, for advanced styling."
+        },
+        {
           "name": "left",
           "signature": "left: number",
           "signatureTokens": [
@@ -3269,6 +4007,27 @@
           "description": "Vertical skew angle in degrees. Shears the node along the Y axis (positive values lean the left edge downward). Combines correctly with rotation and scale."
         },
         {
+          "name": "state",
+          "signature": "state: ButtonState",
+          "signatureTokens": [
+            {
+              "text": "state",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ButtonState",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The state the button currently paints in."
+        },
+        {
           "name": "textColor",
           "signature": "textColor: Color",
           "signatureTokens": [
@@ -3288,6 +4047,185 @@
           "params": [],
           "returnType": null,
           "description": "Label fill colour."
+        },
+        {
+          "name": "textStyleOverrides",
+          "signature": "textStyleOverrides: TextStyleOptions | null",
+          "signatureTokens": [
+            {
+              "text": "textStyleOverrides",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextStyleOptions",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The text-style overrides this button carries, or null when it takes the skin's."
+        },
+        {
+          "name": "theme",
+          "signature": "theme: UITheme",
+          "signatureTokens": [
+            {
+              "text": "theme",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UITheme",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The theme in effect for this node and everything below it."
+        },
+        {
+          "name": "themeOverrides",
+          "signature": "themeOverrides: Partial<Readonly<Record<UIThemeRole, Partial<Readonly<Record<UIWidgetState, Partial<UISkin>>>>>>> | null",
+          "signatureTokens": [
+            {
+              "text": "themeOverrides",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIThemeRole",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIWidgetState",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UISkin",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "This widget's own theme overrides, or null when it purely inherits."
         },
         {
           "name": "top",
