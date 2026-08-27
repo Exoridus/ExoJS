@@ -1,5 +1,7 @@
 import { Signal } from '#core/Signal';
 
+import { AudioUnsupportedError } from './AudioUnsupportedError';
+
 interface AudioContextEventTarget {
   addEventListener?: (type: string, listener: () => void) => void;
 }
@@ -29,7 +31,7 @@ const getExistingAudioContext = (): AudioContext | null => internalAudioContext;
 
 const getOrCreateAudioContext = (): AudioContext => {
   if (!supportsAudioContext()) {
-    throw new Error('This environment does not support AudioContext.');
+    throw new AudioUnsupportedError('AudioContext');
   }
 
   if (internalAudioContext === null) {
@@ -41,7 +43,7 @@ const getOrCreateAudioContext = (): AudioContext => {
 
 const getOrCreateOfflineAudioContext = (): OfflineAudioContext => {
   if (!supportsOfflineAudioContext()) {
-    throw new Error('This environment does not support OfflineAudioContext.');
+    throw new AudioUnsupportedError('OfflineAudioContext');
   }
 
   if (internalOfflineAudioContext === null) {
@@ -222,8 +224,8 @@ export const onAudioContextReady = new AudioContextReadySignal();
 /**
  * Return the global singleton `AudioContext`, creating it if it does not yet
  * exist. Also starts interaction-unlock monitoring so the context will resume
- * on the first user gesture. Throws if `AudioContext` is not available in the
- * current environment.
+ * on the first user gesture. Throws {@link AudioUnsupportedError} when the
+ * environment provides no `AudioContext`.
  */
 export const getAudioContext = (): AudioContext => {
   const audioContext = getOrCreateAudioContext();

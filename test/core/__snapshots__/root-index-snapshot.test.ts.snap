@@ -25,6 +25,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "AudioListener",
   "AudioManager",
   "AudioStream",
+  "AudioUnsupportedError",
   "AxisAction",
   "BinaryAsset",
   "BinaryAssetType",

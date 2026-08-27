@@ -1,3 +1,5 @@
+import { AudioUnsupportedError } from '#audio/AudioUnsupportedError';
+
 import { mutable } from '../support/mutable';
 /**
  * Focused unit tests for `src/audio/audio-context.ts` - the lazy singleton
@@ -31,21 +33,21 @@ describe('audio/audio-context — unsupported environments', () => {
     Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: undefined });
 
     const { getAudioContext } = await import('#audio/audio-context');
-    expect(() => getAudioContext()).toThrow('This environment does not support AudioContext.');
+    expect(() => getAudioContext()).toThrow(new AudioUnsupportedError('AudioContext'));
   });
 
   it('getOfflineAudioContext() throws when OfflineAudioContext is unsupported', async () => {
     Object.defineProperty(globalThis, 'OfflineAudioContext', { configurable: true, value: undefined });
 
     const { getOfflineAudioContext } = await import('#audio/audio-context');
-    expect(() => getOfflineAudioContext()).toThrow('This environment does not support OfflineAudioContext.');
+    expect(() => getOfflineAudioContext()).toThrow(new AudioUnsupportedError('OfflineAudioContext'));
   });
 
   it('decodeAudioData() rejects when OfflineAudioContext is unsupported', async () => {
     Object.defineProperty(globalThis, 'OfflineAudioContext', { configurable: true, value: undefined });
 
     const { decodeAudioData } = await import('#audio/audio-context');
-    await expect(decodeAudioData(new ArrayBuffer(0))).rejects.toThrow('This environment does not support OfflineAudioContext.');
+    await expect(decodeAudioData(new ArrayBuffer(0))).rejects.toThrow(new AudioUnsupportedError('OfflineAudioContext'));
   });
 });
 

@@ -3,6 +3,7 @@ import type { MockInstance } from 'vitest';
 import { getAudioContext } from '#audio/audio-context';
 import { AudioInput } from '#audio/AudioInput';
 import { AudioManager } from '#audio/AudioManager';
+import { AudioUnsupportedError } from '#audio/AudioUnsupportedError';
 import type { InputVoice } from '#audio/InputVoice';
 import { Sound } from '#audio/Sound';
 
@@ -310,13 +311,13 @@ describe('AudioInput / InputVoice', () => {
   test('open() throws when navigator is undefined', async () => {
     vi.stubGlobal('navigator', undefined);
 
-    await expect(AudioInput.open()).rejects.toThrow('AudioInput.open: getUserMedia is not available in this environment.');
+    await expect(AudioInput.open()).rejects.toThrow(new AudioUnsupportedError('navigator.mediaDevices.getUserMedia'));
   });
 
   test('open() throws when navigator.mediaDevices.getUserMedia is unavailable', async () => {
     vi.stubGlobal('navigator', { mediaDevices: {} });
 
-    await expect(AudioInput.open()).rejects.toThrow('AudioInput.open: getUserMedia is not available in this environment.');
+    await expect(AudioInput.open()).rejects.toThrow(new AudioUnsupportedError('navigator.mediaDevices.getUserMedia'));
   });
 
   test('open() forwards deviceId to the getUserMedia constraints', async () => {

@@ -69,6 +69,7 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "AudioManager: class",
   "AudioSpriteClip: interface",
   "AudioStream: class",
+  "AudioUnsupportedError: class",
   "AutoBackendConfig: interface",
   "AxisAction: class",
   "AxisBinding: type alias",

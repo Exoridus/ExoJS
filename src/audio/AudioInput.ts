@@ -1,5 +1,7 @@
 import type { Destroyable } from '#core/types';
 
+import { AudioUnsupportedError } from './AudioUnsupportedError';
+
 /** Options for {@link AudioInput.open} - forwarded to `getUserMedia` audio constraints. */
 export interface AudioInputOptions {
   /** Specific input device id (from `enumerateDevices`). */
@@ -43,12 +45,18 @@ export class AudioInput implements Destroyable {
   }
 
   /**
-   * Request microphone access and resolve with an `AudioInput`. Throws / rejects
-   * if the user denies permission or no input device is available.
+   * Request microphone access and resolve with an `AudioInput`.
+   *
+   * Throws {@link AudioUnsupportedError} when the environment has no
+   * `getUserMedia` at all. When the API exists but the request fails, the
+   * browser's own `DOMException` is passed through unwrapped - its `name`
+   * (`NotAllowedError` for a denied permission, `NotFoundError` for a missing
+   * device) is the standard signal to branch on and is not worth hiding behind
+   * an engine class.
    */
   public static async open(options: AudioInputOptions = {}): Promise<AudioInput> {
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-      throw new Error('AudioInput.open: getUserMedia is not available in this environment.');
+      throw new AudioUnsupportedError('navigator.mediaDevices.getUserMedia');
     }
 
     const constraints: MediaTrackConstraints = {};

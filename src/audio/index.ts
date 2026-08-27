@@ -9,6 +9,7 @@ export { AudioInput } from './AudioInput';
 export { AudioListener, type AudioListenerTarget } from './AudioListener';
 export { AudioManager } from './AudioManager';
 export { AudioStream } from './AudioStream';
+export { AudioUnsupportedError } from './AudioUnsupportedError';
 export { BiquadEffect, type BiquadEffectOptions } from './BiquadEffect';
 export type { CrossFadeOptions } from './crossFade';
 export { crossFade } from './crossFade';

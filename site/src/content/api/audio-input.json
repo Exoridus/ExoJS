@@ -116,7 +116,7 @@
             }
           ],
           "returnType": "Promise<AudioInput>",
-          "description": "Request microphone access and resolve with an AudioInput. Throws / rejects if the user denies permission or no input device is available."
+          "description": "Request microphone access and resolve with an AudioInput. Throws AudioUnsupportedError when the environment has no getUserMedia at all. When the API exists but the request fails, the browser's own DOMException is passed through unwrapped - its name (NotAllowedError for a denied permission, NotFoundError for a missing device) is the standard signal to branch on and is not worth hiding behind an engine class."
         }
       ],
       "paragraphs": [],
