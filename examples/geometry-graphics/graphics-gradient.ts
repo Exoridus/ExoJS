@@ -95,7 +95,7 @@ const app = new Application({
     mount: document.body,
     sizing: new FixedResolutionCanvasSizing(),
   },
-  clearColor: Color.midnightBlue,
+  clearColor: new Color(0x191970),
 });
 
 app.start(GraphicsGradientScene).catch(() => {

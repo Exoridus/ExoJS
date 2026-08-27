@@ -21,7 +21,7 @@ describe('Gradient toTexture()', () => {
       { offset: 0.5, color: Color.cyan },
       { offset: 0.6, color: Color.magenta },
       { offset: 0.7, color: Color.yellow },
-      { offset: 0.8, color: Color.gray },
+      { offset: 0.8, color: new Color(0x808080) },
       { offset: 1.7, color: Color.red },
     ]);
 

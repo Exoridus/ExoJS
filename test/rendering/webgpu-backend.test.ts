@@ -1649,7 +1649,7 @@ describe('WebGpuBackend', () => {
       particle.scale.x = 2;
       particle.scale.y = 3;
       particle.rotation = 45;
-      particle.color = Color.red.toRgba();
+      particle.color = Color.red.toRgba8();
 
       await manager.initialize();
 
@@ -1693,7 +1693,7 @@ describe('WebGpuBackend', () => {
       secondParticle.position.set(20, 24);
       secondParticle.rotation = 20;
       secondParticle.scale.set(2, 2);
-      secondParticle.color = Color.red.toRgba();
+      secondParticle.color = Color.red.toRgba8();
 
       sourceCanvas.width = 16;
       sourceCanvas.height = 16;
@@ -1734,7 +1734,7 @@ describe('WebGpuBackend', () => {
       sourceCanvas.height = 16;
       texture.updateSource();
 
-      particle.color = Color.red.toRgba();
+      particle.color = Color.red.toRgba8();
       system.blendMode = BlendModes.Additive;
 
       await manager.initialize();
@@ -1783,7 +1783,7 @@ describe('WebGpuBackend', () => {
       sourceCanvas.height = 16;
       texture.updateSource();
 
-      particle.color = Color.red.toRgba();
+      particle.color = Color.red.toRgba8();
       system.blendMode = BlendModes.Screen;
 
       await manager.initialize();
@@ -1878,7 +1878,7 @@ describe('WebGpuBackend', () => {
       await manager.initialize();
 
       manager.setRenderTarget(renderTexture);
-      manager.clear(Color.cornflowerBlue);
+      manager.clear(new Color(0x6495ed));
       graphics.render(manager);
       manager.setRenderTarget(null);
       manager.clear(Color.black);
@@ -1939,7 +1939,7 @@ describe('WebGpuBackend', () => {
       await manager.initialize();
 
       manager.setRenderTarget(renderTexture);
-      manager.clear(Color.cornflowerBlue);
+      manager.clear(new Color(0x6495ed));
       graphics.render(manager);
       manager.setRenderTarget(null);
       manager.clear(Color.black);
@@ -2366,14 +2366,14 @@ describe('WebGpuBackend', () => {
 
       await manager.initialize();
 
-      manager.setClearColor(Color.cornflowerBlue);
+      manager.setClearColor(new Color(0x6495ed));
       manager.clear(); // no arg — should use stored clearColor
       manager.flush();
 
       // createColorAttachment uses _clearColor; verify the value propagated
-      expect(manager.clearColor.r).toBe(Color.cornflowerBlue.r);
-      expect(manager.clearColor.g).toBe(Color.cornflowerBlue.g);
-      expect(manager.clearColor.b).toBe(Color.cornflowerBlue.b);
+      expect(manager.clearColor.r).toBe(new Color(0x6495ed).r);
+      expect(manager.clearColor.g).toBe(new Color(0x6495ed).g);
+      expect(manager.clearColor.b).toBe(new Color(0x6495ed).b);
     } finally {
       environment.restore();
     }

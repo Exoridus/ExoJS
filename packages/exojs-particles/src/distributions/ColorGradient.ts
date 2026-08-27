@@ -99,6 +99,6 @@ export class ColorGradient implements LifetimeFunction<Color> {
    * path; suitable for direct write into a `Uint32Array` instance buffer.
    */
   public evaluateRgba(t: number): number {
-    return this.evaluate(t, this._scratch).toRgba();
+    return this.evaluate(t, this._scratch).toRgba8();
   }
 }

@@ -233,7 +233,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     }
 
     const blendMode = node.blendMode;
-    const tintRgba = node.tint.toRgba();
+    const tintRgba = node.tint.toRgba8();
 
     const command = backend.activeDrawCommand;
     const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(node);

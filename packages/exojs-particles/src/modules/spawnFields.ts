@@ -60,7 +60,7 @@ export const fillParticle = (particle: ParticleWriter, fields: ParticleSpawnFiel
   }
 
   if (fields.tint) {
-    particle.color = fields.tint.sample(color).toRgba();
+    particle.color = fields.tint.sample(color).toRgba8();
   }
 
   if (fields.textureIndex) {

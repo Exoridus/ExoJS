@@ -365,7 +365,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     f32[offset + 5] = uvParamY;
     f32[offset + 6] = offsetU;
     f32[offset + 7] = uvParamW;
-    u32[offset + 8] = sprite.tint.toRgba();
+    u32[offset + 8] = sprite.tint.toRgba8();
     u32[offset + 9] = nodeIndex >>> 0;
 
     this._shaderQuadCount++;
@@ -379,7 +379,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     if (quads.length === 0) return;
 
     const flipY = sprite.texture instanceof Texture && sprite.texture.flipY;
-    const tint = sprite.tint.toRgba();
+    const tint = sprite.tint.toRgba8();
     const words = geoStrideBytes / 4;
 
     this._ensureGeoCapacity(this._geoQuadCount + quads.length);

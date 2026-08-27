@@ -209,7 +209,7 @@ describe('WebGPU ParticleSystem — solid color', () => {
     try {
       const particle = system.emit()!;
 
-      particle.color = new Color(0, 255, 0).toRgba();
+      particle.color = new Color(0, 255, 0).toRgba8();
       system.setPosition(32, 32);
       root.addChild(system);
 
@@ -247,7 +247,7 @@ describe('WebGPU ParticleSystem — ribbon', () => {
         const particle = system.emit()!;
 
         particle.position.x = x;
-        particle.color = new Color(0, 255, 0).toRgba();
+        particle.color = new Color(0, 255, 0).toRgba8();
       }
 
       system.setPosition(32, 32);
@@ -335,7 +335,7 @@ describe('WebGPU ParticleSystem — mesh', () => {
       particle.scale.set(0.5, 0.5);
       // 180 degrees puts the right angle at the bottom-right instead of the top-left.
       particle.rotation = 180;
-      particle.color = new Color(0, 255, 0).toRgba();
+      particle.color = new Color(0, 255, 0).toRgba8();
 
       system.setPosition(32, 32);
       root.addChild(system);
@@ -382,7 +382,7 @@ describe('WebGPU ParticleSystem — mesh on the GPU compute path', () => {
 
       const particle = system.emit()!;
 
-      particle.color = new Color(0, 255, 0).toRgba();
+      particle.color = new Color(0, 255, 0).toRgba8();
       particle.lifetime = 10;
       system.setPosition(32, 32);
       root.addChild(system);

@@ -249,7 +249,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
 
       u32[offset + 4] = uMin | (vMin << 16);
       u32[offset + 5] = uMax | (vMax << 16);
-      u32[offset + 6] = sprite.tint.toRgba();
+      u32[offset + 6] = sprite.tint.toRgba8();
       u32[offset + 7] = nodeIndex >>> 0;
 
       this._quadIndex++;

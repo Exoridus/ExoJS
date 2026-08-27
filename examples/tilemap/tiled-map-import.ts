@@ -60,7 +60,7 @@ class TiledMapImportScene extends Scene {
     this.zoneObjects = zones.objects.slice();
 
     this.overlay.lineWidth = 3;
-    this.overlay.lineColor = Color.gold;
+    this.overlay.lineColor = new Color(0xffd700);
 
     this.hud = mountControls({
       title: 'Tiled Map Import & Object Query',
@@ -86,7 +86,7 @@ class TiledMapImportScene extends Scene {
   private redrawQuery(matches: TileMapObject[]): void {
     this.overlay.clear();
     this.overlay.lineWidth = 3;
-    this.overlay.lineColor = Color.gold;
+    this.overlay.lineColor = new Color(0xffd700);
 
     for (const object of matches) {
       if (object.kind === ObjectKind.Point) {

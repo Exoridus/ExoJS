@@ -8,7 +8,7 @@ const debris = new Container();
 
 for (let i = 0; i < 300; i++) {
   const shard = new Graphics();
-  shard.fillColor = Color.slateGray;
+  shard.fillColor = new Color(0x708090);
   shard.drawCircle(0, 0, 2);
   shard.x = Math.random() * 200;
   shard.y = Math.random() * 200;

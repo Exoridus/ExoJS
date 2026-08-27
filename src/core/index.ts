@@ -18,6 +18,7 @@ export { Capabilities, type HostRealm } from './capabilities';
 export { Clock } from './Clock';
 export type { DecompressFormat } from './Codec';
 export { Codec } from './Codec';
+export type { ColorInput } from './Color';
 export { Color } from './Color';
 export type { ConnectivityState, NetworkMode } from './Connectivity';
 export { Connectivity } from './Connectivity';

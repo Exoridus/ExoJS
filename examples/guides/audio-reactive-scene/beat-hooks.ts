@@ -19,7 +19,7 @@ class BeatHookScene extends Scene {
     // Mid-band -> particle tint cycling
     this.detector.onBeat.add((info: BeatInfo) => {
       if (info.beatInBar === 2 || info.beatInBar === 4) {
-        this.burst.config.tint = new Constant(info.beatInBar === 2 ? Color.orange : Color.skyBlue);
+        this.burst.config.tint = new Constant(info.beatInBar === 2 ? new Color(0xffa500) : new Color(0x87ceeb));
         this.burst.reset();
       }
     });

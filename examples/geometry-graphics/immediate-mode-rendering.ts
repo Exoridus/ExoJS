@@ -103,7 +103,7 @@ class ImmediateModeScene extends Scene {
     const centerY = height / 2;
 
     // --- Procedural gears: each drawn with its own drawGeometry call. ---
-    const gearPalette = [Color.gold, Color.skyBlue, Color.hotPink, Color.mediumSpringGreen, Color.orange, Color.mediumPurple];
+    const gearPalette = [new Color(0xffd700), new Color(0x87ceeb), new Color(0xff69b4), new Color(0x00fa9a), new Color(0xffa500), new Color(0x9370db)];
 
     this.gears = [];
     for (let i = 0; i < GEAR_COUNT; i++) {
@@ -126,7 +126,7 @@ class ImmediateModeScene extends Scene {
     this.sparkGeometry = polygonGeometry(7, 4, Color.white, Color.white);
     this.sparkBatch = new RenderBatch(this.sparkGeometry);
 
-    const sparkPalette = [Color.skyBlue, Color.aquamarine, Color.gold, Color.hotPink, Color.white];
+    const sparkPalette = [new Color(0x87ceeb), new Color(0x7fffd4), new Color(0xffd700), new Color(0xff69b4), Color.white];
 
     this.sparks = [];
     for (let i = 0; i < FIELD_COUNT; i++) {

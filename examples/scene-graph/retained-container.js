@@ -82,7 +82,7 @@ class RetainedContainerScene extends Scene {
     // toggle on the instance itself - the tier is chosen at construction.
     const group = retained ? new RetainedContainer() : new Container();
     const frames = [new Rectangle(0, 0, 64, 64), new Rectangle(64, 0, 64, 64), new Rectangle(0, 64, 64, 64), new Rectangle(64, 64, 64, 64)];
-    const palette = [Color.white, Color.skyBlue, Color.gold, Color.mediumSpringGreen, Color.hotPink, Color.mediumPurple];
+    const palette = [Color.white, new Color(0x87ceeb), new Color(0xffd700), new Color(0x00fa9a), new Color(0xff69b4), new Color(0x9370db)];
     let index = 0;
     for (let row = 0; row < FIELD_ROWS; row++) {
       for (let column = 0; column < FIELD_COLUMNS; column++) {

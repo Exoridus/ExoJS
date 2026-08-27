@@ -16,7 +16,7 @@ class CameraViewScene extends Scene {
 
     this.world = new Graphics();
     this.world.lineWidth = 2;
-    this.world.lineColor = Color.darkGray;
+    this.world.lineColor = new Color(0xa9a9a9);
 
     for (let x = -1200; x <= 1200; x += 120) {
       this.world.drawLine(x, -900, x, 900);

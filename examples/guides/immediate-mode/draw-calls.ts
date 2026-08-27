@@ -18,7 +18,7 @@ class GeometryScene extends Scene {
   private elapsed = 0;
   private transform = new Matrix();
   private triangle = triangleGeometry;
-  private tints = [Color.tomato, Color.goldenrod, Color.mediumSeaGreen, Color.cornflowerBlue, Color.orchid];
+  private tints = [new Color(0xff6347), new Color(0xdaa520), new Color(0x3cb371), new Color(0x6495ed), new Color(0xda70d6)];
 
   // #region guide:draw-geometry
   override draw(context: RenderingContext): void {

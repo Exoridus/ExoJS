@@ -276,7 +276,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     f32[idx + 5] = uvParamY;
     f32[idx + 6] = offsetU;
     f32[idx + 7] = uvParamW;
-    u32[idx + 8] = sprite.tint.toRgba();
+    u32[idx + 8] = sprite.tint.toRgba8();
     u32[idx + 9] = nodeIndex >>> 0;
 
     this._shaderQuadCount++;
@@ -288,7 +288,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     const quads: readonly RepeatingSpriteQuad[] = sprite.quads;
 
     const flipY = sprite.texture instanceof Texture && sprite.texture.flipY;
-    const tint = sprite.tint.toRgba();
+    const tint = sprite.tint.toRgba8();
 
     let offset = 0;
 

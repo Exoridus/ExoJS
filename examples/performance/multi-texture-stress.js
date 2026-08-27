@@ -81,10 +81,10 @@ app.start(MultiTextureStressScene).catch(() => {
 });
 function createTextureInfos() {
   return [
-    createTextureInfo('#10213a', '#ffd166', '#fff3c4', 'circle', [Color.white, Color.gold, Color.khaki, Color.orange]),
-    createTextureInfo('#1f1632', '#ff6b9a', '#ffd3ea', 'diamond', [Color.white, Color.hotPink, Color.violet, Color.plum]),
-    createTextureInfo('#0d2b26', '#4ade80', '#d9ffe9', 'star', [Color.white, Color.mediumSpringGreen, Color.limeGreen, Color.aquamarine]),
-    createTextureInfo('#112744', '#7dd3fc', '#e7f9ff', 'triangle', [Color.white, Color.skyBlue, Color.deepSkyBlue, Color.cornflowerBlue]),
+    createTextureInfo('#10213a', '#ffd166', '#fff3c4', 'circle', [Color.white, new Color(0xffd700), new Color(0xf0e68c), new Color(0xffa500)]),
+    createTextureInfo('#1f1632', '#ff6b9a', '#ffd3ea', 'diamond', [Color.white, new Color(0xff69b4), new Color(0xee82ee), new Color(0xdda0dd)]),
+    createTextureInfo('#0d2b26', '#4ade80', '#d9ffe9', 'star', [Color.white, new Color(0x00fa9a), new Color(0x32cd32), new Color(0x7fffd4)]),
+    createTextureInfo('#112744', '#7dd3fc', '#e7f9ff', 'triangle', [Color.white, new Color(0x87ceeb), new Color(0x00bfff), new Color(0x6495ed)]),
   ];
 }
 function createTextureInfo(background, accent, detail, shape, palette) {
