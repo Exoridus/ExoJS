@@ -208,7 +208,10 @@ See `src/core/BuildInfo.ts` for the public runtime API (`buildInfo`).
 
 Express immutability in the type. `readonly` and `readonly T[]` cost nothing at
 runtime and catch the mistake at the call site, which is where it is cheapest to
-fix. Reach for `Object.freeze` only when the type cannot carry the guarantee.
+fix. For a descriptor whose nested levels must be read-only too, `DeepReadonly<T>`
+(`src/core/types.ts`) applies the modifier recursively rather than one level per
+annotation; it is for data, and it cannot lock down a class instance. Reach for
+`Object.freeze` only when the type cannot carry the guarantee.
 
 Two cases justify it:
 
