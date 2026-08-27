@@ -1,8 +1,8 @@
 {
   "stamps": {
     "chromium": {
-      "measuredAt": "2026-08-18",
-      "commit": "ab42a315",
+      "measuredAt": "2026-08-27",
+      "commit": "cec2d14ef",
       "platform": "win32"
     },
     "firefox": {
@@ -29,6 +29,17 @@
     },
     {
       "scene": "blend/additive-overlap",
+      "property": "oracle-agreement",
+      "feature": "BlendMode",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "blend/additive-overlap",
       "property": "renders-something",
       "feature": "BlendMode",
       "browser": "chromium",
@@ -49,6 +60,174 @@
       "delta": 0
     },
     {
+      "scene": "blend/additive-solid-overlap",
+      "property": "cross-backend-parity",
+      "feature": "BlendMode",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "blend/additive-solid-overlap",
+      "property": "oracle-agreement",
+      "feature": "BlendMode",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "oracle",
+      "delta": 0,
+      "note": "4 computed pixel(s) within 1 of additive blending: out = src + dst, clamped"
+    },
+    {
+      "scene": "blend/additive-solid-overlap",
+      "property": "renders-something",
+      "feature": "BlendMode",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "1792/4096 pixels drawn"
+    },
+    {
+      "scene": "blend/additive-solid-overlap",
+      "property": "repeat-render-determinism",
+      "feature": "BlendMode",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "blend/alpha-over-solid",
+      "property": "cross-backend-parity",
+      "feature": "BlendMode",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "blend/alpha-over-solid",
+      "property": "oracle-agreement",
+      "feature": "BlendMode",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "oracle",
+      "delta": 1,
+      "note": "2 computed pixel(s) within 2 of premultiplied source-over: out = src*a + dst*(1 - a), with src = blue at a = 0.5 over opaque red"
+    },
+    {
+      "scene": "blend/alpha-over-solid",
+      "property": "renders-something",
+      "feature": "BlendMode",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "2304/4096 pixels drawn"
+    },
+    {
+      "scene": "blend/alpha-over-solid",
+      "property": "repeat-render-determinism",
+      "feature": "BlendMode",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/color-matrix-channel-swap",
+      "property": "cross-backend-parity",
+      "feature": "ColorMatrixFilter",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/color-matrix-channel-swap",
+      "property": "oracle-agreement",
+      "feature": "ColorMatrixFilter",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "oracle",
+      "delta": 0,
+      "note": "1 computed pixel(s) within 2 of RGBA = M*RGBA with R and B swapped, over an opaque (64, 128, 192) fill"
+    },
+    {
+      "scene": "filter/color-matrix-channel-swap",
+      "property": "renders-something",
+      "feature": "ColorMatrixFilter",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "2304/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/color-matrix-channel-swap",
+      "property": "repeat-render-determinism",
+      "feature": "ColorMatrixFilter",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "gradient/linear-black-to-white",
+      "property": "cross-backend-parity",
+      "feature": "Gradient",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "gradient/linear-black-to-white",
+      "property": "oracle-agreement",
+      "feature": "Gradient",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "oracle",
+      "delta": 1,
+      "note": "3 computed pixel(s) within 4 of a two-stop black-to-white ramp across the shape bounds: channel = 255 * (x + 0.5) / 64"
+    },
+    {
+      "scene": "gradient/linear-black-to-white",
+      "property": "renders-something",
+      "feature": "Gradient",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "4096/4096 pixels drawn"
+    },
+    {
+      "scene": "gradient/linear-black-to-white",
+      "property": "repeat-render-determinism",
+      "feature": "Gradient",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
       "scene": "graphics/overlapping-fills",
       "property": "cross-backend-parity",
       "feature": "Graphics",
@@ -57,6 +236,17 @@
       "support": "supported",
       "evidence": "frame-equal",
       "delta": 0
+    },
+    {
+      "scene": "graphics/overlapping-fills",
+      "property": "oracle-agreement",
+      "feature": "Graphics",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
     },
     {
       "scene": "graphics/overlapping-fills",
@@ -91,6 +281,17 @@
     },
     {
       "scene": "graphics/solid-rectangle",
+      "property": "oracle-agreement",
+      "feature": "Graphics",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "graphics/solid-rectangle",
       "property": "renders-something",
       "feature": "Graphics",
       "browser": "chromium",
@@ -119,6 +320,17 @@
       "support": "supported",
       "evidence": "traced",
       "delta": 0
+    },
+    {
+      "scene": "mask/triangle-clip",
+      "property": "oracle-agreement",
+      "feature": "Mask",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
     },
     {
       "scene": "mask/triangle-clip",
@@ -153,6 +365,17 @@
     },
     {
       "scene": "mesh/mirrored-uvs",
+      "property": "oracle-agreement",
+      "feature": "Mesh",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "mesh/mirrored-uvs",
       "property": "renders-something",
       "feature": "Mesh",
       "browser": "chromium",
@@ -184,6 +407,17 @@
     },
     {
       "scene": "mesh/textured-quad",
+      "property": "oracle-agreement",
+      "feature": "Mesh",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "mesh/textured-quad",
       "property": "renders-something",
       "feature": "Mesh",
       "browser": "chromium",
@@ -212,6 +446,17 @@
       "support": "supported",
       "evidence": "traced",
       "delta": 0
+    },
+    {
+      "scene": "nine-slice/stretched",
+      "property": "oracle-agreement",
+      "feature": "NineSlice",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
     },
     {
       "scene": "nine-slice/stretched",
@@ -246,6 +491,17 @@
     },
     {
       "scene": "nine-slice/unstretched",
+      "property": "oracle-agreement",
+      "feature": "NineSlice",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "nine-slice/unstretched",
       "property": "renders-something",
       "feature": "NineSlice",
       "browser": "chromium",
@@ -277,6 +533,17 @@
     },
     {
       "scene": "particles/static-quad",
+      "property": "oracle-agreement",
+      "feature": "Particles",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "particles/static-quad",
       "property": "renders-something",
       "feature": "Particles",
       "browser": "chromium",
@@ -305,6 +572,17 @@
       "support": "supported",
       "evidence": "frame-equal",
       "delta": 0
+    },
+    {
+      "scene": "render-batch/custom-material-instance-attributes",
+      "property": "oracle-agreement",
+      "feature": "RenderBatch",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
     },
     {
       "scene": "render-batch/custom-material-instance-attributes",
@@ -339,6 +617,17 @@
     },
     {
       "scene": "render-batch/default-material",
+      "property": "oracle-agreement",
+      "feature": "RenderBatch",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "render-batch/default-material",
       "property": "renders-something",
       "feature": "RenderBatch",
       "browser": "chromium",
@@ -370,6 +659,17 @@
     },
     {
       "scene": "repeating/tiled",
+      "property": "oracle-agreement",
+      "feature": "RepeatingSprite",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "repeating/tiled",
       "property": "renders-something",
       "feature": "RepeatingSprite",
       "browser": "chromium",
@@ -398,6 +698,17 @@
       "support": "supported",
       "evidence": "frame-equal",
       "delta": 0
+    },
+    {
+      "scene": "sprite/canvas-texture",
+      "property": "oracle-agreement",
+      "feature": "Sprite",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
     },
     {
       "scene": "sprite/canvas-texture",
@@ -432,6 +743,17 @@
     },
     {
       "scene": "sprite/origin",
+      "property": "oracle-agreement",
+      "feature": "Sprite",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "sprite/origin",
       "property": "renders-something",
       "feature": "Sprite",
       "browser": "chromium",
@@ -463,6 +785,17 @@
     },
     {
       "scene": "sprite/translated",
+      "property": "oracle-agreement",
+      "feature": "Sprite",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "sprite/translated",
       "property": "renders-something",
       "feature": "Sprite",
       "browser": "chromium",
@@ -491,6 +824,17 @@
       "support": "supported",
       "evidence": "frame-equal",
       "delta": 0
+    },
+    {
+      "scene": "text/sdf-glyphs",
+      "property": "oracle-agreement",
+      "feature": "Text",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
     },
     {
       "scene": "text/sdf-glyphs",
@@ -525,6 +869,17 @@
     },
     {
       "scene": "tilemap/two-by-two",
+      "property": "oracle-agreement",
+      "feature": "Tilemap",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "tilemap/two-by-two",
       "property": "renders-something",
       "feature": "Tilemap",
       "browser": "chromium",
@@ -556,6 +911,17 @@
     },
     {
       "scene": "tint/half-intensity",
+      "property": "oracle-agreement",
+      "feature": "Tint",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "tint/half-intensity",
       "property": "renders-something",
       "feature": "Tint",
       "browser": "chromium",
@@ -587,6 +953,17 @@
     },
     {
       "scene": "transform/flipped-x",
+      "property": "oracle-agreement",
+      "feature": "Transform",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "transform/flipped-x",
       "property": "renders-something",
       "feature": "Transform",
       "browser": "chromium",
@@ -618,6 +995,17 @@
     },
     {
       "scene": "transform/nested-parent-offset",
+      "property": "oracle-agreement",
+      "feature": "Transform",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "transform/nested-parent-offset",
       "property": "renders-something",
       "feature": "Transform",
       "browser": "chromium",
@@ -649,6 +1037,17 @@
     },
     {
       "scene": "transform/rotated-quarter-turn",
+      "property": "oracle-agreement",
+      "feature": "Transform",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "transform/rotated-quarter-turn",
       "property": "renders-something",
       "feature": "Transform",
       "browser": "chromium",
@@ -677,6 +1076,17 @@
       "support": "supported",
       "evidence": "traced",
       "delta": 0
+    },
+    {
+      "scene": "transform/scaled-2x",
+      "property": "oracle-agreement",
+      "feature": "Transform",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
     },
     {
       "scene": "transform/scaled-2x",
@@ -711,6 +1121,17 @@
     },
     {
       "scene": "blend/additive-overlap",
+      "property": "oracle-agreement",
+      "feature": "BlendMode",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "blend/additive-overlap",
       "property": "renders-something",
       "feature": "BlendMode",
       "browser": "chromium",
@@ -731,6 +1152,174 @@
       "delta": 0
     },
     {
+      "scene": "blend/additive-solid-overlap",
+      "property": "cross-backend-parity",
+      "feature": "BlendMode",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "blend/additive-solid-overlap",
+      "property": "oracle-agreement",
+      "feature": "BlendMode",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "oracle",
+      "delta": 0,
+      "note": "4 computed pixel(s) within 1 of additive blending: out = src + dst, clamped"
+    },
+    {
+      "scene": "blend/additive-solid-overlap",
+      "property": "renders-something",
+      "feature": "BlendMode",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "1792/4096 pixels drawn"
+    },
+    {
+      "scene": "blend/additive-solid-overlap",
+      "property": "repeat-render-determinism",
+      "feature": "BlendMode",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "blend/alpha-over-solid",
+      "property": "cross-backend-parity",
+      "feature": "BlendMode",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "blend/alpha-over-solid",
+      "property": "oracle-agreement",
+      "feature": "BlendMode",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "oracle",
+      "delta": 1,
+      "note": "2 computed pixel(s) within 2 of premultiplied source-over: out = src*a + dst*(1 - a), with src = blue at a = 0.5 over opaque red"
+    },
+    {
+      "scene": "blend/alpha-over-solid",
+      "property": "renders-something",
+      "feature": "BlendMode",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "2304/4096 pixels drawn"
+    },
+    {
+      "scene": "blend/alpha-over-solid",
+      "property": "repeat-render-determinism",
+      "feature": "BlendMode",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/color-matrix-channel-swap",
+      "property": "cross-backend-parity",
+      "feature": "ColorMatrixFilter",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/color-matrix-channel-swap",
+      "property": "oracle-agreement",
+      "feature": "ColorMatrixFilter",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "oracle",
+      "delta": 0,
+      "note": "1 computed pixel(s) within 2 of RGBA = M*RGBA with R and B swapped, over an opaque (64, 128, 192) fill"
+    },
+    {
+      "scene": "filter/color-matrix-channel-swap",
+      "property": "renders-something",
+      "feature": "ColorMatrixFilter",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "2304/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/color-matrix-channel-swap",
+      "property": "repeat-render-determinism",
+      "feature": "ColorMatrixFilter",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "gradient/linear-black-to-white",
+      "property": "cross-backend-parity",
+      "feature": "Gradient",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "gradient/linear-black-to-white",
+      "property": "oracle-agreement",
+      "feature": "Gradient",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "oracle",
+      "delta": 1,
+      "note": "3 computed pixel(s) within 4 of a two-stop black-to-white ramp across the shape bounds: channel = 255 * (x + 0.5) / 64"
+    },
+    {
+      "scene": "gradient/linear-black-to-white",
+      "property": "renders-something",
+      "feature": "Gradient",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "4096/4096 pixels drawn"
+    },
+    {
+      "scene": "gradient/linear-black-to-white",
+      "property": "repeat-render-determinism",
+      "feature": "Gradient",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
       "scene": "graphics/overlapping-fills",
       "property": "cross-backend-parity",
       "feature": "Graphics",
@@ -739,6 +1328,17 @@
       "support": "supported",
       "evidence": "frame-equal",
       "delta": 0
+    },
+    {
+      "scene": "graphics/overlapping-fills",
+      "property": "oracle-agreement",
+      "feature": "Graphics",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
     },
     {
       "scene": "graphics/overlapping-fills",
@@ -773,6 +1373,17 @@
     },
     {
       "scene": "graphics/solid-rectangle",
+      "property": "oracle-agreement",
+      "feature": "Graphics",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "graphics/solid-rectangle",
       "property": "renders-something",
       "feature": "Graphics",
       "browser": "chromium",
@@ -801,6 +1412,17 @@
       "support": "supported",
       "evidence": "traced",
       "delta": 0
+    },
+    {
+      "scene": "mask/triangle-clip",
+      "property": "oracle-agreement",
+      "feature": "Mask",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
     },
     {
       "scene": "mask/triangle-clip",
@@ -835,6 +1457,17 @@
     },
     {
       "scene": "mesh/mirrored-uvs",
+      "property": "oracle-agreement",
+      "feature": "Mesh",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "mesh/mirrored-uvs",
       "property": "renders-something",
       "feature": "Mesh",
       "browser": "chromium",
@@ -866,6 +1499,17 @@
     },
     {
       "scene": "mesh/textured-quad",
+      "property": "oracle-agreement",
+      "feature": "Mesh",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "mesh/textured-quad",
       "property": "renders-something",
       "feature": "Mesh",
       "browser": "chromium",
@@ -894,6 +1538,17 @@
       "support": "supported",
       "evidence": "traced",
       "delta": 0
+    },
+    {
+      "scene": "nine-slice/stretched",
+      "property": "oracle-agreement",
+      "feature": "NineSlice",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
     },
     {
       "scene": "nine-slice/stretched",
@@ -928,6 +1583,17 @@
     },
     {
       "scene": "nine-slice/unstretched",
+      "property": "oracle-agreement",
+      "feature": "NineSlice",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "nine-slice/unstretched",
       "property": "renders-something",
       "feature": "NineSlice",
       "browser": "chromium",
@@ -959,6 +1625,17 @@
     },
     {
       "scene": "particles/static-quad",
+      "property": "oracle-agreement",
+      "feature": "Particles",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "particles/static-quad",
       "property": "renders-something",
       "feature": "Particles",
       "browser": "chromium",
@@ -987,6 +1664,17 @@
       "support": "supported",
       "evidence": "frame-equal",
       "delta": 0
+    },
+    {
+      "scene": "render-batch/custom-material-instance-attributes",
+      "property": "oracle-agreement",
+      "feature": "RenderBatch",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
     },
     {
       "scene": "render-batch/custom-material-instance-attributes",
@@ -1021,6 +1709,17 @@
     },
     {
       "scene": "render-batch/default-material",
+      "property": "oracle-agreement",
+      "feature": "RenderBatch",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "render-batch/default-material",
       "property": "renders-something",
       "feature": "RenderBatch",
       "browser": "chromium",
@@ -1052,6 +1751,17 @@
     },
     {
       "scene": "repeating/tiled",
+      "property": "oracle-agreement",
+      "feature": "RepeatingSprite",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "repeating/tiled",
       "property": "renders-something",
       "feature": "RepeatingSprite",
       "browser": "chromium",
@@ -1080,6 +1790,17 @@
       "support": "supported",
       "evidence": "frame-equal",
       "delta": 0
+    },
+    {
+      "scene": "sprite/canvas-texture",
+      "property": "oracle-agreement",
+      "feature": "Sprite",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
     },
     {
       "scene": "sprite/canvas-texture",
@@ -1114,6 +1835,17 @@
     },
     {
       "scene": "sprite/origin",
+      "property": "oracle-agreement",
+      "feature": "Sprite",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "sprite/origin",
       "property": "renders-something",
       "feature": "Sprite",
       "browser": "chromium",
@@ -1145,6 +1877,17 @@
     },
     {
       "scene": "sprite/translated",
+      "property": "oracle-agreement",
+      "feature": "Sprite",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "sprite/translated",
       "property": "renders-something",
       "feature": "Sprite",
       "browser": "chromium",
@@ -1173,6 +1916,17 @@
       "support": "supported",
       "evidence": "frame-equal",
       "delta": 0
+    },
+    {
+      "scene": "text/sdf-glyphs",
+      "property": "oracle-agreement",
+      "feature": "Text",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
     },
     {
       "scene": "text/sdf-glyphs",
@@ -1207,6 +1961,17 @@
     },
     {
       "scene": "tilemap/two-by-two",
+      "property": "oracle-agreement",
+      "feature": "Tilemap",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "tilemap/two-by-two",
       "property": "renders-something",
       "feature": "Tilemap",
       "browser": "chromium",
@@ -1238,6 +2003,17 @@
     },
     {
       "scene": "tint/half-intensity",
+      "property": "oracle-agreement",
+      "feature": "Tint",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "tint/half-intensity",
       "property": "renders-something",
       "feature": "Tint",
       "browser": "chromium",
@@ -1269,6 +2045,17 @@
     },
     {
       "scene": "transform/flipped-x",
+      "property": "oracle-agreement",
+      "feature": "Transform",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "transform/flipped-x",
       "property": "renders-something",
       "feature": "Transform",
       "browser": "chromium",
@@ -1300,6 +2087,17 @@
     },
     {
       "scene": "transform/nested-parent-offset",
+      "property": "oracle-agreement",
+      "feature": "Transform",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "transform/nested-parent-offset",
       "property": "renders-something",
       "feature": "Transform",
       "browser": "chromium",
@@ -1331,6 +2129,17 @@
     },
     {
       "scene": "transform/rotated-quarter-turn",
+      "property": "oracle-agreement",
+      "feature": "Transform",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
+    },
+    {
+      "scene": "transform/rotated-quarter-turn",
       "property": "renders-something",
       "feature": "Transform",
       "browser": "chromium",
@@ -1359,6 +2168,17 @@
       "support": "supported",
       "evidence": "traced",
       "delta": 0
+    },
+    {
+      "scene": "transform/scaled-2x",
+      "property": "oracle-agreement",
+      "feature": "Transform",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "unknown",
+      "evidence": "none",
+      "delta": null,
+      "note": "property does not apply to this scene"
     },
     {
       "scene": "transform/scaled-2x",

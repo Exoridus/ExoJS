@@ -771,6 +771,29 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
 
 ### Fixed
 
+- **The rendering-parity matrix now proves correctness somewhere, not only
+  agreement.** `oracle` was the matrix's own strongest evidence class and
+  appeared zero times in the checked-in evidence: every property compared a
+  rendering against another rendering, so two backends computing a colour the
+  same wrong way agreed perfectly and a backend computing it wrongly every time
+  was perfectly deterministic.
+
+  A scene can now declare an oracle - expected pixels derived on the CPU from
+  its own inputs - and a new `oracle-agreement` property checks them per
+  backend. Four scenes carry one, covering exactly the class a traced pixel
+  cannot reach, where the output is computed rather than sampled: premultiplied
+  source-over, additive blending, a colour-matrix channel swap, and a linear
+  gradient ramp. Where a pixel already traces back to its source texel the gap
+  was never open - that is a renderer-independent expectation already - so no
+  blanket oracle mandate was added.
+
+- **Two empty frames no longer count as cross-backend parity.** An empty frame
+  is byte-identical to another empty frame, so a scene that drew nothing filled
+  its parity row with a `traced` claim about nothing. `renders-something`
+  reported the same fact in its own row, but the misleading row was the parity
+  one, so emptiness is now a precondition of the comparison rather than a
+  neighbouring property's business.
+
 - **A typed asset failure no longer loses its class on the way out of the
   loader.** `AssetDecoder` wrapped every failure except a cancellation, a cache
   miss and a store failure in a plain `Error` carrying the original as `cause`.

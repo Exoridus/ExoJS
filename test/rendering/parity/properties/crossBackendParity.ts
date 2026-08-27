@@ -5,13 +5,16 @@
  * it does *not* catch: if both backends are wrong in the same way, they still
  * agree. Correctness against an independent expectation is the oracle
  * property's job.
+ *
+ * One case it refuses outright: two empty frames match perfectly and would
+ * otherwise fill a row with a claim about nothing.
  */
 
 import { Color } from '#core/Color';
 
 import { readWebGl2Frame, readWebGpuFrame, renderWebGl2Once, renderWebGpuOnce, webGl2Available, webGpuAvailable } from '../../browser/_backendSetup';
 import { openWebGl2, openWebGpu } from '../backends';
-import { maxChannelDelta, pixelsExceeding } from '../frames';
+import { drawnPixelCount, maxChannelDelta, pixelsExceeding } from '../frames';
 import type { CrossBackendProperty, PropertyResult } from '../types';
 
 /**
@@ -56,6 +59,16 @@ export const crossBackendParity: CrossBackendProperty = {
 
       const glFrame = readWebGl2Frame(gl, scene.size);
       const gpuFrame = readWebGpuFrame(gpu, scene.size);
+
+      // Two empty frames are byte-identical, so the comparison below would
+      // report a perfect match about nothing at all. `renders-something` covers
+      // the same ground as its own row, but a green parity row claiming
+      // `traced` is the misleading one, so emptiness is a precondition here
+      // rather than a neighbouring property's business.
+      if (drawnPixelCount(glFrame) === 0 && drawnPixelCount(gpuFrame) === 0) {
+        return { support: 'divergent', evidence: 'none', delta: null, note: 'both backends rendered an empty frame - nothing was compared' };
+      }
+
       const delta = maxChannelDelta(glFrame, gpuFrame);
 
       if (delta === 0) {
