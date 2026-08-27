@@ -35,6 +35,38 @@ start.onClick.add(() => console.log('clicked'));
 
 A `Label` wraps a runtime [`Text`](/ExoJS/en/api/text/), so it accepts the same style options (`fontSize`, `fillColor`, `align`, …). A `Panel` is a rounded background you can add children to. A `Button` is a clickable panel with a centered label and hover / pressed / disabled states.
 
+## Theming
+
+A widget does not carry its own colours: it paints a **skin** it resolves from the theme of the nearest themed ancestor — the layer's [`UIRoot`](/ExoJS/en/api/uiroot/), or any widget above it that set overrides. A [`UITheme`](/ExoJS/en/api/uitheme/) holds one [`UISkinSet`](/ExoJS/en/api/uiskin-set/) per role (`panel`, `button`, `label`, `progressBarTrack`, `progressBarFill`), and each skin carries a [`UIBackground`](/ExoJS/en/api/uibackground/) descriptor, a text style, and insets. Insets are layout input, so a theme change re-lays out as well as repaints.
+
+`createUITheme` resolves a patch against the built-in default, which reproduces the widgets' stock look. Assign the result to `scene.ui.theme` to restyle a whole layer, or call `widget.setTheme(patch)` to restyle one subtree:
+
+```ts
+import { Color, createUITheme, Panel } from '@codexo/exojs';
+
+const dark = createUITheme({
+  panel: {
+    normal: {
+      background: { kind: 'fill', color: new Color(18, 20, 28, 1), borderColor: new Color(255, 255, 255, 0.08), borderWidth: 1, cornerRadius: 12 },
+    },
+  },
+  button: {
+    hover: {
+      background: { kind: 'fill', color: new Color(90, 160, 250, 1), borderColor: Color.transparent, borderWidth: 0, cornerRadius: 8 },
+    },
+  },
+});
+
+const dialog = new Panel({ width: 280, height: 160 });
+
+dialog.setTheme({ panel: { normal: { background: dark.panel.normal.background } } });
+dialog.setFill({ color: new Color(40, 44, 60, 1) }); // this panel only, on top of its skin
+```
+
+A background descriptor is either a fill (the rounded rectangle above), `{ kind: 'none' }`, or a nine-slice: `{ kind: 'nineSlice', texture, slices: 8 }` paints a texture that stretches without distorting its corners.
+
+Per-widget style always goes through a setter — `setFill`, `setBackground`, `setTextStyle` — so a change repaints (and re-lays out where it can move something) immediately. Reading `panel.color` gives the value in effect, including the theme's; `panel.fillOverrides` gives only what this panel overrides.
+
 ## Anchoring to the screen
 
 Widgets extend [`Widget`](/ExoJS/en/api/widget/), which adds an explicit layout size and screen-edge anchoring. `widget.anchorIn(scene.ui, anchor, offsetX, offsetY)` pins a widget to a corner or edge and re-applies the position whenever the canvas resizes:
