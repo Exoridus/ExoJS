@@ -25,7 +25,7 @@ import type {
   TiledTileData,
 } from './data';
 import { maskTiledGid, TILED_FLIPPED_DIAGONALLY_FLAG, TILED_FLIPPED_HORIZONTALLY_FLAG, TILED_FLIPPED_VERTICALLY_FLAG } from './gid';
-import { resolveTiledObjectAlignment, tiledObjectAnchorOffset } from './objectAlignment';
+import { getTiledObjectAnchorOffset, resolveTiledObjectAlignment } from './objectAlignment';
 import { createTiledLayer, TiledGroupLayer, TiledImageLayer, type TiledLayer, TiledObjectLayer, TiledTileLayer } from './TiledLayer';
 import type { TiledObject } from './TiledObject';
 import type { TiledTileset } from './TiledTileset';
@@ -615,7 +615,7 @@ const tileObjectAnchorOffset = (
 
   const alignment = resolveTiledObjectAlignment(owningTs.objectAlignment, orientation);
 
-  return tiledObjectAnchorOffset(alignment, width, height);
+  return getTiledObjectAnchorOffset(alignment, width, height);
 };
 
 /**

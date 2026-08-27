@@ -955,6 +955,20 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
 
 ### Changed
 
+- **BREAKING - three noun-only function exports are renamed.** A noun reads as a
+  value at the call site and hides that it has to be called:
+
+  | Before                    | After                        |
+  | ------------------------- | ---------------------------- |
+  | `tiledObjectAnchorOffset` | `getTiledObjectAnchorOffset` |
+  | `wgslFieldLayout`         | `getWgslFieldLayout`         |
+  | `wgslUniformByteSize`     | `getWgslUniformByteSize`     |
+
+  The package prefix stays: the full IIFE build is one flat `window.Exo` object
+  across every package, so it is the only marker of where a symbol came from.
+  This is the whole rename - the rule now written down in `CONTRIBUTING.md`
+  reshapes existing API only where a change touches it anyway.
+
 - **BREAKING — canvas sizing is a policy object, not a mode string.**
   `CanvasSizingMode` named five modes along three different technical axes at
   once, so `'fit'` and `'letterbox'` differed in ways the names never said, and

@@ -11,7 +11,7 @@ import type { ComputeBinding } from './WebGpuComputePipeline';
  * auto-assignment of group/binding numbers (unlike e.g. PlayCanvas's WGSL processor, which lets
  * shaders omit `@group`/`@binding` entirely and assigns them itself), no uniform-buffer member
  * byte-offset computation (that stays a JS-side concern - see `WgslContribution`/
- * `wgslUniformByteSize` in `@codexo/exojs-particles`). It only reads resource declarations that
+ * `getWgslUniformByteSize` in `@codexo/exojs-particles`). It only reads resource declarations that
  * already carry explicit `@group`/`@binding` attributes, the convention every ExoJS-authored
  * compute shader already follows.
  *

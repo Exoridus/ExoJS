@@ -73,7 +73,7 @@ export {
   TILED_OBJECT_ALIGNMENTS,
   tiledBuildInfo,
   tiledExtension,
-  tiledObjectAnchorOffset,
+  getTiledObjectAnchorOffset,
   tiledWangSetToWangSet,
   TiledFormatError,
   TiledGroupLayer,

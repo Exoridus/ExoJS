@@ -45,7 +45,11 @@ export const resolveTiledObjectAlignment = (alignment: TiledObjectAlignment | un
  * `cornerX = object.x - offset.x`.
  * @advanced
  */
-export const tiledObjectAnchorOffset = (alignment: TiledResolvedObjectAlignment, width: number, height: number): { readonly x: number; readonly y: number } => {
+export const getTiledObjectAnchorOffset = (
+  alignment: TiledResolvedObjectAlignment,
+  width: number,
+  height: number,
+): { readonly x: number; readonly y: number } => {
   switch (alignment) {
     case 'topleft':
       return { x: 0, y: 0 };

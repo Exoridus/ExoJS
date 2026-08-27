@@ -20,4 +20,4 @@ export { Turbulence } from './Turbulence';
 export { UpdateModule } from './UpdateModule';
 export { VelocityOverLifetime } from './VelocityOverLifetime';
 export type { WgslContribution, WgslPrimitive, WgslTextureBinding, WgslUniformField } from './WgslContribution';
-export { wgslFieldLayout, wgslUniformByteSize } from './WgslContribution';
+export { getWgslFieldLayout, getWgslUniformByteSize } from './WgslContribution';

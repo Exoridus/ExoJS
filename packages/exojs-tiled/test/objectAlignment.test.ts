@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { TiledObjectAlignment, TiledOrientation } from '../src/data';
-import { resolveTiledObjectAlignment, tiledObjectAnchorOffset } from '../src/objectAlignment';
+import { getTiledObjectAnchorOffset, resolveTiledObjectAlignment } from '../src/objectAlignment';
 
 // Reference values taken from Tiled's own implementation:
 // `MapObject::alignment()` and `alignmentOffset()` in libtiled.
@@ -34,7 +34,7 @@ describe('resolveTiledObjectAlignment — default per map orientation', () => {
   });
 });
 
-describe('tiledObjectAnchorOffset — anchor position inside the bounding box', () => {
+describe('getTiledObjectAnchorOffset — anchor position inside the bounding box', () => {
   const W = 24;
   const H = 16;
 
@@ -49,10 +49,10 @@ describe('tiledObjectAnchorOffset — anchor position inside the bounding box', 
     ['bottom', W / 2, H],
     ['bottomright', W, H],
   ] as const)('%s → (%d, %d)', (alignment, x, y) => {
-    expect(tiledObjectAnchorOffset(alignment, W, H)).toEqual({ x, y });
+    expect(getTiledObjectAnchorOffset(alignment, W, H)).toEqual({ x, y });
   });
 
   it('is all-zero for a zero-sized object', () => {
-    expect(tiledObjectAnchorOffset('bottomright', 0, 0)).toEqual({ x: 0, y: 0 });
+    expect(getTiledObjectAnchorOffset('bottomright', 0, 0)).toEqual({ x: 0, y: 0 });
   });
 });

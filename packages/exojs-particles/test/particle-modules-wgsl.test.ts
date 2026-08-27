@@ -11,7 +11,7 @@ import { OrbitalForce } from '../src/modules/OrbitalForce';
 import { RepelFromPoint } from '../src/modules/RepelFromPoint';
 import { Turbulence } from '../src/modules/Turbulence';
 import { VelocityOverLifetime } from '../src/modules/VelocityOverLifetime';
-import { wgslFieldLayout, wgslUniformByteSize } from '../src/modules/WgslContribution';
+import { getWgslFieldLayout, getWgslUniformByteSize } from '../src/modules/WgslContribution';
 
 // These modules' `wgsl()` / `writeUniforms()` pair is CPU-side codegen: it
 // produces a WGSL source fragment (a string) and packs uniform bytes into a
@@ -22,18 +22,18 @@ import { wgslFieldLayout, wgslUniformByteSize } from '../src/modules/WgslContrib
 // tests don't exercise.
 
 describe('WgslContribution helpers', () => {
-  test('wgslFieldLayout reports size/align for every primitive', () => {
-    expect(wgslFieldLayout('f32')).toEqual({ size: 4, align: 4 });
-    expect(wgslFieldLayout('i32')).toEqual({ size: 4, align: 4 });
-    expect(wgslFieldLayout('u32')).toEqual({ size: 4, align: 4 });
-    expect(wgslFieldLayout('vec2<f32>')).toEqual({ size: 8, align: 8 });
-    expect(wgslFieldLayout('vec4<f32>')).toEqual({ size: 16, align: 16 });
+  test('getWgslFieldLayout reports size/align for every primitive', () => {
+    expect(getWgslFieldLayout('f32')).toEqual({ size: 4, align: 4 });
+    expect(getWgslFieldLayout('i32')).toEqual({ size: 4, align: 4 });
+    expect(getWgslFieldLayout('u32')).toEqual({ size: 4, align: 4 });
+    expect(getWgslFieldLayout('vec2<f32>')).toEqual({ size: 8, align: 8 });
+    expect(getWgslFieldLayout('vec4<f32>')).toEqual({ size: 16, align: 16 });
   });
 
-  test('wgslUniformByteSize packs scalars tightly', () => {
+  test('getWgslUniformByteSize packs scalars tightly', () => {
     // Two f32s (4 bytes, 4-align each) pack to 8 bytes, rounded to the
     // struct's own 4-byte alignment.
-    const size = wgslUniformByteSize([
+    const size = getWgslUniformByteSize([
       { name: 'a', type: 'f32' },
       { name: 'b', type: 'f32' },
     ]);
@@ -41,10 +41,10 @@ describe('WgslContribution helpers', () => {
     expect(size).toBe(8);
   });
 
-  test('wgslUniformByteSize pads scalar-then-vec2 to the vec2 alignment', () => {
+  test('getWgslUniformByteSize pads scalar-then-vec2 to the vec2 alignment', () => {
     // f32 (offset 0..4) then vec2<f32> (needs 8-byte alignment) pads to
     // offset 8, ending at 16; struct rounds to the largest alignment (8).
-    const size = wgslUniformByteSize([
+    const size = getWgslUniformByteSize([
       { name: 'a', type: 'f32' },
       { name: 'b', type: 'vec2<f32>' },
     ]);
@@ -52,10 +52,10 @@ describe('WgslContribution helpers', () => {
     expect(size).toBe(16);
   });
 
-  test('wgslUniformByteSize rounds the whole struct up to the largest field alignment', () => {
+  test('getWgslUniformByteSize rounds the whole struct up to the largest field alignment', () => {
     // f32 (4) + vec4<f32> (16-aligned) -> field starts at 16, ends at 32;
     // struct alignment is 16, 32 is already a multiple so no extra padding.
-    const size = wgslUniformByteSize([
+    const size = getWgslUniformByteSize([
       { name: 'a', type: 'f32' },
       { name: 'b', type: 'vec4<f32>' },
     ]);
@@ -63,8 +63,8 @@ describe('WgslContribution helpers', () => {
     expect(size).toBe(32);
   });
 
-  test('wgslUniformByteSize of an empty field list is zero', () => {
-    expect(wgslUniformByteSize([])).toBe(0);
+  test('getWgslUniformByteSize of an empty field list is zero', () => {
+    expect(getWgslUniformByteSize([])).toBe(0);
   });
 });
 

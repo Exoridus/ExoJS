@@ -121,7 +121,7 @@ export { TiledTileset } from './TiledTileset';
 
 // ── Tile-object anchoring ─────────────────────────────────────────────────────
 export type { TiledResolvedObjectAlignment } from './objectAlignment';
-export { resolveTiledObjectAlignment, TILED_OBJECT_ALIGNMENTS, tiledObjectAnchorOffset } from './objectAlignment';
+export { getTiledObjectAnchorOffset, resolveTiledObjectAlignment, TILED_OBJECT_ALIGNMENTS } from './objectAlignment';
 
 // ── Wangset conversion ────────────────────────────────────────────────────────
 export { tiledWangSetToWangSet } from './wangSets';
