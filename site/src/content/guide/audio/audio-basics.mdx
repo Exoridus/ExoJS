@@ -247,6 +247,29 @@ application.audio.play(sound.sprite('impact'));
 
 Sprites can also be declared up front via the `sprites` constructor option. They are part of the `Sound` descriptor's data; clip ranges are validated against the buffer duration when defined.
 
+### Sprites from a sidecar file
+
+Writing the clip table in code stops scaling once a tool produces it. A `sound` asset therefore accepts a **source string** for `sprites`, naming a JSON sidecar that holds the same map:
+
+```json title="sfx.sprites.json"
+{
+  "impact": { "start": 0.5, "end": 0.8 },
+  "whoosh": { "start": 1.2, "end": 1.6, "loop": true }
+}
+```
+
+```ts
+import { Assets } from '@codexo/exojs';
+
+const assets = Assets.from({
+  sfx: { type: 'sound', source: 'sfx.ogg', sprites: 'sfx.sprites.json' },
+});
+```
+
+The sidecar is loaded through the sound's own asset scope, so it is claimed and released with the sound — one asset to configure, not two. Its source is resolved against the loader's base path exactly like the audio file, so it is *not* a path relative to `sfx.ogg`.
+
+A malformed sheet — not an object, a non-clip entry, a non-finite time, or a window that runs past the buffer — fails the load with an `AssetDecodeError` naming the sidecar. This is ExoJS's own descriptor and the only sprite format the loader reads: `audiosprite` and Howler atlases store `[offsetMs, durationMs]` tuples, which you convert once at build time rather than on every load.
+
 `sound.sprite(name)` is the named counterpart of `sound.clip(offset, duration)` — both return a `Sound` sharing the parent's decoded buffer, so they play through `app.audio.play()` like any other sound and carry their own voice pool and playback defaults (a sprite's `loop` flag becomes the sub-sound's `loop`). The sub-sound is memoized per name, so the pool really is shared across every play of that sprite; it is discarded when the name is redefined or removed. Looking up a name that was never defined throws.
 
 ## Examples

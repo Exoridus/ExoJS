@@ -17,6 +17,27 @@ release and includes intentional breaking changes; see **Changed** and
 
 ### Added
 
+- **Audio sprite tables can live in a sidecar file.** `sprites` on a `sound`
+  asset now also accepts a source string naming a JSON sidecar that holds the
+  same `{ name: { start, end, loop? } }` map, so a table a tool produced no
+  longer has to be pasted into code:
+
+  ```ts
+  Assets.from({ sfx: { type: 'sound', source: 'sfx.ogg', sprites: 'sfx.sprites.json' } });
+  ```
+
+  The sidecar is loaded through the sound's own dependency scope - it is claimed
+  and released with the sound, the way `LdtkProject` claims its atlases - so one
+  asset is configured, not two. Its source resolves against the loader's base
+  path like any other asset source, _not_ relative to the audio file. A
+  malformed sheet fails the load with an `AssetDecodeError` naming the sidecar,
+  including a window only the decoded buffer's duration can reject.
+
+  Deliberately **not** added: a converter for foreign atlas formats.
+  `audiosprite` and Howler store `[offsetMs, durationMs]` tuples in formats that
+  are not even a shared file layout; that conversion belongs in a build step,
+  once, not in the loader on every load.
+
 - **Three error classes where callers were told to match on message text.** The
   asset layer already reported cache and network failures as narrowable types,
   and everything else in `audio`, `input`, `math` and the untyped remainder of

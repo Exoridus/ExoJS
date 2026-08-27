@@ -92,7 +92,7 @@
         },
         {
           "name": "sprites",
-          "signature": "sprites?: Readonly<Record<string, AudioSpriteClip>>",
+          "signature": "sprites?: Readonly<Record<string, AudioSpriteClip>> | string",
           "signatureTokens": [
             {
               "text": "sprites",
@@ -141,11 +141,19 @@
             {
               "text": ">",
               "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Named sub-regions of the decoded buffer, for use as an audio sprite sheet."
+          "description": "Named sub-regions of the decoded buffer, for use as an audio sprite sheet. A string is the source of a sidecar JSON document holding the same map (see SoundSpriteSheet). It is loaded through the sound's own dependency scope, so the sidecar is released with the sound, and it is resolved against the loader's base path like any other asset source - not relative to the audio file."
         }
       ],
       "paragraphs": [],

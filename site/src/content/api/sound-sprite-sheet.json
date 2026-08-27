@@ -1,0 +1,97 @@
+{
+  "title": "SoundSpriteSheet",
+  "description": "Contents of a sound sprite sidecar: the same shape SoundAssetOptions.sprites accepts inline, as a standalone JSON document. ```json { \"impact\": { \"start\": 0.5, \"end\": 0.8 }, \"hum\": { \"start\": 1.2, \"end\": 4.0, \"loop\": true } } ``` Times are seconds into the decoded buffer. This is ExoJS's own descriptor and the only format the loader reads: `audiosprite` and Howler atlases store `[offsetMs, durationMs]` tuples and are converted once at build time, not on every load.",
+  "symbol": "SoundSpriteSheet",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Contents of a sound sprite sidecar: the same shape SoundAssetOptions.sprites accepts inline, as a standalone JSON document.",
+        "```json { \"impact\": { \"start\": 0.5, \"end\": 0.8 }, \"hum\": { \"start\": 1.2, \"end\": 4.0, \"loop\": true } } ```",
+        "Times are seconds into the decoded buffer. This is ExoJS's own descriptor and the only format the loader reads: `audiosprite` and Howler atlases store `[offsetMs, durationMs]` tuples and are converted once at build time, not on every load."
+      ],
+      "importLine": "import { SoundSpriteSheet } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "SoundSpriteSheet",
+          "signature": "Readonly<Record<string, AudioSpriteClip>>",
+          "signatureTokens": [
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioSpriteClip",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/factories/soundSprites.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/soundSprites.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/factories/soundSprites.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/soundSprites.ts"
+}

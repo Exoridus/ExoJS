@@ -503,6 +503,7 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "SoundOptions: interface",
   "SoundPlayOptions: interface",
   "SoundPoolStrategy: enum",
+  "SoundSpriteSheet: type alias",
   "SourceCodecContext: interface",
   "SourceKey: type alias",
   "SpatialSmoothingSettings: interface",

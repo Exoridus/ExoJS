@@ -1,4 +1,6 @@
 import { AssetDecodeError } from '#assets/AssetDecodeError';
+import type { AssetDependencyScope, AssetFactoryContext } from '#assets/AssetFactory';
+import type { SoundAssetOptions } from '#assets/factories/SoundFactory';
 import { SoundFactory } from '#assets/factories/SoundFactory';
 import { Sound } from '#audio/Sound';
 
@@ -99,5 +101,54 @@ describe('SoundFactory', () => {
     await expect(promise).rejects.toMatchObject({ cause: decodeError });
     await expect(promise).rejects.toBeInstanceOf(AssetDecodeError);
     await expect(promise).rejects.toMatchObject({ assetType: 'sound' });
+  });
+});
+
+describe('SoundFactory - sprite sidecar', () => {
+  afterEach(() => {
+    decodeAudioDataMock.mockClear();
+  });
+
+  /** A dependency scope that answers one `json` load with `payload`. */
+  const sidecarContext = (sidecar: string, payload: unknown): AssetFactoryContext<SoundAssetOptions> => {
+    const load = vi.fn(async () => payload);
+
+    return factoryContext<SoundAssetOptions>(
+      { sprites: sidecar },
+      {
+        dependencies: { load, get: vi.fn(), createScope: vi.fn() } as unknown as AssetDependencyScope,
+      },
+    );
+  };
+
+  test('a string sprites option is loaded through the sound own dependency scope', async () => {
+    const context = sidecarContext('sfx.sprites.json', { impact: { start: 0.5, end: 0.8 }, hum: { start: 1, end: 1.5, loop: true } });
+
+    const sound = await new SoundFactory().create(new ArrayBuffer(8), context);
+
+    expect(sound.hasSprite('impact')).toBe(true);
+    expect(sound.sprite('hum').loop).toBe(true);
+    expect(context.dependencies.load).toHaveBeenCalledTimes(1);
+  });
+
+  test('a sidecar that is not an object mapping names to clips is a decode failure', async () => {
+    await expect(new SoundFactory().create(new ArrayBuffer(8), sidecarContext('sfx.json', [1, 2, 3]))).rejects.toBeInstanceOf(AssetDecodeError);
+    await expect(new SoundFactory().create(new ArrayBuffer(8), sidecarContext('sfx.json', { impact: 3 }))).rejects.toThrow(/is not a clip object/);
+    await expect(new SoundFactory().create(new ArrayBuffer(8), sidecarContext('sfx.json', { impact: { start: 0, end: 'x' } }))).rejects.toThrow(
+      /finite "start" and "end" times/,
+    );
+  });
+
+  test('a clip only the buffer duration can reject is reported against the sidecar, not the caller', async () => {
+    const promise = new SoundFactory().create(new ArrayBuffer(8), sidecarContext('sfx.json', { tail: { start: 0, end: 99 } }));
+
+    await expect(promise).rejects.toBeInstanceOf(AssetDecodeError);
+    await expect(promise).rejects.toThrow(/Invalid sound sprite sheet "sfx\.json"/);
+  });
+
+  test('an inline sprite map still reaches the Sound unchanged', async () => {
+    const sound = await new SoundFactory().create(new ArrayBuffer(8), factoryContext<SoundAssetOptions>({ sprites: { hit: { start: 0, end: 1 } } }));
+
+    expect(sound.hasSprite('hit')).toBe(true);
   });
 });

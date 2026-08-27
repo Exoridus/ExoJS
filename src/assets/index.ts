@@ -94,6 +94,7 @@ export type { MusicAssetOptions } from '#assets/factories/MusicFactory';
 export type { CsvAssetOptions } from '#assets/factories/parseCsv';
 export type { SubtitleFormat } from '#assets/factories/parseSubtitles';
 export type { SoundAssetOptions } from '#assets/factories/SoundFactory';
+export type { SoundSpriteSheet } from '#assets/factories/soundSprites';
 export type { SvgAssetOptions } from '#assets/factories/SvgFactory';
 export type { TextureAssetOptions } from '#assets/factories/TextureFactory';
 export type { VideoAssetOptions } from '#assets/factories/VideoFactory';
