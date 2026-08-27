@@ -1,0 +1,105 @@
+{
+  "title": "AssetVariantProfile",
+  "description": "What the running device can accept, as variant rules see it. Filled from the live render backend once it is up - `textureFormats` is RenderBackend.supportedTextureFormats and `resolution` is its `rootResolution`. Before that it is the conservative empty profile, so a load started before the backend exists picks the unconditional fallback rather than a format nothing has confirmed.",
+  "symbol": "AssetVariantProfile",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What the running device can accept, as variant rules see it.",
+        "Filled from the live render backend once it is up - `textureFormats` is RenderBackend.supportedTextureFormats and `resolution` is its `rootResolution`. Before that it is the conservative empty profile, so a load started before the backend exists picks the unconditional fallback rather than a format nothing has confirmed."
+      ],
+      "importLine": "import { AssetVariantProfile } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "resolution",
+          "signature": "resolution: number",
+          "signatureTokens": [
+            {
+              "text": "resolution",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Device pixels per logical unit the application renders at."
+        },
+        {
+          "name": "textureFormats",
+          "signature": "textureFormats: readonly CompressedTextureFormat[]",
+          "signatureTokens": [
+            {
+              "text": "textureFormats",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CompressedTextureFormat",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Compressed texture formats the backend can sample, most preferred first. The order is the selection order, so it decides which of several supported candidates wins. Empty on a device with no compressed-format support."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetVariants.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetVariants.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetVariants.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetVariants.ts"
+}

@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "MIME type for the intermediate blob. Inferred from the magic bytes when omitted."
+          "description": "MIME type for the intermediate blob. Inferred from the magic bytes when omitted. Ignored for a KTX2 payload."
         },
         {
           "name": "textureOptions",
@@ -88,7 +88,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Sampling and upload state forwarded to the Texture constructor; any subset."
+          "description": "Sampling and upload state forwarded to the Texture constructor; any subset. A KTX2 payload in a hardware format takes the sampling half only - premultiplication and mip generation cannot apply to compressed blocks."
         }
       ],
       "paragraphs": [],

@@ -231,6 +231,17 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         apiLinks: ['loader', 'texture'],
       },
       {
+        slug: 'device-variants',
+        level: 'advanced',
+        learningGoals: [
+          'read which compressed texture formats the running device implements',
+          'declare one logical source that resolves to a file per GPU family and density',
+          'know what a compressed payload does not honour, and why',
+        ],
+        prerequisites: ['assets/loading-and-resources'],
+        apiLinks: ['loader', 'texture', 'compressed-texture', 'compressed-texture-format', 'asset-variant-set'],
+      },
+      {
         slug: 'offline',
         level: 'advanced',
         learningGoals: [

@@ -6,11 +6,11 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 37,
+  "memberCount": 38,
   "counts": {
     "constructors": 1,
     "methods": 26,
-    "properties": 2,
+    "properties": 3,
     "events": 8
   },
   "sections": [
@@ -2058,6 +2058,27 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "variants",
+          "signature": "variants: AssetVariantSet",
+          "signatureTokens": [
+            {
+              "text": "variants",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetVariantSet",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Per-device selection between several files standing for one logical source - a texture shipped once per compressed format family, once per display density, or both. Empty by default, so a loader nobody configures resolves every source to itself. The Application publishes the device profile here once its render backend is up."
+        },
         {
           "name": "basePath",
           "signature": "basePath: string",

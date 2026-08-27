@@ -1,0 +1,109 @@
+{
+  "title": "CompressedTexturePayload",
+  "description": "A texture payload already in a hardware block-compressed format, as carried by Texture.compressed. The saving is real in both directions: a BC7 or ASTC 4x4 image occupies a quarter of the VRAM of the same image as RGBA8 and a BC1 or ETC2 image an eighth, and it never has to be decoded on the CPU first. # Upload state does not apply `premultiplyAlpha` and `generateMipMap` are ignored for a compressed payload, and that is not a simplification: both operate on decoded texels, which is precisely what compressed blocks never become. Premultiplication has to happen in the authoring tool before compression, and a mip chain has to be compressed level by level and shipped inside the container. A payload with a single level therefore samples without mips however the sampler is configured. # Availability is per device No GPU implements every format. Binding a texture whose format the live backend does not support throws a `RenderError` with code `'unsupported-format'` rather than uploading something the driver would misread. Check RenderBackend.supportedTextureFormats, or - better - declare the alternatives as asset variants and let the loader choose.",
+  "symbol": "CompressedTexturePayload",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A texture payload already in a hardware block-compressed format, as carried by Texture.compressed.",
+        "The saving is real in both directions: a BC7 or ASTC 4x4 image occupies a quarter of the VRAM of the same image as RGBA8 and a BC1 or ETC2 image an eighth, and it never has to be decoded on the CPU first.",
+        "# Upload state does not apply",
+        "`premultiplyAlpha` and `generateMipMap` are ignored for a compressed payload, and that is not a simplification: both operate on decoded texels, which is precisely what compressed blocks never become. Premultiplication has to happen in the authoring tool before compression, and a mip chain has to be compressed level by level and shipped inside the container. A payload with a single level therefore samples without mips however the sampler is configured.",
+        "# Availability is per device",
+        "No GPU implements every format. Binding a texture whose format the live backend does not support throws a `RenderError` with code `'unsupported-format'` rather than uploading something the driver would misread. Check RenderBackend.supportedTextureFormats, or - better - declare the alternatives as asset variants and let the loader choose."
+      ],
+      "importLine": "import { CompressedTexturePayload } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "format",
+          "signature": "format: CompressedTextureFormat",
+          "signatureTokens": [
+            {
+              "text": "format",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CompressedTextureFormat",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "levels",
+          "signature": "levels: readonly CompressedTextureLevel[]",
+          "signatureTokens": [
+            {
+              "text": "levels",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CompressedTextureLevel",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Mip chain, largest level first and at least one level long. The first level's extent is the texture's size; the chain is uploaded as given, so a partial chain stays partial."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/texture/compressedPayload.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/compressedPayload.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/texture/compressedPayload.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/compressedPayload.ts"
+}

@@ -1,0 +1,391 @@
+{
+  "title": "AssetVariantSet",
+  "description": "Per-device selection between several files that stand for one logical asset. Without this layer a path is a path: one URL, one set of bytes, on every device. That is the wrong shape for two things a real project needs - a texture shipped once per compressed format family (no GPU supports them all) and once per display density - because the choice can only be made where the device is known, which is at load time. Selection happens before the source is canonicalized, so asset identity is keyed on the file that was actually chosen. Two devices picking different candidates therefore get different cache entries instead of one entry whose contents depend on who wrote it last. A source with no rule resolves to itself. Nothing is registered by default, so an application that never calls define pays one map lookup per load and nothing else.",
+  "symbol": "AssetVariantSet",
+  "kind": "class",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Per-device selection between several files that stand for one logical asset.",
+        "Without this layer a path is a path: one URL, one set of bytes, on every device. That is the wrong shape for two things a real project needs - a texture shipped once per compressed format family (no GPU supports them all) and once per display density - because the choice can only be made where the device is known, which is at load time.",
+        "Selection happens before the source is canonicalized, so asset identity is keyed on the file that was actually chosen. Two devices picking different candidates therefore get different cache entries instead of one entry whose contents depend on who wrote it last.",
+        "A source with no rule resolves to itself. Nothing is registered by default, so an application that never calls define pays one map lookup per load and nothing else."
+      ],
+      "importLine": "import { AssetVariantSet } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): AssetVariantSet",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetVariantSet",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "AssetVariantSet",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "candidates",
+          "signature": "candidates(source: string): readonly AssetVariant[] | undefined",
+          "signatureTokens": [
+            {
+              "text": "candidates",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetVariant",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "readonly AssetVariant[] | undefined",
+          "description": "The candidates declared for source, or undefined."
+        },
+        {
+          "name": "clear",
+          "signature": "clear(): this",
+          "signatureTokens": [
+            {
+              "text": "clear",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Forget every rule. The profile is left alone - it describes the device, not the content."
+        },
+        {
+          "name": "define",
+          "signature": "define(source: string, variants: readonly AssetVariant[]): this",
+          "signatureTokens": [
+            {
+              "text": "define",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "variants",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetVariant",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "variants",
+              "type": "readonly AssetVariant[]",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Declare the candidates for one logical source, replacing any previous rule for it. source is the name callers keep using; it never has to exist as a file. Order the candidates most-wanted first: it breaks ties, though a supported compressed format outranks declaration order (see resolve)."
+        },
+        {
+          "name": "resolve",
+          "signature": "resolve(source: string): string",
+          "signatureTokens": [
+            {
+              "text": "resolve",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "string",
+          "description": "The source a load of source should actually fetch. Among the eligible candidates the one carrying the most preferred compressed format wins, then the highest density, then the earliest declared. Format outranks density deliberately: it is what decides VRAM and transfer cost, and a project that wants density to dominate simply declares only the candidates it wants chosen. Returns source unchanged when it has no rule, and when it has one whose candidates are all ineligible."
+        },
+        {
+          "name": "undefine",
+          "signature": "undefine(source: string): this",
+          "signatureTokens": [
+            {
+              "text": "undefine",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Drop the rule for source, so it resolves to itself again."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "profile",
+          "signature": "profile: AssetVariantProfile",
+          "signatureTokens": [
+            {
+              "text": "profile",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetVariantProfile",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Device capabilities selection is measured against. Written by the Application once the backend is initialized; assign it directly to override that - for a deterministic test, or to pin a format set a build already targets. Changing it does not re-resolve assets that are already resident: their identity was fixed by the profile in force when they were requested."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetVariants.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetVariants.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetVariants.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetVariants.ts"
+}

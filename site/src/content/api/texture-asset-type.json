@@ -1,6 +1,6 @@
 {
   "title": "TextureAssetType",
-  "description": "GPU-ready Textures decoded from PNG, JPG, WebP, AVIF and GIF bytes.",
+  "description": "GPU-ready Textures decoded from PNG, JPG, WebP, AVIF and GIF bytes, or from a KTX2 container holding a hardware-compressed payload. One type covers both because the payload kind is a property of the bytes, not of the asset: an AssetVariantSet rule may resolve one logical source to a compressed container where the device supports the format and to an image elsewhere, and a caller holding the handle sees a `Texture` either way.",
   "symbol": "TextureAssetType",
   "kind": "class",
   "subsystem": "assets",
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "GPU-ready Textures decoded from PNG, JPG, WebP, AVIF and GIF bytes."
+        "GPU-ready Textures decoded from PNG, JPG, WebP, AVIF and GIF bytes, or from a KTX2 container holding a hardware-compressed payload.",
+        "One type covers both because the payload kind is a property of the bytes, not of the asset: an AssetVariantSet rule may resolve one logical source to a compressed container where the device supports the format and to an image elsewhere, and a caller holding the handle sees a `Texture` either way."
       ],
       "importLine": "import { TextureAssetType } from '@codexo/exojs'",
       "sourceLink": null

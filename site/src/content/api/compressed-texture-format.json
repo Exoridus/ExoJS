@@ -1,0 +1,260 @@
+{
+  "title": "CompressedTextureFormat",
+  "description": "A block-compressed GPU texture format. These are hardware formats: the GPU samples the compressed blocks directly, so a compressed texture costs a fraction of the VRAM and upload bandwidth of the same image as RGBA8 and stays compressed for its whole lifetime. No device supports all of them - desktop GPUs implement the BC family, mobile GPUs implement ETC2 and ASTC - so a project ships one file per target family and lets AssetVariantProfile pick per device rather than picking at build time. The values are the engine's own vocabulary, mapped per backend (`Bc7RgbaUnorm` becomes `bc7-rgba-unorm` on WebGPU and `COMPRESSED_RGBA_BPTC_UNORM_EXT` on WebGL2). Availability is read from RenderBackend.supportedTextureFormats.",
+  "symbol": "CompressedTextureFormat",
+  "kind": "enum",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 16,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A block-compressed GPU texture format.",
+        "These are hardware formats: the GPU samples the compressed blocks directly, so a compressed texture costs a fraction of the VRAM and upload bandwidth of the same image as RGBA8 and stays compressed for its whole lifetime. No device supports all of them - desktop GPUs implement the BC family, mobile GPUs implement ETC2 and ASTC - so a project ships one file per target family and lets AssetVariantProfile pick per device rather than picking at build time.",
+        "The values are the engine's own vocabulary, mapped per backend (`Bc7RgbaUnorm` becomes `bc7-rgba-unorm` on WebGPU and `COMPRESSED_RGBA_BPTC_UNORM_EXT` on WebGL2). Availability is read from RenderBackend.supportedTextureFormats."
+      ],
+      "importLine": "import { CompressedTextureFormat } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "Astc4x4Unorm",
+          "signature": "Astc4x4Unorm",
+          "signatureTokens": [
+            {
+              "text": "Astc4x4Unorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Astc5x5Unorm",
+          "signature": "Astc5x5Unorm",
+          "signatureTokens": [
+            {
+              "text": "Astc5x5Unorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Astc6x6Unorm",
+          "signature": "Astc6x6Unorm",
+          "signatureTokens": [
+            {
+              "text": "Astc6x6Unorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Astc8x8Unorm",
+          "signature": "Astc8x8Unorm",
+          "signatureTokens": [
+            {
+              "text": "Astc8x8Unorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Bc1RgbaUnorm",
+          "signature": "Bc1RgbaUnorm",
+          "signatureTokens": [
+            {
+              "text": "Bc1RgbaUnorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Bc2RgbaUnorm",
+          "signature": "Bc2RgbaUnorm",
+          "signatureTokens": [
+            {
+              "text": "Bc2RgbaUnorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Bc3RgbaUnorm",
+          "signature": "Bc3RgbaUnorm",
+          "signatureTokens": [
+            {
+              "text": "Bc3RgbaUnorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Bc4RUnorm",
+          "signature": "Bc4RUnorm",
+          "signatureTokens": [
+            {
+              "text": "Bc4RUnorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Bc5RgUnorm",
+          "signature": "Bc5RgUnorm",
+          "signatureTokens": [
+            {
+              "text": "Bc5RgUnorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Bc6hRgbUfloat",
+          "signature": "Bc6hRgbUfloat",
+          "signatureTokens": [
+            {
+              "text": "Bc6hRgbUfloat",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Bc7RgbaUnorm",
+          "signature": "Bc7RgbaUnorm",
+          "signatureTokens": [
+            {
+              "text": "Bc7RgbaUnorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "EacR11Unorm",
+          "signature": "EacR11Unorm",
+          "signatureTokens": [
+            {
+              "text": "EacR11Unorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "EacRg11Unorm",
+          "signature": "EacRg11Unorm",
+          "signatureTokens": [
+            {
+              "text": "EacRg11Unorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Etc2Rgb8A1Unorm",
+          "signature": "Etc2Rgb8A1Unorm",
+          "signatureTokens": [
+            {
+              "text": "Etc2Rgb8A1Unorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Etc2Rgb8Unorm",
+          "signature": "Etc2Rgb8Unorm",
+          "signatureTokens": [
+            {
+              "text": "Etc2Rgb8Unorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Etc2Rgba8Unorm",
+          "signature": "Etc2Rgba8Unorm",
+          "signatureTokens": [
+            {
+              "text": "Etc2Rgba8Unorm",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/texture/CompressedTextureFormat.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/CompressedTextureFormat.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/texture/CompressedTextureFormat.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/CompressedTextureFormat.ts"
+}

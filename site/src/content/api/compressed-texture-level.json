@@ -1,0 +1,114 @@
+{
+  "title": "CompressedTextureLevel",
+  "description": "One mip level of a compressed texture payload: the block bytes exactly as the container stored them, plus the texel extent they decode to. `data` is uploaded verbatim - nothing decodes, re-packs or premultiplies it - so its length must be exactly `compressedLevelByteLength(format, width, height)`.",
+  "symbol": "CompressedTextureLevel",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One mip level of a compressed texture payload: the block bytes exactly as the container stored them, plus the texel extent they decode to.",
+        "`data` is uploaded verbatim - nothing decodes, re-packs or premultiplies it - so its length must be exactly `compressedLevelByteLength(format, width, height)`."
+      ],
+      "importLine": "import { CompressedTextureLevel } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "data",
+          "signature": "data: Uint8Array",
+          "signatureTokens": [
+            {
+              "text": "data",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint8Array",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/texture/compressedPayload.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/compressedPayload.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/texture/compressedPayload.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/compressedPayload.ts"
+}

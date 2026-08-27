@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 34,
+  "memberCount": 36,
   "counts": {
     "constructors": 1,
-    "methods": 11,
-    "properties": 22,
+    "methods": 12,
+    "properties": 23,
     "events": 0
   },
   "sections": [
@@ -261,6 +261,61 @@
           ],
           "returnType": "this",
           "description": ""
+        },
+        {
+          "name": "setCompressed",
+          "signature": "setCompressed(payload: CompressedTexturePayload | null): this",
+          "signatureTokens": [
+            {
+              "text": "setCompressed",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "payload",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CompressedTexturePayload",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "payload",
+              "type": "CompressedTexturePayload | null",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Install a compressed payload, replacing any pixel source, and resize to its base level. Pass null to drop it. Bumps version, so backends re-create their GPU texture - a format change cannot be patched into an existing one."
         },
         {
           "name": "setGenerateMipMap",
@@ -720,6 +775,35 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "compressed",
+          "signature": "compressed: CompressedTexturePayload | null",
+          "signatureTokens": [
+            {
+              "text": "compressed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CompressedTexturePayload",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Hardware-compressed payload this texture uploads instead of a pixel source, or null for the ordinary case. Mutually exclusive with source: installing one clears the other, so a texture is never ambiguous about what it uploads. A handle that arrives empty from the loader can become either, which is what lets an asset variant swap a PNG for a KTX2 file without changing what a caller holds."
         },
         {
           "name": "destroyed",
