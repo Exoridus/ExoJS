@@ -3,6 +3,7 @@ import type { InputToken } from '#input/InputToken';
 import { inputChannelFromToken, inputToken } from '#input/InputToken';
 import { slotZeroGamepadChannel } from '#input/types';
 
+import { InputBindingError } from './InputBindingError';
 import type { ActionKind, SerializedActionBinding } from './serialization';
 import type { ActionSample } from './types';
 
@@ -19,14 +20,14 @@ export type GamepadSlot = 0 | 1 | 2 | 3;
  * onto a pad slot - that happens later, in the owning map's resolve pass, and
  * doing it twice would land on the wrong device.
  *
- * @throws {Error} If no control carries `token`. Deserialization never falls
+ * @throws {InputBindingError} If no control carries `token`. Deserialization never falls
  * back to a nearby control - see {@link inputChannelFromToken}.
  */
 export const channelFromToken = (token: string): InputChannel => {
   const channel = inputChannelFromToken(token);
 
   if (channel === null) {
-    throw new Error(`Input binding: "${token}" is not a known input token. Bindings saved by a newer build cannot be applied to this one.`);
+    throw new InputBindingError(`Input binding: "${token}" is not a known input token. Bindings saved by a newer build cannot be applied to this one.`);
   }
 
   return channel;
@@ -35,12 +36,12 @@ export const channelFromToken = (token: string): InputChannel => {
 /** {@link channelFromToken} over a list, rejecting a non-array or non-string entry outright. */
 export const channelsFromTokens = (tokens: unknown, what: string): readonly InputChannel[] => {
   if (!Array.isArray(tokens)) {
-    throw new Error(`Input binding: ${what} must be an array of input tokens.`);
+    throw new InputBindingError(`Input binding: ${what} must be an array of input tokens.`);
   }
 
   return (tokens as readonly unknown[]).map(token => {
     if (typeof token !== 'string') {
-      throw new Error(`Input binding: ${what} must contain input tokens (strings), not ${typeof token}.`);
+      throw new InputBindingError(`Input binding: ${what} must contain input tokens (strings), not ${typeof token}.`);
     }
 
     return channelFromToken(token);
@@ -114,7 +115,7 @@ export abstract class ActionBase<Binding> {
   /**
    * Turn a persisted binding back into this kind's descriptor.
    *
-   * @throws {Error} On an unknown token or a structurally invalid entry. A
+   * @throws {InputBindingError} On an unknown token or a structurally invalid entry. A
    * profile is applied all-or-nothing, so throwing here aborts the whole
    * application before any action has been touched.
    *

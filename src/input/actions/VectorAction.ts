@@ -4,6 +4,7 @@ import { Vector } from '#math/Vector';
 
 import type { GamepadSlot } from './ActionBase';
 import { ActionBase, channelsFromTokens, tokensFromChannels } from './ActionBase';
+import { InputBindingError } from './InputBindingError';
 import type { SerializedActionBinding, SerializedVectorEntry } from './serialization';
 import type { ActionOptions, ActionSample, AtLeastOne, OneOrMany } from './types';
 import { sampleStrongest, toChannels } from './types';
@@ -60,7 +61,7 @@ const serializeEntry = (binding: ResolvedVectorBinding): SerializedVectorEntry =
 
 const deserializeEntry = (entry: unknown): VectorBinding => {
   if (entry === null || typeof entry !== 'object') {
-    throw new Error('VectorAction: every serialized binding entry must be an object.');
+    throw new InputBindingError('VectorAction: every serialized binding entry must be an object.');
   }
 
   const source = entry as Record<string, unknown>;
@@ -73,7 +74,7 @@ const deserializeEntry = (entry: unknown): VectorBinding => {
   }
 
   if (Object.keys(shape).length === 0) {
-    throw new Error('VectorAction: a serialized binding entry needs at least one of x, y, up, down, left, right.');
+    throw new InputBindingError('VectorAction: a serialized binding entry needs at least one of x, y, up, down, left, right.');
   }
 
   return shape as VectorBinding;
@@ -134,11 +135,11 @@ export class VectorAction extends ActionBase<OneOrMany<VectorBinding>> {
   /** @internal */
   public override _deserialize(data: SerializedActionBinding): OneOrMany<VectorBinding> {
     if (data.kind !== 'vector') {
-      throw new Error(`VectorAction: cannot apply a "${data.kind}" binding.`);
+      throw new InputBindingError(`VectorAction: cannot apply a "${data.kind}" binding.`);
     }
 
     if (!Array.isArray(data.binding)) {
-      throw new Error('VectorAction: a serialized vector binding must be an array of entries.');
+      throw new InputBindingError('VectorAction: a serialized vector binding must be an array of entries.');
     }
 
     return (data.binding as readonly unknown[]).map(deserializeEntry);

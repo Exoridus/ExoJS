@@ -2,6 +2,7 @@ import { resolveGamepadSlotChannel } from '#input/types';
 
 import type { GamepadSlot } from './ActionBase';
 import { ActionBase, channelsFromTokens, tokensFromChannels } from './ActionBase';
+import { InputBindingError } from './InputBindingError';
 import { type InputSequence, type NormalizedStep, normalizeSequence, type ValidatedSequenceBinding } from './pattern';
 import type { SerializedActionBinding } from './serialization';
 import type { ActionOptions, ActionSample } from './types';
@@ -122,16 +123,16 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
   /** @internal */
   public override _deserialize(data: SerializedActionBinding): SequenceBinding {
     if (data.kind !== 'sequence') {
-      throw new Error(`SequenceAction: cannot apply a "${data.kind}" binding.`);
+      throw new InputBindingError(`SequenceAction: cannot apply a "${data.kind}" binding.`);
     }
 
     if (!Array.isArray(data.binding)) {
-      throw new Error('SequenceAction: a serialized sequence binding must be an array of steps.');
+      throw new InputBindingError('SequenceAction: a serialized sequence binding must be an array of steps.');
     }
 
     return (data.binding as readonly unknown[]).map(step => {
       if (!Array.isArray(step)) {
-        throw new Error('SequenceAction: every serialized step must be an array of alternatives.');
+        throw new InputBindingError('SequenceAction: every serialized step must be an array of alternatives.');
       }
 
       return (step as readonly unknown[]).map(alternative => channelsFromTokens(alternative, 'a sequence alternative'));

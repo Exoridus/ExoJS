@@ -4,6 +4,7 @@ import { resolveGamepadSlotChannel } from '#input/types';
 import type { GamepadSlot } from './ActionBase';
 import { channelsFromTokens, tokensFromChannels } from './ActionBase';
 import { ButtonLikeAction } from './ButtonLikeAction';
+import { InputBindingError } from './InputBindingError';
 import type { SerializedActionBinding } from './serialization';
 import type { ActionOptions, OneOrMany } from './types';
 import { toChannels } from './types';
@@ -52,7 +53,7 @@ export class ButtonAction extends ButtonLikeAction<ButtonBinding> {
   /** @internal */
   public override _deserialize(data: SerializedActionBinding): ButtonBinding {
     if (data.kind !== 'button') {
-      throw new Error(`ButtonAction: cannot apply a "${data.kind}" binding.`);
+      throw new InputBindingError(`ButtonAction: cannot apply a "${data.kind}" binding.`);
     }
 
     return channelsFromTokens(data.binding, 'a button binding');

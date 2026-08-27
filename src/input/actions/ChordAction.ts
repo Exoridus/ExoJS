@@ -3,6 +3,7 @@ import { resolveGamepadSlotChannel } from '#input/types';
 import type { GamepadSlot } from './ActionBase';
 import { channelsFromTokens, tokensFromChannels } from './ActionBase';
 import { ButtonLikeAction } from './ButtonLikeAction';
+import { InputBindingError } from './InputBindingError';
 import { type InputAlternation, type InputChord, normalizeSequence, type ValidatedChordBinding } from './pattern';
 import type { SerializedActionBinding } from './serialization';
 import type { ActionOptions } from './types';
@@ -105,11 +106,11 @@ export class ChordAction<const Binding extends ChordBinding = ChordBinding> exte
   /** @internal */
   public override _deserialize(data: SerializedActionBinding): ChordBinding {
     if (data.kind !== 'chord') {
-      throw new Error(`ChordAction: cannot apply a "${data.kind}" binding.`);
+      throw new InputBindingError(`ChordAction: cannot apply a "${data.kind}" binding.`);
     }
 
     if (!Array.isArray(data.binding)) {
-      throw new Error('ChordAction: a serialized chord binding must be an array of alternatives.');
+      throw new InputBindingError('ChordAction: a serialized chord binding must be an array of alternatives.');
     }
 
     return (data.binding as readonly unknown[]).map(alternative => channelsFromTokens(alternative, 'a chord alternative'));
