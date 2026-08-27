@@ -223,7 +223,10 @@ Two cases justify it:
 
 Everywhere else, prefer `readonly` in the type and, if a runtime check is worth
 having, gate the freeze on `__DEV__` — the pattern `TextureRegion` uses on its
-own instances. Production then pays nothing while development still fails loudly.
+own instances, and `Color` on its shared named constants. Production then pays
+nothing while development still fails loudly. A class whose freeze covers lazily
+built caches has to warm them first: a frozen instance cannot take the write its
+own first read would perform.
 
 Never freeze per-frame: `RenderPlanPlayer` deliberately skips a per-draw
 `Object.freeze` for exactly this reason, and that decision should stay the norm
