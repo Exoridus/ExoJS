@@ -1417,7 +1417,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     pass.setPipeline(
       material === null
         ? this._getPipeline(payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive)
-        : this._getOrCreateCustomPipeline(customResources!, payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive, device),
+        : this._getOrCreateCustomPipeline(customResources!, payload.blendMode, backend.renderTargetFormats, coordinator.stencilActive, device),
     );
     pass.setBindGroup(0, bundle.getBindGroup(device, this._uniformBindGroupLayout!, true));
     pass.setBindGroup(1, textureBindGroup);
@@ -1880,7 +1880,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     // material's values actually changed since its last upload.
     applyUserUniformUpload(uniformUpload, resources, device);
 
-    const pipeline = this._getOrCreateCustomPipeline(resources, this._currentBlendMode!, backend.renderTargetFormat, stencil, device);
+    const pipeline = this._getOrCreateCustomPipeline(resources, this._currentBlendMode!, backend.renderTargetFormats, stencil, device);
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, transformBindGroup);
@@ -1955,11 +1955,15 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   private _getOrCreateCustomPipeline(
     resources: CustomSpriteResources,
     blendMode: BlendModes,
-    format: GPUTextureFormat,
+    formats: readonly GPUTextureFormat[],
     stencil: boolean,
     device: GPUDevice,
   ): GPURenderPipeline {
-    const cacheKey = `${blendMode}:${format}:${stencil ? 's' : 'n'}`;
+    // The whole format LIST is part of the key, not just the first format: a
+    // pipeline must declare one target per attachment of the pass it runs in, so
+    // the same material in a one-attachment and a two-attachment pass needs two
+    // pipelines.
+    const cacheKey = `${blendMode}:${formats.join(',')}:${stencil ? 's' : 'n'}`;
     const existing = resources.pipelines.get(cacheKey);
 
     if (existing !== undefined) {
@@ -1988,13 +1992,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       fragment: {
         module: resources.shaderModule,
         entryPoint: 'fragmentMain',
-        targets: [
-          {
-            format,
-            blend: getWebGpuBlendState(blendMode),
-            writeMask: GPUColorWrite.ALL,
-          },
-        ],
+        targets: formats.map(format => ({
+          format,
+          blend: getWebGpuBlendState(blendMode),
+          writeMask: GPUColorWrite.ALL,
+        })),
       },
       primitive: {
         topology: 'triangle-list',
