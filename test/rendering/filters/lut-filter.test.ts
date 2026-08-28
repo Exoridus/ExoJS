@@ -342,6 +342,7 @@ const makeWebGpuBackend = (device: GPUDevice): RenderBackend & WebGpuBackend => 
     },
     getTextureBinding: vi.fn(() => ({ view: {} as GPUTextureView, sampler: {} as GPUSampler })),
     getTextureFormat: vi.fn(() => 'rgba8unorm' as GPUTextureFormat),
+    colorAttachmentCount: 1,
     createColorAttachment: vi.fn(
       () =>
         ({

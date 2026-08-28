@@ -1,0 +1,111 @@
+---
+title: 'Compressed textures and device variants'
+description: 'Ship one texture per GPU family and display density, and let the loader pick what the running device can actually use.'
+---
+
+import Callout from '../../../components/Callout.astro';
+
+# Compressed textures and device variants
+
+A PNG is decoded on the CPU and lands in VRAM as RGBA8: four bytes per pixel, whatever the image looked like. A block-compressed texture is handed to the GPU untouched and stays compressed for its whole lifetime - a quarter of that for BC7 or ASTC 4x4, an eighth for BC1 or ETC2.
+
+The catch is that **no GPU implements every format**. Desktop GPUs implement the BC family, mobile GPUs implement ETC2 and ASTC, and WebGPU only carries a family that was requested when the device was created. So a project ships one file per target family and decides per device - which can only happen at load time, where the device is known.
+
+That is two separate things, and they are two separate parts of the API: a texture that can be compressed, and a rule that decides which file to fetch.
+
+## What the device supports
+
+```ts
+import { type Application, CompressedTextureFormat } from '@codexo/exojs';
+
+const report = (app: Application): void => {
+  // Most preferred first, or empty on a device with no compressed formats.
+  console.log(app.backend.supportedTextureFormats);
+  console.log(app.backend.supportedTextureFormats.includes(CompressedTextureFormat.Bc7RgbaUnorm));
+};
+```
+
+The order is the engine's own preference ranking and is identical on both backends, so what gets picked never depends on which backend happens to be live.
+
+<Callout type="warning" title="Read it after the backend is up">
+The list comes from the initialized backend. Before `app.initialize()` resolves there is no device to ask, and the answer is the empty one.
+</Callout>
+
+## Declaring the variants
+
+`loader.variants` maps one **logical source** - the name your code keeps using - to an ordered list of candidates:
+
+```ts
+import { type Application, CompressedTextureFormat } from '@codexo/exojs';
+
+const declareTerrain = (app: Application): void => {
+  app.loader.variants.define('terrain.png', [
+    { source: 'terrain.bc7.ktx2', textureFormat: CompressedTextureFormat.Bc7RgbaUnorm },
+    { source: 'terrain.astc.ktx2', textureFormat: CompressedTextureFormat.Astc4x4Unorm },
+    { source: 'terrain.etc2.ktx2', textureFormat: CompressedTextureFormat.Etc2Rgba8Unorm },
+    { source: 'terrain@2x.png', resolution: 2 },
+    { source: 'terrain.png' },
+  ]);
+};
+```
+
+Nothing else changes. `app.loader.load('terrain.png')` still asks for `terrain.png`, and what comes back is a `Texture` either way.
+
+A candidate is eligible when every condition it states holds:
+
+- `textureFormat` - only when the device lists that format.
+- `resolution` - only when the device renders at that density **or higher**.
+- Neither - the unconditional fallback. Declare one, or a device that matches nothing falls back to the logical source itself.
+
+Among the eligible candidates the most preferred supported format wins, then the highest density, then declaration order. Format outranks density on purpose: it is what decides VRAM and transfer cost. A project that wants density to dominate declares only the candidates it wants chosen.
+
+<Callout type="hint" title="The fallback is what makes the rest safe">
+The last line of that rule is the whole reason compressed textures are usable at all. A device with no compressed-format support is not a special case to detect - it simply matches the PNG.
+</Callout>
+
+## Identity follows the chosen file
+
+Variant selection happens **before** the source is canonicalized, so asset identity is keyed on the file that was actually fetched. Two devices that pick different candidates get different cache entries rather than one entry whose contents depend on which of them filled it last.
+
+It also happens before the asset type is inferred from the suffix, which is what lets a rule swap a `.png` for a `.ktx2`: the type follows the file the device gets, not the name you wrote.
+
+## KTX2 files
+
+`.ktx2` is claimed by the ordinary `texture` type, and the payload kind is read from the file's magic bytes rather than its suffix. So a KTX2 asset behaves like any other texture:
+
+```ts
+import type { Application } from '@codexo/exojs';
+
+const load = async (app: Application): Promise<void> => {
+  const terrain = await app.loader.load('terrain.bc7.ktx2');
+
+  console.log(terrain.width, terrain.compressed?.format);
+};
+```
+
+`texture.compressed` is `null` for an ordinary image and carries the format and mip chain otherwise. A container holding uncompressed RGBA8 is read as an ordinary image - it takes exactly the same path as a PNG.
+
+Two things do not apply to a compressed payload, and ignoring them is not a simplification:
+
+- **`premultiplyAlpha`** operates on decoded texels. Premultiply in the authoring tool, before compression.
+- **`generateMipMap`** cannot derive a mip level from compressed blocks. Compress the chain level by level and ship it inside the container; a file with one level samples without mips however the sampler is configured.
+
+<Callout type="warning" title="Universal formats are not decoded">
+A BasisLZ/ETC1S or UASTC "universal" KTX2 file needs a transcoder, which the engine does not carry, and loading one fails with an `AssetDecodeError` naming the scheme. Encode one file per target format instead - `toktx --target_type RGBA --encode uastc` and its per-format equivalents - and let a variant rule choose. Zstandard- and ZLIB-supercompressed files are rejected the same way.
+</Callout>
+
+## Constructing one directly
+
+A texture built in code takes the same payload:
+
+```ts
+import { CompressedTexture, CompressedTextureFormat, compressedLevelByteLength } from '@codexo/exojs';
+
+const format = CompressedTextureFormat.Bc7RgbaUnorm;
+const texture = new CompressedTexture({
+  format,
+  levels: [{ data: new Uint8Array(compressedLevelByteLength(format, 64, 64)), width: 64, height: 64 }],
+});
+```
+
+The payload is validated on the spot: a level whose byte length does not match its extent, or a base level that is not a whole number of blocks, throws here rather than at first bind. Binding a format the device does not implement throws a `RenderError` with code `'unsupported-format'` - it never uploads bytes the driver would misread.

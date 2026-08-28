@@ -90,7 +90,9 @@ export interface WebGpuPassBackend {
   flush(): unknown;
   pushScissorRect(bounds: Rectangle): unknown;
   popScissorRect(): unknown;
-  createColorAttachment(): GPURenderPassColorAttachment;
+  createColorAttachment(index?: number): GPURenderPassColorAttachment;
+  /** Colour attachments the bound target contributes to a pass; `1` for every ordinary target. */
+  readonly colorAttachmentCount: number;
   getScissorRect(): ScissorRect | null;
   submit(commandBuffer: GPUCommandBuffer): void;
   /** Whether `target` already holds rendered content this frame. */
@@ -222,7 +224,16 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     // identity to decide whether their draws are in the open pass.
     const descriptor = this._passDescriptor;
 
-    this._colorAttachments[0] = backend.createColorAttachment();
+    const attachmentCount = backend.colorAttachmentCount;
+
+    // Length is set before the slots are filled: the array is reused across
+    // passes, so a shorter pass after a multi-attachment one would otherwise
+    // leave the previous pass's extra views in place and bind them again.
+    this._colorAttachments.length = attachmentCount;
+
+    for (let index = 0; index < attachmentCount; index++) {
+      this._colorAttachments[index] = backend.createColorAttachment(index);
+    }
     descriptor.depthStencilAttachment = stencilEnabled ? this._createStencilAttachment(backend.renderTarget) : undefined;
 
     const encoder = backend.device.createCommandEncoder(commandEncoderDescriptor);

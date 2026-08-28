@@ -3,6 +3,7 @@ title: 'Render targets'
 description: 'Render into intermediate textures and reuse those outputs in scene composition.'
 ---
 
+import Callout from '../../../components/Callout.astro';
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 import SourceSnippet from '../../../components/SourceSnippet.astro';
 
@@ -107,6 +108,51 @@ The `setSize()` method changes the texture dimensions. `powerOfTwo` reports whet
 
 **Staging for post-processing.** Render a scene into a `RenderTexture`, apply a filter to the sprite that displays it, and render the result to the canvas. The [Post-processing](/ExoJS/en/guide/effects/post-processing/) chapter covers this pattern in detail.
 
+## Several attachments in one pass: MultiRenderTarget
+
+Some passes have to produce more than one image from the same geometry — colour plus a selection id, a normal buffer, a velocity buffer. Rendering the scene twice pays for the same transforms and rasterisation twice. A `MultiRenderTarget` carries several colour attachments and fills them in one pass:
+
+```ts
+import { MultiRenderTarget, TextureFormat, type RenderingContext, type RenderNode } from '@codexo/exojs';
+
+declare const context: RenderingContext;
+declare const scene: RenderNode;
+
+const gbuffer = new MultiRenderTarget(512, 512, {
+    formats: [TextureFormat.Rgba8, TextureFormat.Rgba8],
+});
+
+context.renderTo(scene, { target: gbuffer });
+
+const albedo = gbuffer.attachment(0);
+const ids = gbuffer.attachment(1);
+```
+
+Each attachment is an ordinary `RenderTexture` and is sampled like any other texture afterwards. The target **owns** them: it creates them, resizes them with itself, and destroys them with itself. Read `app.backend.maxColorAttachments` for the ceiling on the current device.
+
+<Callout type="warning" title="Only a custom mesh material can write one">
+A fragment shader has to declare one output per attachment. Sprites, text, nine-slice and repeating sprites, video, and the default mesh material all declare exactly one, so drawing any of them into a multi-attachment target throws — as does alpha-mask or backdrop-blend compositing. Give the geometry a `MeshMaterial` whose shader writes every slot:
+
+```wgsl
+struct FragmentOut {
+  @location(0) color: vec4<f32>,
+  @location(1) id: vec4<f32>,
+};
+
+@fragment
+fn fragmentMain(input: VertexOutput) -> FragmentOut {
+  var out: FragmentOut;
+  out.color = vec4<f32>(1.0, 0.0, 0.0, 1.0);
+  out.id = vec4<f32>(0.25, 0.0, 0.0, 1.0);
+  return out;
+}
+```
+
+The GLSL counterpart declares `layout(location = 0) out vec4 outColor;` and `layout(location = 1) out vec4 outId;`.
+</Callout>
+
+If one pass only ever produces one image, a plain `RenderTexture` is the right tool — this exists for the case where it genuinely produces two.
+
 ## RenderTexture vs. cacheAsTexture
 
 `cacheAsTexture` on a `RenderNode` bakes the node's subtree into an internal texture automatically. Use `cacheAsTexture` when the cached content doesn't need to be repositioned, scaled, filtered, or displayed in multiple places — it's a simple on/off toggle. Use a `RenderTexture` when you need explicit control over when the cache updates, what view it uses, or how the result is displayed (multiple sprites, custom sampler settings, composited with blend modes).
@@ -130,7 +176,7 @@ Changing `cacheResolution` invalidates the cache, as does anything that moves th
 
 ## Lifecycle
 
-`RenderTexture` owns GPU resources. Call `destroy()` when the texture is no longer needed to release the backing framebuffer and texture. The engine does not garbage-collect GPU objects automatically.
+`RenderTexture` owns GPU resources. Call `destroy()` when the texture is no longer needed to release the backing framebuffer and texture. The engine does not garbage-collect GPU objects automatically. Destroying a `MultiRenderTarget` destroys its attachments too, so do not `destroy()` one of those separately.
 
 ## Examples
 

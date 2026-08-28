@@ -26,6 +26,8 @@ export interface HarnessOptions {
 /** A wired-up backend ready to render scenes against the recording fake context. */
 export interface WebGl2Harness {
   readonly backend: WebGl2Backend;
+  /** The fake context the backend drives, for tests that spy on individual GL calls. */
+  readonly context: WebGL2RenderingContext;
   readonly recorder: GlRecorder;
   readonly view: View;
   readonly width: number;
@@ -104,6 +106,7 @@ export const createWebGl2Harness = (options: HarnessOptions = {}): WebGl2Harness
 
   return {
     backend,
+    context,
     recorder,
     view: backend.view,
     width,

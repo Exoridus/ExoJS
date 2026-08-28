@@ -1,16 +1,16 @@
 {
   "title": "Spatializable",
-  "description": "A voice that can be positioned in 2D space and optionally track a node.",
+  "description": "A voice that can be positioned in space and optionally track a node.",
   "symbol": "Spatializable",
   "kind": "interface",
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 12,
+  "memberCount": 15,
   "counts": {
     "constructors": 0,
     "methods": 1,
-    "properties": 11,
+    "properties": 14,
     "events": 0
   },
   "sections": [
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A voice that can be positioned in 2D space and optionally track a node."
+        "A voice that can be positioned in space and optionally track a node."
       ],
       "importLine": "import { Spatializable } from '@codexo/exojs'",
       "sourceLink": null
@@ -177,6 +177,48 @@
           "description": "Distance-attenuation model. Default 'linear'."
         },
         {
+          "name": "elevation",
+          "signature": "elevation: number",
+          "signatureTokens": [
+            {
+              "text": "elevation",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Height of the source above (positive) or below (negative) the world plane, in world units. Default 0. Independent of Spatializable.position, and preserved across a position change that does not carry a z. It contributes to distance attenuation, to the panner's own directionality, and to Doppler - a source rising straight up recedes."
+        },
+        {
+          "name": "elevationVelocity",
+          "signature": "elevationVelocity: number",
+          "signatureTokens": [
+            {
+              "text": "elevationVelocity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Vertical component of Spatializable.velocity, in world units per second. Default 0. Only Doppler reads it."
+        },
+        {
           "name": "maxDistance",
           "signature": "maxDistance: number",
           "signatureTokens": [
@@ -196,6 +238,27 @@
           "params": [],
           "returnType": null,
           "description": "For the 'linear' model: distance at which volume reaches zero. Default 1000."
+        },
+        {
+          "name": "occlusion",
+          "signature": "occlusion: number",
+          "signatureTokens": [
+            {
+              "text": "occlusion",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How obstructed the path from this source to the listener is, in [0, 1]. 0 (default) is a clear path; 1 is fully obstructed. Caller-supplied: the engine does not trace geometry, because what counts as an obstruction is a game's decision (a wall, a closed door, a crowd). Write an estimate as often as you like - it is ramped, not stepped, so a per-frame value does not click. Realized as a lowpass plus an attenuation, tuned by app.audio.spatial.occlusionCutoff / .occlusionAttenuation. A voice whose occlusion stays 0 builds neither node."
         },
         {
           "name": "orientation",
@@ -316,7 +379,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "World-space position of the source, or null when not spatialized."
+          "description": "World-plane position of the source, or null when not spatialized. Two-dimensional, because the world plane is: the third axis lives on Spatializable.elevation, which Spatializable.follow cannot fill in and which most 2D games never touch."
         },
         {
           "name": "velocity",

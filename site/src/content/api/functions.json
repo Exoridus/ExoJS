@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 66,
+  "memberCount": 76,
   "counts": {
     "constructors": 0,
-    "methods": 36,
-    "properties": 30,
+    "methods": 44,
+    "properties": 32,
     "events": 0
   },
   "sections": [
@@ -251,6 +251,278 @@
           ],
           "returnType": "number",
           "description": "Clamp value to the closed interval [min, max]."
+        },
+        {
+          "name": "compressedBlockLayout",
+          "signature": "compressedBlockLayout(format: CompressedTextureFormat): CompressedBlockLayout",
+          "signatureTokens": [
+            {
+              "text": "compressedBlockLayout",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "format",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CompressedTextureFormat",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CompressedBlockLayout",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "format",
+              "type": "CompressedTextureFormat",
+              "optional": false
+            }
+          ],
+          "returnType": "CompressedBlockLayout",
+          "description": "Block geometry of format."
+        },
+        {
+          "name": "compressedBlocksAcross",
+          "signature": "compressedBlocksAcross(format: CompressedTextureFormat, width: number): number",
+          "signatureTokens": [
+            {
+              "text": "compressedBlocksAcross",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "format",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CompressedTextureFormat",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "format",
+              "type": "CompressedTextureFormat",
+              "optional": false
+            },
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Number of block columns a mip level of width texels occupies."
+        },
+        {
+          "name": "compressedBlocksDown",
+          "signature": "compressedBlocksDown(format: CompressedTextureFormat, height: number): number",
+          "signatureTokens": [
+            {
+              "text": "compressedBlocksDown",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "format",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CompressedTextureFormat",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "format",
+              "type": "CompressedTextureFormat",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Number of block rows a mip level of height texels occupies."
+        },
+        {
+          "name": "compressedLevelByteLength",
+          "signature": "compressedLevelByteLength(format: CompressedTextureFormat, width: number, height: number): number",
+          "signatureTokens": [
+            {
+              "text": "compressedLevelByteLength",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "format",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CompressedTextureFormat",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "format",
+              "type": "CompressedTextureFormat",
+              "optional": false
+            },
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Exact byte length one mip level of width x height texels occupies in format. A level is padded out to whole blocks, so a 5x5 BC7 level costs four blocks, not one and a half. Container parsers compare this against the byte length the file declares: a mismatch means the file is truncated or its format was mis-identified, and uploading it would hand the driver a short buffer."
         },
         {
           "name": "createArcadeStickGamepadMapping",
@@ -1221,6 +1493,53 @@
           "description": "Return true if the global AudioContext has been created and is currently in the running state. Safe to call before getAudioContext; returns false if no context exists yet."
         },
         {
+          "name": "isCompressedTextureFormat",
+          "signature": "isCompressedTextureFormat(value: string): value",
+          "signatureTokens": [
+            {
+              "text": "isCompressedTextureFormat",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "value",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "value",
+          "description": "Whether value names a format this engine knows how to upload."
+        },
+        {
           "name": "isDomCanvas",
           "signature": "isDomCanvas(surface: RenderSurface): surface",
           "signatureTokens": [
@@ -1457,6 +1776,200 @@
           ],
           "returnType": "number",
           "description": "Linear interpolation between startValue and endValue at normalized ratio ∈ [0, 1]."
+        },
+        {
+          "name": "meshIndexBytes",
+          "signature": "meshIndexBytes(format: MeshIndexFormat): number",
+          "signatureTokens": [
+            {
+              "text": "meshIndexBytes",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "format",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MeshIndexFormat",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "format",
+              "type": "MeshIndexFormat",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Bytes one index occupies in format."
+        },
+        {
+          "name": "meshIndexFormatFor",
+          "signature": "meshIndexFormatFor(indices: MeshIndexArray | null, vertexCount: number): MeshIndexFormat",
+          "signatureTokens": [
+            {
+              "text": "meshIndexFormatFor",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "indices",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MeshIndexArray",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "vertexCount",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MeshIndexFormat",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "indices",
+              "type": "MeshIndexArray | null",
+              "optional": false
+            },
+            {
+              "name": "vertexCount",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "MeshIndexFormat",
+          "description": "The index width a mesh drawn from indices over vertexCount vertices needs. An authored stream keeps the width it was authored with - narrowing a Uint32Array that happens to fit would make the format depend on the values rather than on the declaration, so the same geometry could change width when its content changes. A non-indexed mesh has its indices synthesized, so its width follows purely from how many vertices there are to address."
+        },
+        {
+          "name": "orderCompressedFormats",
+          "signature": "orderCompressedFormats(supported: Iterable<CompressedTextureFormat>): readonly CompressedTextureFormat[]",
+          "signatureTokens": [
+            {
+              "text": "orderCompressedFormats",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "supported",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Iterable",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CompressedTextureFormat",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CompressedTextureFormat",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "supported",
+              "type": "Iterable<CompressedTextureFormat>",
+              "optional": false
+            }
+          ],
+          "returnType": "readonly CompressedTextureFormat[]",
+          "description": "supported in the engine's preference order. Backends collect what their device reports in whatever order they probe it; this puts both of them on one ranking so variant selection cannot depend on which backend is live."
         },
         {
           "name": "registerAudioWorkletProcessor",
@@ -2100,6 +2613,39 @@
           "description": "The shared miss result. Frozen and reusable, so a store that misses allocates nothing."
         },
         {
+          "name": "compressedFormatPreference",
+          "signature": "compressedFormatPreference: readonly CompressedTextureFormat[]",
+          "signatureTokens": [
+            {
+              "text": "compressedFormatPreference",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CompressedTextureFormat",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Order in which the engine prefers compressed formats when several are available, best first. Both backends filter this to the formats their device actually implements, so RenderBackend.supportedTextureFormats - and therefore variant selection - ranks identically on WebGL2 and WebGPU. The order runs from the highest-quality RGBA formats down to the cheapest, with the single- and two-channel formats last: they are not interchangeable with an RGBA format, so they only ever rank against each other."
+        },
+        {
           "name": "coreAssetTypes",
           "signature": "coreAssetTypes: readonly AnyAssetType[]",
           "signatureTokens": [
@@ -2361,6 +2907,27 @@
           "params": [],
           "returnType": null,
           "description": "Maximum number of simultaneous tracked pointers (mouse / touch / pen)."
+        },
+        {
+          "name": "maxUint16VertexCount",
+          "signature": "maxUint16VertexCount: 65536",
+          "signatureTokens": [
+            {
+              "text": "maxUint16VertexCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "65536",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Largest vertex count a 16-bit index stream can address. A Uint16Array index holds 0..65535, so a mesh of exactly this many vertices is still fully addressable; one vertex more is not."
         },
         {
           "name": "musicType",

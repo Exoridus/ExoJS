@@ -1,0 +1,332 @@
+{
+  "title": "AudioZone",
+  "description": "A region of the world that contributes a parallel send while the listener is inside it - a reverb zone, a muffled corridor, an underwater section. The zone owns geometry and a level, and nothing else: it does not route audio, hold effects or touch a voice. SpatialZones reads AudioZone.weightAt once per frame and maintains the sends. That split is deliberate - it means a zone is a plain value a level file can describe, and the effect chain behind it is an ordinary AudioBus the caller already knows how to build. Reverb belongs to the environment the LISTENER is in, not to each source, which is why the weight is sampled at the listener and applied to every audible voice.",
+  "symbol": "AudioZone",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A region of the world that contributes a parallel send while the listener is inside it - a reverb zone, a muffled corridor, an underwater section.",
+        "The zone owns geometry and a level, and nothing else: it does not route audio, hold effects or touch a voice. SpatialZones reads AudioZone.weightAt once per frame and maintains the sends. That split is deliberate - it means a zone is a plain value a level file can describe, and the effect chain behind it is an ordinary AudioBus the caller already knows how to build.",
+        "Reverb belongs to the environment the LISTENER is in, not to each source, which is why the weight is sampled at the listener and applied to every audible voice."
+      ],
+      "importLine": "import { AudioZone } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(__namedParameters: AudioZoneOptions): AudioZone",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "__namedParameters",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioZoneOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioZone",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "__namedParameters",
+              "type": "AudioZoneOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "AudioZone",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "weightAt",
+          "signature": "weightAt(x: number, y: number, z: number): number",
+          "signatureTokens": [
+            {
+              "text": "weightAt",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "z",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "z",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "How strongly this zone applies at (x, y, z): 1 inside the shape, 0 beyond AudioZone.falloff, and a linear ramp between. The ramp is measured on the distance to the shape's boundary rather than to its centre, so a long corridor fades over the same distance at its middle as at its ends."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bus",
+          "signature": "bus: AudioBus",
+          "signatureTokens": [
+            {
+              "text": "bus",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "falloff",
+          "signature": "falloff: number",
+          "signatureTokens": [
+            {
+              "text": "falloff",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Distance outside the shape over which the weight ramps from 1 to 0."
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Height band above and below the world plane the zone covers."
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "send",
+          "signature": "send: number",
+          "signatureTokens": [
+            {
+              "text": "send",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Send level at full weight."
+        },
+        {
+          "name": "shape",
+          "signature": "shape: AudioZoneShape",
+          "signatureTokens": [
+            {
+              "text": "shape",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioZoneShape",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/AudioZone.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioZone.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/AudioZone.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioZone.ts"
+}

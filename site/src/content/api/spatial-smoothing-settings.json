@@ -6,11 +6,11 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 5,
+  "memberCount": 7,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 5,
+    "properties": 7,
     "events": 0
   },
   "sections": [
@@ -48,6 +48,48 @@
           "params": [],
           "returnType": null,
           "description": "Doppler pitch-shift strength multiplier. 0 (default) disables Doppler entirely - even when velocity data is available on a voice or the listener, no playbackRate modulation is applied unless this is set above zero. 1 is physically scaled (relative to speedOfSound); many games deliberately exaggerate beyond 1 for player feedback."
+        },
+        {
+          "name": "occlusionAttenuation",
+          "signature": "occlusionAttenuation: number",
+          "signatureTokens": [
+            {
+              "text": "occlusionAttenuation",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Linear gain a voice at Spatializable.occlusion 1 is attenuated to. Default DEFAULT_OCCLUSION_ATTENUATION. Not 0: a fully occluded source that goes silent reads as a bug rather than as an obstruction."
+        },
+        {
+          "name": "occlusionCutoff",
+          "signature": "occlusionCutoff: number",
+          "signatureTokens": [
+            {
+              "text": "occlusionCutoff",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Lowpass cutoff (Hz) a voice at Spatializable.occlusion 1 is filtered to. Default DEFAULT_OCCLUSION_CUTOFF (400 Hz) - roughly \"behind a closed door\". Interpolation between clear and fully occluded is logarithmic, matching how pitch is perceived."
         },
         {
           "name": "panningModel",

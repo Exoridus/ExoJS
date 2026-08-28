@@ -8,7 +8,8 @@ import type { AudioBus } from './AudioBus';
 import type { AudioEffect } from './AudioEffect';
 import { isEffectReady } from './AudioEffect';
 import type { AudioManager } from './AudioManager';
-import type { DistanceModel, Spatializable, Voice } from './Playable';
+import { AudioSend } from './AudioSend';
+import type { DistanceModel, Spatializable, SpatialPoint, Voice } from './Playable';
 import {
   createVelocitySample,
   deriveVelocity,
@@ -96,6 +97,13 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
   private _spatialRegistered = false;
   private _velocity: Vector | null = null;
   private _explicitVelocity = false;
+  private _elevation = 0;
+  private _elevationVelocity = 0;
+  private _occlusion = 0;
+  /** Lowpass + attenuation for {@link BaseVoice.occlusion}; both `null` until it leaves `0`. */
+  private _occlusionFilter: BiquadFilterNode | null = null;
+  private _occlusionGain: GainNode | null = null;
+  private readonly _sends: AudioSend[] = [];
   private readonly _velocitySample: VelocitySample = createVelocitySample();
   private readonly _smoothX = new SmoothedAudioParam();
   private readonly _smoothY = new SmoothedAudioParam();
@@ -257,7 +265,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     return this._position;
   }
 
-  public set position(value: Vector | { x: number; y: number } | null) {
+  public set position(value: Vector | SpatialPoint | null) {
     if (this._ended) return;
 
     if (value === null) {
@@ -273,6 +281,15 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
       this._position = new Vector(value.x, value.y);
     } else {
       this._position.set(value.x, value.y);
+    }
+
+    // Only a supplied `z` writes elevation. A point without one leaves the
+    // current height alone rather than resetting it, so `follow()` and a plain
+    // `{ x, y }` write cannot silently drop a source back to the plane.
+    const z = (value as SpatialPoint).z;
+
+    if (z !== undefined) {
+      this._elevation = z;
     }
 
     this._ensurePanner();
@@ -420,7 +437,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     return this._velocity;
   }
 
-  public set velocity(value: Vector | { x: number; y: number } | null) {
+  public set velocity(value: Vector | SpatialPoint | null) {
     if (this._ended) return;
 
     if (value === null) {
@@ -442,7 +459,123 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     } else {
       this._velocity.set(value.x, value.y);
     }
+
+    const z = (value as SpatialPoint).z;
+
+    if (z !== undefined) {
+      this._elevationVelocity = z;
+    }
+
     this._explicitVelocity = true;
+  }
+
+  public get elevation(): number {
+    return this._elevation;
+  }
+
+  public set elevation(value: number) {
+    if (!Number.isFinite(value) || value === this._elevation) {
+      return;
+    }
+
+    this._elevation = value;
+    // A voice positioned only by elevation is still spatial - without this a
+    // caller who sets height before position would get no panner at all.
+    this._ensurePanner();
+    this._tickSpatial();
+  }
+
+  public get elevationVelocity(): number {
+    return this._elevationVelocity;
+  }
+
+  public set elevationVelocity(value: number) {
+    if (!Number.isFinite(value)) {
+      return;
+    }
+
+    this._elevationVelocity = value;
+    this._explicitVelocity = true;
+  }
+
+  public get occlusion(): number {
+    return this._occlusion;
+  }
+
+  public set occlusion(value: number) {
+    const clamped = clamp(Number.isFinite(value) ? value : 0, 0, 1);
+
+    if (clamped === this._occlusion) {
+      return;
+    }
+
+    const wasClear = this._occlusion === 0;
+
+    this._occlusion = clamped;
+
+    if (this._ended) {
+      return;
+    }
+
+    // Nothing is built for a voice that stays clear, and nothing is torn down
+    // when it returns to clear: the two nodes are cheap to leave in place and
+    // rebuilding the chain on every threshold crossing would be audible.
+    if (wasClear && this._occlusionFilter === null) {
+      this._buildOcclusionStage();
+    }
+
+    this._writeOcclusion();
+  }
+
+  public get sends(): readonly AudioSend[] {
+    return this._sends;
+  }
+
+  public addSend(bus: AudioBus, level = 1): AudioSend {
+    const send = new AudioSend(this._audioContext, this._output, bus, level);
+
+    this._sends.push(send);
+
+    // A send on an already-finished voice is legal but pointless; destroying it
+    // straight away keeps the invariant that a voice's sends never outlive it.
+    if (this._ended) {
+      send.destroy();
+    }
+
+    return send;
+  }
+
+  /**
+   * Take ownership of a send opened elsewhere against this voice's output, so it
+   * is torn down with this voice like any other.
+   *
+   * Used by the deferred voice a scene hands out: the send exists before the real
+   * voice does, and re-creating it at flush would invalidate the handle the
+   * caller already holds.
+   * @internal
+   */
+  public _adoptSend(send: AudioSend): void {
+    if (this._sends.includes(send)) {
+      return;
+    }
+
+    send._retarget(this._output);
+    this._sends.push(send);
+
+    if (this._ended) {
+      send.destroy();
+    }
+  }
+
+  public removeSend(send: AudioSend): this {
+    const index = this._sends.indexOf(send);
+
+    if (index !== -1) {
+      this._sends.splice(index, 1);
+      send.destroy();
+    }
+
+    return this;
   }
 
   /** @internal Called once per frame by {@link AudioManager.update} for spatial voices. */
@@ -482,9 +615,11 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     // {@link AudioListener}). With the listener at the origin the offset vector
     // is all a panner needs: distance, attenuation and the distance model come
     // out mathematically identical to writing absolute positions.
-    const listenerPosition = this._manager.listener.position;
+    const listener = this._manager.listener;
+    const listenerPosition = listener.position;
     const relativeX = x - listenerPosition.x;
     const relativeY = y - listenerPosition.y;
+    const relativeZ = this._elevation - listener.elevation;
 
     if (panner.positionX) {
       // Route through the smoothing layer (setTargetAtTime + epsilon-skip +
@@ -493,16 +628,16 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
       // centrally on the listener's own params.
       this._smoothX.write(panner.positionX, relativeX, t, settings);
       this._smoothY.write(panner.positionY!, relativeY, t, settings);
-      this._smoothZ.write(panner.positionZ!, 0, t, settings);
+      this._smoothZ.write(panner.positionZ!, relativeZ, t, settings);
     } else if (panner.setPosition) {
       // Legacy AudioParam-less API: snap only (no smoothing available).
-      panner.setPosition(relativeX, relativeY, 0);
+      panner.setPosition(relativeX, relativeY, relativeZ);
     }
 
     this._writeOrientation();
     // Doppler stays in ABSOLUTE world coordinates: it projects both velocities
     // onto the true line of sight and never touches a panner position param.
-    this._tickDoppler(x, y, t, settings);
+    this._tickDoppler(x, y, this._elevation, t, settings);
   }
 
   /**
@@ -527,7 +662,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
    * arbitrarily high/low, so the clamp is what actually keeps that case sane,
    * not the formula itself.
    */
-  private _tickDoppler(x: number, y: number, now: number, settings: SpatialSmoothingSettings): void {
+  private _tickDoppler(x: number, y: number, z: number, now: number, settings: SpatialSmoothingSettings): void {
     if (settings.dopplerFactor <= 0) {
       this._setDopplerRatio(1);
       return;
@@ -535,6 +670,9 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
 
     let vx: number;
     let vy: number;
+    // Only ever explicit: a derived velocity comes from the tracked position,
+    // and nothing tracks elevation - `follow()` reads a 2D scene node.
+    const vz = this._explicitVelocity ? this._elevationVelocity : 0;
 
     if (this._explicitVelocity && this._velocity !== null) {
       vx = this._velocity.x;
@@ -548,7 +686,8 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     const listener = this._manager.listener;
     const dx = x - listener.position.x;
     const dy = y - listener.position.y;
-    const distance = Math.hypot(dx, dy);
+    const dz = z - listener.elevation;
+    const distance = Math.hypot(dx, dy, dz);
     // Coincident with the listener - no defined line of sight to project onto.
     if (distance < POSITION_EPSILON) {
       this._setDopplerRatio(1);
@@ -557,12 +696,13 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
 
     const ux = dx / distance;
     const uy = dy / distance;
+    const uz = dz / distance;
 
     // Positive = source moving away from the listener along the line of sight.
-    const sourceRecedeSpeed = vx * ux + vy * uy;
+    const sourceRecedeSpeed = vx * ux + vy * uy + vz * uz;
     const listenerVelocity = listener.velocity;
     // Positive = listener moving toward the source along the same line.
-    const listenerApproachSpeed = listenerVelocity.x * ux + listenerVelocity.y * uy;
+    const listenerApproachSpeed = listenerVelocity.x * ux + listenerVelocity.y * uy + listener.elevationVelocity * uz;
 
     const speedOfSound = Math.max(POSITION_EPSILON, settings.speedOfSound);
     const rawRatio = 1 + settings.dopplerFactor * ((listenerApproachSpeed - sourceRecedeSpeed) / speedOfSound);
@@ -582,9 +722,12 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
 
   /**
    * Convert `_orientation` (degrees, `SceneNode.rotation` convention) to a
-   * unit XY vector (Z fixed at 0 - no Z axis in this engine) and write it
-   * through the same smoothing layer used for position, so a fast-rotating
-   * emitter's cone direction never zippers.
+   * unit XY vector and write it through the same smoothing layer used for
+   * position, so a fast-rotating emitter's cone direction never zippers.
+   *
+   * Z stays 0 even for an elevated source: `orientation` is a single in-plane
+   * angle, so a cone always points along the world plane. Tilting one would need
+   * a second angle, which no caller can supply today.
    */
   private _writeOrientation(): void {
     if (this._panner === null || this._ended) return;
@@ -615,10 +758,71 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
   // Internals
   // -------------------------------------------------------------------------
 
-  /** The last node in the voice chain before the bus - the output gain, or the last effect. */
+  /** The last node in the voice chain before the bus - the output gain, the occlusion stage, or the last effect. */
   protected _tail(): AudioNode {
     const lastEffect = this._effects[this._effects.length - 1];
-    return lastEffect !== undefined ? lastEffect.outputNode : this._output;
+
+    if (lastEffect !== undefined) {
+      return lastEffect.outputNode;
+    }
+
+    return this._occlusionGain ?? this._output;
+  }
+
+  /**
+   * Create the occlusion lowpass and attenuation and splice them in as
+   * `output -> lowpass -> gain -> [effects] -> bus`.
+   *
+   * Before the caller's own effect chain on purpose: occlusion describes the path
+   * from the source to the listener, so it belongs with the source, and an insert
+   * the caller added is meant to hear what the listener would.
+   */
+  private _buildOcclusionStage(): void {
+    const filter = this._audioContext.createBiquadFilter();
+
+    filter.type = 'lowpass';
+    filter.frequency.value = this._openCutoff();
+    filter.Q.value = 0.7071;
+
+    const gain = this._audioContext.createGain();
+
+    gain.gain.value = 1;
+
+    this._occlusionFilter = filter;
+    this._occlusionGain = gain;
+    this._rebuildEffectChain();
+  }
+
+  /** Highest cutoff the context can express - a lowpass above Nyquist is a no-op, not an error. */
+  private _openCutoff(): number {
+    return this._audioContext.sampleRate / 2;
+  }
+
+  /**
+   * Write the current occlusion amount onto the lowpass and the attenuation.
+   *
+   * The cutoff sweeps LOGARITHMICALLY between the open value and
+   * `spatial.occlusionCutoff`. A linear sweep spends most of its range in the
+   * inaudible top octaves, so half the parameter would do almost nothing.
+   */
+  private _writeOcclusion(): void {
+    const filter = this._occlusionFilter;
+    const gain = this._occlusionGain;
+
+    if (filter === null || gain === null) {
+      return;
+    }
+
+    const settings = this._manager.spatial;
+    const now = this._audioContext.currentTime;
+    const open = this._openCutoff();
+    const closed = clamp(settings.occlusionCutoff, 20, open);
+    const cutoff = open * (closed / open) ** this._occlusion;
+    const attenuated = clamp(settings.occlusionAttenuation, 0, 1);
+    const timeConstant = Math.max(settings.smoothing, POSITION_EPSILON);
+
+    filter.frequency.setTargetAtTime(cutoff, now, timeConstant);
+    gain.gain.setTargetAtTime(1 + (attenuated - 1) * this._occlusion, now, timeConstant);
   }
 
   protected _connectOutput(): void {
@@ -657,11 +861,20 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     if (this._ended) return;
 
     this._output.disconnect();
+    this._occlusionFilter?.disconnect();
+    this._occlusionGain?.disconnect();
     for (const effect of this._effects) {
       effect.outputNode.disconnect();
     }
 
     let prev: AudioNode = this._output;
+
+    if (this._occlusionFilter !== null && this._occlusionGain !== null) {
+      prev.connect(this._occlusionFilter);
+      this._occlusionFilter.connect(this._occlusionGain);
+      prev = this._occlusionGain;
+    }
+
     for (const effect of this._effects) {
       prev.connect(effect.inputNode);
       prev = effect.outputNode;
@@ -741,7 +954,17 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
 
     this._teardownSource();
     this._panner?.disconnect();
+    // Sends read `_output`, so they go before it is disconnected - the shared
+    // bus each one feeds must not be left with a live tap on a dead voice.
+    for (const send of this._sends) {
+      send.destroy();
+    }
+    this._sends.length = 0;
     this._output.disconnect();
+    this._occlusionFilter?.disconnect();
+    this._occlusionGain?.disconnect();
+    this._occlusionFilter = null;
+    this._occlusionGain = null;
 
     // Detach per-voice effects from the chain (the caller still owns them).
     // Skipped for an effect whose own nodes have not been created yet - same

@@ -1,6 +1,7 @@
 /// <reference types="@webgpu/types" />
 
 import type { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
+import type { MeshIndexFormat } from '#rendering/mesh/meshIndices';
 import type { RetainedBatchInstruction, RetainedGroupBundle, RetainedInstructionSet } from '#rendering/plan/RetainedInstructionSet';
 import type { Renderer } from '#rendering/Renderer';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -30,6 +31,8 @@ export interface WebGpuRetainedGeometryRef {
   readonly vertexBuffer: GPUBuffer;
   readonly indexBuffer: GPUBuffer;
   readonly indexCount: number;
+  /** Width `indexBuffer` holds, so replay binds it with the format it was packed at. */
+  readonly indexFormat: MeshIndexFormat;
 }
 
 /**

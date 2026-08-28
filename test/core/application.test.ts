@@ -118,6 +118,9 @@ const loadApplicationHarness = async (
     hasAssetType: vi.fn().mockReturnValue(false),
     hasExtension: vi.fn().mockReturnValue(false),
     bindAsset: vi.fn(),
+    // The Application publishes the initialized backend's capability profile
+    // here - including once more after the WebGPU-to-WebGL2 fallback.
+    variants: { profile: { textureFormats: [], resolution: 1 } },
   };
   const BackendMock = vi.fn(function () {
     return webglManager;

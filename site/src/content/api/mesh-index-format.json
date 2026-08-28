@@ -1,0 +1,73 @@
+{
+  "title": "MeshIndexFormat",
+  "description": "Width of a mesh's index stream. `'uint16'` is the default and the cheaper one - half the index bytes to upload and to keep resident - and covers any mesh addressing at most 65 536 vertices. `'uint32'` exists for generated or merged geometry that legitimately exceeds that: batched tile, trail, terrain or imported SVG meshes. The values are the strings WebGPU accepts verbatim; WebGL2 maps them onto its own `UNSIGNED_SHORT`/`UNSIGNED_INT` element types.",
+  "symbol": "MeshIndexFormat",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Width of a mesh's index stream.",
+        "`'uint16'` is the default and the cheaper one - half the index bytes to upload and to keep resident - and covers any mesh addressing at most 65 536 vertices. `'uint32'` exists for generated or merged geometry that legitimately exceeds that: batched tile, trail, terrain or imported SVG meshes.",
+        "The values are the strings WebGPU accepts verbatim; WebGL2 maps them onto its own `UNSIGNED_SHORT`/`UNSIGNED_INT` element types."
+      ],
+      "importLine": "import { MeshIndexFormat } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "MeshIndexFormat",
+          "signature": "\"uint16\" | \"uint32\"",
+          "signatureTokens": [
+            {
+              "text": "\"uint16\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"uint32\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/mesh/meshIndices.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/mesh/meshIndices.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/mesh/meshIndices.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/mesh/meshIndices.ts"
+}

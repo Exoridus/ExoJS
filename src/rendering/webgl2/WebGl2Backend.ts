@@ -11,6 +11,8 @@ import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { Mesh } from '#rendering/mesh/Mesh';
+import { assertDrawsAllAttachments, assertSingleAttachmentCompose } from '#rendering/multiAttachmentGuard';
+import { isMultiAttachmentTarget, MultiRenderTarget } from '#rendering/MultiRenderTarget';
 import type { PersistentSlotBundle } from '#rendering/plan/PersistentSlotDraw';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
@@ -29,7 +31,7 @@ import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { InstanceDataView } from '#rendering/RenderBatch';
 import type { Renderer } from '#rendering/Renderer';
 import { RendererRegistry } from '#rendering/RendererRegistry';
-import type { RenderError } from '#rendering/RenderError';
+import { RenderError } from '#rendering/RenderError';
 import type { RenderStats } from '#rendering/RenderStats';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
@@ -42,6 +44,8 @@ import {
   type TransformTextureLayout,
   transformTextureRect,
 } from '#rendering/shader/transformTextureLayout';
+import { compressedPayloadOf } from '#rendering/texture/compressedPayload';
+import type { CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
@@ -51,6 +55,7 @@ import { BlendModes, type ColorTextureFormat, TextureFormat } from '#rendering/t
 import type { View } from '#rendering/View';
 
 import { WebGl2BackdropBlendCompositor } from './WebGl2BackdropBlendCompositor';
+import { probeWebgl2CompressedFormats, type Webgl2CompressedFormatSupport } from './webgl2CompressedFormat';
 import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
 import { WebGl2MeshRenderer } from './WebGl2MeshRenderer';
 import { WebGl2PassCoordinator } from './WebGl2PassCoordinator';
@@ -135,10 +140,29 @@ interface ManagedTextureState {
   partialUploadScratch: Float32Array | Uint8Array | null;
 }
 
+/**
+ * Colour attachments this context accepts in one framebuffer.
+ *
+ * The lower of the two limits: a framebuffer may carry `MAX_COLOR_ATTACHMENTS`
+ * textures, but a draw can only write `MAX_DRAW_BUFFERS` of them, and an
+ * attachment nothing can write to is not usable capacity.
+ */
+const readMaxColorAttachments = (gl: WebGL2RenderingContext): number => {
+  const attachments = gl.getParameter(gl.MAX_COLOR_ATTACHMENTS) as number;
+  const drawBuffers = gl.getParameter(gl.MAX_DRAW_BUFFERS) as number;
+
+  return Math.max(Math.min(typeof attachments === 'number' ? attachments : 1, typeof drawBuffers === 'number' ? drawBuffers : 1), 1);
+};
+
 interface ManagedRenderTargetState {
   framebuffer: WebGLFramebuffer | null;
   version: number;
-  attachedTexture: WebGLTexture | null;
+  /**
+   * GL texture currently attached at each colour slot. One entry for an ordinary
+   * `RenderTexture`, one per attachment for a {@link MultiRenderTarget} - so a
+   * re-attach is decided per slot rather than for the framebuffer as a whole.
+   */
+  attachedTextures: Array<WebGLTexture | null>;
   stencilRenderbuffer: WebGLRenderbuffer | null;
   stencilWidth: number;
   stencilHeight: number;
@@ -302,6 +326,19 @@ export class WebGl2Backend implements RenderBackend {
   // with GL_INVALID_VALUE and leave every transform fetch reading an incomplete
   // texture (a black frame). Re-read after a context restore.
   private _maxTextureSize = 0;
+  /**
+   * Compressed-format table of the live context, rebuilt whenever the context
+   * is - a restored context re-enables its extensions from scratch, and a stale
+   * table would hand `compressedTexImage2D` an internal format the new context
+   * never enabled.
+   */
+  private _compressedFormats: Webgl2CompressedFormatSupport = { formats: [], internalFormats: new Map() };
+  private _maxColorAttachments = 1;
+  /** Whether the bound target writes more than one colour attachment - see {@link draw}. */
+  private _multiAttachmentTarget = false;
+  /** Reused per-bind scratch for the colour-attachment handles and the draw-buffer list. */
+  private readonly _attachmentHandleScratch: WebGLTexture[] = [];
+  private readonly _drawBufferScratch: number[] = [];
   /** The application's `canvas.pixelRatio`, sanitized once - see {@link surfacePixelRatio}. */
   private readonly _surfacePixelRatio: number;
   private _renderTarget: RenderTarget;
@@ -386,6 +423,8 @@ export class WebGl2Backend implements RenderBackend {
     // enable call; without it, RGBA16F/RGBA32F are not color-renderable in WebGL2.
     this._floatRenderable = this._context.getExtension('EXT_color_buffer_float') !== null;
     this._maxTextureSize = this._context.getParameter(this._context.MAX_TEXTURE_SIZE) as number;
+    this._compressedFormats = probeWebgl2CompressedFormats(this._context);
+    this._maxColorAttachments = readMaxColorAttachments(this._context);
 
     // Grab the lose-context extension up front so a later restore can act on the
     // live instance (see the field comment). `null` on backends that don't
@@ -463,6 +502,14 @@ export class WebGl2Backend implements RenderBackend {
 
   public get maxTextureSize(): number {
     return this._maxTextureSize;
+  }
+
+  public get supportedTextureFormats(): readonly CompressedTextureFormat[] {
+    return this._compressedFormats.formats;
+  }
+
+  public get maxColorAttachments(): number {
+    return this._maxColorAttachments;
   }
 
   public get clearColor(): Color {
@@ -785,6 +832,12 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   public draw(drawable: Drawable): this {
+    // Only consulted while a multi-attachment target is bound, so an ordinary
+    // frame pays one boolean read per drawable.
+    if (this._multiAttachmentTarget) {
+      assertDrawsAllAttachments(drawable, (this._renderTarget as MultiRenderTarget).attachments.length, RenderBackendType.WebGl2);
+    }
+
     const renderer = this.rendererRegistry.resolve(drawable);
 
     // Belt-and-braces for retained recording: the recordability
@@ -855,6 +908,7 @@ export class WebGl2Backend implements RenderBackend {
     if (changed) {
       this._flushActiveRenderer();
       this._renderTarget = renderTarget;
+      this._multiAttachmentTarget = isMultiAttachmentTarget(renderTarget);
       this._stats.renderTargetChanges++;
     }
 
@@ -995,6 +1049,10 @@ export class WebGl2Backend implements RenderBackend {
     height: number,
     blendMode: BlendModes,
   ): this {
+    if (this._multiAttachmentTarget) {
+      assertSingleAttachmentCompose('Alpha-mask compositing', (this._renderTarget as MultiRenderTarget).attachments.length, RenderBackendType.WebGl2);
+    }
+
     if (width <= 0 || height <= 0) {
       return this;
     }
@@ -1015,6 +1073,10 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   public composeWithBackdropBlend(source: RenderTexture, x: number, y: number, width: number, height: number, mode: BlendModes): this {
+    if (this._multiAttachmentTarget) {
+      assertSingleAttachmentCompose('Backdrop-blend compositing', (this._renderTarget as MultiRenderTarget).attachments.length, RenderBackendType.WebGl2);
+    }
+
     if (width <= 0 || height <= 0) {
       return this;
     }
@@ -2020,6 +2082,8 @@ export class WebGl2Backend implements RenderBackend {
     // being color-renderable until this is re-fetched on the fresh context.
     this._floatRenderable = gl.getExtension('EXT_color_buffer_float') !== null;
     this._maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
+    this._compressedFormats = probeWebgl2CompressedFormats(gl);
+    this._maxColorAttachments = readMaxColorAttachments(gl);
     // Drop the cached transform layout: it was derived from the LOST context's
     // limit, and the restored one may report a different one.
     this._transformTextureLayout = null;
@@ -2190,7 +2254,7 @@ export class WebGl2Backend implements RenderBackend {
     const state: ManagedRenderTargetState = {
       framebuffer: target.root ? null : this._createFramebuffer(),
       version: -1,
-      attachedTexture: null,
+      attachedTextures: [],
       stencilRenderbuffer: null,
       stencilWidth: 0,
       stencilHeight: 0,
@@ -2390,32 +2454,141 @@ export class WebGl2Backend implements RenderBackend {
     }
   }
 
-  private _prepareRenderTarget(target: RenderTarget): ManagedRenderTargetState {
-    if (target instanceof RenderTexture && target.format !== TextureFormat.Rgba8 && !this._floatRenderable) {
+  /** Reject a colour format this context cannot render into. */
+  private _assertColorFormatRenderable(format: ColorTextureFormat): void {
+    if (format !== TextureFormat.Rgba8 && !this._floatRenderable) {
       throw new Error(
-        `RenderTexture: format '${target.format}' requires the WebGL2 extension 'EXT_color_buffer_float', which this context does not support. Check backend.supportsColorFormat() and fall back to TextureFormat.Rgba8.`,
+        `Render target: format '${format}' requires the WebGL2 extension 'EXT_color_buffer_float', which this context does not support. Check backend.supportsColorFormat() and fall back to TextureFormat.Rgba8.`,
       );
+    }
+  }
+
+  /**
+   * Attach `handles` to the framebuffer's colour slots and declare them as the
+   * draw buffers.
+   *
+   * The multi-attachment path only: a single attachment is handled inline in
+   * {@link _prepareRenderTarget}, which is the case that runs every frame.
+   *
+   * `drawBuffers` is framebuffer state, so it is re-issued only when the
+   * attachment set actually changes rather than on every bind. Without the call a
+   * multi-attachment framebuffer would write slot 0 only, which is GL's default
+   * draw-buffer list.
+   */
+  private _syncColorAttachments(state: ManagedRenderTargetState, handles: readonly WebGLTexture[]): void {
+    const attached = state.attachedTextures;
+    let changed = attached.length !== handles.length;
+
+    for (let i = 0; i < handles.length && !changed; i++) {
+      changed = attached[i] !== handles[i];
+    }
+
+    if (!changed) {
+      return;
+    }
+
+    const gl = this._context;
+    const previousFramebuffer = this._boundFramebuffer;
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
+
+    // Detach the slots this target no longer uses: a stale attachment keeps its
+    // texture alive, and once the counts differ it makes the framebuffer
+    // incomplete for the shorter draw-buffer list.
+    for (let i = handles.length; i < attached.length; i++) {
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0 + i, gl.TEXTURE_2D, null, 0);
+    }
+
+    const buffers = this._drawBufferScratch;
+
+    buffers.length = 0;
+
+    for (let i = 0; i < handles.length; i++) {
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0 + i, gl.TEXTURE_2D, handles[i]!, 0);
+      buffers.push(gl.COLOR_ATTACHMENT0 + i);
+    }
+
+    // Left alone for the single-attachment case, which is GL's default anyway -
+    // the call is only needed to widen the list, and to narrow it back.
+    if (handles.length > 1 || attached.length > 1) {
+      gl.drawBuffers(buffers);
+    }
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
+
+    attached.length = handles.length;
+
+    for (let i = 0; i < handles.length; i++) {
+      attached[i] = handles[i]!;
+    }
+  }
+
+  private _prepareRenderTarget(target: RenderTarget): ManagedRenderTargetState {
+    // Both branches are written out rather than resolved through one array of
+    // attachments: this runs on every render-target bind, and a filter-heavy
+    // frame binds hundreds, so materializing a one-element list per bind would
+    // be pure per-frame garbage for the single-attachment case that is every
+    // frame in practice.
+    const multi = target instanceof MultiRenderTarget ? target : null;
+    const single = multi === null && target instanceof RenderTexture ? target : null;
+
+    if (multi !== null) {
+      for (const attachment of multi.attachments) {
+        this._assertColorFormatRenderable(attachment.format);
+      }
+    } else if (single !== null) {
+      this._assertColorFormatRenderable(single.format);
     }
 
     const state = this._getRenderTargetState(target);
+    const attachmentCount = multi?.attachments.length ?? (single === null ? 0 : 1);
 
-    if (target instanceof RenderTexture && state.framebuffer) {
-      const previousFramebuffer = this._boundFramebuffer;
+    if (attachmentCount > 0 && state.framebuffer) {
+      if (attachmentCount > this._maxColorAttachments) {
+        throw new RenderError({
+          code: 'unsupported-format',
+          backendType: RenderBackendType.WebGl2,
+          message: `This context accepts ${this._maxColorAttachments} colour attachment(s), but the target declares ${attachmentCount}. Check backend.maxColorAttachments.`,
+        });
+      }
 
       const previousUnit = this._textureUnit;
 
       this._setTextureUnit(renderTargetTextureSyncUnit);
-      const textureState = this._syncTexture(target);
-      this._setTextureUnit(previousUnit);
 
-      if (state.attachedTexture !== textureState.handle) {
-        const gl = this._context;
+      if (multi === null) {
+        // Single attachment inline, and deliberately not routed through the
+        // general path below. This runs on every render-target bind, and a
+        // filter-heavy frame binds hundreds; measured against the allocation
+        // gate, staging one handle through a scratch list and comparing lists
+        // costs about 100 KB per frame on `filtered/100` alone. The one case
+        // that is every frame in practice pays for nothing it does not need.
+        const textureState = this._syncTexture(single!);
 
-        gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, textureState.handle, 0);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
+        this._setTextureUnit(previousUnit);
 
-        state.attachedTexture = textureState.handle;
+        if (state.attachedTextures[0] !== textureState.handle) {
+          const gl = this._context;
+          const previousFramebuffer = this._boundFramebuffer;
+
+          gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
+          gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, textureState.handle, 0);
+          gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
+
+          state.attachedTextures.length = 1;
+          state.attachedTextures[0] = textureState.handle;
+        }
+      } else {
+        const handles = this._attachmentHandleScratch;
+
+        handles.length = 0;
+
+        for (const attachment of multi.attachments) {
+          handles.push(this._syncTexture(attachment).handle);
+        }
+
+        this._setTextureUnit(previousUnit);
+        this._syncColorAttachments(state, handles);
       }
 
       // Reset the on-demand flag for pooled RenderTexture targets, so a
@@ -2594,6 +2767,7 @@ export class WebGl2Backend implements RenderBackend {
    */
   private _syncTextureUpload(texture: Texture | RenderTexture, state: ManagedTextureState, version: number): ManagedTextureState {
     const gl = this._context;
+    const compressedPayload = compressedPayloadOf(texture);
 
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, texture.premultiplyAlpha);
 
@@ -2695,6 +2869,30 @@ export class WebGl2Backend implements RenderBackend {
         gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, texture.width, texture.height, info.format, info.type, texture.source);
         this._accountant.recordTextureUpload(texture.width * texture.height * info.bytesPerPixel);
       }
+    } else if (compressedPayload !== null) {
+      const { format, levels } = compressedPayload;
+      const internalFormat = this._compressedFormats.internalFormats.get(format);
+
+      if (internalFormat === undefined) {
+        throw new RenderError({
+          code: 'unsupported-format',
+          backendType: RenderBackendType.WebGl2,
+          message: `This context cannot sample the compressed texture format "${format}". Declare an asset variant this device supports, or check backend.supportedTextureFormats before constructing the texture.`,
+        });
+      }
+
+      let uploadedBytes = 0;
+
+      for (const [level, { data, width, height }] of levels.entries()) {
+        gl.compressedTexImage2D(gl.TEXTURE_2D, level, internalFormat, width, height, 0, data);
+        uploadedBytes += data.byteLength;
+      }
+
+      // Booked from the payload rather than through `_bookTextureStorage`: that
+      // helper derives its size from a bytes-per-pixel figure and a synthesized
+      // mip count, and a compressed chain knows both exactly.
+      state.accountedBytes = this._accountant.reallocate(state.accountedBytes, uploadedBytes);
+      this._accountant.recordTextureUpload(uploadedBytes);
     } else if (texture.source) {
       if (state.version === -1 || state.width !== texture.width || state.height !== texture.height) {
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);

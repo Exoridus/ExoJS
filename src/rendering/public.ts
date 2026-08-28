@@ -13,6 +13,8 @@ export { CallbackRenderPass } from './CallbackRenderPass';
 export { Container } from './Container';
 export { Drawable } from './Drawable';
 export type { DrawContext, RenderToOptions } from './DrawContext';
+export type { MultiRenderTargetOptions } from './MultiRenderTarget';
+export { MultiRenderTarget } from './MultiRenderTarget';
 export { PassContext } from './PassContext';
 export { PixelSnapMode } from './pixelSnap';
 export { RenderBackendType } from './RenderBackendType';
@@ -69,6 +71,8 @@ export { ShaderSource } from '#rendering/material/ShaderSource';
 export { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 export type { MeshOptions } from '#rendering/mesh/Mesh';
 export { Mesh } from '#rendering/mesh/Mesh';
+export type { MeshIndexArray, MeshIndexFormat } from '#rendering/mesh/meshIndices';
+export { maxUint16VertexCount, meshIndexBytes, meshIndexFormatFor } from '#rendering/mesh/meshIndices';
 export { Graphics } from '#rendering/primitives/Graphics';
 export { INSTANCE_TRANSFORM_GLSL, INSTANCE_TRANSFORM_WGSL } from '#rendering/shader/instanceContract';
 export type { ShaderProgram } from '#rendering/shader/Shader';
@@ -110,6 +114,20 @@ export type {
   TextPageQuads,
   TextSize,
 } from '#rendering/text/types';
+export type { CompressedTextureLevel, CompressedTexturePayload } from '#rendering/texture/compressedPayload';
+export type { CompressedTextureOptions } from '#rendering/texture/CompressedTexture';
+export { CompressedTexture } from '#rendering/texture/CompressedTexture';
+export type { CompressedBlockLayout } from '#rendering/texture/CompressedTextureFormat';
+export {
+  compressedBlockLayout,
+  compressedBlocksAcross,
+  compressedBlocksDown,
+  compressedFormatPreference,
+  compressedLevelByteLength,
+  CompressedTextureFormat,
+  isCompressedTextureFormat,
+  orderCompressedFormats,
+} from '#rendering/texture/CompressedTextureFormat';
 export type { DataTextureBuffer, DataTextureDirtyRegion, DataTextureFormat, DataTextureOptions } from '#rendering/texture/DataTexture';
 export { DataTexture } from '#rendering/texture/DataTexture';
 export { RenderTexture } from '#rendering/texture/RenderTexture';

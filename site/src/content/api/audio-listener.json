@@ -6,11 +6,11 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 8,
   "counts": {
     "constructors": 1,
     "methods": 2,
-    "properties": 3,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -154,6 +154,48 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "elevation",
+          "signature": "elevation: number",
+          "signatureTokens": [
+            {
+              "text": "elevation",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Height of the observer above (positive) or below (negative) the world plane, in world units. Default 0. Not read from AudioListener.target: a scene node has no third axis, so this is the caller's to set - and it is preserved across every target tick rather than being reset to the plane each frame."
+        },
+        {
+          "name": "elevationVelocity",
+          "signature": "elevationVelocity: number",
+          "signatureTokens": [
+            {
+              "text": "elevationVelocity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Vertical component of AudioListener.velocity, in world units per second. Default 0. Only Doppler reads it, and it is never auto-derived - nothing tracks elevation for the listener to derive it from."
+        },
         {
           "name": "position",
           "signature": "position: Vector",

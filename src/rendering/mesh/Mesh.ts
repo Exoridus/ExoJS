@@ -5,13 +5,8 @@ import type { MeshMaterial } from '#rendering/material/MeshMaterial';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 
-const maxUint16VertexCount = 0x10000;
-
-const assertImplicitIndexRange = (vertexCount: number): void => {
-  if (vertexCount > maxUint16VertexCount) {
-    throw new Error(`Non-indexed Mesh vertex count ${vertexCount} exceeds the 16-bit implicit-index limit of ${maxUint16VertexCount} vertices.`);
-  }
-};
+import type { MeshIndexArray, MeshIndexFormat } from './meshIndices';
+import { meshIndexFormatFor } from './meshIndices';
 
 /**
  * Construction-time options for a {@link Mesh}.
@@ -40,7 +35,12 @@ const assertImplicitIndexRange = (vertexCount: number): void => {
  */
 export interface MeshOptions {
   readonly vertices?: Float32Array;
-  readonly indices?: Uint16Array;
+  /**
+   * Triangle indices. A `Uint16Array` is the cheaper default; supply a
+   * `Uint32Array` for geometry addressing more than 65 536 vertices. The width
+   * is kept as authored - see {@link Mesh.indexFormat}.
+   */
+  readonly indices?: MeshIndexArray;
   readonly uvs?: Float32Array;
   readonly colors?: Uint32Array;
   /** Interleaved geometry source; mutually exclusive with `vertices`. */
@@ -90,7 +90,8 @@ export class Mesh extends Drawable {
   // reconfigure them in place; the public getters keep the data read-only for
   // every external consumer (the v1 immutable-after-construction contract).
   protected _vertices: Float32Array;
-  protected _indices: Uint16Array | null;
+  protected _indices: MeshIndexArray | null;
+  protected _indexFormat: MeshIndexFormat;
   protected _uvs: Float32Array | null;
   protected _colors: Uint32Array | null;
   protected _material: MeshMaterial | null;
@@ -100,7 +101,19 @@ export class Mesh extends Drawable {
     return this._vertices;
   }
 
-  public get indices(): Uint16Array | null {
+  /**
+   * Width the index stream is drawn with, `'uint16'` unless the mesh needs more.
+   *
+   * Derived once at construction from the authored index array - or, for a
+   * non-indexed mesh, from how many vertices its synthesized indices have to
+   * address. Both backends read this rather than re-deriving it, so a mesh can
+   * never be uploaded as one width and drawn as the other.
+   */
+  public get indexFormat(): MeshIndexFormat {
+    return this._indexFormat;
+  }
+
+  public get indices(): MeshIndexArray | null {
     return this._indices;
   }
 
@@ -130,7 +143,7 @@ export class Mesh extends Drawable {
     const { texture = null, material = null } = options;
 
     let vertices: Float32Array;
-    let indices: Uint16Array | null;
+    let indices: MeshIndexArray | null;
     let uvs: Float32Array | null;
     let colors: Uint32Array | null;
     let geometry: Geometry | null;
@@ -187,16 +200,13 @@ export class Mesh extends Drawable {
           throw new Error(`Mesh index ${indices[i]!} at position ${i} is out of range for vertex count ${vertexCount}.`);
         }
       }
-    } else {
-      assertImplicitIndexRange(vertexCount);
-
-      if (vertexCount % 3 !== 0) {
-        throw new Error(`Non-indexed Mesh requires a vertex count that is a multiple of 3 (got ${vertexCount}).`);
-      }
+    } else if (vertexCount % 3 !== 0) {
+      throw new Error(`Non-indexed Mesh requires a vertex count that is a multiple of 3 (got ${vertexCount}).`);
     }
 
     this._vertices = vertices;
     this._indices = indices;
+    this._indexFormat = meshIndexFormatFor(indices, vertexCount);
     this._uvs = uvs;
     this._colors = colors;
     this._material = material;
@@ -276,7 +286,7 @@ export const readGeometry = (
   vertices: Float32Array;
   uvs: Float32Array | null;
   colors: Uint32Array | null;
-  indices: Uint16Array | null;
+  indices: MeshIndexArray | null;
 } => {
   if (geometry.topology !== 'triangle-list') {
     throw new Error(`Mesh only supports triangle-list geometry (got "${geometry.topology}").`);
@@ -300,10 +310,6 @@ export const readGeometry = (
 
   const color = findAttribute(geometry.attributes, colorAttributeNames);
   const vertexCount = geometry.vertexCount;
-
-  if (geometry.indices === null) {
-    assertImplicitIndexRange(vertexCount);
-  }
 
   const { stride } = geometry;
   const source = geometry.vertexData;
@@ -329,9 +335,10 @@ export const readGeometry = (
     }
   }
 
-  const indices = readIndices(geometry.indices, vertexCount);
-
-  return { vertices, uvs, colors, indices };
+  // Kept as authored rather than narrowed to 16 bits: the declared width is the
+  // contract, and re-deriving it from the values would let the same geometry
+  // change index width when its content changes.
+  return { vertices, uvs, colors, indices: geometry.indices };
 };
 
 /** Pack a geometry color attribute into the mesh's RGBA8 u32 representation. */
@@ -357,22 +364,6 @@ const readPackedColor = (view: DataView, offset: number, attribute: GeometryAttr
   }
 
   throw new Error('Mesh geometry color attribute must be u8x4, u32x1, or f32x4.');
-};
-
-const readIndices = (indices: Uint16Array | Uint32Array | null, vertexCount: number): Uint16Array | null => {
-  if (indices === null) {
-    return null;
-  }
-
-  if (indices instanceof Uint16Array) {
-    return indices;
-  }
-
-  if (vertexCount > 0xffff) {
-    throw new Error(`Mesh geometry with ${vertexCount} vertices exceeds the 16-bit index limit.`);
-  }
-
-  return Uint16Array.from(indices);
 };
 
 const clamp01 = (value: number): number => {

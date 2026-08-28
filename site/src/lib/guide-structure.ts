@@ -231,6 +231,17 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         apiLinks: ['loader', 'texture'],
       },
       {
+        slug: 'device-variants',
+        level: 'advanced',
+        learningGoals: [
+          'read which compressed texture formats the running device implements',
+          'declare one logical source that resolves to a file per GPU family and density',
+          'know what a compressed payload does not honour, and why',
+        ],
+        prerequisites: ['assets/loading-and-resources'],
+        apiLinks: ['loader', 'texture', 'compressed-texture', 'compressed-texture-format', 'asset-variant-set'],
+      },
+      {
         slug: 'offline',
         level: 'advanced',
         learningGoals: [
@@ -346,10 +357,14 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         slug: 'render-targets',
         level: 'advanced',
-        learningGoals: ['render a scene into an intermediate texture', 'reuse render-target output in composition'],
+        learningGoals: [
+          'render a scene into an intermediate texture',
+          'reuse render-target output in composition',
+          'fill several colour attachments from one pass',
+        ],
         prerequisites: ['rendering/sprites'],
         examples: ['render-targets/render-to-texture', 'render-targets/mini-map'],
-        apiLinks: ['render-target', 'render-texture'],
+        apiLinks: ['render-target', 'render-texture', 'multi-render-target', 'mesh-material'],
       },
       {
         slug: 'pixel-snapping',
@@ -369,11 +384,12 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
           'draw procedural geometry without a scene node via drawGeometry',
           'instance thousands of like items as one draw call with RenderBatch',
           'drive a batch with a custom material and your own per-instance attributes',
+          'pick an index width, and know which one the engine picks for you',
           'know when immediate rendering beats the retained scene graph',
         ],
         prerequisites: ['rendering/graphics'],
         examples: ['geometry-graphics/immediate-mode-rendering'],
-        apiLinks: ['rendering-context', 'render-batch', 'geometry', 'mesh-material', 'shader-source', 'matrix', 'color'],
+        apiLinks: ['rendering-context', 'render-batch', 'geometry', 'mesh', 'mesh-material', 'shader-source', 'matrix', 'color'],
       },
       {
         slug: 'retained-containers',
@@ -523,10 +539,16 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         slug: 'spatial-audio',
         level: 'intermediate',
-        learningGoals: ['place a listener and sources in space', 'tune directional falloff'],
+        learningGoals: [
+          'place a listener and sources in space',
+          'tune directional falloff',
+          'lift a source off the world plane with elevation',
+          'muffle an obstructed source with occlusion',
+          'feed one shared reverb from many voices, and gate it on a zone',
+        ],
         prerequisites: ['audio/audio-basics'],
         examples: ['spatial-audio/listener-and-source', 'spatial-audio/moving-source', 'spatial-audio/falloff-curves'],
-        apiLinks: ['audio-listener', 'audio-manager'],
+        apiLinks: ['audio-listener', 'audio-manager', 'audio-send', 'audio-zone', 'spatial-zones'],
       },
       {
         slug: 'audio-effects',

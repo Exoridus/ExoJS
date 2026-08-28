@@ -22,9 +22,9 @@
  *   time constant, which is robust to a variable frame rate and converges within
  *   ~3τ.
  *
- * This is the tactical smoothing layer for today's panner/listener surface; the
- * forthcoming 3D-spatializer design (`S2-audio-spatializer`) extends the same
- * settings object with distance/panning defaults.
+ * The same settings object carries the app-wide spatial defaults - panning model,
+ * Doppler scale, and the two occlusion endpoints - because they are tuned
+ * together and read on the same per-frame path.
  */
 
 /** Time constant (seconds) for `setTargetAtTime`. 20 ms - see module docs. */
@@ -39,6 +39,12 @@ export const DEFAULT_TELEPORT_THRESHOLD = 400;
  * frame.
  */
 export const POSITION_EPSILON = 0.01;
+
+/** Lowpass cutoff (Hz) a fully occluded voice is filtered to. */
+export const DEFAULT_OCCLUSION_CUTOFF = 400;
+
+/** Linear gain a fully occluded voice is attenuated to. */
+export const DEFAULT_OCCLUSION_ATTENUATION = 0.25;
 
 /**
  * Tunable smoothing settings shared by the listener and all spatial voices. Owned
@@ -88,6 +94,19 @@ export interface SpatialSmoothingSettings {
    * speeds produce a noticeable but not extreme shift.
    */
   speedOfSound: number;
+  /**
+   * Lowpass cutoff (Hz) a voice at {@link Spatializable.occlusion} `1` is
+   * filtered to. Default {@link DEFAULT_OCCLUSION_CUTOFF} (400 Hz) - roughly
+   * "behind a closed door". Interpolation between clear and fully occluded is
+   * logarithmic, matching how pitch is perceived.
+   */
+  occlusionCutoff: number;
+  /**
+   * Linear gain a voice at {@link Spatializable.occlusion} `1` is attenuated to.
+   * Default {@link DEFAULT_OCCLUSION_ATTENUATION}. Not `0`: a fully occluded
+   * source that goes silent reads as a bug rather than as an obstruction.
+   */
+  occlusionAttenuation: number;
 }
 
 /** Construct the default spatial smoothing settings. */
@@ -97,6 +116,8 @@ export const createSpatialSmoothingSettings = (): SpatialSmoothingSettings => ({
   panningModel: 'equalpower',
   dopplerFactor: 0,
   speedOfSound: 1000,
+  occlusionCutoff: DEFAULT_OCCLUSION_CUTOFF,
+  occlusionAttenuation: DEFAULT_OCCLUSION_ATTENUATION,
 });
 
 /**

@@ -7,6 +7,8 @@ import { isPowerOfTwo } from '#math/utils';
 import { ScaleModes, WrapModes } from '#rendering/types';
 import { createCanvas, createCheckerCanvas } from '#rendering/utils';
 
+import type { CompressedTexturePayload } from './compressedPayload';
+import { validateCompressedPayload } from './compressedPayload';
 import type { TextureOptions } from './TextureOptions';
 
 /**
@@ -88,6 +90,7 @@ export class Texture {
 
   private _version = 0;
   private _source: TextureSource = null;
+  private _compressed: CompressedTexturePayload | null = null;
   private _size: Size = new Size(0, 0);
   private _isDestroyed = false;
   private readonly _destroyListeners: Set<() => void> = new Set<() => void>();
@@ -123,6 +126,48 @@ export class Texture {
 
   public set source(source: TextureSource) {
     this.setSource(source);
+  }
+
+  /**
+   * Hardware-compressed payload this texture uploads instead of a pixel source,
+   * or `null` for the ordinary case.
+   *
+   * Mutually exclusive with {@link source}: installing one clears the other, so a
+   * texture is never ambiguous about what it uploads. A handle that arrives
+   * empty from the loader can become either, which is what lets an asset variant
+   * swap a PNG for a KTX2 file without changing what a caller holds.
+   */
+  public get compressed(): CompressedTexturePayload | null {
+    return this._compressed;
+  }
+
+  /**
+   * Install a compressed payload, replacing any pixel source, and resize to its
+   * base level.
+   *
+   * Pass `null` to drop it. Bumps {@link version}, so backends re-create their
+   * GPU texture - a format change cannot be patched into an existing one.
+   * @throws Error - the payload has no levels, a base level that is not a whole
+   *   number of blocks, or a level whose byte length does not match its extent.
+   */
+  public setCompressed(payload: CompressedTexturePayload | null): this {
+    if (payload === null) {
+      if (this._compressed !== null) {
+        this._compressed = null;
+        this._touch();
+      }
+
+      return this;
+    }
+
+    const base = validateCompressedPayload(payload);
+
+    this._compressed = payload;
+    this._source = null;
+    this.setSize(base.width, base.height);
+    this._touch();
+
+    return this;
   }
 
   public get size(): Size {
@@ -322,6 +367,10 @@ export class Texture {
   public setSource(source: TextureSource): this {
     if (this._source !== source) {
       this._source = source;
+      // A pixel source and a compressed payload are two answers to the same
+      // question, and the backends pick the compressed one - so leaving a stale
+      // payload in place would make this call silently do nothing.
+      this._compressed = null;
       this.updateSource();
     }
 
@@ -374,6 +423,7 @@ export class Texture {
     this._releaseListeners.clear();
     this._size.destroy();
     this._source = null;
+    this._compressed = null;
   }
 
   /**

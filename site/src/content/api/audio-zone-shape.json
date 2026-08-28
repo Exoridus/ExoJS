@@ -1,0 +1,71 @@
+{
+  "title": "AudioZoneShape",
+  "description": "Where an AudioZone applies - an axis-aligned Rectangle or a circle.",
+  "symbol": "AudioZoneShape",
+  "kind": "type",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Where an AudioZone applies - an axis-aligned Rectangle or a circle."
+      ],
+      "importLine": "import { AudioZoneShape } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "AudioZoneShape",
+          "signature": "AudioZoneCircle | Rectangle",
+          "signatureTokens": [
+            {
+              "text": "AudioZoneCircle",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/AudioZone.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioZone.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/AudioZone.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioZone.ts"
+}

@@ -66,6 +66,28 @@ const triangle = new Geometry({
 
 Build the geometry once in `Scene.init` and keep it — it carries no transform, so the same shape is reused at any position. Geometry must use `triangle-list` topology (the default) for the immediate path; custom per-vertex attributes beyond position/texcoord/color are dropped.
 
+### Index width
+
+`indices` are optional — without them the vertex stream is drawn as a flat triangle list. When you do supply them, the array kind you pass **is** the width the GPU draws with:
+
+```ts
+import { Geometry } from '@codexo/exojs';
+
+const attributes = [{ name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 } as const];
+
+// The default: cheaper to upload and to keep resident.
+const small = new Geometry({ attributes, vertexData: new ArrayBuffer(8 * 8), stride: 8, indices: new Uint16Array([0, 1, 2]) });
+
+// Generated or merged geometry addressing more than 65 536 vertices.
+const large = new Geometry({ attributes, vertexData: new ArrayBuffer(8 * 8), stride: 8, indices: new Uint32Array([0, 1, 2]) });
+
+console.log(small.indices?.BYTES_PER_ELEMENT, large.indices?.BYTES_PER_ELEMENT);
+```
+
+Prefer `Uint16Array` — it is half the index bytes, and almost every hand-authored mesh fits. Reach for `Uint32Array` where the vertex count genuinely exceeds what a 16-bit index can address: batched tile chunks, trail ribbons, generated terrain, an imported SVG path.
+
+A `Uint32Array` is never narrowed back for you, even when its values would fit. The declared width is the contract, so a geometry cannot change index width later just because its content changed. A **non-indexed** mesh is the one case the engine decides for you: its indices are synthesized, so they widen on their own once there are more than 65 536 vertices to address. Both widths may appear in the same frame — each draw binds its own.
+
 ## Drawing one shape: drawGeometry
 
 `drawGeometry(geometry, transform, options?)` draws the geometry with `transform` as its raw world matrix. The matrix is taken verbatim as `a, b, c, d, tx, ty` — there is no position / rotation / scale / origin composition the way a node would apply. You build the world matrix yourself, which is the point: full control, zero overhead.

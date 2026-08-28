@@ -1,4 +1,5 @@
 import type { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
+import type { MeshIndexFormat } from '#rendering/mesh/meshIndices';
 import type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet';
 import {
   createTransformTextureLayout,
@@ -67,6 +68,8 @@ export interface WebGl2RetainedGeometryRef {
   readonly vertexBuffer: WebGl2RenderBuffer;
   readonly indexBuffer: WebGl2RenderBuffer;
   readonly indexCount: number;
+  /** Width `indexBuffer` holds, so replay draws it with the type it was packed at. */
+  readonly indexFormat: MeshIndexFormat;
 }
 
 /**

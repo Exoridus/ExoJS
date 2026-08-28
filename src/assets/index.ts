@@ -31,6 +31,8 @@ export { binarySourceCodec, jsonSourceCodec, textSourceCodec } from './AssetSour
 export type { AssetStatus } from './AssetStatus';
 export type { AnyAssetType, AssetLeaf, AssetRequest } from './AssetType';
 export { AssetType } from './AssetType';
+export type { AssetVariant, AssetVariantProfile } from './AssetVariants';
+export { AssetVariantSet } from './AssetVariants';
 export type { CacheLayout, CacheLayoutContext } from './CacheLayout';
 export { CacheFirstPolicy, CacheOnlyPolicy, NetworkFirstPolicy, NetworkOnlyPolicy } from './cachePolicies';
 export type { CacheContext, CachePolicy } from './CachePolicy';

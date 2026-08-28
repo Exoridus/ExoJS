@@ -6,11 +6,11 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 23,
+  "memberCount": 24,
   "counts": {
     "constructors": 1,
     "methods": 14,
-    "properties": 8,
+    "properties": 9,
     "events": 0
   },
   "sections": [
@@ -891,6 +891,27 @@
           "params": [],
           "returnType": null,
           "description": "Tunable smoothing applied to per-frame panner/listener position updates, shared by the AudioListener and every spatial voice. Adjust smoothing (the setTargetAtTime time constant) or teleportThreshold (the snap-instead-of-ramp jump distance) to trade responsiveness against zipper-noise suppression (AU4). Reachable as app.audio.spatial."
+        },
+        {
+          "name": "zones",
+          "signature": "zones: SpatialZones",
+          "signatureTokens": [
+            {
+              "text": "zones",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SpatialZones",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Optional zone layer: regions of the world that contribute a parallel send while the listener is inside them - a reverb zone, a muffled corridor. Empty and inert until a zone is added; see SpatialZones."
         },
         {
           "name": "locked",

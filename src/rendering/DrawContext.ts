@@ -7,17 +7,21 @@ import type { RenderBackend } from './RenderBackend';
 import type { RenderBatch } from './RenderBatch';
 import type { DrawBatchOptions, DrawGeometryOptions, RenderOptions } from './RenderingContext';
 import type { RenderNode } from './RenderNode';
+import type { RenderTarget } from './RenderTarget';
 import type { View } from './View';
 
 /**
  * Options for {@link DrawContext.renderTo}: a caller-owned, per-frame
- * off-screen {@link RenderTexture} target, reused across frames (no per-call
- * allocation). Unlike {@link RenderingContext.capture}, the texture is
- * supplied by the caller.
+ * off-screen target, reused across frames (no per-call allocation). Unlike
+ * {@link RenderingContext.capture}, the target is supplied by the caller.
  */
 export interface RenderToOptions {
-  /** Destination texture, owned and kept stable by the caller. */
-  target: RenderTexture;
+  /**
+   * Destination, owned and kept stable by the caller: a {@link RenderTexture},
+   * or a `MultiRenderTarget` when one pass has to fill several colour
+   * attachments.
+   */
+  target: RenderTexture | RenderTarget;
   /** View to render with. Defaults to the target's own view. */
   view?: View;
   /** Clear the target to this colour before rendering; omitted preserves its contents. */

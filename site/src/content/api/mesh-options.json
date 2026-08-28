@@ -98,7 +98,7 @@
         },
         {
           "name": "indices",
-          "signature": "indices?: Uint16Array<ArrayBufferLike>",
+          "signature": "indices?: MeshIndexArray",
           "signatureTokens": [
             {
               "text": "indices",
@@ -113,25 +113,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "Uint16Array",
+              "text": "MeshIndexArray",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ArrayBufferLike",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Triangle indices. A Uint16Array is the cheaper default; supply a Uint32Array for geometry addressing more than 65 536 vertices. The width is kept as authored - see Mesh.indexFormat."
         },
         {
           "name": "material",

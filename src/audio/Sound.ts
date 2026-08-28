@@ -8,7 +8,7 @@ import type { AudioManager } from './AudioManager';
 import { NoopVoice } from './NoopVoice';
 import type { Playable, PlayOptions, Voice } from './Playable';
 import { SoundVoice, type SoundVoiceWindow } from './SoundVoice';
-import { seedVoiceFromPlayOptions } from './spatial-options';
+import { seedVoiceFromPlayOptions, seedVoiceSends } from './spatial-options';
 
 /**
  * Eviction strategy used when the pool is full and a new play is requested.
@@ -617,6 +617,7 @@ export class Sound implements Playable {
     });
 
     seedVoiceFromPlayOptions(voice, options);
+    seedVoiceSends(voice, options);
 
     const startedAt = audioContext.currentTime;
     const effectiveDuration = loop ? Infinity : window.end - offset;

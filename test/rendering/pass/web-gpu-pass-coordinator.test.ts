@@ -77,6 +77,7 @@ const createMockBackend = (
     pushScissorRect,
     popScissorRect,
     createColorAttachment,
+    colorAttachmentCount: 1,
     getScissorRect,
     submit,
     _targetHasContent: targetHasContent,

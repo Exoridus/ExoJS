@@ -4,6 +4,7 @@ import type { Geometry } from '#rendering/geometry/Geometry';
 import type { MeshMaterial } from '#rendering/material/MeshMaterial';
 
 import { Mesh, readGeometry } from './Mesh';
+import { meshIndexFormatFor } from './meshIndices';
 
 // A degenerate triangle that satisfies the Mesh constructor's validation; it is
 // overwritten on the first configure() before the mesh is ever drawn.
@@ -88,6 +89,10 @@ export class ImmediateMesh extends Mesh {
     this._uvs = data.uvs;
     this._colors = data.colors;
     this._indices = data.indices;
+    // Re-derived with the data, not carried over: a pooled mesh is reused across
+    // geometries, and a stale format would draw the new index stream at the old
+    // width.
+    this._indexFormat = meshIndexFormatFor(data.indices, data.vertices.length / 2);
     this._sourceGeometry = geometry;
     this._sourceVersion = geometry.version;
   }

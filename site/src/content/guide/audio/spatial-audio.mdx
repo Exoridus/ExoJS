@@ -9,10 +9,10 @@ import Callout from '../../../components/Callout.astro';
 
 # Spatial audio
 
-Spatial audio in ExoJS is 2D: a single shared listener and any number of sound sources, each with a world-space position. The engine maps the 2D coordinates to the Web Audio API's 3D panner behind the scenes — you work in the same pixel coordinates your sprites and containers use, and the audio system pans and attenuates accordingly.
+Spatial audio in ExoJS is 2D by default: a single shared listener and any number of sound sources, each with a world-space position. The engine maps the coordinates to the Web Audio API's 3D panner behind the scenes — you work in the same pixel coordinates your sprites and containers use, and the audio system pans and attenuates accordingly. A third axis is available when you want it, as an [elevation](#elevation-the-third-axis) you set explicitly.
 
-<Callout type="info" title="Spatialisation is 2D and equalpower">
-The listener and every source sit on one plane (Z=0), panned with the Web Audio `equalpower` model — right for a top-down or side-on scene, but not a precise stereo mixer. When you need an exact, listener-independent left/right balance, keep the sound non-spatial (`position = null`) and set the bus `pan` instead.
+<Callout type="info" title="Panning is equalpower by default">
+Sources are panned with the Web Audio `equalpower` model — right for a top-down or side-on scene, but not a precise stereo mixer. When you need an exact, listener-independent left/right balance, keep the sound non-spatial (`position = null`) and set the bus `pan` instead.
 </Callout>
 
 ## The listener
@@ -256,9 +256,108 @@ const voice = application.audio.play(waterfall, {
 
 Spatial updates happen automatically — each frame the `AudioManager` updates the listener from its target and ticks every spatial `Voice`, writing the resolved position (relative to that application's listener) to the Web Audio `PannerNode`. You do not need to call any per-frame update on spatial sources: pass `position` in `PlayOptions` at play time, set it live on the returned `Voice`, or call `voice.follow(node)`, and the engine handles the rest.
 
+## Elevation: the third axis
+
+The scene graph has no third axis, so height is something you state rather than something the engine can read off a node. Every source and the listener carry an `elevation` in the same world units as x and y, `0` by default:
+
+```ts
+import { type Application, Sound } from '@codexo/exojs';
+
+declare const application: Application;
+declare const bell: Sound;
+
+application.audio.listener.elevation = 0;
+
+// Two equivalent ways to put a source 200 units up.
+const voice = application.audio.play(bell, { position: { x: 400, y: 300 }, elevation: 200 });
+
+voice.position = { x: 400, y: 300, z: 200 };
+```
+
+`position` stays two-dimensional when you read it — that is the world plane, and it is the part `follow(node)` can fill in. A point you pass **without** a `z` leaves the current height alone, so following a node never drops a source back onto the plane behind your back.
+
+Elevation contributes to distance attenuation, to panning, and to Doppler: `voice.elevationVelocity` (and `listener.elevationVelocity`) is the vertical component, so a source rising straight away from the listener genuinely pitches down.
+
+<Callout type="hint" title="Cones stay in the plane">
+`orientation` is a single in-plane angle, so a cone always points along the world plane however high its source sits. Tilting one would need a second angle, which no API takes today.
+</Callout>
+
+## Occlusion
+
+`voice.occlusion` is how obstructed the path to the listener is, from `0` (clear, the default) to `1` (fully obstructed). It muffles the source with a lowpass and attenuates it:
+
+```ts
+import type { Spatializable, Voice } from '@codexo/exojs';
+
+declare const voice: Voice & Spatializable;
+declare const wallsBetweenSourceAndListener: number;
+
+voice.occlusion = Math.min(wallsBetweenSourceAndListener * 0.5, 1);
+```
+
+You supply the estimate — the engine does not trace geometry, because what counts as an obstruction is a game's decision (a wall, a closed door, a crowd). Write it as often as you like: both the cutoff and the gain are ramped, not stepped, so a per-frame value never clicks.
+
+Tune the endpoints on `app.audio.spatial`: `occlusionCutoff` (default 400 Hz) is where a fully occluded voice's lowpass lands, and `occlusionAttenuation` (default `0.25`) is how far its gain drops. The sweep between clear and occluded is logarithmic, matching how pitch is heard.
+
+A voice whose occlusion never leaves `0` builds no filter at all, so this costs nothing when unused.
+
+## Sends: one effect for many voices
+
+An insert effect **replaces** a signal, so it cannot express "keep playing dry, and also feed a shared reverb". A send can:
+
+```ts
+import { AudioBus, type Voice } from '@codexo/exojs';
+
+declare const voice: Voice;
+declare const myConvolver: import('@codexo/exojs').AudioEffect;
+
+const reverb = new AudioBus('reverb');
+
+reverb.addEffect(myConvolver);
+
+const send = voice.addSend(reverb, 0.4); // 40 % of the voice also reaches the reverb
+
+send.level = 0.8; // ramped, not stepped
+```
+
+The voice keeps playing into its own bus unchanged; a copy of the same signal additionally reaches the send's bus. Sends are owned by the voice and torn down with it, so you only remove one (`voice.removeSend(send)`) to change routing. `PlayOptions.sends` opens them at play time.
+
+## Reverb zones
+
+An `AudioZone` is a region of the world that contributes a send while the listener is inside it. The zone owns geometry and a level and nothing else — it never routes audio, holds effects or touches a voice:
+
+```ts
+import { AudioBus, AudioZone, type Application, Rectangle } from '@codexo/exojs';
+
+declare const application: Application;
+declare const myConvolver: import('@codexo/exojs').AudioEffect;
+
+const caveBus = new AudioBus('cave-reverb');
+
+caveBus.addEffect(myConvolver);
+
+application.audio.zones.add(
+    new AudioZone({
+        shape: new Rectangle(0, 0, 800, 600),
+        bus: caveBus,
+        send: 0.6,
+        falloff: 120,
+    }),
+);
+```
+
+`app.audio.zones` samples every zone's weight at the **listener** each frame and maintains one send per voice per active zone. That is deliberate: reverb is a property of the environment a scene is heard from, not of each individual source.
+
+- `shape` is a `Rectangle` or a `{ x, y, radius }` circle.
+- `falloff` is the distance outside the shape over which the send ramps to zero — `0` gives a hard edge.
+- `height` bounds the zone vertically; the default is a column of infinite height.
+- Overlapping zones each contribute their own send.
+
+Crossing a boundary is a level ramp on the existing send, not a teardown and rebuild, so walking in and out of a cave crossfades. The zone layer is inert until a zone is added, and the bus stays yours — two zones may legitimately name the same one, and destroying it is your call.
+
 ## Browser constraints
 
-The Web Audio `PannerNode` maps to 3D space. ExoJS sets Z=0 for both listener and sources and uses forward=-Z with up=+Y, which produces correct left/right panning for 2D scenes. The elevation axis (up/down) is unused — all audio is co-planar with the listener.
+The Web Audio `PannerNode` maps to 3D space. ExoJS uses forward=-Z with up=+Y, which produces correct left/right panning for 2D scenes, and writes the source's `elevation` relative to the listener's as the panner's Z. A scene that never sets an elevation is therefore exactly co-planar, as before.
 
 `AudioContext.listener`, though, is a property of the process-wide `AudioContext`: there is exactly one, shared by every `Application`. ExoJS therefore pins it at the origin and pans each voice by its offset from *its own* application's `app.audio.listener` — so two applications in one page each keep their own viewpoint instead of overwriting one another every frame. Distance, attenuation and the distance model are unaffected; the only observable difference is that `app.audio.spatial.teleportThreshold` is measured on the source-to-listener offset, so warping the listener snaps every spatial voice rather than snapping one listener.
 

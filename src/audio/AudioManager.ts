@@ -11,6 +11,7 @@ import { InputVoice } from './InputVoice';
 import type { Playable, PlayOptions, Voice } from './Playable';
 import type { Sound, SoundPlayOptions } from './Sound';
 import { createSpatialSmoothingSettings, type SpatialSmoothingSettings } from './spatial-smoothing';
+import { SpatialZones } from './SpatialZones';
 
 /**
  * The signal behind {@link AudioManager.onUnlock}. A plain one-shot `Signal`
@@ -135,6 +136,14 @@ export class AudioManager {
    * zipper-noise suppression (AU4). Reachable as `app.audio.spatial`.
    */
   public readonly spatial: SpatialSmoothingSettings = createSpatialSmoothingSettings();
+
+  /**
+   * Optional zone layer: regions of the world that contribute a parallel send
+   * while the listener is inside them - a reverb zone, a muffled corridor.
+   *
+   * Empty and inert until a zone is added; see {@link SpatialZones}.
+   */
+  public readonly zones: SpatialZones = new SpatialZones();
   /**
    * Fires once when the AudioContext transitions to "running" - i.e. the first
    * user gesture unlocks audio under the browser's autoplay policy. This is the
@@ -376,6 +385,12 @@ export class AudioManager {
       }
       voice._tickSpatial();
     }
+
+    // After the listener moved and the voices followed it, so a zone crossing is
+    // reconciled against this frame's positions rather than last frame's.
+    if (this.zones.active) {
+      this.zones._tick(this.listener, this._voices);
+    }
   }
 
   /**
@@ -403,6 +418,9 @@ export class AudioManager {
   /** Internal: drop a voice that has ended. Called from the voice's own teardown. */
   public _unregisterVoice(voice: Voice): void {
     this._voices.delete(voice);
+    // The voice destroys its own sends; this only drops the zone layer's map
+    // entry, which would otherwise keep the ended voice reachable.
+    this.zones._forget(voice);
   }
 
   /**
@@ -542,6 +560,9 @@ export class AudioManager {
     }
 
     this._voices.clear();
+    // Before the buses: a zone send is an edge into a bus, and the voices that
+    // held those edges have just been stopped.
+    this.zones.clear();
     this.listener.destroy();
     this._spatial.clear();
     for (const bus of this._registered.values()) {

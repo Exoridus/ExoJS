@@ -6,11 +6,11 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 19,
+  "memberCount": 20,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 19,
+    "properties": 20,
     "events": 0
   },
   "sections": [
@@ -189,6 +189,27 @@
             },
             {
               "text": "\"json\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ktx2",
+          "signature": "ktx2: \"texture\"",
+          "signatureTokens": [
+            {
+              "text": "ktx2",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"texture\"",
               "kind": "keyword"
             }
           ],

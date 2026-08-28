@@ -1,0 +1,122 @@
+{
+  "title": "AssetVariant",
+  "description": "One candidate representation of a logical asset source. A candidate is eligible when every condition it states holds for the current AssetVariantProfile. A candidate that states none is the unconditional fallback and is always eligible - declare one, or a device that matches nothing falls back to the logical source itself.",
+  "symbol": "AssetVariant",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One candidate representation of a logical asset source.",
+        "A candidate is eligible when every condition it states holds for the current AssetVariantProfile. A candidate that states none is the unconditional fallback and is always eligible - declare one, or a device that matches nothing falls back to the logical source itself."
+      ],
+      "importLine": "import { AssetVariant } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "resolution",
+          "signature": "resolution?: number",
+          "signatureTokens": [
+            {
+              "text": "resolution",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Eligible only when the profile renders at this density or higher."
+        },
+        {
+          "name": "source",
+          "signature": "source: string",
+          "signatureTokens": [
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Source to load when this candidate wins. Resolved against the loader base path like any other."
+        },
+        {
+          "name": "textureFormat",
+          "signature": "textureFormat?: CompressedTextureFormat",
+          "signatureTokens": [
+            {
+              "text": "textureFormat",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CompressedTextureFormat",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Eligible only when the profile lists this format."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetVariants.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetVariants.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetVariants.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetVariants.ts"
+}

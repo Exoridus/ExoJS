@@ -1,7 +1,8 @@
 import { getAudioContext } from '#audio/audio-context';
 import type { AudioBus } from '#audio/AudioBus';
 import type { AudioEffect } from '#audio/AudioEffect';
-import type { DistanceModel, Pausable, Playable, PlayOptions, Spatializable, Voice } from '#audio/Playable';
+import { AudioSend } from '#audio/AudioSend';
+import type { DistanceModel, Pausable, Playable, PlayOptions, Spatializable, SpatialPoint, Voice } from '#audio/Playable';
 import type { Application } from '#core/Application';
 import { SceneAvailability } from '#core/SceneAvailability';
 import type { SceneNode } from '#core/SceneNode';
@@ -49,6 +50,9 @@ interface BufferedSpatialWrites {
   coneInnerAngle?: number;
   coneOuterAngle?: number;
   coneOuterGain?: number;
+  elevation?: number;
+  elevationVelocity?: number;
+  occlusion?: number;
 }
 
 /**
@@ -56,7 +60,7 @@ interface BufferedSpatialWrites {
  * needed. Mirrors how `BaseVoice` stores its own spatial points: the caller's
  * object is never retained.
  */
-const copyPoint = (target: Vector | null, value: Vector | { x: number; y: number } | null): Vector | null => {
+const copyPoint = (target: Vector | null, value: Vector | SpatialPoint | null): Vector | null => {
   if (value === null) {
     target?.destroy();
 
@@ -91,6 +95,12 @@ class PendingVoice implements Voice {
   private _volume: number;
   private _bus: AudioBus | undefined;
   private readonly _pendingEffects: AudioEffect[] = [];
+  /**
+   * Sends opened before the real voice existed. Each is wired to
+   * {@link PendingVoice._dummyOutput} and re-pointed at the real output on flush,
+   * so the handle the caller already holds stays valid.
+   */
+  private readonly _sendList: AudioSend[] = [];
   private readonly _dummyOutput: AudioNode;
   private readonly _spatial: BufferedSpatialWrites = {};
   private _followTarget: SceneNode | null | undefined;
@@ -201,7 +211,7 @@ class PendingVoice implements Voice {
     return this._real?.position ?? this._position;
   }
 
-  public set position(value: Vector | { x: number; y: number } | null) {
+  public set position(value: Vector | SpatialPoint | null) {
     this._positionWritten = true;
     this._position = copyPoint(this._position, value);
 
@@ -326,11 +336,94 @@ class PendingVoice implements Voice {
     }
   }
 
+  public get elevation(): number {
+    return this._real?.elevation ?? this._spatial.elevation ?? 0;
+  }
+
+  public set elevation(value: number) {
+    this._spatial.elevation = value;
+
+    if (this._real) {
+      this._real.elevation = value;
+    }
+  }
+
+  public get elevationVelocity(): number {
+    return this._real?.elevationVelocity ?? this._spatial.elevationVelocity ?? 0;
+  }
+
+  public set elevationVelocity(value: number) {
+    this._spatial.elevationVelocity = value;
+
+    if (this._real) {
+      this._real.elevationVelocity = value;
+    }
+  }
+
+  public get occlusion(): number {
+    return this._real?.occlusion ?? this._spatial.occlusion ?? 0;
+  }
+
+  public set occlusion(value: number) {
+    this._spatial.occlusion = value;
+
+    if (this._real) {
+      this._real.occlusion = value;
+    }
+  }
+
+  public get sends(): readonly AudioSend[] {
+    return this._real?.sends ?? this._sendList;
+  }
+
+  public addSend(bus: AudioBus, level = 1): AudioSend {
+    if (this._real) {
+      return this._real.addSend(bus, level);
+    }
+
+    // Wired to the placeholder output, which nothing feeds, so the send is silent
+    // until flush re-points it at the real voice.
+    const send = new AudioSend(getAudioContext(), this._dummyOutput, bus, level);
+
+    this._sendList.push(send);
+
+    return send;
+  }
+
+  /** @internal */
+  public _adoptSend(send: AudioSend): void {
+    if (this._real) {
+      this._real._adoptSend(send);
+
+      return;
+    }
+
+    send._retarget(this._dummyOutput);
+    this._sendList.push(send);
+  }
+
+  public removeSend(send: AudioSend): this {
+    if (this._real) {
+      this._real.removeSend(send);
+
+      return this;
+    }
+
+    const index = this._sendList.indexOf(send);
+
+    if (index !== -1) {
+      this._sendList.splice(index, 1);
+      send.destroy();
+    }
+
+    return this;
+  }
+
   public get velocity(): Vector | null {
     return this._real?.velocity ?? this._velocity;
   }
 
-  public set velocity(value: Vector | { x: number; y: number } | null) {
+  public set velocity(value: Vector | SpatialPoint | null) {
     this._velocityWritten = true;
     this._velocity = copyPoint(this._velocity, value);
 
@@ -365,6 +458,13 @@ class PendingVoice implements Voice {
     }
 
     this._pendingEffects.length = 0;
+
+    // Handed over rather than re-created: the caller already holds these objects.
+    for (const send of this._sendList) {
+      real._adoptSend(send);
+    }
+
+    this._sendList.length = 0;
     this._replaySpatial(real);
     real.onEnd.add((): void => {
       this.onEnd.dispatch();
@@ -393,6 +493,18 @@ class PendingVoice implements Voice {
     }
 
     const spatial = this._spatial;
+
+    if (spatial.elevation !== undefined) {
+      real.elevation = spatial.elevation;
+    }
+
+    if (spatial.elevationVelocity !== undefined) {
+      real.elevationVelocity = spatial.elevationVelocity;
+    }
+
+    if (spatial.occlusion !== undefined) {
+      real.occlusion = spatial.occlusion;
+    }
 
     if (spatial.distanceModel !== undefined) {
       real.distanceModel = spatial.distanceModel;
