@@ -111,6 +111,23 @@ describe('WebGl2Backend.supportedTextureFormats', () => {
       CompressedTextureFormat.Bc2RgbaUnorm,
       CompressedTextureFormat.Bc1RgbaUnorm,
       CompressedTextureFormat.Bc6hRgbUfloat,
+      CompressedTextureFormat.Bc6hRgbFloat,
+    ]);
+  });
+
+  test('one ASTC extension carries every block size, and RGTC carries both signednesses', () => {
+    harness = createHarness(['WEBGL_compressed_texture_astc']);
+
+    expect(harness.backend.supportedTextureFormats.filter(format => format.startsWith('astc-'))).toHaveLength(14);
+
+    harness.destroy();
+    harness = createHarness(['EXT_texture_compression_rgtc']);
+
+    expect(harness.backend.supportedTextureFormats).toEqual([
+      CompressedTextureFormat.Bc5RgUnorm,
+      CompressedTextureFormat.Bc5RgSnorm,
+      CompressedTextureFormat.Bc4RUnorm,
+      CompressedTextureFormat.Bc4RSnorm,
     ]);
   });
 

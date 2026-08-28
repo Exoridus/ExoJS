@@ -28,8 +28,11 @@ const formatByVkFormat = new Map<number, Format>([
   [137, Format.Bc3RgbaUnorm],
   [138, Format.Bc3RgbaUnorm],
   [139, Format.Bc4RUnorm],
+  [140, Format.Bc4RSnorm],
   [141, Format.Bc5RgUnorm],
+  [142, Format.Bc5RgSnorm],
   [143, Format.Bc6hRgbUfloat],
+  [144, Format.Bc6hRgbFloat],
   [145, Format.Bc7RgbaUnorm],
   [146, Format.Bc7RgbaUnorm],
   [147, Format.Etc2Rgb8Unorm],
@@ -42,12 +45,32 @@ const formatByVkFormat = new Map<number, Format>([
   [155, Format.EacRg11Unorm],
   [157, Format.Astc4x4Unorm],
   [158, Format.Astc4x4Unorm],
+  [159, Format.Astc5x4Unorm],
+  [160, Format.Astc5x4Unorm],
   [161, Format.Astc5x5Unorm],
   [162, Format.Astc5x5Unorm],
+  [163, Format.Astc6x5Unorm],
+  [164, Format.Astc6x5Unorm],
   [165, Format.Astc6x6Unorm],
   [166, Format.Astc6x6Unorm],
+  [167, Format.Astc8x5Unorm],
+  [168, Format.Astc8x5Unorm],
+  [169, Format.Astc8x6Unorm],
+  [170, Format.Astc8x6Unorm],
   [171, Format.Astc8x8Unorm],
   [172, Format.Astc8x8Unorm],
+  [173, Format.Astc10x5Unorm],
+  [174, Format.Astc10x5Unorm],
+  [175, Format.Astc10x6Unorm],
+  [176, Format.Astc10x6Unorm],
+  [177, Format.Astc10x8Unorm],
+  [178, Format.Astc10x8Unorm],
+  [179, Format.Astc10x10Unorm],
+  [180, Format.Astc10x10Unorm],
+  [181, Format.Astc12x10Unorm],
+  [182, Format.Astc12x10Unorm],
+  [183, Format.Astc12x12Unorm],
+  [184, Format.Astc12x12Unorm],
 ]);
 
 /** `VK_FORMAT_R8G8B8A8_UNORM` and `..._SRGB` - the one uncompressed payload this parser accepts. */
@@ -58,8 +81,15 @@ const vkFormatRgba8Srgb = 43;
 const supercompressionNames = new Map<number, string>([
   [1, 'BasisLZ'],
   [2, 'Zstandard'],
-  [3, 'ZLIB'],
 ]);
+
+/** Scheme 3: every level is a zlib stream, which the browser inflates natively. */
+const zlibSupercompression = 3;
+
+const headerBytes = 80;
+const levelIndexEntryBytes = 24;
+const supercompressionSchemeOffset = 44;
+const levelCountOffset = 40;
 
 /** A KTX2 payload whose levels are already in a hardware format. */
 export interface Ktx2CompressedPayload {
@@ -107,8 +137,6 @@ const fail = (source: string, message: string): never => {
  *   whose declared byte length does not match its extent.
  */
 export const parseKtx2 = (buffer: ArrayBuffer, source: string): Ktx2Payload => {
-  const headerBytes = 80;
-
   if (buffer.byteLength < headerBytes) {
     return fail(source, `file is ${buffer.byteLength} bytes, too short to hold a header.`);
   }
@@ -129,8 +157,12 @@ export const parseKtx2 = (buffer: ArrayBuffer, source: string): Ktx2Payload => {
   // A stored `levelCount` of 0 means "the mip chain is to be generated", which
   // for a compressed payload is not possible - so it is read as the single level
   // the file does contain rather than rejected.
-  const levelCount = Math.max(view.getUint32(40, true), 1);
-  const supercompressionScheme = view.getUint32(44, true);
+  const levelCount = Math.max(view.getUint32(levelCountOffset, true), 1);
+  const supercompressionScheme = view.getUint32(supercompressionSchemeOffset, true);
+
+  if (supercompressionScheme === zlibSupercompression) {
+    return fail(source, 'payload is still ZLIB-supercompressed. Run inflateKtx2Levels over the bytes before parsing them.');
+  }
 
   if (supercompressionScheme !== 0) {
     const name = supercompressionNames.get(supercompressionScheme) ?? `scheme ${supercompressionScheme}`;
@@ -150,14 +182,14 @@ export const parseKtx2 = (buffer: ArrayBuffer, source: string): Ktx2Payload => {
     return fail(source, `declares an empty extent of ${pixelWidth}x${pixelHeight}.`);
   }
 
-  const levelIndexBytes = levelCount * 24;
+  const levelIndexBytes = levelCount * levelIndexEntryBytes;
 
   if (buffer.byteLength < headerBytes + levelIndexBytes) {
     return fail(source, `declares ${levelCount} levels, but the file is too short to hold their index.`);
   }
 
   const readLevel = (index: number): { readonly offset: number; readonly length: number } => {
-    const entry = headerBytes + index * 24;
+    const entry = headerBytes + index * levelIndexEntryBytes;
     // Both fields are 64-bit. A level beyond 2^53 bytes cannot exist, so reading
     // them as `BigUint64` and narrowing is pointless - but the high word still
     // has to be checked, or a corrupt header would silently truncate to a
@@ -212,4 +244,157 @@ export const parseKtx2 = (buffer: ArrayBuffer, source: string): Ktx2Payload => {
   }
 
   return { kind: 'compressed', format, levels };
+};
+
+/**
+ * Inflate the levels of a ZLIB-supercompressed KTX2 container.
+ *
+ * Scheme 3 stores every mip level as a zlib stream, which the browser inflates
+ * natively through `DecompressionStream` - no decoder ships with the engine, so
+ * this is the one supercompression scheme that costs nothing to support. The
+ * other two need a WASM transcoder and stay refused.
+ *
+ * Returns `buffer` itself when the container is not ZLIB-supercompressed, so it
+ * can sit in front of {@link parseKtx2} unconditionally. The result is an
+ * equivalent container with scheme 0 and its level index rewritten, which keeps
+ * the parser synchronous and testable without I/O.
+ *
+ * `source` only names the file in error messages.
+ *
+ * @throws AssetDecodeError - a level whose inflated size does not match the one
+ *   the container declares, or a runtime without `DecompressionStream`.
+ */
+export const inflateKtx2Levels = async (buffer: ArrayBuffer, source: string): Promise<ArrayBuffer> => {
+  if (buffer.byteLength < headerBytes) {
+    return buffer;
+  }
+
+  const bytes = new Uint8Array(buffer);
+
+  if (!isKtx2(bytes)) {
+    return buffer;
+  }
+
+  const view = new DataView(buffer);
+
+  if (view.getUint32(supercompressionSchemeOffset, true) !== zlibSupercompression) {
+    return buffer;
+  }
+
+  if (typeof DecompressionStream === 'undefined') {
+    return fail(source, 'payload is ZLIB-supercompressed, which needs DecompressionStream. Ship the container uncompressed for this runtime.');
+  }
+
+  const levelCount = Math.max(view.getUint32(levelCountOffset, true), 1);
+  const levelIndexBytes = levelCount * levelIndexEntryBytes;
+
+  if (buffer.byteLength < headerBytes + levelIndexBytes) {
+    return fail(source, `declares ${levelCount} levels, but the file is too short to hold their index.`);
+  }
+
+  const levels: Array<{ readonly offset: number; readonly length: number; readonly inflatedLength: number }> = [];
+
+  for (let index = 0; index < levelCount; index++) {
+    const entry = headerBytes + index * levelIndexEntryBytes;
+
+    if (view.getUint32(entry + 4, true) !== 0 || view.getUint32(entry + 12, true) !== 0 || view.getUint32(entry + 20, true) !== 0) {
+      return fail(source, `level ${index} declares an offset or length above 4 GiB.`);
+    }
+
+    const offset = view.getUint32(entry, true);
+    const length = view.getUint32(entry + 8, true);
+
+    if (offset < headerBytes + levelIndexBytes || offset + length > buffer.byteLength) {
+      return fail(source, `level ${index} runs outside the file.`);
+    }
+
+    levels.push({ offset, length, inflatedLength: view.getUint32(entry + 16, true) });
+  }
+
+  // Everything the header points at other than level data - the format
+  // descriptor, the key/value data, the supercompression global data - lives
+  // before the first level and is referenced by absolute offset, so that prefix
+  // is copied verbatim and only the levels move.
+  const prefixBytes = Math.min(...levels.map(({ offset }) => offset));
+  const inflated = await Promise.all(levels.map(async ({ offset, length }) => inflateZlib(bytes.subarray(offset, offset + length))));
+
+  for (const [index, level] of inflated.entries()) {
+    const declared = levels[index]?.inflatedLength ?? 0;
+
+    if (level.byteLength !== declared) {
+      return fail(source, `level ${index} inflates to ${level.byteLength} bytes but declares ${declared}.`);
+    }
+  }
+
+  const result = new Uint8Array(prefixBytes + inflated.reduce((total, level) => total + level.byteLength, 0));
+
+  result.set(bytes.subarray(0, prefixBytes));
+
+  const resultView = new DataView(result.buffer);
+
+  resultView.setUint32(supercompressionSchemeOffset, 0, true);
+
+  // Written back in the container's own storage order (smallest level first), so
+  // the rewritten offsets stay monotonic with the bytes they name.
+  let cursor = prefixBytes;
+
+  const storageOrder = levels.map((level, index) => ({ index, offset: level.offset })).sort((a, b) => a.offset - b.offset);
+
+  for (const { index } of storageOrder) {
+    const data = inflated[index];
+
+    if (data === undefined) {
+      return fail(source, `level ${index} has no inflated payload.`);
+    }
+
+    const entry = headerBytes + index * levelIndexEntryBytes;
+
+    result.set(data, cursor);
+    resultView.setUint32(entry, cursor, true);
+    resultView.setUint32(entry + 8, data.byteLength, true);
+    cursor += data.byteLength;
+  }
+
+  return result.buffer;
+};
+
+// The buffer generic is explicit because DecompressionStream only accepts a view
+// over a plain ArrayBuffer, which a Uint8Array is not required to be.
+const inflateZlib = async (data: Uint8Array<ArrayBuffer>): Promise<Uint8Array> => {
+  const decompressor = new DecompressionStream('deflate');
+  // Written through the writer rather than piped from a source stream: the
+  // whole level is already in memory, and this keeps the chunk types the
+  // DecompressionStream declares on both ends.
+  const pump = (async (): Promise<void> => {
+    const writer = decompressor.writable.getWriter();
+
+    await writer.write(data);
+    await writer.close();
+  })();
+  const reader = decompressor.readable.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  for (;;) {
+    const { done, value } = await reader.read();
+
+    if (done) {
+      break;
+    }
+
+    chunks.push(value);
+    total += value.byteLength;
+  }
+
+  await pump;
+
+  const result = new Uint8Array(total);
+  let cursor = 0;
+
+  for (const chunk of chunks) {
+    result.set(chunk, cursor);
+    cursor += chunk.byteLength;
+  }
+
+  return result;
 };

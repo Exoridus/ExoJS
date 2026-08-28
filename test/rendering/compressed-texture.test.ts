@@ -59,6 +59,34 @@ describe('compressed texture formats', () => {
     expect(ordered).toEqual([CompressedTextureFormat.Bc7RgbaUnorm, CompressedTextureFormat.Bc3RgbaUnorm, CompressedTextureFormat.Bc1RgbaUnorm]);
   });
 
+  test('every ASTC entry carries the block geometry its name states', () => {
+    for (const format of Object.values(CompressedTextureFormat)) {
+      const match = /^astc-(\d+)x(\d+)-unorm$/.exec(format);
+
+      if (match === null) continue;
+
+      expect(compressedBlockLayout(format)).toEqual({ blockWidth: Number(match[1]), blockHeight: Number(match[2]), bytesPerBlock: 16 });
+    }
+  });
+
+  test('non-square ASTC block sizes pad each axis on its own', () => {
+    // Hand-computed: 32x18 in 8x6 blocks is 4 columns by 3 rows, 12 blocks of 16 bytes.
+    expect(compressedLevelByteLength(CompressedTextureFormat.Astc8x6Unorm, 32, 18)).toBe(192);
+    // 30x24 in 10x8 blocks is 3 by 3.
+    expect(compressedLevelByteLength(CompressedTextureFormat.Astc10x8Unorm, 30, 24)).toBe(144);
+    // 24x25 in 12x10 blocks is 2 by 3 - the height rounds up to a third row.
+    expect(compressedLevelByteLength(CompressedTextureFormat.Astc12x10Unorm, 24, 25)).toBe(96);
+    // 11x9 in 5x4 blocks is 3 by 3.
+    expect(compressedLevelByteLength(CompressedTextureFormat.Astc5x4Unorm, 11, 9)).toBe(144);
+    expect(compressedLevelByteLength(CompressedTextureFormat.Astc12x12Unorm, 1, 1)).toBe(16);
+  });
+
+  test('a SNORM format has the block geometry of its UNORM sibling', () => {
+    expect(compressedBlockLayout(CompressedTextureFormat.Bc4RSnorm)).toEqual(compressedBlockLayout(CompressedTextureFormat.Bc4RUnorm));
+    expect(compressedBlockLayout(CompressedTextureFormat.Bc5RgSnorm)).toEqual(compressedBlockLayout(CompressedTextureFormat.Bc5RgUnorm));
+    expect(compressedBlockLayout(CompressedTextureFormat.Bc6hRgbFloat)).toEqual(compressedBlockLayout(CompressedTextureFormat.Bc6hRgbUfloat));
+  });
+
   test('the preference order covers every format exactly once', () => {
     const formats = Object.values(CompressedTextureFormat);
 

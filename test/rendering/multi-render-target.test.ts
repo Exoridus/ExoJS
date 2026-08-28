@@ -18,6 +18,7 @@ import { afterEach, describe, expect, test } from 'vitest';
 import { Geometry } from '#rendering/geometry/Geometry';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
 import { ShaderSource } from '#rendering/material/ShaderSource';
+import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { MultiRenderTarget } from '#rendering/MultiRenderTarget';
 import { RenderError } from '#rendering/RenderError';
@@ -55,6 +56,37 @@ fn fragmentMain(input: VertexOutput) -> FragmentOut {
   var out: FragmentOut;
   out.color = vec4<f32>(1.0);
   out.id = vec4<f32>(0.5);
+  return out;
+}
+`.trim(),
+    }),
+  });
+
+/** The same two outputs from a sprite material - a 2D scene is sprites, not meshes. */
+const twoOutputSpriteMaterial = (): SpriteMaterial =>
+  new SpriteMaterial({
+    shader: new ShaderSource({
+      glsl: {
+        vertex: `#version 300 es
+in vec2 a_position;
+void main() { gl_Position = vec4(a_position, 0.0, 1.0); }`,
+        fragment: `#version 300 es
+precision mediump float;
+layout(location = 0) out vec4 outColor;
+layout(location = 1) out vec4 outId;
+void main() { outColor = vec4(1.0); outId = vec4(0.25); }`,
+      },
+      wgsl: `
+struct FragmentOut {
+  @location(0) color: vec4<f32>,
+  @location(1) id: vec4<f32>,
+};
+
+@fragment
+fn fragmentMain(input: VertexOutput) -> FragmentOut {
+  var out: FragmentOut;
+  out.color = vec4<f32>(1.0);
+  out.id = vec4<f32>(0.25);
   return out;
 }
 `.trim(),
@@ -207,6 +239,23 @@ describe('WebGL2 multiple colour attachments', () => {
     target.destroy();
   });
 
+  test('a sprite with a two-output material writes both slots', () => {
+    harness = createGlHarness();
+
+    const context = new RenderingContext(harness.backend);
+    const target = new MultiRenderTarget(64, 64, { formats: [TextureFormat.Rgba8, TextureFormat.Rgba8] });
+    const sprite = new Sprite(new RenderTexture(8, 8));
+
+    sprite.material = twoOutputSpriteMaterial();
+
+    context.renderTo(sprite, { target });
+    harness.backend.flush();
+
+    expect(harness.drawBufferLists).toEqual([[harness.colorAttachment0, harness.colorAttachment0 + 1]]);
+
+    target.destroy();
+  });
+
   test('a single-attachment RenderTexture still needs no drawBuffers call', () => {
     harness = createGlHarness();
 
@@ -290,6 +339,32 @@ describe('WebGPU multiple colour attachments', () => {
       // A pipeline must declare one target per attachment of the pass it runs in,
       // so the two-output material gets its own pipeline rather than reusing the
       // single-target one.
+      expect(environment.pipelineTargetCounts()).toContain(2);
+
+      target.destroy();
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test('a sprite material gets a pipeline per attachment count, like a mesh material', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const backend = await createMockBackend(environment);
+      const context = new RenderingContext(backend);
+      const target = new MultiRenderTarget(64, 64, { formats: [TextureFormat.Rgba8, TextureFormat.Rgba8] });
+      const sprite = new Sprite(createCanvasTexture());
+
+      sprite.material = twoOutputSpriteMaterial();
+
+      context.renderTo(sprite, { target });
+      backend.flush();
+
+      expect(environment.renderPassAttachmentCounts()).toContain(2);
+      // The custom sprite pipeline used to build a fixed single-entry target
+      // list and key on one format, so it could not be used in this pass at all.
       expect(environment.pipelineTargetCounts()).toContain(2);
 
       target.destroy();
