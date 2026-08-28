@@ -64,6 +64,10 @@
     }
   },
   "prettier": "@codexo/exojs-config/prettier",
+  "lint-staged": {
+    "*.{ts,tsx,mts,cts,mjs,js,json,jsonc,md,mdx,css,yml,yaml,html}": "prettier --write",
+    "{src,test,examples,scripts,packages}/**/*.{ts,tsx,mts,cts}": "eslint --fix --no-warn-ignored --max-warnings=0"
+  },
   "scripts": {
     "bootstrap": "pnpm install --frozen-lockfile --ignore-scripts && pnpm build:tooling",
     "build:tooling": "pnpm --filter @codexo/exojs-build build",
@@ -246,6 +250,7 @@
     "husky": "^9.1.7",
     "jiti": "^2.7.0",
     "jsdom": "^29.1.1",
+    "lint-staged": "^16.2.7",
     "playwright": "^1.50.0",
     "prettier": "3.8.5",
     "rimraf": "^6.1.3",

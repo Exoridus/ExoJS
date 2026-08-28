@@ -40,3 +40,19 @@ case "$branch" in
         exit 1
         ;;
 esac
+
+# Format and auto-fix what is about to be committed.
+#
+# The pre-push gate runs `format:check` and `lint:all` over the whole tree, so a
+# file that reaches a commit unformatted is only found once the push is already
+# underway - at which point the fix has to be amended into a commit that exists.
+# Running the writers here, on the staged paths only, keeps the commit itself
+# clean and the push gate quiet.
+#
+# Skip it for a commit that is not about content (a rebase, a merge resolution):
+#
+#   SKIP_LINT_STAGED=1 git commit ...
+
+[ "$SKIP_LINT_STAGED" = "1" ] && exit 0
+
+npx --no-install lint-staged
