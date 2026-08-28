@@ -11,7 +11,7 @@
 
 import { describe, expect, test } from 'vitest';
 
-import { isKtx2, parseKtx2 } from '#assets/factories/ktx2';
+import { inflateKtx2Levels, isKtx2, parseKtx2 } from '#assets/factories/ktx2';
 import { compressedLevelByteLength, CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 
 const HEADER_BYTES = 80;
@@ -207,7 +207,7 @@ describe('parseKtx2', () => {
   test.each([
     [1, /BasisLZ/],
     [2, /Zstandard/],
-    [3, /ZLIB/],
+    [3, /still ZLIB-supercompressed/],
     [9, /scheme 9/],
   ])('rejects supercompression scheme %i', (scheme, expected) => {
     const format = CompressedTextureFormat.Bc7RgbaUnorm;
@@ -256,5 +256,115 @@ describe('parseKtx2', () => {
 
   test('names the file in every message', () => {
     expect(() => parseKtx2(new Uint8Array(16).buffer, 'levels/terrain.ktx2')).toThrow(/levels\/terrain\.ktx2/);
+  });
+});
+
+/** Deflates every level of an uncompressed container into a scheme-3 one. */
+const deflateKtx2 = async (buffer: ArrayBuffer, levelCount: number): Promise<ArrayBuffer> => {
+  const source = new Uint8Array(buffer);
+  const view = new DataView(buffer);
+  const indexBytes = levelCount * LEVEL_ENTRY_BYTES;
+  const entries = Array.from({ length: levelCount }, (_unused, index) => ({
+    index,
+    offset: view.getUint32(HEADER_BYTES + index * LEVEL_ENTRY_BYTES, true),
+    length: view.getUint32(HEADER_BYTES + index * LEVEL_ENTRY_BYTES + 8, true),
+  }));
+  const deflated = await Promise.all(
+    entries.map(async ({ offset, length }) => {
+      const compressor = new CompressionStream('deflate');
+      const pump = (async (): Promise<void> => {
+        const writer = compressor.writable.getWriter();
+
+        await writer.write(source.subarray(offset, offset + length));
+        await writer.close();
+      })();
+      const reader = compressor.readable.getReader();
+      const chunks: Uint8Array[] = [];
+
+      for (;;) {
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        chunks.push(value);
+      }
+
+      await pump;
+
+      const deflatedBytes = new Uint8Array(chunks.reduce((total, chunk) => total + chunk.byteLength, 0));
+      let cursor = 0;
+
+      for (const chunk of chunks) {
+        deflatedBytes.set(chunk, cursor);
+        cursor += chunk.byteLength;
+      }
+
+      return deflatedBytes;
+    }),
+  );
+  const result = new Uint8Array(HEADER_BYTES + indexBytes + deflated.reduce((total, level) => total + level.byteLength, 0));
+  const resultView = new DataView(result.buffer);
+
+  result.set(source.subarray(0, HEADER_BYTES + indexBytes));
+  resultView.setUint32(44, 3, true);
+
+  // Kept in the container's own storage order - smallest level last in mip order,
+  // so the offsets are written back to front like the uncompressed builder does.
+  let cursor = result.byteLength;
+
+  for (let index = levelCount - 1; index >= 0; index--) {
+    const data = deflated[index]!;
+    const entry = HEADER_BYTES + index * LEVEL_ENTRY_BYTES;
+
+    cursor -= data.byteLength;
+    result.set(data, cursor);
+    resultView.setUint32(entry, cursor, true);
+    resultView.setUint32(entry + 8, data.byteLength, true);
+    resultView.setUint32(entry + 16, entries[index]!.length, true);
+  }
+
+  return result.buffer;
+};
+
+describe('inflateKtx2Levels', () => {
+  const format = CompressedTextureFormat.Bc7RgbaUnorm;
+
+  test('a ZLIB container reads exactly like the uncompressed one it was made from', async () => {
+    const plain = buildKtx2({ vkFormat: 145, width: 16, height: 16, levelLengths: levelLengthsFor(format, 16, 16, 3) });
+    const compressed = await deflateKtx2(plain, 3);
+
+    expect(new DataView(compressed).getUint32(44, true)).toBe(3);
+    expect(compressed.byteLength).not.toBe(plain.byteLength);
+
+    const expected = parseKtx2(plain, 'plain.ktx2');
+    const actual = parseKtx2(await inflateKtx2Levels(compressed, 'zlib.ktx2'), 'zlib.ktx2');
+
+    expect(actual).toEqual(expected);
+  });
+
+  test('hands back a container that needs no inflating, untouched', async () => {
+    const plain = buildKtx2({ vkFormat: 145, width: 8, height: 8, levelLengths: levelLengthsFor(format, 8, 8, 1) });
+
+    expect(await inflateKtx2Levels(plain, 'plain.ktx2')).toBe(plain);
+    // Not a KTX2 file at all: the caller's own error belongs to the parser.
+    const foreign = new Uint8Array(HEADER_BYTES).buffer;
+
+    expect(await inflateKtx2Levels(foreign, 'foreign.ktx2')).toBe(foreign);
+  });
+
+  test.each([1, 2])('leaves scheme %i alone for the parser to refuse', async scheme => {
+    const buffer = buildKtx2({ vkFormat: 145, width: 8, height: 8, levelLengths: levelLengthsFor(format, 8, 8, 1), supercompressionScheme: scheme });
+
+    expect(await inflateKtx2Levels(buffer, 'hero.ktx2')).toBe(buffer);
+  });
+
+  test('rejects a level whose inflated size is not the one declared', async () => {
+    const plain = buildKtx2({ vkFormat: 145, width: 8, height: 8, levelLengths: levelLengthsFor(format, 8, 8, 1) });
+    const compressed = await deflateKtx2(plain, 1);
+
+    // The level really inflates to 64 bytes (one 8x8 BC7 level); claim 48.
+    new DataView(compressed).setUint32(HEADER_BYTES + 16, 48, true);
+
+    await expect(inflateKtx2Levels(compressed, 'zlib.ktx2')).rejects.toThrow(/inflates to 64 bytes but declares 48/);
   });
 });

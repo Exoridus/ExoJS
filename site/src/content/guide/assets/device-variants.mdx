@@ -91,7 +91,9 @@ Two things do not apply to a compressed payload, and ignoring them is not a simp
 - **`generateMipMap`** cannot derive a mip level from compressed blocks. Compress the chain level by level and ship it inside the container; a file with one level samples without mips however the sampler is configured.
 
 <Callout type="warning" title="Universal formats are not decoded">
-A BasisLZ/ETC1S or UASTC "universal" KTX2 file needs a transcoder, which the engine does not carry, and loading one fails with an `AssetDecodeError` naming the scheme. Encode one file per target format instead - `toktx --target_type RGBA --encode uastc` and its per-format equivalents - and let a variant rule choose. Zstandard- and ZLIB-supercompressed files are rejected the same way.
+A BasisLZ/ETC1S or UASTC "universal" KTX2 file needs a transcoder, which the engine does not carry, and loading one fails with an `AssetDecodeError` naming the scheme. Encode one file per target format instead - `toktx --target_type RGBA --encode uastc` and its per-format equivalents - and let a variant rule choose. Zstandard-supercompressed files are rejected the same way.
+
+ZLIB supercompression (KTX2 scheme 3) does load: it is a plain zlib stream per mip level, which the browser inflates itself, so it costs no decoder and no bundle size. It saves download bytes on top of the block compression and is unpacked before upload - the texture in VRAM is the same either way.
 </Callout>
 
 ## Constructing one directly

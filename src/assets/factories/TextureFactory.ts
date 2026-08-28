@@ -5,7 +5,7 @@ import { Texture } from '#rendering/texture/Texture';
 import type { SamplerOptions, TextureOptions } from '#rendering/texture/TextureOptions';
 
 import { decodeImageBlob } from './decodeImageBlob';
-import { isKtx2, parseKtx2 } from './ktx2';
+import { inflateKtx2Levels, isKtx2, parseKtx2 } from './ktx2';
 import { ObjectUrlPool } from './ObjectUrlPool';
 
 /** Options accepted by an asset of the built-in `texture` type. */
@@ -50,7 +50,10 @@ export class TextureFactory implements AssetFactory<ArrayBuffer, Texture, Textur
   }
 
   private async _createFromKtx2(source: ArrayBuffer, name: string, textureOptions: Partial<TextureOptions> | undefined): Promise<Texture> {
-    const payload = parseKtx2(source, name);
+    // ZLIB supercompression is inflated ahead of the parser rather than inside
+    // it: DecompressionStream is a stream, and keeping the parser synchronous
+    // keeps it testable without I/O.
+    const payload = parseKtx2(await inflateKtx2Levels(source, name), name);
 
     if (payload.kind === 'compressed') {
       // Copied key by key rather than picked with a destructure: a key present
