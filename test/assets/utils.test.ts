@@ -20,6 +20,13 @@ describe('determineMimeType', () => {
     expect(determineMimeType(png)).toBe('image/png');
   });
 
+  test('detects BMP and ICO by their magic bytes', () => {
+    expect(determineMimeType(toBuffer([0x42, 0x4d, 0x36, 0x00, 0x00, 0x00]))).toBe('image/bmp');
+    // An ICO and a CUR differ only in the image-type word, and both decode.
+    expect(determineMimeType(toBuffer([0x00, 0x00, 0x01, 0x00, 0x01, 0x00]))).toBe('image/x-icon');
+    expect(determineMimeType(toBuffer([0x00, 0x00, 0x02, 0x00, 0x01, 0x00]))).toBe('image/x-icon');
+  });
+
   test('falls back to text/plain for unrecognized bytes', () => {
     const unknown = toBuffer([0x01, 0x02, 0x03, 0x04, 0x05]);
 

@@ -9,17 +9,22 @@ import { textureSeamlessAdapter } from '#assets/seamless';
 import { Texture } from '#rendering/texture/Texture';
 
 /**
- * GPU-ready {@link Texture}s decoded from PNG, JPG, WebP, AVIF and GIF bytes, or
- * from a KTX2 container holding a hardware-compressed payload.
+ * GPU-ready {@link Texture}s decoded from PNG, JPG, WebP, AVIF, GIF, BMP and ICO
+ * bytes, or from a KTX2 container holding a hardware-compressed payload.
  *
  * One type covers both because the payload kind is a property of the bytes, not
  * of the asset: an {@link AssetVariantSet} rule may resolve one logical source to
  * a compressed container where the device supports the format and to an image
  * elsewhere, and a caller holding the handle sees a `Texture` either way.
+ *
+ * An `.ico` file may hold several resolutions of one image. Which of them the
+ * decode yields is the browser's choice and is not specified anywhere, so an
+ * icon whose exact size matters should be shipped as the single image it is
+ * meant to be rather than as a multi-resolution container.
  */
 export class TextureAssetType extends AssetType<ArrayBuffer, Texture, TextureAssetOptions> {
   public readonly id = 'texture';
-  public override readonly extensions = ['png', 'jpg', 'jpeg', 'webp', 'avif', 'gif', 'ktx2'];
+  public override readonly extensions = ['png', 'jpg', 'jpeg', 'webp', 'avif', 'gif', 'bmp', 'ico', 'ktx2'];
   public override readonly leaf = textureSeamlessAdapter;
   public override readonly _token: AssetConstructor = Texture;
   public override readonly codec: AssetSourceCodec<ArrayBuffer> = binarySourceCodec;

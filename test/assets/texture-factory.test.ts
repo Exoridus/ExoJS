@@ -1,6 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import { TextureFactory } from '#assets/factories/TextureFactory';
+import { textureType } from '#assets/types/textureType';
 import { Texture } from '#rendering/texture/Texture';
 
 import { factoryContext } from './factory-context';
@@ -28,6 +29,14 @@ const lastImage = (): HTMLImageElement => {
   if (!image) throw new Error('No Image instance was created by the factory under test.');
   return image;
 };
+
+describe('textureType suffixes', () => {
+  test('claims every raster suffix the decode path already handles', () => {
+    // BMP and ICO reach createImageBitmap like any other blob; only the suffix
+    // list decided whether a bare path resolved to a texture at all.
+    expect(textureType.extensions).toEqual(expect.arrayContaining(['png', 'jpg', 'jpeg', 'webp', 'avif', 'gif', 'bmp', 'ico', 'ktx2']));
+  });
+});
 
 describe('TextureFactory', () => {
   let revokeObjectUrlSpy: MockInstance;
