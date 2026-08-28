@@ -6,11 +6,11 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 20,
+  "memberCount": 26,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 20,
+    "properties": 26,
     "events": 0
   },
   "sections": [
@@ -50,11 +50,53 @@
           "description": ""
         },
         {
+          "name": "apng",
+          "signature": "apng: \"texture\"",
+          "signatureTokens": [
+            {
+              "text": "apng",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"texture\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "avif",
           "signature": "avif: \"texture\"",
           "signatureTokens": [
             {
               "text": "avif",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"texture\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "avifs",
+          "signature": "avifs: \"texture\"",
+          "signatureTokens": [
+            {
+              "text": "avifs",
               "kind": "name"
             },
             {
@@ -92,6 +134,27 @@
           "description": ""
         },
         {
+          "name": "bmp",
+          "signature": "bmp: \"texture\"",
+          "signatureTokens": [
+            {
+              "text": "bmp",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"texture\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "csv",
           "signature": "csv: \"csv\"",
           "signatureTokens": [
@@ -118,6 +181,69 @@
           "signatureTokens": [
             {
               "text": "gif",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"texture\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ico",
+          "signature": "ico: \"texture\"",
+          "signatureTokens": [
+            {
+              "text": "ico",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"texture\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "jfif",
+          "signature": "jfif: \"texture\"",
+          "signatureTokens": [
+            {
+              "text": "jfif",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"texture\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "jpe",
+          "signature": "jpe: \"texture\"",
+          "signatureTokens": [
+            {
+              "text": "jpe",
               "kind": "name"
             },
             {

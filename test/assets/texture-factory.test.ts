@@ -34,7 +34,9 @@ describe('textureType suffixes', () => {
   test('claims every raster suffix the decode path already handles', () => {
     // BMP and ICO reach createImageBitmap like any other blob; only the suffix
     // list decided whether a bare path resolved to a texture at all.
-    expect(textureType.extensions).toEqual(expect.arrayContaining(['png', 'jpg', 'jpeg', 'webp', 'avif', 'gif', 'bmp', 'ico', 'ktx2']));
+    expect(textureType.extensions).toEqual(
+      expect.arrayContaining(['png', 'apng', 'jpg', 'jpeg', 'jpe', 'jfif', 'webp', 'avif', 'avifs', 'gif', 'bmp', 'ico', 'ktx2']),
+    );
   });
 });
 

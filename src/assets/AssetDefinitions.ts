@@ -154,11 +154,17 @@ export type InferAssetResource<I extends AssetInput> =
  */
 export interface ExtensionKindMap {
   png: 'texture';
+  apng: 'texture';
   jpg: 'texture';
   jpeg: 'texture';
+  jpe: 'texture';
+  jfif: 'texture';
   webp: 'texture';
   avif: 'texture';
+  avifs: 'texture';
   gif: 'texture';
+  bmp: 'texture';
+  ico: 'texture';
   ktx2: 'texture';
   ogg: 'sound';
   mp3: 'sound';
