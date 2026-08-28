@@ -1,4 +1,4 @@
-import type { PlayOptions, Spatializable } from './Playable';
+import type { PlayOptions, Spatializable, Voice } from './Playable';
 
 /**
  * Apply every spatial {@link PlayOptions} field present on `options` to
@@ -22,7 +22,28 @@ export const seedVoiceFromPlayOptions = (voice: Spatializable, options: PlayOpti
   if (options.coneInnerAngle !== undefined) voice.coneInnerAngle = options.coneInnerAngle;
   if (options.coneOuterAngle !== undefined) voice.coneOuterAngle = options.coneOuterAngle;
   if (options.coneOuterGain !== undefined) voice.coneOuterGain = options.coneOuterGain;
+  // Before `position`, for the same reason the cone fields are: setting position
+  // creates the panner, and the first relative write should already carry the
+  // final height rather than snapping to the plane and ramping up from there.
+  if (options.elevation !== undefined) voice.elevation = options.elevation;
   if (options.position !== undefined) voice.position = options.position;
   if (options.panningModel !== undefined) voice.panningModel = options.panningModel;
   if (options.velocity !== undefined) voice.velocity = options.velocity;
+  if (options.elevationVelocity !== undefined) voice.elevationVelocity = options.elevationVelocity;
+  if (options.occlusion !== undefined) voice.occlusion = options.occlusion;
+};
+
+/**
+ * Open the parallel sends a play call asked for. Separate from
+ * {@link seedVoiceFromPlayOptions} because a send is a lifecycle-owning object
+ * rather than a value, and only a live {@link Voice} can hold one.
+ */
+export const seedVoiceSends = (voice: Voice, options: PlayOptions): void => {
+  if (options.sends === undefined) {
+    return;
+  }
+
+  for (const { bus, level } of options.sends) {
+    voice.addSend(bus, level);
+  }
 };

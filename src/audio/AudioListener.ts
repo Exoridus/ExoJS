@@ -51,6 +51,23 @@ export class AudioListener {
   public readonly position: Vector = new Vector(0, 0);
   public target: AudioListenerTarget = null;
 
+  /**
+   * Height of the observer above (positive) or below (negative) the world plane,
+   * in world units. Default `0`.
+   *
+   * Not read from {@link AudioListener.target}: a scene node has no third axis,
+   * so this is the caller's to set - and it is preserved across every target
+   * tick rather than being reset to the plane each frame.
+   */
+  public elevation = 0;
+
+  /**
+   * Vertical component of {@link AudioListener.velocity}, in world units per
+   * second. Default `0`. Only Doppler reads it, and it is never auto-derived -
+   * nothing tracks elevation for the listener to derive it from.
+   */
+  public elevationVelocity = 0;
+
   private readonly _velocity: Vector = new Vector(0, 0);
   private _explicitVelocity = false;
   private readonly _velocitySample: VelocitySample = createVelocitySample();

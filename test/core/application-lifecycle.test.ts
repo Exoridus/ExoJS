@@ -96,7 +96,7 @@ interface LifecycleHarness {
   readonly ManualCanvasSizing: typeof import('#core/sizing/ManualCanvasSizing').ManualCanvasSizing;
   readonly ResponsiveCanvasSizing: typeof import('#core/sizing/ResponsiveCanvasSizing').ResponsiveCanvasSizing;
   readonly Texture: typeof import('#rendering/texture/Texture').Texture;
-  readonly loader: { destroy: MockInstance };
+  readonly loader: { destroy: MockInstance; variants: { profile: unknown } };
   readonly webglManager: {
     initialize: MockInstance;
     flush: MockInstance;
@@ -200,6 +200,9 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
     hasAssetType: vi.fn().mockReturnValue(false),
     hasExtension: vi.fn().mockReturnValue(false),
     bindAsset: vi.fn(),
+    // The Application publishes the initialized backend's capability profile
+    // here, so the double needs somewhere to receive it.
+    variants: { profile: { textureFormats: [], resolution: 1 } },
   };
 
   vi.resetModules();

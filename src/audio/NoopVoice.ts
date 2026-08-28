@@ -5,7 +5,11 @@ import type { Vector } from '#math/Vector';
 import { getAudioContext } from './audio-context';
 import type { AudioBus } from './AudioBus';
 import type { AudioEffect } from './AudioEffect';
-import type { DistanceModel, Voice } from './Playable';
+import type { AudioSend } from './AudioSend';
+import type { DistanceModel, SpatialPoint, Voice } from './Playable';
+
+/** Shared empty list, so `sends` never allocates on a voice that can never have one. */
+const emptySends: readonly AudioSend[] = Object.freeze([]);
 
 /**
  * An already-ended {@link Voice} returned for degenerate play calls - a seek
@@ -64,6 +68,27 @@ export class NoopVoice implements Voice {
     return this;
   }
 
+  public get sends(): readonly AudioSend[] {
+    return emptySends;
+  }
+
+  public addSend(_bus: AudioBus, _level?: number): AudioSend {
+    // A send on a voice that already ended would tap a graph with nothing in it.
+    // Refusing loudly beats handing back a dead object the caller has to check.
+    throw new Error('Cannot open an audio send on a voice that has already ended.');
+  }
+
+  public removeSend(_send: AudioSend): this {
+    return this;
+  }
+
+  /** @internal */
+  public _adoptSend(send: AudioSend): void {
+    // Nothing to adopt it into - this voice has already ended, so the send would
+    // tap a graph with nothing in it.
+    send.destroy();
+  }
+
   // Spatializable - inert like the rest of this class. A voice that has
   // already ended has nowhere to place a panner, but the getters still answer
   // with the documented defaults so a caller that positions a voice without
@@ -73,7 +98,23 @@ export class NoopVoice implements Voice {
     return null;
   }
 
-  public set position(_value: Vector | { x: number; y: number } | null) {
+  public set position(_value: Vector | SpatialPoint | null) {
+    // inert - the voice already ended
+  }
+
+  public get elevation(): number {
+    return 0;
+  }
+
+  public set elevation(_value: number) {
+    // inert - the voice already ended
+  }
+
+  public get occlusion(): number {
+    return 0;
+  }
+
+  public set occlusion(_value: number) {
     // inert - the voice already ended
   }
 
@@ -157,7 +198,15 @@ export class NoopVoice implements Voice {
     return null;
   }
 
-  public set velocity(_value: Vector | { x: number; y: number } | null) {
+  public set velocity(_value: Vector | SpatialPoint | null) {
+    // inert - the voice already ended
+  }
+
+  public get elevationVelocity(): number {
+    return 0;
+  }
+
+  public set elevationVelocity(_value: number) {
     // inert - the voice already ended
   }
 }

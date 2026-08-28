@@ -5,6 +5,7 @@ import type { Vector } from '#math/Vector';
 import type { AudioBus } from './AudioBus';
 import type { AudioEffect } from './AudioEffect';
 import type { AudioManager } from './AudioManager';
+import type { AudioSend } from './AudioSend';
 
 /**
  * A live playback instance in the audio graph with a control surface.
@@ -59,6 +60,34 @@ export interface Voice extends Spatializable {
   addEffect(effect: AudioEffect): this;
   /** Remove a previously added per-voice effect. The caller still owns it and must `destroy()` it. */
   removeEffect(effect: AudioEffect): this;
+  /**
+   * Open a parallel send from this voice's output into `bus` at `level`
+   * (default `1`).
+   *
+   * The dry path is untouched: the voice keeps playing into its own
+   * {@link Voice.bus}, and a copy of the same signal additionally reaches `bus`.
+   * Use it for shared ambience processing - one reverb serving many voices -
+   * which an insert effect cannot express, because an insert replaces the signal
+   * rather than duplicating it.
+   *
+   * The returned {@link AudioSend} is owned by this voice and torn down with it;
+   * remove one early with {@link Voice.removeSend} only to change the routing.
+   */
+  addSend(bus: AudioBus, level?: number): AudioSend;
+  /** Tear down a send opened on this voice. Idempotent; a send from another voice is ignored. */
+  removeSend(send: AudioSend): this;
+  /** Live view of this voice's open sends, in the order they were opened. */
+  readonly sends: readonly AudioSend[];
+  /**
+   * Take ownership of a send opened against a different node, re-pointing it at
+   * this voice's output.
+   *
+   * Exists for a deferred voice: a scene hands one out before the asset is ready,
+   * so a send opened on it is wired to a placeholder and has to be handed over -
+   * re-creating it would invalidate the handle the caller already holds.
+   * @internal
+   */
+  _adoptSend(send: AudioSend): void;
 }
 
 /** A voice whose playhead can be read and moved. */
@@ -104,12 +133,59 @@ export interface RatePitched {
  */
 export type DistanceModel = 'linear' | 'inverse' | 'exponential';
 
-/** A voice that can be positioned in 2D space and optionally track a node. */
+/**
+ * A point in the audio world: the 2D world plane, plus an optional out-of-plane
+ * height in the same units.
+ *
+ * `z` is optional everywhere it appears - a 2D game never supplies it, and a
+ * scene node cannot, because the scene graph has no third axis.
+ */
+export interface SpatialPoint {
+  readonly x: number;
+  readonly y: number;
+  readonly z?: number;
+}
+
+/** A voice that can be positioned in space and optionally track a node. */
 export interface Spatializable {
-  /** World-space position of the source, or `null` when not spatialized. */
+  /**
+   * World-plane position of the source, or `null` when not spatialized.
+   *
+   * Two-dimensional, because the world plane is: the third axis lives on
+   * {@link Spatializable.elevation}, which {@link Spatializable.follow} cannot
+   * fill in and which most 2D games never touch.
+   */
   get position(): Vector | null;
-  /** Accepts any `{ x, y }` point - implementations copy the values. */
-  set position(value: Vector | { x: number; y: number } | null);
+  /**
+   * Accepts any `{ x, y }` point - implementations copy the values. A supplied
+   * `z` is written to {@link Spatializable.elevation}, so a caller who thinks in
+   * three axes can pass one point instead of two properties.
+   */
+  set position(value: Vector | SpatialPoint | null);
+  /**
+   * Height of the source above (positive) or below (negative) the world plane,
+   * in world units. Default `0`.
+   *
+   * Independent of {@link Spatializable.position}, and preserved across a
+   * position change that does not carry a `z`. It contributes to distance
+   * attenuation, to the panner's own directionality, and to Doppler - a source
+   * rising straight up recedes.
+   */
+  elevation: number;
+  /**
+   * How obstructed the path from this source to the listener is, in `[0, 1]`.
+   * `0` (default) is a clear path; `1` is fully obstructed.
+   *
+   * Caller-supplied: the engine does not trace geometry, because what counts as
+   * an obstruction is a game's decision (a wall, a closed door, a crowd). Write
+   * an estimate as often as you like - it is ramped, not stepped, so a per-frame
+   * value does not click.
+   *
+   * Realized as a lowpass plus an attenuation, tuned by
+   * `app.audio.spatial.occlusionCutoff` / `.occlusionAttenuation`. A voice whose
+   * occlusion stays `0` builds neither node.
+   */
+  occlusion: number;
   /**
    * Track a {@link SceneNode}: the voice reads the node's global translation
    * each frame. Pass `null` to stop following and fall back to
@@ -150,8 +226,16 @@ export interface Spatializable {
    * position delta instead.
    */
   get velocity(): Vector | null;
-  /** Accepts any `{ x, y }` point - implementations copy the values. */
-  set velocity(value: Vector | { x: number; y: number } | null);
+  /**
+   * Accepts any `{ x, y }` point - implementations copy the values. A supplied
+   * `z` is written to {@link Spatializable.elevationVelocity}.
+   */
+  set velocity(value: Vector | SpatialPoint | null);
+  /**
+   * Vertical component of {@link Spatializable.velocity}, in world units per
+   * second. Default `0`. Only Doppler reads it.
+   */
+  elevationVelocity: number;
 }
 
 /**
@@ -173,7 +257,11 @@ export interface PlayOptions {
   /** Start muted (volume 0). */
   muted?: boolean;
   /** Initial spatial position - equivalent to setting `voice.position` right after play. */
-  position?: { x: number; y: number } | Vector;
+  position?: SpatialPoint | Vector;
+  /** Initial height above the world plane. Default `0`. */
+  elevation?: number;
+  /** Initial occlusion amount in `[0, 1]`. Default `0` (clear path). */
+  occlusion?: number;
   /** Initial distance-attenuation model. Default `'linear'`. */
   distanceModel?: DistanceModel;
   /** Initial reference distance. Default `50`. */
@@ -193,7 +281,11 @@ export interface PlayOptions {
   /** Initial gain outside the outer cone. Default `0`. */
   coneOuterGain?: number;
   /** Initial velocity for Doppler. See {@link Spatializable.velocity}. */
-  velocity?: { x: number; y: number } | Vector;
+  velocity?: SpatialPoint | Vector;
+  /** Initial vertical velocity for Doppler. Default `0`. */
+  elevationVelocity?: number;
+  /** Parallel sends to open on the voice right after play - one per bus. */
+  sends?: ReadonlyArray<{ readonly bus: AudioBus; readonly level?: number }>;
 }
 
 /**
