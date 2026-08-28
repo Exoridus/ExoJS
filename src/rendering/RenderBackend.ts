@@ -86,6 +86,17 @@ export interface RenderBackend {
   readonly supportedTextureFormats: readonly CompressedTextureFormat[];
 
   /**
+   * Colour attachments this device accepts in one render pass - the upper bound
+   * on a {@link MultiRenderTarget}'s attachment count.
+   *
+   * At least `1` everywhere, and `1` before the backend is initialized. WebGL2
+   * reports the lower of `MAX_COLOR_ATTACHMENTS` and `MAX_DRAW_BUFFERS`, since an
+   * attachment nothing can write to is not usable capacity; WebGPU reports
+   * `limits.maxColorAttachments`.
+   */
+  readonly maxColorAttachments: number;
+
+  /**
    * Dispatched when the backend detects a GPU error that does not surface as a
    * synchronous exception - WGSL compilation errors, WebGPU uncaptured
    * validation/OOM/internal errors. Synchronous failures (WebGL2 shader

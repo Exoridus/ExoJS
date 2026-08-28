@@ -15,6 +15,8 @@ import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { Mesh } from '#rendering/mesh/Mesh';
+import { assertDrawsAllAttachments, assertSingleAttachmentCompose } from '#rendering/multiAttachmentGuard';
+import { isMultiAttachmentTarget, MultiRenderTarget } from '#rendering/MultiRenderTarget';
 import type { PersistentSlotBundle } from '#rendering/plan/PersistentSlotDraw';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
@@ -263,6 +265,18 @@ export class WebGpuBackend implements RenderBackend {
     loadOp: 'load',
     storeOp: 'store',
   };
+  /**
+   * Extra reusable attachment records for a MultiRenderTarget, one per slot
+   * beyond the first. Pooled for the same reason the first one is: a pass is
+   * opened many times per frame and the records do not outlive beginRenderPass.
+   */
+  private readonly _extraColorAttachments: GPURenderPassColorAttachment[] = [];
+  /** Reused one-element list backing renderTargetFormats for a single-attachment target. */
+  private readonly _singleFormatScratch: GPUTextureFormat[] = ['rgba8unorm'];
+  /** Load op slot 0 resolved for the pass being opened; the other slots follow it. */
+  private _loadOpForPass: GPULoadOp = 'load';
+  /** Whether the bound target writes more than one colour attachment - see `draw`. */
+  private _multiAttachmentTarget = false;
   /** Reused one-element command-buffer list for `submit`. */
   private readonly _submitBatch: GPUCommandBuffer[] = [undefined as unknown as GPUCommandBuffer];
   private _renderer: Renderer | null = null;
@@ -378,6 +392,13 @@ export class WebGpuBackend implements RenderBackend {
     return this._compressedFormats.formats;
   }
 
+  public get maxColorAttachments(): number {
+    const limits = (this._device as { limits?: GPUSupportedLimits } | null)?.limits;
+    const reported = limits?.maxColorAttachments;
+
+    return typeof reported === 'number' && reported > 0 ? reported : 1;
+  }
+
   public get device(): GPUDevice {
     if (this._device === null) {
       throw new Error('WebGPU device is not initialized yet.');
@@ -414,7 +435,39 @@ export class WebGpuBackend implements RenderBackend {
       return this._getGpuTextureFormat(this._renderTarget);
     }
 
+    if (this._renderTarget instanceof MultiRenderTarget) {
+      return this._getGpuTextureFormat(this._renderTarget.attachment(0));
+    }
+
     return managedTextureFormat;
+  }
+
+  /**
+   * Colour format of every attachment of the bound target, in slot order.
+   *
+   * A pipeline must declare one target per attachment of the pass it runs in, so a
+   * renderer that can draw into a multi-attachment target keys its pipelines on
+   * all of these rather than on renderTargetFormat alone. Single-target renderers
+   * keep reading the singular getter, which stays the first slot.
+   * @internal
+   */
+  public get renderTargetFormats(): readonly GPUTextureFormat[] {
+    const target = this._renderTarget;
+
+    if (target instanceof MultiRenderTarget) {
+      return target.attachments.map(attachment => this._getGpuTextureFormat(attachment));
+    }
+
+    this._singleFormatScratch[0] = this.renderTargetFormat;
+
+    return this._singleFormatScratch;
+  }
+
+  /** Colour attachments the bound target contributes to a pass. */
+  public get colorAttachmentCount(): number {
+    const target = this._renderTarget;
+
+    return target instanceof MultiRenderTarget ? target.attachments.length : 1;
   }
 
   /**
@@ -709,6 +762,12 @@ export class WebGpuBackend implements RenderBackend {
       return this;
     }
 
+    // Only consulted while a multi-attachment target is bound, so an ordinary
+    // frame pays one boolean read per drawable.
+    if (this._multiAttachmentTarget) {
+      assertDrawsAllAttachments(drawable, (this._renderTarget as MultiRenderTarget).attachments.length, RenderBackendType.WebGpu);
+    }
+
     const renderer = this.rendererRegistry.resolve(drawable);
 
     // Defensive: a draw the recorder cannot capture inside an active
@@ -799,7 +858,18 @@ export class WebGpuBackend implements RenderBackend {
       }
 
       this._renderTarget = nextRenderTarget;
+      this._multiAttachmentTarget = isMultiAttachmentTarget(nextRenderTarget);
       this._stats.renderTargetChanges++;
+
+      if (this._multiAttachmentTarget && (nextRenderTarget as MultiRenderTarget).attachments.length > this.maxColorAttachments) {
+        throw new RenderError({
+          code: 'unsupported-format',
+          backendType: RenderBackendType.WebGpu,
+          message:
+            `This device accepts ${this.maxColorAttachments} colour attachment(s), but the target declares ` +
+            `${(nextRenderTarget as MultiRenderTarget).attachments.length}. Check backend.maxColorAttachments.`,
+        });
+      }
 
       if (nextRenderTarget !== this._rootRenderTarget) {
         this._subscribeRenderTarget(nextRenderTarget);
@@ -840,6 +910,10 @@ export class WebGpuBackend implements RenderBackend {
     height: number,
     blendMode: BlendModes,
   ): this {
+    if (this._multiAttachmentTarget) {
+      assertSingleAttachmentCompose('Alpha-mask compositing', (this._renderTarget as MultiRenderTarget).attachments.length, RenderBackendType.WebGpu);
+    }
+
     if (width <= 0 || height <= 0) {
       return this;
     }
@@ -866,6 +940,10 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   public composeWithBackdropBlend(source: RenderTexture, x: number, y: number, width: number, height: number, mode: BlendModes): this {
+    if (this._multiAttachmentTarget) {
+      assertSingleAttachmentCompose('Backdrop-blend compositing', (this._renderTarget as MultiRenderTarget).attachments.length, RenderBackendType.WebGpu);
+    }
+
     if (width <= 0 || height <= 0) {
       return this;
     }
@@ -1157,34 +1235,69 @@ export class WebGpuBackend implements RenderBackend {
    * passes (501 on `filter/color 100`), and two fresh records per pass was one
    * of the larger remaining per-pass costs.
    */
-  public createColorAttachment(): GPURenderPassColorAttachment {
+  /**
+   * Resolve the pass attachment for colour slot `index` of the bound target.
+   *
+   * The load op is resolved once, on slot 0: it answers whether this target has
+   * already been drawn into this frame, which is a property of the target, and the
+   * attachments of one multi-attachment target are always written together.
+   * Resolving per slot would consume the pending clear request on the first slot
+   * and leave the rest loading undefined contents.
+   */
+  public createColorAttachment(index = 0): GPURenderPassColorAttachment {
     const renderTarget = this._renderTarget;
+    const multi = renderTarget instanceof MultiRenderTarget ? renderTarget : null;
     let view: GPUTextureView;
 
-    if (renderTarget === this._rootRenderTarget) {
+    if (multi !== null) {
+      view = this._syncTexture(multi.attachment(index)).view;
+    } else if (renderTarget === this._rootRenderTarget) {
       view = this.context.getCurrentTexture().createView();
     } else if (renderTarget instanceof RenderTexture) {
       // Sync first so a resized RenderTexture resets its content flag before the
       // coordinator resolves the load op below.
       view = this._syncTexture(renderTarget).view;
     } else {
-      throw new Error('WebGPU currently supports only root targets and RenderTexture targets.');
+      throw new Error('WebGPU currently supports only root targets, RenderTexture and MultiRenderTarget targets.');
     }
 
-    const loadOp = this._passCoordinator.resolveLoad(renderTarget, this._clearRequested);
+    if (index === 0) {
+      this._loadOpForPass = this._passCoordinator.resolveLoad(renderTarget, this._clearRequested);
+      this._clearRequested = false;
 
-    this._clearRequested = false;
+      const clearValue = this._clearValue;
 
-    const attachment = this._colorAttachment;
-    const clearValue = this._clearValue;
+      clearValue.r = this._clearColor.r / 255;
+      clearValue.g = this._clearColor.g / 255;
+      clearValue.b = this._clearColor.b / 255;
+      clearValue.a = this._clearColor.a;
+    }
 
-    clearValue.r = this._clearColor.r / 255;
-    clearValue.g = this._clearColor.g / 255;
-    clearValue.b = this._clearColor.b / 255;
-    clearValue.a = this._clearColor.a;
+    const attachment = index === 0 ? this._colorAttachment : this._extraAttachment(index);
 
     attachment.view = view;
-    attachment.loadOp = loadOp;
+    attachment.loadOp = this._loadOpForPass;
+
+    return attachment;
+  }
+
+  /** Pooled attachment record for colour slot `index`, grown on demand. */
+  private _extraAttachment(index: number): GPURenderPassColorAttachment {
+    const slot = index - 1;
+    const existing = this._extraColorAttachments[slot];
+
+    if (existing !== undefined) {
+      return existing;
+    }
+
+    const attachment: GPURenderPassColorAttachment = {
+      view: undefined as unknown as GPUTextureView,
+      clearValue: this._clearValue,
+      loadOp: 'load',
+      storeOp: 'store',
+    };
+
+    this._extraColorAttachments[slot] = attachment;
 
     return attachment;
   }

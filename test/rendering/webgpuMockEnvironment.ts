@@ -37,6 +37,10 @@ export interface MockWebGpuEnvironment {
   drawIndexedCount(): number;
   /** Format and byte offset of every `setIndexBuffer` call, in call order. */
   indexBufferBindings(): ReadonlyArray<{ readonly format: string; readonly offset: number }>;
+  /** Colour-attachment count of every `beginRenderPass` descriptor, in call order. */
+  renderPassAttachmentCounts(): readonly number[];
+  /** Fragment-target count of every synchronously created render pipeline, in call order. */
+  pipelineTargetCounts(): readonly number[];
   restore(): void;
 }
 
@@ -59,6 +63,8 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   const createBufferLabels: string[] = [];
   const writeTextureData: ArrayBufferView[] = [];
   const indexBufferBindings: Array<{ format: string; offset: number }> = [];
+  const renderPassAttachmentCounts: number[] = [];
+  const pipelineTargetCounts: number[] = [];
 
   const pass = {
     setPipeline: (): void => {},
@@ -77,7 +83,11 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     end: (): void => {},
   };
   const encoder = {
-    beginRenderPass: () => pass,
+    beginRenderPass: (descriptor: GPURenderPassDescriptor) => {
+      renderPassAttachmentCounts.push([...descriptor.colorAttachments].length);
+
+      return pass;
+    },
     finish: () => ({ label: 'command-buffer' }) as unknown as GPUCommandBuffer,
   };
   const queue = {
@@ -91,6 +101,9 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     },
   };
   const device = {
+    // The spec's default. The backend reads it to bound a MultiRenderTarget's
+    // attachment count, and falls back to 1 when a device reports nothing.
+    limits: { maxColorAttachments: 8 },
     createShaderModule: () => ({}) as GPUShaderModule,
     createBindGroupLayout: () => ({}) as GPUBindGroupLayout,
     createPipelineLayout: () => ({}) as GPUPipelineLayout,
@@ -100,8 +113,9 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
 
       return {} as GPUBindGroup;
     },
-    createRenderPipeline: (): GPURenderPipeline => {
+    createRenderPipeline: (descriptor: GPURenderPipelineDescriptor): GPURenderPipeline => {
       syncPipelineCount++;
+      pipelineTargetCounts.push(descriptor.fragment?.targets.length ?? 0);
 
       return {} as GPURenderPipeline;
     },
@@ -167,6 +181,8 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     syncPipelineCount: () => syncPipelineCount,
     drawIndexedCount: () => drawIndexedCount,
     indexBufferBindings: () => indexBufferBindings,
+    renderPassAttachmentCounts: () => renderPassAttachmentCounts,
+    pipelineTargetCounts: () => pipelineTargetCounts,
     restore: (): void => {
       if (previousGpu) {
         Object.defineProperty(navigator, 'gpu', previousGpu);

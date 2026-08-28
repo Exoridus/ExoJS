@@ -13,6 +13,8 @@ export { CallbackRenderPass } from './CallbackRenderPass';
 export { Container } from './Container';
 export { Drawable } from './Drawable';
 export type { DrawContext, RenderToOptions } from './DrawContext';
+export type { MultiRenderTargetOptions } from './MultiRenderTarget';
+export { MultiRenderTarget } from './MultiRenderTarget';
 export { PassContext } from './PassContext';
 export { PixelSnapMode } from './pixelSnap';
 export { RenderBackendType } from './RenderBackendType';

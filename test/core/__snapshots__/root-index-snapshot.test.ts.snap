@@ -141,6 +141,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "Mesh",
   "MeshBuilder",
   "MeshMaterial",
+  "MultiRenderTarget",
   "MusicAssetType",
   "NetworkFirstPolicy",
   "NetworkOnlyPolicy",

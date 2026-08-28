@@ -151,6 +151,7 @@ interface MockWebGpuBackendExtras {
   device: GPUDevice;
   renderTargetFormat: GPUTextureFormat;
   createColorAttachment: MockInstance;
+  colorAttachmentCount: number;
   submit: MockInstance;
   stats: ReturnType<typeof createRenderStats>;
 }
@@ -258,6 +259,9 @@ const makeWebGpuBackend = (env: MockWebGpuEnv): RenderBackend & WebGpuBackend & 
     getTextureBinding,
     getTextureFormat,
     createColorAttachment,
+    // The coordinator sizes its attachment list from this; a single-attachment
+    // target is what every filter path renders into.
+    colorAttachmentCount: 1,
     submit,
   } as unknown as RenderBackend & WebGpuBackend & MockWebGpuBackendExtras;
 

@@ -1033,7 +1033,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         pass.pushDebugGroup('MeshMaterial (custom)');
 
         if (needsPipeline) {
-          pass.setPipeline(this._getOrCreateCustomPipeline(resources, dc.blendMode, renderTargetFormat, stencil));
+          pass.setPipeline(this._getOrCreateCustomPipeline(resources, dc.blendMode, backend.renderTargetFormats, stencil));
           lastShader = dc.customShader;
           lastBlendMode = dc.blendMode;
           lastFormat = renderTargetFormat;
@@ -2530,12 +2530,22 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     this._device!.queue.writeBuffer(resources.meshUniformBuffer!, drawCursor * slotBytes, data);
   }
 
-  private _getOrCreateCustomPipeline(resources: CustomShaderResources, blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
+  private _getOrCreateCustomPipeline(
+    resources: CustomShaderResources,
+    blendMode: BlendModes,
+    formats: readonly GPUTextureFormat[],
+    stencil: boolean,
+  ): GPURenderPipeline {
     // The stencil dimension keeps the clip and no-clip variants distinct,
     // mirroring the default and static-batch caches: a stencil pipeline carries
     // depth/stencil state and is only valid in a pass with the matching
     // attachment, so the two are never interchangeable.
-    const cacheKey = `${blendMode}:${format}:${stencil ? 's' : 'n'}`;
+    //
+    // The whole format LIST is part of the key, not just the first format: a
+    // pipeline must declare one target per attachment of the pass it runs in, so
+    // the same material in a one-attachment and a two-attachment pass needs two
+    // pipelines.
+    const cacheKey = `${blendMode}:${formats.join(',')}:${stencil ? 's' : 'n'}`;
     let pipeline = resources.pipelines.get(cacheKey);
 
     if (pipeline === undefined) {
@@ -2560,13 +2570,11 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         fragment: {
           module: resources.shaderModule,
           entryPoint: 'fragmentMain',
-          targets: [
-            {
-              format,
-              blend: getWebGpuBlendState(blendMode),
-              writeMask: GPUColorWrite.ALL,
-            },
-          ],
+          targets: formats.map(format => ({
+            format,
+            blend: getWebGpuBlendState(blendMode),
+            writeMask: GPUColorWrite.ALL,
+          })),
         },
         primitive: {
           topology: 'triangle-list',

@@ -348,6 +348,8 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "MeshMaterial: class",
   "MeshOptions: interface",
   "Milliseconds: type alias",
+  "MultiRenderTarget: class",
+  "MultiRenderTargetOptions: interface",
   "MusicAssetOptions: interface",
   "MusicAssetType: class",
   "Mutable: type alias",
