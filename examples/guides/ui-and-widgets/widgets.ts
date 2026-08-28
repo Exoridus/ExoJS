@@ -1,4 +1,4 @@
-import { Button, Color, DockContainer, Keyboard, Label, Panel, ProgressBar, Scene, ScrollContainer, Stack, Tooltip } from '@codexo/exojs';
+import { Button, Color, DockContainer, Keyboard, Label, Panel, ProgressBar, Scene, ScrollContainer, Stack, Tooltip, UIRoot } from '@codexo/exojs';
 
 // #region guide:anchoring
 class HudScene extends Scene {
@@ -96,6 +96,27 @@ class FormScene extends Scene {
 }
 // #endregion guide:focus
 
+// #region guide:ui-scale
+class SettingsScene extends Scene {
+  override init(): void {
+    // Snap the factor so nine-slice corners resample predictably.
+    this.ui.uiScaleStep = 0.25;
+
+    // A user-facing "UI scale" setting.
+    this.ui.uiScale = 1.5;
+
+    // Or start from how large a 24-pixel control ends up physically, and grow
+    // the layer until it reaches a 9mm touch target.
+    this.ui.uiScale = UIRoot.scaleForTouchTarget(24, 9);
+
+    const quit = new Button({ label: 'Quit', width: 160, height: 44 });
+    // Anchoring works against the scaled box, so this stays in the corner.
+    quit.anchorIn(this.ui, 'bottom-right', -24, -24);
+    this.ui.addChild(quit);
+  }
+}
+// #endregion guide:ui-scale
+
 // #region guide:tooltip
 class ShopScene extends Scene {
   private tooltip!: Tooltip;
@@ -111,4 +132,4 @@ class ShopScene extends Scene {
 }
 // #endregion guide:tooltip
 
-export { DockedHudScene, FormScene, HudScene, InventoryScene, MenuScene, ShopScene };
+export { DockedHudScene, FormScene, HudScene, InventoryScene, MenuScene, SettingsScene, ShopScene };

@@ -176,6 +176,27 @@ Dragging a thumb scrolls the content, and scrolling by any other means moves the
 Parent scrollable items to `scroll.content`, never to the `ScrollContainer` itself. Children added straight to the container sit outside the clipped, scrolling region — they render at a fixed spot and ignore the wheel.
 </Callout>
 
+## Scaling the UI
+
+A HUD authored at one size is not automatically readable on every screen. `scene.ui.uiScale` is one factor over the whole layer, default `1`: raise it and every widget, its text and its touch target grow together.
+
+<SourceSnippet
+  source="examples/guides/ui-and-widgets/widgets.ts"
+  region="ui-scale"
+  language="ts"
+  title="examples/guides/ui-and-widgets/widgets.ts"
+/>
+
+The factor is applied as the layer's transform, so hit-testing follows it for free — pointer routing already goes through that transform, and a widget's own `uiWidth`/`uiHeight` never change. `scene.ui.screenWidth` and `screenHeight` report the box in the scaled units widgets lay out in, and `onResize` fires when the factor changes, so anchored widgets re-place themselves.
+
+`uiScaleStep` snaps the factor — set it to `0.25` before wiring a slider to it. An arbitrary factor resamples nine-slice corners and pixel art; a handful of discrete sizes usually looks better. Text is SDF and stays crisp either way.
+
+<Callout type="note" title="Scale and adaptation are two different mechanisms">
+`uiScale` is a readability and touch-size control. It is **not** a resolution policy: which logical coordinate system the game is authored in — and so how much of the world is visible — belongs to the application's [`CanvasSizing`](/ExoJS/en/api/canvas-sizing/), and a HUD authored against the base resolution therefore does not shrink on a 4K display to begin with. Adapting to a *different shape* of screen is layout's job: anchors, `DockContainer` and a reactive `Stack`. A phone usually wants both — reflow for the aspect ratio, a factor for the finger.
+</Callout>
+
+`UIRoot.scaleForTouchTarget(sizePixels, millimeters)` turns "a 24-pixel button should be at least 9mm across" into a factor. It converts through the CSS reference pixel (96 per inch), which is all a browser exposes — there is no API for the display's real physical size, and `devicePixelRatio` describes the backing store, not how large a pixel is. Treat it as a starting point for a density heuristic, not a measurement.
+
 ## Clicks and keyboard focus
 
 UI nodes are hit-tested in screen space *before* the world, so a `Button` on `scene.ui` is clickable even under a panned or zoomed camera. Listen to `button.onClick`:

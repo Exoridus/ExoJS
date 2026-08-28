@@ -13,6 +13,7 @@ import { Rectangle } from '#math/Rectangle';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
+import { Panel } from '#ui/Panel';
 
 import { frameDelta } from '../support/frame-delta';
 
@@ -130,6 +131,31 @@ describe('UI interaction routing', () => {
     im.preUpdate(frameDelta);
 
     expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  test('hit-testing follows the UI scale', () => {
+    const { scene, im, signals } = createUIApp();
+    const panel = new Panel({ width: 100, height: 50 });
+    const handler = vi.fn();
+
+    panel.interactive = true;
+    scene.ui.addChild(panel);
+    panel.onPointerDown.add(handler);
+
+    // (150, 50) is outside the unscaled 100x50 panel...
+    dispatchPointer(signals.onPointerDown, 150, 50);
+    im.preUpdate(frameDelta);
+
+    expect(handler).not.toHaveBeenCalled();
+
+    // ...and inside it once the layer is drawn at twice the size, without the
+    // panel's own layout size changing.
+    scene.ui.uiScale = 2;
+    dispatchPointer(signals.onPointerDown, 150, 50);
+    im.preUpdate(frameDelta);
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(panel.uiWidth).toBe(100);
   });
 
   test('UI layer takes precedence over the world at the same screen point', () => {
