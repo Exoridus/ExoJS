@@ -357,10 +357,14 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         slug: 'render-targets',
         level: 'advanced',
-        learningGoals: ['render a scene into an intermediate texture', 'reuse render-target output in composition'],
+        learningGoals: [
+          'render a scene into an intermediate texture',
+          'reuse render-target output in composition',
+          'fill several colour attachments from one pass',
+        ],
         prerequisites: ['rendering/sprites'],
         examples: ['render-targets/render-to-texture', 'render-targets/mini-map'],
-        apiLinks: ['render-target', 'render-texture'],
+        apiLinks: ['render-target', 'render-texture', 'multi-render-target', 'mesh-material'],
       },
       {
         slug: 'pixel-snapping',
