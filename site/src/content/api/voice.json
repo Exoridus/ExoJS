@@ -6,11 +6,11 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 21,
+  "memberCount": 27,
   "counts": {
     "constructors": 0,
-    "methods": 5,
-    "properties": 16,
+    "methods": 7,
+    "properties": 20,
     "events": 0
   },
   "sections": [
@@ -77,6 +77,78 @@
           ],
           "returnType": "this",
           "description": "Insert a per-voice AudioEffect into this voice's output chain (after the volume gain, before the bus). Effects are applied in insertion order."
+        },
+        {
+          "name": "addSend",
+          "signature": "addSend(bus: AudioBus, level?: number): AudioSend",
+          "signatureTokens": [
+            {
+              "text": "addSend",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "bus",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "level",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioSend",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "bus",
+              "type": "AudioBus",
+              "optional": false
+            },
+            {
+              "name": "level",
+              "type": "number",
+              "optional": true
+            }
+          ],
+          "returnType": "AudioSend",
+          "description": "Open a parallel send from this voice's output into bus at level (default 1). The dry path is untouched: the voice keeps playing into its own Voice.bus, and a copy of the same signal additionally reaches bus. Use it for shared ambience processing - one reverb serving many voices - which an insert effect cannot express, because an insert replaces the signal rather than duplicating it. The returned AudioSend is owned by this voice and torn down with it; remove one early with Voice.removeSend only to change the routing."
         },
         {
           "name": "fade",
@@ -249,6 +321,53 @@
           "description": "Remove a previously added per-voice effect. The caller still owns it and must destroy() it."
         },
         {
+          "name": "removeSend",
+          "signature": "removeSend(send: AudioSend): this",
+          "signatureTokens": [
+            {
+              "text": "removeSend",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "send",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioSend",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "send",
+              "type": "AudioSend",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Tear down a send opened on this voice. Idempotent; a send from another voice is ignored."
+        },
+        {
           "name": "stop",
           "signature": "stop(fadeMs?: number): void",
           "signatureTokens": [
@@ -414,6 +533,48 @@
           "description": "Distance-attenuation model. Default 'linear'."
         },
         {
+          "name": "elevation",
+          "signature": "elevation: number",
+          "signatureTokens": [
+            {
+              "text": "elevation",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Height of the source above (positive) or below (negative) the world plane, in world units. Default 0. Independent of Spatializable.position, and preserved across a position change that does not carry a z. It contributes to distance attenuation, to the panner's own directionality, and to Doppler - a source rising straight up recedes."
+        },
+        {
+          "name": "elevationVelocity",
+          "signature": "elevationVelocity: number",
+          "signatureTokens": [
+            {
+              "text": "elevationVelocity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Vertical component of Spatializable.velocity, in world units per second. Default 0. Only Doppler reads it."
+        },
+        {
           "name": "ended",
           "signature": "ended: boolean",
           "signatureTokens": [
@@ -454,6 +615,27 @@
           "params": [],
           "returnType": null,
           "description": "For the 'linear' model: distance at which volume reaches zero. Default 1000."
+        },
+        {
+          "name": "occlusion",
+          "signature": "occlusion: number",
+          "signatureTokens": [
+            {
+              "text": "occlusion",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How obstructed the path from this source to the listener is, in [0, 1]. 0 (default) is a clear path; 1 is fully obstructed. Caller-supplied: the engine does not trace geometry, because what counts as an obstruction is a game's decision (a wall, a closed door, a crowd). Write an estimate as often as you like - it is ramped, not stepped, so a per-frame value does not click. Realized as a lowpass plus an attenuation, tuned by app.audio.spatial.occlusionCutoff / .occlusionAttenuation. A voice whose occlusion stays 0 builds neither node."
         },
         {
           "name": "onEnd",
@@ -590,6 +772,39 @@
           "description": "Falloff rate. Higher = steeper attenuation. Default 1."
         },
         {
+          "name": "sends",
+          "signature": "sends: readonly AudioSend[]",
+          "signatureTokens": [
+            {
+              "text": "sends",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioSend",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Live view of this voice's open sends, in the order they were opened."
+        },
+        {
           "name": "volume",
           "signature": "volume: number",
           "signatureTokens": [
@@ -637,7 +852,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "World-space position of the source, or null when not spatialized."
+          "description": "World-plane position of the source, or null when not spatialized. Two-dimensional, because the world plane is: the third axis lives on Spatializable.elevation, which Spatializable.follow cannot fill in and which most 2D games never touch."
         },
         {
           "name": "velocity",

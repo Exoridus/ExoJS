@@ -535,10 +535,16 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
       {
         slug: 'spatial-audio',
         level: 'intermediate',
-        learningGoals: ['place a listener and sources in space', 'tune directional falloff'],
+        learningGoals: [
+          'place a listener and sources in space',
+          'tune directional falloff',
+          'lift a source off the world plane with elevation',
+          'muffle an obstructed source with occlusion',
+          'feed one shared reverb from many voices, and gate it on a zone',
+        ],
         prerequisites: ['audio/audio-basics'],
         examples: ['spatial-audio/listener-and-source', 'spatial-audio/moving-source', 'spatial-audio/falloff-curves'],
-        apiLinks: ['audio-listener', 'audio-manager'],
+        apiLinks: ['audio-listener', 'audio-manager', 'audio-send', 'audio-zone', 'spatial-zones'],
       },
       {
         slug: 'audio-effects',

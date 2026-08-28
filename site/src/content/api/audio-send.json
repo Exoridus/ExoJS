@@ -1,0 +1,153 @@
+{
+  "title": "AudioSend",
+  "description": "A parallel tap from one voice's output into an AudioBus, at its own level. A send is what an insert effect cannot express: the voice keeps playing into its own bus unchanged (the dry path) while a copy of the same signal also reaches another bus (the wet path). That is the shape reverb, echo and any shared ambience processing needs - one effect instance serving many voices, with each voice deciding how much of itself to contribute. Created by `voice.addSend(bus)` and owned by that voice: it is torn down when the voice ends, so a caller only has to remove one early if the routing itself should change. The target bus is not owned - it keeps serving whoever else sends into it.",
+  "symbol": "AudioSend",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A parallel tap from one voice's output into an AudioBus, at its own level.",
+        "A send is what an insert effect cannot express: the voice keeps playing into its own bus unchanged (the dry path) while a copy of the same signal also reaches another bus (the wet path). That is the shape reverb, echo and any shared ambience processing needs - one effect instance serving many voices, with each voice deciding how much of itself to contribute.",
+        "Created by `voice.addSend(bus)` and owned by that voice: it is torn down when the voice ends, so a caller only has to remove one early if the routing itself should change. The target bus is not owned - it keeps serving whoever else sends into it."
+      ],
+      "importLine": "import { AudioSend } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Disconnect and discard. Idempotent. The source node and the target bus are untouched - only this send's own gain node goes away."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bus",
+          "signature": "bus: AudioBus",
+          "signatureTokens": [
+            {
+              "text": "bus",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true once this send has been torn down; a torn-down send ignores further writes."
+        },
+        {
+          "name": "level",
+          "signature": "level: number",
+          "signatureTokens": [
+            {
+              "text": "level",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Contribution level, 0 and up. 1 sends the voice at its own volume; values above 1 amplify, as an aux send on a mixing desk does. Ramped rather than stepped, so a level driven per frame - by a zone the listener is walking into, say - does not click."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/AudioSend.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioSend.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/AudioSend.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioSend.ts"
+}

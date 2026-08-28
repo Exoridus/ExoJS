@@ -1,0 +1,192 @@
+{
+  "title": "AudioZoneOptions",
+  "description": "Construction options for AudioZone.",
+  "symbol": "AudioZoneOptions",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for AudioZone."
+      ],
+      "importLine": "import { AudioZoneOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bus",
+          "signature": "bus: AudioBus",
+          "signatureTokens": [
+            {
+              "text": "bus",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Bus every voice's send is opened into while this zone is active. Not owned - the caller builds it, hangs whatever effect chain the zone represents on it, and destroys it."
+        },
+        {
+          "name": "falloff",
+          "signature": "falloff?: number",
+          "signatureTokens": [
+            {
+              "text": "falloff",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Distance outside the shape over which the weight ramps to zero. Default 0 - a hard edge."
+        },
+        {
+          "name": "height",
+          "signature": "height?: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Height band the zone occupies, measured from the world plane. Default Infinity - the zone is a column."
+        },
+        {
+          "name": "name",
+          "signature": "name?: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Free label for diagnostics."
+        },
+        {
+          "name": "send",
+          "signature": "send?: number",
+          "signatureTokens": [
+            {
+              "text": "send",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Send level at full weight. Default 1."
+        },
+        {
+          "name": "shape",
+          "signature": "shape: AudioZoneShape",
+          "signatureTokens": [
+            {
+              "text": "shape",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioZoneShape",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Footprint on the world plane."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/AudioZone.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioZone.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/AudioZone.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioZone.ts"
+}

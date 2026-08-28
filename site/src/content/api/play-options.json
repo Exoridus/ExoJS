@@ -6,11 +6,11 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 18,
+  "memberCount": 22,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 18,
+    "properties": 22,
     "events": 0
   },
   "sections": [
@@ -179,6 +179,56 @@
           "description": "Initial distance-attenuation model. Default 'linear'."
         },
         {
+          "name": "elevation",
+          "signature": "elevation?: number",
+          "signatureTokens": [
+            {
+              "text": "elevation",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial height above the world plane. Default 0."
+        },
+        {
+          "name": "elevationVelocity",
+          "signature": "elevationVelocity?: number",
+          "signatureTokens": [
+            {
+              "text": "elevationVelocity",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial vertical velocity for Doppler. Default 0."
+        },
+        {
           "name": "loop",
           "signature": "loop?: boolean",
           "signatureTokens": [
@@ -252,6 +302,31 @@
           "params": [],
           "returnType": null,
           "description": "Start muted (volume 0)."
+        },
+        {
+          "name": "occlusion",
+          "signature": "occlusion?: number",
+          "signatureTokens": [
+            {
+              "text": "occlusion",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial occlusion amount in [0, 1]. Default 0 (clear path)."
         },
         {
           "name": "orientation",
@@ -330,7 +405,7 @@
         },
         {
           "name": "position",
-          "signature": "position?: Vector | { x: number; y: number }",
+          "signature": "position?: SpatialPoint | Vector",
           "signatureTokens": [
             {
               "text": "position",
@@ -345,7 +420,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Vector",
+              "text": "SpatialPoint",
               "kind": "type"
             },
             {
@@ -353,40 +428,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "{ ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "x",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": "; ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "y",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": " }",
-              "kind": "punctuation"
+              "text": "Vector",
+              "kind": "type"
             }
           ],
           "params": [],
@@ -444,6 +487,79 @@
           "description": "Initial rolloff factor. Default 1."
         },
         {
+          "name": "sends",
+          "signature": "sends?: readonly { bus: AudioBus; level?: number }[]",
+          "signatureTokens": [
+            {
+              "text": "sends",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "bus",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBus",
+              "kind": "type"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "level",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Parallel sends to open on the voice right after play - one per bus."
+        },
+        {
           "name": "time",
           "signature": "time?: number",
           "signatureTokens": [
@@ -470,7 +586,7 @@
         },
         {
           "name": "velocity",
-          "signature": "velocity?: Vector | { x: number; y: number }",
+          "signature": "velocity?: SpatialPoint | Vector",
           "signatureTokens": [
             {
               "text": "velocity",
@@ -485,7 +601,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Vector",
+              "text": "SpatialPoint",
               "kind": "type"
             },
             {
@@ -493,40 +609,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "{ ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "x",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": "; ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "y",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": " }",
-              "kind": "punctuation"
+              "text": "Vector",
+              "kind": "type"
             }
           ],
           "params": [],
