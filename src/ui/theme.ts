@@ -106,7 +106,7 @@ export type UISkinSet = { readonly normal: UISkin } & Partial<Readonly<Record<Ex
  * A themed surface. Roles are per painted surface, not per widget class: a
  * progress bar draws its track and its fill from two independent roles.
  */
-export type UIThemeRole = 'panel' | 'button' | 'label' | 'progressBarTrack' | 'progressBarFill';
+export type UIThemeRole = 'panel' | 'button' | 'label' | 'progressBarTrack' | 'progressBarFill' | 'scrollbarTrack' | 'scrollbarThumb';
 
 /** Skins for every role, as resolved for a widget. */
 export type UITheme = Readonly<Record<UIThemeRole, UISkinSet>>;
@@ -215,6 +215,14 @@ export const defaultUITheme: UITheme = {
   },
   progressBarFill: {
     normal: skin(fill(new Color(80, 220, 120, 1), 4)),
+  },
+  scrollbarTrack: {
+    normal: skin(fill(new Color(255, 255, 255, 0.08), 6)),
+  },
+  scrollbarThumb: {
+    normal: skin(fill(new Color(255, 255, 255, 0.28), 6)),
+    hover: skin(fill(new Color(255, 255, 255, 0.42), 6)),
+    pressed: skin(fill(new Color(255, 255, 255, 0.56), 6)),
   },
 };
 

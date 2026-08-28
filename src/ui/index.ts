@@ -7,6 +7,8 @@ export type { PanelOptions } from './Panel';
 export { Panel } from './Panel';
 export type { ProgressBarFillMode, ProgressBarOptions } from './ProgressBar';
 export { ProgressBar } from './ProgressBar';
+export type { ScrollbarOptions, ScrollbarOrientation, ScrollbarVisibility } from './Scrollbar';
+export { Scrollbar } from './Scrollbar';
 export type { ScrollContainerOptions, ScrollDirection } from './ScrollContainer';
 export { ScrollContainer } from './ScrollContainer';
 export type { StackAlign, StackDirection, StackOptions } from './Stack';

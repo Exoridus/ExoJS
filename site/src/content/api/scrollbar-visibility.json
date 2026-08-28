@@ -1,0 +1,79 @@
+{
+  "title": "ScrollbarVisibility",
+  "description": "When a scrollbar is shown - see ScrollContainer.",
+  "symbol": "ScrollbarVisibility",
+  "kind": "type",
+  "subsystem": "ui",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "When a scrollbar is shown - see ScrollContainer."
+      ],
+      "importLine": "import { ScrollbarVisibility } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ScrollbarVisibility",
+          "signature": "\"always\" | \"auto\" | \"never\"",
+          "signatureTokens": [
+            {
+              "text": "\"always\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"auto\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"never\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/ui/Scrollbar.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Scrollbar.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/ui/Scrollbar.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Scrollbar.ts"
+}

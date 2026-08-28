@@ -1,17 +1,17 @@
 {
-  "title": "ScrollContainer",
-  "description": "Clipped container that scrolls its content with the mouse wheel or its scrollbars. Add child nodes to ScrollContainer.content rather than to the `ScrollContainer` itself. The content container is offset as the user scrolls, while the outer widget is clipped to its declared `width` × `height`. Scrollbars overlay the content rather than shrinking it, so the visible box stays the size it was declared at whether or not a bar is showing. With the default `'auto'` policy a bar appears only while its axis actually overflows; `'always'` keeps it, and `'never'` builds none at all. They paint the `scrollbarTrack` and `scrollbarThumb` roles of the inherited theme. The scroll range follows what the content holds: adding or removing an item updates it. A change the container cannot observe - a child of the content that resized itself - needs ScrollContainer.refresh. Mouse-wheel events from the global InputManager are consumed only when the pointer is within the widget's bounds. The container subscribes to the app's `onMouseWheel` signal when it enters the scene tree, and unsubscribes on detach.",
-  "symbol": "ScrollContainer",
+  "title": "Scrollbar",
+  "description": "Scroll position indicator with a draggable thumb, painting the `scrollbarTrack` and `scrollbarThumb` roles of its inherited theme. A scrollbar reports a position rather than applying one: dragging the thumb fires Scrollbar.onScroll with the new value and paints it, and the owner decides what to scroll. ScrollContainer wires that up itself, so a bar is only constructed directly to drive something else. The range comes from Scrollbar.setRange: how much is visible against how much there is. The thumb's length is the ratio of the two, never shorter than `minThumbLength`, and Scrollbar.overflowing is `false` while everything fits.",
+  "symbol": "Scrollbar",
   "kind": "class",
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 128,
+  "memberCount": 129,
   "counts": {
     "constructors": 1,
-    "methods": 61,
-    "properties": 52,
-    "events": 14
+    "methods": 59,
+    "properties": 54,
+    "events": 15
   },
   "sections": [
     {
@@ -19,13 +19,11 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Clipped container that scrolls its content with the mouse wheel or its scrollbars.",
-        "Add child nodes to ScrollContainer.content rather than to the `ScrollContainer` itself. The content container is offset as the user scrolls, while the outer widget is clipped to its declared `width` × `height`.",
-        "Scrollbars overlay the content rather than shrinking it, so the visible box stays the size it was declared at whether or not a bar is showing. With the default `'auto'` policy a bar appears only while its axis actually overflows; `'always'` keeps it, and `'never'` builds none at all. They paint the `scrollbarTrack` and `scrollbarThumb` roles of the inherited theme.",
-        "The scroll range follows what the content holds: adding or removing an item updates it. A change the container cannot observe - a child of the content that resized itself - needs ScrollContainer.refresh.",
-        "Mouse-wheel events from the global InputManager are consumed only when the pointer is within the widget's bounds. The container subscribes to the app's `onMouseWheel` signal when it enters the scene tree, and unsubscribes on detach."
+        "Scroll position indicator with a draggable thumb, painting the `scrollbarTrack` and `scrollbarThumb` roles of its inherited theme.",
+        "A scrollbar reports a position rather than applying one: dragging the thumb fires Scrollbar.onScroll with the new value and paints it, and the owner decides what to scroll. ScrollContainer wires that up itself, so a bar is only constructed directly to drive something else.",
+        "The range comes from Scrollbar.setRange: how much is visible against how much there is. The thumb's length is the ratio of the two, never shorter than `minThumbLength`, and Scrollbar.overflowing is `false` while everything fits."
       ],
-      "importLine": "import { ScrollContainer } from '@codexo/exojs'",
+      "importLine": "import { Scrollbar } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -34,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(options: ScrollContainerOptions): ScrollContainer",
+          "signature": "new(options: ScrollbarOptions): Scrollbar",
           "signatureTokens": [
             {
               "text": "new",
@@ -53,7 +51,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "ScrollContainerOptions",
+              "text": "ScrollbarOptions",
               "kind": "type"
             },
             {
@@ -65,18 +63,18 @@
               "kind": "punctuation"
             },
             {
-              "text": "ScrollContainer",
+              "text": "Scrollbar",
               "kind": "type"
             }
           ],
           "params": [
             {
               "name": "options",
-              "type": "ScrollContainerOptions",
+              "type": "ScrollbarOptions",
               "optional": false
             }
           ],
-          "returnType": "ScrollContainer",
+          "returnType": "Scrollbar",
           "description": ""
         }
       ],
@@ -1054,7 +1052,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "A point only hits this widget when it both falls within the viewport AND lands on a visible child (Container.contains's child-union check) - a scrolled-out child's own geometry no longer makes the ScrollContainer itself claim a point far outside what is actually rendered."
+          "description": "Hit-test the world-space point (x, y) against this node. For world-axis-aligned nodes (own and inherited rotation a multiple of 90° and no skew) the AABB equals the oriented box, so the cheap getBounds test is exact. For rotated or skewed nodes the point is mapped back into local space with the inverse of the global transform and tested against the untransformed getLocalBounds - i.e. a true oriented-box test. This is the exact inverse of the forward map that getBounds and the renderer use to place the node's corners, so picking matches the rendered quad instead of over-reporting hits in the empty AABB corners of a rotated node."
         },
         {
           "name": "destroy",
@@ -1697,35 +1695,6 @@
           "description": "Project this shape onto axis and write the scalar min/max into interval. Used internally by the SAT solver."
         },
         {
-          "name": "refresh",
-          "signature": "refresh(): this",
-          "signatureTokens": [
-            {
-              "text": "refresh",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "this",
-          "description": "Re-measure the content and update the scroll range and the scrollbars. Adding and removing content does this on its own; this is for the change the container cannot observe - a child of the content that resized itself."
-        },
-        {
           "name": "removeChild",
           "signature": "removeChild(child: RenderNode): this",
           "signatureTokens": [
@@ -2029,218 +1998,6 @@
           "description": ""
         },
         {
-          "name": "scrollBy",
-          "signature": "scrollBy(dx: number, dy: number): void",
-          "signatureTokens": [
-            {
-              "text": "scrollBy",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "dx",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "dy",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "dx",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "dy",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
-          "description": "Scroll by (dx, dy) pixels, clamped to the scrollable content range. Positive values scroll right / down; negative values scroll left / up."
-        },
-        {
-          "name": "scrollTo",
-          "signature": "scrollTo(x: number, y: number): void",
-          "signatureTokens": [
-            {
-              "text": "scrollTo",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "x",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "y",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "x",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "y",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
-          "description": "Scroll to an absolute (x, y) position in pixels, clamped to the content range so the content never scrolls past its edges."
-        },
-        {
-          "name": "setBackground",
-          "signature": "setBackground(background: UIBackgroundInput | null, options: UIBackgroundOptions): this",
-          "signatureTokens": [
-            {
-              "text": "setBackground",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "background",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "UIBackgroundInput",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "UIBackgroundOptions",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "background",
-              "type": "UIBackgroundInput | null",
-              "optional": false
-            },
-            {
-              "name": "options",
-              "type": "UIBackgroundOptions",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Set the surface painted behind the content from a colour, a texture, a region or a descriptor; null returns the container to transparent."
-        },
-        {
           "name": "setChildIndex",
           "signature": "setChildIndex(child: RenderNode, index: number): this",
           "signatureTokens": [
@@ -2307,6 +2064,53 @@
           ],
           "returnType": "this",
           "description": ""
+        },
+        {
+          "name": "setLength",
+          "signature": "setLength(length: number): this",
+          "signatureTokens": [
+            {
+              "text": "setLength",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "length",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "length",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Size the bar along its axis; the thickness fills the other one."
         },
         {
           "name": "setOrigin",
@@ -2443,6 +2247,74 @@
           ],
           "returnType": "this",
           "description": ""
+        },
+        {
+          "name": "setRange",
+          "signature": "setRange(viewportLength: number, contentLength: number): this",
+          "signatureTokens": [
+            {
+              "text": "setRange",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "viewportLength",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "contentLength",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "viewportLength",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "contentLength",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Declare how much of how much is visible; re-clamps the offset."
         },
         {
           "name": "setRotation",
@@ -2945,7 +2817,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": "Bounds this widget to its declared viewport - (0, 0, uiWidth, uiHeight) in world space - instead of Container.updateBounds's default union of content's (scrolled, often far larger) child extent. This is what ScrollContainer.clip clips descendants to (a null clipShape clips to getBounds()) and what mouse-wheel routing gates on, so both now agree with what is actually visible instead of the full, unclipped content extent."
+          "description": ""
         },
         {
           "name": "updateParentTransform",
@@ -3097,27 +2969,6 @@
           "params": [],
           "returnType": null,
           "description": ""
-        },
-        {
-          "name": "content",
-          "signature": "content: Container",
-          "signatureTokens": [
-            {
-              "text": "content",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Container",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Add children here - not to the ScrollContainer itself."
         },
         {
           "name": "cursor",
@@ -3274,64 +3125,6 @@
           "description": "Tab-traversal order among focusable nodes in the same focus scope. Lower values are visited first; equal values keep document (tree) order."
         },
         {
-          "name": "background",
-          "signature": "background: UIBackground | null",
-          "signatureTokens": [
-            {
-              "text": "background",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "UIBackground",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "The background this container paints, or null while it paints none."
-        },
-        {
-          "name": "backgroundNode",
-          "signature": "backgroundNode: BackgroundNode | null",
-          "signatureTokens": [
-            {
-              "text": "backgroundNode",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "BackgroundNode",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "The node painting the background, or null while it paints nothing."
-        },
-        {
           "name": "bottom",
           "signature": "bottom: number",
           "signatureTokens": [
@@ -3486,6 +3279,27 @@
           "description": "Clip region used when clip is true. A Rectangle (or null for the node's bounds) maps to the scissor fast path; a Geometry maps to the stencil path. Has no effect while clip is false."
         },
         {
+          "name": "contentLength",
+          "signature": "contentLength: number",
+          "signatureTokens": [
+            {
+              "text": "contentLength",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How much content there is along the axis, in pixels."
+        },
+        {
           "name": "cullable",
           "signature": "cullable: boolean",
           "signatureTokens": [
@@ -3557,11 +3371,11 @@
           "description": "true once destroy has run on this node. A destroyed node has released its pooled resources (transform/bounds), has been unlinked from its parent, renders nothing, and must not be reused or re-attached. The render plan skips a destroyed node, so even one handed straight to a renderer as a detached root contributes nothing."
         },
         {
-          "name": "direction",
-          "signature": "direction: ScrollDirection",
+          "name": "dragging",
+          "signature": "dragging: boolean",
           "signatureTokens": [
             {
-              "text": "direction",
+              "text": "dragging",
               "kind": "name"
             },
             {
@@ -3569,13 +3383,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "ScrollDirection",
-              "kind": "type"
+              "text": "boolean",
+              "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "The axis (or axes) this container scrolls along. Fixed at construction."
+          "description": "Whether the thumb is being dragged right now."
         },
         {
           "name": "effectiveEnabled",
@@ -3674,35 +3488,6 @@
           "description": "Rendered height of the whole subtree - see width."
         },
         {
-          "name": "horizontalScrollbar",
-          "signature": "horizontalScrollbar: Scrollbar | null",
-          "signatureTokens": [
-            {
-              "text": "horizontalScrollbar",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Scrollbar",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "The horizontal scrollbar, or null when this container has none."
-        },
-        {
           "name": "interactive",
           "signature": "interactive: boolean",
           "signatureTokens": [
@@ -3766,6 +3551,27 @@
           "description": "Leftmost edge of the subtree in the node's global-transform space. These four edges are read straight off the aggregate bounds so they always span exactly width/height and agree with each other. They cannot be reconstructed from position and origin: origin is in local pixels and a container's own local bounds are empty, so the rendered extent comes entirely from the children."
         },
         {
+          "name": "length",
+          "signature": "length: number",
+          "signatureTokens": [
+            {
+              "text": "length",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Extent along the axis, in pixels."
+        },
+        {
           "name": "mask",
           "signature": "mask: MaskSource",
           "signatureTokens": [
@@ -3787,6 +3593,69 @@
           "description": "The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself). Indirect cycles (a.mask = b; b.mask = a) are rejected as well: the candidate's mask chain is walked and any cycle - whether it closes on this or was already present in the chain - fails the assignment."
         },
         {
+          "name": "maxOffset",
+          "signature": "maxOffset: number",
+          "signatureTokens": [
+            {
+              "text": "maxOffset",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The largest offset the content can be scrolled to; 0 while it fits."
+        },
+        {
+          "name": "offset",
+          "signature": "offset: number",
+          "signatureTokens": [
+            {
+              "text": "offset",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Current scroll offset in content pixels, clamped to [0, maxOffset]."
+        },
+        {
+          "name": "orientation",
+          "signature": "orientation: ScrollbarOrientation",
+          "signatureTokens": [
+            {
+              "text": "orientation",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ScrollbarOrientation",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The axis this bar runs along. Fixed at construction."
+        },
+        {
           "name": "origin",
           "signature": "origin: ObservableVector",
           "signatureTokens": [
@@ -3806,6 +3675,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "overflowing",
+          "signature": "overflowing: boolean",
+          "signatureTokens": [
+            {
+              "text": "overflowing",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the content exceeds the viewport, and so whether the bar has anything to show."
         },
         {
           "name": "parent",
@@ -3940,69 +3830,6 @@
           "params": [],
           "returnType": null,
           "description": ""
-        },
-        {
-          "name": "scrollbars",
-          "signature": "scrollbars: ScrollbarVisibility",
-          "signatureTokens": [
-            {
-              "text": "scrollbars",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ScrollbarVisibility",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "When the scrollbars are shown. Fixed at construction."
-        },
-        {
-          "name": "scrollX",
-          "signature": "scrollX: number",
-          "signatureTokens": [
-            {
-              "text": "scrollX",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Current horizontal scroll position in pixels."
-        },
-        {
-          "name": "scrollY",
-          "signature": "scrollY: number",
-          "signatureTokens": [
-            {
-              "text": "scrollY",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Current vertical scroll position in pixels."
         },
         {
           "name": "skewX",
@@ -4197,6 +4024,48 @@
           "description": "This widget's own theme overrides, or null when it purely inherits."
         },
         {
+          "name": "thickness",
+          "signature": "thickness: number",
+          "signatureTokens": [
+            {
+              "text": "thickness",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Extent across the axis, in pixels."
+        },
+        {
+          "name": "thumbNode",
+          "signature": "thumbNode: Widget",
+          "signatureTokens": [
+            {
+              "text": "thumbNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Widget",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The widget painting the thumb."
+        },
+        {
           "name": "top",
           "signature": "top: number",
           "signatureTokens": [
@@ -4216,6 +4085,35 @@
           "params": [],
           "returnType": null,
           "description": "Topmost edge of the subtree - see left."
+        },
+        {
+          "name": "trackNode",
+          "signature": "trackNode: BackgroundNode | null",
+          "signatureTokens": [
+            {
+              "text": "trackNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BackgroundNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node painting the track, or null while it paints nothing."
         },
         {
           "name": "uiHeight",
@@ -4260,11 +4158,11 @@
           "description": "Explicit layout width in pixels (not derived from children or scale)."
         },
         {
-          "name": "verticalScrollbar",
-          "signature": "verticalScrollbar: Scrollbar | null",
+          "name": "viewportLength",
+          "signature": "viewportLength: number",
           "signatureTokens": [
             {
-              "text": "verticalScrollbar",
+              "text": "viewportLength",
               "kind": "name"
             },
             {
@@ -4272,21 +4170,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "Scrollbar",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
+              "text": "number",
               "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "The vertical scrollbar, or null when this container has none."
+          "description": "How much of the content is visible at once, in pixels."
         },
         {
           "name": "visible",
@@ -4402,6 +4292,55 @@
       "id": "events",
       "title": "Events",
       "members": [
+        {
+          "name": "onScroll",
+          "signature": "onScroll: Signal<[offset, scrollbar]>",
+          "signatureTokens": [
+            {
+              "text": "onScroll",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "offset",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "scrollbar",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires with the offset a thumb drag arrived at, in content pixels."
+        },
         {
           "name": "onBlur",
           "signature": "onBlur: Signal<[RenderNode]>",
@@ -4988,11 +4927,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/ui/ScrollContainer.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/ScrollContainer.ts"
+        "label": "src/ui/Scrollbar.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Scrollbar.ts"
       }
     }
   ],
-  "sourcePath": "src/ui/ScrollContainer.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/ScrollContainer.ts"
+  "sourcePath": "src/ui/Scrollbar.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Scrollbar.ts"
 }

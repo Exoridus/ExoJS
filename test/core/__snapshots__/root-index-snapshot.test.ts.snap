@@ -195,6 +195,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "SceneTransition",
   "SceneTransitionLifecycleError",
   "ScrollContainer",
+  "Scrollbar",
   "SequenceAction",
   "SerializationRegistry",
   "Shader",

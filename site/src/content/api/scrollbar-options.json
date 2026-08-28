@@ -1,0 +1,125 @@
+{
+  "title": "ScrollbarOptions",
+  "description": "Options for Scrollbar.",
+  "symbol": "ScrollbarOptions",
+  "kind": "interface",
+  "subsystem": "ui",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for Scrollbar."
+      ],
+      "importLine": "import { ScrollbarOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "minThumbLength",
+          "signature": "minThumbLength?: number",
+          "signatureTokens": [
+            {
+              "text": "minThumbLength",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Smallest thumb extent in pixels, so a long content list keeps a grabbable thumb. Default 24."
+        },
+        {
+          "name": "orientation",
+          "signature": "orientation?: ScrollbarOrientation",
+          "signatureTokens": [
+            {
+              "text": "orientation",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ScrollbarOrientation",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Axis the bar runs along. Default 'vertical'."
+        },
+        {
+          "name": "thickness",
+          "signature": "thickness?: number",
+          "signatureTokens": [
+            {
+              "text": "thickness",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Extent across the axis, in pixels. Default 12."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/ui/Scrollbar.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Scrollbar.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/ui/Scrollbar.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Scrollbar.ts"
+}

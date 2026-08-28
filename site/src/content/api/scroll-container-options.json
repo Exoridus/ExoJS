@@ -6,11 +6,11 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 3,
+  "memberCount": 10,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 3,
+    "properties": 10,
     "events": 0
   },
   "sections": [
@@ -28,6 +28,76 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "background",
+          "signature": "background?: UIBackgroundInput",
+          "signatureTokens": [
+            {
+              "text": "background",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIBackgroundInput",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "A surface painted behind the content, stated as a colour, a texture, a region or a descriptor. Absent leaves the container transparent."
+        },
+        {
+          "name": "border",
+          "signature": "border?: Partial<NineSliceInsets> | number",
+          "signatureTokens": [
+            {
+              "text": "border",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NineSliceInsets",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Destination border widths for a texture background; defaults to slices."
+        },
         {
           "name": "direction",
           "signature": "direction?: ScrollDirection",
@@ -54,6 +124,31 @@
           "description": "Scroll axis. Default 'vertical'."
         },
         {
+          "name": "fit",
+          "signature": "fit?: UISpriteFit",
+          "signatureTokens": [
+            {
+              "text": "fit",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UISpriteFit",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Paint a texture background flat with this fit instead of slicing it."
+        },
+        {
           "name": "height",
           "signature": "height: number",
           "signatureTokens": [
@@ -73,6 +168,126 @@
           "params": [],
           "returnType": null,
           "description": "Visible height in pixels."
+        },
+        {
+          "name": "modes",
+          "signature": "modes?: NineSliceModes",
+          "signatureTokens": [
+            {
+              "text": "modes",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NineSliceModes",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "scrollbars",
+          "signature": "scrollbars?: ScrollbarVisibility",
+          "signatureTokens": [
+            {
+              "text": "scrollbars",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ScrollbarVisibility",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When the scrollbars are shown. Default 'auto'."
+        },
+        {
+          "name": "scrollbarThickness",
+          "signature": "scrollbarThickness?: number",
+          "signatureTokens": [
+            {
+              "text": "scrollbarThickness",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Scrollbar extent across its axis, in pixels. Default 12."
+        },
+        {
+          "name": "slices",
+          "signature": "slices?: Partial<NineSliceInsets> | number",
+          "signatureTokens": [
+            {
+              "text": "slices",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NineSliceInsets",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Source-texture slice widths for a texture background; defaults to a third per axis."
         },
         {
           "name": "width",

@@ -12,7 +12,7 @@ import Callout from '../../../components/Callout.astro';
 
 Every scene owns a screen-fixed UI layer, [`scene.ui`](/ExoJS/en/api/uiroot/), that is rendered automatically on top of the world. It lives in screen space (origin top-left, `0..width` × `0..height`), so its contents never scroll or zoom with the camera. Add anything to it with `scene.ui.addChild(...)`.
 
-On top of that layer, ExoJS ships a small set of widgets — [`Panel`](/ExoJS/en/api/panel/), [`Button`](/ExoJS/en/api/button/), [`Label`](/ExoJS/en/api/label/), [`ProgressBar`](/ExoJS/en/api/progress-bar/), a [`Stack`](/ExoJS/en/api/stack/) layout container, a [`ScrollContainer`](/ExoJS/en/api/scroll-container/) for overflowing content, and a hover [`Tooltip`](/ExoJS/en/api/tooltip/) helper — for HUDs, menus, and pause screens without hand-built hit-tests.
+On top of that layer, ExoJS ships a small set of widgets — [`Panel`](/ExoJS/en/api/panel/), [`Button`](/ExoJS/en/api/button/), [`Label`](/ExoJS/en/api/label/), [`ProgressBar`](/ExoJS/en/api/progress-bar/), a [`Stack`](/ExoJS/en/api/stack/) layout container, a [`ScrollContainer`](/ExoJS/en/api/scroll-container/) with [`Scrollbar`](/ExoJS/en/api/scrollbar/)s for overflowing content, and a hover [`Tooltip`](/ExoJS/en/api/tooltip/) helper — for HUDs, menus, and pause screens without hand-built hit-tests.
 
 ## Building blocks
 
@@ -37,7 +37,7 @@ A `Label` wraps a runtime [`Text`](/ExoJS/en/api/text/), so it accepts the same 
 
 ## Theming
 
-A widget does not carry its own colours: it paints a **skin** it resolves from the theme of the nearest themed ancestor — the layer's [`UIRoot`](/ExoJS/en/api/uiroot/), or any widget above it that set overrides. A [`UITheme`](/ExoJS/en/api/uitheme/) holds one [`UISkinSet`](/ExoJS/en/api/uiskin-set/) per role (`panel`, `button`, `label`, `progressBarTrack`, `progressBarFill`), and each skin carries a [`UIBackground`](/ExoJS/en/api/uibackground/) descriptor, a text style, and insets. Insets are layout input, so a theme change re-lays out as well as repaints.
+A widget does not carry its own colours: it paints a **skin** it resolves from the theme of the nearest themed ancestor — the layer's [`UIRoot`](/ExoJS/en/api/uiroot/), or any widget above it that set overrides. A [`UITheme`](/ExoJS/en/api/uitheme/) holds one [`UISkinSet`](/ExoJS/en/api/uiskin-set/) per role (`panel`, `button`, `label`, `progressBarTrack`, `progressBarFill`, `scrollbarTrack`, `scrollbarThumb`), and each skin carries a [`UIBackground`](/ExoJS/en/api/uibackground/) descriptor, a text style, and insets. Insets are layout input, so a theme change re-lays out as well as repaints.
 
 `createUITheme` resolves a patch against the built-in default, which reproduces the widgets' stock look. Assign the result to `scene.ui.theme` to restyle a whole layer, or call `widget.setTheme(patch)` to restyle one subtree:
 
@@ -163,6 +163,14 @@ A `ScrollContainer` clips its content to a fixed `width` × `height` and scrolls
 />
 
 `scroll.scrollTo(x, y)` and `scroll.scrollBy(dx, dy)` move the content programmatically, clamped so it never scrolls past its edges; `direction` restricts the wheel to `'vertical'`, `'horizontal'`, or `'both'`.
+
+A container paints a [`Scrollbar`](/ExoJS/en/api/scrollbar/) per scrollable axis, themed through the `scrollbarTrack` and `scrollbarThumb` roles. The bars overlay the content instead of shrinking it, so the visible box stays the size you declared. `scrollbars` decides when they show:
+
+- `'auto'` (the default) shows a bar only while its axis actually overflows,
+- `'always'` keeps it visible as a permanent affordance,
+- `'never'` builds none at all, leaving the wheel and `scrollTo` as the only way to move.
+
+Dragging a thumb scrolls the content, and scrolling by any other means moves the thumb. The range follows what `scroll.content` holds — adding or removing an item updates it. A child that resized *itself* is the one change the container cannot observe; call `scroll.refresh()` after it.
 
 <Callout type="pitfall" title="Items go on scroll.content, not the container">
 Parent scrollable items to `scroll.content`, never to the `ScrollContainer` itself. Children added straight to the container sit outside the clipped, scrolling region — they render at a fixed spot and ignore the wheel.

@@ -1,4 +1,4 @@
-import { Button, DockContainer, Keyboard, Label, Panel, ProgressBar, Scene, ScrollContainer, Stack, Tooltip } from '@codexo/exojs';
+import { Button, Color, DockContainer, Keyboard, Label, Panel, ProgressBar, Scene, ScrollContainer, Stack, Tooltip } from '@codexo/exojs';
 
 // #region guide:anchoring
 class HudScene extends Scene {
@@ -56,7 +56,13 @@ class DockedHudScene extends Scene {
 // #region guide:scrolling
 class InventoryScene extends Scene {
   override init(): void {
-    const scroll = new ScrollContainer({ width: 280, height: 320, direction: 'vertical' });
+    const scroll = new ScrollContainer({
+      width: 280,
+      height: 320,
+      direction: 'vertical',
+      background: new Color(20, 24, 32, 0.9),
+      scrollbars: 'auto',
+    });
     scroll.anchorIn(this.ui, 'center');
 
     for (let i = 0; i < 20; i++) {
