@@ -1,10 +1,19 @@
-import type { Color } from '#core/Color';
+import { Color } from '#core/Color';
 import { clamp } from '#math/utils';
 
-import type { UIBackground, UIFillPatch } from './theme';
-import { applyUIFillPatch } from './theme';
+import type { UIBackground, UIBackgroundInput, UIBackgroundOptions, UIFillPatch } from './theme';
+import { applyUIFillPatch, backgroundOptionsFrom, createUIBackground } from './theme';
+import { UIClipBox } from './UIClipBox';
 import { Widget } from './Widget';
 import { WidgetBackground } from './WidgetBackground';
+
+/**
+ * How the bar follows the value: `'scale'` paints the background at the value's
+ * width, `'clip'` paints it at full width and shows the leading fraction of it.
+ * Clipping is what keeps textured art undistorted; a fill has nothing to
+ * distort, so it is always painted at the value's width.
+ */
+export type ProgressBarFillMode = 'scale' | 'clip';
 
 export interface ProgressBarOptions {
   width?: number;
@@ -14,6 +23,19 @@ export interface ProgressBarOptions {
   trackColor?: Color;
   fillColor?: Color;
   cornerRadius?: number;
+  /** The groove's background, stated as a colour, a texture, a region or a descriptor. */
+  trackBackground?: UIBackgroundInput;
+  /** The bar's background, stated as a colour, a texture, a region or a descriptor. */
+  barBackground?: UIBackgroundInput;
+  /** How the bar follows the value. Default `'clip'`. */
+  fillMode?: ProgressBarFillMode;
+  /** Source-texture slice widths for textured backgrounds; defaults to a third per axis. */
+  slices?: UIBackgroundOptions['slices'];
+  /** Destination border widths for textured backgrounds; defaults to `slices`. */
+  border?: UIBackgroundOptions['border'];
+  modes?: UIBackgroundOptions['modes'];
+  /** Paint textured backgrounds flat with this fit instead of slicing them. */
+  fit?: UIBackgroundOptions['fit'];
 }
 
 /**
@@ -25,19 +47,38 @@ export interface ProgressBarOptions {
  */
 export class ProgressBar extends Widget {
   private readonly _track = new WidgetBackground(this, 0);
-  private readonly _bar = new WidgetBackground(this, 1);
+  private readonly _barBox = new UIClipBox();
+  private readonly _bar = new WidgetBackground(this._barBox, 0);
   private _trackBackground: UIBackground | null = null;
   private _barBackground: UIBackground | null = null;
   private _trackFill: UIFillPatch | null = null;
   private _barFill: UIFillPatch | null = null;
   private _value: number;
+  private _fillMode: ProgressBarFillMode;
 
   public constructor(options: ProgressBarOptions = {}) {
     super();
 
     this._value = clamp(options.value ?? 0, 0, 1);
+    this._fillMode = options.fillMode ?? 'clip';
     this._trackFill = fillPatchFrom(options.trackColor, options.cornerRadius);
     this._barFill = fillPatchFrom(options.fillColor, options.cornerRadius);
+
+    this.addChild(this._barBox);
+
+    const backgroundOptions = backgroundOptionsFrom(options);
+
+    if (options.trackBackground !== undefined) {
+      this._trackBackground = normalizeBackground(options.trackBackground, backgroundOptions, patch => {
+        this._trackFill = { ...this._trackFill, ...patch };
+      });
+    }
+
+    if (options.barBackground !== undefined) {
+      this._barBackground = normalizeBackground(options.barBackground, backgroundOptions, patch => {
+        this._barFill = { ...this._barFill, ...patch };
+      });
+    }
 
     this.setSize(options.width ?? 200, options.height ?? 12);
   }
@@ -54,6 +95,33 @@ export class ProgressBar extends Widget {
       this._value = next;
       this._paintBar();
     }
+  }
+
+  /** How the bar follows the value. */
+  public get fillMode(): ProgressBarFillMode {
+    return this._fillMode;
+  }
+
+  public set fillMode(mode: ProgressBarFillMode) {
+    if (this._fillMode !== mode) {
+      this._fillMode = mode;
+      this._paintBar();
+    }
+  }
+
+  /** The node painting the groove, or `null` while it paints nothing. */
+  public get trackNode(): WidgetBackground['node'] {
+    return this._track.node;
+  }
+
+  /** The node painting the bar, or `null` while it paints nothing. */
+  public get barNode(): WidgetBackground['node'] {
+    return this._bar.node;
+  }
+
+  /** Width in pixels of the bar that is actually visible: `uiWidth * value`. */
+  public get barVisibleWidth(): number {
+    return this._uiWidth * this._value;
   }
 
   /** The background painted behind the bar. */
@@ -108,17 +176,35 @@ export class ProgressBar extends Widget {
     return this;
   }
 
-  /** Replace the track's whole background descriptor; `null` restores the skin's. */
-  public setTrackBackground(background: UIBackground | null): this {
-    this._trackBackground = background;
+  /**
+   * Set the groove's background from a colour, a texture, a region or a full
+   * descriptor; `null` returns it to its skin. A colour becomes a fill
+   * override, so the skin's corner radius survives it.
+   */
+  public setTrackBackground(background: UIBackgroundInput | null, options: UIBackgroundOptions = {}): this {
+    this._trackBackground =
+      background === null
+        ? null
+        : normalizeBackground(background, options, patch => {
+            this._trackFill = { ...this._trackFill, ...patch };
+          });
     this._invalidateLayout();
 
     return this;
   }
 
-  /** Replace the bar's whole background descriptor; `null` restores the skin's. */
-  public setBarBackground(background: UIBackground | null): this {
-    this._barBackground = background;
+  /**
+   * Set the bar's background from a colour, a texture, a region or a full
+   * descriptor; `null` returns it to its skin. A colour becomes a fill
+   * override, so the skin's corner radius survives it.
+   */
+  public setBarBackground(background: UIBackgroundInput | null, options: UIBackgroundOptions = {}): this {
+    this._barBackground =
+      background === null
+        ? null
+        : normalizeBackground(background, options, patch => {
+            this._barFill = { ...this._barFill, ...patch };
+          });
     this._invalidateLayout();
 
     return this;
@@ -130,15 +216,35 @@ export class ProgressBar extends Widget {
   }
 
   private _paintBar(): void {
-    this._bar.apply(this.barBackground, this._uiWidth * this._value, this._uiHeight);
+    const background = this.barBackground;
+    // A fill has no art to distort, so it is drawn at the value's width in
+    // either mode - which keeps the default bar off the clipping path, and so
+    // clear of the render barrier a clip imposes.
+    const clipped = this._fillMode === 'clip' && background.kind !== 'fill';
+
+    this._bar.apply(background, clipped ? this._uiWidth : this.barVisibleWidth, this._uiHeight);
+    this._barBox.clip = clipped;
+    this._barBox.setClipSize(clipped ? this.barVisibleWidth : this._uiWidth, this._uiHeight);
   }
 
   public override destroy(): void {
     this._track.destroy();
     this._bar.destroy();
+    this._barBox.destroy();
     super.destroy();
   }
 }
+
+/** Turn a background input into a descriptor, routing a colour to `applyFill` instead. */
+const normalizeBackground = (background: UIBackgroundInput, options: UIBackgroundOptions, applyFill: (patch: UIFillPatch) => void): UIBackground | null => {
+  if (background instanceof Color) {
+    applyFill({ color: background });
+
+    return null;
+  }
+
+  return createUIBackground(background, options);
+};
 
 /** The fill overrides a colour and radius pair asks for, or `null` for none. */
 const fillPatchFrom = (color: Color | undefined, cornerRadius: number | undefined): UIFillPatch | null => {

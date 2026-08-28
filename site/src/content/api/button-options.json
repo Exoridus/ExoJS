@@ -6,11 +6,11 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 10,
+  "memberCount": 15,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 10,
+    "properties": 15,
     "events": 0
   },
   "sections": [
@@ -26,6 +26,51 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "border",
+          "signature": "border?: Partial<NineSliceInsets> | number",
+          "signatureTokens": [
+            {
+              "text": "border",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NineSliceInsets",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Destination border widths for every textured skin entry; defaults to slices."
+        },
         {
           "name": "color",
           "signature": "color?: Color",
@@ -100,6 +145,31 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "fit",
+          "signature": "fit?: UISpriteFit",
+          "signatureTokens": [
+            {
+              "text": "fit",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UISpriteFit",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Paint textured skin entries flat with this fit instead of slicing them."
         },
         {
           "name": "fontSize",
@@ -202,6 +272,31 @@
           "description": ""
         },
         {
+          "name": "modes",
+          "signature": "modes?: NineSliceModes",
+          "signatureTokens": [
+            {
+              "text": "modes",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NineSliceModes",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "pressedColor",
           "signature": "pressedColor?: Color",
           "signatureTokens": [
@@ -225,6 +320,108 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "skin",
+          "signature": "skin?: Partial<Record<ButtonState, UIBackgroundInput>>",
+          "signatureTokens": [
+            {
+              "text": "skin",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ButtonState",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIBackgroundInput",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The background per state, each stated as a colour, a texture, a region or a full descriptor. States left out fall back to the theme's button skin."
+        },
+        {
+          "name": "slices",
+          "signature": "slices?: Partial<NineSliceInsets> | number",
+          "signatureTokens": [
+            {
+              "text": "slices",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NineSliceInsets",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Source-texture slice widths for every textured skin entry; defaults to a third per axis."
         },
         {
           "name": "textColor",

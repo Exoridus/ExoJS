@@ -1,7 +1,10 @@
 import type { RenderNode } from '#rendering/RenderNode';
 import { Button } from '#ui/Button';
+import type { DockRegion } from '#ui/DockContainer';
+import { DockContainer } from '#ui/DockContainer';
 import { Label } from '#ui/Label';
 import { Panel } from '#ui/Panel';
+import type { ProgressBarFillMode } from '#ui/ProgressBar';
 import { ProgressBar } from '#ui/ProgressBar';
 import { ScrollContainer, type ScrollDirection } from '#ui/ScrollContainer';
 import { Stack } from '#ui/Stack';
@@ -153,6 +156,8 @@ const buttonSerializer: NodeSerializer<Button> = {
 
 // ── ProgressBar ──────────────────────────────────────────────────────────────
 
+const isFillMode = (value: unknown): value is ProgressBarFillMode => value === 'scale' || value === 'clip';
+
 const progressBarSerializer: NodeSerializer<ProgressBar> = {
   write(node) {
     const { track, bar } = node.fillOverrides;
@@ -163,6 +168,7 @@ const progressBarSerializer: NodeSerializer<ProgressBar> = {
       ...serializeFillColor('trackColor', track),
       ...serializeFillColor('fillColor', bar),
       ...(track?.cornerRadius !== undefined && { cornerRadius: track.cornerRadius }),
+      ...(node.fillMode !== 'clip' && { fillMode: node.fillMode }),
     };
 
     if (!node.enabled) out.enabled = false;
@@ -178,6 +184,7 @@ const progressBarSerializer: NodeSerializer<ProgressBar> = {
         trackColor: arrayToColor(data.trackColor),
         fillColor: arrayToColor(data.fillColor),
         cornerRadius: num(data.cornerRadius),
+        fillMode: isFillMode(data.fillMode) ? data.fillMode : undefined,
       }),
     );
 
@@ -276,6 +283,52 @@ const stackSerializer: NodeSerializer<Stack> = {
   },
 };
 
+// ── DockContainer ───────────────────────────────────────────────────
+
+const dockRegions: readonly DockRegion[] = ['top', 'right', 'bottom', 'left', 'center'];
+
+const isDockRegion = (value: unknown): value is DockRegion => dockRegions.includes(value as DockRegion);
+
+const dockContainerSerializer: NodeSerializer<DockContainer> = {
+  write(node, ctx) {
+    const out: Record<string, unknown> = { width: node.uiWidth, height: node.uiHeight };
+
+    if (!node.enabled) out.enabled = false;
+
+    if (node.children.length > 0) {
+      out.children = node.children.map(child => ctx.writeNode(child));
+      // Regions live beside the children rather than inside their data: a child
+      // serializes itself, and where it happens to be docked is the container's
+      // business, not part of the child's own state.
+      out.regions = node.children.map(child => node.regionOf(child));
+    }
+
+    return out;
+  },
+  read(data, ctx) {
+    const dock = new DockContainer(compact({ width: num(data.width), height: num(data.height) }));
+
+    if (data.enabled === false) dock.enabled = false;
+
+    const children = data.children;
+    const regions = Array.isArray(data.regions) ? data.regions : [];
+
+    if (Array.isArray(children)) {
+      for (let index = 0; index < children.length; index++) {
+        const childNode = asSerializedNode(children[index]);
+
+        if (childNode !== null) {
+          const region: unknown = regions[index];
+
+          dock.dock(ctx.readNode(childNode) as RenderNode, isDockRegion(region) ? region : 'center');
+        }
+      }
+    }
+
+    return dock;
+  },
+};
+
 // ── UIRoot ───────────────────────────────────────────────────────────────────
 
 const uiRootSerializer: NodeSerializer<UIRoot> = {
@@ -308,5 +361,6 @@ export const registerUiSerializers = (registry: SerializationRegistry): void => 
   registry.register('ProgressBar', ProgressBar, progressBarSerializer);
   registry.register('ScrollContainer', ScrollContainer, scrollContainerSerializer);
   registry.register('Stack', Stack, stackSerializer);
+  registry.register('DockContainer', DockContainer, dockContainerSerializer);
   registry.register('UIRoot', UIRoot, uiRootSerializer);
 };

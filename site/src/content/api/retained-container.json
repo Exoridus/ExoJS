@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 94,
+  "memberCount": 95,
   "counts": {
     "constructors": 1,
-    "methods": 42,
+    "methods": 43,
     "properties": 37,
     "events": 14
   },
@@ -97,6 +97,35 @@
           "params": [],
           "returnType": "void",
           "description": "Own-transform mutations move the whole group: bump the group-matrix version and refresh ancestor bounds flags (the group's world AABB moved), but do NOT content-dirty the fragment - that decoupling is the entire point of the retained tier."
+        },
+        {
+          "name": "_onChildListChanged",
+          "signature": "_onChildListChanged(): void",
+          "signatureTokens": [
+            {
+              "text": "_onChildListChanged",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Called after this container's child list changed - an insert, a removal or a reorder - once the list and the caches derived from it are consistent again. Override in containers whose own state is derived from their children, such as a layout container that re-flows them."
         },
         {
           "name": "[iterator]",

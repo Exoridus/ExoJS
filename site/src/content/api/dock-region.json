@@ -1,7 +1,7 @@
 {
-  "title": "UIBackground",
-  "description": "How a widget paints its body.",
-  "symbol": "UIBackground",
+  "title": "DockRegion",
+  "description": "Where a DockContainer places a child.",
+  "symbol": "DockRegion",
   "kind": "type",
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "How a widget paints its body."
+        "Where a DockContainer places a child."
       ],
-      "importLine": "import { UIBackground } from '@codexo/exojs'",
+      "importLine": "import { DockRegion } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,36 +29,44 @@
       "title": "Definition",
       "members": [
         {
-          "name": "UIBackground",
-          "signature": "UIFillBackground | UINineSliceBackground | UINoBackground | UISpriteBackground",
+          "name": "DockRegion",
+          "signature": "\"bottom\" | \"center\" | \"left\" | \"right\" | \"top\"",
           "signatureTokens": [
             {
-              "text": "UIFillBackground",
-              "kind": "type"
+              "text": "\"bottom\"",
+              "kind": "keyword"
             },
             {
               "text": " | ",
               "kind": "punctuation"
             },
             {
-              "text": "UINineSliceBackground",
-              "kind": "type"
+              "text": "\"center\"",
+              "kind": "keyword"
             },
             {
               "text": " | ",
               "kind": "punctuation"
             },
             {
-              "text": "UINoBackground",
-              "kind": "type"
+              "text": "\"left\"",
+              "kind": "keyword"
             },
             {
               "text": " | ",
               "kind": "punctuation"
             },
             {
-              "text": "UISpriteBackground",
-              "kind": "type"
+              "text": "\"right\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"top\"",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -77,11 +85,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/ui/theme.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/theme.ts"
+        "label": "src/ui/DockContainer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/DockContainer.ts"
       }
     }
   ],
-  "sourcePath": "src/ui/theme.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/theme.ts"
+  "sourcePath": "src/ui/DockContainer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/DockContainer.ts"
 }

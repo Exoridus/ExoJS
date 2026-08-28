@@ -78,6 +78,7 @@ export abstract class Widget extends ThemedContainer {
       this._uiWidth = w;
       this._uiHeight = h;
       this._invalidateLayout();
+      this._requestParentLayout();
     }
 
     return this;
@@ -214,6 +215,26 @@ export abstract class Widget extends ThemedContainer {
     if (this._skinState !== state) {
       this._skinState = state;
       this._invalidatePaint();
+    }
+  }
+
+  /**
+   * React to a child widget's size change. Layout containers override it to
+   * re-flow; the default does nothing, so a widget that does not place its
+   * children pays nothing for a descendant resize.
+   */
+  protected _onChildResized(): void {
+    // Overridden by layout containers.
+  }
+
+  /** Tell the nearest Widget ancestor that this widget's layout size changed. */
+  private _requestParentLayout(): void {
+    for (let current = this.parent; current !== null; current = current.parent) {
+      if (current instanceof Widget) {
+        current._onChildResized();
+
+        return;
+      }
     }
   }
 

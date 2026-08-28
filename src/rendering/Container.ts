@@ -263,6 +263,7 @@ export class Container extends RenderNode {
 
     child._setStage(this._stage);
     this._stage?.interaction._notifyNodeAdded(child);
+    this._onChildListChanged();
 
     return this;
   }
@@ -282,8 +283,19 @@ export class Container extends RenderNode {
     this._invalidateChildOrder();
     this.invalidateCache();
     this._markStructureDirty();
+    this._onChildListChanged();
 
     return this;
+  }
+
+  /**
+   * Called after this container's child list changed - an insert, a removal or
+   * a reorder - once the list and the caches derived from it are consistent
+   * again. Override in containers whose own state is derived from their
+   * children, such as a layout container that re-flows them.
+   */
+  protected _onChildListChanged(): void {
+    // Overridden by containers that derive state from their child list.
   }
 
   /** Clamp an insert position against the CURRENT list length; `null` appends. */
@@ -301,6 +313,7 @@ export class Container extends RenderNode {
       this._invalidateChildOrder();
       this.invalidateCache();
       this._markStructureDirty();
+      this._onChildListChanged();
     }
 
     return this;
@@ -334,6 +347,7 @@ export class Container extends RenderNode {
     this._invalidateChildOrder();
     this.invalidateCache();
     this._markStructureDirty();
+    this._onChildListChanged();
 
     return this;
   }
@@ -380,6 +394,7 @@ export class Container extends RenderNode {
 
     this.invalidateCache();
     this._markStructureDirty();
+    this._onChildListChanged();
 
     return this;
   }
@@ -424,6 +439,7 @@ export class Container extends RenderNode {
 
     this.invalidateCache();
     this._markStructureDirty();
+    this._onChildListChanged();
 
     return this;
   }

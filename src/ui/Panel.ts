@@ -1,7 +1,7 @@
-import type { Color } from '#core/Color';
+import { Color } from '#core/Color';
 
-import type { UIBackground, UIFillPatch } from './theme';
-import { applyUIFillPatch } from './theme';
+import type { UIBackground, UIBackgroundInput, UIBackgroundOptions, UIFillPatch } from './theme';
+import { applyUIFillPatch, backgroundOptionsFrom, createUIBackground } from './theme';
 import { Widget } from './Widget';
 import { WidgetBackground } from './WidgetBackground';
 
@@ -14,8 +14,19 @@ export interface PanelOptions {
   borderColor?: Color;
   borderWidth?: number;
   cornerRadius?: number;
-  /** Whole-background override, e.g. a nine-slice skin, replacing the theme's. */
-  background?: UIBackground;
+  /**
+   * The panel's background, stated as a colour, a texture, a region or a full
+   * descriptor. A colour overrides the skin's fill and keeps the rest of it;
+   * anything else replaces the skin's background outright.
+   */
+  background?: UIBackgroundInput;
+  /** Source-texture slice widths for a texture `background`; defaults to a third per axis. */
+  slices?: UIBackgroundOptions['slices'];
+  /** Destination border widths for a texture `background`; defaults to `slices`. */
+  border?: UIBackgroundOptions['border'];
+  modes?: UIBackgroundOptions['modes'];
+  /** Paint a texture `background` flat with this fit instead of slicing it. */
+  fit?: UIBackgroundOptions['fit'];
 }
 
 /**
@@ -35,11 +46,12 @@ export class Panel extends Widget {
   public constructor(options: PanelOptions = {}) {
     super();
 
+    this._fill = fillPatchFrom(options);
+
     if (options.background !== undefined) {
-      this._background = options.background;
+      this._applyBackgroundInput(options.background, backgroundOptionsFrom(options));
     }
 
-    this._fill = fillPatchFrom(options);
     this.setSize(options.width ?? 0, options.height ?? 0);
   }
 
@@ -99,15 +111,29 @@ export class Panel extends Widget {
   }
 
   /**
-   * Replace the whole background descriptor, ignoring the skin's. `null`
-   * restores it. Layout-invalidating: a nine-slice and a fill can imply
-   * different content boxes.
+   * Set the panel's background from a colour, a texture, a region or a full
+   * descriptor; `null` returns it to its skin. A colour becomes a fill override
+   * on top of the skin, so the skin's corner radius and border survive it.
+   * Layout-invalidating: a nine-slice and a fill can imply different content
+   * boxes.
    */
-  public setBackground(background: UIBackground | null): this {
-    this._background = background;
+  public setBackground(background: UIBackgroundInput | null, options: UIBackgroundOptions = {}): this {
+    this._applyBackgroundInput(background, options);
     this._invalidateLayout();
 
     return this;
+  }
+
+  /** Route a background input to the override it actually is: a fill patch for a colour, a descriptor otherwise. */
+  private _applyBackgroundInput(background: UIBackgroundInput | null, options: UIBackgroundOptions): void {
+    if (background instanceof Color) {
+      this._background = null;
+      this._fill = { ...this._fill, color: background };
+
+      return;
+    }
+
+    this._background = background === null ? null : createUIBackground(background, options);
   }
 
   protected override _repaint(): void {

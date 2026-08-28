@@ -1,7 +1,7 @@
 {
-  "title": "UIBackground",
-  "description": "How a widget paints its body.",
-  "symbol": "UIBackground",
+  "title": "UISpriteFit",
+  "description": "How a sprite background fills the widget box.",
+  "symbol": "UISpriteFit",
   "kind": "type",
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "How a widget paints its body."
+        "How a sprite background fills the widget box."
       ],
-      "importLine": "import { UIBackground } from '@codexo/exojs'",
+      "importLine": "import { UISpriteFit } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,36 +29,20 @@
       "title": "Definition",
       "members": [
         {
-          "name": "UIBackground",
-          "signature": "UIFillBackground | UINineSliceBackground | UINoBackground | UISpriteBackground",
+          "name": "UISpriteFit",
+          "signature": "\"stretch\" | \"tile\"",
           "signatureTokens": [
             {
-              "text": "UIFillBackground",
-              "kind": "type"
+              "text": "\"stretch\"",
+              "kind": "keyword"
             },
             {
               "text": " | ",
               "kind": "punctuation"
             },
             {
-              "text": "UINineSliceBackground",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "UINoBackground",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "UISpriteBackground",
-              "kind": "type"
+              "text": "\"tile\"",
+              "kind": "keyword"
             }
           ],
           "params": [],

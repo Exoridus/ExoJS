@@ -63,7 +63,35 @@ dialog.setTheme({ panel: { normal: { background: dark.panel.normal.background } 
 dialog.setFill({ color: new Color(40, 44, 60, 1) }); // this panel only, on top of its skin
 ```
 
-A background descriptor is either a fill (the rounded rectangle above), `{ kind: 'none' }`, or a nine-slice: `{ kind: 'nineSlice', texture, slices: 8 }` paints a texture that stretches without distorting its corners.
+A background descriptor is either a fill (the rounded rectangle above), `{ kind: 'none' }`, a nine-slice that stretches a texture without distorting its corners, or a sprite that stretches or tiles flat art.
+
+## Textured skins
+
+Anywhere a background is taken you can state it the way you have it - a colour, a texture, an atlas region, or a full descriptor. A texture becomes a nine-slice; a colour becomes a fill override on top of the skin, so the skin's corner radius and border survive it:
+
+```ts
+import { Button, Color, Panel, ProgressBar, type Texture } from '@codexo/exojs';
+
+declare const frame: Texture;
+declare const idle: Texture;
+declare const hot: Texture;
+
+const panel = new Panel({ width: 280, height: 160, background: frame });
+const start = new Button({ label: 'Start', skin: { normal: idle, hover: hot, disabled: new Color(70, 76, 90, 1) } });
+```
+
+Without `slices`, a texture is sliced at a third of its source size per axis - a usable starting point, not a substitute for stating the slices a skin was drawn for. Pass them (and, where the corners should be drawn at a different scale, `border`) alongside the background: `panel.setBackground(frame, { slices: 8, border: 16 })`. For flat art that has no frame to preserve, pass `fit` instead: `{ fit: 'stretch' }` or `{ fit: 'tile' }`.
+
+A [`ProgressBar`](/ExoJS/en/api/progress-bar/) decides how its bar follows the value with `fillMode`. The default `'clip'` paints the bar's art at full width and shows the leading fraction of it, which is what keeps a textured bar undistorted; `'scale'` paints it at the value's width instead. A fill has no art to distort and is always painted at the value's width:
+
+```ts
+import { ProgressBar, type Texture } from '@codexo/exojs';
+
+declare const barArt: Texture;
+
+const health = new ProgressBar({ width: 240, height: 14, value: 0.6, barBackground: barArt, slices: 6 });
+health.fillMode = 'scale'; // squash the art with the value instead of cutting it
+```
 
 Per-widget style always goes through a setter — `setFill`, `setBackground`, `setTextStyle` — so a change repaints (and re-lays out where it can move something) immediately. Reading `panel.color` gives the value in effect, including the theme's; `panel.fillOverrides` gives only what this panel overrides.
 
@@ -94,6 +122,34 @@ A `Stack` flows its children in a row or column with even spacing and sizes itse
   language="ts"
   title="examples/guides/ui-and-widgets/widgets.ts"
 />
+
+`Stack` re-flows on its own: adding, removing or resizing a child, and setting `direction`, `spacing`, `padding` or `align`, all re-place the items immediately. `align` decides the cross axis - `'start'`, `'center'`, `'end'`, or `'stretch'`, which resizes the items to the stack's cross extent.
+
+A stack sizes itself to its content until you give it a box with `setSize`. From then on it keeps that box, and `stack.setGrow(child, factor)` hands the leftover space along the flow direction to the growing children, split by factor:
+
+```ts
+import { Button, Stack } from '@codexo/exojs';
+
+const sidebar = new Stack({ direction: 'column', spacing: 8, align: 'stretch' });
+const list = new Button({ label: 'Inventory' });
+
+sidebar.addChild(list, new Button({ label: 'Close' }));
+sidebar.setSize(220, 400); // an explicit box is what leaves space to distribute
+sidebar.setGrow(list, 1); // the list takes everything the other items leave
+```
+
+## Docking to the edges
+
+A `DockContainer` pins children to `'top'`, `'right'`, `'bottom'` or `'left'` and gives what is left to `'center'`. Each edge child is sized across its band and keeps its own extent along the other axis, so a docked HUD survives a resize with one `setSize` call:
+
+<SourceSnippet
+  source="examples/guides/ui-and-widgets/widgets.ts"
+  region="dock"
+  language="ts"
+  title="examples/guides/ui-and-widgets/widgets.ts"
+/>
+
+Bands are taken in docking order: docking `'top'` before `'left'` gives the top band the full width and the left band only what is left below it. Reverse the two calls and the left band runs the full height instead.
 
 ## Scrolling content
 

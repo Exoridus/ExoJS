@@ -1,11 +1,16 @@
 import type { Container } from '#rendering/Container';
 import { Graphics } from '#rendering/primitives/Graphics';
 import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
+import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 
-import type { UIBackground, UINineSliceBackground } from './theme';
+import type { UIBackground, UINineSliceBackground, UISpriteBackground } from './theme';
+
+type BackgroundNode = Graphics | NineSliceSprite | RepeatingSprite;
 
 const sameNineSlice = (a: UINineSliceBackground, b: UINineSliceBackground): boolean =>
   a.texture === b.texture && a.slices === b.slices && a.border === b.border && a.modes === b.modes;
+
+const sameSprite = (a: UISpriteBackground, b: UISpriteBackground): boolean => a.texture === b.texture && a.fit === b.fit;
 
 /**
  * One painted widget surface. Owns whichever node the current
@@ -19,7 +24,7 @@ const sameNineSlice = (a: UINineSliceBackground, b: UINineSliceBackground): bool
 export class WidgetBackground {
   private readonly _owner: Container;
   private readonly _index: number;
-  private _node: Graphics | NineSliceSprite | null = null;
+  private _node: BackgroundNode | null = null;
   private _painted: UIBackground | null = null;
 
   /**
@@ -34,7 +39,7 @@ export class WidgetBackground {
   }
 
   /** The live node, or `null` while the background paints nothing. */
-  public get node(): Graphics | NineSliceSprite | null {
+  public get node(): BackgroundNode | null {
     return this._node;
   }
 
@@ -59,6 +64,15 @@ export class WidgetBackground {
 
       graphics.fillColor = background.color;
       graphics.drawRoundedRectangle(0, 0, width, height, background.cornerRadius);
+    } else if (background.kind === 'sprite') {
+      const reusable =
+        this._node instanceof RepeatingSprite && this._painted !== null && this._painted.kind === 'sprite' && sameSprite(this._painted, background);
+      const mode = background.fit === 'tile' ? 'repeat' : 'stretch';
+      const sprite = reusable
+        ? (this._node as RepeatingSprite)
+        : this._replaceNode(new RepeatingSprite(background.texture, { width, height, modeX: mode, modeY: mode }));
+
+      sprite.setSize(width, height);
     } else {
       // The sampled region, slice widths and fill modes are constructor-only on
       // `NineSliceSprite`, so a descriptor that changes any of them needs a new
@@ -89,7 +103,7 @@ export class WidgetBackground {
   }
 
   /** Swap the painted node, re-inserting the replacement at the declared slot. */
-  private _replaceNode<T extends Graphics | NineSliceSprite | null>(next: T): T {
+  private _replaceNode<T extends BackgroundNode | null>(next: T): T {
     const previous = this._node;
 
     if (previous === next) {

@@ -6,11 +6,11 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 124,
+  "memberCount": 130,
   "counts": {
     "constructors": 1,
-    "methods": 59,
-    "properties": 50,
+    "methods": 61,
+    "properties": 54,
     "events": 14
   },
   "sections": [
@@ -239,6 +239,64 @@
           "params": [],
           "returnType": "void",
           "description": "Repaint without re-laying out - for a change that cannot move anything, such as a colour or a state flip. Applied immediately, not batched."
+        },
+        {
+          "name": "_onChildListChanged",
+          "signature": "_onChildListChanged(): void",
+          "signatureTokens": [
+            {
+              "text": "_onChildListChanged",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Called after this container's child list changed - an insert, a removal or a reorder - once the list and the caches derived from it are consistent again. Override in containers whose own state is derived from their children, such as a layout container that re-flows them."
+        },
+        {
+          "name": "_onChildResized",
+          "signature": "_onChildResized(): void",
+          "signatureTokens": [
+            {
+              "text": "_onChildResized",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "React to a child widget's size change. Layout containers override it to re-flow; the default does nothing, so a widget that does not place its children pays nothing for a descendant resize."
         },
         {
           "name": "_onEnabledChanged",
@@ -1940,7 +1998,7 @@
         },
         {
           "name": "setBarBackground",
-          "signature": "setBarBackground(background: UIBackground | null): this",
+          "signature": "setBarBackground(background: UIBackgroundInput | null, options: UIBackgroundOptions): this",
           "signatureTokens": [
             {
               "text": "setBarBackground",
@@ -1959,7 +2017,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "UIBackground",
+              "text": "UIBackgroundInput",
               "kind": "type"
             },
             {
@@ -1969,6 +2027,22 @@
             {
               "text": "null",
               "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIBackgroundOptions",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -1986,12 +2060,17 @@
           "params": [
             {
               "name": "background",
-              "type": "UIBackground | null",
+              "type": "UIBackgroundInput | null",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "UIBackgroundOptions",
               "optional": false
             }
           ],
           "returnType": "this",
-          "description": "Replace the bar's whole background descriptor; null restores the skin's."
+          "description": "Set the bar's background from a colour, a texture, a region or a full descriptor; null returns it to its skin. A colour becomes a fill override, so the skin's corner radius survives it."
         },
         {
           "name": "setBarFill",
@@ -2660,7 +2739,7 @@
         },
         {
           "name": "setTrackBackground",
-          "signature": "setTrackBackground(background: UIBackground | null): this",
+          "signature": "setTrackBackground(background: UIBackgroundInput | null, options: UIBackgroundOptions): this",
           "signatureTokens": [
             {
               "text": "setTrackBackground",
@@ -2679,7 +2758,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "UIBackground",
+              "text": "UIBackgroundInput",
               "kind": "type"
             },
             {
@@ -2689,6 +2768,22 @@
             {
               "text": "null",
               "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIBackgroundOptions",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -2706,12 +2801,17 @@
           "params": [
             {
               "name": "background",
-              "type": "UIBackground | null",
+              "type": "UIBackgroundInput | null",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "UIBackgroundOptions",
               "optional": false
             }
           ],
           "returnType": "this",
-          "description": "Replace the track's whole background descriptor; null restores the skin's."
+          "description": "Set the groove's background from a colour, a texture, a region or a full descriptor; null returns it to its skin. A colour becomes a fill override, so the skin's corner radius survives it."
         },
         {
           "name": "setTrackFill",
@@ -3192,6 +3292,56 @@
           "description": "The background painted for the filled portion."
         },
         {
+          "name": "barNode",
+          "signature": "barNode: BackgroundNode | null",
+          "signatureTokens": [
+            {
+              "text": "barNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BackgroundNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node painting the bar, or null while it paints nothing."
+        },
+        {
+          "name": "barVisibleWidth",
+          "signature": "barVisibleWidth: number",
+          "signatureTokens": [
+            {
+              "text": "barVisibleWidth",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Width in pixels of the bar that is actually visible: uiWidth * value."
+        },
+        {
           "name": "bottom",
           "signature": "bottom: number",
           "signatureTokens": [
@@ -3507,6 +3657,27 @@
           "params": [],
           "returnType": null,
           "description": "Bar colour, or null when the bar does not paint a fill."
+        },
+        {
+          "name": "fillMode",
+          "signature": "fillMode: ProgressBarFillMode",
+          "signatureTokens": [
+            {
+              "text": "fillMode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ProgressBarFillMode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How the bar follows the value."
         },
         {
           "name": "fillOverrides",
@@ -4132,6 +4303,35 @@
           "params": [],
           "returnType": null,
           "description": "Track colour, or null when the track does not paint a fill."
+        },
+        {
+          "name": "trackNode",
+          "signature": "trackNode: BackgroundNode | null",
+          "signatureTokens": [
+            {
+              "text": "trackNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BackgroundNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node painting the groove, or null while it paints nothing."
         },
         {
           "name": "uiHeight",

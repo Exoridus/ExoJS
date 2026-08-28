@@ -1,16 +1,16 @@
 {
-  "title": "Label",
-  "description": "Text label widget. Wraps a Text node and keeps the widget's layout size in sync with the measured text, so it anchors and stacks correctly. The label takes its text style from the `label` role of its inherited theme; the constructor style and Label.setTextStyle override parts of it for this label only.",
-  "symbol": "Label",
+  "title": "DockContainer",
+  "description": "Layout container that pins children to the edges of its box and gives the remaining space to the centre. Each edge child is sized across the band it docks to - a `'top'` child spans the width that is still free, a `'left'` child the height - and keeps its own extent along the other axis. Bands are taken in the order the children were docked, so docking `'top'` before `'left'` gives the top band the full width and the left band what is left below it. The container re-flows itself whenever a child is added, removed, reordered or resized, and whenever the container is resized.",
+  "symbol": "DockContainer",
   "kind": "class",
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 119,
+  "memberCount": 118,
   "counts": {
     "constructors": 1,
-    "methods": 58,
-    "properties": 46,
+    "methods": 60,
+    "properties": 43,
     "events": 14
   },
   "sections": [
@@ -19,10 +19,11 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Text label widget. Wraps a Text node and keeps the widget's layout size in sync with the measured text, so it anchors and stacks correctly.",
-        "The label takes its text style from the `label` role of its inherited theme; the constructor style and Label.setTextStyle override parts of it for this label only."
+        "Layout container that pins children to the edges of its box and gives the remaining space to the centre.",
+        "Each edge child is sized across the band it docks to - a `'top'` child spans the width that is still free, a `'left'` child the height - and keeps its own extent along the other axis. Bands are taken in the order the children were docked, so docking `'top'` before `'left'` gives the top band the full width and the left band what is left below it.",
+        "The container re-flows itself whenever a child is added, removed, reordered or resized, and whenever the container is resized."
       ],
-      "importLine": "import { Label } from '@codexo/exojs'",
+      "importLine": "import { DockContainer } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -31,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(text: string, style: TextStyleOptions): Label",
+          "signature": "new(options: DockContainerOptions): DockContainer",
           "signatureTokens": [
             {
               "text": "new",
@@ -42,7 +43,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "text",
+              "text": "options",
               "kind": "param"
             },
             {
@@ -50,23 +51,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "style",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "TextStyleOptions",
+              "text": "DockContainerOptions",
               "kind": "type"
             },
             {
@@ -78,23 +63,18 @@
               "kind": "punctuation"
             },
             {
-              "text": "Label",
+              "text": "DockContainer",
               "kind": "type"
             }
           ],
           "params": [
             {
-              "name": "text",
-              "type": "string",
-              "optional": false
-            },
-            {
-              "name": "style",
-              "type": "TextStyleOptions",
+              "name": "options",
+              "type": "DockContainerOptions",
               "optional": false
             }
           ],
-          "returnType": "Label",
+          "returnType": "DockContainer",
           "description": ""
         }
       ],
@@ -1104,6 +1084,74 @@
           "description": "Destroy this container and every node beneath it. Ownership is by containment: detaching a subtree only unlinks it, so the descendants' GPU-backed resources (cached textures, filters, render textures) and signal listeners would outlive the tree that owned them and leak on every scene change."
         },
         {
+          "name": "dock",
+          "signature": "dock(child: RenderNode, region: DockRegion): this",
+          "signatureTokens": [
+            {
+              "text": "dock",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "child",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderNode",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "region",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DockRegion",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "child",
+              "type": "RenderNode",
+              "optional": false
+            },
+            {
+              "name": "region",
+              "type": "DockRegion",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Add child (if it is not already here) and dock it in region."
+        },
+        {
           "name": "focus",
           "signature": "focus(): this",
           "signatureTokens": [
@@ -1579,6 +1627,35 @@
           "description": ""
         },
         {
+          "name": "layout",
+          "signature": "layout(): this",
+          "signatureTokens": [
+            {
+              "text": "layout",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Re-place children in their regions."
+        },
+        {
           "name": "move",
           "signature": "move(x: number, y: number): this",
           "signatureTokens": [
@@ -1713,6 +1790,61 @@
           ],
           "returnType": "Interval",
           "description": "Project this shape onto axis and write the scalar min/max into interval. Used internally by the SAT solver."
+        },
+        {
+          "name": "regionOf",
+          "signature": "regionOf(child: RenderNode): DockRegion | null",
+          "signatureTokens": [
+            {
+              "text": "regionOf",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "child",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderNode",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DockRegion",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "child",
+              "type": "RenderNode",
+              "optional": false
+            }
+          ],
+          "returnType": "DockRegion | null",
+          "description": "The region child is laid out in, or null when it is not a child of this container. A child added without DockContainer.dock takes the centre."
         },
         {
           "name": "removeChild",
@@ -2471,61 +2603,6 @@
           ],
           "returnType": "this",
           "description": ""
-        },
-        {
-          "name": "setTextStyle",
-          "signature": "setTextStyle(style: TextStyleOptions | null): this",
-          "signatureTokens": [
-            {
-              "text": "setTextStyle",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "style",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "TextStyleOptions",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "style",
-              "type": "TextStyleOptions | null",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Override text style on top of the skin's; null returns to it. The label is re-measured, so its layout size follows the new style."
         },
         {
           "name": "setTheme",
@@ -3687,77 +3764,6 @@
           "description": "Vertical skew angle in degrees. Shears the node along the Y axis (positive values lean the left edge downward). Combines correctly with rotation and scale."
         },
         {
-          "name": "text",
-          "signature": "text: string",
-          "signatureTokens": [
-            {
-              "text": "text",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "textNode",
-          "signature": "textNode: Text",
-          "signatureTokens": [
-            {
-              "text": "textNode",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Text",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "The underlying Text node, for advanced styling."
-        },
-        {
-          "name": "textStyleOverrides",
-          "signature": "textStyleOverrides: TextStyleOptions | null",
-          "signatureTokens": [
-            {
-              "text": "textStyleOverrides",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "TextStyleOptions",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "The text-style overrides this label carries, or null when it takes the skin's."
-        },
-        {
           "name": "theme",
           "signature": "theme: UITheme",
           "signatureTokens": [
@@ -4670,11 +4676,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/ui/Label.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Label.ts"
+        "label": "src/ui/DockContainer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/DockContainer.ts"
       }
     }
   ],
-  "sourcePath": "src/ui/Label.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Label.ts"
+  "sourcePath": "src/ui/DockContainer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/DockContainer.ts"
 }

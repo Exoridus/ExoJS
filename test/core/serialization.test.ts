@@ -27,6 +27,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
 import { Video } from '#rendering/video/Video';
 import { Button } from '#ui/Button';
+import { DockContainer } from '#ui/DockContainer';
 import { Label } from '#ui/Label';
 import { Panel } from '#ui/Panel';
 import { ProgressBar } from '#ui/ProgressBar';
@@ -895,6 +896,22 @@ describe('serialization — UI widgets', () => {
     expect(restored.direction).toBe('row');
     expect(restored.padding).toBe(4);
     expect(restored.children).toHaveLength(2);
+  });
+
+  it('round-trips a DockContainer (size + docked children)', () => {
+    const dock = new DockContainer({ width: 320, height: 180 });
+    dock.dock(new Label('top'), 'top');
+    dock.dock(new Label('middle'), 'center');
+
+    const data = serializeTree(dock);
+    expect(data.type).toBe('DockContainer');
+    expect(data.width).toBe(320);
+    expect(data.children).toHaveLength(2);
+
+    const restored = deserializeTree(data) as DockContainer;
+    expect(restored.uiHeight).toBe(180);
+    expect(restored.regionOf(restored.children[0]!)).toBe('top');
+    expect(restored.regionOf(restored.children[1]!)).toBe('center');
   });
 
   it('round-trips a ScrollContainer (viewport, direction, scroll offsets, enabled) with its content children', () => {

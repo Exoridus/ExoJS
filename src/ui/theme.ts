@@ -52,8 +52,39 @@ export interface UINineSliceBackground {
   readonly modes?: NineSliceModes;
 }
 
+/** How a sprite background fills the widget box. */
+export type UISpriteFit = 'stretch' | 'tile';
+
+/**
+ * Flat textured background: one image stretched over the widget box or tiled
+ * across it. Use a nine-slice instead for art with a frame that must keep its
+ * corner proportions.
+ */
+export interface UISpriteBackground {
+  readonly kind: 'sprite';
+  readonly texture: Texture | TextureRegion;
+  readonly fit: UISpriteFit;
+}
+
 /** How a widget paints its body. */
-export type UIBackground = UINoBackground | UIFillBackground | UINineSliceBackground;
+export type UIBackground = UINoBackground | UIFillBackground | UINineSliceBackground | UISpriteBackground;
+
+/**
+ * What a background can be stated as. A texture or region becomes a textured
+ * descriptor, a colour becomes a fill; a descriptor is taken as it is.
+ */
+export type UIBackgroundInput = Color | Texture | TextureRegion | UIBackground;
+
+/** How a texture is turned into a background descriptor. */
+export interface UIBackgroundOptions {
+  /** Source-texture slice widths in texels; defaults to a third of the source per axis. */
+  readonly slices?: number | Partial<NineSliceInsets>;
+  /** Destination border widths; defaults to `slices`. */
+  readonly border?: number | Partial<NineSliceInsets>;
+  readonly modes?: NineSliceModes;
+  /** Paint the texture flat with this fit instead of slicing it. */
+  readonly fit?: UISpriteFit;
+}
 
 /**
  * The look of one widget surface in one state: what it paints, how its text is
@@ -101,6 +132,50 @@ export interface UIFillPatch {
   readonly borderWidth?: number;
   readonly cornerRadius?: number;
 }
+
+/**
+ * The background options a widget's options object states, for the texture
+ * path. Absent keys are dropped so a widget never states a slice, border or
+ * fit it was not given.
+ *
+ * @internal
+ */
+export const backgroundOptionsFrom = (options: { [Key in keyof UIBackgroundOptions]?: UIBackgroundOptions[Key] | undefined }): UIBackgroundOptions => ({
+  ...(options.slices !== undefined && { slices: options.slices }),
+  ...(options.border !== undefined && { border: options.border }),
+  ...(options.modes !== undefined && { modes: options.modes }),
+  ...(options.fit !== undefined && { fit: options.fit }),
+});
+
+/** A third of `size`, floored - the slice width a texture gets when none is stated. */
+const thirdOf = (size: number): number => Math.max(0, Math.floor(size / 3));
+
+/**
+ * Normalise a texture, region or descriptor into a background descriptor.
+ *
+ * A texture becomes a nine-slice whose slices default to a third of the source
+ * per axis, so a frame is usable without measuring it first; a real skin states
+ * its slices. A source edge under three pixels degenerates to a slice of zero,
+ * which stretches that axis rather than failing. Passing `fit` paints the
+ * texture flat instead, and a descriptor is returned unchanged.
+ */
+export const createUIBackground = (source: Texture | TextureRegion | UIBackground, options: UIBackgroundOptions = {}): UIBackground => {
+  if ('kind' in source) {
+    return source;
+  }
+
+  if (options.fit !== undefined) {
+    return { kind: 'sprite', texture: source, fit: options.fit };
+  }
+
+  return {
+    kind: 'nineSlice',
+    texture: source,
+    slices: options.slices ?? { left: thirdOf(source.width), top: thirdOf(source.height), right: thirdOf(source.width), bottom: thirdOf(source.height) },
+    ...(options.border !== undefined && { border: options.border }),
+    ...(options.modes !== undefined && { modes: options.modes }),
+  };
+};
 
 const zeroInsets: UIInsets = { left: 0, top: 0, right: 0, bottom: 0 };
 
