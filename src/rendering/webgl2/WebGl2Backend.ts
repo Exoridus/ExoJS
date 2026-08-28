@@ -147,27 +147,6 @@ interface ManagedTextureState {
  * textures, but a draw can only write `MAX_DRAW_BUFFERS` of them, and an
  * attachment nothing can write to is not usable capacity.
  */
-/**
- * Colour textures a target attaches, or `null` for the canvas root, whose
- * attachment is the default framebuffer rather than a texture.
- */
-const colorAttachmentsOf = (target: RenderTarget): readonly RenderTexture[] | null => {
-  if (target instanceof MultiRenderTarget) {
-    return target.attachments;
-  }
-
-  return target instanceof RenderTexture ? [target] : null;
-};
-
-/** Colour formats a target renders into - one per attachment, empty for the canvas root. */
-const colorFormatsOf = (target: RenderTarget): readonly ColorTextureFormat[] => {
-  if (target instanceof MultiRenderTarget) {
-    return target.formats;
-  }
-
-  return target instanceof RenderTexture ? [target.format] : [];
-};
-
 const readMaxColorAttachments = (gl: WebGL2RenderingContext): number => {
   const attachments = gl.getParameter(gl.MAX_COLOR_ATTACHMENTS) as number;
   const drawBuffers = gl.getParameter(gl.MAX_DRAW_BUFFERS) as number;
@@ -2484,6 +2463,15 @@ export class WebGl2Backend implements RenderBackend {
    * multi-attachment framebuffer would write slot 0 only, which is GL's default
    * draw-buffer list.
    */
+  /** Reject a colour format this context cannot render into. */
+  private _assertColorFormatRenderable(format: ColorTextureFormat): void {
+    if (format !== TextureFormat.Rgba8 && !this._floatRenderable) {
+      throw new Error(
+        `Render target: format '${format}' requires the WebGL2 extension 'EXT_color_buffer_float', which this context does not support. Check backend.supportsColorFormat() and fall back to TextureFormat.Rgba8.`,
+      );
+    }
+  }
+
   private _syncColorAttachments(state: ManagedRenderTargetState, handles: readonly WebGLTexture[]): void {
     const attached = state.attachedTextures;
     let changed = attached.length !== handles.length;
@@ -2525,28 +2513,39 @@ export class WebGl2Backend implements RenderBackend {
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
 
-    attached.length = 0;
-    attached.push(...handles);
+    attached.length = handles.length;
+
+    for (let i = 0; i < handles.length; i++) {
+      attached[i] = handles[i]!;
+    }
   }
 
   private _prepareRenderTarget(target: RenderTarget): ManagedRenderTargetState {
-    for (const format of colorFormatsOf(target)) {
-      if (format !== TextureFormat.Rgba8 && !this._floatRenderable) {
-        throw new Error(
-          `Render target: format '${format}' requires the WebGL2 extension 'EXT_color_buffer_float', which this context does not support. Check backend.supportsColorFormat() and fall back to TextureFormat.Rgba8.`,
-        );
+    // Both branches are written out rather than resolved through one array of
+    // attachments: this runs on every render-target bind, and a filter-heavy
+    // frame binds hundreds, so materializing a one-element list per bind would
+    // be pure per-frame garbage for the single-attachment case that is every
+    // frame in practice.
+    const multi = target instanceof MultiRenderTarget ? target : null;
+    const single = multi === null && target instanceof RenderTexture ? target : null;
+
+    if (multi !== null) {
+      for (const attachment of multi.attachments) {
+        this._assertColorFormatRenderable(attachment.format);
       }
+    } else if (single !== null) {
+      this._assertColorFormatRenderable(single.format);
     }
 
     const state = this._getRenderTargetState(target);
-    const colorTextures = colorAttachmentsOf(target);
+    const attachmentCount = multi?.attachments.length ?? (single === null ? 0 : 1);
 
-    if (colorTextures !== null && state.framebuffer) {
-      if (colorTextures.length > this._maxColorAttachments) {
+    if (attachmentCount > 0 && state.framebuffer) {
+      if (attachmentCount > this._maxColorAttachments) {
         throw new RenderError({
           code: 'unsupported-format',
           backendType: RenderBackendType.WebGl2,
-          message: `This context accepts ${this._maxColorAttachments} colour attachment(s), but the target declares ${colorTextures.length}. Check backend.maxColorAttachments.`,
+          message: `This context accepts ${this._maxColorAttachments} colour attachment(s), but the target declares ${attachmentCount}. Check backend.maxColorAttachments.`,
         });
       }
 
@@ -2558,8 +2557,12 @@ export class WebGl2Backend implements RenderBackend {
 
       handles.length = 0;
 
-      for (const attachment of colorTextures) {
-        handles.push(this._syncTexture(attachment).handle);
+      if (multi !== null) {
+        for (const attachment of multi.attachments) {
+          handles.push(this._syncTexture(attachment).handle);
+        }
+      } else {
+        handles.push(this._syncTexture(single!).handle);
       }
 
       this._setTextureUnit(previousUnit);

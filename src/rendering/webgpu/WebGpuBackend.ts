@@ -271,8 +271,8 @@ export class WebGpuBackend implements RenderBackend {
    * opened many times per frame and the records do not outlive beginRenderPass.
    */
   private readonly _extraColorAttachments: GPURenderPassColorAttachment[] = [];
-  /** Reused one-element list backing renderTargetFormats for a single-attachment target. */
-  private readonly _singleFormatScratch: GPUTextureFormat[] = ['rgba8unorm'];
+  /** Reused list backing `renderTargetFormats`; refilled in place on every read. */
+  private readonly _formatScratch: GPUTextureFormat[] = ['rgba8unorm'];
   /** Load op slot 0 resolved for the pass being opened; the other slots follow it. */
   private _loadOpForPass: GPULoadOp = 'load';
   /** Whether the bound target writes more than one colour attachment - see `draw`. */
@@ -453,14 +453,26 @@ export class WebGpuBackend implements RenderBackend {
    */
   public get renderTargetFormats(): readonly GPUTextureFormat[] {
     const target = this._renderTarget;
+    // Filled in place rather than mapped: this is read once per custom-material
+    // draw, and a fresh array there would be per-draw garbage.
+    const formats = this._formatScratch;
 
     if (target instanceof MultiRenderTarget) {
-      return target.attachments.map(attachment => this._getGpuTextureFormat(attachment));
+      const attachments = target.attachments;
+
+      formats.length = attachments.length;
+
+      for (let index = 0; index < attachments.length; index++) {
+        formats[index] = this._getGpuTextureFormat(attachments[index]!);
+      }
+
+      return formats;
     }
 
-    this._singleFormatScratch[0] = this.renderTargetFormat;
+    formats.length = 1;
+    formats[0] = this.renderTargetFormat;
 
-    return this._singleFormatScratch;
+    return formats;
   }
 
   /** Colour attachments the bound target contributes to a pass. */
