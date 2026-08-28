@@ -2,6 +2,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { Button } from '#ui/Button';
 import { Label } from '#ui/Label';
 import { Panel } from '#ui/Panel';
+import type { ProgressBarFillMode } from '#ui/ProgressBar';
 import { ProgressBar } from '#ui/ProgressBar';
 import { ScrollContainer, type ScrollDirection } from '#ui/ScrollContainer';
 import { Stack } from '#ui/Stack';
@@ -153,6 +154,8 @@ const buttonSerializer: NodeSerializer<Button> = {
 
 // ── ProgressBar ──────────────────────────────────────────────────────────────
 
+const isFillMode = (value: unknown): value is ProgressBarFillMode => value === 'scale' || value === 'clip';
+
 const progressBarSerializer: NodeSerializer<ProgressBar> = {
   write(node) {
     const { track, bar } = node.fillOverrides;
@@ -163,6 +166,7 @@ const progressBarSerializer: NodeSerializer<ProgressBar> = {
       ...serializeFillColor('trackColor', track),
       ...serializeFillColor('fillColor', bar),
       ...(track?.cornerRadius !== undefined && { cornerRadius: track.cornerRadius }),
+      ...(node.fillMode !== 'clip' && { fillMode: node.fillMode }),
     };
 
     if (!node.enabled) out.enabled = false;
@@ -178,6 +182,7 @@ const progressBarSerializer: NodeSerializer<ProgressBar> = {
         trackColor: arrayToColor(data.trackColor),
         fillColor: arrayToColor(data.fillColor),
         cornerRadius: num(data.cornerRadius),
+        fillMode: isFillMode(data.fillMode) ? data.fillMode : undefined,
       }),
     );
 

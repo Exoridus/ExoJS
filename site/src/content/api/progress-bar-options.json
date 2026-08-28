@@ -6,11 +6,11 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 13,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 6,
+    "properties": 13,
     "events": 0
   },
   "sections": [
@@ -26,6 +26,76 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "barBackground",
+          "signature": "barBackground?: UIBackgroundInput",
+          "signatureTokens": [
+            {
+              "text": "barBackground",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIBackgroundInput",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The bar's background, stated as a colour, a texture, a region or a descriptor."
+        },
+        {
+          "name": "border",
+          "signature": "border?: Partial<NineSliceInsets> | number",
+          "signatureTokens": [
+            {
+              "text": "border",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NineSliceInsets",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Destination border widths for textured backgrounds; defaults to slices."
+        },
         {
           "name": "cornerRadius",
           "signature": "cornerRadius?: number",
@@ -77,6 +147,56 @@
           "description": ""
         },
         {
+          "name": "fillMode",
+          "signature": "fillMode?: ProgressBarFillMode",
+          "signatureTokens": [
+            {
+              "text": "fillMode",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ProgressBarFillMode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How the bar follows the value. Default 'clip'."
+        },
+        {
+          "name": "fit",
+          "signature": "fit?: UISpriteFit",
+          "signatureTokens": [
+            {
+              "text": "fit",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UISpriteFit",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Paint textured backgrounds flat with this fit instead of slicing them."
+        },
+        {
           "name": "height",
           "signature": "height?: number",
           "signatureTokens": [
@@ -100,6 +220,101 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "modes",
+          "signature": "modes?: NineSliceModes",
+          "signatureTokens": [
+            {
+              "text": "modes",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NineSliceModes",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "slices",
+          "signature": "slices?: Partial<NineSliceInsets> | number",
+          "signatureTokens": [
+            {
+              "text": "slices",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NineSliceInsets",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Source-texture slice widths for textured backgrounds; defaults to a third per axis."
+        },
+        {
+          "name": "trackBackground",
+          "signature": "trackBackground?: UIBackgroundInput",
+          "signatureTokens": [
+            {
+              "text": "trackBackground",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIBackgroundInput",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The groove's background, stated as a colour, a texture, a region or a descriptor."
         },
         {
           "name": "trackColor",

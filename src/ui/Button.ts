@@ -1,12 +1,12 @@
-import type { Color } from '#core/Color';
+import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
 import type { KeyEvent } from '#input/KeyEvent';
 import { Keyboard } from '#input/types';
 import { Text } from '#rendering/text/Text';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 
-import type { UIBackground, UIFillPatch, UIWidgetState } from './theme';
-import { applyUIFillPatch, resolveUISkin } from './theme';
+import type { UIBackground, UIBackgroundInput, UIBackgroundOptions, UIFillPatch, UIWidgetState } from './theme';
+import { applyUIFillPatch, backgroundOptionsFrom, createUIBackground, resolveUISkin } from './theme';
 import { Widget } from './Widget';
 import { WidgetBackground } from './WidgetBackground';
 
@@ -22,6 +22,18 @@ export interface ButtonOptions {
   disabledColor?: Color;
   textColor?: Color;
   fontSize?: number;
+  /**
+   * The background per state, each stated as a colour, a texture, a region or
+   * a full descriptor. States left out fall back to the theme's button skin.
+   */
+  skin?: Partial<Record<ButtonState, UIBackgroundInput>>;
+  /** Source-texture slice widths for every textured `skin` entry; defaults to a third per axis. */
+  slices?: UIBackgroundOptions['slices'];
+  /** Destination border widths for every textured `skin` entry; defaults to `slices`. */
+  border?: UIBackgroundOptions['border'];
+  modes?: UIBackgroundOptions['modes'];
+  /** Paint textured `skin` entries flat with this fit instead of slicing them. */
+  fit?: UIBackgroundOptions['fit'];
 }
 
 /** The states a button paints in. */
@@ -73,6 +85,18 @@ export class Button extends Widget {
       if (Object.keys(patch).length > 0) this._fills[state] = patch;
     }
 
+    if (options.skin !== undefined) {
+      const backgroundOptions = backgroundOptionsFrom(options);
+
+      for (const state of buttonStates) {
+        const input = options.skin[state];
+
+        if (input !== undefined) {
+          this._applyBackgroundInput(input, state, backgroundOptions);
+        }
+      }
+    }
+
     if (options.textColor !== undefined || options.fontSize !== undefined) {
       this._textStyle = {
         ...(options.textColor !== undefined && { fillColor: options.textColor }),
@@ -106,6 +130,11 @@ export class Button extends Widget {
   public set label(value: string) {
     this._label.text = value;
     this._positionLabel();
+  }
+
+  /** The node painting the background, or `null` while it paints nothing. */
+  public get backgroundNode(): WidgetBackground['node'] {
+    return this._surface.node;
   }
 
   /** The {@link Text} node drawing the label, for advanced styling. */
@@ -176,17 +205,34 @@ export class Button extends Widget {
     return this;
   }
 
-  /** Replace one state's whole background descriptor; `null` restores the skin's. */
-  public setBackground(background: UIBackground | null, state: UIWidgetState = 'normal'): this {
-    if (background === null) {
-      delete this._backgrounds[state];
-    } else {
-      this._backgrounds[state] = background;
-    }
-
+  /**
+   * Set one state's background from a colour, a texture, a region or a full
+   * descriptor; `null` returns that state to its skin. A colour becomes a fill
+   * override, so the skin's corner radius and border survive it.
+   */
+  public setBackground(background: UIBackgroundInput | null, state: UIWidgetState = 'normal', options: UIBackgroundOptions = {}): this {
+    this._applyBackgroundInput(background, state, options);
     this._invalidateLayout();
 
     return this;
+  }
+
+  /** Route a background input to the override it actually is: a fill patch for a colour, a descriptor otherwise. */
+  private _applyBackgroundInput(background: UIBackgroundInput | null, state: UIWidgetState, options: UIBackgroundOptions): void {
+    if (background instanceof Color) {
+      delete this._backgrounds[state];
+      this._fills[state] = { ...this._fills[state], color: background };
+
+      return;
+    }
+
+    if (background === null) {
+      delete this._backgrounds[state];
+
+      return;
+    }
+
+    this._backgrounds[state] = createUIBackground(background, options);
   }
 
   /**

@@ -1,0 +1,71 @@
+{
+  "title": "ProgressBarFillMode",
+  "description": "How the bar follows the value: `'scale'` paints the background at the value's width, `'clip'` paints it at full width and shows the leading fraction of it. Clipping is what keeps textured art undistorted; a fill has nothing to distort, so it is always painted at the value's width.",
+  "symbol": "ProgressBarFillMode",
+  "kind": "type",
+  "subsystem": "ui",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "How the bar follows the value: `'scale'` paints the background at the value's width, `'clip'` paints it at full width and shows the leading fraction of it. Clipping is what keeps textured art undistorted; a fill has nothing to distort, so it is always painted at the value's width."
+      ],
+      "importLine": "import { ProgressBarFillMode } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ProgressBarFillMode",
+          "signature": "\"clip\" | \"scale\"",
+          "signatureTokens": [
+            {
+              "text": "\"clip\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"scale\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/ui/ProgressBar.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/ProgressBar.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/ui/ProgressBar.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/ProgressBar.ts"
+}

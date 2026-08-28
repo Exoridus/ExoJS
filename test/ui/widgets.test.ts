@@ -5,6 +5,7 @@ import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Graphics } from '#rendering/primitives/Graphics';
 import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
+import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
@@ -515,5 +516,96 @@ describe('widget skins', () => {
     expect(bar.trackColor?.r).toBe(2);
     expect(bar.fillColor?.r).toBe(80);
     expect(bar.fillOverrides.bar).toBeNull();
+  });
+});
+
+describe('background input', () => {
+  test('a panel takes a texture directly and slices it into thirds', () => {
+    const panel = new Panel({ width: 40, height: 20, background: textureStub() });
+    const background = panel.background;
+
+    expect(panel.backgroundNode).toBeInstanceOf(NineSliceSprite);
+    expect(background.kind === 'nineSlice' && background.slices).toEqual({ left: 42, top: 21, right: 42, bottom: 21 });
+  });
+
+  test('a panel takes a colour as a fill override and keeps the skin corner radius', () => {
+    const panel = new Panel({ width: 40, height: 20, background: new Color(7, 8, 9, 1) });
+
+    expect(panel.color?.r).toBe(7);
+    expect(panel.cornerRadius).toBe(8);
+    expect(panel.fillOverrides?.color?.r).toBe(7);
+  });
+
+  test('setBackground takes a texture with explicit slices', () => {
+    const panel = new Panel({ width: 40, height: 20 });
+
+    panel.setBackground(textureStub(), { slices: 8, border: 12 });
+
+    const background = panel.background;
+
+    expect(background.kind === 'nineSlice' && background.slices).toBe(8);
+    expect(background.kind === 'nineSlice' && background.border).toBe(12);
+  });
+
+  test('a sprite background paints a repeating sprite sized to the widget', () => {
+    const panel = new Panel({ width: 40, height: 20 });
+
+    panel.setBackground(textureStub(), { fit: 'tile' });
+
+    expect(panel.backgroundNode).toBeInstanceOf(RepeatingSprite);
+    expect(panel.background.kind).toBe('sprite');
+  });
+
+  test('a button states all four skins in one option, mixing textures and colours', () => {
+    const button = new Button({ width: 80, height: 30, skin: { normal: textureStub(), hover: new Color(3, 4, 5, 1) } });
+
+    expect(button.backgroundIn('normal').kind).toBe('nineSlice');
+    expect(button.colors.hover?.r).toBe(3);
+    expect(button.backgroundNode).toBeInstanceOf(NineSliceSprite);
+  });
+
+  test('a progress bar takes a texture per surface', () => {
+    const bar = new ProgressBar({ width: 200, height: 12, trackBackground: textureStub(), barBackground: textureStub() });
+
+    expect(bar.trackBackground.kind).toBe('nineSlice');
+    expect(bar.barBackground.kind).toBe('nineSlice');
+  });
+});
+
+describe('ProgressBar fill modes', () => {
+  test('clips a textured bar to the value instead of squashing it', () => {
+    const bar = new ProgressBar({ width: 200, height: 12, value: 0.25, barBackground: textureStub() });
+
+    expect(bar.fillMode).toBe('clip');
+    expect(bar.barNode).toBeInstanceOf(NineSliceSprite);
+    expect((bar.barNode as NineSliceSprite).width).toBe(200);
+    expect(bar.barVisibleWidth).toBe(50);
+    expect(bar.barNode?.parent?.clip).toBe(true);
+  });
+
+  test('scales a textured bar with the value when asked to', () => {
+    const bar = new ProgressBar({ width: 200, height: 12, value: 0.25, barBackground: textureStub(), fillMode: 'scale' });
+
+    expect((bar.barNode as NineSliceSprite).width).toBe(50);
+    expect(bar.barVisibleWidth).toBe(50);
+  });
+
+  test('paints a fill bar at the value width in either mode, so it is never clipped', () => {
+    const clipped = new ProgressBar({ width: 200, height: 12, value: 0.5 });
+    const scaled = new ProgressBar({ width: 200, height: 12, value: 0.5, fillMode: 'scale' });
+
+    expect(clipped.barNode).toBeInstanceOf(Graphics);
+    expect((clipped.barNode as Graphics).getBounds().width).toBe(100);
+    expect((scaled.barNode as Graphics).getBounds().width).toBe(100);
+    expect(clipped.barNode?.parent?.clip).toBe(false);
+  });
+
+  test('follows a later fill-mode change', () => {
+    const bar = new ProgressBar({ width: 200, height: 12, value: 0.25, barBackground: textureStub(), fillMode: 'scale' });
+
+    bar.fillMode = 'clip';
+
+    expect((bar.barNode as NineSliceSprite).width).toBe(200);
+    expect(bar.barVisibleWidth).toBe(50);
   });
 });

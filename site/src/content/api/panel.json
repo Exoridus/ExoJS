@@ -1940,7 +1940,7 @@
         },
         {
           "name": "setBackground",
-          "signature": "setBackground(background: UIBackground | null): this",
+          "signature": "setBackground(background: UIBackgroundInput | null, options: UIBackgroundOptions): this",
           "signatureTokens": [
             {
               "text": "setBackground",
@@ -1959,7 +1959,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "UIBackground",
+              "text": "UIBackgroundInput",
               "kind": "type"
             },
             {
@@ -1969,6 +1969,22 @@
             {
               "text": "null",
               "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIBackgroundOptions",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -1986,12 +2002,17 @@
           "params": [
             {
               "name": "background",
-              "type": "UIBackground | null",
+              "type": "UIBackgroundInput | null",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "UIBackgroundOptions",
               "optional": false
             }
           ],
           "returnType": "this",
-          "description": "Replace the whole background descriptor, ignoring the skin's. null restores it. Layout-invalidating: a nine-slice and a fill can imply different content boxes."
+          "description": "Set the panel's background from a colour, a texture, a region or a full descriptor; null returns it to its skin. A colour becomes a fill override on top of the skin, so the skin's corner radius and border survive it. Layout-invalidating: a nine-slice and a fill can imply different content boxes."
         },
         {
           "name": "setChildIndex",
@@ -3083,7 +3104,7 @@
         },
         {
           "name": "backgroundNode",
-          "signature": "backgroundNode: Graphics | NineSliceSprite | null",
+          "signature": "backgroundNode: BackgroundNode | null",
           "signatureTokens": [
             {
               "text": "backgroundNode",
@@ -3094,15 +3115,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Graphics",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "NineSliceSprite",
+              "text": "BackgroundNode",
               "kind": "type"
             },
             {

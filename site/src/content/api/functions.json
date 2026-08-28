@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 76,
+  "memberCount": 77,
   "counts": {
     "constructors": 0,
-    "methods": 44,
+    "methods": 45,
     "properties": 32,
     "events": 0
   },
@@ -820,6 +820,90 @@
           "params": [],
           "returnType": "GamepadMapping",
           "description": "Nintendo Switch Pro Controller over USB or Bluetooth. Index 17 is the Capture button (SWITCH_PRO_BUTTON_CAPTURE == BUTTON_INDEX_COUNT); Home maps to Guide, Minus/Plus to Select/Start. Some browsers only recognise the controller after it has been paired through Steam or a dedicated driver."
+        },
+        {
+          "name": "createUIBackground",
+          "signature": "createUIBackground(source: Texture | TextureRegion | UIBackground, options: UIBackgroundOptions): UIBackground",
+          "signatureTokens": [
+            {
+              "text": "createUIBackground",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureRegion",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIBackground",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIBackgroundOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIBackground",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "Texture | TextureRegion | UIBackground",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "UIBackgroundOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "UIBackground",
+          "description": "Normalise a texture, region or descriptor into a background descriptor. A texture becomes a nine-slice whose slices default to a third of the source per axis, so a frame is usable without measuring it first; a real skin states its slices. A source edge under three pixels degenerates to a slice of zero, which stretches that axis rather than failing. Passing fit paints the texture flat instead, and a descriptor is returned unchanged."
         },
         {
           "name": "createUITheme",

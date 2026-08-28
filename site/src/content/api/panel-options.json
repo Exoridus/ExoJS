@@ -6,11 +6,11 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 11,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 7,
+    "properties": 11,
     "events": 0
   },
   "sections": [
@@ -28,7 +28,7 @@
       "members": [
         {
           "name": "background",
-          "signature": "background?: UIBackground",
+          "signature": "background?: UIBackgroundInput",
           "signatureTokens": [
             {
               "text": "background",
@@ -43,13 +43,58 @@
               "kind": "punctuation"
             },
             {
-              "text": "UIBackground",
+              "text": "UIBackgroundInput",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Whole-background override, e.g. a nine-slice skin, replacing the theme's."
+          "description": "The panel's background, stated as a colour, a texture, a region or a full descriptor. A colour overrides the skin's fill and keeps the rest of it; anything else replaces the skin's background outright."
+        },
+        {
+          "name": "border",
+          "signature": "border?: Partial<NineSliceInsets> | number",
+          "signatureTokens": [
+            {
+              "text": "border",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NineSliceInsets",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Destination border widths for a texture background; defaults to slices."
         },
         {
           "name": "borderColor",
@@ -152,6 +197,31 @@
           "description": ""
         },
         {
+          "name": "fit",
+          "signature": "fit?: UISpriteFit",
+          "signatureTokens": [
+            {
+              "text": "fit",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UISpriteFit",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Paint a texture background flat with this fit instead of slicing it."
+        },
+        {
           "name": "height",
           "signature": "height?: number",
           "signatureTokens": [
@@ -175,6 +245,76 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "modes",
+          "signature": "modes?: NineSliceModes",
+          "signatureTokens": [
+            {
+              "text": "modes",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NineSliceModes",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "slices",
+          "signature": "slices?: Partial<NineSliceInsets> | number",
+          "signatureTokens": [
+            {
+              "text": "slices",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NineSliceInsets",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Source-texture slice widths for a texture background; defaults to a third per axis."
         },
         {
           "name": "width",

@@ -6,11 +6,11 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 127,
+  "memberCount": 128,
   "counts": {
     "constructors": 1,
     "methods": 60,
-    "properties": 51,
+    "properties": 52,
     "events": 15
   },
   "sections": [
@@ -2042,7 +2042,7 @@
         },
         {
           "name": "setBackground",
-          "signature": "setBackground(background: UIBackground | null, state: UIWidgetState): this",
+          "signature": "setBackground(background: UIBackgroundInput | null, state: UIWidgetState, options: UIBackgroundOptions): this",
           "signatureTokens": [
             {
               "text": "setBackground",
@@ -2061,7 +2061,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "UIBackground",
+              "text": "UIBackgroundInput",
               "kind": "type"
             },
             {
@@ -2089,6 +2089,22 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIBackgroundOptions",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -2104,17 +2120,22 @@
           "params": [
             {
               "name": "background",
-              "type": "UIBackground | null",
+              "type": "UIBackgroundInput | null",
               "optional": false
             },
             {
               "name": "state",
               "type": "UIWidgetState",
               "optional": false
+            },
+            {
+              "name": "options",
+              "type": "UIBackgroundOptions",
+              "optional": false
             }
           ],
           "returnType": "this",
-          "description": "Replace one state's whole background descriptor; null restores the skin's."
+          "description": "Set one state's background from a colour, a texture, a region or a full descriptor; null returns that state to its skin. A colour becomes a fill override, so the skin's corner radius and border survive it."
         },
         {
           "name": "setChildIndex",
@@ -3258,6 +3279,35 @@
           "params": [],
           "returnType": null,
           "description": "Tab-traversal order among focusable nodes in the same focus scope. Lower values are visited first; equal values keep document (tree) order."
+        },
+        {
+          "name": "backgroundNode",
+          "signature": "backgroundNode: BackgroundNode | null",
+          "signatureTokens": [
+            {
+              "text": "backgroundNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BackgroundNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node painting the background, or null while it paints nothing."
         },
         {
           "name": "bottom",
