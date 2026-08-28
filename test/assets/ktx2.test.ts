@@ -143,6 +143,50 @@ describe('parseKtx2', () => {
     });
   });
 
+  test('reads every ASTC block size the engine exposes, at both its vkFormat values', () => {
+    // VK_FORMAT_ASTC_4x4_UNORM_BLOCK is 157 and the LDR sizes run in pairs from
+    // there, UNORM then SRGB, in the same order as the engine's block table.
+    const sizes = [
+      [4, 4],
+      [5, 4],
+      [5, 5],
+      [6, 5],
+      [6, 6],
+      [8, 5],
+      [8, 6],
+      [8, 8],
+      [10, 5],
+      [10, 6],
+      [10, 8],
+      [10, 10],
+      [12, 10],
+      [12, 12],
+    ] as const;
+
+    sizes.forEach(([blockWidth, blockHeight], index) => {
+      const format = `astc-${blockWidth}x${blockHeight}-unorm` as CompressedTextureFormat;
+      const width = blockWidth * 2;
+      const height = blockHeight * 2;
+      const lengths = levelLengthsFor(format, width, height, 1);
+
+      for (const vkFormat of [157 + index * 2, 158 + index * 2]) {
+        expect(parseKtx2(buildKtx2({ vkFormat, width, height, levelLengths: lengths }), 'a.ktx2')).toMatchObject({ format });
+      }
+    });
+  });
+
+  test('reads the signed BC variants as their own formats', () => {
+    const signed = [
+      [140, CompressedTextureFormat.Bc4RSnorm],
+      [142, CompressedTextureFormat.Bc5RgSnorm],
+      [144, CompressedTextureFormat.Bc6hRgbFloat],
+    ] as const;
+
+    for (const [vkFormat, format] of signed) {
+      expect(parseKtx2(buildKtx2({ vkFormat, width: 8, height: 8, levelLengths: levelLengthsFor(format, 8, 8, 1) }), 'a.ktx2')).toMatchObject({ format });
+    }
+  });
+
   test('reads an uncompressed RGBA8 payload as pixels', () => {
     const payload = parseKtx2(buildKtx2({ vkFormat: 37, width: 4, height: 2, levelLengths: [4 * 2 * 4] }), 'hero.ktx2');
 
