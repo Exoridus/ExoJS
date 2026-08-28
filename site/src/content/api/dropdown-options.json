@@ -1,0 +1,249 @@
+{
+  "title": "DropdownOptions",
+  "description": "Options for Dropdown.",
+  "symbol": "DropdownOptions",
+  "kind": "interface",
+  "subsystem": "ui",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for Dropdown."
+      ],
+      "importLine": "import { DropdownOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "height",
+          "signature": "height?: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Height of the closed control, and of one list row. Default 36."
+        },
+        {
+          "name": "items",
+          "signature": "items?: readonly DropdownItem<T>[]",
+          "signatureTokens": [
+            {
+              "text": "items",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DropdownItem",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The entries to choose from."
+        },
+        {
+          "name": "padding",
+          "signature": "padding?: number",
+          "signatureTokens": [
+            {
+              "text": "padding",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Horizontal padding of the label and the rows, in pixels. Default 12."
+        },
+        {
+          "name": "placeholder",
+          "signature": "placeholder?: string",
+          "signatureTokens": [
+            {
+              "text": "placeholder",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Text shown while nothing is selected. Default 'Select...'."
+        },
+        {
+          "name": "selectedIndex",
+          "signature": "selectedIndex?: number",
+          "signatureTokens": [
+            {
+              "text": "selectedIndex",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Index selected initially; -1 (the default) selects nothing."
+        },
+        {
+          "name": "textStyle",
+          "signature": "textStyle?: TextStyleOptions",
+          "signatureTokens": [
+            {
+              "text": "textStyle",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextStyleOptions",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Text style overrides on top of the skin's."
+        },
+        {
+          "name": "width",
+          "signature": "width?: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Width in pixels. Default 180."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/ui/Dropdown.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Dropdown.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/ui/Dropdown.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Dropdown.ts"
+}

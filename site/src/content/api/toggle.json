@@ -1,17 +1,17 @@
 {
-  "title": "Widget",
-  "description": "Base class for UI widgets - a Container with an explicit layout size (independent of child bounds / scale), an `enabled` flag, and optional screen-edge anchoring that re-applies on resize. Widgets read their look from the theme of the nearest themed ancestor - the layer's UIRoot, or any widget above them that set overrides with Widget.setTheme. Subclasses paint in Widget._repaint, place size-dependent content in Widget._relayout, and react to enable/disable in Widget._onEnabledChanged.",
-  "symbol": "Widget",
+  "title": "Toggle",
+  "description": "A switch that slides between off and on, with an optional label beside it. Behaviourally identical to Checkbox - same state machine, same keyboard activation, same CheckableWidget.onChange - and different only in what it paints: the `toggleTrack` role carries the interaction states, and the `toggleKnob` role slides to the side `checked` selects.",
+  "symbol": "Toggle",
   "kind": "class",
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 118,
+  "memberCount": 129,
   "counts": {
     "constructors": 1,
-    "methods": 59,
-    "properties": 44,
-    "events": 14
+    "methods": 63,
+    "properties": 50,
+    "events": 15
   },
   "sections": [
     {
@@ -19,11 +19,10 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Base class for UI widgets - a Container with an explicit layout size (independent of child bounds / scale), an `enabled` flag, and optional screen-edge anchoring that re-applies on resize.",
-        "Widgets read their look from the theme of the nearest themed ancestor - the layer's UIRoot, or any widget above them that set overrides with Widget.setTheme.",
-        "Subclasses paint in Widget._repaint, place size-dependent content in Widget._relayout, and react to enable/disable in Widget._onEnabledChanged."
+        "A switch that slides between off and on, with an optional label beside it.",
+        "Behaviourally identical to Checkbox - same state machine, same keyboard activation, same CheckableWidget.onChange - and different only in what it paints: the `toggleTrack` role carries the interaction states, and the `toggleKnob` role slides to the side `checked` selects."
       ],
-      "importLine": "import { Widget } from '@codexo/exojs'",
+      "importLine": "import { Toggle } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -32,7 +31,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(): Widget",
+          "signature": "new(options: ToggleOptions): Toggle",
           "signatureTokens": [
             {
               "text": "new",
@@ -43,6 +42,18 @@
               "kind": "punctuation"
             },
             {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ToggleOptions",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -51,12 +62,18 @@
               "kind": "punctuation"
             },
             {
-              "text": "Widget",
+              "text": "Toggle",
               "kind": "type"
             }
           ],
-          "params": [],
-          "returnType": "Widget",
+          "params": [
+            {
+              "name": "options",
+              "type": "ToggleOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Toggle",
           "description": ""
         }
       ],
@@ -164,6 +181,67 @@
           "params": [],
           "returnType": "void",
           "description": "Push a theme refresh into every themed descendant."
+        },
+        {
+          "name": "_controlSize",
+          "signature": "_controlSize(): { height: number; width: number }",
+          "signatureTokens": [
+            {
+              "text": "_controlSize",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "{ height: number; width: number }",
+          "description": "The control's own extent, independent of the label beside it."
         },
         {
           "name": "_invalidateLayout",
@@ -283,7 +361,7 @@
         },
         {
           "name": "_onEnabledChanged",
-          "signature": "_onEnabledChanged(_effectiveEnabled: boolean): void",
+          "signature": "_onEnabledChanged(effectiveEnabled: boolean): void",
           "signatureTokens": [
             {
               "text": "_onEnabledChanged",
@@ -294,7 +372,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "_effectiveEnabled",
+              "text": "effectiveEnabled",
               "kind": "param"
             },
             {
@@ -320,7 +398,7 @@
           ],
           "params": [
             {
-              "name": "_effectiveEnabled",
+              "name": "effectiveEnabled",
               "type": "boolean",
               "optional": false
             }
@@ -330,7 +408,7 @@
         },
         {
           "name": "_onFocusChanged",
-          "signature": "_onFocusChanged(_focused: boolean): void",
+          "signature": "_onFocusChanged(): void",
           "signatureTokens": [
             {
               "text": "_onFocusChanged",
@@ -341,18 +419,6 @@
               "kind": "punctuation"
             },
             {
-              "text": "_focused",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "boolean",
-              "kind": "keyword"
-            },
-            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -365,13 +431,7 @@
               "kind": "keyword"
             }
           ],
-          "params": [
-            {
-              "name": "_focused",
-              "type": "boolean",
-              "optional": false
-            }
-          ],
+          "params": [],
           "returnType": "void",
           "description": "React to a focus change on this widget. Override in subclasses that repaint for it; the default does nothing, so opting into tracking alone does not change how a widget looks."
         },
@@ -403,6 +463,35 @@
           "params": [],
           "returnType": "void",
           "description": "React to a resolved-theme change. The default re-lays out and repaints; override to re-read skin values that are cached elsewhere first, then call super._onThemeChanged()."
+        },
+        {
+          "name": "_paintControl",
+          "signature": "_paintControl(): void",
+          "signatureTokens": [
+            {
+              "text": "_paintControl",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Paint the control itself at (0, 0), sized by _controlSize."
         },
         {
           "name": "_relayout",
@@ -584,6 +673,35 @@
           ],
           "returnType": "UISkin",
           "description": "The skin role paints with in this widget's current state."
+        },
+        {
+          "name": "_textRole",
+          "signature": "_textRole(): UIThemeRole",
+          "signatureTokens": [
+            {
+              "text": "_textRole",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIThemeRole",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "UIThemeRole",
+          "description": "The role the label's text style comes from - the control's own surface role."
         },
         {
           "name": "_trackFocus",
@@ -1139,7 +1257,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Destroy this container and every node beneath it. Ownership is by containment: detaching a subtree only unlinks it, so the descendants' GPU-backed resources (cached textures, filters, render textures) and signal listeners would outlive the tree that owned them and leak on every scene change."
+          "description": ""
         },
         {
           "name": "focus",
@@ -2734,6 +2852,35 @@
           "description": ""
         },
         {
+          "name": "toggle",
+          "signature": "toggle(): this",
+          "signatureTokens": [
+            {
+              "text": "toggle",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Flip checked."
+        },
+        {
           "name": "updateBounds",
           "signature": "updateBounds(): this",
           "signatureTokens": [
@@ -3131,6 +3278,27 @@
           "description": "Resolution the cacheAsTexture texture is baked at, in device pixels per logical unit. 'inherit' (the default) matches the surface the cache is composited into, so enabling the cache does not soften the picture on a HiDPI display. Pin it to a number to trade sharpness for memory and bake cost - a cache is resolution² texels, so 1 on a DPR-3 phone is a ninth of the VRAM and a ninth of the fill per re-bake. Changing it invalidates the cache."
         },
         {
+          "name": "checked",
+          "signature": "checked: boolean",
+          "signatureTokens": [
+            {
+              "text": "checked",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the control is on. Assigning fires onChange."
+        },
+        {
           "name": "children",
           "signature": "children: readonly RenderNode[]",
           "signatureTokens": [
@@ -3452,6 +3620,85 @@
           "description": ""
         },
         {
+          "name": "knobNode",
+          "signature": "knobNode: BackgroundNode | null",
+          "signatureTokens": [
+            {
+              "text": "knobNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BackgroundNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node painting the knob, or null while it paints nothing."
+        },
+        {
+          "name": "label",
+          "signature": "label: string",
+          "signatureTokens": [
+            {
+              "text": "label",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The label text, or '' when the control was built without one."
+        },
+        {
+          "name": "labelNode",
+          "signature": "labelNode: Text | null",
+          "signatureTokens": [
+            {
+              "text": "labelNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Text",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The Text node drawing the label, or null when there is none."
+        },
+        {
           "name": "left",
           "signature": "left: number",
           "signatureTokens": [
@@ -3691,6 +3938,27 @@
           "description": "Vertical skew angle in degrees. Shears the node along the Y axis (positive values lean the left edge downward). Combines correctly with rotation and scale."
         },
         {
+          "name": "state",
+          "signature": "state: UIWidgetState",
+          "signatureTokens": [
+            {
+              "text": "state",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIWidgetState",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The state the control currently paints in."
+        },
+        {
           "name": "theme",
           "signature": "theme: UITheme",
           "signatureTokens": [
@@ -3862,6 +4130,35 @@
           "description": "Topmost edge of the subtree - see left."
         },
         {
+          "name": "trackNode",
+          "signature": "trackNode: BackgroundNode | null",
+          "signatureTokens": [
+            {
+              "text": "trackNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BackgroundNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node painting the track, or null while it paints nothing."
+        },
+        {
           "name": "uiHeight",
           "signature": "uiHeight: number",
           "signatureTokens": [
@@ -4017,6 +4314,55 @@
       "id": "events",
       "title": "Events",
       "members": [
+        {
+          "name": "onChange",
+          "signature": "onChange: Signal<[checked, widget]>",
+          "signatureTokens": [
+            {
+              "text": "onChange",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "checked",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "widget",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires whenever checked changes, however it changed."
+        },
         {
           "name": "onBlur",
           "signature": "onBlur: Signal<[RenderNode]>",
@@ -4603,11 +4949,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/ui/Widget.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Widget.ts"
+        "label": "src/ui/Toggle.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Toggle.ts"
       }
     }
   ],
-  "sourcePath": "src/ui/Widget.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Widget.ts"
+  "sourcePath": "src/ui/Toggle.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Toggle.ts"
 }

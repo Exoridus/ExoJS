@@ -1,4 +1,22 @@
-import { Button, Color, DockContainer, Keyboard, Label, Panel, ProgressBar, Scene, ScrollContainer, Stack, Tooltip, UIRoot } from '@codexo/exojs';
+import {
+  Button,
+  Checkbox,
+  Color,
+  DockContainer,
+  Dropdown,
+  GamepadButton,
+  Keyboard,
+  Label,
+  Panel,
+  ProgressBar,
+  Scene,
+  ScrollContainer,
+  Slider,
+  Stack,
+  Toggle,
+  Tooltip,
+  UIRoot,
+} from '@codexo/exojs';
 
 // #region guide:anchoring
 class HudScene extends Scene {
@@ -132,4 +150,60 @@ class ShopScene extends Scene {
 }
 // #endregion guide:tooltip
 
-export { DockedHudScene, FormScene, HudScene, InventoryScene, MenuScene, SettingsScene, ShopScene };
+// #region guide:controls
+class OptionsScene extends Scene {
+  override init(): void {
+    const options = new Stack({ direction: 'column', spacing: 12, padding: 16 });
+
+    const fullscreen = new Checkbox({ label: 'Fullscreen' });
+    fullscreen.onChange.add(checked => console.log('fullscreen', checked));
+
+    const vsync = new Toggle({ label: 'V-Sync', checked: true });
+
+    const volume = new Slider({ width: 240, min: 0, max: 1, value: 0.8, step: 0.05 });
+    volume.onChange.add(value => console.log('volume', value));
+
+    const quality = new Dropdown({
+      width: 240,
+      items: [
+        { label: 'Low', value: 'low' },
+        { label: 'Medium', value: 'medium' },
+        { label: 'High', value: 'high' },
+      ],
+      selectedIndex: 1,
+    });
+    quality.onChange.add(value => console.log('quality', value));
+
+    options.addChild(fullscreen).addChild(vsync).addChild(volume).addChild(quality);
+    options.anchorIn(this.ui, 'center');
+    this.ui.addChild(options);
+  }
+}
+// #endregion guide:controls
+
+// #region guide:focus-navigation
+class GamepadMenuScene extends Scene {
+  override init(): void {
+    const interaction = this.app.interaction;
+
+    // The default: the arrow keys and a D-pad walk the UI layer, and the game
+    // keeps the arrow keys for everything else.
+    interaction.focusNavigation = 'ui';
+
+    // Enter the menu with something already focused, so the first D-pad press
+    // moves rather than picks a starting point.
+    const first = new Button({ label: 'Continue', width: 200, height: 44 });
+    this.ui.addChild(first);
+    interaction.focus(first);
+
+    // Any other trigger can navigate too - a shoulder button, a stick tilt.
+    this.app.input.onAnyGamepadButtonDown.add((_pad, button) => {
+      if (button.channel === GamepadButton.RightShoulder) {
+        interaction.focusInDirection('down');
+      }
+    });
+  }
+}
+// #endregion guide:focus-navigation
+
+export { DockedHudScene, FormScene, GamepadMenuScene, HudScene, InventoryScene, MenuScene, OptionsScene, SettingsScene, ShopScene };

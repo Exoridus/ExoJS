@@ -35,6 +35,8 @@ import {
 } from '#core/SceneTypes';
 import { Signal } from '#core/Signal';
 import { type Seconds, Time } from '#core/units';
+import type { Gamepad } from '#input/Gamepad';
+import type { GamepadButton } from '#input/GamepadButton';
 import type { Pointer } from '#input/Pointer';
 import { Rectangle } from '#math/Rectangle';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -42,6 +44,7 @@ import { RenderTexture } from '#rendering/texture/RenderTexture';
 interface InputManagerStub {
   readonly onKeyDown: Signal<[number]>;
   readonly onKeyUp: Signal<[number]>;
+  readonly onAnyGamepadButtonDown: Signal<[Gamepad, GamepadButton, number]>;
   readonly onPointerEnter: Signal<[Pointer]>;
   readonly onPointerLeave: Signal<[Pointer]>;
   readonly onPointerDown: Signal<[Pointer]>;
@@ -56,6 +59,7 @@ interface InputManagerStub {
 const createInputManagerStub = (): InputManagerStub => ({
   onKeyDown: new Signal<[number]>(),
   onKeyUp: new Signal<[number]>(),
+  onAnyGamepadButtonDown: new Signal<[Gamepad, GamepadButton, number]>(),
   onPointerEnter: new Signal<[Pointer]>(),
   onPointerLeave: new Signal<[Pointer]>(),
   onPointerDown: new Signal<[Pointer]>(),

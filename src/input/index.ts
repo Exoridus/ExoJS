@@ -1,5 +1,6 @@
 export * from './actions';
 export type { ContextMenuRequest } from './ContextMenuRequest';
+export type { FocusDirection, FocusNavigationPolicy } from './FocusController';
 export * from './Gamepad';
 export type { GamepadAxisOptions } from './GamepadAxis';
 export { GamepadAxis } from './GamepadAxis';

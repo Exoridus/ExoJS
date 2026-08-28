@@ -1,17 +1,17 @@
 {
-  "title": "Widget",
-  "description": "Base class for UI widgets - a Container with an explicit layout size (independent of child bounds / scale), an `enabled` flag, and optional screen-edge anchoring that re-applies on resize. Widgets read their look from the theme of the nearest themed ancestor - the layer's UIRoot, or any widget above them that set overrides with Widget.setTheme. Subclasses paint in Widget._repaint, place size-dependent content in Widget._relayout, and react to enable/disable in Widget._onEnabledChanged.",
-  "symbol": "Widget",
+  "title": "Dropdown",
+  "description": "A closed control showing the current selection that opens a list of alternatives. Clicking it, or pressing Enter or Space while it holds focus, opens the list; the arrow keys move the highlight, Enter picks it, and Escape closes without changing the selection. With the list closed, the arrow keys step through the entries directly, so a value can be changed without ever opening it. The closed control paints the `button` role - the same states a Button does - the open list the `dropdownList` role, and each row the `dropdownItem` role, with the highlighted row in its `hover` state. The list is a child of the dropdown, so it draws above whatever the dropdown itself draws above and is clipped by the same ancestors.",
+  "symbol": "Dropdown",
   "kind": "class",
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 118,
+  "memberCount": 131,
   "counts": {
     "constructors": 1,
-    "methods": 59,
-    "properties": 44,
-    "events": 14
+    "methods": 63,
+    "properties": 52,
+    "events": 15
   },
   "sections": [
     {
@@ -19,11 +19,11 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Base class for UI widgets - a Container with an explicit layout size (independent of child bounds / scale), an `enabled` flag, and optional screen-edge anchoring that re-applies on resize.",
-        "Widgets read their look from the theme of the nearest themed ancestor - the layer's UIRoot, or any widget above them that set overrides with Widget.setTheme.",
-        "Subclasses paint in Widget._repaint, place size-dependent content in Widget._relayout, and react to enable/disable in Widget._onEnabledChanged."
+        "A closed control showing the current selection that opens a list of alternatives.",
+        "Clicking it, or pressing Enter or Space while it holds focus, opens the list; the arrow keys move the highlight, Enter picks it, and Escape closes without changing the selection. With the list closed, the arrow keys step through the entries directly, so a value can be changed without ever opening it.",
+        "The closed control paints the `button` role - the same states a Button does - the open list the `dropdownList` role, and each row the `dropdownItem` role, with the highlighted row in its `hover` state. The list is a child of the dropdown, so it draws above whatever the dropdown itself draws above and is clipped by the same ancestors."
       ],
-      "importLine": "import { Widget } from '@codexo/exojs'",
+      "importLine": "import { Dropdown } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(): Widget",
+          "signature": "new(options: DropdownOptions<T>): Dropdown<T>",
           "signatureTokens": [
             {
               "text": "new",
@@ -40,6 +40,30 @@
             },
             {
               "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DropdownOptions",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
               "kind": "punctuation"
             },
             {
@@ -51,12 +75,30 @@
               "kind": "punctuation"
             },
             {
-              "text": "Widget",
+              "text": "Dropdown",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
-          "params": [],
-          "returnType": "Widget",
+          "params": [
+            {
+              "name": "options",
+              "type": "DropdownOptions<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "Dropdown<T>",
           "description": ""
         }
       ],
@@ -283,7 +325,7 @@
         },
         {
           "name": "_onEnabledChanged",
-          "signature": "_onEnabledChanged(_effectiveEnabled: boolean): void",
+          "signature": "_onEnabledChanged(effectiveEnabled: boolean): void",
           "signatureTokens": [
             {
               "text": "_onEnabledChanged",
@@ -294,7 +336,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "_effectiveEnabled",
+              "text": "effectiveEnabled",
               "kind": "param"
             },
             {
@@ -320,7 +362,7 @@
           ],
           "params": [
             {
-              "name": "_effectiveEnabled",
+              "name": "effectiveEnabled",
               "type": "boolean",
               "optional": false
             }
@@ -330,7 +372,7 @@
         },
         {
           "name": "_onFocusChanged",
-          "signature": "_onFocusChanged(_focused: boolean): void",
+          "signature": "_onFocusChanged(focused: boolean): void",
           "signatureTokens": [
             {
               "text": "_onFocusChanged",
@@ -341,7 +383,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "_focused",
+              "text": "focused",
               "kind": "param"
             },
             {
@@ -367,7 +409,7 @@
           ],
           "params": [
             {
-              "name": "_focused",
+              "name": "focused",
               "type": "boolean",
               "optional": false
             }
@@ -988,6 +1030,35 @@
           "params": [],
           "returnType": "this",
           "description": ""
+        },
+        {
+          "name": "close",
+          "signature": "close(): this",
+          "signatureTokens": [
+            {
+              "text": "close",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Hide the list, leaving the selection as it is."
         },
         {
           "name": "collidesWith",
@@ -1685,6 +1756,35 @@
           "description": ""
         },
         {
+          "name": "open",
+          "signature": "open(): this",
+          "signatureTokens": [
+            {
+              "text": "open",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Show the list, highlighting the current selection."
+        },
+        {
           "name": "project",
           "signature": "project(axis: Vector, result: Interval): Interval",
           "signatureTokens": [
@@ -2122,6 +2222,77 @@
           ],
           "returnType": "this",
           "description": ""
+        },
+        {
+          "name": "setItems",
+          "signature": "setItems(items: readonly DropdownItem<T>[]): this",
+          "signatureTokens": [
+            {
+              "text": "setItems",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "items",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DropdownItem",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "items",
+              "type": "readonly DropdownItem<T>[]",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Replace the entries; the selection is kept only if its index still exists."
         },
         {
           "name": "setOrigin",
@@ -2734,6 +2905,35 @@
           "description": ""
         },
         {
+          "name": "toggle",
+          "signature": "toggle(): this",
+          "signatureTokens": [
+            {
+              "text": "toggle",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Open the list if it is closed, close it if it is open."
+        },
+        {
           "name": "updateBounds",
           "signature": "updateBounds(): this",
           "signatureTokens": [
@@ -3066,6 +3266,35 @@
           "params": [],
           "returnType": null,
           "description": "Tab-traversal order among focusable nodes in the same focus scope. Lower values are visited first; equal values keep document (tree) order."
+        },
+        {
+          "name": "backgroundNode",
+          "signature": "backgroundNode: BackgroundNode | null",
+          "signatureTokens": [
+            {
+              "text": "backgroundNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BackgroundNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node painting the closed control, or null while it paints nothing."
         },
         {
           "name": "bottom",
@@ -3410,6 +3639,27 @@
           "description": "Rendered height of the whole subtree - see width."
         },
         {
+          "name": "highlightedIndex",
+          "signature": "highlightedIndex: number",
+          "signatureTokens": [
+            {
+              "text": "highlightedIndex",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Index the arrow keys have moved to while the list is open, or -1."
+        },
+        {
           "name": "interactive",
           "signature": "interactive: boolean",
           "signatureTokens": [
@@ -3452,6 +3702,72 @@
           "description": ""
         },
         {
+          "name": "isOpen",
+          "signature": "isOpen: boolean",
+          "signatureTokens": [
+            {
+              "text": "isOpen",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the list is showing."
+        },
+        {
+          "name": "items",
+          "signature": "items: readonly DropdownItem<T>[]",
+          "signatureTokens": [
+            {
+              "text": "items",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DropdownItem",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The entries to choose from."
+        },
+        {
           "name": "left",
           "signature": "left: number",
           "signatureTokens": [
@@ -3471,6 +3787,27 @@
           "params": [],
           "returnType": null,
           "description": "Leftmost edge of the subtree in the node's global-transform space. These four edges are read straight off the aggregate bounds so they always span exactly width/height and agree with each other. They cannot be reconstructed from position and origin: origin is in local pixels and a container's own local bounds are empty, so the rendered extent comes entirely from the children."
+        },
+        {
+          "name": "listNode",
+          "signature": "listNode: Container",
+          "signatureTokens": [
+            {
+              "text": "listNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Container",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The container holding the open list, for placement or clipping by a caller."
         },
         {
           "name": "mask",
@@ -3649,6 +3986,56 @@
           "description": ""
         },
         {
+          "name": "selectedIndex",
+          "signature": "selectedIndex: number",
+          "signatureTokens": [
+            {
+              "text": "selectedIndex",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Index of the selected entry, or -1 while nothing is selected."
+        },
+        {
+          "name": "selectedValue",
+          "signature": "selectedValue: T | null",
+          "signatureTokens": [
+            {
+              "text": "selectedValue",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The selected value, or null while nothing is selected."
+        },
+        {
           "name": "skewX",
           "signature": "skewX: number",
           "signatureTokens": [
@@ -3689,6 +4076,27 @@
           "params": [],
           "returnType": null,
           "description": "Vertical skew angle in degrees. Shears the node along the Y axis (positive values lean the left edge downward). Combines correctly with rotation and scale."
+        },
+        {
+          "name": "state",
+          "signature": "state: UIWidgetState",
+          "signatureTokens": [
+            {
+              "text": "state",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIWidgetState",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The state the closed control currently paints in."
         },
         {
           "name": "theme",
@@ -4017,6 +4425,63 @@
       "id": "events",
       "title": "Events",
       "members": [
+        {
+          "name": "onChange",
+          "signature": "onChange: Signal<[value, index, dropdown]>",
+          "signatureTokens": [
+            {
+              "text": "onChange",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "index",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "dropdown",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires when the selection changes, with the value and its index."
+        },
         {
           "name": "onBlur",
           "signature": "onBlur: Signal<[RenderNode]>",
@@ -4603,11 +5068,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/ui/Widget.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Widget.ts"
+        "label": "src/ui/Dropdown.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Dropdown.ts"
       }
     }
   ],
-  "sourcePath": "src/ui/Widget.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Widget.ts"
+  "sourcePath": "src/ui/Dropdown.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Dropdown.ts"
 }

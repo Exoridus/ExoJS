@@ -10,6 +10,8 @@ import { Scene } from '#core/Scene';
 import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
 import type { ContextMenuRequest } from '#input/ContextMenuRequest';
+import type { Gamepad } from '#input/Gamepad';
+import type { GamepadButton } from '#input/GamepadButton';
 import type { InputManager } from '#input/InputManager';
 import { InteractionManager } from '#input/InteractionManager';
 import type { Pointer } from '#input/Pointer';
@@ -74,6 +76,7 @@ const createApp = (dragThreshold?: number): { app: Application; scene: Scene; si
     onContextMenu: new Signal<[ContextMenuRequest]>(),
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
+    onAnyGamepadButtonDown: new Signal<[Gamepad, GamepadButton, number]>(),
     _finishInteractionFrame: (): void => undefined,
   };
   const canvas = document.createElement('canvas');

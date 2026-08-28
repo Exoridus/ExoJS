@@ -1,17 +1,17 @@
 {
-  "title": "Widget",
-  "description": "Base class for UI widgets - a Container with an explicit layout size (independent of child bounds / scale), an `enabled` flag, and optional screen-edge anchoring that re-applies on resize. Widgets read their look from the theme of the nearest themed ancestor - the layer's UIRoot, or any widget above them that set overrides with Widget.setTheme. Subclasses paint in Widget._repaint, place size-dependent content in Widget._relayout, and react to enable/disable in Widget._onEnabledChanged.",
-  "symbol": "Widget",
+  "title": "Slider",
+  "description": "Horizontal value slider: a groove, a fill up to the current value, and a draggable thumb. Dragging the thumb, clicking anywhere on the groove, and the arrow keys while it holds focus all move the value and fire Slider.onChange; Home and End jump to the ends. Keyboard steps use Slider.step, or a twentieth of the range while the slider is continuous. The three surfaces are themed independently - `sliderTrack`, `sliderFill` and `sliderThumb` - and all three resolve for the slider's own interaction state, so hovering anywhere on the control highlights the thumb.",
+  "symbol": "Slider",
   "kind": "class",
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 118,
+  "memberCount": 129,
   "counts": {
     "constructors": 1,
     "methods": 59,
-    "properties": 44,
-    "events": 14
+    "properties": 54,
+    "events": 15
   },
   "sections": [
     {
@@ -19,11 +19,11 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Base class for UI widgets - a Container with an explicit layout size (independent of child bounds / scale), an `enabled` flag, and optional screen-edge anchoring that re-applies on resize.",
-        "Widgets read their look from the theme of the nearest themed ancestor - the layer's UIRoot, or any widget above them that set overrides with Widget.setTheme.",
-        "Subclasses paint in Widget._repaint, place size-dependent content in Widget._relayout, and react to enable/disable in Widget._onEnabledChanged."
+        "Horizontal value slider: a groove, a fill up to the current value, and a draggable thumb.",
+        "Dragging the thumb, clicking anywhere on the groove, and the arrow keys while it holds focus all move the value and fire Slider.onChange; Home and End jump to the ends. Keyboard steps use Slider.step, or a twentieth of the range while the slider is continuous.",
+        "The three surfaces are themed independently - `sliderTrack`, `sliderFill` and `sliderThumb` - and all three resolve for the slider's own interaction state, so hovering anywhere on the control highlights the thumb."
       ],
-      "importLine": "import { Widget } from '@codexo/exojs'",
+      "importLine": "import { Slider } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(): Widget",
+          "signature": "new(options: SliderOptions): Slider",
           "signatureTokens": [
             {
               "text": "new",
@@ -43,6 +43,18 @@
               "kind": "punctuation"
             },
             {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SliderOptions",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -51,12 +63,18 @@
               "kind": "punctuation"
             },
             {
-              "text": "Widget",
+              "text": "Slider",
               "kind": "type"
             }
           ],
-          "params": [],
-          "returnType": "Widget",
+          "params": [
+            {
+              "name": "options",
+              "type": "SliderOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Slider",
           "description": ""
         }
       ],
@@ -283,7 +301,7 @@
         },
         {
           "name": "_onEnabledChanged",
-          "signature": "_onEnabledChanged(_effectiveEnabled: boolean): void",
+          "signature": "_onEnabledChanged(effectiveEnabled: boolean): void",
           "signatureTokens": [
             {
               "text": "_onEnabledChanged",
@@ -294,7 +312,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "_effectiveEnabled",
+              "text": "effectiveEnabled",
               "kind": "param"
             },
             {
@@ -320,7 +338,7 @@
           ],
           "params": [
             {
-              "name": "_effectiveEnabled",
+              "name": "effectiveEnabled",
               "type": "boolean",
               "optional": false
             }
@@ -330,7 +348,7 @@
         },
         {
           "name": "_onFocusChanged",
-          "signature": "_onFocusChanged(_focused: boolean): void",
+          "signature": "_onFocusChanged(): void",
           "signatureTokens": [
             {
               "text": "_onFocusChanged",
@@ -341,18 +359,6 @@
               "kind": "punctuation"
             },
             {
-              "text": "_focused",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "boolean",
-              "kind": "keyword"
-            },
-            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -365,13 +371,7 @@
               "kind": "keyword"
             }
           ],
-          "params": [
-            {
-              "name": "_focused",
-              "type": "boolean",
-              "optional": false
-            }
-          ],
+          "params": [],
           "returnType": "void",
           "description": "React to a focus change on this widget. Override in subclasses that repaint for it; the default does nothing, so opting into tracking alone does not change how a widget looks."
         },
@@ -3293,6 +3293,27 @@
           "description": "true once destroy has run on this node. A destroyed node has released its pooled resources (transform/bounds), has been unlinked from its parent, renders nothing, and must not be reused or re-attached. The render plan skips a destroyed node, so even one handed straight to a renderer as a detached root contributes nothing."
         },
         {
+          "name": "dragging",
+          "signature": "dragging: boolean",
+          "signatureTokens": [
+            {
+              "text": "dragging",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the thumb is being dragged right now."
+        },
+        {
           "name": "effectiveEnabled",
           "signature": "effectiveEnabled: boolean",
           "signatureTokens": [
@@ -3333,6 +3354,35 @@
           "params": [],
           "returnType": null,
           "description": "The widget's own enabled flag, independent of any ancestor's. Disabling a container widget does not change this on its children - see effectiveEnabled for the value interaction and keyboard focus actually consult, and for what disabling a container does to them."
+        },
+        {
+          "name": "fillNode",
+          "signature": "fillNode: BackgroundNode | null",
+          "signatureTokens": [
+            {
+              "text": "fillNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BackgroundNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node painting the filled part, or null while it paints nothing."
         },
         {
           "name": "filters",
@@ -3387,6 +3437,27 @@
           "params": [],
           "returnType": null,
           "description": "Whether this widget holds keyboard focus. Only tracked for widgets that opted in with Widget._trackFocus; a widget that never takes focus always reports false."
+        },
+        {
+          "name": "fraction",
+          "signature": "fraction: number",
+          "signatureTokens": [
+            {
+              "text": "fraction",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The value as a fraction of the range, in [0, 1]."
         },
         {
           "name": "height",
@@ -3492,6 +3563,48 @@
           "params": [],
           "returnType": null,
           "description": "The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself). Indirect cycles (a.mask = b; b.mask = a) are rejected as well: the candidate's mask chain is walked and any cycle - whether it closes on this or was already present in the chain - fails the assignment."
+        },
+        {
+          "name": "max",
+          "signature": "max: number",
+          "signatureTokens": [
+            {
+              "text": "max",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Highest selectable value. Fixed at construction."
+        },
+        {
+          "name": "min",
+          "signature": "min: number",
+          "signatureTokens": [
+            {
+              "text": "min",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Lowest selectable value. Fixed at construction."
         },
         {
           "name": "origin",
@@ -3691,6 +3804,48 @@
           "description": "Vertical skew angle in degrees. Shears the node along the Y axis (positive values lean the left edge downward). Combines correctly with rotation and scale."
         },
         {
+          "name": "state",
+          "signature": "state: UIWidgetState",
+          "signatureTokens": [
+            {
+              "text": "state",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIWidgetState",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The state the slider currently paints in."
+        },
+        {
+          "name": "step",
+          "signature": "step: number",
+          "signatureTokens": [
+            {
+              "text": "step",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Rounding of the value in value units; 0 while the slider is continuous."
+        },
+        {
           "name": "theme",
           "signature": "theme: UITheme",
           "signatureTokens": [
@@ -3841,6 +3996,35 @@
           "description": "This widget's own theme overrides, or null when it purely inherits."
         },
         {
+          "name": "thumbNode",
+          "signature": "thumbNode: BackgroundNode | null",
+          "signatureTokens": [
+            {
+              "text": "thumbNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BackgroundNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node painting the thumb, or null while it paints nothing."
+        },
+        {
           "name": "top",
           "signature": "top: number",
           "signatureTokens": [
@@ -3860,6 +4044,35 @@
           "params": [],
           "returnType": null,
           "description": "Topmost edge of the subtree - see left."
+        },
+        {
+          "name": "trackNode",
+          "signature": "trackNode: BackgroundNode | null",
+          "signatureTokens": [
+            {
+              "text": "trackNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BackgroundNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node painting the groove, or null while it paints nothing."
         },
         {
           "name": "uiHeight",
@@ -3902,6 +4115,27 @@
           "params": [],
           "returnType": null,
           "description": "Explicit layout width in pixels (not derived from children or scale)."
+        },
+        {
+          "name": "value",
+          "signature": "value: number",
+          "signatureTokens": [
+            {
+              "text": "value",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Current value, clamped into [min, max] and rounded to step."
         },
         {
           "name": "visible",
@@ -4017,6 +4251,55 @@
       "id": "events",
       "title": "Events",
       "members": [
+        {
+          "name": "onChange",
+          "signature": "onChange: Signal<[value, slider]>",
+          "signatureTokens": [
+            {
+              "text": "onChange",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "slider",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires with the new value whenever it changes, however it changed."
+        },
         {
           "name": "onBlur",
           "signature": "onBlur: Signal<[RenderNode]>",
@@ -4603,11 +4886,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/ui/Widget.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Widget.ts"
+        "label": "src/ui/Slider.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Slider.ts"
       }
     }
   ],
-  "sourcePath": "src/ui/Widget.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Widget.ts"
+  "sourcePath": "src/ui/Slider.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Slider.ts"
 }

@@ -1,0 +1,250 @@
+{
+  "title": "SliderOptions",
+  "description": "Options for Slider.",
+  "symbol": "SliderOptions",
+  "kind": "interface",
+  "subsystem": "ui",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 8,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for Slider."
+      ],
+      "importLine": "import { SliderOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "height",
+          "signature": "height?: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Height in pixels - the room the thumb has. Default 20."
+        },
+        {
+          "name": "max",
+          "signature": "max?: number",
+          "signatureTokens": [
+            {
+              "text": "max",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Highest selectable value. Default 1."
+        },
+        {
+          "name": "min",
+          "signature": "min?: number",
+          "signatureTokens": [
+            {
+              "text": "min",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Lowest selectable value. Default 0."
+        },
+        {
+          "name": "step",
+          "signature": "step?: number",
+          "signatureTokens": [
+            {
+              "text": "step",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Rounding of the value, in value units; 0 (the default) is continuous."
+        },
+        {
+          "name": "thumbSize",
+          "signature": "thumbSize?: number",
+          "signatureTokens": [
+            {
+              "text": "thumbSize",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Diameter of the thumb, in pixels. Defaults to height."
+        },
+        {
+          "name": "trackThickness",
+          "signature": "trackThickness?: number",
+          "signatureTokens": [
+            {
+              "text": "trackThickness",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Thickness of the groove, in pixels. Default 6."
+        },
+        {
+          "name": "value",
+          "signature": "value?: number",
+          "signatureTokens": [
+            {
+              "text": "value",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial value, clamped into the range. Defaults to min."
+        },
+        {
+          "name": "width",
+          "signature": "width?: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Width in pixels. Default 200."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/ui/Slider.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Slider.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/ui/Slider.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Slider.ts"
+}

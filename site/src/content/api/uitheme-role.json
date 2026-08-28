@@ -30,10 +30,42 @@
       "members": [
         {
           "name": "UIThemeRole",
-          "signature": "\"button\" | \"label\" | \"panel\" | \"progressBarFill\" | \"progressBarTrack\" | \"scrollbarThumb\" | \"scrollbarTrack\"",
+          "signature": "\"button\" | \"checkbox\" | \"checkboxMark\" | \"dropdownItem\" | \"dropdownList\" | \"label\" | \"panel\" | \"progressBarFill\" | \"progressBarTrack\" | \"scrollbarThumb\" | \"scrollbarTrack\" | \"sliderFill\" | \"sliderThumb\" | \"sliderTrack\" | \"toggleKnob\" | \"toggleTrack\"",
           "signatureTokens": [
             {
               "text": "\"button\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"checkbox\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"checkboxMark\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"dropdownItem\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"dropdownList\"",
               "kind": "keyword"
             },
             {
@@ -82,6 +114,46 @@
             },
             {
               "text": "\"scrollbarTrack\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"sliderFill\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"sliderThumb\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"sliderTrack\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"toggleKnob\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"toggleTrack\"",
               "kind": "keyword"
             }
           ],

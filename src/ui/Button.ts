@@ -36,7 +36,7 @@ export interface ButtonOptions {
   fit?: UIBackgroundOptions['fit'];
 }
 
-/** The states a button paints in. */
+/** The states a button's skin can be stated for. */
 export type ButtonState = 'normal' | 'hover' | 'pressed' | 'disabled';
 
 const buttonStates: readonly ButtonState[] = ['normal', 'hover', 'pressed', 'disabled'];
@@ -112,6 +112,7 @@ export class Button extends Widget {
     this.interactive = true;
     this.focusable = true;
     this.cursor = 'pointer';
+    this._trackFocus();
 
     this.onPointerOver.add(this._onPointerOver);
     this.onPointerOut.add(this._onPointerOut);
@@ -143,8 +144,8 @@ export class Button extends Widget {
   }
 
   /** The state the button currently paints in. */
-  public get state(): ButtonState {
-    return this._skinState as ButtonState;
+  public get state(): UIWidgetState {
+    return this._skinState;
   }
 
   /** The background painted in `state`: this button's overrides over its skin. */
@@ -286,15 +287,21 @@ export class Button extends Widget {
   };
 
   private _refreshState(): void {
-    let state: ButtonState = 'normal';
+    let state: UIWidgetState = 'normal';
 
     if (!this.effectiveEnabled) {
       state = 'disabled';
     } else if (this._pointerInside) {
       state = 'hover';
+    } else if (this.focused) {
+      state = 'focused';
     }
 
     this._setSkinState(state);
+  }
+
+  protected override _onFocusChanged(): void {
+    this._refreshState();
   }
 
   protected override _onEnabledChanged(effectiveEnabled: boolean): void {

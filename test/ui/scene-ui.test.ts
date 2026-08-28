@@ -5,6 +5,8 @@ import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
 import type { ContextMenuRequest } from '#input/ContextMenuRequest';
 import { FocusController } from '#input/FocusController';
+import type { Gamepad } from '#input/Gamepad';
+import type { GamepadButton } from '#input/GamepadButton';
 import type { InputManager } from '#input/InputManager';
 import { InteractionManager } from '#input/InteractionManager';
 import type { Pointer } from '#input/Pointer';
@@ -69,6 +71,7 @@ const createUIApp = (): {
     onContextMenu: new Signal<[ContextMenuRequest]>(),
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
+    onAnyGamepadButtonDown: new Signal<[Gamepad, GamepadButton, number]>(),
     _finishInteractionFrame: (): void => undefined,
   };
   const canvas = document.createElement('canvas');
@@ -405,5 +408,40 @@ describe('UI Tab traversal excludes destroyed nodes', () => {
     signals.onKeyDown.dispatch(Keyboard.Tab);
     // Wraps back to `a` - the sole surviving candidate - `b` is never a stop.
     expect(focus.focused).toBe(a);
+  });
+});
+
+describe('UI directional navigation', () => {
+  /** A focusable node with a real extent, so directional navigation has geometry to compare. */
+  const spatial = (x: number, y: number): Container => {
+    const node = new Container();
+
+    node.focusable = true;
+    node._setLocalBounds(0, 0, 10, 10);
+    node.setPosition(x, y);
+
+    return node;
+  };
+
+  test("the default 'ui' policy navigates the UI layer and stops at its edge", () => {
+    const { scene, focus, signals } = createUIApp();
+    const left = spatial(0, 0);
+    const right = spatial(100, 0);
+    const inWorld = spatial(200, 0);
+
+    scene.ui.addChild(left).addChild(right);
+    scene.root.addChild(inWorld);
+    focus.focus(left);
+
+    signals.onKeyDown.dispatch(Keyboard.Right);
+    expect(focus.focused).toBe(right);
+
+    // `inWorld` lies further right, but the UI layer is the whole candidate set.
+    signals.onKeyDown.dispatch(Keyboard.Right);
+    expect(focus.focused).toBe(right);
+
+    focus.navigation = 'always';
+    signals.onKeyDown.dispatch(Keyboard.Right);
+    expect(focus.focused).toBe(inWorld);
   });
 });

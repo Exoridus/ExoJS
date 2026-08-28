@@ -7,14 +7,15 @@ import type { Seconds } from '#core/units';
 import { DynamicAabbTree } from '#math/DynamicAabbTree';
 import { Matrix } from '#math/Matrix';
 import type { PointLike } from '#math/PointLike';
-import { Rectangle } from '#math/Rectangle';
 import { getDistance } from '#math/utils';
 import type { PlatformAdapter } from '#platform/PlatformAdapter';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 
 import type { ContextMenuRequest } from './ContextMenuRequest';
+import type { FocusDirection, FocusNavigationPolicy } from './FocusController';
 import { FocusController } from './FocusController';
+import { isHittable, isWithinAncestorClips, isWithinClip } from './hitTestPredicates';
 import type { InteractionEventType } from './InteractionEvent';
 import { InteractionEvent } from './InteractionEvent';
 import type { Pointer } from './Pointer';
@@ -172,7 +173,7 @@ const isSelfOrDescendant = (node: RenderNode, root: RenderNode): boolean => {
  * (stencil) clipShape and `RenderNode.mask` (alpha masking) are NOT accounted
  * for: both affect only what is *painted*, not what is *hit-tested*, and an
  * interactive descendant under either stays hittable across its ancestor's
- * full, unclipped bounds. See {@link _isWithinClip}'s doc comment.
+ * full, unclipped bounds. See {@link isWithinClip}'s doc comment.
  *
  * Constructed automatically by {@link Application}; you do not instantiate
  * this class yourself.
@@ -433,6 +434,31 @@ export class InteractionManager implements InteractionHooks {
   /** Move focus to the previous focusable node of the active scope, in Tab order. */
   public focusPrevious(): void {
     this._focus.focusPrevious();
+  }
+
+  /**
+   * Which nodes the arrow keys and a gamepad D-pad may move focus to.
+   * Defaults to `'ui'`, so directional navigation reaches the UI layer while
+   * the game keeps the arrow keys for itself.
+   */
+  public get focusNavigation(): FocusNavigationPolicy {
+    return this._focus.navigation;
+  }
+
+  public set focusNavigation(policy: FocusNavigationPolicy) {
+    this._focus.navigation = policy;
+  }
+
+  /**
+   * Move focus to the nearest focusable node lying in `direction` from the
+   * currently focused one - what an arrow key or a D-pad press does - or to
+   * the first candidate when nothing holds focus yet. Candidates are compared
+   * by the centre of their global bounds and navigation does not wrap, so
+   * nothing moves at the edge of the layout. No-op while
+   * {@link focusNavigation} is `'never'`.
+   */
+  public focusInDirection(direction: FocusDirection): void {
+    this._focus.focusInDirection(direction);
   }
 
   /**
@@ -1530,7 +1556,7 @@ export class InteractionManager implements InteractionHooks {
     if (scope !== null) {
       const coords = this._designToLayerSpace(x, y, this._isUINode(scope));
 
-      if (!this._isHittable(scope)) {
+      if (!isHittable(scope)) {
         return { node: null, x: coords.x, y: coords.y };
       }
 
@@ -1642,75 +1668,7 @@ export class InteractionManager implements InteractionHooks {
       return false;
     }
 
-    return this._isHittable(candidate) && this._containsWorldPoint(candidate, x, y) && this._isWithinAncestorClips(candidate, x, y);
-  }
-
-  /**
-   * Whether world point `(x, y)` falls inside `clipNode`'s own clip region.
-   * `clipShape === null` or a `Rectangle` are both world-space (see
-   * {@link RenderNode.clip}'s doc comment) and so are directly evaluable here
-   * with a plain rectangle-containment test, matching
-   * {@link RenderPlanBuilder}'s own `ClipKind.Rect` classification.
-   *
-   * A `Geometry` clipShape uses the stencil path and has no cheap point-in-
-   * silhouette test available here; hit-testing deliberately does not
-   * attempt one - an interactive descendant under a `Geometry`-clipped
-   * ancestor stays hittable across the ancestor's full (unclipped) bounds.
-   * This is a documented gap, not a silent one: geometry clips and alpha
-   * masks ({@link RenderNode.mask}) both affect only what is *painted*, not
-   * what is *hit-tested*.
-   */
-  private _isWithinClip(clipNode: RenderNode, x: number, y: number): boolean {
-    const shape = clipNode.clipShape;
-
-    if (shape === null) {
-      return clipNode.getBounds().contains(x, y);
-    }
-
-    if (shape instanceof Rectangle) {
-      return shape.contains(x, y);
-    }
-
-    return true;
-  }
-
-  /**
-   * Whether `(x, y)` clears every clipping ancestor above `node`, so a hit
-   * candidate found through the spatial index (which bypasses the recursive
-   * parent-child walk `_hitTestNode` uses) is bounded exactly like the
-   * visible render output for hard (`Rectangle`/`null`) clip shapes.
-   */
-  private _isWithinAncestorClips(node: RenderNode, x: number, y: number): boolean {
-    let current = node.parent;
-
-    while (current !== null) {
-      if (current.clip && !this._isWithinClip(current, x, y)) {
-        return false;
-      }
-
-      current = current.parent;
-    }
-
-    return true;
-  }
-
-  /**
-   * A node is only a hit target while it and every ancestor up to the root is
-   * visible. The spatial index deliberately keeps hidden nodes registered -
-   * `visible = false` does not unregister - so the check has to happen here.
-   */
-  private _isHittable(node: RenderNode): boolean {
-    let current: RenderNode | null = node;
-
-    while (current !== null) {
-      if (!current.visible) {
-        return false;
-      }
-
-      current = current.parent;
-    }
-
-    return true;
+    return isHittable(candidate) && this._containsWorldPoint(candidate, x, y) && isWithinAncestorClips(candidate, x, y);
   }
 
   /**
@@ -1818,11 +1776,11 @@ export class InteractionManager implements InteractionHooks {
     }
 
     // A hard clip bounds descendants exactly like the visible render output
-    // (see `_isWithinClip`'s doc comment): a point outside it cannot hit
+    // (see `isWithinClip`'s doc comment): a point outside it cannot hit
     // anything nested inside, so the whole subtree is skipped rather than
     // recursed into. The node's own hit-test below is unaffected - `clip`
     // only bounds descendants, never the clipping node itself.
-    if (node instanceof Container && (!node.clip || this._isWithinClip(node, x, y))) {
+    if (node instanceof Container && (!node.clip || isWithinClip(node, x, y))) {
       const children = node._childrenInPaintOrder();
 
       for (let i = children.length - 1; i >= 0; i--) {

@@ -4,9 +4,60 @@ import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Widget } from '#ui/Widget';
 
+import { GamepadButton } from './GamepadButton';
 import { KeyEvent } from './KeyEvent';
 import type { ScopeToken } from './ScopeToken';
 import { Keyboard } from './types';
+
+/**
+ * A direction for spatial focus navigation - see
+ * {@link InteractionManager.focusInDirection}.
+ */
+export type FocusDirection = 'up' | 'down' | 'left' | 'right';
+
+/**
+ * Which nodes the arrow keys and the D-pad may move focus to - see
+ * {@link InteractionManager.focusNavigation}.
+ *
+ * - `'ui'` restricts navigation to the scene's UI layer, so the arrow keys
+ *   stay available to the game itself.
+ * - `'always'` navigates both layers, exactly the set Tab traverses.
+ * - `'never'` turns directional navigation off, including
+ *   {@link InteractionManager.focusInDirection}.
+ *
+ * An active interaction scope replaces the candidate set with its own subtree
+ * whichever layer it lives in - a modal is navigable regardless of the policy,
+ * which only ever decides what an UNSCOPED navigation may reach.
+ */
+export type FocusNavigationPolicy = 'ui' | 'always' | 'never';
+
+/** The direction an arrow key or a D-pad button navigates in, or `null` for any other channel. */
+const directionForChannel = (channel: number): FocusDirection | null => {
+  switch (channel) {
+    case Keyboard.Up:
+    case GamepadButton.DPadUp:
+      return 'up';
+    case Keyboard.Down:
+    case GamepadButton.DPadDown:
+      return 'down';
+    case Keyboard.Left:
+    case GamepadButton.DPadLeft:
+      return 'left';
+    case Keyboard.Right:
+    case GamepadButton.DPadRight:
+      return 'right';
+    default:
+      return null;
+  }
+};
+
+/**
+ * How much a candidate's offset ACROSS the travel direction counts against it
+ * relative to its distance along it. Above 1 so a neighbour that is roughly
+ * straight ahead wins over a closer one far off to the side, which is what
+ * "press right" is understood to mean.
+ */
+const crossAxisPenalty = 2;
 
 /** One entry of the focus-scope stack - see {@link FocusController.pushScope}. */
 interface FocusScopeEntry {
@@ -30,8 +81,10 @@ interface FocusScopeEntry {
  * `app.input.canvasFocused`.
  *
  * Built-in key handling: `Tab` / `Shift+Tab` move focus to the next / previous
- * focusable node. A focused node can call {@link KeyEvent.preventDefault} on its
- * `onKeyDown` event to opt out of this and consume the key itself.
+ * focusable node, and the arrow keys (plus a gamepad D-pad) move it spatially
+ * as {@link navigation} permits. A focused node can call
+ * {@link KeyEvent.preventDefault} on its `onKeyDown` event to opt out of this
+ * and consume the key itself - a slider does exactly that with the arrow keys.
  *
  * @internal
  */
@@ -45,16 +98,32 @@ export class FocusController implements FocusHooks {
   // doc comment for why root identity alone cannot identify an entry.
   private readonly _scopeStack: FocusScopeEntry[] = [];
 
+  private _navigation: FocusNavigationPolicy = 'ui';
+
   private readonly _onKeyDownHandler: (channel: number) => void;
   private readonly _onKeyUpHandler: (channel: number) => void;
+  private readonly _onGamepadButtonDownHandler: (pad: unknown, button: GamepadButton) => void;
 
   public constructor(app: Application) {
     this._app = app;
     this._onKeyDownHandler = this._handleKeyDown.bind(this);
     this._onKeyUpHandler = this._handleKeyUp.bind(this);
+    this._onGamepadButtonDownHandler = (_pad, button): void => {
+      this._handleDirectionalChannel(button.channel);
+    };
 
     app.input.onKeyDown.add(this._onKeyDownHandler);
     app.input.onKeyUp.add(this._onKeyUpHandler);
+    app.input.onAnyGamepadButtonDown.add(this._onGamepadButtonDownHandler);
+  }
+
+  /** Which nodes the arrow keys and the D-pad may move focus to. */
+  public get navigation(): FocusNavigationPolicy {
+    return this._navigation;
+  }
+
+  public set navigation(policy: FocusNavigationPolicy) {
+    this._navigation = policy;
   }
 
   /** The node that currently holds keyboard focus, or `null`. */
@@ -237,6 +306,43 @@ export class FocusController implements FocusHooks {
     this._step(1);
   }
 
+  /**
+   * Move focus to the nearest focusable node lying in `direction` from the
+   * focused one, or to the first candidate when nothing holds focus yet.
+   * No-op while {@link navigation} is `'never'`, and at the edge of the
+   * layout: unlike Tab traversal, directional navigation does not wrap - the
+   * node beyond the last one in a direction is not "the first one", and
+   * jumping back across the whole screen reads as focus being lost.
+   *
+   * Candidates are compared by the centre of their global bounds, weighing
+   * sideways offset heavier than distance along the direction, so a neighbour
+   * roughly straight ahead beats a closer one far off axis.
+   */
+  public focusInDirection(direction: FocusDirection): void {
+    if (this._navigation === 'never') {
+      return;
+    }
+
+    const candidates = this._collectDirectionalCandidates();
+    const current = this._focused;
+
+    if (current === null || !candidates.includes(current)) {
+      const first = candidates[0];
+
+      if (first !== undefined) {
+        this.focus(first);
+      }
+
+      return;
+    }
+
+    const nearest = this._nearestInDirection(current, candidates, direction);
+
+    if (nearest !== null) {
+      this.focus(nearest);
+    }
+  }
+
   /** Move focus to the previous focusable node in the active scope (Shift+Tab order). */
   public focusPrevious(): void {
     this._step(-1);
@@ -286,6 +392,7 @@ export class FocusController implements FocusHooks {
   public destroy(): void {
     this._app.input.onKeyDown.remove(this._onKeyDownHandler);
     this._app.input.onKeyUp.remove(this._onKeyUpHandler);
+    this._app.input.onAnyGamepadButtonDown.remove(this._onGamepadButtonDownHandler);
     this._scopeStack.length = 0;
     this._focused = null;
   }
@@ -305,13 +412,114 @@ export class FocusController implements FocusHooks {
       defaultPrevented = event.defaultPrevented;
     }
 
-    if (!defaultPrevented && channel === Keyboard.Tab) {
+    if (defaultPrevented) {
+      return;
+    }
+
+    if (channel === Keyboard.Tab) {
       if (this._shiftDown) {
         this.focusPrevious();
       } else {
         this.focusNext();
       }
+
+      return;
     }
+
+    this._handleDirectionalChannel(channel);
+  }
+
+  /** Navigate for an arrow key or a D-pad button; any other channel is left alone. */
+  private _handleDirectionalChannel(channel: number): void {
+    const direction = directionForChannel(channel);
+
+    if (direction !== null) {
+      this.focusInDirection(direction);
+    }
+  }
+
+  /**
+   * The candidates directional navigation may reach: an active scope's
+   * subtree, otherwise the UI layer - plus the world layer while
+   * {@link navigation} is `'always'`. Collection order stands in for reading
+   * order and decides where navigation enters when nothing is focused yet.
+   */
+  private _collectDirectionalCandidates(): RenderNode[] {
+    const out: RenderNode[] = [];
+
+    if (this._navigation === 'never') {
+      return out;
+    }
+
+    const scope = this._activeScopeRoot();
+
+    if (scope !== null) {
+      this._collectInto(scope, out);
+
+      return out;
+    }
+
+    const scene = this._app.scenes.currentScene;
+
+    if (scene === null) {
+      return out;
+    }
+
+    const uiRoot = scene._peekUI();
+
+    if (uiRoot !== null) {
+      this._collectInto(uiRoot, out);
+    }
+
+    if (this._navigation === 'always') {
+      this._collectInto(scene.root, out);
+    }
+
+    return out;
+  }
+
+  /**
+   * The best candidate lying in `direction` from `current`, or `null` when
+   * none does. Only candidates whose centre is strictly past `current`'s along
+   * the direction qualify, so navigation always makes progress; among those
+   * the lowest weighted distance wins, ties going to the earlier one in
+   * collection order.
+   */
+  private _nearestInDirection(current: RenderNode, candidates: readonly RenderNode[], direction: FocusDirection): RenderNode | null {
+    const currentBounds = current.getBounds();
+    const currentX = currentBounds.x + currentBounds.width / 2;
+    const currentY = currentBounds.y + currentBounds.height / 2;
+    const horizontal = direction === 'left' || direction === 'right';
+    const sign = direction === 'left' || direction === 'up' ? -1 : 1;
+    let best: RenderNode | null = null;
+    let bestScore = Infinity;
+
+    for (const candidate of candidates) {
+      if (candidate === current) {
+        continue;
+      }
+
+      // Read out immediately: getBounds() hands back a cached rectangle that
+      // the next call rebuilds in place.
+      const bounds = candidate.getBounds();
+      const deltaX = bounds.x + bounds.width / 2 - currentX;
+      const deltaY = bounds.y + bounds.height / 2 - currentY;
+      const along = (horizontal ? deltaX : deltaY) * sign;
+
+      if (along <= 0) {
+        continue;
+      }
+
+      const across = Math.abs(horizontal ? deltaY : deltaX);
+      const score = along + across * crossAxisPenalty;
+
+      if (score < bestScore) {
+        bestScore = score;
+        best = candidate;
+      }
+    }
+
+    return best;
   }
 
   private _handleKeyUp(channel: number): void {

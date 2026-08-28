@@ -1,0 +1,150 @@
+{
+  "title": "CheckableOptions",
+  "description": "Options shared by the two-state controls (Checkbox, Toggle).",
+  "symbol": "CheckableOptions",
+  "kind": "interface",
+  "subsystem": "ui",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options shared by the two-state controls (Checkbox, Toggle)."
+      ],
+      "importLine": "import { CheckableOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "checked",
+          "signature": "checked?: boolean",
+          "signatureTokens": [
+            {
+              "text": "checked",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial state. Default false."
+        },
+        {
+          "name": "label",
+          "signature": "label?: string",
+          "signatureTokens": [
+            {
+              "text": "label",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Text drawn beside the control; omitted draws the control alone."
+        },
+        {
+          "name": "labelGap",
+          "signature": "labelGap?: number",
+          "signatureTokens": [
+            {
+              "text": "labelGap",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Gap between the control and its label, in pixels. Default 8."
+        },
+        {
+          "name": "textStyle",
+          "signature": "textStyle?: TextStyleOptions",
+          "signatureTokens": [
+            {
+              "text": "textStyle",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextStyleOptions",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Text style overrides on top of the skin's."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/ui/CheckableWidget.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/CheckableWidget.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/ui/CheckableWidget.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/CheckableWidget.ts"
+}

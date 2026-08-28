@@ -6,11 +6,11 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 130,
+  "memberCount": 133,
   "counts": {
     "constructors": 1,
-    "methods": 61,
-    "properties": 54,
+    "methods": 63,
+    "properties": 55,
     "events": 14
   },
   "sections": [
@@ -346,6 +346,53 @@
           "description": "React to an effectiveEnabled change - fired whenever it flips, whether the widget's own enabled flag changed or an ancestor widget's did. Override in subclasses."
         },
         {
+          "name": "_onFocusChanged",
+          "signature": "_onFocusChanged(_focused: boolean): void",
+          "signatureTokens": [
+            {
+              "text": "_onFocusChanged",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_focused",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "_focused",
+              "type": "boolean",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "React to a focus change on this widget. Override in subclasses that repaint for it; the default does nothing, so opting into tracking alone does not change how a widget looks."
+        },
+        {
           "name": "_onThemeChanged",
           "signature": "_onThemeChanged(): void",
           "signatureTokens": [
@@ -554,6 +601,35 @@
           ],
           "returnType": "UISkin",
           "description": "The skin role paints with in this widget's current state."
+        },
+        {
+          "name": "_trackFocus",
+          "signature": "_trackFocus(): void",
+          "signatureTokens": [
+            {
+              "text": "_trackFocus",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Follow keyboard focus on this widget, so it can paint the focused state and react in Widget._onFocusChanged. Interactive subclasses call this in their constructor; it is opt-in because subscribing allocates the focus signals, which a decorative widget would never fire."
         },
         {
           "name": "[iterator]",
@@ -3780,6 +3856,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "focused",
+          "signature": "focused: boolean",
+          "signatureTokens": [
+            {
+              "text": "focused",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether this widget holds keyboard focus. Only tracked for widgets that opted in with Widget._trackFocus; a widget that never takes focus always reports false."
         },
         {
           "name": "height",

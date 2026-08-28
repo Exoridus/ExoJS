@@ -1,9 +1,9 @@
 {
-  "title": "ButtonState",
-  "description": "The states a button's skin can be stated for.",
-  "symbol": "ButtonState",
+  "title": "FocusDirection",
+  "description": "A direction for spatial focus navigation - see InteractionManager.focusInDirection.",
+  "symbol": "FocusDirection",
   "kind": "type",
-  "subsystem": "ui",
+  "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 0,
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The states a button's skin can be stated for."
+        "A direction for spatial focus navigation - see InteractionManager.focusInDirection."
       ],
-      "importLine": "import { ButtonState } from '@codexo/exojs'",
+      "importLine": "import { FocusDirection } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,11 +29,11 @@
       "title": "Definition",
       "members": [
         {
-          "name": "ButtonState",
-          "signature": "\"disabled\" | \"hover\" | \"normal\" | \"pressed\"",
+          "name": "FocusDirection",
+          "signature": "\"down\" | \"left\" | \"right\" | \"up\"",
           "signatureTokens": [
             {
-              "text": "\"disabled\"",
+              "text": "\"down\"",
               "kind": "keyword"
             },
             {
@@ -41,7 +41,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"hover\"",
+              "text": "\"left\"",
               "kind": "keyword"
             },
             {
@@ -49,7 +49,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"normal\"",
+              "text": "\"right\"",
               "kind": "keyword"
             },
             {
@@ -57,7 +57,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"pressed\"",
+              "text": "\"up\"",
               "kind": "keyword"
             }
           ],
@@ -77,11 +77,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/ui/Button.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Button.ts"
+        "label": "src/input/FocusController.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/FocusController.ts"
       }
     }
   ],
-  "sourcePath": "src/ui/Button.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Button.ts"
+  "sourcePath": "src/input/FocusController.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/FocusController.ts"
 }

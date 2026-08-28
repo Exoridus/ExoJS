@@ -1,7 +1,12 @@
 export type { ButtonOptions, ButtonState } from './Button';
 export { Button } from './Button';
+export type { CheckableOptions } from './CheckableWidget';
+export type { CheckboxOptions } from './Checkbox';
+export { Checkbox } from './Checkbox';
 export type { DockContainerOptions, DockRegion } from './DockContainer';
 export { DockContainer } from './DockContainer';
+export type { DropdownItem, DropdownOptions } from './Dropdown';
+export { Dropdown } from './Dropdown';
 export { Label } from './Label';
 export type { PanelOptions } from './Panel';
 export { Panel } from './Panel';
@@ -11,6 +16,8 @@ export type { ScrollbarOptions, ScrollbarOrientation, ScrollbarVisibility } from
 export { Scrollbar } from './Scrollbar';
 export type { ScrollContainerOptions, ScrollDirection } from './ScrollContainer';
 export { ScrollContainer } from './ScrollContainer';
+export type { SliderOptions } from './Slider';
+export { Slider } from './Slider';
 export type { StackAlign, StackDirection, StackOptions } from './Stack';
 export { Stack } from './Stack';
 export type {
@@ -35,6 +42,8 @@ export type {
 } from './theme';
 export { createUIBackground, createUITheme, defaultUITheme, resolveUISkin } from './theme';
 export { ThemedContainer } from './ThemedContainer';
+export type { ToggleOptions } from './Toggle';
+export { Toggle } from './Toggle';
 export type { TooltipOptions } from './Tooltip';
 export { Tooltip } from './Tooltip';
 export { UIRoot } from './UIRoot';
