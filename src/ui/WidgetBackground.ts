@@ -65,7 +65,8 @@ export class WidgetBackground {
       graphics.fillColor = background.color;
       graphics.drawRoundedRectangle(0, 0, width, height, background.cornerRadius);
     } else if (background.kind === 'sprite') {
-      const reusable = this._node instanceof RepeatingSprite && this._painted !== null && this._painted.kind === 'sprite' && sameSprite(this._painted, background);
+      const reusable =
+        this._node instanceof RepeatingSprite && this._painted !== null && this._painted.kind === 'sprite' && sameSprite(this._painted, background);
       const mode = background.fit === 'tile' ? 'repeat' : 'stretch';
       const sprite = reusable
         ? (this._node as RepeatingSprite)

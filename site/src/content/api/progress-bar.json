@@ -6,10 +6,10 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 128,
+  "memberCount": 130,
   "counts": {
     "constructors": 1,
-    "methods": 59,
+    "methods": 61,
     "properties": 54,
     "events": 14
   },
@@ -239,6 +239,64 @@
           "params": [],
           "returnType": "void",
           "description": "Repaint without re-laying out - for a change that cannot move anything, such as a colour or a state flip. Applied immediately, not batched."
+        },
+        {
+          "name": "_onChildListChanged",
+          "signature": "_onChildListChanged(): void",
+          "signatureTokens": [
+            {
+              "text": "_onChildListChanged",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Called after this container's child list changed - an insert, a removal or a reorder - once the list and the caches derived from it are consistent again. Override in containers whose own state is derived from their children, such as a layout container that re-flows them."
+        },
+        {
+          "name": "_onChildResized",
+          "signature": "_onChildResized(): void",
+          "signatureTokens": [
+            {
+              "text": "_onChildResized",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "React to a child widget's size change. Layout containers override it to re-flow; the default does nothing, so a widget that does not place its children pays nothing for a descendant resize."
         },
         {
           "name": "_onEnabledChanged",

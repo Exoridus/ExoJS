@@ -1,16 +1,16 @@
 {
   "title": "Stack",
-  "description": "Linear layout container that flows its children in a row or column with even spacing and optional padding, then sizes itself to fit. Call Stack.layout after mutating children added with `addChild`, or use Stack.addItem to add and re-flow in one step.",
+  "description": "Linear layout container that flows its children in a row or column with even spacing and optional padding. The stack re-flows itself whenever anything it lays out changes: a child is added, removed or reordered, a child widget resizes, or one of the layout properties below is set. Stack.layout exists for the cases the container cannot observe - a non-widget child whose drawn extent changed. A stack sizes itself to its content until Stack.setSize gives it an explicit box. From then on it keeps that box, and the leftover space along the flow direction is what Stack.setGrow distributes.",
   "symbol": "Stack",
   "kind": "class",
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 118,
+  "memberCount": 123,
   "counts": {
     "constructors": 1,
-    "methods": 57,
-    "properties": 46,
+    "methods": 61,
+    "properties": 47,
     "events": 14
   },
   "sections": [
@@ -19,7 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Linear layout container that flows its children in a row or column with even spacing and optional padding, then sizes itself to fit. Call Stack.layout after mutating children added with `addChild`, or use Stack.addItem to add and re-flow in one step."
+        "Linear layout container that flows its children in a row or column with even spacing and optional padding.",
+        "The stack re-flows itself whenever anything it lays out changes: a child is added, removed or reordered, a child widget resizes, or one of the layout properties below is set. Stack.layout exists for the cases the container cannot observe - a non-widget child whose drawn extent changed.",
+        "A stack sizes itself to its content until Stack.setSize gives it an explicit box. From then on it keeps that box, and the leftover space along the flow direction is what Stack.setGrow distributes."
       ],
       "importLine": "import { Stack } from '@codexo/exojs'",
       "sourceLink": null
@@ -238,6 +240,64 @@
           "params": [],
           "returnType": "void",
           "description": "Repaint without re-laying out - for a change that cannot move anything, such as a colour or a state flip. Applied immediately, not batched."
+        },
+        {
+          "name": "_onChildListChanged",
+          "signature": "_onChildListChanged(): void",
+          "signatureTokens": [
+            {
+              "text": "_onChildListChanged",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Called after this container's child list changed - an insert, a removal or a reorder - once the list and the caches derived from it are consistent again. Override in containers whose own state is derived from their children, such as a layout container that re-flows them."
+        },
+        {
+          "name": "_onChildResized",
+          "signature": "_onChildResized(): void",
+          "signatureTokens": [
+            {
+              "text": "_onChildResized",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "React to a child widget's size change. Layout containers override it to re-flow; the default does nothing, so a widget that does not place its children pays nothing for a descendant resize."
         },
         {
           "name": "_onEnabledChanged",
@@ -748,7 +808,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Add a child and re-flow the stack."
+          "description": "Add a child; the stack re-flows on its own."
         },
         {
           "name": "anchorIn",
@@ -1394,6 +1454,53 @@
           "description": "The node's TRUE world-space transform, composed through every transform-group boundary (RetainedContainer) in the ancestor chain. getGlobalTransform deliberately stops at the nearest engaged boundary (descendants resolve group-RELATIVE transforms; the renderer multiplies the group matrix back in on the GPU), so it is the right space for rendering but the wrong one for spatial queries. Use THIS accessor whenever a real world position/orientation is needed - picking, spatial audio, physics, world-space math against nodes outside the group. Without any engaged boundary ancestor it returns the exact getGlobalTransform matrix (same instance, no extra work). With one, it lazily caches groupLocal × groupWorld and revalidates on read via version/stamp compares - including runtime space flips such as RetainedContainer's deep-barrier sub-branch escape."
         },
         {
+          "name": "growOf",
+          "signature": "growOf(child: RenderNode): number",
+          "signatureTokens": [
+            {
+              "text": "growOf",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "child",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderNode",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "child",
+              "type": "RenderNode",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "The grow factor child carries, or 0 when it does not grow."
+        },
+        {
           "name": "intersectsWith",
           "signature": "intersectsWith(target: Collidable): boolean",
           "signatureTokens": [
@@ -1572,7 +1679,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": "Re-flow children along the stack direction and resize to fit them."
+          "description": "Re-flow children along the stack direction."
         },
         {
           "name": "move",
@@ -2082,6 +2189,74 @@
           "description": ""
         },
         {
+          "name": "setGrow",
+          "signature": "setGrow(child: RenderNode, factor: number): this",
+          "signatureTokens": [
+            {
+              "text": "setGrow",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "child",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderNode",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "factor",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "child",
+              "type": "RenderNode",
+              "optional": false
+            },
+            {
+              "name": "factor",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Give child a share of the leftover space along the flow direction, proportional to factor against every other growing child. 0 drops the share and restores the size the child had before it grew. Growing needs space to distribute, so it only applies once the stack has an explicit size; a stack that sizes itself to its content has none."
+        },
+        {
           "name": "setOrigin",
           "signature": "setOrigin(x: number, y: number): this",
           "signatureTokens": [
@@ -2398,7 +2573,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Set the widget's layout size; triggers a redraw and re-anchors if anchored."
+          "description": "Give the stack an explicit box instead of sizing it to its content. This is what makes Stack.setGrow effective, since growing needs leftover space to hand out."
         },
         {
           "name": "setSkew",
@@ -3024,6 +3199,27 @@
           "params": [],
           "returnType": null,
           "description": "Tab-traversal order among focusable nodes in the same focus scope. Lower values are visited first; equal values keep document (tree) order."
+        },
+        {
+          "name": "align",
+          "signature": "align: StackAlign",
+          "signatureTokens": [
+            {
+              "text": "align",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "StackAlign",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Cross-axis placement of the items. 'stretch' resizes widget children to the full cross extent; leaving it restores the size they had before."
         },
         {
           "name": "bottom",

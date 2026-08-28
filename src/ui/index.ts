@@ -1,5 +1,7 @@
 export type { ButtonOptions, ButtonState } from './Button';
 export { Button } from './Button';
+export type { DockContainerOptions, DockRegion } from './DockContainer';
+export { DockContainer } from './DockContainer';
 export { Label } from './Label';
 export type { PanelOptions } from './Panel';
 export { Panel } from './Panel';
@@ -7,7 +9,7 @@ export type { ProgressBarFillMode, ProgressBarOptions } from './ProgressBar';
 export { ProgressBar } from './ProgressBar';
 export type { ScrollContainerOptions, ScrollDirection } from './ScrollContainer';
 export { ScrollContainer } from './ScrollContainer';
-export type { StackDirection, StackOptions } from './Stack';
+export type { StackAlign, StackDirection, StackOptions } from './Stack';
 export { Stack } from './Stack';
 export type {
   UIBackground,

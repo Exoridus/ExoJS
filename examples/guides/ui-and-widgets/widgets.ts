@@ -1,4 +1,4 @@
-import { Button, Keyboard, Label, Panel, ProgressBar, Scene, ScrollContainer, Stack, Tooltip } from '@codexo/exojs';
+import { Button, DockContainer, Keyboard, Label, Panel, ProgressBar, Scene, ScrollContainer, Stack, Tooltip } from '@codexo/exojs';
 
 // #region guide:anchoring
 class HudScene extends Scene {
@@ -30,6 +30,28 @@ class MenuScene extends Scene {
   }
 }
 // #endregion guide:stack
+
+// #region guide:dock
+class DockedHudScene extends Scene {
+  override init(): void {
+    const hud = new DockContainer({ width: this.ui.screenWidth, height: this.ui.screenHeight });
+
+    const topBar = new Stack({ direction: 'row', spacing: 12, padding: 8, align: 'center' });
+    topBar.addChild(new Label('Score: 0', { fontSize: 20 }), new ProgressBar({ width: 180, height: 12, value: 1 }));
+
+    const sidebar = new Stack({ direction: 'column', spacing: 8, padding: 8 });
+    sidebar.setSize(200, 0);
+    sidebar.addChild(new Button({ label: 'Map' }), new Button({ label: 'Quests' }));
+
+    hud.dock(topBar, 'top');
+    hud.dock(sidebar, 'right');
+    hud.dock(new Panel(), 'center');
+
+    this.ui.addChild(hud);
+    this.ui.onResize.add((width, height) => hud.setSize(width, height));
+  }
+}
+// #endregion guide:dock
 
 // #region guide:scrolling
 class InventoryScene extends Scene {
@@ -83,4 +105,4 @@ class ShopScene extends Scene {
 }
 // #endregion guide:tooltip
 
-export { FormScene, HudScene, InventoryScene, MenuScene, ShopScene };
+export { DockedHudScene, FormScene, HudScene, InventoryScene, MenuScene, ShopScene };

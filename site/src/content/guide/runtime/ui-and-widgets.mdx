@@ -123,6 +123,34 @@ A `Stack` flows its children in a row or column with even spacing and sizes itse
   title="examples/guides/ui-and-widgets/widgets.ts"
 />
 
+`Stack` re-flows on its own: adding, removing or resizing a child, and setting `direction`, `spacing`, `padding` or `align`, all re-place the items immediately. `align` decides the cross axis - `'start'`, `'center'`, `'end'`, or `'stretch'`, which resizes the items to the stack's cross extent.
+
+A stack sizes itself to its content until you give it a box with `setSize`. From then on it keeps that box, and `stack.setGrow(child, factor)` hands the leftover space along the flow direction to the growing children, split by factor:
+
+```ts
+import { Button, Stack } from '@codexo/exojs';
+
+const sidebar = new Stack({ direction: 'column', spacing: 8, align: 'stretch' });
+const list = new Button({ label: 'Inventory' });
+
+sidebar.addChild(list, new Button({ label: 'Close' }));
+sidebar.setSize(220, 400); // an explicit box is what leaves space to distribute
+sidebar.setGrow(list, 1); // the list takes everything the other items leave
+```
+
+## Docking to the edges
+
+A `DockContainer` pins children to `'top'`, `'right'`, `'bottom'` or `'left'` and gives what is left to `'center'`. Each edge child is sized across its band and keeps its own extent along the other axis, so a docked HUD survives a resize with one `setSize` call:
+
+<SourceSnippet
+  source="examples/guides/ui-and-widgets/widgets.ts"
+  region="dock"
+  language="ts"
+  title="examples/guides/ui-and-widgets/widgets.ts"
+/>
+
+Bands are taken in docking order: docking `'top'` before `'left'` gives the top band the full width and the left band only what is left below it. Reverse the two calls and the left band runs the full height instead.
+
 ## Scrolling content
 
 A `ScrollContainer` clips its content to a fixed `width` × `height` and scrolls it with the mouse wheel — useful for inventories, logs, or any list longer than its box. Add children to `scroll.content`, not to the container itself:
