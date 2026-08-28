@@ -2454,15 +2454,6 @@ export class WebGl2Backend implements RenderBackend {
     }
   }
 
-  /**
-   * Attach `handles` to the framebuffer's colour slots and declare them as the
-   * draw buffers.
-   *
-   * `drawBuffers` is framebuffer state, so it is re-issued only when the
-   * attachment set actually changes rather than on every bind. Without the call a
-   * multi-attachment framebuffer would write slot 0 only, which is GL's default
-   * draw-buffer list.
-   */
   /** Reject a colour format this context cannot render into. */
   private _assertColorFormatRenderable(format: ColorTextureFormat): void {
     if (format !== TextureFormat.Rgba8 && !this._floatRenderable) {
@@ -2472,6 +2463,18 @@ export class WebGl2Backend implements RenderBackend {
     }
   }
 
+  /**
+   * Attach `handles` to the framebuffer's colour slots and declare them as the
+   * draw buffers.
+   *
+   * The multi-attachment path only: a single attachment is handled inline in
+   * {@link _prepareRenderTarget}, which is the case that runs every frame.
+   *
+   * `drawBuffers` is framebuffer state, so it is re-issued only when the
+   * attachment set actually changes rather than on every bind. Without the call a
+   * multi-attachment framebuffer would write slot 0 only, which is GL's default
+   * draw-buffer list.
+   */
   private _syncColorAttachments(state: ManagedRenderTargetState, handles: readonly WebGLTexture[]): void {
     const attached = state.attachedTextures;
     let changed = attached.length !== handles.length;
@@ -2553,20 +2556,40 @@ export class WebGl2Backend implements RenderBackend {
 
       this._setTextureUnit(renderTargetTextureSyncUnit);
 
-      const handles = this._attachmentHandleScratch;
+      if (multi === null) {
+        // Single attachment inline, and deliberately not routed through the
+        // general path below. This runs on every render-target bind, and a
+        // filter-heavy frame binds hundreds; measured against the allocation
+        // gate, staging one handle through a scratch list and comparing lists
+        // costs about 100 KB per frame on `filtered/100` alone. The one case
+        // that is every frame in practice pays for nothing it does not need.
+        const textureState = this._syncTexture(single!);
 
-      handles.length = 0;
+        this._setTextureUnit(previousUnit);
 
-      if (multi !== null) {
+        if (state.attachedTextures[0] !== textureState.handle) {
+          const gl = this._context;
+          const previousFramebuffer = this._boundFramebuffer;
+
+          gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
+          gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, textureState.handle, 0);
+          gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
+
+          state.attachedTextures.length = 1;
+          state.attachedTextures[0] = textureState.handle;
+        }
+      } else {
+        const handles = this._attachmentHandleScratch;
+
+        handles.length = 0;
+
         for (const attachment of multi.attachments) {
           handles.push(this._syncTexture(attachment).handle);
         }
-      } else {
-        handles.push(this._syncTexture(single!).handle);
-      }
 
-      this._setTextureUnit(previousUnit);
-      this._syncColorAttachments(state, handles);
+        this._setTextureUnit(previousUnit);
+        this._syncColorAttachments(state, handles);
+      }
 
       // Reset the on-demand flag for pooled RenderTexture targets, so a
       // stencil renderbuffer from a previous use does not permanently
