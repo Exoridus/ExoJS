@@ -18,6 +18,17 @@ import { Rectangle } from '#math/Rectangle';
 
 const createAudioBufferStub = (): AudioBuffer => ({ duration: 2 }) as AudioBuffer;
 
+/**
+ * Run the per-frame spatial update a voice would get from `AudioManager`.
+ *
+ * `_tickSpatial` is internal to the voice implementations rather than part of the
+ * public `Voice` surface, and these cells drive it directly to read back exactly
+ * what one frame writes.
+ */
+const tickSpatial = (voice: object): void => {
+  (voice as { _tickSpatial(): void })._tickSpatial();
+};
+
 interface MockParam {
   setValueAtTime: MockInstance;
   setTargetAtTime: MockInstance;
@@ -204,7 +215,7 @@ describe('elevation - the third axis', () => {
     const voice = manager.play(sound, { position: { x: 0, y: 0 }, elevation: 30 });
 
     manager.listener.elevation = 10;
-    voice._tickSpatial();
+    tickSpatial(voice);
 
     expect(lastWritten(panners.panners[0]!.positionZ)).toBe(20);
 
@@ -232,12 +243,12 @@ describe('elevation - the third axis', () => {
     // Receding straight upward from a listener on the plane. A planar projection
     // could never produce this: every component of the motion is out of plane.
     voice.elevationVelocity = 200;
-    voice._tickSpatial();
+    tickSpatial(voice);
 
     expect(ratios.at(-1)).toBeCloseTo(0.8, 5);
 
     voice.elevationVelocity = -200;
-    voice._tickSpatial();
+    tickSpatial(voice);
 
     expect(ratios.at(-1)).toBeCloseTo(1.2, 5);
 

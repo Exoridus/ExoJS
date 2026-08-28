@@ -24,6 +24,7 @@ import { RenderError } from '#rendering/RenderError';
 import { RenderingContext } from '#rendering/RenderingContext';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
+import type { ColorTextureFormat } from '#rendering/types';
 import { TextureFormat } from '#rendering/types';
 
 import { createWebGl2Harness } from '../perf/rendering/harness';
@@ -226,7 +227,7 @@ describe('WebGL2 multiple colour attachments', () => {
     harness = createGlHarness();
 
     const context = new RenderingContext(harness.backend);
-    const formats = Array.from({ length: harness.backend.maxColorAttachments + 1 }, () => TextureFormat.Rgba8);
+    const formats: ColorTextureFormat[] = Array.from({ length: harness.backend.maxColorAttachments + 1 }, () => TextureFormat.Rgba8);
     const target = new MultiRenderTarget(16, 16, { formats });
     const mesh = new Mesh({ geometry: triangleGeometry(), material: twoOutputMaterial(), texture: null });
 
@@ -323,7 +324,7 @@ describe('WebGPU multiple colour attachments', () => {
 
     try {
       const backend = await createMockBackend(environment);
-      const formats = Array.from({ length: backend.maxColorAttachments + 1 }, () => TextureFormat.Rgba8);
+      const formats: ColorTextureFormat[] = Array.from({ length: backend.maxColorAttachments + 1 }, () => TextureFormat.Rgba8);
       const target = new MultiRenderTarget(16, 16, { formats });
 
       expect(() => backend.setRenderTarget(target)).toThrow(/colour attachment/);

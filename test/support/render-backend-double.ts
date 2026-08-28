@@ -6,6 +6,7 @@ import { RendererRegistry } from '#rendering/RendererRegistry';
 import type { RenderError } from '#rendering/RenderError';
 import { createRenderStats, type RenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
+import type { CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 
 export interface RenderBackendDoubleOptions {
@@ -16,6 +17,10 @@ export interface RenderBackendDoubleOptions {
   readonly backendType?: RenderBackendType;
   readonly rootResolution?: number;
   readonly maxTextureSize?: number;
+  /** Compressed formats the double claims to sample. Empty when omitted - the conservative answer. */
+  readonly supportedTextureFormats?: readonly CompressedTextureFormat[];
+  /** Colour attachments the double accepts in one pass. `1` when omitted. */
+  readonly maxColorAttachments?: number;
 }
 
 /**
@@ -55,6 +60,8 @@ export const createRenderBackendDouble = (options: RenderBackendDoubleOptions = 
     clearColor: new Color(0, 0, 0, 0),
     rootResolution: options.rootResolution ?? 1,
     maxTextureSize: options.maxTextureSize ?? 4096,
+    supportedTextureFormats: options.supportedTextureFormats ?? [],
+    maxColorAttachments: options.maxColorAttachments ?? 1,
     onRenderError: new Signal<[RenderError]>(),
 
     async initialize() {
