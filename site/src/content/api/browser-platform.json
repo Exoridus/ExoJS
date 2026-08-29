@@ -214,7 +214,7 @@
           ],
           "params": [],
           "returnType": "PlatformTextInput | null",
-          "description": "Builds a hidden <textarea> transport. Created per call, so a text widget owns its transport's lifetime; callers that never ask for one never create the element."
+          "description": "Builds a text-input transport: EditContext where the host has it, a hidden <textarea> everywhere else. Created per call, so a text widget owns its transport's lifetime; callers that never ask for one never create the element."
         },
         {
           "name": "destroy",
