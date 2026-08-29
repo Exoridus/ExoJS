@@ -1,6 +1,9 @@
 import type * as RAPIER from '@dimforge/rapier2d-compat';
 
 import type { PhysicsAdapter, PhysicsArchetypeSpec, PhysicsStructuralCounters } from '../PhysicsAdapter';
+import type { PerStepWork } from './perStepWork';
+import { createPerStepWork } from './perStepWork';
+import type { BodyDesc } from './scene';
 import { describePhysicsScene } from './scene';
 
 /**
@@ -63,6 +66,8 @@ export const createRapierAdapter = async (): Promise<PhysicsAdapter | null> => {
 
   let world: RAPIER.World | null = null;
   let perturbedSignature = '';
+  let perStep: PerStepWork | null = null;
+  let stepIndex = 0;
 
   /** Count collider pairs with at least one solid contact point, deduped by ordered handle pair. */
   const countTouchingContacts = (w: RAPIER.World): number => {
@@ -112,7 +117,7 @@ export const createRapierAdapter = async (): Promise<PhysicsAdapter | null> => {
 
       created.timestep = 1 / 60;
 
-      for (const desc of scene.bodies) {
+      const createBody = (desc: BodyDesc): RAPIER.RigidBody => {
         const bodyDesc = desc.type === 'static' ? R.RigidBodyDesc.fixed() : R.RigidBodyDesc.dynamic();
 
         bodyDesc.setTranslation(desc.x, desc.y);
@@ -132,29 +137,57 @@ export const createRapierAdapter = async (): Promise<PhysicsAdapter | null> => {
           // rapier linear velocity is world-units/s - the px/s impulse carries over unchanged.
           body.setLinvel({ x: desc.perturb.vx, y: desc.perturb.vy }, true);
         }
+
+        return body;
+      };
+
+      const table = scene.bodies.map(createBody);
+
+      // rapier's revolute anchors are body-LOCAL, so the shared world pivot is
+      // converted per body - the same pivot the exojs and matter arms are given.
+      for (const joint of scene.joints) {
+        const bodyA = table[joint.bodyA]!;
+        const bodyB = table[joint.bodyB]!;
+        const a = bodyA.translation();
+        const b = bodyB.translation();
+
+        created.createImpulseJoint(R.JointData.revolute({ x: joint.x - a.x, y: joint.y - a.y }, { x: joint.x - b.x, y: joint.y - b.y }), bodyA, bodyB, true);
       }
 
+      stepIndex = 0;
+      perStep = createPerStepWork(spec, scene, table, {
+        createBody,
+        removeBody: body => created.removeRigidBody(body),
+        // `maxToi` is measured in multiples of the ray direction, and the shared
+        // descriptor's direction is a unit vector, so it is the distance in px.
+        // `solid: true` counts a ray starting inside a shape as a hit, matching the
+        // other arms' containment behaviour.
+        castRay: ray => created.castRay(new R.Ray({ x: ray.x, y: ray.y }, { x: ray.dx, y: ray.dy }), ray.maxDistance, true) !== null,
+      });
       world = created;
     },
 
     step(dt: number): void {
-      if (world === null) {
+      if (world === null || perStep === null) {
         throw new Error('rapier adapter: step() called before setup().');
       }
 
+      perStep.run(stepIndex++);
       // rapier steps its own fixed internal `world.timestep`; keep it pinned to the shared dt.
       world.timestep = dt;
       world.step();
     },
 
     sampleStructural(): PhysicsStructuralCounters {
-      if (world === null) {
+      if (world === null || perStep === null) {
         throw new Error('rapier adapter: sampleStructural() called before setup().');
       }
 
       return {
         bodyCount: world.bodies.len(),
         contactCount: countTouchingContacts(world),
+        jointCount: world.impulseJoints.len(),
+        rayHits: perStep.rayHits,
       };
     },
 
@@ -164,6 +197,8 @@ export const createRapierAdapter = async (): Promise<PhysicsAdapter | null> => {
         world.free();
         world = null;
       }
+
+      perStep = null;
     },
 
     mutationSignature(): string {

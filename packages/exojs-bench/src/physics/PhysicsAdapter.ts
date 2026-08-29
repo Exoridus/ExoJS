@@ -9,12 +9,25 @@ import type { BaseCellResult } from '../shared/result';
  * ExoJS user cares about when deciding stay-native vs. attach an adapter -
  * resting-contact solving, wide broad-phase + many active contacts, and a mix.
  */
-export type PhysicsArchetypeId = 'box-stack' | 'many-dynamic' | 'mixed-static-dynamic';
+export type PhysicsArchetypeId = 'box-stack' | 'many-dynamic' | 'mixed-static-dynamic' | 'raycast' | 'body-churn' | 'joints';
+
+/**
+ * Body layout an archetype simulates, independent of what its per-step work is.
+ *
+ * Separating the layout from the archetype id is what lets a new archetype be
+ * read as a DELTA against an existing one: `raycast` simulates exactly the
+ * `mixed-static-dynamic` scene and additionally casts rays, so the difference
+ * between the two rows is query cost and nothing else. An archetype whose id
+ * doubled as its scene could only ever be compared against zero.
+ */
+export type PhysicsSceneShape = 'box-stack' | 'many-dynamic' | 'mixed-static-dynamic' | 'joint-chains';
 
 /** Structural definition of a physics archetype, independent of any physics engine arm. */
 export interface PhysicsArchetypeSpec {
   /** Archetype identifier. */
   readonly id: PhysicsArchetypeId;
+  /** Body layout this archetype simulates; see {@link PhysicsSceneShape}. */
+  readonly scene: PhysicsSceneShape;
   /** Dynamic-body counts swept for this archetype, smallest to largest. */
   readonly bodyCounts: readonly number[];
   /** World gravity in px/s² (+Y down). */
@@ -26,6 +39,32 @@ export interface PhysicsArchetypeSpec {
    * archetypes that settle purely under gravity.
    */
   readonly perturbFraction: number;
+  /**
+   * Rays cast per step, or `undefined` for an archetype that runs no queries.
+   *
+   * Queries exercise the broad-phase acceleration structure rather than the
+   * solver, which is a separate cost class: a world can be cheap to step and
+   * expensive to query, or the reverse. Ray origins and directions come from the
+   * shared closed-form {@link '../shared/mutation'} -free generator in `scene.ts`,
+   * so every arm casts the identical rays at the identical step index.
+   */
+  readonly raysPerStep?: number;
+  /**
+   * When `true`, the {@link perturbFraction} selection is DESTROYED and rebuilt
+   * per step instead of being given an initial impulse.
+   *
+   * Reusing the perturbed selection for the churned set keeps the cross-arm
+   * determinism assertion intact - the arms are asserted to agree on that set
+   * before a cell is timed - and makes `body-churn` differ from its base scene in
+   * exactly one thing.
+   */
+  readonly churn?: boolean;
+  /**
+   * Bodies per constraint chain, meaningful only for the `joint-chains` scene.
+   * The scene builds `ceil(bodyCount / jointChainLength)` chains, each hanging
+   * from its own static anchor.
+   */
+  readonly jointChainLength?: number;
 }
 
 /** One physics matrix cell: an (engine, config, archetype, body count) combination to measure. */
@@ -50,6 +89,17 @@ export interface PhysicsStructuralCounters {
   readonly bodyCount: number;
   /** Touching solid contacts resolved on the last step (broad×narrow-phase load proxy). */
   readonly contactCount: number;
+  /** Live constraints in the world; `0` for an archetype that builds none. */
+  readonly jointCount: number;
+  /**
+   * Rays that hit something on the last step, out of {@link PhysicsArchetypeSpec.raysPerStep}.
+   *
+   * The counter exists because a query archetype whose rays all miss measures an
+   * empty traversal and would look fast for the wrong reason. `0` for an
+   * archetype that casts no rays; a query archetype reporting `0` is a defect,
+   * not a datapoint.
+   */
+  readonly rayHits: number;
 }
 
 /**

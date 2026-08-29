@@ -2,6 +2,9 @@ import type Matter from 'matter-js';
 
 import { STEP_DELTA } from '../archetypes';
 import type { PhysicsAdapter, PhysicsArchetypeSpec, PhysicsStructuralCounters } from '../PhysicsAdapter';
+import type { PerStepWork } from './perStepWork';
+import { createPerStepWork } from './perStepWork';
+import type { BodyDesc } from './scene';
 import { describePhysicsScene } from './scene';
 
 /**
@@ -43,6 +46,15 @@ import { describePhysicsScene } from './scene';
  * - Contact count is matter's active colliding-pair count (`engine.pairs
  *   .collisionActive`), a pair-level proxy comparable to - but not semantically
  *   identical to - exojs's solid-contact count.
+ * - Ray queries. `Matter.Query.ray` is matter's only ray API and is what a matter
+ *   app writes, but it is NOT an accelerated query: it tests the ray's bounding
+ *   region against a body LIST, so its cost is O(bodies) and it reports no hit
+ *   distance ("Intersection points are not provided"). The exojs and rapier arms
+ *   answer the same ray out of a bounding-volume tree. The `raycast` row therefore
+ *   measures what each library's users actually pay for a ray, which is the honest
+ *   question, and NOT tree-versus-tree traversal - stated here and in the report
+ *   rather than papered over by hand-writing a spatial index for matter that its
+ *   users do not have.
  *
  * `matter-js` is a CommonJS default export loaded lazily via dynamic `import()`,
  * so a checkout that never ran `bench:setup` (the competitor library is not
@@ -78,6 +90,8 @@ export const createMatterJsAdapter = async (): Promise<PhysicsAdapter | null> =>
 
   let engine: Matter.Engine | null = null;
   let perturbedSignature = '';
+  let perStep: PerStepWork | null = null;
+  let stepIndex = 0;
 
   return {
     engine: 'matter-js',
@@ -93,9 +107,7 @@ export const createMatterJsAdapter = async (): Promise<PhysicsAdapter | null> =>
       // Reproduce the archetype's px/s² gravity field in matter's unit model.
       created.gravity = { x: spec.gravity.x * PX_PER_S2_TO_MATTER, y: spec.gravity.y * PX_PER_S2_TO_MATTER, scale: GRAVITY_SCALE };
 
-      const bodies: Matter.Body[] = [];
-
-      for (const desc of scene.bodies) {
+      const createBody = (desc: BodyDesc): Matter.Body => {
         const options: Matter.IChamferableBodyDefinition = {
           isStatic: desc.type === 'static',
           friction: desc.friction,
@@ -116,24 +128,70 @@ export const createMatterJsAdapter = async (): Promise<PhysicsAdapter | null> =>
           M.Body.setVelocity(body, { x: desc.perturb.vx * STEP_DELTA, y: desc.perturb.vy * STEP_DELTA });
         }
 
-        bodies.push(body);
+        M.Composite.add(created.world, body);
+
+        return body;
+      };
+
+      const table = scene.bodies.map(createBody);
+
+      // Revolute equivalent: a zero-length, fully stiff constraint pinning the
+      // shared world anchor on both bodies. matter's constraint points are
+      // body-LOCAL offsets from the centre, so the world anchor is converted per
+      // body - the same pivot the exojs and rapier arms are given.
+      for (const joint of scene.joints) {
+        const bodyA = table[joint.bodyA]!;
+        const bodyB = table[joint.bodyB]!;
+
+        M.Composite.add(
+          created.world,
+          M.Constraint.create({
+            bodyA,
+            bodyB,
+            pointA: { x: joint.x - bodyA.position.x, y: joint.y - bodyA.position.y },
+            pointB: { x: joint.x - bodyB.position.x, y: joint.y - bodyB.position.y },
+            length: 0,
+            stiffness: 1,
+          }),
+        );
       }
 
-      M.Composite.add(created.world, bodies);
+      // `Query.ray` takes a body LIST, so the arm holds one. It is refreshed on
+      // churn rather than rebuilt per ray: an app casting 64 rays a step would
+      // call `allBodies` once too, and rebuilding it per ray would charge matter
+      // for a list walk its users do not pay.
+      let queryBodies = M.Composite.allBodies(created.world);
+
+      stepIndex = 0;
+      perStep = createPerStepWork(spec, scene, table, {
+        createBody: desc => {
+          const body = createBody(desc);
+
+          queryBodies = M.Composite.allBodies(created.world);
+
+          return body;
+        },
+        removeBody: body => M.Composite.remove(created.world, body),
+        // `Query.ray` is a segment query, so the unit direction and distance are
+        // converted back to an end point.
+        castRay: ray =>
+          M.Query.ray(queryBodies, { x: ray.x, y: ray.y }, { x: ray.x + ray.dx * ray.maxDistance, y: ray.y + ray.dy * ray.maxDistance }).length > 0,
+      });
       engine = created;
     },
 
     step(dt: number): void {
-      if (engine === null) {
+      if (engine === null || perStep === null) {
         throw new Error('matter-js adapter: step() called before setup().');
       }
 
+      perStep.run(stepIndex++);
       // Engine.update takes milliseconds; a fixed dt keeps matter's Verlet integration deterministic.
       M.Engine.update(engine, dt * 1_000);
     },
 
     sampleStructural(): PhysicsStructuralCounters {
-      if (engine === null) {
+      if (engine === null || perStep === null) {
         throw new Error('matter-js adapter: sampleStructural() called before setup().');
       }
 
@@ -141,6 +199,8 @@ export const createMatterJsAdapter = async (): Promise<PhysicsAdapter | null> =>
         bodyCount: M.Composite.allBodies(engine.world).length,
         // Active colliding pairs on the last step - matter's pair-level contact proxy.
         contactCount: engine.pairs.collisionActive.length,
+        jointCount: M.Composite.allConstraints(engine.world).length,
+        rayHits: perStep.rayHits,
       };
     },
 
@@ -150,6 +210,8 @@ export const createMatterJsAdapter = async (): Promise<PhysicsAdapter | null> =>
         M.Engine.clear(engine);
         engine = null;
       }
+
+      perStep = null;
     },
 
     mutationSignature(): string {
