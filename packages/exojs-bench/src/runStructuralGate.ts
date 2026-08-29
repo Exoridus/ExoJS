@@ -32,12 +32,17 @@ const BASELINE_PATH = 'baselines/structural.json';
  * Node count the gate measures at.
  *
  * One count, and a small one. The counters the gate guards are steady-state per
- * frame and their VALUES scale with node count, but a batching collapse shows up
- * at any count - so a second count would double the gate's wall clock to
- * re-detect the same defect. 1 000 keeps every archetype (including the text and
- * render-target rows) inside a few seconds per cell on a software rasterizer.
+ * frame, and a batching collapse shows up at any count - so a second count would
+ * double the gate's wall clock to re-detect the same defect.
+ *
+ * 200 rather than 1 000, from measurement: at 1 000 the full gate took roughly
+ * 55 minutes on a software rasterizer, which is unusable in a pre-push hook and
+ * uncomfortably close to a CI job timeout. Software rasterization is fill-bound,
+ * so the cost falls with the node count while the batch STRUCTURE - which is what
+ * the counters record - does not: every archetype still forms its plateaus and
+ * breaks its batches here.
  */
-const GATE_NODE_COUNT = 1_000;
+const GATE_NODE_COUNT = 200;
 
 /** Timed frames per cell. Counters are steady-state, so a handful is enough to divide evenly and prove it. */
 const GATE_TIMED_FRAMES = 3;

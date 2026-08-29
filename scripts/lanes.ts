@@ -59,6 +59,7 @@ export interface Lane {
  * `coverage` has no entry - it is the same suite as `unit`, measured. Running it
  * locally would double the wall time for no extra signal, and the allocation
  * gate it shares a job with reads wrong under instrumentation anyway.
+ *
  */
 export const LOCAL_LANES: readonly Lane[] = [
   { key: 'typecheck', name: 'typecheck gates', command: ['pnpm', 'gates', 'typecheck'], gate: true },
@@ -73,8 +74,10 @@ export const LOCAL_LANES: readonly Lane[] = [
   { key: 'browserAudio', name: 'browser: audio worklets', command: ['pnpm', 'test:browser:audio'], browser: true },
   { key: 'browserTilemapWorker', name: 'browser: tilemap worker', command: ['pnpm', 'test:browser:tilemap'], browser: true },
   { key: 'siteBuild', name: 'site gates', command: ['pnpm', 'gates', 'site'], gate: true },
-  // Drives headless Chromium on the software rasterizer, so it is a browser lane
-  // for `--quick`'s purposes even though it needs no GPU.
+  // Drives headless Chromium on the software rasterizer, so `--quick` skips it
+  // like any other browser lane. It is cheap enough to keep in the local plan
+  // (~1 minute measured) only because the gate excludes the archetypes whose
+  // software FILL cost dominates everything else - see `structuralGate.ts`.
   { key: 'benchStructural', name: 'bench: structural counter gate', command: ['pnpm', 'gate:bench:structural'], browser: true },
   // The harness serves `site/dist`, so locally the build is part of the lane -
   // smoking a stale dist is the false green this lane exists to prevent. CI
@@ -146,7 +149,7 @@ const main = (): void => {
 
   process.stdout.write(`lanes: ${scope}\n`);
   process.stdout.write(
-    `lanes: engine=${areas.engine} site=${areas.site} audioFx=${areas.audioFx} tilemapWorker=${areas.tilemapWorker} exampleCatalog=${areas.exampleCatalog}\n\n`,
+    `lanes: engine=${areas.engine} site=${areas.site} audioFx=${areas.audioFx} tilemapWorker=${areas.tilemapWorker} exampleCatalog=${areas.exampleCatalog} benchStructural=${areas.benchStructural}\n\n`,
   );
 
   for (const lane of selected) {
