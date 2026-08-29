@@ -332,3 +332,28 @@ describe('CI lane selection - example-smoke lane', () => {
     expect(decide('README.md').lanes.exampleSmoke).toBe(false);
   });
 });
+
+describe('CI lane selection - bench structural gate', () => {
+  it('rendering source runs the gate, because it decides what the counters record', () => {
+    expect(decide('src/rendering/sprite/Sprite.ts').lanes.benchStructural).toBe(true);
+  });
+
+  it('the harness and its committed baseline run the gate', () => {
+    expect(decide('packages/exojs-bench/src/rendering/adapters/exojs.ts').lanes.benchStructural).toBe(true);
+    expect(decide('packages/exojs-bench/baselines/structural.json').lanes.benchStructural).toBe(true);
+    expect(decide('packages/exojs-bench/package.json').lanes.benchStructural).toBe(true);
+  });
+
+  it('engine code that cannot move a draw-call count does NOT run it', () => {
+    expect(decide('src/audio/AudioManager.ts').lanes.benchStructural).toBe(false);
+    expect(decide('src/input/InputManager.ts').lanes.benchStructural).toBe(false);
+  });
+
+  it('a docs-only change runs nothing', () => {
+    expect(decide('README.md').lanes.benchStructural).toBe(false);
+  });
+
+  it('a workflow change revalidates it, since a workflow edit can alter any lane', () => {
+    expect(decide('.github/workflows/ci.yml').lanes.benchStructural).toBe(true);
+  });
+});

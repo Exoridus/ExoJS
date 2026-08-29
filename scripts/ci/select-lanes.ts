@@ -310,14 +310,14 @@ const main = (): void => {
   const areas =
     eventName === 'pull_request'
       ? selectAreas(parseChangedFiles(process.env['CHANGED_FILES']))
-      : { engine: true, site: true, audioFx: true, tilemapWorker: true, exampleCatalog: true };
+      : { engine: true, site: true, audioFx: true, tilemapWorker: true, exampleCatalog: true, benchStructural: true };
 
   // Human-readable trace to the job log (stderr keeps it out of $GITHUB_OUTPUT).
   process.stderr.write(
-    `select-lanes: event=${eventName || 'unknown'} engine=${areas.engine} site=${areas.site} audioFx=${areas.audioFx} tilemapWorker=${areas.tilemapWorker} exampleCatalog=${areas.exampleCatalog}\n`,
+    `select-lanes: event=${eventName || 'unknown'} engine=${areas.engine} site=${areas.site} audioFx=${areas.audioFx} tilemapWorker=${areas.tilemapWorker} exampleCatalog=${areas.exampleCatalog} benchStructural=${areas.benchStructural}\n`,
   );
   process.stdout.write(
-    `engine=${areas.engine}\nsite=${areas.site}\naudioFx=${areas.audioFx}\ntilemapWorker=${areas.tilemapWorker}\nexampleCatalog=${areas.exampleCatalog}\n`,
+    `engine=${areas.engine}\nsite=${areas.site}\naudioFx=${areas.audioFx}\ntilemapWorker=${areas.tilemapWorker}\nexampleCatalog=${areas.exampleCatalog}\nbenchStructural=${areas.benchStructural}\n`,
   );
 };
 
