@@ -13,6 +13,17 @@ pnpm --filter @codexo/exojs-bench bench:setup   # installs + links the competito
 pnpm --filter @codexo/exojs-bench bench         # runs the benchmark
 ```
 
+Everything else the package offers:
+
+```sh
+pnpm --filter @codexo/exojs-bench bench --domain=physics   # the CPU-only physics matrix
+pnpm --filter @codexo/exojs-bench bench:compare \
+  --rendering .workspace/output/baseline/results.json \
+  --physics .workspace/output/physics/results.json        # generate the published comparison
+pnpm gate:bench:structural                                # the structural counter gate (also a CI lane)
+pnpm --filter @codexo/exojs-bench gate:timing             # the manual timing gate
+```
+
 ## What it measures
 
 Two domains, selected with `--domain` (default `rendering`):
@@ -28,12 +39,38 @@ Two domains, selected with `--domain` (default `rendering`):
 Everything below describes the rendering domain.
 
 A cell's scene comes from a fixed **archetype** (`src/rendering/archetypes.ts`):
-`static-heavy`, `dynamic-heavy`, `deep-hierarchy`, `overdraw`, `batch-breaking`,
-`batch-breaking-atlased`, `split-screen`, `mixed-blend`, `mixed-material`,
-`mixed-material-atlased`, `instanced-batch`, `mixed-sprite-mesh-static`,
-`mixed-sprite-mesh-array`, `scrolling-world`. Each pins nesting depth, texture
-count, per-frame mutation fraction and whatever dimension it exists to isolate,
-and sweeps a ladder of node counts. Every arm builds the identical scene from the
+`static-heavy`, `dynamic-heavy`, `deep-hierarchy`, `lifecycle-churn`,
+`overdraw`, `batch-breaking`, `batch-breaking-atlased`, `split-screen`,
+`mixed-blend`, `mixed-material`, `mixed-material-atlased`, `instanced-batch`,
+`mixed-sprite-mesh-static`, `mixed-sprite-mesh-array`, `scrolling-world`,
+`text-static`, `text-dynamic`, `filter-chain-1`, `filter-chain-2`,
+`filter-chain-4`, `mask-clip`. Each pins nesting depth, texture count, per-frame
+mutation fraction and whatever dimension it exists to isolate, and sweeps a
+ladder of node counts.
+
+Most of them are readable as a DELTA against another row, which is where their
+value is: `lifecycle-churn` differs from `dynamic-heavy` only in destroying the
+leaves it would otherwise have moved, so the difference between the two rows is
+what structural invalidation costs; `text-dynamic` differs from `text-static`
+only in re-setting strings; each `filter-chain-*` step adds one render-target
+pass. Every archetype also declares whether a cross-arm comparison of it is
+meaningful at all (`crossArm`) - the ExoJS-internal probes say no, and the
+published comparison excludes them by construction.
+
+Text is compared on each library's GLYPH-ATLAS path, never its canvas-raster
+one: ExoJS SDF text, Pixi `BitmapText` (not `Text`, which rasterizes one canvas
+texture per node), Phaser `BitmapText` over a `RetroFont` grid, Excalibur
+`SpriteFont`. The last two have no dynamic font generation, so they parse a
+generated digit sheet the harness supplies; `src/rendering/digitAtlas.ts` states
+what that buys them.
+
+The physics domain's archetypes work the same way: `box-stack`, `many-dynamic`,
+`mixed-static-dynamic`, plus `raycast` (the mixed scene with 64 ray queries per
+step), `body-churn` (the many-dynamic scene with 5 % of its bodies destroyed and
+rebuilt per step) and `joints` (chains of 8 bodies on revolute constraints). The
+per-cell seed is keyed on the SCENE rather than on the archetype, so a query or
+churn row and its base row simulate the byte-identical world and their delta
+carries one cause. Every arm builds the identical scene from the
 identical seed; the harness asserts that by comparing each arm's mutation-index
 signature against a canonical selection and failing the cell loudly on any
 divergence.
@@ -343,6 +380,69 @@ CPU-path measurements with no browser and no GPU, used while iterating on a chan
 — are a different measurement entirely. They are not comparable with the table
 above and are never published as ExoJS performance figures.
 
+## The two regression gates
+
+They guard different defect classes and are deliberately unlike each other.
+
+**Structural** (`pnpm gate:bench:structural`) compares exact integer
+draw/bind/upload counters against `baselines/structural.json`. The values are
+decided CPU-side, so they do not drift and the baseline carries no tolerance
+band: any deviation fails, as does a guarded cell that disappears or stops
+measuring. It catches the fault that renders the identical picture and is merely
+expensive - a batching collapse from 782 to 25 000 draw calls passes every
+correctness test.
+
+It runs on the software rasterizer, which is what puts it in CI. That its
+counters are genuinely backend-independent was measured, not assumed: every
+archetype was run on a real GPU and on SwiftShader, and all three counters came
+out byte-identical everywhere except `batch-breaking` (does not complete on a
+software rasterizer) and `text-dynamic` (aborts there as too slow). Those two are
+unguarded, named in the source with the reason; no counter needed a tolerance.
+Re-record with `--update` in the same commit as an intended change.
+
+**Timing** (`pnpm --filter @codexo/exojs-bench gate:timing`) compares wall-clock
+medians against `baselines/timing.json` and is a RELEASE PRECONDITION invoked by
+hand on a machine you have confirmed idle. It is not a hook and not a CI job:
+the matrix needs an idle machine, a push is by definition not one, and a gate
+that goes falsely red gets bypassed.
+
+A cell fails when its median exceeds the baseline by more than 25 % **and** by at
+least 0.5 ms. The absolute floor is not a softening - without it the gate is
+unusable on sub-millisecond cells: two consecutive runs of the same code on the
+same machine put 15 of 42 cells over 25 %, the smallest moving 0.060 ms to
+0.095 ms. p95 is reported on every row and gates nothing, being the noisier
+statistic. The committed baseline is stamped `confirmedIdle: false` and the gate
+repeats that caveat on every run; re-record it with `--update --idle` on a quiet
+machine before relying on it for a release.
+
+Correctness assertions stay in the test suite, which is fast, CI-resident and
+needs no GPU. Nothing moved out of it: the gates add the other defect class -
+faults that look correct and are merely expensive.
+
+## The published comparison
+
+`bench:compare` reads a run's `results.json` and generates the comparison
+document. It is generated, never hand-maintained, because a hand-written
+comparison drifts from the harness and once it drifts the honesty is gone
+without anyone noticing.
+
+Rules the generator enforces rather than merely intends:
+
+- Rows are archetypes; categories are section headings. Nothing aggregates
+  across archetypes, because any mean over a category hides its worst cell.
+- Verdicts are computed from the two medians. A ratio inside 0.8-1.2 is `level`
+  (the matrix's own noise band); outside it the faster arm `leads`, and at 5x or
+  more `leads clearly` - a gap too large for machine mood to explain.
+- One node count for the whole table, chosen from the archetype ladders BEFORE
+  any timing is read, then lowered until every arm produced a valid cell. It can
+  never be picked per row.
+- Every row names the mechanism behind its difference, drawn from the structural
+  counters. A row whose mechanism cannot be evidenced is not published - it is
+  listed under Omissions with the reason, so a dropped row stays auditable.
+- One column per competitor, no "best competitor" composite. Phaser occupies its
+  own WebGL1 block, CPU time only, explicitly carrying no mechanism.
+- Cells where ExoJS loses are published exactly like the cells where it wins.
+
 ## Cross-library numbers
 
 The harness runs competitor arms, and no cross-library figure is published in the
@@ -372,6 +472,14 @@ shipped. So `@codexo/exojs-bench` is deliberately excluded from
 `typecheck:packages` / `verify:quick` / CI. A standalone `typecheck:bench`
 root script exists for on-demand/manual runs:
 
+**The one exception is the structural gate**, and it is an exception precisely
+because it needs none of that: it measures only the ExoJS arms on the software
+rasterizer, so its CI job installs no competitor library and needs no GPU.
+Nothing in that job runs `bench:setup`, so the competitor packages never enter
+the CI trust boundary. It is path-gated on the rendering source, the harness and
+the baseline itself — narrower than the `engine` area, since a change to audio or
+input cannot move a draw-call count.
+
 ```sh
 pnpm typecheck:bench   # bench:setup + typecheck, in one step
 ```
@@ -394,9 +502,15 @@ pnpm typecheck:bench   # bench:setup + typecheck, in one step
 
 This is a local, path-gated backstop, not a CI gate — it only runs on the
 machine that pushes a bench-touching commit, and only if that machine has
-already run `bench:setup`. An **engine API change under `src/`** that breaks
-the bench adapters' types, without a commit that also touches
-`packages/exojs-bench/**`, is **not** caught by this hook (or by CI). This is
+already run `bench:setup`. An engine API change under `src/` that breaks the
+bench adapters' types, without a commit that also touches
+`packages/exojs-bench/**`, is not caught by this hook.
+
+The structural-gate CI lane closes part of that gap, but only part: a change
+under `src/rendering/` now runs the harness (and therefore compiles and executes
+the ExoJS adapters) in CI, so a break there fails a PR. A change elsewhere under
+`src/` still does not, and neither does anything that only affects a competitor
+adapter. This is
 an accepted trade-off to keep the bench package's ~235MB of competitor
 dependencies out of the shared-CI trust boundary entirely. A future
 self-hosted-GPU bench tier (see the engine's perf-tracking roadmap) is the
