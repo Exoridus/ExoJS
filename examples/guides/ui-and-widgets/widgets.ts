@@ -13,6 +13,7 @@ import {
   ScrollContainer,
   Slider,
   Stack,
+  TextInput,
   Toggle,
   Tooltip,
   UIRoot,
@@ -181,6 +182,44 @@ class OptionsScene extends Scene {
 }
 // #endregion guide:controls
 
+// #region guide:text-input
+class LoginScene extends Scene {
+  override init(): void {
+    const form = new Stack({ direction: 'column', spacing: 12, padding: 16 });
+
+    const name = new TextInput({
+      width: 260,
+      placeholder: 'Player name',
+      maxLength: 24,
+      enterKeyHint: 'next',
+    });
+
+    const password = new TextInput({
+      width: 260,
+      placeholder: 'Password',
+      maskChar: '•',
+      enterKeyHint: 'go',
+    });
+
+    // The value the gate sees is the value the edit would produce, so a paste
+    // that would break the rule is dropped whole rather than truncated.
+    const code = new TextInput({
+      width: 260,
+      inputMode: 'numeric',
+      filter: candidate => /^\d*$/.test(candidate),
+    });
+
+    name.onSubmit.add(() => password.focus());
+    password.onSubmit.add(value => console.log('sign in', name.value, value.length));
+    code.onChange.add(value => console.log('code', value));
+
+    form.addChild(name).addChild(password).addChild(code);
+    form.anchorIn(this.ui, 'center');
+    this.ui.addChild(form);
+  }
+}
+// #endregion guide:text-input
+
 // #region guide:focus-navigation
 class GamepadMenuScene extends Scene {
   override init(): void {
@@ -206,4 +245,4 @@ class GamepadMenuScene extends Scene {
 }
 // #endregion guide:focus-navigation
 
-export { DockedHudScene, FormScene, GamepadMenuScene, HudScene, InventoryScene, MenuScene, OptionsScene, SettingsScene, ShopScene };
+export { DockedHudScene, FormScene, GamepadMenuScene, HudScene, InventoryScene, LoginScene, MenuScene, OptionsScene, SettingsScene, ShopScene };

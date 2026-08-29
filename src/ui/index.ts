@@ -20,6 +20,8 @@ export type { SliderOptions } from './Slider';
 export { Slider } from './Slider';
 export type { StackAlign, StackDirection, StackOptions } from './Stack';
 export { Stack } from './Stack';
+export type { TextInputOptions } from './TextInput';
+export { TextInput } from './TextInput';
 export type {
   UIBackground,
   UIBackgroundInput,

@@ -1,16 +1,16 @@
 {
-  "title": "UIThemeRole",
-  "description": "A themed surface. Roles are per painted surface, not per widget class: a progress bar draws its track and its fill from two independent roles.",
-  "symbol": "UIThemeRole",
-  "kind": "type",
-  "subsystem": "ui",
+  "title": "PlatformTextInputHints",
+  "description": "What a host should tell its input method about the field. Every member is a hint: an input method may ignore any of them.",
+  "symbol": "PlatformTextInputHints",
+  "kind": "interface",
+  "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 0,
+  "memberCount": 3,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 0,
+    "properties": 3,
     "events": 0
   },
   "sections": [
@@ -19,21 +19,33 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A themed surface. Roles are per painted surface, not per widget class: a progress bar draws its track and its fill from two independent roles."
+        "What a host should tell its input method about the field. Every member is a hint: an input method may ignore any of them."
       ],
-      "importLine": "import { UIThemeRole } from '@codexo/exojs'",
+      "importLine": "import { PlatformTextInputHints } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
-      "id": "definition",
-      "title": "Definition",
+      "id": "properties",
+      "title": "Properties",
       "members": [
         {
-          "name": "UIThemeRole",
-          "signature": "\"button\" | \"caret\" | \"checkbox\" | \"checkboxMark\" | \"dropdownItem\" | \"dropdownList\" | \"label\" | \"panel\" | \"placeholder\" | \"progressBarFill\" | \"progressBarTrack\" | \"scrollbarThumb\" | \"scrollbarTrack\" | \"selection\" | \"sliderFill\" | \"sliderThumb\" | \"sliderTrack\" | \"textFieldSurface\" | \"toggleKnob\" | \"toggleTrack\"",
+          "name": "enterKeyHint",
+          "signature": "enterKeyHint?: \"done\" | \"enter\" | \"go\" | \"next\" | \"search\" | \"send\"",
           "signatureTokens": [
             {
-              "text": "\"button\"",
+              "text": "enterKeyHint",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"done\"",
               "kind": "keyword"
             },
             {
@@ -41,7 +53,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"caret\"",
+              "text": "\"enter\"",
               "kind": "keyword"
             },
             {
@@ -49,7 +61,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"checkbox\"",
+              "text": "\"go\"",
               "kind": "keyword"
             },
             {
@@ -57,7 +69,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"checkboxMark\"",
+              "text": "\"next\"",
               "kind": "keyword"
             },
             {
@@ -65,7 +77,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"dropdownItem\"",
+              "text": "\"search\"",
               "kind": "keyword"
             },
             {
@@ -73,125 +85,111 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"dropdownList\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"label\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"panel\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"placeholder\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"progressBarFill\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"progressBarTrack\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"scrollbarThumb\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"scrollbarTrack\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"selection\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"sliderFill\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"sliderThumb\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"sliderTrack\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"textFieldSurface\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"toggleKnob\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"toggleTrack\"",
+              "text": "\"send\"",
               "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "What the field's confirm key should be labelled as."
+        },
+        {
+          "name": "inputMode",
+          "signature": "inputMode?: \"decimal\" | \"email\" | \"numeric\" | \"search\" | \"tel\" | \"text\" | \"url\"",
+          "signatureTokens": [
+            {
+              "text": "inputMode",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"decimal\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"email\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"numeric\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"search\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"tel\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"text\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"url\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "What kind of content the field holds, so mobile keyboards can adapt."
+        },
+        {
+          "name": "masked",
+          "signature": "masked?: boolean",
+          "signatureTokens": [
+            {
+              "text": "masked",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The field shows masking characters; clipboard reads are refused."
         }
       ],
       "paragraphs": [],
@@ -205,11 +203,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/ui/theme.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/theme.ts"
+        "label": "src/platform/PlatformTextInput.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformTextInput.ts"
       }
     }
   ],
-  "sourcePath": "src/ui/theme.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/theme.ts"
+  "sourcePath": "src/platform/PlatformTextInput.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformTextInput.ts"
 }

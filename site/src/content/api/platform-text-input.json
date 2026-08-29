@@ -1,0 +1,459 @@
+{
+  "title": "PlatformTextInput",
+  "description": "The transport between a text-editing widget and whatever the host uses to receive real keyboard and IME input. The contract knows no text model: it mirrors state in (`setValue`), mirrors geometry in (`setBounds`, `setCaretRect`), states hints (`setHints`), and reports edits and composition progress out through its signals. `createTextInput` may return `null` - a host with no way to receive text input is a supported outcome, not an error. The widget renders and takes focus, but rejects edits.",
+  "symbol": "PlatformTextInput",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 0,
+    "methods": 7,
+    "properties": 0,
+    "events": 2
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The transport between a text-editing widget and whatever the host uses to receive real keyboard and IME input. The contract knows no text model: it mirrors state in (`setValue`), mirrors geometry in (`setBounds`, `setCaretRect`), states hints (`setHints`), and reports edits and composition progress out through its signals.",
+        "`createTextInput` may return `null` - a host with no way to receive text input is a supported outcome, not an error. The widget renders and takes focus, but rejects edits."
+      ],
+      "importLine": "import { PlatformTextInput } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "blur",
+          "signature": "blur(): void",
+          "signatureTokens": [
+            {
+              "text": "blur",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Release host focus."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Tear the transport down: detach element and listeners."
+        },
+        {
+          "name": "focus",
+          "signature": "focus(): void",
+          "signatureTokens": [
+            {
+              "text": "focus",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Give the transport host focus, so keyboards and IMEs attach."
+        },
+        {
+          "name": "setBounds",
+          "signature": "setBounds(rect: Rectangle): void",
+          "signatureTokens": [
+            {
+              "text": "setBounds",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "rect",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "rect",
+              "type": "Rectangle",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Where the field is, in CSS pixels relative to the drawing surface's top-left. Hosts that anchor an input method to a real element position the element there; the caller converts from its own layout space, which is where a UI scale or a canvas display size is applied."
+        },
+        {
+          "name": "setCaretRect",
+          "signature": "setCaretRect(rect: Rectangle): void",
+          "signatureTokens": [
+            {
+              "text": "setCaretRect",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "rect",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "rect",
+              "type": "Rectangle",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Where the caret is, in the same space as PlatformTextInput.setBounds - the anchor point for an IME candidate window."
+        },
+        {
+          "name": "setHints",
+          "signature": "setHints(hints: PlatformTextInputHints): void",
+          "signatureTokens": [
+            {
+              "text": "setHints",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "hints",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlatformTextInputHints",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "hints",
+              "type": "PlatformTextInputHints",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Update the input-method hints."
+        },
+        {
+          "name": "setValue",
+          "signature": "setValue(text: string, selectionStart: number, selectionEnd: number): void",
+          "signatureTokens": [
+            {
+              "text": "setValue",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "text",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "selectionStart",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "selectionEnd",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "text",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "selectionStart",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "selectionEnd",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Mirror the model's value and selection into the transport, so host-side features that read the element (clipboard, word deletion, undo) operate on the same text the model holds. Ignored while a composition is in flight; the mirror resumes when it ends."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "members": [
+        {
+          "name": "onComposition",
+          "signature": "onComposition: Signal<[CompositionState]>",
+          "signatureTokens": [
+            {
+              "text": "onComposition",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CompositionState",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires for composition progress. An update's text is in flight, not committed."
+        },
+        {
+          "name": "onEdit",
+          "signature": "onEdit: Signal<[TextEditIntent]>",
+          "signatureTokens": [
+            {
+              "text": "onEdit",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextEditIntent",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires for every edit the host asks for. Never fires while composing."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/platform/PlatformTextInput.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformTextInput.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/platform/PlatformTextInput.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformTextInput.ts"
+}

@@ -122,7 +122,11 @@ export type UIThemeRole =
   | 'sliderFill'
   | 'sliderThumb'
   | 'dropdownList'
-  | 'dropdownItem';
+  | 'dropdownItem'
+  | 'textFieldSurface'
+  | 'placeholder'
+  | 'caret'
+  | 'selection';
 
 /** Skins for every role, as resolved for a widget. */
 export type UITheme = Readonly<Record<UIThemeRole, UISkinSet>>;
@@ -290,6 +294,20 @@ export const defaultUITheme: UITheme = {
     hover: skin(fill(new Color(255, 255, 255, 0.14), 4), controlText),
     pressed: skin(fill(new Color(54, 120, 220, 1), 4), controlText),
     disabled: skin(fill(new Color(255, 255, 255, 0), 4), disabledText),
+  },
+  textFieldSurface: {
+    normal: skin(fill(new Color(255, 255, 255, 0.08), 6, new Color(255, 255, 255, 0.18), 1), controlText, { left: 8, top: 6, right: 8, bottom: 6 }),
+    disabled: skin(fill(new Color(255, 255, 255, 0.04), 6, new Color(255, 255, 255, 0.08), 1), disabledText, { left: 8, top: 6, right: 8, bottom: 6 }),
+    focused: skin(fill(new Color(255, 255, 255, 0.1), 6, new Color(120, 180, 255, 1), 1), controlText, { left: 8, top: 6, right: 8, bottom: 6 }),
+  },
+  placeholder: {
+    normal: skin(noBackground, { fillColor: new Color(255, 255, 255, 0.35), fontSize: 16 }),
+  },
+  caret: {
+    normal: skin(fill(new Color(120, 180, 255, 1), 0)),
+  },
+  selection: {
+    normal: skin(fill(new Color(54, 120, 220, 0.35), 0)),
   },
 };
 

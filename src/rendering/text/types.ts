@@ -134,6 +134,15 @@ export interface GlyphPlacement {
   readonly y: number;
   readonly width: number;
   readonly height: number;
+  /**
+   * Pen origin of this glyph on its line - the advance box's left edge, with
+   * the alignment offset applied and the glyph's bearing excluded. This is the
+   * boundary a caret sits on; `x` is the ink edge and in SDF mode sits left of
+   * the pen by the atlas padding.
+   */
+  readonly penX: number;
+  /** Pen step from this glyph to the next, `letterSpacing` included. */
+  readonly penAdvance: number;
   /** Which {@link AtlasPage} within the atlas holds this glyph's texture data. */
   readonly page: number;
   readonly uvLeft: number;

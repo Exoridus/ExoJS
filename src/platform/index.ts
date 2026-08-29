@@ -19,4 +19,5 @@ export type {
   PlatformWindowEventMap,
   TimeSource,
 } from './PlatformAdapter';
+export type { CompositionState, PlatformTextInput, PlatformTextInputHints, TextEditIntent } from './PlatformTextInput';
 export { isDomCanvas, type RenderSurface } from './RenderSurface';
