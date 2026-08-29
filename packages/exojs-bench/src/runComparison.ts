@@ -16,14 +16,10 @@ import { parseArgs } from './shared/args';
  * that looked wrong, and the artifact would stop being a function of the
  * recorded data.
  *
- * Usage:
- *
- * ```
- * pnpm --filter @codexo/exojs-bench bench:compare \\
- *   --rendering .workspace/output/baseline/results.json \\
- *   --physics .workspace/output/physics/results.json \\
- *   --out .workspace/output/comparison.md
- * ```
+ * Usage: point `--rendering` and/or `--physics` at the `results.json` a run
+ * wrote, and `--out` at the document to write. Both inputs default to nothing -
+ * a document must never imply it covers a domain that was not measured - and
+ * `--out` defaults to the harness's own (gitignored) output directory.
  */
 
 /** Default output path for the generated document. */
