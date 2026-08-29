@@ -1,10 +1,10 @@
 import * as Phaser from 'phaser';
 
-import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
-import { createDigitAtlasCanvas, DIGIT_ALPHABET, DIGIT_CELL_HEIGHT, DIGIT_CELL_WIDTH } from '../digitAtlas';
+import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
+import { createDigitAtlasCanvas, createDistinctTextureCanvas, DIGIT_ALPHABET, DIGIT_CELL_HEIGHT, DIGIT_CELL_WIDTH, TEXT_FONT_SIZE } from '../sceneAssets';
 import { isChurning, isTextArchetype, isTextUpdating, textForLeaf, usesRenderTargets } from '../traits';
-import { isScrolling } from '../world';
+import { GRID_MARGIN, gridLayout, gridPosition, isScrolling, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '../world';
 
 /**
  * Phaser 4.2 arm of the rendering benchmark.
@@ -47,21 +47,8 @@ import { isScrolling } from '../world';
  * only Phaser's render path is measured.
  */
 
-/** Fixed design-space viewport the harness canvas renders (see `page/index.html`). Identical to the ExoJS/Pixi arms. */
-const VIEWPORT_WIDTH = 1280;
-const VIEWPORT_HEIGHT = 720;
-/** Inset that keeps every gridded sprite (plus its mutation wobble) inside the view so culling never removes it mid-run. */
-const GRID_MARGIN = 32;
-/** Side length of the generated per-archetype textures / sprites, in pixels. */
-const SPRITE_SIZE = 8;
-/** Peak per-axis displacement applied to a mutated leaf; small enough to never cross the viewport edge. */
-const WOBBLE_AMPLITUDE = 2;
-/** Phase step per frame for the mutation wobble. */
-const WOBBLE_SPEED = 0.15;
 /** TextureManager key of the scene the game boots (fixed; the game is destroyed and rebuilt per cell). */
 const SCENE_KEY = 'bench';
-/** Font size, in logical pixels, of every text leaf - identical on every arm. */
-const TEXT_FONT_SIZE = 12;
 /** TextureManager key of the digit glyph sheet the `RetroFont` grid is parsed from. */
 const GLYPH_TEXTURE_KEY = `${SCENE_KEY}-glyphs`;
 /** BitmapFont cache key the parsed retro font is registered under. */
@@ -80,31 +67,6 @@ interface MutableLeaf {
   readonly baseX: number;
   readonly baseY: number;
 }
-
-/**
- * Generate one of `total` visually distinct solid-colour 8x8 canvases - the same
- * construction the ExoJS/Pixi arms use, so the `batch-breaking` archetype breaks
- * batches on every arm for the same reason (distinct GPU texture identities).
- */
-const createTextureCanvas = (index: number, total: number): HTMLCanvasElement => {
-  const canvas = document.createElement('canvas');
-
-  canvas.width = SPRITE_SIZE;
-  canvas.height = SPRITE_SIZE;
-
-  const context = canvas.getContext('2d');
-
-  if (context === null) {
-    throw new Error('A 2D context is required to generate benchmark textures.');
-  }
-
-  const hue = total > 1 ? Math.round((index / total) * 360) : 210;
-
-  context.fillStyle = `hsl(${hue}, 70%, 55%)`;
-  context.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
-
-  return canvas;
-};
 
 /**
  * Register the shared digit sheet as a uniform-grid `RetroFont` in the game's
@@ -239,7 +201,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
           textures.remove(key);
         }
 
-        textures.addCanvas(key, createTextureCanvas(t, spec.textureCount));
+        textures.addCanvas(key, createDistinctTextureCanvas(t, spec.textureCount));
         textureKeys.push(key);
       }
 
@@ -263,10 +225,10 @@ export const createPhaserAdapter = (): EngineAdapter => {
         spine.push(container);
       }
 
-      const columns = Math.max(1, Math.ceil(Math.sqrt(nodeCount)));
-      const rows = Math.max(1, Math.ceil(nodeCount / columns));
-      const cellWidth = (VIEWPORT_WIDTH - 2 * GRID_MARGIN) / columns;
-      const cellHeight = (VIEWPORT_HEIGHT - 2 * GRID_MARGIN) / rows;
+      // The SHARED grid, not a transcription of it: this arm places leaf `i` at
+      // the position `world.ts` computes, so a change to the layout cannot move
+      // one arm's scene without moving every arm's.
+      const layout = gridLayout(nodeCount, VIEWPORT_WIDTH, VIEWPORT_HEIGHT, GRID_MARGIN);
       const overdraw = spec.id === 'overdraw';
 
       // Shared, canonical mutation selection - the SAME helper every arm routes
@@ -288,14 +250,8 @@ export const createPhaserAdapter = (): EngineAdapter => {
         installGlyphFont(game, scene);
       }
 
-      /** Resting grid position of leaf `index`, on this arm's transcription of the shared grid. */
-      const leafPosition = (index: number): { x: number; y: number } =>
-        overdraw
-          ? { x: 0, y: 0 }
-          : {
-              x: GRID_MARGIN + (index % columns) * cellWidth + cellWidth / 2,
-              y: GRID_MARGIN + Math.floor(index / columns) * cellHeight + cellHeight / 2,
-            };
+      /** Resting grid position of leaf `index`, from the shared layout helpers. */
+      const leafPosition = (index: number): { x: number; y: number } => (overdraw ? { x: 0, y: 0 } : gridPosition(index, layout, GRID_MARGIN));
 
       /** Build (but do not parent) the leaf at global index `index`; reused by the churn mutation. */
       const makeLeaf = (index: number): Phaser.GameObjects.Sprite | Phaser.GameObjects.BitmapText => {
@@ -391,9 +347,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
         return;
       }
 
-      const phase = frame * WOBBLE_SPEED;
-      const dx = Math.sin(phase) * WOBBLE_AMPLITUDE;
-      const dy = Math.cos(phase) * WOBBLE_AMPLITUDE;
+      const { dx, dy } = wobbleOffsetAt(frame);
 
       for (const leaf of mutableLeaves) {
         leaf.node.setPosition(leaf.baseX + dx, leaf.baseY + dy);

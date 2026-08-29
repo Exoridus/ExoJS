@@ -34,6 +34,8 @@ import type { ArchetypeId, Backend, CellResult, StructuralCounters } from './Eng
 export const UNGUARDED_ARCHETYPES: Readonly<Partial<Record<ArchetypeId, string>>> = {
   'batch-breaking': 'the cell does not complete on a software rasterizer (40 distinct textures wedge it), so it has no counters there to compare',
   'text-dynamic': 'the cell aborts on a software rasterizer as too slow, so its counters cover an unpredictable number of frames',
+  overdraw:
+    'its fill cost dominates the gate wall clock in software (stacked full-viewport quads are hundreds of millions of shaded pixels per frame) while its draw structure is a single call that static-heavy already guards',
 };
 
 /** Identity of one guarded cell. */

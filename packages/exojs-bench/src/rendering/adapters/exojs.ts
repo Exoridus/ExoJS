@@ -21,8 +21,9 @@ import { BlendModes } from '#rendering/types';
 import { View } from '#rendering/View';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
+import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
+import { createDistinctTextureCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
 import { filterChainDepth, isChurning, isTextArchetype, isTextUpdating, maskDepth, textForLeaf } from '../traits';
 import {
   cameraCenterAt,
@@ -93,11 +94,6 @@ const createBatchQuad = (): Geometry => {
     stride,
   });
 };
-
-/** Peak per-axis displacement applied to a mutated leaf; small enough to never cross the viewport edge. */
-const WOBBLE_AMPLITUDE = 2;
-/** Phase step per frame for the mutation wobble. */
-const WOBBLE_SPEED = 0.15;
 
 /**
  * Fixed-function blend modes cycled by the `mixed-blend` / `mixed-material`
@@ -172,9 +168,6 @@ interface MutableLeaf {
  */
 const createTextLeaf = (index: number, glyphs: number): Text => new Text(textForLeaf(index, glyphs), { fontSize: TEXT_FONT_SIZE });
 
-/** Font size, in logical pixels, of every text leaf on every arm. */
-const TEXT_FONT_SIZE = 12;
-
 /**
  * One link of a filter chain. A colour matrix at a near-identity saturation: it
  * is a single full-target pass with trivial fragment work, which is what leaves
@@ -189,25 +182,7 @@ const createChainFilter = (link: number): Filter => new ColorMatrixFilter().satu
  * canvas. Distinct texture identities are what force the `batch-breaking`
  * archetype to break instanced batches (each texture is a separate GPU bind).
  */
-const createDistinctTexture = (index: number, total: number): Texture => {
-  const canvas = document.createElement('canvas');
-
-  canvas.width = SPRITE_SIZE;
-  canvas.height = SPRITE_SIZE;
-
-  const context = canvas.getContext('2d');
-
-  if (context === null) {
-    throw new Error('A 2D context is required to generate benchmark textures.');
-  }
-
-  const hue = total > 1 ? Math.round((index / total) * 360) : 210;
-
-  context.fillStyle = `hsl(${hue}, 70%, 55%)`;
-  context.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
-
-  return new Texture(canvas);
-};
+const createDistinctTexture = (index: number, total: number): Texture => new Texture(createDistinctTextureCanvas(index, total));
 
 /**
  * Build `count` `View`s tiled in a near-square screen grid (split-screen /
@@ -750,9 +725,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         return;
       }
 
-      const phase = frame * WOBBLE_SPEED;
-      const dx = Math.sin(phase) * WOBBLE_AMPLITUDE;
-      const dy = Math.cos(phase) * WOBBLE_AMPLITUDE;
+      const { dx, dy } = wobbleOffsetAt(frame);
 
       for (const leaf of mutableLeaves) {
         leaf.node.setPosition(leaf.baseX + dx, leaf.baseY + dy);

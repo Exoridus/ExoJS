@@ -769,7 +769,11 @@ jobs:
     needs: [changes]
     if: ${{ needs.changes.outputs.benchStructural == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Generous, because the run is fill-bound on a software rasterizer rather than
+    # CPU-bound: measured at roughly 55 minutes at the node count the gate first
+    # shipped with, which is why it now measures a smaller one. The cap is a
+    # runaway guard, not a budget.
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6

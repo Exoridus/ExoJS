@@ -1,6 +1,6 @@
 {
   "recorded": {
-    "at": "2026-08-29T11:12:13.429Z",
+    "at": "2026-08-29T12:12:44.813Z",
     "engineVersion": "0.15.2",
     "adapter": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
   },
@@ -10,7 +10,7 @@
       "config": "current",
       "backend": "webgl2",
       "archetype": "batch-breaking-atlased",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
       "bufferUploads": 0
@@ -20,7 +20,7 @@
       "config": "current",
       "backend": "webgl2",
       "archetype": "deep-hierarchy",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
       "bufferUploads": 1
@@ -30,7 +30,7 @@
       "config": "current",
       "backend": "webgl2",
       "archetype": "dynamic-heavy",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
       "bufferUploads": 1
@@ -40,7 +40,7 @@
       "config": "current",
       "backend": "webgl2",
       "archetype": "filter-chain-1",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 3,
       "textureBinds": 5,
       "bufferUploads": 6
@@ -50,7 +50,7 @@
       "config": "current",
       "backend": "webgl2",
       "archetype": "filter-chain-2",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 7,
       "bufferUploads": 6
@@ -60,7 +60,7 @@
       "config": "current",
       "backend": "webgl2",
       "archetype": "filter-chain-4",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 6,
       "textureBinds": 11,
       "bufferUploads": 6
@@ -70,17 +70,17 @@
       "config": "current",
       "backend": "webgl2",
       "archetype": "instanced-batch",
-      "nodeCount": 1000,
-      "drawCalls": 16,
+      "nodeCount": 200,
+      "drawCalls": 4,
       "textureBinds": 0,
-      "bufferUploads": 48
+      "bufferUploads": 12
     },
     {
       "engine": "exojs",
       "config": "current",
       "backend": "webgl2",
       "archetype": "lifecycle-churn",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
       "bufferUploads": 1
@@ -90,7 +90,7 @@
       "config": "current",
       "backend": "webgl2",
       "archetype": "mask-clip",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 0,
       "bufferUploads": 4
@@ -100,8 +100,8 @@
       "config": "current",
       "backend": "webgl2",
       "archetype": "mixed-blend",
-      "nodeCount": 1000,
-      "drawCalls": 26,
+      "nodeCount": 200,
+      "drawCalls": 8,
       "textureBinds": 0,
       "bufferUploads": 0
     },
@@ -110,8 +110,8 @@
       "config": "current",
       "backend": "webgl2",
       "archetype": "mixed-material-atlased",
-      "nodeCount": 1000,
-      "drawCalls": 26,
+      "nodeCount": 200,
+      "drawCalls": 8,
       "textureBinds": 0,
       "bufferUploads": 0
     },
@@ -120,8 +120,8 @@
       "config": "current",
       "backend": "webgl2",
       "archetype": "mixed-material",
-      "nodeCount": 1000,
-      "drawCalls": 26,
+      "nodeCount": 200,
+      "drawCalls": 8,
       "textureBinds": 0,
       "bufferUploads": 0
     },
@@ -130,17 +130,17 @@
       "config": "current",
       "backend": "webgl2",
       "archetype": "mixed-sprite-mesh-array",
-      "nodeCount": 1000,
-      "drawCalls": 62,
+      "nodeCount": 200,
+      "drawCalls": 14,
       "textureBinds": 0,
-      "bufferUploads": 182
+      "bufferUploads": 38
     },
     {
       "engine": "exojs",
       "config": "current",
       "backend": "webgl2",
       "archetype": "mixed-sprite-mesh-static",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 0,
       "bufferUploads": 0
@@ -149,18 +149,8 @@
       "engine": "exojs",
       "config": "current",
       "backend": "webgl2",
-      "archetype": "overdraw",
-      "nodeCount": 1000,
-      "drawCalls": 1,
-      "textureBinds": 0,
-      "bufferUploads": 0
-    },
-    {
-      "engine": "exojs",
-      "config": "current",
-      "backend": "webgl2",
       "archetype": "scrolling-world",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
       "bufferUploads": 1
@@ -170,7 +160,7 @@
       "config": "current",
       "backend": "webgl2",
       "archetype": "split-screen",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 0,
       "bufferUploads": 0
@@ -180,7 +170,7 @@
       "config": "current",
       "backend": "webgl2",
       "archetype": "static-heavy",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
       "bufferUploads": 0
@@ -190,7 +180,7 @@
       "config": "current",
       "backend": "webgl2",
       "archetype": "text-static",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
       "bufferUploads": 0
@@ -200,7 +190,7 @@
       "config": "retained",
       "backend": "webgl2",
       "archetype": "batch-breaking-atlased",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 2,
       "textureBinds": 0,
       "bufferUploads": 0
@@ -210,7 +200,7 @@
       "config": "retained",
       "backend": "webgl2",
       "archetype": "deep-hierarchy",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 16,
       "textureBinds": 0,
       "bufferUploads": 19
@@ -220,7 +210,7 @@
       "config": "retained",
       "backend": "webgl2",
       "archetype": "dynamic-heavy",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 0,
       "bufferUploads": 7
@@ -230,7 +220,7 @@
       "config": "retained",
       "backend": "webgl2",
       "archetype": "filter-chain-1",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 9,
       "bufferUploads": 1
@@ -240,7 +230,7 @@
       "config": "retained",
       "backend": "webgl2",
       "archetype": "filter-chain-2",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 5,
       "textureBinds": 11,
       "bufferUploads": 1
@@ -250,7 +240,7 @@
       "config": "retained",
       "backend": "webgl2",
       "archetype": "filter-chain-4",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 7,
       "textureBinds": 15,
       "bufferUploads": 1
@@ -260,17 +250,17 @@
       "config": "retained",
       "backend": "webgl2",
       "archetype": "instanced-batch",
-      "nodeCount": 1000,
-      "drawCalls": 16,
+      "nodeCount": 200,
+      "drawCalls": 4,
       "textureBinds": 0,
-      "bufferUploads": 48
+      "bufferUploads": 12
     },
     {
       "engine": "exojs",
       "config": "retained",
       "backend": "webgl2",
       "archetype": "lifecycle-churn",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 0,
       "bufferUploads": 4
@@ -280,7 +270,7 @@
       "config": "retained",
       "backend": "webgl2",
       "archetype": "mask-clip",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 4,
       "bufferUploads": 3
@@ -290,8 +280,8 @@
       "config": "retained",
       "backend": "webgl2",
       "archetype": "mixed-blend",
-      "nodeCount": 1000,
-      "drawCalls": 26,
+      "nodeCount": 200,
+      "drawCalls": 8,
       "textureBinds": 0,
       "bufferUploads": 0
     },
@@ -300,8 +290,8 @@
       "config": "retained",
       "backend": "webgl2",
       "archetype": "mixed-material-atlased",
-      "nodeCount": 1000,
-      "drawCalls": 26,
+      "nodeCount": 200,
+      "drawCalls": 8,
       "textureBinds": 0,
       "bufferUploads": 0
     },
@@ -310,8 +300,8 @@
       "config": "retained",
       "backend": "webgl2",
       "archetype": "mixed-material",
-      "nodeCount": 1000,
-      "drawCalls": 26,
+      "nodeCount": 200,
+      "drawCalls": 8,
       "textureBinds": 0,
       "bufferUploads": 0
     },
@@ -320,17 +310,17 @@
       "config": "retained",
       "backend": "webgl2",
       "archetype": "mixed-sprite-mesh-array",
-      "nodeCount": 1000,
-      "drawCalls": 62,
+      "nodeCount": 200,
+      "drawCalls": 14,
       "textureBinds": 0,
-      "bufferUploads": 182
+      "bufferUploads": 38
     },
     {
       "engine": "exojs",
       "config": "retained",
       "backend": "webgl2",
       "archetype": "mixed-sprite-mesh-static",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 0,
       "bufferUploads": 0
@@ -339,18 +329,8 @@
       "engine": "exojs",
       "config": "retained",
       "backend": "webgl2",
-      "archetype": "overdraw",
-      "nodeCount": 1000,
-      "drawCalls": 2,
-      "textureBinds": 0,
-      "bufferUploads": 0
-    },
-    {
-      "engine": "exojs",
-      "config": "retained",
-      "backend": "webgl2",
       "archetype": "scrolling-world",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 0,
       "bufferUploads": 0
@@ -360,7 +340,7 @@
       "config": "retained",
       "backend": "webgl2",
       "archetype": "split-screen",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 16,
       "textureBinds": 0,
       "bufferUploads": 0
@@ -370,7 +350,7 @@
       "config": "retained",
       "backend": "webgl2",
       "archetype": "static-heavy",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 0,
       "bufferUploads": 0
@@ -380,7 +360,7 @@
       "config": "retained",
       "backend": "webgl2",
       "archetype": "text-static",
-      "nodeCount": 1000,
+      "nodeCount": 200,
       "drawCalls": 4,
       "textureBinds": 0,
       "bufferUploads": 12
