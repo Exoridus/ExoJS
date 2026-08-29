@@ -31,5 +31,18 @@ export * from './Size';
 export type { SweptHit } from './swept-collision';
 export { Sweep } from './swept-collision';
 export { triangulate } from './triangulate';
-export { clamp, inRange, isPowerOfTwo, lerp, MathUtils, sign, TAU } from './utils';
+export {
+  bezierCurveTo,
+  clamp,
+  degreesToRadians,
+  getDistance,
+  inRange,
+  isPowerOfTwo,
+  lerp,
+  quadraticCurveTo,
+  radiansToDegrees,
+  sign,
+  TAU,
+  trimRotation,
+} from './utils';
 export * from './Vector';

@@ -1,4 +1,4 @@
-import { MathUtils, Sprite, Texture } from '@codexo/exojs';
+import { radiansToDegrees, Sprite, Texture } from '@codexo/exojs';
 import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 
 const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
@@ -7,5 +7,5 @@ const sprite = new Sprite(Texture.empty);
 
 // #region guide:manual-sync
 sprite.setPosition(body.x, body.y);
-sprite.setRotation(MathUtils.radiansToDegrees(body.angle));
+sprite.setRotation(radiansToDegrees(body.angle));
 // #endregion guide:manual-sync
