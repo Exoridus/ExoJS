@@ -111,6 +111,7 @@ export type {
   TextAlignment,
   TextLayoutResult,
   TextLayoutStyle,
+  TextLineMetrics,
   TextPageQuads,
   TextSize,
 } from '#rendering/text/types';

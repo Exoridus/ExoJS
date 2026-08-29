@@ -12,7 +12,7 @@ import Callout from '../../../components/Callout.astro';
 
 Every scene owns a screen-fixed UI layer, [`scene.ui`](/ExoJS/en/api/uiroot/), that is rendered automatically on top of the world. It lives in screen space (origin top-left, `0..width` × `0..height`), so its contents never scroll or zoom with the camera. Add anything to it with `scene.ui.addChild(...)`.
 
-On top of that layer, ExoJS ships a small set of widgets — [`Panel`](/ExoJS/en/api/panel/), [`Button`](/ExoJS/en/api/button/), [`Label`](/ExoJS/en/api/label/), [`ProgressBar`](/ExoJS/en/api/progress-bar/), a [`Stack`](/ExoJS/en/api/stack/) layout container, a [`ScrollContainer`](/ExoJS/en/api/scroll-container/) with [`Scrollbar`](/ExoJS/en/api/scrollbar/)s for overflowing content, the form controls [`Checkbox`](/ExoJS/en/api/checkbox/), [`Toggle`](/ExoJS/en/api/toggle/), [`Slider`](/ExoJS/en/api/slider/), [`Dropdown`](/ExoJS/en/api/dropdown/) and [`TextInput`](/ExoJS/en/api/text-input/), and a hover [`Tooltip`](/ExoJS/en/api/tooltip/) helper — for HUDs, menus, and pause screens without hand-built hit-tests.
+On top of that layer, ExoJS ships a small set of widgets — [`Panel`](/ExoJS/en/api/panel/), [`Button`](/ExoJS/en/api/button/), [`Label`](/ExoJS/en/api/label/), [`ProgressBar`](/ExoJS/en/api/progress-bar/), a [`Stack`](/ExoJS/en/api/stack/) layout container, a [`ScrollContainer`](/ExoJS/en/api/scroll-container/) with [`Scrollbar`](/ExoJS/en/api/scrollbar/)s for overflowing content, the form controls [`Checkbox`](/ExoJS/en/api/checkbox/), [`Toggle`](/ExoJS/en/api/toggle/), [`Slider`](/ExoJS/en/api/slider/), [`Dropdown`](/ExoJS/en/api/dropdown/), [`TextInput`](/ExoJS/en/api/text-input/) and [`TextArea`](/ExoJS/en/api/text-area/), and a hover [`Tooltip`](/ExoJS/en/api/tooltip/) helper — for HUDs, menus, and pause screens without hand-built hit-tests.
 
 ## Building blocks
 
@@ -70,6 +70,8 @@ Keyboard input does not come from key codes. The field owns a hidden transport e
 `maxLength`, `filter` and `maskChar` are enforced in the editing model rather than in the key handler, so a paste cannot slip past them: `filter` sees the value the edit *would* produce and refuses the whole edit, never a truncated part of it. A masked field keeps the plain value in `value` and renders one mask character per grapheme; copy and cut are refused while a mask is set, so the transport can never hand the clipboard a password.
 
 `inputMode` and `enterKeyHint` are passed to the transport, which is what decides the on-screen keyboard layout and the label on its confirm key on a phone.
+
+A [`TextArea`](/ExoJS/en/api/text-area/) is the multi-line field on the same core. `Enter` inserts a line break instead of confirming, `Up` / `Down` move by line and keep the column the caret last chose, `PageUp` / `PageDown` move by as many lines as the field shows, and `Home` / `End` go to the ends of the current line. The content scrolls in both axes to keep the caret visible and is clipped to the field. Its lines are the ones the value states - a long line scrolls sideways rather than wrapping.
 
 <Callout type="note">
 A host with no text-input transport — the offscreen-canvas adapter, for instance — makes the field render and take focus but reject every edit. It is a capability, not a guarantee: check that the field is reachable before making it the only way to enter something.

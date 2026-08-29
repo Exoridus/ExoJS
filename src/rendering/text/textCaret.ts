@@ -16,9 +16,11 @@ import type { TextLayoutResult } from './types';
  * character replaces one grapheme and the mapping stays one glyph per
  * grapheme.
  *
- * Single-line only: every placement is treated as sitting on one line box
- * of `lineHeight`, starting at y = 0. Multi-line caret geometry is its own
- * layer on top of this.
+ * {@link caretRectAt} and {@link indexAtPoint} answer in the flat glyph index
+ * space of a single line. Multi-line callers work per line instead - see
+ * {@link lineAtPoint}, {@link glyphAtPointOnLine} and {@link caretRectOnLine} -
+ * because a line break places no glyph, so the flat index alone cannot say
+ * which side of a break a caret is on.
  */
 
 /**
@@ -90,4 +92,73 @@ export const indexAtPoint = (layout: TextLayoutResult, x: number, y: number): nu
   }
 
   return placements.length;
+};
+
+/**
+ * The line a point falls on, clamped to the laid-out lines. `y` is in the
+ * layout's own space, where the first line box starts at y = 0.
+ */
+export const lineAtPoint = (layout: TextLayoutResult, y: number, lineHeight: number): number => {
+  const count = layout.lines.length;
+
+  if (count === 0 || lineHeight <= 0) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(count - 1, Math.floor(y / lineHeight)));
+};
+
+/**
+ * The glyph a point selects within one line, as an index into that line
+ * (`0` to the line's glyph count), snapped to the nearer edge of the glyph
+ * under `x`. An empty line answers `0`.
+ */
+export const glyphAtPointOnLine = (layout: TextLayoutResult, lineIndex: number, x: number): number => {
+  const line = layout.lines[lineIndex];
+
+  if (line === undefined || line.count === 0) {
+    return 0;
+  }
+
+  for (let i = 0; i < line.count; i++) {
+    const placement = layout.placements[line.start + i];
+
+    if (placement === undefined) {
+      continue;
+    }
+
+    const right = placement.penX + placement.penAdvance;
+
+    if (x <= right) {
+      return x < (placement.penX + right) / 2 ? i : i + 1;
+    }
+  }
+
+  return line.count;
+};
+
+/**
+ * The caret boundary at `glyphInLine` on `lineIndex`, spanning one line box at
+ * that line's own y. An index at or past the line's glyph count sits at the
+ * line's trailing advance edge, which is also where the caret goes on an empty
+ * line.
+ */
+export const caretRectOnLine = (layout: TextLayoutResult, lineIndex: number, glyphInLine: number, lineHeight: number): Rectangle => {
+  const line = layout.lines[lineIndex];
+
+  if (line === undefined) {
+    return new Rectangle(0, 0, 0, lineHeight);
+  }
+
+  if (glyphInLine >= line.count) {
+    return new Rectangle(line.x + line.width, line.y, 0, lineHeight);
+  }
+
+  const placement = layout.placements[line.start + Math.max(0, glyphInLine)];
+
+  if (placement === undefined) {
+    return new Rectangle(line.x + line.width, line.y, 0, lineHeight);
+  }
+
+  return new Rectangle(placement.penX, line.y, 0, lineHeight);
 };

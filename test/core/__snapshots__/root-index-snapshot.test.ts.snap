@@ -230,6 +230,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "SystemRegistry",
   "TAU",
   "Text",
+  "TextArea",
   "TextAsset",
   "TextAssetType",
   "TextInput",

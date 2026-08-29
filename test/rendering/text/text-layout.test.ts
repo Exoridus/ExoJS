@@ -519,6 +519,7 @@ describe('layoutText advance', () => {
 
     expect(layoutText('', style, {}, provider)).toEqual({
       placements: [],
+      lines: [],
       advance: { width: 0, height: 0 },
       ink: { x: 0, y: 0, width: 0, height: 0 },
     });

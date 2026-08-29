@@ -119,6 +119,20 @@ export const glyphCount = (text: string): number => {
   return codePointOffsets(text).length;
 };
 
+/**
+ * Start of the line `offset` sits on: the position after the preceding line
+ * break, or `0`. A value with no line breaks has exactly one line, so this
+ * answers `0` for every offset in it.
+ */
+export const lineStartAt = (text: string, offset: number): number => text.lastIndexOf('\n', Math.max(0, offset - 1)) + 1;
+
+/** End of the line `offset` sits on: the position of the next line break, or the end of the text. */
+export const lineEndAt = (text: string, offset: number): number => {
+  const next = text.indexOf('\n', offset);
+
+  return next === -1 ? text.length : next;
+};
+
 /** Number of glyphs fully before UTF-16 offset `offset`. */
 export const glyphIndexAtOffset = (offsets: number[], offset: number): number => {
   let low = 0;
@@ -496,8 +510,8 @@ export class TextEditingModel {
 
     if (start === end) {
       if (granularity === 'line') {
-        from = direction === 'backward' ? 0 : start;
-        to = direction === 'backward' ? start : this._value.length;
+        from = direction === 'backward' ? lineStartAt(this._value, start) : start;
+        to = direction === 'backward' ? start : lineEndAt(this._value, start);
       } else if (direction === 'backward') {
         from = granularity === 'word' ? wordBoundaryBackward(this._value, start) : this._stepBackward(start);
         to = start;
@@ -531,7 +545,7 @@ export class TextEditingModel {
     let next: number;
 
     if (granularity === 'line') {
-      next = direction === 'backward' ? 0 : this._value.length;
+      next = direction === 'backward' ? lineStartAt(this._value, this._focus) : lineEndAt(this._value, this._focus);
     } else if (direction === 'backward') {
       next = granularity === 'word' ? wordBoundaryBackward(this._value, this._focus) : this._stepBackward(this._focus);
     } else {

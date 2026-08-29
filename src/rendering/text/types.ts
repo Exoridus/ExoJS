@@ -111,6 +111,13 @@ export interface TextLayoutResult {
   /** Per-glyph quad placements in local text space. */
   readonly placements: readonly GlyphPlacement[];
   /**
+   * One entry per laid-out line, in order, including lines that placed no
+   * glyph at all. A caret or a hit test needs the lines a string broke into,
+   * which the placement array alone cannot answer: a line break places no
+   * glyph, and an empty line places nothing.
+   */
+  readonly lines: readonly TextLineMetrics[];
+  /**
    * Advance extent - where the cursor ends up. Width is the widest line's
    * advance (letterSpacing and kerning included, no trailing gap), height is
    * `lineCount * (fontSize * lineHeight + leading)`. This is the measure a
@@ -123,6 +130,22 @@ export interface TextLayoutResult {
    * its minimum is not necessarily zero. This is the node's local bounds.
    */
   readonly ink: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
+}
+
+/**
+ * One laid-out line, in the same local space as {@link GlyphPlacement}.
+ */
+export interface TextLineMetrics {
+  /** Index of this line's first glyph in `placements`. */
+  readonly start: number;
+  /** How many glyphs this line placed. Zero for an empty line. */
+  readonly count: number;
+  /** Pen origin of the line's first glyph, so the alignment offset is included. */
+  readonly x: number;
+  /** Top of this line's box. */
+  readonly y: number;
+  /** Advance width of the line, with no trailing letter spacing. */
+  readonly width: number;
 }
 
 /**

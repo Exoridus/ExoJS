@@ -10,12 +10,12 @@ import { Vector } from '#math/Vector';
 import type { PlatformTextInput, PlatformTextInputHints, TextEditIntent } from '#platform/PlatformTextInput';
 import { Graphics } from '#rendering/primitives/Graphics';
 import { Text } from '#rendering/text/Text';
-import { caretRectAt, indexAtPoint } from '#rendering/text/textCaret';
+import { caretRectOnLine, glyphAtPointOnLine, lineAtPoint } from '#rendering/text/textCaret';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 import type { TextLayoutResult } from '#rendering/text/types';
 
 import type { TextEditGranularity } from './TextEditingModel';
-import { codePointOffsets, glyphIndexAtOffset, glyphOffsetAtIndex, graphemeOffsets, TextEditingModel } from './TextEditingModel';
+import { codePointOffsets, glyphCount, glyphOffsetAtIndex, graphemeOffsets, lineStartAt, TextEditingModel } from './TextEditingModel';
 import type { UIWidgetState } from './theme';
 import { resolveUISkin } from './theme';
 import { Widget } from './Widget';
@@ -91,6 +91,8 @@ export abstract class TextEditWidget extends Widget {
   private readonly _hints: PlatformTextInputHints = {};
   private _seam: PlatformTextInput | null = null;
   private _scrollX = 0;
+  private _scrollY = 0;
+  private _goalX: number | null = null;
   private _caretShown = true;
   private _blinkSeconds = 0;
   private _blinkApp: Application | null = null;
@@ -133,6 +135,7 @@ export abstract class TextEditWidget extends Widget {
     }
 
     this.focus();
+    this._goalX = null;
 
     const x = event.x;
     const y = event.y;
@@ -214,6 +217,15 @@ export abstract class TextEditWidget extends Widget {
     /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison -- widening casts are redundant here, so the suppression is the only honest option */
     if (channel === Keyboard.Enter) {
       event.preventDefault();
+
+      if (this.model.multiline) {
+        if (!this._readOnly && this.model.insert('\n')) {
+          this._afterModelChange();
+        }
+
+        return;
+      }
+
       this._onSubmit.dispatch(this.model.value);
 
       return;
@@ -243,6 +255,10 @@ export abstract class TextEditWidget extends Widget {
     // `number`), intentionally compared against the Keyboard enum constants
     // - see KeyEvent docs.
     /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison -- widening casts are redundant here, so the suppression is the only honest option */
+    if (channel !== Keyboard.Up && channel !== Keyboard.Down && channel !== Keyboard.PageUp && channel !== Keyboard.PageDown) {
+      this._goalX = null;
+    }
+
     switch (channel) {
       case Keyboard.Left:
         this.model.moveCaret('backward', word ? 'word' : 'character', extend);
@@ -251,10 +267,16 @@ export abstract class TextEditWidget extends Widget {
         this.model.moveCaret('forward', word ? 'word' : 'character', extend);
         return true;
       case Keyboard.Up:
-        this.model.moveCaret('backward', 'line', extend);
+        this._moveByLines(-1, extend);
         return true;
       case Keyboard.Down:
-        this.model.moveCaret('forward', 'line', extend);
+        this._moveByLines(1, extend);
+        return true;
+      case Keyboard.PageUp:
+        this._moveByLines(-this._visibleLineCount(), extend);
+        return true;
+      case Keyboard.PageDown:
+        this._moveByLines(this._visibleLineCount(), extend);
         return true;
       case Keyboard.Home:
         this.model.moveCaret('backward', 'line', extend);
@@ -278,6 +300,7 @@ export abstract class TextEditWidget extends Widget {
     /* eslint-enable @typescript-eslint/no-unsafe-enum-comparison */
   }
 
+  private readonly _fieldRect = new Rectangle();
   private readonly _localPoint = new Vector();
   private readonly _scratchTopLeft = new Vector();
   private readonly _scratchBottomRight = new Vector();
@@ -302,6 +325,7 @@ export abstract class TextEditWidget extends Widget {
     this.addChild(this._textNode);
     this.addChild(this._placeholderNode);
 
+    this.clip = true;
     this.interactive = true;
     this.focusable = true;
     this.cursor = 'text';
@@ -398,6 +422,18 @@ export abstract class TextEditWidget extends Widget {
     return this._overlays;
   }
 
+  /**
+   * The field's own box, not the text behind it. A value wider or taller than
+   * the field scrolls inside it, so the child extent is not what should be
+   * clipped to, hit-tested against, or laid out around.
+   */
+  public override updateBounds(): this {
+    this._fieldRect.set(0, 0, this._uiWidth, this._uiHeight);
+    this._bounds.reset().addRect(this._fieldRect, this.getGlobalTransform());
+
+    return this;
+  }
+
   public override destroy(): void {
     this._stopBlink();
     this._stopPointerDrag();
@@ -406,6 +442,7 @@ export abstract class TextEditWidget extends Widget {
     this.model.onChange.destroy();
     this.onChange.destroy();
     this._onSubmit.destroy();
+    this._fieldRect.destroy();
     this._localPoint.destroy();
     this._scratchTopLeft.destroy();
     this._scratchBottomRight.destroy();
@@ -535,6 +572,8 @@ export abstract class TextEditWidget extends Widget {
   }
 
   private _applyIntent(intent: TextEditIntent): void {
+    this._goalX = null;
+
     if (this._readOnly) {
       return;
     }
@@ -627,27 +666,129 @@ export abstract class TextEditWidget extends Widget {
   }
 
   /**
-   * The model offset a point in widget-local space selects: the glyph the
-   * point lands on, snapped to its nearer edge. When masked, the layout
-   * runs over the masked text and one glyph is one grapheme of the value.
+   * Move the caret `delta` lines, keeping the column the caret last chose
+   * horizontally. Without a remembered goal, walking down past a short line
+   * and back up would pull the caret to that short line's end and leave it
+   * there. A single-line field has nowhere to go, so the caret jumps to the
+   * value's start or end instead - which is what Up and Down do in one.
    */
-  private _offsetAtLocal(localX: number, localY: number): number {
-    const layout = this._textNode.currentLayout;
-    const glyph = indexAtPoint(layout, localX - this._textNode.x, localY - this._textNode.y);
-    const offsets = this._glyphOffsets();
+  private _moveByLines(delta: number, extend: boolean): void {
+    if (!this.model.multiline) {
+      this.model.moveCaret(delta < 0 ? 'backward' : 'forward', 'line', extend);
 
-    return glyphOffsetAtIndex(offsets, glyph, this.model.composedText.length);
+      return;
+    }
+
+    const layout = this._layout();
+    const lineBox = this._lineBox(layout);
+    const at = this._locate(this.model.focus);
+    const goalX = this._goalX ?? caretRectOnLine(layout, at.line, at.glyph, lineBox).x;
+    const target = Math.max(0, Math.min(layout.lines.length - 1, at.line + delta));
+    const offset = this._offsetAt(target, glyphAtPointOnLine(layout, target, goalX));
+
+    this.model.setSelection(extend ? this.model.anchor : offset, offset);
+    this._goalX = goalX;
+  }
+
+  /** How many whole line boxes the content area shows - one page of vertical motion. */
+  private _visibleLineCount(): number {
+    const insets = this.contentInsets;
+    const lineBox = this._lineBox(this._layout());
+    const viewport = this._uiHeight - insets.top - insets.bottom;
+
+    return lineBox > 0 ? Math.max(1, Math.floor(viewport / lineBox)) : 1;
   }
 
   /**
-   * Offsets into the string the text node actually laid out. That is the
-   * composed text, not `value`: an in-flight composition is displayed and the
-   * model's focus points behind the candidate, so offsets taken over `value`
-   * would pin the caret at the composition start while the candidate grows.
-   * Masked fields lay out one mask glyph per grapheme, hence the split.
+   * The model offset a point in widget-local space selects: the glyph the
+   * point lands on, snapped to its nearer edge, on the line the point falls
+   * on.
    */
-  private _glyphOffsets(): number[] {
-    return this.model.maskChar !== null ? graphemeOffsets(this.model.composedText) : codePointOffsets(this.model.composedText);
+  private _offsetAtLocal(localX: number, localY: number): number {
+    const layout = this._layout();
+    const line = lineAtPoint(layout, localY - this._textNode.y, this._lineBox(layout));
+    const glyph = glyphAtPointOnLine(layout, line, localX - this._textNode.x);
+
+    return this._offsetAt(line, glyph);
+  }
+
+  /**
+   * Where a model offset sits in the layout: which line, and how many glyphs
+   * into it.
+   *
+   * The mapping runs over the composed text, not `value` - an in-flight
+   * composition is displayed and the model's focus points behind the
+   * candidate, so a mapping taken over `value` would pin the caret at the
+   * composition start while the candidate grows. A masked field lays its mask
+   * out as one glyph per grapheme and holds no line breaks, so it is always
+   * line 0.
+   */
+  private _locate(offset: number): { line: number; glyph: number } {
+    const text = this.model.composedText;
+    const clamped = Math.max(0, Math.min(offset, text.length));
+
+    if (this.model.maskChar !== null) {
+      return { line: 0, glyph: glyphCount(text.slice(0, clamped)) };
+    }
+
+    const start = lineStartAt(text, clamped);
+    let line = 0;
+
+    for (let i = text.indexOf('\n'); i !== -1 && i < start; i = text.indexOf('\n', i + 1)) {
+      line++;
+    }
+
+    return { line, glyph: codePointOffsets(text.slice(start, clamped)).length };
+  }
+
+  /** The inverse of {@link TextEditWidget._locate}. */
+  private _offsetAt(line: number, glyph: number): number {
+    const text = this.model.composedText;
+
+    if (this.model.maskChar !== null) {
+      const offsets = graphemeOffsets(text);
+
+      return glyphOffsetAtIndex(offsets, glyph, text.length);
+    }
+
+    let start = 0;
+
+    for (let i = 0; i < line; i++) {
+      const next = text.indexOf('\n', start);
+
+      if (next === -1) {
+        break;
+      }
+
+      start = next + 1;
+    }
+
+    const lineText = text.slice(start, !text.includes('\n', start) ? text.length : text.indexOf('\n', start));
+    const offsets = codePointOffsets(lineText);
+
+    return start + glyphOffsetAtIndex(offsets, glyph, lineText.length);
+  }
+
+  /**
+   * Height of one line box. A single-line field spreads its caret over the
+   * whole content box, which is what makes the caret look like a field caret
+   * rather than a text-sized tick; a multi-line field has to use the real line
+   * advance, or lines would overlap.
+   */
+  private _lineBox(layout: TextLayoutResult): number {
+    if (this.model.multiline) {
+      const lines = layout.lines.length;
+
+      if (lines > 0) {
+        return layout.advance.height / lines;
+      }
+
+      const style = this._textNode.style;
+
+      return style.fontSize * style.lineHeight + style.leading;
+    }
+
+    return this._overlayLineHeight(layout);
   }
 
   /** The layout the text node settled, shared by caret painting and hit testing. */
@@ -676,30 +817,42 @@ export abstract class TextEditWidget extends Widget {
     this._placeholderNode.setPosition(this.contentInsets.left, this.contentInsets.top);
   }
 
-  /** Clamp the horizontal scroll so the caret stays inside the viewport. */
+  /** Clamp the scroll offsets so the caret stays inside the viewport, on both axes. */
   private _refreshScroll(): void {
     const insets = this.contentInsets;
-    const viewport = this._uiWidth - insets.left - insets.right;
+    const viewportWidth = this._uiWidth - insets.left - insets.right;
+    const viewportHeight = this._uiHeight - insets.top - insets.bottom;
     const layout = this._layout();
-    const contentWidth = layout.advance.width;
-    const offsets = this._glyphOffsets();
-    const caretGlyph = glyphIndexAtOffset(offsets, this.model.focus);
-    const caretX = caretRectAt(layout, caretGlyph, this._uiHeight).x;
+    const lineBox = this._lineBox(layout);
+    const caret = this._caretRectLocal(layout, lineBox);
 
-    if (viewport <= 0) {
+    if (viewportWidth <= 0) {
       this._scrollX = 0;
-    } else if (caretX - this._scrollX > viewport) {
-      this._scrollX = caretX - viewport;
-    } else if (caretX < this._scrollX) {
-      this._scrollX = caretX;
+    } else if (caret.x - this._scrollX > viewportWidth) {
+      this._scrollX = caret.x - viewportWidth;
+    } else if (caret.x < this._scrollX) {
+      this._scrollX = caret.x;
     }
 
-    this._scrollX = Math.max(0, Math.min(this._scrollX, Math.max(0, contentWidth - viewport)));
-    this._textNode.setPosition(insets.left - this._scrollX, insets.top);
+    this._scrollX = Math.max(0, Math.min(this._scrollX, Math.max(0, layout.advance.width - viewportWidth)));
+
+    if (!this.model.multiline || viewportHeight <= 0) {
+      this._scrollY = 0;
+    } else {
+      if (caret.y + lineBox - this._scrollY > viewportHeight) {
+        this._scrollY = caret.y + lineBox - viewportHeight;
+      } else if (caret.y < this._scrollY) {
+        this._scrollY = caret.y;
+      }
+
+      this._scrollY = Math.max(0, Math.min(this._scrollY, Math.max(0, layout.advance.height - viewportHeight)));
+    }
+
+    this._textNode.setPosition(insets.left - this._scrollX, insets.top - this._scrollY);
     // Overlays are painted in the layout's own coordinates, so they have to
     // ride the same offset as the text they annotate - otherwise caret and
     // selection sit at the widget origin and drift further with every scroll.
-    this._overlays.setPosition(insets.left - this._scrollX, insets.top);
+    this._overlays.setPosition(insets.left - this._scrollX, insets.top - this._scrollY);
   }
 
   /** Selection rectangles and the caret, painted under the text. */
@@ -713,44 +866,64 @@ export abstract class TextEditWidget extends Widget {
     }
 
     const layout = this._layout();
-
-    if (layout.placements.length === 0) {
-      this._paintCaret(layout);
-
-      return;
-    }
-
-    const lineHeight = this._overlayLineHeight(layout);
-    const offsets = this._glyphOffsets();
-    const start = caretRectAt(layout, glyphIndexAtOffset(offsets, this.model.selectionStart), lineHeight);
-    const end = caretRectAt(layout, glyphIndexAtOffset(offsets, this.model.selectionEnd), lineHeight);
+    const lineBox = this._lineBox(layout);
 
     if (this.model.selectionStart !== this.model.selectionEnd) {
       const selection = resolveUISkin(this.theme.selection, 'normal').background;
 
       if (selection.kind === 'fill') {
         graphics.fillColor = selection.color;
-        graphics.drawRectangle(start.x, start.y, end.x - start.x, lineHeight);
+        this._paintSelection(layout, lineBox);
       }
     }
 
-    this._paintCaret(layout);
+    this._paintCaret(layout, lineBox);
   }
 
-  private _paintCaret(layout: TextLayoutResult): void {
+  /**
+   * One rectangle per line the selection touches. A line fully inside the
+   * selection is painted to its own advance edge rather than to the widest
+   * line's, so a selection follows the text instead of a bounding box.
+   */
+  private _paintSelection(layout: TextLayoutResult, lineBox: number): void {
+    const from = this._locate(this.model.selectionStart);
+    const to = this._locate(this.model.selectionEnd);
+
+    for (let line = from.line; line <= to.line; line++) {
+      const metrics = layout.lines[line];
+
+      if (metrics === undefined) {
+        continue;
+      }
+
+      const left = line === from.line ? caretRectOnLine(layout, line, from.glyph, lineBox).x : metrics.x;
+      const right = line === to.line ? caretRectOnLine(layout, line, to.glyph, lineBox).x : metrics.x + metrics.width;
+
+      if (right > left) {
+        this._overlays.drawRectangle(left, metrics.y, right - left, lineBox);
+      }
+    }
+  }
+
+  private _paintCaret(layout: TextLayoutResult, lineBox: number): void {
     if (!this._caretShown || this.model.composing) {
       return;
     }
 
-    const lineHeight = this._overlayLineHeight(layout);
-    const offsets = this._glyphOffsets();
-    const caret = caretRectAt(layout, glyphIndexAtOffset(offsets, this.model.focus), lineHeight);
+    const caret = this._caretRectLocal(layout, lineBox);
     const skin = resolveUISkin(this.theme.caret, 'normal').background;
 
     if (skin.kind === 'fill') {
       this._overlays.fillColor = skin.color;
-      this._overlays.drawRectangle(caret.x, caret.y, 1, lineHeight);
+      this._overlays.drawRectangle(caret.x, caret.y, 1, lineBox);
     }
+  }
+
+  /** The caret rectangle in the layout's own space. */
+  private _caretRectLocal(layout: TextLayoutResult, lineBox: number): Rectangle {
+    const at = this._locate(this.model.focus);
+
+    return caretRectOnLine(layout, at.line, at.glyph, lineBox);
   }
 
   private _overlayLineHeight(layout: TextLayoutResult): number {
@@ -789,10 +962,10 @@ export abstract class TextEditWidget extends Widget {
 
   private _caretRectWorld(): Rectangle {
     const layout = this._layout();
-    const offsets = this._glyphOffsets();
-    const caret = caretRectAt(layout, glyphIndexAtOffset(offsets, this.model.focus), this._overlayLineHeight(layout));
+    const lineBox = this._lineBox(layout);
+    const caret = this._caretRectLocal(layout, lineBox);
 
-    return this._rectToWorld(new Rectangle(caret.x + this._textNode.x, caret.y + this._textNode.y, 1, caret.height));
+    return this._rectToWorld(new Rectangle(caret.x + this._textNode.x, caret.y + this._textNode.y, 1, lineBox));
   }
 
   /** Map a rect in widget-local space to world space through the global transform. */

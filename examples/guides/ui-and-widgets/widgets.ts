@@ -13,6 +13,7 @@ import {
   ScrollContainer,
   Slider,
   Stack,
+  TextArea,
   TextInput,
   Toggle,
   Tooltip,
@@ -209,11 +210,20 @@ class LoginScene extends Scene {
       filter: candidate => /^\d*$/.test(candidate),
     });
 
+    const notes = new TextArea({
+      width: 260,
+      height: 120,
+      placeholder: 'Notes',
+      maxLength: 500,
+    });
+
+    notes.onChange.add(value => console.log(value.split('\n').length, 'lines'));
+
     name.onSubmit.add(() => password.focus());
     password.onSubmit.add(value => console.log('sign in', name.value, value.length));
     code.onChange.add(value => console.log('code', value));
 
-    form.addChild(name).addChild(password).addChild(code);
+    form.addChild(name).addChild(password).addChild(code).addChild(notes);
     form.anchorIn(this.ui, 'center');
     this.ui.addChild(form);
   }

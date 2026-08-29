@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 3,
+  "memberCount": 4,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 3,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -134,6 +134,39 @@
           "params": [],
           "returnType": null,
           "description": "Ink extent - the union of the glyph quads, in the same local space as placements. Carries SDF padding and therefore outline/shadow reach, and its minimum is not necessarily zero. This is the node's local bounds."
+        },
+        {
+          "name": "lines",
+          "signature": "lines: readonly TextLineMetrics[]",
+          "signatureTokens": [
+            {
+              "text": "lines",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextLineMetrics",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "One entry per laid-out line, in order, including lines that placed no glyph at all. A caret or a hit test needs the lines a string broke into, which the placement array alone cannot answer: a line break places no glyph, and an empty line places nothing."
         },
         {
           "name": "placements",

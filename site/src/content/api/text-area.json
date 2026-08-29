@@ -1,17 +1,17 @@
 {
-  "title": "TextInput",
-  "description": "Single-line text field. Editing runs through the TextEditingModel and the platform text-input transport: real keyboard and IME input arrive as edit intents, the caret and selection render from the text layout, and `maxLength` / `filter` / masking are enforced by the model, so paste cannot bypass them. `Enter` confirms and fires TextInput.onSubmit; `Escape` and `Tab` release focus and stay unconsumed. Editing keys are consumed while focused, so focus navigation does not also react. On a host without a text-input transport the field renders and takes focus but rejects edits.",
-  "symbol": "TextInput",
+  "title": "TextArea",
+  "description": "Multi-line text field. It shares the editing core, the platform transport and the theme roles with TextInput, and differs in what the keys mean and in how much of the value is on screen at once: - `Enter` inserts a line break instead of confirming. - `Up` / `Down` move by line, keeping the column the caret last chose, and `PageUp` / `PageDown` move by as many lines as the field shows. - `Home` / `End` go to the ends of the current line, not of the value. - The content scrolls in both axes to keep the caret visible, and is clipped to the field. Lines are the ones the value states: a long line scrolls horizontally rather than wrapping.",
+  "symbol": "TextArea",
   "kind": "class",
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 137,
+  "memberCount": 134,
   "counts": {
     "constructors": 1,
     "methods": 62,
-    "properties": 58,
-    "events": 16
+    "properties": 56,
+    "events": 15
   },
   "sections": [
     {
@@ -19,10 +19,11 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Single-line text field. Editing runs through the TextEditingModel and the platform text-input transport: real keyboard and IME input arrive as edit intents, the caret and selection render from the text layout, and `maxLength` / `filter` / masking are enforced by the model, so paste cannot bypass them.",
-        "`Enter` confirms and fires TextInput.onSubmit; `Escape` and `Tab` release focus and stay unconsumed. Editing keys are consumed while focused, so focus navigation does not also react. On a host without a text-input transport the field renders and takes focus but rejects edits."
+        "Multi-line text field. It shares the editing core, the platform transport and the theme roles with TextInput, and differs in what the keys mean and in how much of the value is on screen at once:",
+        "- `Enter` inserts a line break instead of confirming. - `Up` / `Down` move by line, keeping the column the caret last chose, and `PageUp` / `PageDown` move by as many lines as the field shows. - `Home` / `End` go to the ends of the current line, not of the value. - The content scrolls in both axes to keep the caret visible, and is clipped to the field.",
+        "Lines are the ones the value states: a long line scrolls horizontally rather than wrapping."
       ],
-      "importLine": "import { TextInput } from '@codexo/exojs'",
+      "importLine": "import { TextArea } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -31,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(options: TextInputOptions): TextInput",
+          "signature": "new(options: TextAreaOptions): TextArea",
           "signatureTokens": [
             {
               "text": "new",
@@ -50,7 +51,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "TextInputOptions",
+              "text": "TextAreaOptions",
               "kind": "type"
             },
             {
@@ -62,18 +63,18 @@
               "kind": "punctuation"
             },
             {
-              "text": "TextInput",
+              "text": "TextArea",
               "kind": "type"
             }
           ],
           "params": [
             {
               "name": "options",
-              "type": "TextInputOptions",
+              "type": "TextAreaOptions",
               "optional": false
             }
           ],
-          "returnType": "TextInput",
+          "returnType": "TextArea",
           "description": ""
         }
       ],
@@ -3602,95 +3603,6 @@
           "description": "The widget's own enabled flag, independent of any ancestor's. Disabling a container widget does not change this on its children - see effectiveEnabled for the value interaction and keyboard focus actually consult, and for what disabling a container does to them."
         },
         {
-          "name": "enterKeyHint",
-          "signature": "enterKeyHint: NonNullable<\"done\" | \"enter\" | \"go\" | \"next\" | \"search\" | \"send\" | undefined> | undefined",
-          "signatureTokens": [
-            {
-              "text": "enterKeyHint",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "NonNullable",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"done\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"enter\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"go\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"next\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"search\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"send\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "undefined",
-              "kind": "keyword"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "undefined",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "What the field's confirm key should be labelled as."
-        },
-        {
           "name": "filter",
           "signature": "filter: (candidate: string) => boolean | null",
           "signatureTokens": [
@@ -3815,103 +3727,6 @@
           "description": "Rendered height of the whole subtree - see width."
         },
         {
-          "name": "inputMode",
-          "signature": "inputMode: NonNullable<\"decimal\" | \"email\" | \"numeric\" | \"search\" | \"tel\" | \"text\" | \"url\" | undefined> | undefined",
-          "signatureTokens": [
-            {
-              "text": "inputMode",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "NonNullable",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"decimal\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"email\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"numeric\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"search\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"tel\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"text\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"url\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "undefined",
-              "kind": "keyword"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "undefined",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "What kind of content the field holds, so mobile keyboards can adapt."
-        },
-        {
           "name": "interactive",
           "signature": "interactive: boolean",
           "signatureTokens": [
@@ -3975,6 +3790,27 @@
           "description": "Leftmost edge of the subtree in the node's global-transform space. These four edges are read straight off the aggregate bounds so they always span exactly width/height and agree with each other. They cannot be reconstructed from position and origin: origin is in local pixels and a container's own local bounds are empty, so the rendered extent comes entirely from the children."
         },
         {
+          "name": "lineCount",
+          "signature": "lineCount: number",
+          "signatureTokens": [
+            {
+              "text": "lineCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How many lines the value holds."
+        },
+        {
           "name": "mask",
           "signature": "mask: MaskSource",
           "signatureTokens": [
@@ -3994,35 +3830,6 @@
           "params": [],
           "returnType": null,
           "description": "The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself). Indirect cycles (a.mask = b; b.mask = a) are rejected as well: the candidate's mask chain is walked and any cycle - whether it closes on this or was already present in the chain - fails the assignment."
-        },
-        {
-          "name": "maskChar",
-          "signature": "maskChar: null | string",
-          "signatureTokens": [
-            {
-              "text": "maskChar",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "The masking character, or null when the value renders as it is."
         },
         {
           "name": "maxLength",
@@ -4745,47 +4552,6 @@
           "description": "Fires whenever the value changed, however it changed."
         },
         {
-          "name": "onSubmit",
-          "signature": "onSubmit: Signal<[value]>",
-          "signatureTokens": [
-            {
-              "text": "onSubmit",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Signal",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "value",
-              "kind": "type"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Fires when the user confirms the field with Enter."
-        },
-        {
           "name": "onBlur",
           "signature": "onBlur: Signal<[RenderNode]>",
           "signatureTokens": [
@@ -5371,11 +5137,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/ui/TextInput.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/TextInput.ts"
+        "label": "src/ui/TextArea.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/TextArea.ts"
       }
     }
   ],
-  "sourcePath": "src/ui/TextInput.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/TextInput.ts"
+  "sourcePath": "src/ui/TextArea.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/TextArea.ts"
 }
