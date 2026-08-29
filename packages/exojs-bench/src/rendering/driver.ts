@@ -11,6 +11,7 @@ import { buildMatrix } from './archetypes';
 import type { ArchetypeSpec, Backend, CellResult, CellSpec, EngineAdapter } from './EngineAdapter';
 import type { MatrixSelection } from './selection';
 import { applySelection } from './selection';
+import { usesRenderTargets } from './traits';
 import { isScrolling } from './world';
 
 // Re-exported so the rendering barrel and the CLI keep importing the selection
@@ -165,8 +166,17 @@ const ADAPTER_CAPABILITIES: readonly EngineAdapter[] = [
   // Both sit out the scrolling archetypes: neither arm implements a moving
   // camera, so they would render a fixed, fully-visible scene under an id that
   // promises off-screen content - a row that looks comparable and is not.
-  capabilityDescriptor('phaser', 'default', ['webgl2'], spec => !isScrolling(spec)),
-  capabilityDescriptor('excalibur', 'default', ['webgl2'], spec => !isScrolling(spec)),
+  //
+  // Both also sit out the render-target archetypes (`filter-chain-*`,
+  // `mask-clip`), for two different reasons that land on the same exclusion.
+  // Phaser 4 renders a WebGL1 context, so a target-heavy row's gap would be
+  // attributable to the backend generation rather than to the engine, and a
+  // WebGL1-vs-WebGL2 factor is not a claim this matrix makes. Excalibur 0.32 has
+  // no per-node filter or clipping API at all: its `PostProcessor` chain is a
+  // full-SCREEN pass, not a filtered subtree, and it ships no mask source, so
+  // the cell would have to be approximated - which the fairness rule forbids.
+  capabilityDescriptor('phaser', 'default', ['webgl2'], spec => !isScrolling(spec) && !usesRenderTargets(spec)),
+  capabilityDescriptor('excalibur', 'default', ['webgl2'], spec => !isScrolling(spec) && !usesRenderTargets(spec)),
 ];
 
 /**

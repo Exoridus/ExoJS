@@ -46,6 +46,18 @@ export interface WorldPoint {
   readonly y: number;
 }
 
+/** An axis-aligned rectangle in world space - a mask's clip rect. */
+export interface WorldRect {
+  /** Left edge. */
+  readonly x: number;
+  /** Top edge. */
+  readonly y: number;
+  /** Width. */
+  readonly width: number;
+  /** Height. */
+  readonly height: number;
+}
+
 /** Size of the world the scene is laid out across, in world units. */
 export interface WorldExtent {
   /** World width. */
@@ -96,6 +108,32 @@ export const worldExtent = (spec: ArchetypeSpec, viewportWidth: number, viewport
 
   return { width: viewportWidth * span, height: viewportHeight * span };
 };
+
+/**
+ * Clip rectangle for nesting level `level` of a `depth`-deep mask stack, in the
+ * masked node's local (world-origin) space.
+ *
+ * Each level is inset by a further {@link MASK_INSET_STEP} fraction of the
+ * viewport per side, so every level genuinely narrows the clip - a mask that
+ * merely repeated its parent's rect would be a no-op the driver could not tell
+ * apart from a working one. The innermost rect still covers well over half the
+ * viewport, so the archetype keeps drawing most of its content and does not
+ * quietly turn into a culling measurement.
+ *
+ * Shared by every arm for the same reason {@link gridPosition} is: two
+ * hand-written rect ladders would drift, and the drift would surface as a
+ * comparison instead of an error.
+ */
+export const maskRect = (level: number, depth: number, viewportWidth: number, viewportHeight: number): WorldRect => {
+  const step = Math.min(level + 1, Math.max(1, depth));
+  const insetX = viewportWidth * MASK_INSET_STEP * step;
+  const insetY = viewportHeight * MASK_INSET_STEP * step;
+
+  return { x: insetX, y: insetY, width: viewportWidth - 2 * insetX, height: viewportHeight - 2 * insetY };
+};
+
+/** Per-level inset of a nested mask rect, as a fraction of the viewport per side; see {@link maskRect}. */
+const MASK_INSET_STEP = 0.02;
 
 /**
  * Triangle wave: `value` folded back and forth inside `[0, span]`.

@@ -8,6 +8,24 @@ export { createRng };
 
 const SCALING_COUNTS = [1_000, 5_000, 25_000, 100_000] as const;
 const GPU_BOUND_COUNTS = [1_000, 5_000, 25_000] as const;
+/**
+ * Node counts for the text archetypes. A text leaf costs one to two orders of
+ * magnitude more than a sprite leaf (layout, glyph lookup, per-glyph quad
+ * generation), so the sprite ladder's top steps would be pure abort cells on
+ * every arm and would say nothing about text scaling. These three steps still
+ * span 25x, which is enough to fit a slope, and their glyph totals -
+ * `nodeCount * TEXT_GLYPHS_PER_NODE` - reach 60k glyphs, well past what any
+ * real HUD or dialogue scene contains.
+ */
+const TEXT_COUNTS = [200, 1_000, 5_000] as const;
+
+/**
+ * Characters per text leaf across both text archetypes. Twelve is the length of
+ * an ordinary label (a score, a name, a damage number) - long enough that layout
+ * and glyph iteration dominate the per-node cost, short enough that no arm's
+ * line-breaking policy enters the measurement.
+ */
+const TEXT_GLYPHS_PER_NODE = 12;
 
 /**
  * Scene archetypes. `SCALING_COUNTS` sweeps 100x over four geometric steps -
@@ -211,6 +229,81 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     materialCount: 4,
     materialRunLength: 64,
   },
+  // TEXT. The largest cost class the matrix did not cover: every archetype above
+  // draws quads, and none of them pays for layout or glyph lookup. All four arms
+  // have real text nodes, so these two rows carry full cross-arm meaning.
+  //
+  // The pair differs in exactly ONE field - `textUpdate` - so the delta between
+  // them is the cost of invalidating a laid-out string and nothing else.
+  // `text-static` lays out once at build time and then only draws; `text-dynamic`
+  // re-sets a quarter of its leaves' strings every frame, which is the shape a
+  // real HUD produces (a few counters change, the rest of the labels do not).
+  // A fraction of 1 was rejected: re-laying out every label in the scene every
+  // frame is not a workload anything ships, and at the top step it would abort on
+  // every arm, replacing three comparable rows with three aborts.
+  {
+    id: 'text-static',
+    nodeCounts: TEXT_COUNTS,
+    nestingDepth: 4,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    textGlyphsPerNode: TEXT_GLYPHS_PER_NODE,
+  },
+  {
+    id: 'text-dynamic',
+    nodeCounts: TEXT_COUNTS,
+    nestingDepth: 4,
+    textureCount: 1,
+    mutationFraction: 0.25,
+    cullingEnabled: false,
+    textGlyphsPerNode: TEXT_GLYPHS_PER_NODE,
+    textUpdate: true,
+  },
+  // STRUCTURAL INVALIDATION. `dynamic-heavy` moves existing leaves; this one
+  // destroys them and builds replacements. The two share every other field -
+  // depth 4, one texture, the same `mutationFraction: 0.075`, hence the same
+  // selected leaf set - so the delta between the rows is exactly what structural
+  // churn costs over transform mutation, per arm.
+  //
+  // That distinction is where a retained tier is vulnerable: a moved leaf can be
+  // absorbed by re-uploading a transform, while a destroyed one invalidates the
+  // recorded instruction stream its group owned. The ladder stops at 25k rather
+  // than following `dynamic-heavy` to 100k because churn at 100k means 7 500
+  // node constructions and destructions per frame, which is an allocator
+  // benchmark, not a renderer one; the three shared steps are what the delta is
+  // read on.
+  { id: 'lifecycle-churn', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 4, textureCount: 1, mutationFraction: 0.075, cullingEnabled: false, churn: true },
+  // RENDER-TARGET PING-PONG. Three rows sweeping chain depth 1 / 2 / 4 as
+  // separate archetypes rather than as an extra axis, because the matrix sweeps
+  // exactly one axis (`nodeCounts`) per archetype and a second one would make
+  // every cell's identity ambiguous in `results.json`.
+  //
+  // Otherwise identical to `static-heavy` at depth 2, so `filter-chain-1 minus
+  // static-heavy` is one target pass and the step from 1 to 2 to 4 is the
+  // marginal cost of each further pass. The filter is a colour matrix (cheap per
+  // fragment, one full-target pass): the archetype measures target allocation,
+  // binding and blit, so a heavy kernel would move the bottleneck into the
+  // fragment shader and hide the thing under test.
+  //
+  // WebGL2/WebGPU arms only. The Phaser arm renders WebGL1, so its gap here
+  // would be attributable to the backend generation rather than to the engine.
+  { id: 'filter-chain-1', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 1, mutationFraction: 0, cullingEnabled: false, filterChainDepth: 1 },
+  { id: 'filter-chain-2', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 1, mutationFraction: 0, cullingEnabled: false, filterChainDepth: 2 },
+  { id: 'filter-chain-4', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 1, mutationFraction: 0, cullingEnabled: false, filterChainDepth: 4 },
+  // NESTED CLIPPING. One axis-aligned rectangle mask per spine container, each
+  // inset inside its parent's rect so no level is a no-op. Both arms implement an
+  // unrotated rect mask as GPU scissor/clip state, so the row measures the
+  // nesting rather than one arm's intermediate-target policy.
+  //
+  // Shares the render-target machinery of the filter rows and the same WebGL1
+  // exclusion; otherwise identical to `static-heavy` at depth 4.
+  //
+  // The nesting depth is one greater than the mask depth on purpose: the scene
+  // root stays unmasked so the Pixi arm has somewhere to host its mask sources
+  // (a Pixi mask source parented under the container it masks would be clipped by
+  // its own mask), and both arms therefore clip spine levels 1..3.
+  { id: 'mask-clip', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 4, textureCount: 1, mutationFraction: 0, cullingEnabled: false, maskDepth: 3 },
 ];
 
 /**

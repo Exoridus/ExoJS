@@ -1,8 +1,32 @@
-import { Application, Container, Culler, RendererType, Sprite, Texture, type WebGPURenderer } from 'pixi.js';
+import {
+  Application,
+  BitmapText,
+  ColorMatrixFilter,
+  Container,
+  Culler,
+  type Filter,
+  Graphics,
+  RendererType,
+  Sprite,
+  Texture,
+  type WebGPURenderer,
+} from 'pixi.js';
 
 import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
-import { cameraCenterAt, GRID_MARGIN, gridLayout, gridPosition, isScrolling, SPRITE_SIZE, VIEWPORT_HEIGHT, VIEWPORT_WIDTH, worldExtent } from '../world';
+import { filterChainDepth, isChurning, isTextArchetype, isTextUpdating, maskDepth, textForLeaf } from '../traits';
+import {
+  cameraCenterAt,
+  GRID_MARGIN,
+  gridLayout,
+  gridPosition,
+  isScrolling,
+  maskRect,
+  SPRITE_SIZE,
+  VIEWPORT_HEIGHT,
+  VIEWPORT_WIDTH,
+  worldExtent,
+} from '../world';
 
 /**
  * Pixi.js v8 arm of the rendering benchmark - the direct renderer comparison and
@@ -36,12 +60,70 @@ const WOBBLE_SPEED = 0.15;
  */
 const CYCLED_BLEND_MODES = ['normal', 'add', 'multiply', 'screen'] as const;
 
-/** A pre-selected leaf sprite and its resting grid position - the only nodes `mutate` disturbs. */
+/**
+ * A pre-selected leaf and its resting grid position - the only nodes `mutate`
+ * disturbs. `node` is mutable because the churn archetype replaces it every
+ * frame; `parent` and `index` are what the replacement needs to land in the
+ * identical place with the identical content.
+ */
 interface MutableLeaf {
-  readonly sprite: Sprite;
+  node: Sprite | BitmapText;
+  readonly parent: Container;
+  readonly index: number;
   readonly baseX: number;
   readonly baseY: number;
 }
+
+/** Font size, in logical pixels, of every text leaf - identical on every arm. */
+const TEXT_FONT_SIZE = 12;
+
+/**
+ * Text leaf for the text archetypes.
+ *
+ * {@link BitmapText}, not `Text`, and this is the load-bearing choice of the text
+ * rows. Pixi's `Text` rasterizes each node's whole string into its OWN canvas
+ * texture, so a text scene there is N textures and N uploads - a different cost
+ * class from a glyph-atlas renderer, and one no glyph-atlas engine can be
+ * compared against. `BitmapText` is Pixi's glyph-atlas path (a dynamically
+ * generated bitmap font, one atlas, per-glyph quads), which is the architectural
+ * counterpart of the ExoJS SDF text node and of Phaser's and Excalibur's atlas
+ * text. The report's Methodology states this, and states that a Pixi app written
+ * with `Text` instead pays the per-node-texture cost these rows do not measure.
+ */
+const createTextLeaf = (index: number, glyphs: number): BitmapText =>
+  new BitmapText({ text: textForLeaf(index, glyphs), style: { fontFamily: 'Arial', fontSize: TEXT_FONT_SIZE, fill: 0xffffff } });
+
+/**
+ * One link of a filter chain: a colour matrix at a near-identity saturation, so
+ * each link is one full-target pass with trivial fragment work. Mirrors the ExoJS
+ * arm's chain link exactly, including the per-link saturation offset that stops
+ * either engine collapsing the chain by recognising two identical filters.
+ */
+const createChainFilter = (link: number): Filter => {
+  const filter = new ColorMatrixFilter();
+
+  filter.saturate(1 + link * 0.05, false);
+
+  return filter;
+};
+
+/**
+ * One nesting level of the mask stack: an axis-aligned rectangle, drawn as
+ * {@link Graphics} because that is the only rect-mask source Pixi accepts.
+ *
+ * MECHANISM DISCLOSURE: this is not the same GPU mechanism the ExoJS arm uses.
+ * ExoJS accepts a bare `Rectangle` mask and implements it as a clip/scissor rect;
+ * Pixi routes a `Graphics` mask through its stencil pipe. Both are the idiomatic
+ * axis-aligned rect mask of their engine - a Pixi app has no scissor mask to
+ * write - so the row compares what each library actually offers, and the
+ * mechanism difference is stated in the report rather than resolved by making one
+ * arm write unidiomatic code.
+ */
+const createMaskRect = (level: number, depth: number): Graphics => {
+  const rect = maskRect(level, depth, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+
+  return new Graphics().rect(rect.x, rect.y, rect.width, rect.height).fill(0xffffff);
+};
 
 /** Pixi renderer preference string for each harness backend. Pixi names WebGL2 simply `'webgl'`. */
 const PREFERENCE: Record<Backend, 'webgl' | 'webgpu'> = {
@@ -113,6 +195,13 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
    * disclosed in the report's Methodology.
    */
   let scrollingSpec: ArchetypeSpec | null = null;
+  /** Rebuilds the leaf at a global index exactly as `buildScene` built it; non-null only for a churning archetype. */
+  let rebuildLeaf: ((index: number) => Sprite | BitmapText) | null = null;
+  /** Per-frame mutation mode of the built archetype; see `traits.ts`. */
+  let churning = false;
+  let textUpdating = false;
+  /** Characters per text leaf of the built archetype; `0` when it has no text. */
+  let textGlyphs = 0;
 
   return {
     engine: 'pixi',
@@ -231,7 +320,32 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
       const selectedSet = new Set(selectedIndices);
       const leaves: MutableLeaf[] = [];
 
-      for (let i = 0; i < nodeCount; i++) {
+      textGlyphs = isTextArchetype(spec) ? Math.max(1, Math.trunc(spec.textGlyphsPerNode ?? 0)) : 0;
+      churning = isChurning(spec);
+      textUpdating = isTextUpdating(spec);
+
+      /** Resting grid position of leaf `index`, from the shared layout helpers. */
+      const leafPosition = (index: number): { x: number; y: number } => (overdraw ? { x: 0, y: 0 } : gridPosition(index, layout, GRID_MARGIN));
+
+      /**
+       * Build (but do not parent) the leaf at global index `index`. Extracted for
+       * the same reason the ExoJS arm extracts it: the churn archetype has to
+       * reproduce a leaf mid-run, and a second construction site is how the
+       * replacement ends up differing from the leaf it replaces.
+       */
+      const makeLeaf = (index: number): Sprite | BitmapText => {
+        const i = index;
+
+        if (textGlyphs > 0) {
+          const label = createTextLeaf(i, textGlyphs);
+          const { x, y } = leafPosition(i);
+
+          label.cullable = spec.cullingEnabled;
+          label.position.set(x, y);
+
+          return label;
+        }
+
         // Texture indexed by position WITHIN the spine bucket, not the global
         // index - identical to the ExoJS arm, so the batch-breaking archetype
         // overflows the batcher's texture slots the same way on both arms.
@@ -252,16 +366,58 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
           sprite.height = VIEWPORT_HEIGHT;
         }
 
-        const cell = gridPosition(i, layout, GRID_MARGIN);
-        const x = overdraw ? 0 : cell.x;
-        const y = overdraw ? 0 : cell.y;
+        const { x, y } = leafPosition(i);
 
         sprite.position.set(x, y);
-        spine[i % spine.length]!.addChild(sprite);
+
+        return sprite;
+      };
+
+      for (let i = 0; i < nodeCount; i++) {
+        const leaf = makeLeaf(i);
+        const parent = spine[i % spine.length]!;
+
+        parent.addChild(leaf);
 
         if (selectedSet.has(i)) {
-          leaves.push({ sprite, baseX: x, baseY: y });
+          const { x, y } = leafPosition(i);
+
+          leaves.push({ node: leaf, parent, index: i, baseX: x, baseY: y });
         }
+      }
+
+      rebuildLeaf = churning ? makeLeaf : null;
+
+      // Filter chain on the scene ROOT, mirroring the ExoJS arm: one chain over
+      // the whole scene, so its depth is the measured axis.
+      const chainDepth = filterChainDepth(spec);
+
+      if (chainDepth > 0) {
+        const chain: Filter[] = [];
+
+        for (let link = 0; link < chainDepth; link++) {
+          chain.push(createChainFilter(link));
+        }
+
+        sceneRoot.filters = chain;
+      }
+
+      // Nested rect masks, one per spine level, from the shared rect ladder. Each
+      // source is a child of the scene root, so the root's own
+      // `destroy({ children: true })` in `teardown` releases it with the scene.
+      //
+      // The scene ROOT stays unmasked and hosts every mask source: a Pixi mask
+      // source must sit in the display tree to reach the stencil buffer, and a
+      // source parented under the container it masks would be clipped by the
+      // very mask it provides. Masking therefore starts one level down, which is
+      // why `mask-clip` declares a nesting depth one greater than its mask depth.
+      const maskLevels = Math.min(maskDepth(spec), spine.length - 1);
+
+      for (let level = 0; level < maskLevels; level++) {
+        const source = createMaskRect(level, maskLevels);
+
+        sceneRoot.addChild(source);
+        spine[level + 1]!.mask = source;
       }
 
       root = sceneRoot;
@@ -287,12 +443,43 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
         root.position.set(VIEWPORT_WIDTH / 2 - centre.x, VIEWPORT_HEIGHT / 2 - centre.y);
       }
 
+      // Structural churn: destroy each selected leaf and build its replacement in
+      // the same place. Pixi's `destroy` does not detach the child, so the parent
+      // is told first - a destroyed child left in the tree corrupts the next
+      // render.
+      if (churning && rebuildLeaf !== null) {
+        for (const leaf of mutableLeaves) {
+          leaf.parent.removeChild(leaf.node);
+          leaf.node.destroy();
+
+          const replacement = rebuildLeaf(leaf.index);
+
+          leaf.parent.addChild(replacement);
+          leaf.node = replacement;
+        }
+
+        return;
+      }
+
+      // Text invalidation: re-set the string, discarding that leaf's layout and
+      // glyph run. The frame index shifts the run so no leaf is ever assigned the
+      // string it already has.
+      if (textUpdating) {
+        for (const leaf of mutableLeaves) {
+          if (leaf.node instanceof BitmapText) {
+            leaf.node.text = textForLeaf(leaf.index + frame, textGlyphs);
+          }
+        }
+
+        return;
+      }
+
       const phase = frame * WOBBLE_SPEED;
       const dx = Math.sin(phase) * WOBBLE_AMPLITUDE;
       const dy = Math.cos(phase) * WOBBLE_AMPLITUDE;
 
       for (const leaf of mutableLeaves) {
-        leaf.sprite.position.set(leaf.baseX + dx, leaf.baseY + dy);
+        leaf.node.position.set(leaf.baseX + dx, leaf.baseY + dy);
       }
     },
 
@@ -346,6 +533,10 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
       mutableLeaves = [];
       mutableIndices = [];
       scrollingSpec = null;
+      rebuildLeaf = null;
+      churning = false;
+      textUpdating = false;
+      textGlyphs = 0;
 
       if (app !== null) {
         // `removeView: false` - keep the shared `#stage` canvas in the DOM for

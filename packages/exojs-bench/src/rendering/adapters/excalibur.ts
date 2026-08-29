@@ -1,7 +1,9 @@
 import * as ex from 'excalibur';
 
 import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
+import { createDigitAtlasCanvas, DIGIT_ALPHABET, DIGIT_CELL_HEIGHT, DIGIT_CELL_WIDTH } from '../digitAtlas';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
+import { isChurning, isTextArchetype, isTextUpdating, textForLeaf, usesRenderTargets } from '../traits';
 import { isScrolling } from '../world';
 
 /**
@@ -45,13 +47,42 @@ const WOBBLE_AMPLITUDE = 2;
 const WOBBLE_SPEED = 0.15;
 /** Constant elapsed-ms handed to the draw path each frame (the harness, not this value, owns timing). */
 const FRAME_ELAPSED_MS = 16;
+/** Font size, in logical pixels, of every text leaf - identical on every arm. */
+const TEXT_FONT_SIZE = 12;
 
-/** A pre-selected leaf actor and its resting grid position - the only nodes `mutate` disturbs. */
+/**
+ * A pre-selected leaf actor and its resting grid position - the only nodes
+ * `mutate` disturbs. `actor` is mutable because the churn archetype replaces it
+ * every frame; `parent`, `index` and `text` are what the replacement needs to
+ * land in the identical place with the identical content.
+ */
 interface MutableLeaf {
-  readonly actor: ex.Actor;
+  actor: ex.Actor;
+  readonly parent: ex.Actor;
+  readonly index: number;
+  /** The leaf's text graphic, when the archetype builds text leaves; `null` for a sprite leaf. */
+  text: ex.Text | null;
   readonly baseX: number;
   readonly baseY: number;
 }
+
+/**
+ * Glyph-atlas font for the text archetypes.
+ *
+ * {@link ex.SpriteFont}, not `ex.Font`: `ex.Font` rasterizes through the browser's
+ * canvas text API per text instance, which is a different cost class from a
+ * glyph-atlas renderer and not comparable against one. `SpriteFont` is
+ * Excalibur's atlas path, and the shared digit sheet is exactly the uniform grid
+ * it consumes (see `digitAtlas.ts` for the disclosure this carries).
+ */
+const createGlyphFont = (): ex.SpriteFont =>
+  new ex.SpriteFont({
+    alphabet: DIGIT_ALPHABET,
+    spriteSheet: ex.SpriteSheet.fromImageSource({
+      image: ex.ImageSource.fromHtmlImageElement(createDigitAtlasCanvas(TEXT_FONT_SIZE) as unknown as HTMLImageElement),
+      grid: { rows: 1, columns: DIGIT_ALPHABET.length, spriteWidth: DIGIT_CELL_WIDTH, spriteHeight: DIGIT_CELL_HEIGHT },
+    }),
+  });
 
 /**
  * Generate one of `total` visually distinct solid-colour 8x8 textures from a
@@ -97,6 +128,15 @@ export const createExcaliburAdapter = (): EngineAdapter => {
   const topLeftAnchor = new ex.Vector(0, 0);
   /** Reusable scratch vector for the per-frame mutation, so `mutate` allocates nothing (matching the ExoJS/Pixi arms). */
   const scratch = new ex.Vector(0, 0);
+  /** Rebuilds the leaf at a global index exactly as `buildScene` built it; non-null only for a churning archetype. */
+  let rebuildLeaf: ((index: number) => { actor: ex.Actor; text: ex.Text | null }) | null = null;
+  /** Per-frame mutation mode of the built archetype; see `traits.ts`. */
+  let churning = false;
+  let textUpdating = false;
+  /** Characters per text leaf of the built archetype; `0` when it has no text. */
+  let textGlyphs = 0;
+  /** Glyph-atlas font shared by every text leaf of the built scene; `null` for a sprite archetype. */
+  let glyphFont: ex.SpriteFont | null = null;
 
   return {
     engine: 'excalibur',
@@ -112,7 +152,12 @@ export const createExcaliburAdapter = (): EngineAdapter => {
       // scrolling archetype would silently render as an ordinary fully-visible
       // one here, i.e. a row that looks comparable and is not - so the arm sits
       // the archetype out instead.
-      return !isScrolling(spec);
+      //
+      // The render-target archetypes are sat out because Excalibur 0.32 has no
+      // equivalent API at all: its `PostProcessor` chain is a full-SCREEN pass
+      // rather than a filtered subtree, and it ships no mask source, so those
+      // cells could only be approximated - which the fairness rule forbids.
+      return !isScrolling(spec) && !usesRenderTargets(spec);
     },
 
     async init(canvas: HTMLCanvasElement, target: Backend): Promise<void> {
@@ -186,7 +231,37 @@ export const createExcaliburAdapter = (): EngineAdapter => {
       const selectedSet = new Set(selectedIndices);
       const leaves: MutableLeaf[] = [];
 
-      for (let i = 0; i < nodeCount; i++) {
+      textGlyphs = isTextArchetype(spec) ? Math.max(1, Math.trunc(spec.textGlyphsPerNode ?? 0)) : 0;
+      churning = isChurning(spec);
+      textUpdating = isTextUpdating(spec);
+      // One font for the whole scene: every arm shares one glyph atlas across its
+      // text leaves, so a per-leaf font here would measure atlas duplication
+      // instead of text.
+      glyphFont = textGlyphs > 0 ? createGlyphFont() : null;
+
+      /** Resting grid position of leaf `index`, on this arm's transcription of the shared grid. */
+      const leafPosition = (index: number): { x: number; y: number } =>
+        overdraw
+          ? { x: 0, y: 0 }
+          : {
+              x: GRID_MARGIN + (index % columns) * cellWidth + cellWidth / 2,
+              y: GRID_MARGIN + Math.floor(index / columns) * cellHeight + cellHeight / 2,
+            };
+
+      /** Build (but do not parent) the leaf at global index `index`; reused by the churn mutation. */
+      const makeLeaf = (index: number): { actor: ex.Actor; text: ex.Text | null } => {
+        const i = index;
+        const { x, y } = leafPosition(i);
+        const actor = new ex.Actor({ pos: new ex.Vector(x, y), anchor: topLeftAnchor });
+
+        if (glyphFont !== null) {
+          const label = new ex.Text({ text: textForLeaf(i, textGlyphs), font: glyphFont });
+
+          actor.graphics.use(label);
+
+          return { actor, text: label };
+        }
+
         // Texture indexed by position WITHIN the spine bucket, not the global
         // index - identical to the other arms, so the batch-breaking archetype
         // overflows the batcher's texture slots the same way everywhere. Each
@@ -212,18 +287,25 @@ export const createExcaliburAdapter = (): EngineAdapter => {
           sprite.destSize = { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT };
         }
 
-        const x = overdraw ? 0 : GRID_MARGIN + (i % columns) * cellWidth + cellWidth / 2;
-        const y = overdraw ? 0 : GRID_MARGIN + Math.floor(i / columns) * cellHeight + cellHeight / 2;
-
-        const actor = new ex.Actor({ pos: new ex.Vector(x, y), anchor: topLeftAnchor });
-
         actor.graphics.use(sprite);
-        spine[i % spine.length]!.addChild(actor);
+
+        return { actor, text: null };
+      };
+
+      for (let i = 0; i < nodeCount; i++) {
+        const { actor, text } = makeLeaf(i);
+        const parent = spine[i % spine.length]!;
+
+        parent.addChild(actor);
 
         if (selectedSet.has(i)) {
-          leaves.push({ actor, baseX: x, baseY: y });
+          const { x, y } = leafPosition(i);
+
+          leaves.push({ actor, parent, index: i, text, baseX: x, baseY: y });
         }
       }
+
+      rebuildLeaf = churning ? makeLeaf : null;
 
       // Add the spine root to the current scene; the entity manager recursively
       // adds every descendant to the world, so the GraphicsSystem draws them all.
@@ -239,6 +321,38 @@ export const createExcaliburAdapter = (): EngineAdapter => {
     },
 
     mutate(frame: number): void {
+      // Structural churn: detach each selected actor from its parent and build a
+      // replacement in the same place. `removeChild` takes the actor and its
+      // descendants out of the world; `kill()` then releases it, in that order, so
+      // the parent never holds a dead child.
+      if (churning && rebuildLeaf !== null) {
+        for (const leaf of mutableLeaves) {
+          leaf.parent.removeChild(leaf.actor);
+          leaf.actor.kill();
+
+          const replacement = rebuildLeaf(leaf.index);
+
+          leaf.parent.addChild(replacement.actor);
+          leaf.actor = replacement.actor;
+          leaf.text = replacement.text;
+        }
+
+        return;
+      }
+
+      // Text invalidation: re-set the string, discarding that leaf's laid-out
+      // glyph run. The frame index shifts the run so no leaf is ever assigned the
+      // string it already has.
+      if (textUpdating) {
+        for (const leaf of mutableLeaves) {
+          if (leaf.text !== null) {
+            leaf.text.text = textForLeaf(leaf.index + frame, textGlyphs);
+          }
+        }
+
+        return;
+      }
+
       const phase = frame * WOBBLE_SPEED;
       const dx = Math.sin(phase) * WOBBLE_AMPLITUDE;
       const dy = Math.cos(phase) * WOBBLE_AMPLITUDE;
@@ -291,6 +405,11 @@ export const createExcaliburAdapter = (): EngineAdapter => {
       images = [];
       mutableLeaves = [];
       mutableIndices = [];
+      rebuildLeaf = null;
+      churning = false;
+      textUpdating = false;
+      textGlyphs = 0;
+      glyphFont = null;
     },
   };
 };

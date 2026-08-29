@@ -18,7 +18,14 @@ export type ArchetypeId =
   | 'instanced-batch'
   | 'mixed-sprite-mesh-array'
   | 'mixed-sprite-mesh-static'
-  | 'scrolling-world';
+  | 'scrolling-world'
+  | 'text-static'
+  | 'text-dynamic'
+  | 'lifecycle-churn'
+  | 'filter-chain-1'
+  | 'filter-chain-2'
+  | 'filter-chain-4'
+  | 'mask-clip';
 
 /** Structural definition of a scene archetype, independent of any engine or backend. */
 export interface ArchetypeSpec {
@@ -165,6 +172,71 @@ export interface ArchetypeSpec {
    * {@link cameraSpeed}.
    */
   readonly worldSpan?: number;
+  /**
+   * Characters per text leaf, or `undefined` for a scene with no text at all.
+   *
+   * Setting it replaces every sprite leaf with a text leaf carrying a string of
+   * exactly this length, so the archetype's glyph total is
+   * `nodeCount * textGlyphsPerNode` while `nodeCount` keeps meaning what it
+   * means everywhere else in the matrix - one scene node. The string content is
+   * derived from the leaf index (see the adapters' `textForLeaf`), so no two
+   * adjacent leaves share a glyph run and a layout cache keyed on the string
+   * cannot make the archetype disappear.
+   *
+   * Text is a cross-arm dimension: all four arms have real text nodes, so an
+   * archetype setting this carries full cross-arm meaning - unlike
+   * `materialCount` or `batchSize`.
+   */
+  readonly textGlyphsPerNode?: number;
+  /**
+   * When `true`, the per-frame mutation RE-SETS each selected text leaf's string
+   * instead of moving it, which invalidates that leaf's layout and glyph run.
+   *
+   * Meaningful only with {@link textGlyphsPerNode}. The selected set is the
+   * ordinary {@link mutationFraction} selection, so the static and dynamic text
+   * archetypes differ in exactly one thing: what the mutation does to the leaf
+   * it was always going to touch.
+   */
+  readonly textUpdate?: boolean;
+  /**
+   * When `true`, the per-frame mutation DESTROYS each selected leaf and builds a
+   * replacement in its place, instead of moving the existing one.
+   *
+   * This is structural invalidation rather than transform mutation: the two are
+   * separate cost classes, and a retained tier that absorbs the second can still
+   * be fully re-collected by the first. The destroyed/created set is the
+   * ordinary {@link mutationFraction} selection, so `lifecycle-churn` and
+   * `dynamic-heavy` touch the identical leaves and differ only in what they do
+   * to them.
+   */
+  readonly churn?: boolean;
+  /**
+   * Number of chained post-process filters applied to the scene root, or
+   * `undefined` for the unfiltered scene every other archetype builds.
+   *
+   * Each filter is one full render-target pass over the filtered subtree's
+   * bounds, so the chain length is the ping-pong depth under study. The filters
+   * are deliberately cheap per fragment (a colour matrix) on both arms: the
+   * archetype measures target allocation, binding and blit cost, not fragment
+   * ALU.
+   *
+   * WebGL2/WebGPU arms only - see the Phaser exclusion in `archetypes.ts`.
+   */
+  readonly filterChainDepth?: number;
+  /**
+   * Number of NESTED axis-aligned rectangle masks applied down the container
+   * spine (mask `k` sits on spine container `k`), or `undefined` for the
+   * unmasked scene.
+   *
+   * Rectangles rather than alpha sources on purpose: both arms implement an
+   * axis-aligned rect mask as GPU scissor/clip state, so the measured cost is
+   * the nesting itself rather than one arm's intermediate-target policy. Each
+   * rect is inset from its parent's, so every level genuinely narrows the clip
+   * and none of them is a no-op.
+   *
+   * WebGL2/WebGPU arms only - see the Phaser exclusion in `archetypes.ts`.
+   */
+  readonly maskDepth?: number;
 }
 
 /** One matrix cell: a single (engine, config, backend, archetype, node count) combination to measure. */
