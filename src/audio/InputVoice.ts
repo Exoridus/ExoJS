@@ -11,7 +11,7 @@ export interface InputVoiceInit extends BaseVoiceInit {
 
 /**
  * Live control handle for an {@link AudioInput} (microphone / WebRTC stream),
- * created via {@link AudioManager.open}. Unlike a {@link Playable} voice it is
+ * created via {@link AudioSystem.open}. Unlike a {@link Playable} voice it is
  * **analysis-only by default** - its output is not routed to a bus, so it never
  * causes feedback. Tap it for visualisation/beat-detection (`new AudioAnalyser({
  * source: inputVoice })`), opt into monitoring with {@link InputVoice.routeTo},

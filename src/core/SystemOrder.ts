@@ -11,7 +11,7 @@ export enum SystemOrder {
    * {@link SystemMethods.preUpdate} systems, which occupy the negative range
    * so that an application system added without an `order` runs after all of
    * them. To sit between two of them, prefer `before`/`after` against the
-   * manager instance (`before: [app.rendering]`) over picking a number.
+   * system instance (`before: [app.rendering]`) over picking a number.
    */
   CoreInput = -500,
   /** Node-level pointer dispatch plus terminal-pointer retirement, directly after {@link SystemOrder.CoreInput}. */

@@ -188,7 +188,7 @@ if (typeof (globalThis as Record<string, unknown>)['AudioWorkletNode'] === 'unde
 import { getAudioContext } from '../../src/audio/audio-context';
 import { AudioBus } from '../../src/audio/AudioBus';
 import { AudioListener } from '../../src/audio/AudioListener';
-import { AudioManager } from '../../src/audio/AudioManager';
+import { AudioSystem } from '../../src/audio/AudioSystem';
 import type { SpatialVoice } from '../../src/audio/BaseVoice';
 import { LowpassFilter } from '../../src/audio/filters/LowpassFilter';
 import type { Voice } from '../../src/audio/Playable';
@@ -222,13 +222,13 @@ const results: BenchmarkResult[] = [];
 // --- Scenario 1: 50 simultaneous Sound instances, play() once per iteration ---
 {
   const sounds: Sound[] = [];
-  let manager: AudioManager | null = null;
+  let system: AudioSystem | null = null;
 
   results.push(
     runScenario({
       name: 'many-sounds-play',
       setup() {
-        manager = new AudioManager();
+        system = new AudioSystem();
         for (let i = 0; i < 50; i++) {
           sounds.push(new Sound(makeAudioBuffer(), { poolSize: 4 }));
         }
@@ -238,7 +238,7 @@ const results: BenchmarkResult[] = [];
         // the measured cost stays "50 plays", not "50 plays on a pool that grew
         // by 50 every previous iteration".
         for (const s of sounds) {
-          manager!.play(s).stop();
+          system!.play(s).stop();
         }
       },
       teardown() {
@@ -246,41 +246,41 @@ const results: BenchmarkResult[] = [];
           s.destroy();
         }
         sounds.length = 0;
-        manager!.destroy();
-        manager = null;
+        system!.destroy();
+        system = null;
       },
     }),
   );
 }
 
-// --- Scenario 2: AudioManager.preUpdate() - listener tick + 20 spatial voices ---
+// --- Scenario 2: AudioSystem.preUpdate() - listener tick + 20 spatial voices ---
 {
   const FRAME_DELTA = seconds(1 / 60);
 
-  let manager: AudioManager | null = null;
+  let system: AudioSystem | null = null;
   const spatialSounds: Sound[] = [];
 
   results.push(
     runScenario({
-      name: 'audio-manager-pre-update',
+      name: 'audio-system-pre-update',
       setup() {
-        manager = new AudioManager();
+        system = new AudioSystem();
         for (let i = 0; i < 20; i++) {
           const s = new Sound(makeAudioBuffer());
           spatialSounds.push(s);
-          manager.play(s, { position: { x: Math.random() * 1000, y: Math.random() * 1000 } });
+          system.play(s, { position: { x: Math.random() * 1000, y: Math.random() * 1000 } });
         }
       },
       tick() {
-        manager!.preUpdate(FRAME_DELTA);
+        system!.preUpdate(FRAME_DELTA);
       },
       teardown() {
         for (const s of spatialSounds) {
           s.destroy();
         }
         spatialSounds.length = 0;
-        manager!.destroy();
-        manager = null;
+        system!.destroy();
+        system = null;
       },
     }),
   );
@@ -325,7 +325,7 @@ const results: BenchmarkResult[] = [];
 
 // --- Scenario 4: Voice._tickSpatial() - 20 voices, positions updated each frame ---
 {
-  let manager: AudioManager | null = null;
+  let system: AudioSystem | null = null;
   const spatialSounds: Sound[] = [];
   // `_tickSpatial` is the internal per-frame hook `SpatialVoice` declares; the
   // concrete voice behind the public `Voice` handle is the thing that has it.
@@ -335,11 +335,11 @@ const results: BenchmarkResult[] = [];
     runScenario({
       name: 'spatial-voice-tick',
       setup() {
-        manager = new AudioManager();
+        system = new AudioSystem();
         for (let i = 0; i < 20; i++) {
           const s = new Sound(makeAudioBuffer());
           spatialSounds.push(s);
-          spatialVoices.push(manager.play(s, { position: { x: Math.random() * 1000, y: Math.random() * 1000 } }) as Voice & SpatialVoice);
+          spatialVoices.push(system.play(s, { position: { x: Math.random() * 1000, y: Math.random() * 1000 } }) as Voice & SpatialVoice);
         }
       },
       tick(i) {
@@ -354,8 +354,8 @@ const results: BenchmarkResult[] = [];
           s.destroy();
         }
         spatialSounds.length = 0;
-        manager!.destroy();
-        manager = null;
+        system!.destroy();
+        system = null;
       },
     }),
   );
@@ -369,7 +369,7 @@ const results: BenchmarkResult[] = [];
   // BeatDetector requires an AudioBus or similar source. We measure the
   // overhead of 60 simulated message dispatches per "frame" (call).
   // Since BeatDetector wraps worklet messaging, we benchmark the public
-  // signal dispatch + state-update path via AudioManager.update() with
+  // signal dispatch + state-update path via AudioSystem.update() with
   // a listener that tracks beat events.
 
   const listener = new AudioListener();

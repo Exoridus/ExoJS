@@ -23,12 +23,12 @@ export {
 } from './gamepadMappings';
 export * from './GamepadPromptLayouts';
 export * from './InputBinding';
-export type { GamepadSlotStrategy } from './InputManager';
-export { InputManager } from './InputManager';
+export type { GamepadSlotStrategy } from './InputSystem';
+export { InputSystem } from './InputSystem';
 export type { InputToken } from './InputToken';
 export { inputChannelFromToken, inputToken } from './InputToken';
 export * from './InteractionEvent';
-export * from './InteractionManager';
+export * from './InteractionSystem';
 export { keyboardChannelFromCode } from './keyboardCodes';
 export * from './KeyEvent';
 export { Pointer, PointerState } from './Pointer';

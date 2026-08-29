@@ -1,6 +1,6 @@
 {
   "title": "Playable",
-  "description": "Implemented by audio assets (Sound, AudioStream, AudioGenerator) to support manager-driven playback via AudioManager.play. Assets are **data descriptors** - they hold the audio data and default playback parameters. The playback machinery lives in the Voice returned by `_createVoice`; the manager is injected at play time, so assets never reach for a global. `_createVoice` is a low-level hook meant for asset implementations; consumers should call `audioManager.play(asset)` instead of invoking it directly.",
+  "description": "Implemented by audio assets (Sound, AudioStream, AudioGenerator) to support system-driven playback via AudioSystem.play. Assets are **data descriptors** - they hold the audio data and default playback parameters. The playback machinery lives in the Voice returned by `_createVoice`; the system is injected at play time, so assets never reach for a global. `_createVoice` is a low-level hook meant for asset implementations; consumers should call `audioSystem.play(asset)` instead of invoking it directly.",
   "symbol": "Playable",
   "kind": "interface",
   "subsystem": "audio",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Implemented by audio assets (Sound, AudioStream, AudioGenerator) to support manager-driven playback via AudioManager.play.",
-        "Assets are **data descriptors** - they hold the audio data and default playback parameters. The playback machinery lives in the Voice returned by `_createVoice`; the manager is injected at play time, so assets never reach for a global.",
-        "`_createVoice` is a low-level hook meant for asset implementations; consumers should call `audioManager.play(asset)` instead of invoking it directly."
+        "Implemented by audio assets (Sound, AudioStream, AudioGenerator) to support system-driven playback via AudioSystem.play.",
+        "Assets are **data descriptors** - they hold the audio data and default playback parameters. The playback machinery lives in the Voice returned by `_createVoice`; the system is injected at play time, so assets never reach for a global.",
+        "`_createVoice` is a low-level hook meant for asset implementations; consumers should call `audioSystem.play(asset)` instead of invoking it directly."
       ],
       "importLine": "import { Playable } from '@codexo/exojs'",
       "sourceLink": null
@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "_createVoice",
-          "signature": "_createVoice(manager: AudioManager, options: PlayOptions): Voice",
+          "signature": "_createVoice(system: AudioSystem, options: PlayOptions): Voice",
           "signatureTokens": [
             {
               "text": "_createVoice",
@@ -43,7 +43,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "manager",
+              "text": "system",
               "kind": "param"
             },
             {
@@ -51,7 +51,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "AudioManager",
+              "text": "AudioSystem",
               "kind": "type"
             },
             {
@@ -85,8 +85,8 @@
           ],
           "params": [
             {
-              "name": "manager",
-              "type": "AudioManager",
+              "name": "system",
+              "type": "AudioSystem",
               "optional": false
             },
             {
@@ -96,7 +96,7 @@
             }
           ],
           "returnType": "Voice",
-          "description": "Create and start a new playback instance. Called by AudioManager.play; do not call directly."
+          "description": "Create and start a new playback instance. Called by AudioSystem.play; do not call directly."
         }
       ],
       "paragraphs": [],

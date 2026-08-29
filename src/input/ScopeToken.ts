@@ -1,8 +1,8 @@
 /**
  * Opaque, stable identity for one scope pushed via
- * {@link InteractionManager.pushScope}. Release exactly that scope - wherever
+ * {@link InteractionSystem.pushScope}. Release exactly that scope - wherever
  * it currently sits in the stack - through the matching
- * {@link InteractionManager.popScope} call, regardless of whether other
+ * {@link InteractionSystem.popScope} call, regardless of whether other
  * scopes were pushed (and are still active) above or below it.
  *
  * A token, not the scope's `root` node, is what identifies an entry: two

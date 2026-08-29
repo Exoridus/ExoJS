@@ -1,7 +1,7 @@
 {
-  "title": "InputManager",
+  "title": "InputSystem",
   "description": "Owns the unified input pipeline for an Application: keyboard events, pointer (mouse/touch/pen) events with multi-touch slot management, gamepad polling with mapping detection, mouse-wheel events, canvas-focus tracking, and high-level gesture recognition (pinch / rotate / long-press). All raw inputs are written into a shared `Float32Array` channel buffer. Bind input listeners via the onTrigger / onActive / onStart / onStop factory methods (or via Gamepad.onTrigger-style methods on individual pads), or subscribe to the signal-style notifications (`onKeyDown`, `onPointerDown`, `onGamepadConnected`, `onAnyGamepadButtonDown`, ...). Driven each frame by Application.update's internal prepare stage (first, ahead of interaction/audio/tweens/rendering); constructed automatically - you do not instantiate this class yourself.",
-  "symbol": "InputManager",
+  "symbol": "InputSystem",
   "kind": "class",
   "subsystem": "input",
   "importPath": "@codexo/exojs",
@@ -23,7 +23,7 @@
         "All raw inputs are written into a shared `Float32Array` channel buffer. Bind input listeners via the onTrigger / onActive / onStart / onStop factory methods (or via Gamepad.onTrigger-style methods on individual pads), or subscribe to the signal-style notifications (`onKeyDown`, `onPointerDown`, `onGamepadConnected`, `onAnyGamepadButtonDown`, ...).",
         "Driven each frame by Application.update's internal prepare stage (first, ahead of interaction/audio/tweens/rendering); constructed automatically - you do not instantiate this class yourself."
       ],
-      "importLine": "import { InputManager } from '@codexo/exojs'",
+      "importLine": "import { InputSystem } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(app: Application): InputManager",
+          "signature": "new(app: Application): InputSystem",
           "signatureTokens": [
             {
               "text": "new",
@@ -63,7 +63,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "InputManager",
+              "text": "InputSystem",
               "kind": "type"
             }
           ],
@@ -74,7 +74,7 @@
               "optional": false
             }
           ],
-          "returnType": "InputManager",
+          "returnType": "InputSystem",
           "description": ""
         }
       ],
@@ -1082,7 +1082,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The slot strategy active for this InputManager."
+          "description": "The slot strategy active for this InputSystem."
         },
         {
           "name": "hasGamepad",
@@ -1435,7 +1435,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires whenever the platform's single native contextmenu event fires - right-click, the keyboard context-menu key, Shift+F10, and (on most touch browsers) a long-press all funnel through that one event, so there is exactly one source to listen to here regardless of which of them the user used. Independent of whether the browser's own menu was suppressed - see InputApplicationOptions.allowNativeContextMenu. This is the engine-wide fallback: it fires unconditionally, with no regard for the scene graph, so it is the right place for an application-level menu that should appear no matter what - or nothing - was under the pointer. Fires even when the request has no pointer to attribute itself to (a keyboard-only session that has never moved a mouse) - see ContextMenuRequest's doc comment for why the request carries its own coordinates instead of forcing the contract onto a Pointer. A request over a specific interactive node additionally bubbles as a scene-graph contextmenu InteractionEvent (see InteractionManager), which only fires when a node is actually hit and can be stopped with InteractionEvent.stopPropagation; use that one for a per-node menu instead. Do not confuse either with GestureRecognizer.onLongPress - a separate, purely informational touch/mouse-hold signal that never triggers this one on its own."
+          "description": "Fires whenever the platform's single native contextmenu event fires - right-click, the keyboard context-menu key, Shift+F10, and (on most touch browsers) a long-press all funnel through that one event, so there is exactly one source to listen to here regardless of which of them the user used. Independent of whether the browser's own menu was suppressed - see InputApplicationOptions.allowNativeContextMenu. This is the engine-wide fallback: it fires unconditionally, with no regard for the scene graph, so it is the right place for an application-level menu that should appear no matter what - or nothing - was under the pointer. Fires even when the request has no pointer to attribute itself to (a keyboard-only session that has never moved a mouse) - see ContextMenuRequest's doc comment for why the request carries its own coordinates instead of forcing the contract onto a Pointer. A request over a specific interactive node additionally bubbles as a scene-graph contextmenu InteractionEvent (see InteractionSystem), which only fires when a node is actually hit and can be stopped with InteractionEvent.stopPropagation; use that one for a per-node menu instead. Do not confuse either with GestureRecognizer.onLongPress - a separate, purely informational touch/mouse-hold signal that never triggers this one on its own."
         },
         {
           "name": "onGamepadConnected",
@@ -1640,7 +1640,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires when a pointer has been held without significant movement for ≥ 500 ms of ENGINE time - frame deltas summed across the frames this manager actually ran, not wall-clock time. A hold therefore freezes while the active scene is paused and while the application is stopped, and resumes from where it left off; it never completes in the background."
+          "description": "Fires when a pointer has been held without significant movement for ≥ 500 ms of ENGINE time - frame deltas summed across the frames this system actually ran, not wall-clock time. A hold therefore freezes while the active scene is paused and while the application is stopped, and resumes from where it left off; it never completes in the background."
         },
         {
           "name": "onMouseWheel",
@@ -2273,11 +2273,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/input/InputManager.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputManager.ts"
+        "label": "src/input/InputSystem.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputSystem.ts"
       }
     }
   ],
-  "sourcePath": "src/input/InputManager.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputManager.ts"
+  "sourcePath": "src/input/InputSystem.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputSystem.ts"
 }

@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import { getAudioContext } from '#audio/audio-context';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import { NoopVoice } from '#audio/NoopVoice';
 import { Sound } from '#audio/Sound';
 
@@ -66,13 +66,13 @@ describe('Sound', () => {
   });
 
   // Default (and explicit replace: false): concurrent instances layer, nothing is stopped.
-  test('manager.play(sound, { replace: false }) called twice keeps both instances playing concurrently', () => {
+  test('system.play(sound, { replace: false }) called twice keeps both instances playing concurrently', () => {
     const factory = setupSourceFactorySpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
 
-    manager.play(sound, { replace: false });
-    manager.play(sound, { replace: false });
+    system.play(sound, { replace: false });
+    system.play(sound, { replace: false });
 
     expect(factory.sources.length).toBe(2);
     expect(factory.sources[0].stop).not.toHaveBeenCalled();
@@ -82,14 +82,14 @@ describe('Sound', () => {
     sound.destroy();
   });
 
-  // manager.play(sound, { replace: true }) stops the prior instance before starting a new one.
-  test('manager.play(sound, { replace: true }) stops prior instance before starting a new one', () => {
+  // system.play(sound, { replace: true }) stops the prior instance before starting a new one.
+  test('system.play(sound, { replace: true }) stops prior instance before starting a new one', () => {
     const factory = setupSourceFactorySpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
 
-    manager.play(sound, { replace: true });
-    manager.play(sound, { replace: true });
+    system.play(sound, { replace: true });
+    system.play(sound, { replace: true });
 
     // Two sources created; the first was stopped when the second started.
     expect(factory.sources.length).toBe(2);
@@ -100,15 +100,15 @@ describe('Sound', () => {
     sound.destroy();
   });
 
-  // manager.play() creates independent pooled instances (multi-instance default).
-  test('manager.play() creates independent pooled instances', () => {
+  // system.play() creates independent pooled instances (multi-instance default).
+  test('system.play() creates independent pooled instances', () => {
     const factory = setupSourceFactorySpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 3 });
 
-    manager.play(sound);
-    manager.play(sound);
-    manager.play(sound);
+    system.play(sound);
+    system.play(sound);
+    system.play(sound);
 
     expect(factory.sources.length).toBe(3);
     for (const src of factory.sources) {
@@ -120,14 +120,14 @@ describe('Sound', () => {
   });
 
   // Pool eviction: when pool is full a new play() evicts oldest (FIFO).
-  test('manager.play() past pool limit evicts oldest via FIFO', () => {
+  test('system.play() past pool limit evicts oldest via FIFO', () => {
     const factory = setupSourceFactorySpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 2 });
 
-    manager.play(sound);
-    manager.play(sound);
-    manager.play(sound);
+    system.play(sound);
+    system.play(sound);
+    system.play(sound);
 
     expect(factory.sources.length).toBe(3);
     expect(factory.sources[0].stop).toHaveBeenCalledTimes(1);
@@ -138,16 +138,16 @@ describe('Sound', () => {
     sound.destroy();
   });
 
-  test('manager.play() with sprite plays the requested clip range from one source', () => {
+  test('system.play() with sprite plays the requested clip range from one source', () => {
     const factory = setupSourceFactorySpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), {
       sprites: {
         click: { start: 0.2, end: 0.5 },
       },
     });
 
-    manager.play(sound.sprite('click'));
+    system.play(sound.sprite('click'));
 
     expect(factory.sources.length).toBe(1);
 
@@ -162,11 +162,11 @@ describe('Sound', () => {
 
   test('looping audio sprites configure source loop window', () => {
     const factory = setupSourceFactorySpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
 
     sound.defineSprite('hum', { start: 0.1, end: 0.6, loop: true });
-    manager.play(sound.sprite('hum'));
+    system.play(sound.sprite('hum'));
 
     expect(factory.sources.length).toBe(1);
     expect(factory.sources[0].loop).toBe(true);
@@ -272,24 +272,24 @@ describe('Sound', () => {
   });
 
   test('playing a sprite past its clip end returns a NoopVoice, like any other clip', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(2), {
       sprites: { click: { start: 0, end: 0.5 } },
     });
 
-    expect(manager.play(sound.sprite('click'), { time: 0.5 })).toBeInstanceOf(NoopVoice);
+    expect(system.play(sound.sprite('click'), { time: 0.5 })).toBeInstanceOf(NoopVoice);
     sound.destroy();
   });
 
   test('_createVoice() past the clip end returns a NoopVoice on the requested bus', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(2));
 
-    const voice = sound._createVoice(manager, { time: 10 });
+    const voice = sound._createVoice(system, { time: 10 });
     expect(voice).toBeInstanceOf(NoopVoice);
 
-    // With no explicit bus, falls back to manager.sound.
-    const withBus = sound._createVoice(manager, { time: 10, bus: manager.music });
+    // With no explicit bus, falls back to system.sound.
+    const withBus = sound._createVoice(system, { time: 10, bus: system.music });
     expect(withBus).toBeInstanceOf(NoopVoice);
 
     sound.destroy();
@@ -297,14 +297,14 @@ describe('Sound', () => {
 
   test('muted playback (per-call and descriptor default) forces the voice volume to 0', () => {
     const factory = setupSourceFactorySpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
 
     const sound = new Sound(createAudioBufferStub(2), { volume: 0.8 });
-    const voiceMutedPerCall = manager.play(sound, { muted: true });
+    const voiceMutedPerCall = system.play(sound, { muted: true });
     expect(voiceMutedPerCall.volume).toBe(0);
 
     const mutedSound = new Sound(createAudioBufferStub(2), { volume: 0.8, muted: true });
-    const voiceMutedByDefault = manager.play(mutedSound);
+    const voiceMutedByDefault = system.play(mutedSound);
     expect(voiceMutedByDefault.volume).toBe(0);
 
     factory.restore();

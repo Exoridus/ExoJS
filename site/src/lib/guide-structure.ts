@@ -202,7 +202,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         ],
         prerequisites: ['runtime/scenes-and-lifecycle'],
         examples: ['ui/hud-and-widgets', 'application-scenes/hud-overlay-scene'],
-        apiLinks: ['uiroot', 'widget', 'button', 'panel', 'label', 'progress-bar', 'interaction-manager'],
+        apiLinks: ['uiroot', 'widget', 'button', 'panel', 'label', 'progress-bar', 'interaction-system'],
       },
       {
         slug: 'serialization-and-prefabs',
@@ -352,7 +352,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
           'tweens-animation/tween-from-array',
           'tweens-animation/tween-with-yoyo',
         ],
-        apiLinks: ['tween', 'tween-manager', 'animated-sprite'],
+        apiLinks: ['tween', 'tween-system', 'animated-sprite'],
       },
       {
         slug: 'render-targets',
@@ -484,7 +484,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         ],
         prerequisites: ['getting-started/your-first-scene'],
         examples: ['input/keyboard', 'input/key-rebinding', 'input/action-mapping'],
-        apiLinks: ['keyboard', 'input-manager'],
+        apiLinks: ['keyboard', 'input-system'],
       },
       {
         slug: 'mouse-and-pointer',
@@ -492,7 +492,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         learningGoals: ['read unified pointer events across mouse and touch', 'translate pointer position into world space'],
         prerequisites: ['input/keyboard-and-actions'],
         examples: ['input/mouse-and-pointer', 'input/multitouch', 'input/pointer-to-world'],
-        apiLinks: ['pointer', 'input-manager'],
+        apiLinks: ['pointer', 'input-system'],
       },
       {
         slug: 'gamepad',
@@ -500,7 +500,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         learningGoals: ['read controller buttons and axes', 'support multiple connected gamepads'],
         prerequisites: ['input/keyboard-and-actions'],
         examples: ['input/gamepad', 'input/multi-gamepad'],
-        apiLinks: ['gamepad', 'input-manager'],
+        apiLinks: ['gamepad', 'input-system'],
       },
       {
         slug: 'chords-and-sequences',
@@ -534,7 +534,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
           'audio-basics/random-pitch-pool',
           'audio-basics/audio-buses',
         ],
-        apiLinks: ['sound', 'audio-stream', 'audio-manager'],
+        apiLinks: ['sound', 'audio-stream', 'audio-system'],
       },
       {
         slug: 'spatial-audio',
@@ -548,7 +548,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         ],
         prerequisites: ['audio/audio-basics'],
         examples: ['spatial-audio/listener-and-source', 'spatial-audio/moving-source', 'spatial-audio/falloff-curves'],
-        apiLinks: ['audio-listener', 'audio-manager', 'audio-send', 'audio-zone', 'spatial-zones'],
+        apiLinks: ['audio-listener', 'audio-system', 'audio-send', 'audio-zone', 'spatial-zones'],
       },
       {
         slug: 'audio-effects',

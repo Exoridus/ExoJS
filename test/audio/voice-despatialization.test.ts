@@ -5,16 +5,16 @@ import type { MockInstance } from 'vitest';
  * `follow` once nothing spatial remains must actually tear down the
  * `PannerNode` - disconnect it, restore the direct source-to-output route via
  * each concrete voice's `_routeDirect()`, and unregister the voice from
- * `AudioManager`'s per-frame spatial tick set - not merely stop writing to a
+ * `AudioSystem`'s per-frame spatial tick set - not merely stop writing to a
  * panner that is still silently wired into the graph.
  */
 import { getAudioContext } from '#audio/audio-context';
 import { AudioGenerator } from '#audio/AudioGenerator';
 import type { AudioGeneratorVoice } from '#audio/AudioGeneratorVoice';
 import { AudioInput } from '#audio/AudioInput';
-import { AudioManager } from '#audio/AudioManager';
 import { AudioStream } from '#audio/AudioStream';
 import type { AudioStreamVoice } from '#audio/AudioStreamVoice';
+import { AudioSystem } from '#audio/AudioSystem';
 import type { InputVoice } from '#audio/InputVoice';
 import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
@@ -109,7 +109,7 @@ interface MockGainNode {
 
 /**
  * Spy on `createGain`, returning every `GainNode` mock it hands out, in
- * creation order. Construct the {@link AudioManager} BEFORE calling this so
+ * creation order. Construct the {@link AudioSystem} BEFORE calling this so
  * the busses' own internal gain nodes (created synchronously in their
  * constructors) are not captured - the first gain node captured after this
  * runs is always the next voice's `output`.
@@ -194,13 +194,13 @@ describe('Real de-spatialization — each concrete voice reconnects directly exa
   });
 
   test('SoundVoice: clearing position disconnects the panner and reconnects the buffer source to the output', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const gainSpy = setupGainSpy();
     const pannerSpy = setupPannerSpy();
     const sourceSpy = setupBufferSourceSpy();
     const sound = new Sound(createAudioBufferStub());
 
-    const voice = manager.play(sound, { position: { x: 1, y: 2 } }) as SoundVoice;
+    const voice = system.play(sound, { position: { x: 1, y: 2 } }) as SoundVoice;
     const output = gainSpy.gains[0];
     const panner = pannerSpy.panners[0];
     const source = sourceSpy.sources[0];
@@ -227,14 +227,14 @@ describe('Real de-spatialization — each concrete voice reconnects directly exa
   });
 
   test('AudioStreamVoice: clearing follow disconnects the panner and reconnects the media-element source to the output', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const gainSpy = setupGainSpy();
     const pannerSpy = setupPannerSpy();
     const sourceSpy = setupMediaElementSourceSpy();
     const el = createAudioElementStub();
     const stream = new AudioStream(el);
 
-    const voice = manager.play(stream) as AudioStreamVoice;
+    const voice = system.play(stream) as AudioStreamVoice;
     const output = gainSpy.gains[0];
     const source = sourceSpy.sources[0];
 
@@ -264,12 +264,12 @@ describe('Real de-spatialization — each concrete voice reconnects directly exa
     stubGetUserMedia(makeStream());
     const input = await AudioInput.open();
 
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const gainSpy = setupGainSpy();
     const pannerSpy = setupPannerSpy();
     const sourceSpy = setupMediaStreamSourceSpy();
 
-    const voice = manager.open(input) as InputVoice;
+    const voice = system.open(input) as InputVoice;
     const output = gainSpy.gains[0];
     const source = sourceSpy.sources[0];
 
@@ -294,12 +294,12 @@ describe('Real de-spatialization — each concrete voice reconnects directly exa
   });
 
   test('AudioGeneratorVoice: clearing position disconnects the panner and reconnects the envelope gain to the output', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const gainSpy = setupGainSpy();
     const pannerSpy = setupPannerSpy();
     const generator = new AudioGenerator();
 
-    const voice = manager.play(generator, { position: { x: 1, y: 1 } }) as AudioGeneratorVoice;
+    const voice = system.play(generator, { position: { x: 1, y: 1 } }) as AudioGeneratorVoice;
     // gains[0] is the voice's `output` (created by AudioGenerator._createVoice);
     // gains[1] is `_envelopeGain` (created inside the AudioGeneratorVoice constructor).
     const output = gainSpy.gains[0];
@@ -325,26 +325,26 @@ describe('Real de-spatialization — each concrete voice reconnects directly exa
 });
 
 // ---------------------------------------------------------------------------
-// Tests - manager tick-set membership and re-spatialization
+// Tests - system tick-set membership and re-spatialization
 // ---------------------------------------------------------------------------
 
-describe('Real de-spatialization — AudioManager tick-set membership', () => {
+describe('Real de-spatialization — AudioSystem tick-set membership', () => {
   afterEach(() => vi.restoreAllMocks());
 
-  test('the manager stops ticking a voice once it is fully de-spatialized', () => {
+  test('the system stops ticking a voice once it is fully de-spatialized', () => {
     const pannerSpy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 } }) as SoundVoice;
+    const voice = system.play(sound, { position: { x: 0, y: 0 } }) as SoundVoice;
 
     // Sanity: still ticked while spatial.
     const tickSpy = vi.spyOn(voice, '_tickSpatial');
-    manager.preUpdate(frameDelta);
+    system.preUpdate(frameDelta);
     expect(tickSpy).toHaveBeenCalledTimes(1);
     tickSpy.mockClear();
 
-    voice.position = null; // de-spatializes: unregisters from the manager's tick set
-    manager.preUpdate(frameDelta);
+    voice.position = null; // de-spatializes: unregisters from the system's tick set
+    system.preUpdate(frameDelta);
     expect(tickSpy).not.toHaveBeenCalled();
 
     pannerSpy.restore();
@@ -353,14 +353,14 @@ describe('Real de-spatialization — AudioManager tick-set membership', () => {
 
   test('re-spatializing a previously de-spatialized voice creates and registers a new PannerNode', () => {
     const pannerSpy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 } }) as SoundVoice;
+    const voice = system.play(sound, { position: { x: 0, y: 0 } }) as SoundVoice;
 
     voice.position = null; // de-spatializes, unregisters
     expect(pannerSpy.panners.length).toBe(1);
 
-    const registerSpy = vi.spyOn(manager, '_registerSpatial');
+    const registerSpy = vi.spyOn(system, '_registerSpatial');
     voice.position = { x: 10, y: 10 }; // re-spatializes
 
     expect(pannerSpy.panners.length).toBe(2); // a genuinely new PannerNode, not the old (disconnected) one
@@ -369,7 +369,7 @@ describe('Real de-spatialization — AudioManager tick-set membership', () => {
 
     // And it is ticked again.
     const tickSpy = vi.spyOn(voice, '_tickSpatial');
-    manager.preUpdate(frameDelta);
+    system.preUpdate(frameDelta);
     expect(tickSpy).toHaveBeenCalledTimes(1);
 
     pannerSpy.restore();
@@ -384,9 +384,9 @@ describe('Real de-spatialization — AudioManager tick-set membership', () => {
     // (unchanged) orientation value was already written and skip the write,
     // leaving the new panner silently stuck at its default orientation.
     const pannerSpy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 }, orientation: 90 }) as SoundVoice;
+    const voice = system.play(sound, { position: { x: 0, y: 0 }, orientation: 90 }) as SoundVoice;
 
     voice.position = null; // de-spatializes
     voice.position = { x: 1, y: 1 }; // re-spatializes with a fresh PannerNode; orientation is still 90
@@ -401,9 +401,9 @@ describe('Real de-spatialization — AudioManager tick-set membership', () => {
 
   test('follow(null) only de-spatializes once position is also absent', () => {
     const pannerSpy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 } }) as SoundVoice;
+    const voice = system.play(sound, { position: { x: 0, y: 0 } }) as SoundVoice;
 
     const fakeNode = { getWorldTransform: () => ({ x: 1, y: 1 }) };
     voice.follow(fakeNode as never); // still has `position` set too

@@ -1,6 +1,6 @@
 {
   "title": "SpatialSmoothingSettings",
-  "description": "Tunable smoothing settings shared by the listener and all spatial voices. Owned by AudioManager and reachable as `app.audio.spatial`.",
+  "description": "Tunable smoothing settings shared by the listener and all spatial voices. Owned by AudioSystem and reachable as `app.audio.spatial`.",
   "symbol": "SpatialSmoothingSettings",
   "kind": "interface",
   "subsystem": "audio",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Tunable smoothing settings shared by the listener and all spatial voices. Owned by AudioManager and reachable as `app.audio.spatial`."
+        "Tunable smoothing settings shared by the listener and all spatial voices. Owned by AudioSystem and reachable as `app.audio.spatial`."
       ],
       "importLine": "import { SpatialSmoothingSettings } from '@codexo/exojs'",
       "sourceLink": null

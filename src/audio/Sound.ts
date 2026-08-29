@@ -4,7 +4,7 @@ import { clamp } from '#math/utils';
 
 import { getAudioContext, isAudioContextReady } from './audio-context';
 import type { AudioBus } from './AudioBus';
-import type { AudioManager } from './AudioManager';
+import type { AudioSystem } from './AudioSystem';
 import { NoopVoice } from './NoopVoice';
 import type { Playable, PlayOptions, Voice } from './Playable';
 import { SoundVoice, type SoundVoiceWindow } from './SoundVoice';
@@ -15,7 +15,7 @@ import { seedVoiceFromPlayOptions, seedVoiceSends } from './spatial-options';
  *
  * At the per-Sound level all pooled instances share the same priority, so
  * `LowestPriority` degenerates to `FirstInFirstOut`. The enum is
- * forward-compatible with a future global voice manager that culls across
+ * forward-compatible with a future global voice system that culls across
  * multiple Sound instances.
  */
 export enum SoundPoolStrategy {
@@ -64,7 +64,7 @@ export interface SoundOptions {
   muted?: boolean;
 }
 
-/** Per-call overrides for {@link AudioManager.play}. */
+/** Per-call overrides for {@link AudioSystem.play}. */
 export interface SoundPlayOptions extends PlayOptions {
   /**
    * When `true`, all currently-playing instances of this sound are stopped
@@ -92,7 +92,7 @@ interface PooledVoice {
  * definitions, and default playback parameters but does NOT start playback
  * itself, and holds no per-playback spatial state (that lives on the
  * {@link Voice} returned by playing it). Playback is driven by
- * `AudioManager.play(sound, options)` which returns a {@link Voice} handle.
+ * `AudioSystem.play(sound, options)` which returns a {@link Voice} handle.
  *
  * Multiple concurrent plays of the same Sound are supported up to `poolSize`.
  * When the pool is full the configured {@link SoundPoolStrategy} decides which
@@ -493,15 +493,15 @@ export class Sound implements Playable {
   }
 
   /**
-   * Implements {@link Playable}. Called by {@link AudioManager.play}; do not
-   * call directly - use `manager.play(sound, options)` instead.
+   * Implements {@link Playable}. Called by {@link AudioSystem.play}; do not
+   * call directly - use `app.audio.play(sound, options)` instead.
    *
    * Creates one {@link SoundVoice} backed by a single `AudioBufferSourceNode`.
    * Pool limits are enforced: if the pool is full the configured eviction
    * strategy picks a victim to stop before the new voice starts.
    */
-  public _createVoice(manager: AudioManager, options: SoundPlayOptions): Voice {
-    const bus = options.bus ?? manager.sound;
+  public _createVoice(system: AudioSystem, options: SoundPlayOptions): Voice {
+    const bus = options.bus ?? system.sound;
 
     // A suspended context's `currentTime` stands still, so `source.start(0, ...)`
     // - which `SoundVoice` issues from its own constructor - pins every voice
@@ -509,7 +509,7 @@ export class Sound implements Playable {
     // backlog then fires at once. A buffer sound cannot be deferred honestly:
     // skip it, like `AudioGenerator` does.
     if (!isAudioContextReady()) {
-      manager._warnPlaybackWhileLocked('sound');
+      system._warnPlaybackWhileLocked('sound');
       return new NoopVoice(bus);
     }
 
@@ -531,7 +531,7 @@ export class Sound implements Playable {
       return new NoopVoice(bus);
     }
 
-    return this._buildVoice(manager, options, buffer, offset, {
+    return this._buildVoice(system, options, buffer, offset, {
       base,
       end,
       loopStart: base,
@@ -554,12 +554,12 @@ export class Sound implements Playable {
     const loadState = this._rootLoadState;
 
     if (loadState.value === 'failed') {
-      logger.warn('AudioManager.play() called on a sound that failed to load; playing silence.', { source: 'Sound' });
+      logger.warn('AudioSystem.play() called on a sound that failed to load; playing silence.', { source: 'Sound' });
       return new NoopVoice(bus);
     }
 
     if (buffer === null || loadState.value === 'loading') {
-      logger.warn('AudioManager.play() called on a sound that is not yet loaded; playing silence. Await sound.loaded or use loader.load().', {
+      logger.warn('AudioSystem.play() called on a sound that is not yet loaded; playing silence. Await sound.loaded or use loader.load().', {
         source: 'Sound',
       });
       return new NoopVoice(bus);
@@ -573,12 +573,12 @@ export class Sound implements Playable {
    * pool limit, builds the {@link SoundVoice}, seeds spatialization from the
    * play-time options, and tracks the voice for eviction.
    */
-  private _buildVoice(manager: AudioManager, options: SoundPlayOptions, buffer: AudioBuffer, offset: number, window: SoundVoiceWindow): Voice {
+  private _buildVoice(system: AudioSystem, options: SoundPlayOptions, buffer: AudioBuffer, offset: number, window: SoundVoiceWindow): Voice {
     const loop = options.loop ?? this.loop;
     const playbackRate = clamp(options.playbackRate ?? this.playbackRate, 0.1, 20);
     const detune = options.detune ?? 0;
     const volume = clamp(options.muted ? 0 : (options.volume ?? (this.muted ? 0 : this.volume)), 0, 1);
-    const bus = options.bus ?? manager.sound;
+    const bus = options.bus ?? system.sound;
 
     if (options.replace === true) {
       // Singleton-replace mode: every other active voice of this sound is
@@ -606,7 +606,7 @@ export class Sound implements Playable {
       audioContext,
       output,
       bus,
-      manager,
+      system,
       volume,
       buffer,
       loop,

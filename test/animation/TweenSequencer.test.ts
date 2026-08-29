@@ -1,10 +1,10 @@
 import { Tween } from '#animation/Tween';
-import { TweenManager } from '#animation/TweenManager';
 import { TweenSequencer, TweenSequencerState } from '#animation/TweenSequencer';
+import { TweenSystem } from '#animation/TweenSystem';
 import { TweenState } from '#animation/types';
 import { type Seconds, Time } from '#core/units';
 
-/** Wrap a seconds value so it can be passed to TweenManager.update(). */
+/** Wrap a seconds value so it can be passed to TweenSystem.update(). */
 const sec = (seconds: number): Seconds => Time.seconds(seconds);
 
 /** Create a minimal target object and a tween that animates x 0→100 over `duration` seconds. */
@@ -16,8 +16,8 @@ const makeTween = (duration = 1.0): { tween: Tween<{ x: number }>; target: { x: 
 
 // ─── Standalone helpers ────────────────────────────────────────────────────────
 //
-// Most tests drive the sequencer directly (no TweenManager) so they can use
-// precise sub-frame deltas without needing a manager clock.
+// Most tests drive the sequencer directly (no TweenSystem) so they can use
+// precise sub-frame deltas without needing a system clock.
 
 describe('TweenSequencer', () => {
   // ── Initial state ──────────────────────────────────────────────────────────
@@ -444,79 +444,79 @@ describe('TweenSequencer', () => {
     });
   });
 
-  // ── TweenManager integration ───────────────────────────────────────────────
+  // ── TweenSystem integration ───────────────────────────────────────────────
 
-  describe('TweenManager integration', () => {
-    test('createSequencer() returns a sequencer bound to the manager', () => {
-      const manager = new TweenManager();
-      const seq = manager.createSequencer();
+  describe('TweenSystem integration', () => {
+    test('createSequencer() returns a sequencer bound to the system', () => {
+      const system = new TweenSystem();
+      const seq = system.createSequencer();
       expect(seq).toBeInstanceOf(TweenSequencer);
     });
 
-    test('manager drives the sequencer and its tweens each frame', () => {
-      const manager = new TweenManager();
+    test('system drives the sequencer and its tweens each frame', () => {
+      const system = new TweenSystem();
       const { tween: t1, target: a } = makeTween(1.0);
       const { tween: t2, target: b } = makeTween(1.0);
 
-      const seq = manager.createSequencer().then(t1).then(t2).start();
+      const seq = system.createSequencer().then(t1).then(t2).start();
 
-      // Frame 1: manager ticks tweens first (t1 advances), then ticks sequencer.
-      manager.preUpdate(sec(1.0)); // t1 completes; sequencer sees it and starts t2
+      // Frame 1: system ticks tweens first (t1 advances), then ticks sequencer.
+      system.preUpdate(sec(1.0)); // t1 completes; sequencer sees it and starts t2
       expect(t1.state).toBe(TweenState.Complete);
       expect(a.x).toBe(100);
 
       // Frame 2: t2 advances and completes.
-      manager.preUpdate(sec(1.0));
+      system.preUpdate(sec(1.0));
       expect(t2.state).toBe(TweenState.Complete);
       expect(b.x).toBe(100);
       expect(seq.state).toBe(TweenSequencerState.Complete);
     });
 
-    test('sequencer is removed from manager on complete', () => {
-      const manager = new TweenManager();
+    test('sequencer is removed from system on complete', () => {
+      const system = new TweenSystem();
       const { tween } = makeTween(1.0);
-      const seq = manager.createSequencer().then(tween).start();
+      const seq = system.createSequencer().then(tween).start();
 
-      manager.preUpdate(sec(1.0)); // completes
+      system.preUpdate(sec(1.0)); // completes
       expect(seq.state).toBe(TweenSequencerState.Complete);
 
-      // Subsequent manager updates must not error (ticker already removed).
-      expect(() => manager.preUpdate(sec(1.0))).not.toThrow();
+      // Subsequent system updates must not error (ticker already removed).
+      expect(() => system.preUpdate(sec(1.0))).not.toThrow();
     });
 
-    test('sequencer is removed from manager on stop()', () => {
-      const manager = new TweenManager();
+    test('sequencer is removed from system on stop()', () => {
+      const system = new TweenSystem();
       const { tween } = makeTween(1.0);
-      const seq = manager.createSequencer().then(tween).start();
+      const seq = system.createSequencer().then(tween).start();
 
-      manager.preUpdate(sec(0.3));
+      system.preUpdate(sec(0.3));
       seq.stop();
 
       // No crash and no further advancement.
-      expect(() => manager.preUpdate(sec(1.0))).not.toThrow();
+      expect(() => system.preUpdate(sec(1.0))).not.toThrow();
     });
 
-    test('manager.clear() also removes tickers', () => {
-      const manager = new TweenManager();
+    test('system.clear() also removes tickers', () => {
+      const system = new TweenSystem();
       const { tween } = makeTween(1.0);
       const onComplete = vi.fn();
 
-      manager.createSequencer().then(tween).onComplete(onComplete).start();
-      manager.clear();
-      manager.preUpdate(sec(2.0));
+      system.createSequencer().then(tween).onComplete(onComplete).start();
+      system.clear();
+      system.preUpdate(sec(2.0));
 
       expect(onComplete).not.toHaveBeenCalled();
     });
 
     test('addTicker is idempotent — registering the same sequencer twice does not double-tick', () => {
-      const manager = new TweenManager();
+      const system = new TweenSystem();
       const { tween, target } = makeTween(1.0);
-      const seq = manager.createSequencer().then(tween).start();
+      const seq = system.createSequencer().then(tween).start();
 
       // Simulate accidentally calling start() again (which calls addTicker again).
       // The sequencer resets, but the ticker must not be in the list twice.
       seq.start();
-      manager.preUpdate(sec(0.5));
+      system.preUpdate(sec(0.5));
       expect(target.x).toBeCloseTo(50, 5); // exactly one advancement
     });
   });

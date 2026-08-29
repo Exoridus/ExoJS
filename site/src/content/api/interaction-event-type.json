@@ -1,6 +1,6 @@
 {
   "title": "InteractionEventType",
-  "description": "String literal union of every interaction event the InteractionManager can deliver to a RenderNode. Handlers attach via the node's `interactive*` API.",
+  "description": "String literal union of every interaction event the InteractionSystem can deliver to a RenderNode. Handlers attach via the node's `interactive*` API.",
   "symbol": "InteractionEventType",
   "kind": "type",
   "subsystem": "input",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "String literal union of every interaction event the InteractionManager can deliver to a RenderNode. Handlers attach via the node's `interactive*` API."
+        "String literal union of every interaction event the InteractionSystem can deliver to a RenderNode. Handlers attach via the node's `interactive*` API."
       ],
       "importLine": "import { InteractionEventType } from '@codexo/exojs'",
       "sourceLink": null

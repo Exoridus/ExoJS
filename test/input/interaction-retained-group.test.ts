@@ -6,8 +6,8 @@ import { Signal } from '#core/Signal';
 import type { ContextMenuRequest } from '#input/ContextMenuRequest';
 import type { Gamepad } from '#input/Gamepad';
 import type { GamepadButton } from '#input/GamepadButton';
-import type { InputManager } from '#input/InputManager';
-import { InteractionManager } from '#input/InteractionManager';
+import type { InputSystem } from '#input/InputSystem';
+import { InteractionSystem } from '#input/InteractionSystem';
 import type { Pointer } from '#input/Pointer';
 import { Vector } from '#math/Vector';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
@@ -72,7 +72,7 @@ const createApp = (): {
     onPointerCancel: new Signal<[Pointer, number, number]>(),
     onPointerLeave: new Signal<[Pointer, number, number]>(),
     onContextMenu: new Signal<[ContextMenuRequest]>(),
-    // InteractionManager owns the focus controller, which listens for keys.
+    // InteractionSystem owns the focus controller, which listens for keys.
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
     onAnyGamepadButtonDown: new Signal<[Gamepad, GamepadButton, number]>(),
@@ -92,7 +92,7 @@ const createApp = (): {
     platform: new BrowserPlatform(canvas),
     width: 800,
     height: 600,
-    input: signals as unknown as InputManager,
+    input: signals as unknown as InputSystem,
     focus: { focused: null, focus() {}, blur() {}, _notifyNodeRemoved() {} },
     rendering: {
       view: {
@@ -120,10 +120,10 @@ const makeSprite = (): Drawable => {
   return sprite;
 };
 
-describe('InteractionManager: hit-testing children of a translated RetainedContainer', () => {
+describe('InteractionSystem: hit-testing children of a translated RetainedContainer', () => {
   test('pointer over the WORLD position of a child inside a translated group fires its handler', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -151,7 +151,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
 
   test('pointer at the GROUP-LOCAL coordinates (where nothing is on screen) does NOT fire', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -180,7 +180,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
 
   test('camera-pan pattern: moving the group between events retargets hits with no child mutation', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -219,7 +219,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
 
   test('a rotated + scaled group hit-tests against the true oriented world quad', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -260,7 +260,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
 
   test('the recursive-walk path (interaction scope) is world-correct too', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -296,7 +296,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
 
   test('z-order across spaces: the later-registered node wins where world rects overlap', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -334,7 +334,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
 
   test('moving the group re-indexes a non-anchored (barrier-effect) world-space child so hits track it', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -383,7 +383,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
 
   test('moving the group re-indexes a non-anchored world-space DESCENDANT (grandchild under a barrier child)', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -421,7 +421,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
 
   test('dev diagnostic: registering an interactive node under an engaged boundary warns once', () => {
     const { app, scene } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     const warnSpy = vi.spyOn(logger, 'warn');
 
     im.attachRoot(scene.root);

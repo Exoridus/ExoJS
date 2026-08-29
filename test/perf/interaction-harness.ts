@@ -1,12 +1,12 @@
 /**
  * Node-side interaction benchmark harness.
  *
- * Wires the real {@link InputManager} + {@link InteractionManager} to a fake,
+ * Wires the real {@link InputSystem} + {@link InteractionSystem} to a fake,
  * DOM-free {@link PlatformAdapter} - the same seam `BrowserPlatform`
  * implements - so synthetic pointer events travel through the exact
- * `platform.onSurfaceEvent → InputManager → onPointer* signal →
- * InteractionManager` pipeline a live `Application` uses. Hit-testing is
- * therefore exercised through the real `InteractionManager` code (whichever
+ * `platform.onSurfaceEvent → InputSystem → onPointer* signal →
+ * InteractionSystem` pipeline a live `Application` uses. Hit-testing is
+ * therefore exercised through the real `InteractionSystem` code (whichever
  * of `_hitTestNode`/`_hitTestIndexed` it actually picks), never a hand-copied
  * stand-in.
  *
@@ -22,8 +22,8 @@ import type { Application } from '../../src/core/Application';
 import { Scene } from '../../src/core/Scene';
 import { SceneState } from '../../src/core/SceneState';
 import type { BrowserGamepad } from '../../src/input/GamepadDefinitions';
-import { InputManager } from '../../src/input/InputManager';
-import { InteractionManager } from '../../src/input/InteractionManager';
+import { InputSystem } from '../../src/input/InputSystem';
+import { InteractionSystem } from '../../src/input/InteractionSystem';
 import type { ScopeToken } from '../../src/input/ScopeToken';
 import type {
   PlatformAdapter,
@@ -161,7 +161,7 @@ class FakePlatformAdapter implements PlatformAdapter {
   }
 }
 
-/** Fields the real InputManager/Pointer pipeline actually reads off a pointer event - see {@link Pointer}'s constructor. */
+/** Fields the real InputSystem/Pointer pipeline actually reads off a pointer event - see {@link Pointer}'s constructor. */
 export interface FakePointerInit {
   readonly clientX: number;
   readonly clientY: number;
@@ -199,13 +199,13 @@ export type FakePointerEventType = 'pointerover' | 'pointerdown' | 'pointermove'
 export interface InteractionHarness {
   readonly app: Application;
   readonly scene: Scene;
-  readonly input: InputManager;
-  readonly interaction: InteractionManager;
+  readonly input: InputSystem;
+  readonly interaction: InteractionSystem;
   /** Enqueue a synthetic pointer event, mirroring a real `platform.onSurfaceEvent('pointer*', ...)` delivery. */
   firePointer(type: FakePointerEventType, init: FakePointerInit): void;
-  /** Drain the queued platform events through the real InputManager → InteractionManager pipeline, exactly as one `Application` frame does. */
+  /** Drain the queued platform events through the real InputSystem → InteractionSystem pipeline, exactly as one `Application` frame does. */
   flush(): void;
-  /** Confine hit-testing to `root`'s subtree - see {@link InteractionManager.pushScope}. */
+  /** Confine hit-testing to `root`'s subtree - see {@link InteractionSystem.pushScope}. */
   pushScope(root: RenderNode): ScopeToken;
   /** Release a scope pushed via {@link InteractionHarness.pushScope}. */
   popScope(token: ScopeToken): void;
@@ -219,7 +219,7 @@ export interface InteractionHarnessOptions {
 }
 
 /**
- * Build a real InputManager + InteractionManager pair wired to a fake
+ * Build a real InputSystem + InteractionSystem pair wired to a fake
  * DOM-free PlatformAdapter and a bare Scene - the same real pipeline
  * `Application` wires, without needing a real canvas/`HTMLCanvasElement`.
  */
@@ -244,11 +244,11 @@ export const createInteractionHarness = (options: InteractionHarnessOptions = {}
     _backingStoreToLogical: (x: number, y: number): { x: number; y: number } => ({ x, y }),
   } as unknown as Application;
 
-  const input = new InputManager(app);
+  const input = new InputSystem(app);
 
-  (app as unknown as { input: InputManager }).input = input;
+  (app as unknown as { input: InputSystem }).input = input;
 
-  const interaction = new InteractionManager(app);
+  const interaction = new InteractionSystem(app);
 
   interaction.attachRoot(scene.root);
 

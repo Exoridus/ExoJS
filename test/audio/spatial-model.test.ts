@@ -11,7 +11,7 @@ import type { MockInstance } from 'vitest';
 
 import { getAudioContext } from '#audio/audio-context';
 import { AudioBus } from '#audio/AudioBus';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import { AudioZone } from '#audio/AudioZone';
 import { Sound } from '#audio/Sound';
 import { Rectangle } from '#math/Rectangle';
@@ -19,7 +19,7 @@ import { Rectangle } from '#math/Rectangle';
 const createAudioBufferStub = (): AudioBuffer => ({ duration: 2 }) as AudioBuffer;
 
 /**
- * Run the per-frame spatial update a voice would get from `AudioManager`.
+ * Run the per-frame spatial update a voice would get from `AudioSystem`.
  *
  * `_tickSpatial` is internal to the voice implementations rather than part of the
  * public `Voice` surface, and these cells drive it directly to read back exactly
@@ -152,10 +152,10 @@ describe('elevation - the third axis', () => {
 
   test('a voice with no position still builds no panner', () => {
     const panners = spyPanners();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
 
-    manager.play(sound);
+    system.play(sound);
 
     expect(panners.panners).toHaveLength(0);
 
@@ -165,9 +165,9 @@ describe('elevation - the third axis', () => {
 
   test('elevation reaches the panner Z param', () => {
     const panners = spyPanners();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 }, elevation: 30 });
+    const voice = system.play(sound, { position: { x: 0, y: 0 }, elevation: 30 });
 
     expect(voice.elevation).toBe(30);
     expect(lastWritten(panners.panners[0]!.positionZ)).toBe(30);
@@ -178,9 +178,9 @@ describe('elevation - the third axis', () => {
 
   test('a three-component position writes elevation, and a two-component one leaves it alone', () => {
     const panners = spyPanners();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
 
     voice.position = { x: 4, y: 5, z: 12 };
     expect(voice.elevation).toBe(12);
@@ -196,9 +196,9 @@ describe('elevation - the third axis', () => {
 
   test('setting elevation alone is enough to spatialize a voice', () => {
     const panners = spyPanners();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
 
     voice.elevation = 8;
 
@@ -210,11 +210,11 @@ describe('elevation - the third axis', () => {
 
   test('listener elevation shifts the relative Z a voice writes', () => {
     const panners = spyPanners();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 }, elevation: 30 });
+    const voice = system.play(sound, { position: { x: 0, y: 0 }, elevation: 30 });
 
-    manager.listener.elevation = 10;
+    system.listener.elevation = 10;
     tickSpatial(voice);
 
     expect(lastWritten(panners.panners[0]!.positionZ)).toBe(20);
@@ -225,13 +225,13 @@ describe('elevation - the third axis', () => {
 
   test('vertical motion produces a Doppler shift', () => {
     const panners = spyPanners();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
 
-    manager.spatial.dopplerFactor = 1;
-    manager.spatial.speedOfSound = 1000;
+    system.spatial.dopplerFactor = 1;
+    system.spatial.speedOfSound = 1000;
 
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 }, elevation: 100 });
+    const voice = system.play(sound, { position: { x: 0, y: 0 }, elevation: 100 });
     const ratios: number[] = [];
 
     // `_applyDopplerRate` is the documented hook a voice type overrides to reach
@@ -264,9 +264,9 @@ describe('occlusion', () => {
 
   test('a voice that is never occluded builds no filter', () => {
     const filters = spyFilters();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+    const voice = system.play(sound, { position: { x: 0, y: 0 } });
 
     expect(voice.occlusion).toBe(0);
     expect(filters.filters).toHaveLength(0);
@@ -277,9 +277,9 @@ describe('occlusion', () => {
 
   test('occluding a voice lowers its cutoff and its gain', () => {
     const filters = spyFilters();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+    const voice = system.play(sound, { position: { x: 0, y: 0 } });
 
     voice.occlusion = 1;
 
@@ -287,7 +287,7 @@ describe('occlusion', () => {
 
     expect(filter).toBeDefined();
     expect(filter!.type).toBe('lowpass');
-    expect(lastTarget(filter!.frequency)).toBeCloseTo(manager.spatial.occlusionCutoff, 5);
+    expect(lastTarget(filter!.frequency)).toBeCloseTo(system.spatial.occlusionCutoff, 5);
 
     voice.occlusion = 0.5;
 
@@ -295,7 +295,7 @@ describe('occlusion', () => {
     // the arithmetic one - a linear sweep would spend half the range inaudible.
     const open = getAudioContext().sampleRate / 2;
 
-    expect(lastTarget(filter!.frequency)).toBeCloseTo(Math.sqrt(open * manager.spatial.occlusionCutoff), 3);
+    expect(lastTarget(filter!.frequency)).toBeCloseTo(Math.sqrt(open * system.spatial.occlusionCutoff), 3);
 
     filters.restore();
     sound.destroy();
@@ -303,9 +303,9 @@ describe('occlusion', () => {
 
   test('occlusion is clamped and idempotent', () => {
     const filters = spyFilters();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+    const voice = system.play(sound, { position: { x: 0, y: 0 } });
 
     voice.occlusion = 5;
     expect(voice.occlusion).toBe(1);
@@ -323,9 +323,9 @@ describe('occlusion', () => {
 
   test('PlayOptions.occlusion seeds it', () => {
     const filters = spyFilters();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 }, occlusion: 0.75 });
+    const voice = system.play(sound, { position: { x: 0, y: 0 }, occlusion: 0.75 });
 
     expect(voice.occlusion).toBe(0.75);
     expect(filters.filters).toHaveLength(1);
@@ -341,10 +341,10 @@ describe('AudioSend', () => {
   });
 
   test('a send carries its own level and shows up on the voice', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
     const reverb = new AudioBus('reverb');
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     const send = voice.addSend(reverb, 0.4);
 
     expect(send.bus).toBe(reverb);
@@ -359,10 +359,10 @@ describe('AudioSend', () => {
   });
 
   test('a negative level is clamped to silence', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
     const reverb = new AudioBus('reverb');
-    const send = manager.play(sound).addSend(reverb, -1);
+    const send = system.play(sound).addSend(reverb, -1);
 
     expect(send.level).toBe(0);
 
@@ -371,10 +371,10 @@ describe('AudioSend', () => {
   });
 
   test('removeSend destroys it and drops it from the list', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
     const reverb = new AudioBus('reverb');
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     const send = voice.addSend(reverb);
 
     voice.removeSend(send);
@@ -390,10 +390,10 @@ describe('AudioSend', () => {
   });
 
   test('the voice tears its sends down when it ends', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
     const reverb = new AudioBus('reverb');
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     const send = voice.addSend(reverb);
 
     voice.stop();
@@ -406,11 +406,11 @@ describe('AudioSend', () => {
   });
 
   test('PlayOptions.sends opens them at play time', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
     const reverb = new AudioBus('reverb');
     const echo = new AudioBus('echo');
-    const voice = manager.play(sound, { sends: [{ bus: reverb, level: 0.3 }, { bus: echo }] });
+    const voice = system.play(sound, { sends: [{ bus: reverb, level: 0.3 }, { bus: echo }] });
 
     expect(voice.sends.map(({ bus, level }) => [bus.name, level])).toEqual([
       ['reverb', 0.3],
@@ -478,12 +478,12 @@ describe('SpatialZones', () => {
   });
 
   test('does nothing at all while no zone is registered', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+    const voice = system.play(sound, { position: { x: 0, y: 0 } });
 
-    expect(manager.zones.active).toBe(false);
-    manager.preUpdate(0.016 as never);
+    expect(system.zones.active).toBe(false);
+    system.preUpdate(0.016 as never);
 
     expect(voice.sends).toHaveLength(0);
 
@@ -491,18 +491,18 @@ describe('SpatialZones', () => {
   });
 
   test('a listener inside a zone opens a send on every voice, and leaving closes it', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
     const reverb = new AudioBus('reverb');
     const zone = new AudioZone({ shape: new Rectangle(0, 0, 100, 100), bus: reverb, send: 0.6 });
 
-    manager.zones.add(zone);
-    expect(manager.zones.active).toBe(true);
+    system.zones.add(zone);
+    expect(system.zones.active).toBe(true);
 
-    const voice = manager.play(sound, { position: { x: 10, y: 10 } });
+    const voice = system.play(sound, { position: { x: 10, y: 10 } });
 
-    manager.listener.position.set(50, 50);
-    manager.preUpdate(0.016 as never);
+    system.listener.position.set(50, 50);
+    system.preUpdate(0.016 as never);
 
     expect(voice.sends).toHaveLength(1);
     expect(voice.sends[0]!.bus).toBe(reverb);
@@ -510,8 +510,8 @@ describe('SpatialZones', () => {
 
     const send = voice.sends[0]!;
 
-    manager.listener.position.set(400, 400);
-    manager.preUpdate(0.016 as never);
+    system.listener.position.set(400, 400);
+    system.preUpdate(0.016 as never);
 
     expect(voice.sends).toHaveLength(0);
     expect(send.destroyed).toBe(true);
@@ -521,16 +521,16 @@ describe('SpatialZones', () => {
   });
 
   test('the send level follows the falloff ramp instead of switching', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
     const reverb = new AudioBus('reverb');
 
-    manager.zones.add(new AudioZone({ shape: new Rectangle(0, 0, 100, 100), bus: reverb, send: 1, falloff: 100 }));
+    system.zones.add(new AudioZone({ shape: new Rectangle(0, 0, 100, 100), bus: reverb, send: 1, falloff: 100 }));
 
-    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+    const voice = system.play(sound, { position: { x: 0, y: 0 } });
 
-    manager.listener.position.set(150, 50);
-    manager.preUpdate(0.016 as never);
+    system.listener.position.set(150, 50);
+    system.preUpdate(0.016 as never);
 
     expect(voice.sends[0]!.level).toBeCloseTo(0.5, 5);
 
@@ -538,8 +538,8 @@ describe('SpatialZones', () => {
     // teardown and rebuild.
     const send = voice.sends[0]!;
 
-    manager.listener.position.set(125, 50);
-    manager.preUpdate(0.016 as never);
+    system.listener.position.set(125, 50);
+    system.preUpdate(0.016 as never);
 
     expect(voice.sends[0]).toBe(send);
     expect(send.level).toBeCloseTo(0.75, 5);
@@ -549,19 +549,19 @@ describe('SpatialZones', () => {
   });
 
   test('two overlapping zones each contribute their own send', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
     const reverb = new AudioBus('reverb');
     const echo = new AudioBus('echo');
 
-    manager.zones
+    system.zones
       .add(new AudioZone({ shape: new Rectangle(0, 0, 100, 100), bus: reverb, send: 0.5 }))
       .add(new AudioZone({ shape: { x: 60, y: 60, radius: 80 }, bus: echo, send: 0.25 }));
 
-    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+    const voice = system.play(sound, { position: { x: 0, y: 0 } });
 
-    manager.listener.position.set(70, 70);
-    manager.preUpdate(0.016 as never);
+    system.listener.position.set(70, 70);
+    system.preUpdate(0.016 as never);
 
     expect(voice.sends.map(({ bus }) => bus.name)).toEqual(['reverb', 'echo']);
 
@@ -571,24 +571,24 @@ describe('SpatialZones', () => {
   });
 
   test('removing a zone closes the sends it held', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
     const reverb = new AudioBus('reverb');
     const zone = new AudioZone({ shape: new Rectangle(0, 0, 100, 100), bus: reverb });
 
-    manager.zones.add(zone);
+    system.zones.add(zone);
 
-    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+    const voice = system.play(sound, { position: { x: 0, y: 0 } });
 
-    manager.listener.position.set(50, 50);
-    manager.preUpdate(0.016 as never);
+    system.listener.position.set(50, 50);
+    system.preUpdate(0.016 as never);
     expect(voice.sends).toHaveLength(1);
 
     const send = voice.sends[0]!;
 
-    manager.zones.remove(zone);
+    system.zones.remove(zone);
 
-    expect(manager.zones.active).toBe(false);
+    expect(system.zones.active).toBe(false);
     expect(send.destroyed).toBe(true);
     expect(voice.sends).toHaveLength(0);
 
@@ -597,17 +597,17 @@ describe('SpatialZones', () => {
   });
 
   test('an ended voice gets no new sends and is dropped from the bookkeeping', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
     const reverb = new AudioBus('reverb');
 
-    manager.zones.add(new AudioZone({ shape: new Rectangle(0, 0, 100, 100), bus: reverb }));
+    system.zones.add(new AudioZone({ shape: new Rectangle(0, 0, 100, 100), bus: reverb }));
 
-    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+    const voice = system.play(sound, { position: { x: 0, y: 0 } });
 
-    manager.listener.position.set(50, 50);
+    system.listener.position.set(50, 50);
     voice.stop();
-    manager.preUpdate(0.016 as never);
+    system.preUpdate(0.016 as never);
 
     expect(voice.sends).toHaveLength(0);
 

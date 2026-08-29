@@ -3,8 +3,8 @@
 import { getAudioContext } from '#audio/audio-context';
 import { AudioBus } from '#audio/AudioBus';
 import type { AudioInput } from '#audio/AudioInput';
-import { AudioManager } from '#audio/AudioManager';
 import { AudioStream } from '#audio/AudioStream';
+import { AudioSystem } from '#audio/AudioSystem';
 import type { Voice } from '#audio/Playable';
 import { Sound } from '#audio/Sound';
 import { logger } from '#core/logging';
@@ -16,8 +16,8 @@ import { Signal } from '#core/Signal';
 // The default MockAudioContext (test/setup-env.vitest.ts) starts in the
 // 'running' state, so the real onAudioContextReady signal fires synchronously
 // the first time anything subscribes - leaving no window to observe an
-// AudioManager registering its own forwarding handler *before* the event
-// fires. To exercise AudioManager's onUnlock wiring deterministically we
+// AudioSystem registering its own forwarding handler *before* the event
+// fires. To exercise AudioSystem's onUnlock wiring deterministically we
 // replace '#audio/audio-context' wholesale with a minimal fake that starts
 // "locked" and only becomes ready when the test explicitly dispatches it.
 // ---------------------------------------------------------------------------
@@ -76,28 +76,28 @@ const createAudioElementStub = (): HTMLAudioElement => {
   return el;
 };
 
-/** Size of the manager's internal live-voice registry. */
-const liveVoiceCount = (manager: AudioManager): number => (manager as unknown as { _voices: Set<unknown> })._voices.size;
+/** Size of the system's internal live-voice registry. */
+const liveVoiceCount = (system: AudioSystem): number => (system as unknown as { _voices: Set<unknown> })._voices.size;
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('AudioManager', () => {
+describe('AudioSystem', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
   // 2. Built-in buses exist
   test('built-in buses master, music, sound exist as AudioBus instances', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     expect(mixer.master).toBeInstanceOf(AudioBus);
     expect(mixer.music).toBeInstanceOf(AudioBus);
     expect(mixer.sound).toBeInstanceOf(AudioBus);
   });
 
   test('built-in buses have correct names', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     expect(mixer.master.name).toBe('master');
     expect(mixer.music.name).toBe('music');
     expect(mixer.sound.name).toBe('sound');
@@ -105,23 +105,23 @@ describe('AudioManager', () => {
 
   // 3. Bus hierarchy
   test('music parent is master', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     expect(mixer.music.parent).toBe(mixer.master);
   });
 
   test('sound parent is master', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     expect(mixer.sound.parent).toBe(mixer.master);
   });
 
   test('master parent is null', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     expect(mixer.master.parent).toBeNull();
   });
 
   // 4. registerBus succeeds for new bus
   test('registerBus() adds a custom bus that can be retrieved via getBus()', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     const voice = new AudioBus('voice');
     mixer.registerBus(voice);
     expect(mixer.getBus('voice')).toBe(voice);
@@ -129,7 +129,7 @@ describe('AudioManager', () => {
 
   // 5. Re-registering same name throws
   test('registerBus() throws if name is already registered', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     const voice = new AudioBus('voice');
     mixer.registerBus(voice);
     const voice2 = new AudioBus('voice');
@@ -139,7 +139,7 @@ describe('AudioManager', () => {
 
   // 6. unregisterBus
   test('unregisterBus() removes and destroys a custom bus', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     const voice = new AudioBus('voice');
     mixer.registerBus(voice);
     mixer.unregisterBus(voice);
@@ -147,22 +147,22 @@ describe('AudioManager', () => {
   });
 
   test('unregisterBus() throws for master', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     expect(() => mixer.unregisterBus(mixer.master)).toThrow('Cannot unregister built-in bus "master".');
   });
 
   test('unregisterBus() throws for music', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     expect(() => mixer.unregisterBus(mixer.music)).toThrow('Cannot unregister built-in bus "music".');
   });
 
   test('unregisterBus() throws for sound', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     expect(() => mixer.unregisterBus(mixer.sound)).toThrow('Cannot unregister built-in bus "sound".');
   });
 
   test('unregisterBus() is a no-op for a bus that was never registered', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     const orphan = new AudioBus('orphan');
     expect(() => mixer.unregisterBus(orphan)).not.toThrow();
     orphan.destroy();
@@ -170,19 +170,19 @@ describe('AudioManager', () => {
 
   // 7. getBus / hasBus
   test('getBus() returns the registered bus by name', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     const bus = new AudioBus('sfx');
     mixer.registerBus(bus);
     expect(mixer.getBus('sfx')).toBe(bus);
   });
 
   test('getBus() throws for an unknown name', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     expect(() => mixer.getBus('typo')).toThrow('Audio bus "typo" is not registered.');
   });
 
   test('hasBus() returns true for registered bus', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     expect(mixer.hasBus('master')).toBe(true);
     const bus = new AudioBus('ambient');
     mixer.registerBus(bus);
@@ -190,18 +190,18 @@ describe('AudioManager', () => {
   });
 
   test('hasBus() returns false for unregistered name', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     expect(mixer.hasBus('typo')).toBe(false);
   });
 
   // 8. muteOnHidden
   test('muteOnHidden defaults to false', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     expect(mixer.muteOnHidden).toBe(false);
   });
 
   test('muteOnHidden=true: _applyVisibility(false) mutes master', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     mixer.muteOnHidden = true;
     expect(mixer.master.muted).toBe(false);
     mixer._applyVisibility(false);
@@ -209,14 +209,14 @@ describe('AudioManager', () => {
   });
 
   test('muteOnHidden=false: _applyVisibility(false) does NOT mute master', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     mixer.muteOnHidden = false;
     mixer._applyVisibility(false);
     expect(mixer.master.muted).toBe(false);
   });
 
   test('after visibility returns to true, master is unmuted', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     mixer.muteOnHidden = true;
     mixer._applyVisibility(false);
     expect(mixer.master.muted).toBe(true);
@@ -224,10 +224,10 @@ describe('AudioManager', () => {
     expect(mixer.master.muted).toBe(false);
   });
 
-  // 9. Each AudioManager owns an independent bus subtree
-  test('separate AudioManager instances own independent buses', () => {
-    const mixer1 = new AudioManager();
-    const mixer2 = new AudioManager();
+  // 9. Each AudioSystem owns an independent bus subtree
+  test('separate AudioSystem instances own independent buses', () => {
+    const mixer1 = new AudioSystem();
+    const mixer2 = new AudioSystem();
 
     expect(mixer2).not.toBe(mixer1);
     expect(mixer2.master).not.toBe(mixer1.master);
@@ -244,7 +244,7 @@ describe('AudioManager', () => {
     const fakeSignal = new Signal<[AudioContext]>();
     // Readiness has to move with the signal: the real `onAudioContextReady`
     // only ever dispatches while the context reports 'running', and
-    // `AudioManager` reads the live state rather than trusting the dispatch.
+    // `AudioSystem` reads the live state rather than trusting the dispatch.
     let ready = false;
 
     vi.doMock('#audio/audio-context', () => ({
@@ -253,15 +253,15 @@ describe('AudioManager', () => {
       onAudioContextReady: fakeSignal,
     }));
 
-    const { AudioManager: DeferredAudioManager } = await import('#audio/AudioManager');
-    const mixer = new DeferredAudioManager();
+    const { AudioSystem: DeferredAudioSystem } = await import('#audio/AudioSystem');
+    const mixer = new DeferredAudioSystem();
     const onUnlock = vi.fn();
     mixer.onUnlock.add(onUnlock);
 
     // Simulate the AudioContext becoming ready: fires every pending listener in
     // registration order - master/music/sound buses, the listener, and
-    // finally AudioManager's own onUnlock-forwarding handler (see
-    // AudioManager.ts constructor, registered last).
+    // finally AudioSystem's own onUnlock-forwarding handler (see
+    // AudioSystem.ts constructor, registered last).
     ready = true;
     fakeSignal.dispatch(fakeCtx);
 
@@ -271,15 +271,15 @@ describe('AudioManager', () => {
     vi.resetModules();
   });
 
-  test('onUnlock fires (once, async) for an AudioManager built while the shared AudioContext is already running', async () => {
+  test('onUnlock fires (once, async) for an AudioSystem built while the shared AudioContext is already running', async () => {
     // Our global test AudioContext mock starts 'running' immediately. Creating
     // the shared context explicitly first (as an earlier gesture / explicit
-    // getAudioContext would) mirrors "an AudioManager constructed after the
+    // getAudioContext would) mirrors "an AudioSystem constructed after the
     // context has already unlocked" - e.g. a second Application in the same
     // process. The one-shot module-global ready signal has already fired by
-    // then, so the manager dispatches its own unlock on a microtask instead.
+    // then, so the system dispatches its own unlock on a microtask instead.
     getAudioContext();
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     expect(mixer.locked).toBe(false);
 
     const onUnlock = vi.fn();
@@ -292,56 +292,56 @@ describe('AudioManager', () => {
 
   // ---- live-voice registry ----
 
-  test('play() registers the new voice with the manager', () => {
-    const manager = new AudioManager();
+  test('play() registers the new voice with the system', () => {
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
 
-    expect(liveVoiceCount(manager)).toBe(0);
-    manager.play(sound);
-    expect(liveVoiceCount(manager)).toBe(1);
+    expect(liveVoiceCount(system)).toBe(0);
+    system.play(sound);
+    expect(liveVoiceCount(system)).toBe(1);
 
     sound.destroy();
   });
 
-  test('a voice that ends deregisters itself from the manager', () => {
-    const manager = new AudioManager();
+  test('a voice that ends deregisters itself from the system', () => {
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
 
     voice.stop();
 
     expect(voice.ended).toBe(true);
-    expect(liveVoiceCount(manager)).toBe(0);
+    expect(liveVoiceCount(system)).toBe(0);
 
     sound.destroy();
   });
 
   test('destroy() stops every voice that is still playing', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const first = manager.play(sound);
-    const second = manager.play(sound);
+    const first = system.play(sound);
+    const second = system.play(sound);
 
     expect(first.ended).toBe(false);
     expect(second.ended).toBe(false);
 
-    manager.destroy();
+    system.destroy();
 
     expect(first.ended).toBe(true);
     expect(second.ended).toBe(true);
-    expect(liveVoiceCount(manager)).toBe(0);
+    expect(liveVoiceCount(system)).toBe(0);
 
     sound.destroy();
   });
 
   test('destroy() stops a stream voice so its media element stops decoding', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const stream = new AudioStream(el);
-    const voice = manager.play(stream);
+    const voice = system.play(stream);
     const pauseSpy = vi.spyOn(el, 'pause');
 
-    manager.destroy();
+    system.destroy();
 
     expect(voice.ended).toBe(true);
     expect(pauseSpy).toHaveBeenCalled();
@@ -350,13 +350,13 @@ describe('AudioManager', () => {
   });
 
   test('destroy() stops an input voice opened through open()', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const input = { stream: {} as MediaStream } as AudioInput;
-    const voice = manager.open(input);
+    const voice = system.open(input);
 
     expect(voice.ended).toBe(false);
 
-    manager.destroy();
+    system.destroy();
 
     expect(voice.ended).toBe(true);
   });
@@ -364,28 +364,28 @@ describe('AudioManager', () => {
   // ---- teardown hardening ----
 
   test('destroy() also drains a voice registered while the teardown is running', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const first = manager.play(sound);
+    const first = system.play(sound);
 
     // A voice appearing after the drain started. Reproduced through the
     // internal registration hook because `play()` is refused once destroyed;
     // an iteration over a snapshot would drop this one still running.
     const late = { ended: false, stop: vi.fn() };
     first.onEnd.add((): void => {
-      manager._registerVoice(late as unknown as Voice);
+      system._registerVoice(late as unknown as Voice);
     });
 
-    manager.destroy();
+    system.destroy();
 
     expect(late.stop).toHaveBeenCalledTimes(1);
-    expect(liveVoiceCount(manager)).toBe(0);
+    expect(liveVoiceCount(system)).toBe(0);
 
     sound.destroy();
   });
 
   test('destroy() completes the teardown even when a voice throws while stopping', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
     const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
 
@@ -396,36 +396,36 @@ describe('AudioManager', () => {
         throw new Error('half-built voice');
       }),
     };
-    manager._registerVoice(broken as unknown as Voice);
-    const healthy = manager.play(sound);
+    system._registerVoice(broken as unknown as Voice);
+    const healthy = system.play(sound);
 
-    expect(() => manager.destroy()).not.toThrow();
+    expect(() => system.destroy()).not.toThrow();
 
     // The loop carried on past the throw...
     expect(healthy.ended).toBe(true);
     // ...and the tail (listener + buses) still ran.
-    expect(manager.hasBus('master')).toBe(false);
+    expect(system.hasBus('master')).toBe(false);
     expect(errorSpy).toHaveBeenCalled();
 
     sound.destroy();
   });
 
   test('play() after destroy() throws instead of registering an untracked voice', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
 
-    manager.destroy();
+    system.destroy();
 
-    expect(() => manager.play(sound)).toThrow(/destroyed AudioManager/);
-    expect(liveVoiceCount(manager)).toBe(0);
+    expect(() => system.play(sound)).toThrow(/destroyed AudioSystem/);
+    expect(liveVoiceCount(system)).toBe(0);
 
     sound.destroy();
   });
 
   test('open() after destroy() throws', () => {
-    const manager = new AudioManager();
-    manager.destroy();
+    const system = new AudioSystem();
+    system.destroy();
 
-    expect(() => manager.open({ stream: {} as MediaStream } as AudioInput)).toThrow(/destroyed AudioManager/);
+    expect(() => system.open({ stream: {} as MediaStream } as AudioInput)).toThrow(/destroyed AudioSystem/);
   });
 });

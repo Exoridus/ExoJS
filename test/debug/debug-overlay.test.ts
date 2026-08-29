@@ -11,7 +11,7 @@ import { DebugOverlay } from '#debug/DebugOverlay';
 import * as debugExports from '#debug/index';
 import { RenderPassInspectorLayer } from '#debug/RenderPassInspectorLayer';
 import * as rootExports from '#index';
-import { InputManager } from '#input/InputManager';
+import { InputSystem } from '#input/InputSystem';
 import { Keyboard } from '#input/types';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
@@ -90,7 +90,7 @@ const makeOnFrame = () => new Signal<[import('#core/units').Seconds]>();
 const makeOnResize = () => new Signal<[number, number, unknown]>();
 
 /**
- * Stand-in for the binding side of `InputManager`. The overlay claims its
+ * Stand-in for the binding side of `InputSystem`. The overlay claims its
  * keys through `onStart` - registering a binding is what marks a key consumed
  * so its browser default is suppressed - so the mock records the callbacks
  * per channel and lets `pressKey` fire one.
@@ -136,11 +136,11 @@ const makeApp = () => {
 };
 
 /**
- * Same mock, but with a REAL {@link InputManager} on a real canvas - the only
+ * Same mock, but with a REAL {@link InputSystem} on a real canvas - the only
  * way to observe what the overlay's keybindings do to the actual DOM event,
  * which is the whole point of claiming them through bindings.
  */
-const makeAppWithRealInput = (): { app: import('#core/Application').Application; canvas: HTMLCanvasElement; input: InputManager } => {
+const makeAppWithRealInput = (): { app: import('#core/Application').Application; canvas: HTMLCanvasElement; input: InputSystem } => {
   const canvas = document.createElement('canvas');
 
   canvas.width = 800;
@@ -160,9 +160,9 @@ const makeAppWithRealInput = (): { app: import('#core/Application').Application;
     onResize: makeOnResize(),
   } as unknown as import('#core/Application').Application;
 
-  const input = new InputManager(app);
+  const input = new InputSystem(app);
 
-  (app as { input: InputManager }).input = input;
+  (app as { input: InputSystem }).input = input;
 
   return { app, canvas, input };
 };

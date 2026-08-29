@@ -104,7 +104,7 @@ export class BrowserPlatform implements PlatformAdapter {
       this._canvas.setPointerCapture(pointerId);
     } catch {
       // Not supported everywhere, and never essential - the interaction
-      // manager tracks the capture itself.
+      // system tracks the capture itself.
     }
   }
 

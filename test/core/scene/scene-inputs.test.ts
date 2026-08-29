@@ -7,7 +7,7 @@ import { ActionMap } from '#input/actions/ActionMap';
 import { ButtonAction } from '#input/actions/ButtonAction';
 import type { ActionSample, ChannelEventBatch } from '#input/actions/types';
 import type { InputBinding } from '#input/InputBinding';
-import type { ActionScopeHost } from '#input/InputManager';
+import type { ActionScopeHost } from '#input/InputSystem';
 import { ChannelSize, Keyboard } from '#input/types';
 
 /** A zeroed sample with a mutable `frameId`/`timestamp`, for tests that only need a valid shape. */
@@ -20,7 +20,7 @@ const createEmptySample = (): ActionSample => ({
 
 /**
  * Write `value` to `channel` on `sample`, also logging it as its own atomic
- * `ChannelEventBatch` - mirrors what `InputManager._recordChannelChanges`
+ * `ChannelEventBatch` - mirrors what `InputSystem._recordChannelChanges`
  * does for a single-channel real write. A bare `sample.values[channel] =
  * value` is not enough: `ButtonAction._update` replays `sample.batches`, not
  * `values`, to detect its threshold-crossing edges in true order.
@@ -32,7 +32,7 @@ const setChannel = (sample: ActionSample, channel: number, value: number): void 
   (sample.batches as ChannelEventBatch[]).push({ channels: [{ channel, value }], sequence, timestamp: sequence });
 };
 
-/** Close the frame on `sample` - clears its batch log and bumps `frameId`, mirroring `InputManager.update()`. */
+/** Close the frame on `sample` - clears its batch log and bumps `frameId`, mirroring `InputSystem.update()`. */
 const advanceFrame = (sample: ActionSample): void => {
   (sample.batches as ChannelEventBatch[]).length = 0;
   sample.frameId++;
@@ -489,7 +489,7 @@ describe('SceneInputs action maps', () => {
     expect(map.jump.active).toBe(false);
 
     // The key was never released - resume() sees it still held through the
-    // manager's live sample (mirrored here by resyncSample).
+    // system's live sample (mirrored here by resyncSample).
     resyncSample.values[Keyboard.Space] = 1;
     inputs.resume();
 
@@ -606,7 +606,7 @@ describe('SceneInputs action maps — availability policy (when)', () => {
 
           return resyncSample;
         }),
-        // Mirrors the real InputManager's live monotonic counter: "now", not a
+        // Mirrors the real InputSystem's live monotonic counter: "now", not a
         // constant - a re-arm on regaining availability must exclude batches
         // already sitting in the log from before this exact moment (e.g. a
         // press/release that happened while disallowed), never replay them.

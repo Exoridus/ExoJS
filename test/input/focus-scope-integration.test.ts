@@ -1,5 +1,5 @@
 /**
- * Real InputManager + InteractionManager integration tests for the focus and
+ * Real InputSystem + InteractionSystem integration tests for the focus and
  * scope-ownership guarantees: active scopes as real focus traps (blocking
  * both Tab traversal and programmatic focus()), focus handling on scope
  * push/pop, app-level and scene-level scopes nesting without clobbering each
@@ -10,8 +10,8 @@
 import type { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
 import { SceneState } from '#core/SceneState';
-import { InputManager } from '#input/InputManager';
-import { InteractionManager } from '#input/InteractionManager';
+import { InputSystem } from '#input/InputSystem';
+import { InteractionSystem } from '#input/InteractionSystem';
 import type { KeyEvent } from '#input/KeyEvent';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Container } from '#rendering/Container';
@@ -19,8 +19,8 @@ import { Container } from '#rendering/Container';
 interface Harness {
   scene: Scene;
   canvas: HTMLCanvasElement;
-  input: InputManager;
-  im: InteractionManager;
+  input: InputSystem;
+  im: InteractionSystem;
 }
 
 const createHarness = (): Harness => {
@@ -63,11 +63,11 @@ const createHarness = (): Harness => {
     _backingStoreToLogical: (x: number, y: number): { x: number; y: number } => ({ x, y }),
   } as unknown as Application;
 
-  const input = new InputManager(app);
+  const input = new InputSystem(app);
 
-  (app as unknown as { input: InputManager }).input = input;
+  (app as unknown as { input: InputSystem }).input = input;
 
-  const im = new InteractionManager(app);
+  const im = new InteractionSystem(app);
 
   im.attachRoot(scene.root);
   canvas.dispatchEvent(new FocusEvent('focus'));
@@ -75,7 +75,7 @@ const createHarness = (): Harness => {
   return { scene, canvas, input, im };
 };
 
-/** Dispatch a real keydown, then flush it through InputManager into FocusController. */
+/** Dispatch a real keydown, then flush it through InputSystem into FocusController. */
 const pressKey = (h: Harness, code: string): void => {
   window.dispatchEvent(new KeyboardEvent('keydown', { code }));
   h.input.preUpdate(0 as never);

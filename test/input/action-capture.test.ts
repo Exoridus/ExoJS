@@ -1,7 +1,7 @@
 /**
  * Browser-default capture for controls reached through an `ActionMap`.
  *
- * The manager suppresses a keyboard default for exactly those channels
+ * The system suppresses a keyboard default for exactly those channels
  * something has bound, tracked as a refcount so two owners of one key release
  * it only when the last of them goes away. These tests pin that an action map
  * feeds that same ledger - directly attached, scene-attached, or inside an
@@ -15,13 +15,13 @@ import { ActionMap } from '#input/actions/ActionMap';
 import { BindingProfile } from '#input/actions/BindingProfile';
 import { ButtonAction } from '#input/actions/ButtonAction';
 import { InputScope } from '#input/actions/InputScope';
-import { InputManager } from '#input/InputManager';
+import { InputSystem } from '#input/InputSystem';
 import { Keyboard } from '#input/types';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 
 interface Harness {
-  readonly input: InputManager;
-  /** A scene facade over the same manager, for the scope and availability cases. */
+  readonly input: InputSystem;
+  /** A scene facade over the same system, for the scope and availability cases. */
   scene(state?: () => SceneState): SceneInputs;
   /** Dispatch a cancelable keydown and report whether the default was suppressed. */
   captured(code: string): boolean;
@@ -49,9 +49,9 @@ const createHarness = (): Harness => {
         return false;
       },
     },
-  } as unknown as { input: InputManager } & Application;
+  } as unknown as { input: InputSystem } & Application;
 
-  const input = new InputManager(app);
+  const input = new InputSystem(app);
 
   app.input = input;
   canvas.dispatchEvent(new FocusEvent('focus'));

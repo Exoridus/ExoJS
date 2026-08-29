@@ -236,7 +236,7 @@ describe('Application.stop() unloads the active scene regardless of an in-flight
     await app.start(TitleScene);
 
     // The backend stands in for every dependency destroy() releases after
-    // scenes (loader, rendering context, audio manager, backend): none of them
+    // scenes (loader, rendering context, audio system, backend): none of them
     // may run while the scene's unload() is still touching them.
     const backendDestroy = vi.spyOn(app.backend, 'destroy');
 

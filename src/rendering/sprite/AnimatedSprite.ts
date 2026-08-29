@@ -1,4 +1,4 @@
-import type { AnimationManager } from '#animation/AnimationManager';
+import type { AnimationSystem } from '#animation/AnimationSystem';
 import { Signal } from '#core/Signal';
 import type { Stage } from '#core/Stage';
 import type { Rectangle } from '#math/Rectangle';
@@ -86,7 +86,7 @@ const assertValidRepeat = (context: string, repeat: number): void => {
  * Multiple named clips can be registered via {@link defineClip} or the
  * constructor. Call {@link play} to start a clip. Playback then advances by
  * itself: a playing sprite attached to an {@link Application}'s scene tree
- * registers with that application's {@link AnimationManager} and is ticked
+ * registers with that application's {@link AnimationSystem} and is ticked
  * once per frame, with no `update()` call of your own. A sprite that is never
  * attached to a tree - one drawn immediate-mode via `context.render(sprite)`,
  * say - has no owning application to reach, so drive it by calling
@@ -108,13 +108,13 @@ export class AnimatedSprite extends Sprite {
   private _elapsedFrameTimeMs = 0;
   private _completedCycles = 0;
   /**
-   * The {@link AnimationManager} this sprite is currently registered with, or
+   * The {@link AnimationSystem} this sprite is currently registered with, or
    * `null` when it is not being ticked by one (not playing, not attached to a
    * tree, or destroyed). Kept as the single record of the registration so
-   * {@link _syncManagerRegistration} can always undo exactly what it did, even
+   * {@link _syncSystemRegistration} can always undo exactly what it did, even
    * after the owning stage has already been swapped out.
    */
-  private _manager: AnimationManager | null = null;
+  private _system: AnimationSystem | null = null;
 
   public readonly onComplete = new Signal<[clip: string]>();
   public readonly onFrame = new Signal<[clip: string, frame: number]>();
@@ -301,7 +301,7 @@ export class AnimatedSprite extends Sprite {
    *
    * Safe to call before the sprite is attached to a scene tree (in a
    * constructor, ahead of `addChild`): the sprite simply has no owning
-   * {@link AnimationManager} to register with yet, and joins one the moment it
+   * {@link AnimationSystem} to register with yet, and joins one the moment it
    * is attached.
    */
   public play(name: string, options: AnimatedSpritePlayOptions = {}): this {
@@ -330,7 +330,7 @@ export class AnimatedSprite extends Sprite {
 
     this._repeatOverride = options.repeat ?? this._repeatOverride;
     this._playing = true;
-    this._syncManagerRegistration();
+    this._syncSystemRegistration();
 
     return this;
   }
@@ -339,7 +339,7 @@ export class AnimatedSprite extends Sprite {
   public stop(): this {
     this._playing = false;
     this._elapsedFrameTimeMs = 0;
-    this._syncManagerRegistration();
+    this._syncSystemRegistration();
 
     if (!this._currentClipName) {
       return this;
@@ -359,7 +359,7 @@ export class AnimatedSprite extends Sprite {
 
   public pause(): this {
     this._playing = false;
-    this._syncManagerRegistration();
+    this._syncSystemRegistration();
 
     return this;
   }
@@ -367,7 +367,7 @@ export class AnimatedSprite extends Sprite {
   public resume(): this {
     if (this._currentClipName !== null) {
       this._playing = true;
-      this._syncManagerRegistration();
+      this._syncSystemRegistration();
     }
 
     return this;
@@ -381,7 +381,7 @@ export class AnimatedSprite extends Sprite {
    * per frame and `fps` is still frames per second; only this argument is
    * seconds.
    *
-   * Called automatically once per frame by the owning {@link AnimationManager}
+   * Called automatically once per frame by the owning {@link AnimationSystem}
    * for a playing, attached sprite - call it yourself only for a sprite that
    * is not part of an application's scene tree, or to step playback manually.
    * Dispatches `onFrame` for each frame boundary crossed and `onComplete` when
@@ -449,9 +449,9 @@ export class AnimatedSprite extends Sprite {
         // In-bounds: last frame index.
         this._applyFrame(clip, this._currentFrameIndex);
         this._playing = false;
-        // Leave the manager before the signal, so a handler that calls play()
+        // Leave the system before the signal, so a handler that calls play()
         // again re-registers on top of a clean state rather than being undone.
-        this._syncManagerRegistration();
+        this._syncSystemRegistration();
         this.onComplete.dispatch(this._currentClipName);
 
         break;
@@ -468,7 +468,7 @@ export class AnimatedSprite extends Sprite {
   }
 
   /**
-   * @internal - join or leave the owning application's {@link AnimationManager}
+   * @internal - join or leave the owning application's {@link AnimationSystem}
    * as this sprite enters or leaves a scene tree. This is what makes
    * `play()`-before-`addChild()` work: playback state is kept on the sprite,
    * and the registration follows attachment.
@@ -476,7 +476,7 @@ export class AnimatedSprite extends Sprite {
   public override _setStage(stage: Stage | null): void {
     super._setStage(stage);
 
-    this._syncManagerRegistration();
+    this._syncSystemRegistration();
   }
 
   public override destroy(): void {
@@ -484,7 +484,7 @@ export class AnimatedSprite extends Sprite {
     // Before `super.destroy()`, which detaches from the parent and would run
     // the sync through `_setStage(null)` anyway - doing it here first also
     // covers a sprite destroyed while already detached.
-    this._syncManagerRegistration();
+    this._syncSystemRegistration();
 
     super.destroy();
 
@@ -519,22 +519,22 @@ export class AnimatedSprite extends Sprite {
   }
 
   /**
-   * Reconcile this sprite's {@link AnimationManager} registration with the two
+   * Reconcile this sprite's {@link AnimationSystem} registration with the two
    * facts that decide it: whether playback is running, and which application
    * (if any) currently owns the tree this sprite is attached to. Called from
    * every place either fact can change - `play`/`stop`/`pause`/`resume`, clip
    * completion, attach/detach, and `destroy` - so there is exactly one rule
    * rather than a registration and a deregistration to keep in step.
    */
-  private _syncManagerRegistration(): void {
+  private _syncSystemRegistration(): void {
     const target = this._playing && !this.destroyed ? (this._stage?.app?.animations ?? null) : null;
 
-    if (this._manager === target) {
+    if (this._system === target) {
       return;
     }
 
-    this._manager?.remove(this);
-    this._manager = target;
+    this._system?.remove(this);
+    this._system = target;
     target?.add(this);
   }
 

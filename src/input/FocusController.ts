@@ -11,19 +11,19 @@ import { Keyboard } from './types';
 
 /**
  * A direction for spatial focus navigation - see
- * {@link InteractionManager.focusInDirection}.
+ * {@link InteractionSystem.focusInDirection}.
  */
 export type FocusDirection = 'up' | 'down' | 'left' | 'right';
 
 /**
  * Which nodes the arrow keys and the D-pad may move focus to - see
- * {@link InteractionManager.focusNavigation}.
+ * {@link InteractionSystem.focusNavigation}.
  *
  * - `'ui'` restricts navigation to the scene's UI layer, so the arrow keys
  *   stay available to the game itself.
  * - `'always'` navigates both layers, exactly the set Tab traverses.
  * - `'never'` turns directional navigation off, including
- *   {@link InteractionManager.focusInDirection}.
+ *   {@link InteractionSystem.focusInDirection}.
  *
  * An active interaction scope replaces the candidate set with its own subtree
  * whichever layer it lives in - a modal is navigable regardless of the policy,
@@ -68,9 +68,9 @@ interface FocusScopeEntry {
 }
 
 /**
- * Keyboard-focus service owned by the {@link InteractionManager}. Tracks the
+ * Keyboard-focus service owned by the {@link InteractionSystem}. Tracks the
  * single focused {@link RenderNode}, routes keyboard input from the
- * {@link InputManager} to it, and provides Tab-order traversal across the
+ * {@link InputSystem} to it, and provides Tab-order traversal across the
  * focusable nodes of the active scope.
  *
  * Not public API - RenderNode focus is reached through `app.interaction`
@@ -182,7 +182,7 @@ export class FocusController implements FocusHooks {
   /**
    * Bound subsequent Tab traversal - and, from this point on, every
    * programmatic {@link focus} call - to `root`'s subtree. Pushed by
-   * {@link InteractionManager.pushScope} so focus navigation and pointer
+   * {@link InteractionSystem.pushScope} so focus navigation and pointer
    * hit-testing are confined to the same subtree - a modal that shields
    * clicks must shield Tab (and focus) too.
    *
@@ -197,7 +197,7 @@ export class FocusController implements FocusHooks {
    * not blur current focus right now - there is nothing live to trap
    * anything with yet. Once `root` does attach, it becomes the topmost live
    * entry on this stack (it was just pushed last) and
-   * `InteractionManager._notifyNodeAdded` calls {@link _enforceActiveScopeTrap}
+   * `InteractionSystem._notifyNodeAdded` calls {@link _enforceActiveScopeTrap}
    * for exactly this reason, engaging the trap at that point instead.
    */
   public pushScope(token: ScopeToken, root: RenderNode): void {
@@ -351,7 +351,7 @@ export class FocusController implements FocusHooks {
   /**
    * Re-enforce the active scope's focus trap right now, rather than waiting
    * for the next explicit {@link focus} call to notice - called by
-   * {@link InteractionManager._notifyNodeAdded} whenever a subtree attaches
+   * {@link InteractionSystem._notifyNodeAdded} whenever a subtree attaches
    * to the scene, since a scope root that was temporarily detached (and so
    * not actively trapping anything - see {@link _activeScopeRoot}'s doc
    * comment) may have just become live again. Blurs the currently focused
@@ -559,7 +559,7 @@ export class FocusController implements FocusHooks {
 
   /**
    * Bubble `event` from its target up through every ancestor, same shape as
-   * {@link InteractionManager}'s pointer-event bubble: `focusable` gates
+   * {@link InteractionSystem}'s pointer-event bubble: `focusable` gates
    * which nodes can be the *target*, not which ones may observe an event
    * bubbling past them, so a plain container above the focused node still
    * receives it. Stops early on {@link KeyEvent.stopPropagation}.

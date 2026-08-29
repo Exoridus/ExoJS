@@ -147,7 +147,7 @@ const channelsByToken = new Map<InputToken, InputChannel>([
   ['keyboard.numpad-enter', Keyboard.NumPadEnter],
   ['keyboard.numpad-equal', Keyboard.NumPadEqual],
   // Aggregate modifier channels. No `KeyboardEvent.code` addresses these -
-  // they are written by `InputManager` alongside whichever side was pressed.
+  // they are written by `InputSystem` alongside whichever side was pressed.
   ['keyboard.shift', Keyboard.Shift],
   ['keyboard.control', Keyboard.Control],
   ['keyboard.alt', Keyboard.Alt],

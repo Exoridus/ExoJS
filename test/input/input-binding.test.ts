@@ -1,6 +1,6 @@
 /**
  * Direct unit tests for InputBinding - constructed standalone (no
- * InputManager/DOM involved) for precise control over the channel buffer,
+ * InputSystem/DOM involved) for precise control over the channel buffer,
  * the tap-threshold timer, and the detacher callback.
  */
 
@@ -11,7 +11,7 @@ import { ChannelSize } from '#input/types';
 const makeChannels = (): Float32Array => new Float32Array(ChannelSize.Container);
 
 /**
- * Monotonic counter mirroring `InputManager`'s own `_batchSequence` - shared
+ * Monotonic counter mirroring `InputSystem`'s own `_batchSequence` - shared
  * across every `batchOf()` call in this file so sequence numbers stay
  * globally increasing, exactly like the real thing. Tests that care about a
  * specific watermark boundary read this via `nextSequence()` instead.
@@ -20,14 +20,14 @@ let sequenceCounter = 0;
 const nextSequence = (): number => ++sequenceCounter;
 
 /**
- * Monotonic counter mirroring `InputManager`'s own `getPreciseTime()` stamp -
+ * Monotonic counter mirroring `InputSystem`'s own `getPreciseTime()` stamp -
  * distinct from `sequenceCounter` so tests can freely set an explicit
  * timestamp (a real source-event time) independent of the ordering-only
  * `sequence` field.
  */
 let timestampCounter = 0;
 
-/** One atomic batch touching a single channel - mirrors `InputManager._recordChannelChanges` for a single-channel write. */
+/** One atomic batch touching a single channel - mirrors `InputSystem._recordChannelChanges` for a single-channel write. */
 const batchOf = (channel: number, value: number, sequence = nextSequence(), timestamp = ++timestampCounter): ChannelEventBatch => ({
   channels: [{ channel, value }],
   sequence,

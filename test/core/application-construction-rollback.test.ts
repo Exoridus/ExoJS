@@ -6,18 +6,18 @@
  * error propagates untouched, and every subsystem built before the failure is
  * torn down in reverse construction order.
  */
-import { AnimationManager } from '#animation/AnimationManager';
-import { TweenManager } from '#animation/TweenManager';
+import { AnimationSystem } from '#animation/AnimationSystem';
+import { TweenSystem } from '#animation/TweenSystem';
 import { Loader } from '#assets/Loader';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import { Application } from '#core/Application';
 import { SceneDirector } from '#core/SceneDirector';
 import { ResponsiveCanvasSizing } from '#core/sizing/ResponsiveCanvasSizing';
 import type { System } from '#core/System';
 import { SystemRegistry } from '#core/SystemRegistry';
 import type { Extension } from '#extensions/Extension';
-import { InputManager } from '#input/InputManager';
-import { InteractionManager } from '#input/InteractionManager';
+import { InputSystem } from '#input/InputSystem';
+import { InteractionSystem } from '#input/InteractionSystem';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 import type { NetworkHint, PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
 import { RenderingContext } from '#rendering/RenderingContext';
@@ -160,19 +160,19 @@ describe('Application construction rollback', () => {
     recordDestroy(BrowserPlatform.prototype, 'platform');
     recordDestroy(Loader.prototype, 'loader');
     recordDestroy(RenderingContext.prototype, 'rendering');
-    recordDestroy(InputManager.prototype, 'input');
-    recordDestroy(InteractionManager.prototype, 'interaction');
+    recordDestroy(InputSystem.prototype, 'input');
+    recordDestroy(InteractionSystem.prototype, 'interaction');
     recordDestroy(SceneDirector.prototype, 'scenes');
     recordDestroy(SystemRegistry.prototype, 'systems');
-    recordDestroy(AnimationManager.prototype, 'animations');
-    recordDestroy(TweenManager.prototype, 'tweens');
-    recordDestroy(AudioManager.prototype, 'audio');
+    recordDestroy(AnimationSystem.prototype, 'animations');
+    recordDestroy(TweenSystem.prototype, 'tweens');
+    recordDestroy(AudioSystem.prototype, 'audio');
 
     expect(() => new Application({ backend: { type: 'webgl2' }, extensions: [throwingInstallExtension(new Error('boom'))] })).toThrow('boom');
 
     expect(destroyOrder).toEqual([
       // App-level registry first: extension systems are the last thing built
-      // and may read the core managers from their own destroy().
+      // and may read the core systems from their own destroy().
       'systems',
       'animations',
       'tweens',
@@ -192,8 +192,8 @@ describe('Application construction rollback', () => {
     recordDestroy(BrowserPlatform.prototype, 'platform');
     recordDestroy(Loader.prototype, 'loader');
     recordDestroy(RenderingContext.prototype, 'rendering');
-    recordDestroy(InputManager.prototype, 'input');
-    recordDestroy(InteractionManager.prototype, 'interaction');
+    recordDestroy(InputSystem.prototype, 'input');
+    recordDestroy(InteractionSystem.prototype, 'interaction');
     recordDestroy(SceneDirector.prototype, 'scenes');
 
     // `SystemRegistry.destroy()` has no per-item guard, so this throw escapes
@@ -309,8 +309,8 @@ describe('Application construction rollback', () => {
     recordDestroy(BrowserPlatform.prototype, 'platform');
     recordDestroy(Loader.prototype, 'loader');
     recordDestroy(RenderingContext.prototype, 'rendering');
-    recordDestroy(InputManager.prototype, 'input');
-    recordDestroy(InteractionManager.prototype, 'interaction');
+    recordDestroy(InputSystem.prototype, 'input');
+    recordDestroy(InteractionSystem.prototype, 'interaction');
     recordDestroy(SceneDirector.prototype, 'scenes');
     recordDestroy(SystemRegistry.prototype, 'systems');
 

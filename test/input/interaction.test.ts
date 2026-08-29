@@ -5,9 +5,9 @@ import { Signal } from '#core/Signal';
 import type { ContextMenuRequest } from '#input/ContextMenuRequest';
 import type { Gamepad } from '#input/Gamepad';
 import type { GamepadButton } from '#input/GamepadButton';
-import type { InputManager } from '#input/InputManager';
+import type { InputSystem } from '#input/InputSystem';
 import type { InteractionEvent } from '#input/InteractionEvent';
-import { InteractionManager } from '#input/InteractionManager';
+import { InteractionSystem } from '#input/InteractionSystem';
 import type { Pointer } from '#input/Pointer';
 import { Rectangle } from '#math/Rectangle';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
@@ -34,7 +34,7 @@ class TestSprite extends Drawable {
     this._width = width;
     this._height = height;
     // What a real node does whenever its geometry changes: cascade the bounds
-    // invalidation, so the interaction manager learns the node has to be
+    // invalidation, so the interaction system learns the node has to be
     // re-indexed - and that whatever sits under a resting pointer may have
     // changed with it.
     this._invalidateBoundsCascade();
@@ -137,7 +137,7 @@ const createApp = (): {
     onPointerCancel: new Signal<[Pointer, number, number]>(),
     onPointerLeave: new Signal<[Pointer, number, number]>(),
     onContextMenu: new Signal<[ContextMenuRequest]>(),
-    // InteractionManager owns the focus controller, which listens for keys.
+    // InteractionSystem owns the focus controller, which listens for keys.
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
     onAnyGamepadButtonDown: new Signal<[Gamepad, GamepadButton, number]>(),
@@ -154,7 +154,7 @@ const createApp = (): {
     platform: new BrowserPlatform(canvas),
     width: 800,
     height: 600,
-    input: signals as unknown as InputManager,
+    input: signals as unknown as InputSystem,
     focus: { focused: null, focus() {}, blur: vi.fn(), _notifyNodeRemoved() {} },
     // Default centered camera: design-space pointer coords pass through to
     // world space unchanged (identity screenToWorld). `screenView` uses the
@@ -196,7 +196,7 @@ const createAppNoScene = (
     onPointerCancel: new Signal<[Pointer, number, number]>(),
     onPointerLeave: new Signal<[Pointer, number, number]>(),
     onContextMenu: new Signal<[ContextMenuRequest]>(),
-    // InteractionManager owns the focus controller, which listens for keys.
+    // InteractionSystem owns the focus controller, which listens for keys.
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
     onAnyGamepadButtonDown: new Signal<[Gamepad, GamepadButton, number]>(),
@@ -210,7 +210,7 @@ const createAppNoScene = (
     platform: new BrowserPlatform(canvas),
     width: overrides.width ?? 800,
     height: overrides.height ?? 600,
-    input: signals as unknown as InputManager,
+    input: signals as unknown as InputSystem,
     focus: { focused: null, focus() {}, blur: vi.fn(), _notifyNodeRemoved() {} },
     rendering: {
       view: {
@@ -233,12 +233,12 @@ const createAppNoScene = (
 };
 
 /**
- * Flush all pending interaction events. Because InteractionManager is now
+ * Flush all pending interaction events. Because InteractionSystem is now
  * tick-based, signal handlers only enqueue events - call this after each
  * `signals.onPointerXxx.dispatch()` to actually run hit-testing and fire
  * node listeners.
  */
-const flushInteractions = (im: InteractionManager): void => {
+const flushInteractions = (im: InteractionSystem): void => {
   im.preUpdate(frameDelta);
 };
 
@@ -246,10 +246,10 @@ const flushInteractions = (im: InteractionManager): void => {
 // 1. Hit-test basics
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — hit-test basics', () => {
+describe('InteractionSystem — hit-test basics', () => {
   test('fires onPointerDown on interactive sprite when pointer is over it', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
@@ -271,7 +271,7 @@ describe('InteractionManager — hit-test basics', () => {
 
   test('does NOT fire onPointerDown when interactive=false', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
@@ -292,7 +292,7 @@ describe('InteractionManager — hit-test basics', () => {
 
   test('does NOT fire when pointer misses the sprite bounds', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
@@ -316,10 +316,10 @@ describe('InteractionManager — hit-test basics', () => {
 // 2. Z-order - top child wins
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — z-order', () => {
+describe('InteractionSystem — z-order', () => {
   test('top child (added last) receives hit over bottom child at same position', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const bottom = new TestSprite().setBounds(0, 0, 100, 100);
     const top = new TestSprite().setBounds(0, 0, 100, 100);
@@ -350,10 +350,10 @@ describe('InteractionManager — z-order', () => {
 // 3. Bubble - child + parent both interactive
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — bubbling', () => {
+describe('InteractionSystem — bubbling', () => {
   test('child and interactive parent both receive event; target=child for both', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const parent = new Container();
     const child = new TestSprite().setBounds(0, 0, 50, 50);
@@ -396,10 +396,10 @@ describe('InteractionManager — bubbling', () => {
 // 4. stopPropagation
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — stopPropagation', () => {
+describe('InteractionSystem — stopPropagation', () => {
   test('stopPropagation in child handler prevents parent from receiving event', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const parent = new Container();
     const child = new TestSprite().setBounds(0, 0, 50, 50);
@@ -429,10 +429,10 @@ describe('InteractionManager — stopPropagation', () => {
 // 5. Bubble stops at non-interactive parent
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — bubble passes through non-interactive ancestors', () => {
+describe('InteractionSystem — bubble passes through non-interactive ancestors', () => {
   test('event reaches grandparent through a non-interactive parent', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const grandparent = new Container();
     const parent = new Container();
@@ -466,7 +466,7 @@ describe('InteractionManager — bubble passes through non-interactive ancestors
 
   test('a listener on the non-interactive parent itself still receives the event', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const parent = new Container();
     const child = new TestSprite().setBounds(0, 0, 50, 50);
@@ -491,7 +491,7 @@ describe('InteractionManager — bubble passes through non-interactive ancestors
 
   test('stopPropagation on a non-interactive parent halts the walk', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const grandparent = new Container();
     const parent = new Container();
@@ -523,10 +523,10 @@ describe('InteractionManager — bubble passes through non-interactive ancestors
 // 6. pointerover / pointerout on move
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — pointerover / pointerout on move', () => {
+describe('InteractionSystem — pointerover / pointerout on move', () => {
   test('moving from sprite A to sprite B fires pointerout on A then pointerover on B', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const spriteA = new TestSprite().setBounds(0, 0, 50, 50);
     const spriteB = new TestSprite().setBounds(60, 0, 50, 50);
@@ -563,7 +563,7 @@ describe('InteractionManager — pointerover / pointerout on move', () => {
 
   test('moving off a hovered sprite to empty space fires pointerout only (no spurious pointerover)', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 50, 50);
 
@@ -594,7 +594,7 @@ describe('InteractionManager — pointerover / pointerout on move', () => {
 
   test('a pointerout handler that destroys the incoming node suppresses its pointerover without throwing', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const spriteA = new TestSprite().setBounds(0, 0, 50, 50);
     const spriteB = new TestSprite().setBounds(60, 0, 50, 50);
@@ -627,7 +627,7 @@ describe('InteractionManager — pointerover / pointerout on move', () => {
 
   test('a pointerover handler that destroys its own node leaves no stale hover entry behind', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 50, 50);
 
@@ -652,10 +652,10 @@ describe('InteractionManager — pointerover / pointerout on move', () => {
 // 6a. Hover follows the scene, not only the pointer
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — hover tracks scene changes under a stationary pointer', () => {
+describe('InteractionSystem — hover tracks scene changes under a stationary pointer', () => {
   test('a hovered node moving away from a resting pointer fires pointerout', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 50, 50);
 
@@ -683,7 +683,7 @@ describe('InteractionManager — hover tracks scene changes under a stationary p
 
   test('a node moving under a resting pointer fires pointerover', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(200, 200, 50, 50);
 
@@ -710,7 +710,7 @@ describe('InteractionManager — hover tracks scene changes under a stationary p
 
   test('a frame with neither pointer activity nor a scene change dispatches nothing', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 50, 50);
 
@@ -739,7 +739,7 @@ describe('InteractionManager — hover tracks scene changes under a stationary p
 
   test('a node moving under a dragging pointer does not steal hover from the dragged node', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const dragged = new TestSprite().setBounds(0, 0, 50, 50);
     const other = new TestSprite().setBounds(400, 400, 50, 50);
@@ -775,10 +775,10 @@ describe('InteractionManager — hover tracks scene changes under a stationary p
 // 6b. A hovered node that stops being hoverable
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — removing or disabling a hovered node balances enter/leave', () => {
+describe('InteractionSystem — removing or disabling a hovered node balances enter/leave', () => {
   test('removing a hovered node from the scene fires pointerout on it', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 50, 50);
 
@@ -805,7 +805,7 @@ describe('InteractionManager — removing or disabling a hovered node balances e
 
   test('destroying a hovered node clears the hover without dispatching on the dead node', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 50, 50);
 
@@ -834,7 +834,7 @@ describe('InteractionManager — removing or disabling a hovered node balances e
 
   test('removing a hovered node dispatches pointerout up its own subtree chain', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const group = new Container();
     const child = new TestSprite().setBounds(0, 0, 50, 50);
@@ -863,7 +863,7 @@ describe('InteractionManager — removing or disabling a hovered node balances e
 
   test('the node exposed by removing the one above it receives pointerover on the next flush', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const below = new TestSprite().setBounds(0, 0, 50, 50);
     const above = new TestSprite().setBounds(0, 0, 50, 50);
@@ -895,7 +895,7 @@ describe('InteractionManager — removing or disabling a hovered node balances e
 
   test('turning a hovered node non-interactive fires pointerout on it', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 50, 50);
 
@@ -921,7 +921,7 @@ describe('InteractionManager — removing or disabling a hovered node balances e
 
   test('a pooled node recycled under a resting pointer balances every enter against a leave', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 50, 50);
 
@@ -958,10 +958,10 @@ describe('InteractionManager — removing or disabling a hovered node balances e
 // 6b. Phase-consistent coordinates
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — phase-consistent event coordinates', () => {
+describe('InteractionSystem — phase-consistent event coordinates', () => {
   test('event.x/y are the phase-specific layer-space coordinates; event.pointer.x/y always read the live position', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 200, 200);
 
@@ -1002,10 +1002,10 @@ describe('InteractionManager — phase-consistent event coordinates', () => {
 // 7. Multi-pointer independence
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — multi-pointer', () => {
+describe('InteractionSystem — multi-pointer', () => {
   test('two pointers track separate lastHit independently', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const spriteA = new TestSprite().setBounds(0, 0, 50, 50);
     const spriteB = new TestSprite().setBounds(60, 0, 50, 50);
@@ -1045,10 +1045,10 @@ describe('InteractionManager — multi-pointer', () => {
 // 8. Cursor
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — cursor', () => {
+describe('InteractionSystem — cursor', () => {
   test('canvas cursor becomes pointer when sprite.cursor="pointer" is hovered', () => {
     const { app, scene, signals, canvas } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
@@ -1067,7 +1067,7 @@ describe('InteractionManager — cursor', () => {
 
   test('canvas cursor reverts to empty string when pointer leaves', () => {
     const { app, scene, signals, canvas } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
@@ -1092,10 +1092,10 @@ describe('InteractionManager — cursor', () => {
 // 9. Tap
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — tap', () => {
+describe('InteractionSystem — tap', () => {
   test('onPointerTap signal fires on hit node when input.onPointerTap dispatches', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
@@ -1108,7 +1108,7 @@ describe('InteractionManager — tap', () => {
     // A tap only fires when this release resolves to the same node its own
     // cycle's press landed on - see `_pressTargets`' doc comment - so a
     // preceding press is required now, not just the release/tap signal. The
-    // real `InputManager` always dispatches `onPointerUp` immediately before
+    // real `InputSystem` always dispatches `onPointerUp` immediately before
     // a conditional `onPointerTap` for the SAME occurrence (see
     // `InteractionJournalEntry.tap`'s doc comment) - `onPointerTap` folds its
     // classification onto that Up entry rather than standing alone.
@@ -1128,10 +1128,10 @@ describe('InteractionManager — tap', () => {
   });
 });
 
-describe('InteractionManager — tap target semantics', () => {
+describe('InteractionSystem — tap target semantics', () => {
   test('a release that resolves to a different node than the press does not fire a tap on either', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const left = new TestSprite().setBounds(0, 0, 50, 50);
     const right = new TestSprite().setBounds(50, 0, 50, 50);
@@ -1165,7 +1165,7 @@ describe('InteractionManager — tap target semantics', () => {
 
   test('a press target destroyed between press and release suppresses the tap without throwing', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
@@ -1197,7 +1197,7 @@ describe('InteractionManager — tap target semantics', () => {
 
   test('preventDefault() on pointerdown suppresses automatic drag-candidate creation without stopping propagation', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const parent = new Container();
     const child = new TestSprite().setBounds(0, 0, 100, 100);
@@ -1234,10 +1234,10 @@ describe('InteractionManager — tap target semantics', () => {
 // 10. Destroy cleanup
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — destroy cleanup', () => {
+describe('InteractionSystem — destroy cleanup', () => {
   test('no events fire after interaction.destroy()', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
@@ -1262,10 +1262,10 @@ describe('InteractionManager — destroy cleanup', () => {
 // 11. Drag and drop
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — drag and drop', () => {
+describe('InteractionSystem — drag and drop', () => {
   /**
    * jsdom does not implement setPointerCapture / releasePointerCapture on
-   * canvas elements. Stub them out before spying so the InteractionManager's
+   * canvas elements. Stub them out before spying so the InteractionSystem's
    * best-effort calls don't throw.
    */
   const mockPointerCapture = (canvas: HTMLCanvasElement): void => {
@@ -1300,7 +1300,7 @@ describe('InteractionManager — drag and drop', () => {
   test('dragstart waits for the threshold; pointermove drags; dragend fires on pointerup', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
@@ -1344,7 +1344,7 @@ describe('InteractionManager — drag and drop', () => {
   test('drag offset is preserved — node stays at grab-point relative distance', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
 
     // Sprite positioned at (50, 50) in scene space.
@@ -1374,7 +1374,7 @@ describe('InteractionManager — drag and drop', () => {
   test('drag bypasses hit-test — moving pointer over another sprite does not fire pointerover on it', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const dragged = new TestSprite().setBounds(0, 0, 100, 100);
     const other = new TestSprite().setBounds(200, 0, 100, 100);
@@ -1407,7 +1407,7 @@ describe('InteractionManager — drag and drop', () => {
   test('drag does NOT start if draggable=false', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
@@ -1431,7 +1431,7 @@ describe('InteractionManager — drag and drop', () => {
   test('drag does NOT start if interactive=false (no pointerdown lands)', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
@@ -1458,7 +1458,7 @@ describe('InteractionManager — drag and drop', () => {
   test('pointercancel during drag fires onDragEnd and clears drag state', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
@@ -1496,7 +1496,7 @@ describe('InteractionManager — drag and drop', () => {
   test('onDrag fires on every pointermove during drag with dragged node as currentTarget', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
@@ -1514,7 +1514,7 @@ describe('InteractionManager — drag and drop', () => {
     flushInteractions(im);
 
     // 40 design pixels from the press position - comfortably past the
-    // default 8px drag threshold, which InteractionManager now measures as
+    // default 8px drag threshold, which InteractionSystem now measures as
     // real geometric distance from its own recorded press position rather
     // than trusting a declared `travelled` value decoupled from x/y.
     dispatchPointer(signals.onPointerMove, { x: 90, y: 50 });
@@ -1534,7 +1534,7 @@ describe('InteractionManager — drag and drop', () => {
   test('drag events do not bubble — interactive parent does not receive them', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const parent = new Container();
     const child = new TestSprite().setBounds(0, 0, 50, 50);
@@ -1573,7 +1573,7 @@ describe('InteractionManager — drag and drop', () => {
   test('multiple draggable nodes — dragging one does not capture events for others', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const spriteA = new TestSprite().setBounds(0, 0, 50, 50);
     const spriteB = new TestSprite().setBounds(60, 0, 50, 50);
@@ -1617,7 +1617,7 @@ describe('InteractionManager — drag and drop', () => {
   test('a first drag cycle followed by a new press in the same flush starts a fresh, independent second cycle', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -1656,12 +1656,12 @@ describe('InteractionManager — drag and drop', () => {
   });
 });
 
-describe('InteractionManager — multi-Application isolation', () => {
-  test('two Applications route picking independently (no global active-manager)', () => {
+describe('InteractionSystem — multi-Application isolation', () => {
+  test('two Applications route picking independently (no global active-system)', () => {
     const a = createApp();
     const b = createApp();
-    const imA = new InteractionManager(a.app);
-    const imB = new InteractionManager(b.app);
+    const imA = new InteractionSystem(a.app);
+    const imB = new InteractionSystem(b.app);
     imA.attachRoot(a.scene.root);
     imB.attachRoot(b.scene.root);
 
@@ -1673,7 +1673,7 @@ describe('InteractionManager — multi-Application isolation', () => {
     sprite.onPointerDown.add(down);
 
     // App B's pointer must NOT reach app A's node. Under the old global
-    // singleton the node registered with whichever manager was constructed
+    // singleton the node registered with whichever system was constructed
     // last, breaking exactly this case.
     dispatchPointer(b.signals.onPointerDown, { x: 25, y: 25 });
     imB.preUpdate(frameDelta);
@@ -1694,10 +1694,10 @@ describe('InteractionManager — multi-Application isolation', () => {
 // Modal input capture
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — interaction scope', () => {
+describe('InteractionSystem — interaction scope', () => {
   test('confines hit-testing to the scoped subtree; outside pointers hit nothing', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
 
     const modal = new Container();
@@ -1736,7 +1736,7 @@ describe('InteractionManager — interaction scope', () => {
 
   test('popScope restores hit-testing outside the previous subtree', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
 
     const modal = new Container();
@@ -1769,7 +1769,7 @@ describe('InteractionManager — interaction scope', () => {
 
   test('a scope root removed via removeChild without popping the scope is skipped: hit-testing falls through to the real scene graph instead of staying confined to the detached subtree', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
 
     const modal = new Container();
@@ -1806,13 +1806,13 @@ describe('InteractionManager — interaction scope', () => {
   test("a scope root belonging to a different Application is skipped: hit-testing falls through to this Application's own real scene graph", () => {
     const a = createApp();
     const b = createApp();
-    const imA = new InteractionManager(a.app);
-    const imB = new InteractionManager(b.app);
+    const imA = new InteractionSystem(a.app);
+    const imB = new InteractionSystem(b.app);
 
     imA.attachRoot(a.scene.root);
     imB.attachRoot(b.scene.root);
 
-    // A caller mistake: app A's manager is scoped to a root that only ever
+    // A caller mistake: app A's system is scoped to a root that only ever
     // had a stage installed by app B.
     imA.pushScope(b.scene.root);
 
@@ -1826,7 +1826,7 @@ describe('InteractionManager — interaction scope', () => {
     sprite.onPointerDown.add(down);
 
     // The cross-Application scope root is dead from app A's perspective, so
-    // it neither hit-tests app B's subtree through app A's manager nor blocks
+    // it neither hit-tests app B's subtree through app A's system nor blocks
     // app A's own real scene graph.
     dispatchPointer(a.signals.onPointerDown, { x: 25, y: 25 });
     flushInteractions(imA);
@@ -1843,10 +1843,10 @@ describe('InteractionManager — interaction scope', () => {
 // getHoveredNode
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — getHoveredNode', () => {
+describe('InteractionSystem — getHoveredNode', () => {
   test('returns null for a pointerId that has no recorded hit', () => {
     const { app, scene } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -1857,7 +1857,7 @@ describe('InteractionManager — getHoveredNode', () => {
 
   test('returns the hovered node for a given pointerId', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -1877,7 +1877,7 @@ describe('InteractionManager — getHoveredNode', () => {
 
   test('returns null when no pointerId is given and nothing is hovered', () => {
     const { app, scene } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -1888,7 +1888,7 @@ describe('InteractionManager — getHoveredNode', () => {
 
   test('returns the first hovered node in iteration order when no pointerId is given', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -1911,10 +1911,10 @@ describe('InteractionManager — getHoveredNode', () => {
 // getCapturedNodes
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — getCapturedNodes', () => {
+describe('InteractionSystem — getCapturedNodes', () => {
   test('returns an empty array when nothing is captured', () => {
     const { app, scene } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -1929,7 +1929,7 @@ describe('InteractionManager — getCapturedNodes', () => {
     Object.defineProperty(canvas, 'setPointerCapture', { value: () => undefined, writable: true, configurable: true });
     Object.defineProperty(canvas, 'releasePointerCapture', { value: () => undefined, writable: true, configurable: true });
 
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -1959,10 +1959,10 @@ describe('InteractionManager — getCapturedNodes', () => {
 // detachRoot
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — detachRoot', () => {
+describe('InteractionSystem — detachRoot', () => {
   test('blurs focus, clears the scope stack, unregisters interactive nodes, and clears the subtree stage', () => {
     const { app, scene } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -2001,10 +2001,10 @@ describe('InteractionManager — detachRoot', () => {
 // UI layer (attachUIRoot / detachUIRoot)
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — UI layer', () => {
+describe('InteractionSystem — UI layer', () => {
   test('a UI node is hit-tested in screen space and takes priority over a world node at the same position', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
     im.attachUIRoot(scene.ui);
@@ -2038,7 +2038,7 @@ describe('InteractionManager — UI layer', () => {
 
   test('a click that misses every UI node falls through to world hit-testing', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
     im.attachUIRoot(scene.ui);
@@ -2070,7 +2070,7 @@ describe('InteractionManager — UI layer', () => {
 
   test('attachUIRoot installs the UI stage; detachUIRoot clears it', () => {
     const { app, scene } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
     im.attachUIRoot(scene.ui);
@@ -2090,7 +2090,7 @@ describe('InteractionManager — UI layer', () => {
     Object.defineProperty(canvas, 'setPointerCapture', { value: () => undefined, writable: true, configurable: true });
     Object.defineProperty(canvas, 'releasePointerCapture', { value: () => undefined, writable: true, configurable: true });
 
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
     im.attachUIRoot(scene.ui);
@@ -2123,7 +2123,7 @@ describe('InteractionManager — UI layer', () => {
     Object.defineProperty(canvas, 'setPointerCapture', { value: () => undefined, writable: true, configurable: true });
     Object.defineProperty(canvas, 'releasePointerCapture', { value: () => undefined, writable: true, configurable: true });
 
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
     im.attachUIRoot(scene.ui); // a UI root exists, but the dragged node lives in the world
@@ -2156,7 +2156,7 @@ describe('InteractionManager — UI layer', () => {
 
   test('UI hooks route _notifyNodeRemoved and _notifyInteractiveChanged for already-attached UI nodes', () => {
     const { app, scene } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
     im.attachUIRoot(scene.ui);
@@ -2185,10 +2185,10 @@ describe('InteractionManager — UI layer', () => {
 // No active scene
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — no active scene', () => {
+describe('InteractionSystem — no active scene', () => {
   test('pointer events are safely ignored when there is no current scene', () => {
     const { app, signals } = createAppNoScene();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     expect(() => {
       dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
@@ -2202,7 +2202,7 @@ describe('InteractionManager — no active scene', () => {
 
   test('creating the quadtree with no current scene root falls back to the seed bounds, and to the default width/height when app.width/height are falsy', () => {
     const { app } = createAppNoScene({ width: 0, height: 0 });
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     // A freestanding container (not the scene's root - there is no scene) can
     // still be attached directly; registering its interactive child forces
@@ -2225,10 +2225,10 @@ describe('InteractionManager — no active scene', () => {
 // Invisible nodes are skipped by hit-testing
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — invisible nodes', () => {
+describe('InteractionSystem — invisible nodes', () => {
   test('an invisible interactive node inside a scoped subtree is skipped by hit-testing', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -2260,10 +2260,10 @@ describe('InteractionManager — invisible nodes', () => {
 // Render-correct picking: hard clips bound descendant hits
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — clip-aware hit-testing', () => {
+describe('InteractionSystem — clip-aware hit-testing', () => {
   test('a Rectangle clipShape bounds descendant hits in the indexed (world) hit-test path', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
 
     const clipper = new TestClipContainer();
@@ -2293,7 +2293,7 @@ describe('InteractionManager — clip-aware hit-testing', () => {
 
   test("a null clipShape falls back to the clip node's own world bounds in the indexed path", () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
 
     const clipper = new TestClipContainer().setClipBounds(0, 0, 50, 50);
@@ -2323,7 +2323,7 @@ describe('InteractionManager — clip-aware hit-testing', () => {
 
   test('a Rectangle clipShape bounds descendant hits in the scoped/recursive hit-test path', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
 
     const clipper = new TestClipContainer();
@@ -2354,7 +2354,7 @@ describe('InteractionManager — clip-aware hit-testing', () => {
 
   test('clip bounds only descendants — a clipped node is still hit through its own (unclipped) contains() check', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
 
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
@@ -2378,7 +2378,7 @@ describe('InteractionManager — clip-aware hit-testing', () => {
 
   test('a Geometry clipShape does not bound descendant hits — documented non-pixel-hit-test contract', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
 
     const clipper = new TestClipContainer().setClipBounds(0, 0, 10, 10);
@@ -2410,10 +2410,10 @@ describe('InteractionManager — clip-aware hit-testing', () => {
 // Coalesced events (two events for one pointer enqueued before update())
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — coalesced events', () => {
+describe('InteractionSystem — coalesced events', () => {
   test('two events enqueued for the same pointer before update() are both processed on the next flush', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -2442,7 +2442,7 @@ describe('InteractionManager — coalesced events', () => {
 
   test('each coalesced phase hit-tests against the node it actually happened over, not a shared position', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -2464,7 +2464,7 @@ describe('InteractionManager — coalesced events', () => {
 
     // A mock pointer carries only ONE (x, y) - makePointer's `x`/`y` become
     // whatever pointer.x/y read AT dispatch time, which is exactly what
-    // InteractionManager._enqueue captures per phase. Down and Up share the
+    // InteractionSystem._enqueue captures per phase. Down and Up share the
     // same stub position (25, 25) - still over `left` - while Move alone
     // reports (225, 25), over `right`; all three collapse into one flush.
     dispatchPointer(signals.onPointerDown, { id: 9, x: 25, y: 25 });
@@ -2482,10 +2482,10 @@ describe('InteractionManager — coalesced events', () => {
   });
 });
 
-describe('InteractionManager — ordered phase processing', () => {
+describe('InteractionSystem — ordered phase processing', () => {
   test('an Up dispatched before a Down in one flush fires in that true order, not always Down-before-Up', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -2499,7 +2499,7 @@ describe('InteractionManager — ordered phase processing', () => {
     sprite.onPointerUp.add(() => order.push('up'));
     sprite.onPointerDown.add(() => order.push('down'));
 
-    // Signal dispatch order is the source of truth InteractionManager must
+    // Signal dispatch order is the source of truth InteractionSystem must
     // preserve end-to-end - an aggregated bitmask cannot represent this at
     // all, since it always processed Down before Up regardless.
     dispatchPointer(signals.onPointerUp, { x: 50, y: 50 });
@@ -2514,7 +2514,7 @@ describe('InteractionManager — ordered phase processing', () => {
 
   test('Down→Up→Down in one flush fires all three in that order, not collapsed to one Down', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -2541,7 +2541,7 @@ describe('InteractionManager — ordered phase processing', () => {
 
   test('two full press/release cycles in one flush stay two cycles, not one aggregated pair', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -2571,7 +2571,7 @@ describe('InteractionManager — ordered phase processing', () => {
 
   test('a context-menu request between two pointer phases keeps its position relative to them', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -2604,10 +2604,10 @@ describe('InteractionManager — ordered phase processing', () => {
 // Hit-miss edge cases (event fires with no node under the pointer)
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — events with no hit', () => {
+describe('InteractionSystem — events with no hit', () => {
   test('pointermove over empty space dispatches nothing and does not throw', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -2632,7 +2632,7 @@ describe('InteractionManager — events with no hit', () => {
 
   test('pointerup on a non-draggable node fires pointerup with no drag involved', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -2656,7 +2656,7 @@ describe('InteractionManager — events with no hit', () => {
 
   test('pointerup over empty space dispatches nothing and does not throw', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -2670,7 +2670,7 @@ describe('InteractionManager — events with no hit', () => {
 
   test('pointertap over empty space dispatches nothing and does not throw', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -2684,7 +2684,7 @@ describe('InteractionManager — events with no hit', () => {
 
   test('pointercancel/pointerleave with no prior hover and no active drag does not throw', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -2703,10 +2703,10 @@ describe('InteractionManager — events with no hit', () => {
 // Registration-guard idempotency
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — registration guards', () => {
+describe('InteractionSystem — registration guards', () => {
   test('calling attachRoot twice on the same root does not double-register interactive nodes', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -2734,7 +2734,7 @@ describe('InteractionManager — registration guards', () => {
 
   test('_notifyInteractiveChanged(node, false) for an unregistered node is a safe no-op', () => {
     const { app, scene } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -2756,7 +2756,7 @@ describe('InteractionManager — registration guards', () => {
 
   test('toggling .interactive AFTER a node is already attached routes through the setter (not addChild)', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -2787,10 +2787,10 @@ describe('InteractionManager — registration guards', () => {
 // Miscellaneous
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — miscellaneous', () => {
+describe('InteractionSystem — miscellaneous', () => {
   test('update() with nothing enqueued is a no-op (dirty flag stays false)', () => {
     const { app, scene } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -2801,7 +2801,7 @@ describe('InteractionManager — miscellaneous', () => {
 
   test('unregistering one of two interactive nodes keeps the quadtree alive for the other', () => {
     const { app, scene } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -2833,13 +2833,13 @@ describe('InteractionManager — miscellaneous', () => {
 // Dispatch gating (SceneState + transition gate)
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — dispatch gating', () => {
+describe('InteractionSystem — dispatch gating', () => {
   test('does not dispatch while state is Preparing (no active scope yet)', () => {
     const { app, scene, signals } = createApp();
     const appMutable = app as unknown as { scenes: { state: SceneState | null } };
     appMutable.scenes.state = SceneState.Preparing;
 
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
@@ -2860,7 +2860,7 @@ describe('InteractionManager — dispatch gating', () => {
 
   test('dispatches normally while state is Active', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
@@ -2884,7 +2884,7 @@ describe('InteractionManager — dispatch gating', () => {
     const appMutable = app as unknown as { scenes: { state: SceneState | null } };
     appMutable.scenes.state = SceneState.Active;
 
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
@@ -2908,7 +2908,7 @@ describe('InteractionManager — dispatch gating', () => {
     const appMutable = app as unknown as { scenes: { _transitionGateOpen: boolean } };
     appMutable.scenes._transitionGateOpen = true;
 
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     im.attachRoot(scene.root);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
@@ -2933,7 +2933,7 @@ describe('InteractionManager — dispatch gating', () => {
 
   test('pointer events are safely ignored when there is no current scene (state null)', () => {
     const { app, signals } = createAppNoScene();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     expect(() => {
       dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });

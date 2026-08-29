@@ -1,5 +1,5 @@
 import { getAudioContext } from '#audio/audio-context';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import { NoopVoice } from '#audio/NoopVoice';
 import { Sound } from '#audio/Sound';
 import { LoadState } from '#core/LoadState';
@@ -69,10 +69,10 @@ describe('Sound.play before load', () => {
       if (e.severity === LogSeverity.Warning) warnings.push(e.message);
     });
     try {
-      const manager = new AudioManager();
+      const system = new AudioSystem();
       const sound = new Sound(null);
       sound._loadState.begin(); // -> 'loading'
-      const voice = sound._createVoice(manager, {});
+      const voice = sound._createVoice(system, {});
       expect(voice).toBeInstanceOf(NoopVoice);
       expect(warnings.some(m => /not yet loaded/i.test(m))).toBe(true);
     } finally {
@@ -86,10 +86,10 @@ describe('Sound.play before load', () => {
       if (e.severity === LogSeverity.Warning) warnings.push(e.message);
     });
     try {
-      const manager = new AudioManager();
+      const system = new AudioSystem();
       const sound = new Sound(null);
       sound._loadState.fail(new Error('boom'));
-      const voice = sound._createVoice(manager, {});
+      const voice = sound._createVoice(system, {});
       expect(voice).toBeInstanceOf(NoopVoice);
       expect(warnings.some(m => /failed to load/i.test(m))).toBe(true);
     } finally {
@@ -98,7 +98,7 @@ describe('Sound.play before load', () => {
   });
 
   test('a sprite replayed after eviction returns NoopVoice, not a throw', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(bufferStub(4));
     sound.defineSprite('hit', { start: 0, end: 1 }); // defined while loaded
     sound._evictBuffer();
@@ -106,7 +106,7 @@ describe('Sound.play before load', () => {
 
     let voice: unknown;
     expect(() => {
-      voice = manager.play(sound.sprite('hit'), {});
+      voice = system.play(sound.sprite('hit'), {});
     }).not.toThrow();
     expect(voice).toBeInstanceOf(NoopVoice);
   });

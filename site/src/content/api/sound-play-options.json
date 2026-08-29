@@ -1,6 +1,6 @@
 {
   "title": "SoundPlayOptions",
-  "description": "Per-call overrides for AudioManager.play.",
+  "description": "Per-call overrides for AudioSystem.play.",
   "symbol": "SoundPlayOptions",
   "kind": "interface",
   "subsystem": "audio",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Per-call overrides for AudioManager.play."
+        "Per-call overrides for AudioSystem.play."
       ],
       "importLine": "import { SoundPlayOptions } from '@codexo/exojs'",
       "sourceLink": null

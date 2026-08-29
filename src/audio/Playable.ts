@@ -4,13 +4,13 @@ import type { Vector } from '#math/Vector';
 
 import type { AudioBus } from './AudioBus';
 import type { AudioEffect } from './AudioEffect';
-import type { AudioManager } from './AudioManager';
 import type { AudioSend } from './AudioSend';
+import type { AudioSystem } from './AudioSystem';
 
 /**
  * A live playback instance in the audio graph with a control surface.
  *
- * A Voice is created by playing a {@link Playable} via {@link AudioManager.play}
+ * A Voice is created by playing a {@link Playable} via {@link AudioSystem.play}
  * (and, later, by opening an `AudioInput`). Each `play()` returns an independent
  * Voice, so overlapping concurrent playback of the same asset is just multiple
  * Voices.
@@ -239,7 +239,7 @@ export interface Spatializable {
 }
 
 /**
- * Per-play overrides passed to {@link AudioManager.play}.
+ * Per-play overrides passed to {@link AudioSystem.play}.
  */
 export interface PlayOptions {
   /** Route this play through a specific {@link AudioBus}. */
@@ -290,27 +290,27 @@ export interface PlayOptions {
 
 /**
  * Implemented by audio assets ({@link Sound}, {@link AudioStream},
- * {@link AudioGenerator}) to support manager-driven playback via
- * {@link AudioManager.play}.
+ * {@link AudioGenerator}) to support system-driven playback via
+ * {@link AudioSystem.play}.
  *
  * Assets are **data descriptors** - they hold the audio data and default
  * playback parameters. The playback machinery lives in the {@link Voice}
- * returned by `_createVoice`; the manager is injected at play time, so assets
+ * returned by `_createVoice`; the system is injected at play time, so assets
  * never reach for a global.
  *
  * `_createVoice` is a low-level hook meant for asset implementations;
- * consumers should call `audioManager.play(asset)` instead of invoking it
+ * consumers should call `audioSystem.play(asset)` instead of invoking it
  * directly.
  * @advanced
  */
 export interface Playable {
   /**
    * Create and start a new playback instance. Called by
-   * {@link AudioManager.play}; do not call directly.
+   * {@link AudioSystem.play}; do not call directly.
    *
-   * @param manager - The owning {@link AudioManager} (provides bus hierarchy).
+   * @param system - The owning {@link AudioSystem} (provides bus hierarchy).
    * @param options - Per-play overrides.
    * @returns A {@link Voice} handle for the new instance.
    */
-  _createVoice(manager: AudioManager, options: PlayOptions): Voice;
+  _createVoice(system: AudioSystem, options: PlayOptions): Voice;
 }

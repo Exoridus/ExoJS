@@ -146,7 +146,7 @@ describe('deriveVelocity', () => {
 
     // A second tick at the exact same position AND the exact same
     // AudioContext.currentTime (e.g. an explicit `voice.position = ...` write
-    // immediately followed by the manager's per-frame tick, both landing in
+    // immediately followed by the system's per-frame tick, both landing in
     // the same render quantum) must not stomp the velocity just derived.
     deriveVelocity(sample, 100, 0, 1);
     expect(sample.x).toBe(100);

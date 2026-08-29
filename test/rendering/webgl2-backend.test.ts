@@ -149,8 +149,8 @@ describe('Application.setCursor', () => {
     vi.doMock('#rendering/coreRendererBindings', () => ({
       buildCoreRendererBindings: vi.fn().mockReturnValue([]),
     }));
-    vi.doMock('#input/InputManager', () => ({
-      InputManager: vi.fn(function () {
+    vi.doMock('#input/InputSystem', () => ({
+      InputSystem: vi.fn(function () {
         return {
           update: vi.fn(),
           destroy: vi.fn(),
@@ -173,8 +173,8 @@ describe('Application.setCursor', () => {
         };
       }),
     }));
-    vi.doMock('#input/InteractionManager', () => ({
-      InteractionManager: vi.fn(function () {
+    vi.doMock('#input/InteractionSystem', () => ({
+      InteractionSystem: vi.fn(function () {
         return { update: vi.fn(), destroy: vi.fn() };
       }),
     }));

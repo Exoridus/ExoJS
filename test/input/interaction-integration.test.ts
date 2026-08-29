@@ -1,18 +1,18 @@
 /**
- * End-to-end InputManager + InteractionManager integration tests: real
- * PointerEvents dispatched on a real canvas, through a real InputManager,
- * into a real InteractionManager - no mocked signals. Covers the phase-level
+ * End-to-end InputSystem + InteractionSystem integration tests: real
+ * PointerEvents dispatched on a real canvas, through a real InputSystem,
+ * into a real InteractionSystem - no mocked signals. Covers the phase-level
  * defects the mocked-signal test suites (interaction.test.ts, dragging.test.ts)
  * cannot exercise, because those construct a bare Pointer stub with a single
- * (x, y) rather than letting a real Pointer/InputManager produce the distinct
+ * (x, y) rather than letting a real Pointer/InputSystem produce the distinct
  * press/move/release/context-menu coordinates a real frame collapses.
  */
 
 import type { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
 import { SceneState } from '#core/SceneState';
-import { InputManager } from '#input/InputManager';
-import { InteractionManager } from '#input/InteractionManager';
+import { InputSystem } from '#input/InputSystem';
+import { InteractionSystem } from '#input/InteractionSystem';
 import { Rectangle } from '#math/Rectangle';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Container } from '#rendering/Container';
@@ -56,13 +56,13 @@ interface Harness {
   app: Application;
   scene: Scene;
   canvas: HTMLCanvasElement;
-  input: InputManager;
-  im: InteractionManager;
+  input: InputSystem;
+  im: InteractionSystem;
   fire: (type: string, init: PointerEventInit) => void;
 }
 
 /**
- * A full real InputManager + InteractionManager pair sharing one canvas -
+ * A full real InputSystem + InteractionSystem pair sharing one canvas -
  * dispatching a genuine platform PointerEvent and calling `flush()` runs the
  * exact pipeline a live Application does (input.preUpdate() then
  * interaction.preUpdate()).
@@ -110,11 +110,11 @@ const createHarness = (dragThreshold?: number): Harness => {
     _backingStoreToLogical: (x: number, y: number): { x: number; y: number } => ({ x, y }),
   } as unknown as Application;
 
-  const input = new InputManager(app);
+  const input = new InputSystem(app);
 
-  (app as unknown as { input: InputManager }).input = input;
+  (app as unknown as { input: InputSystem }).input = input;
 
-  const im = new InteractionManager(app);
+  const im = new InteractionSystem(app);
 
   im.attachRoot(scene.root);
 
@@ -158,7 +158,7 @@ describe('phase-correct hit-testing within one frame flush', () => {
     flush(h);
 
     // Down over `left`, a fast move sweeps over `right`, release back over `left`
-    // - all collapsed into one frame, before either manager ever flushes.
+    // - all collapsed into one frame, before either system ever flushes.
     h.fire('pointerdown', { clientX: 10, clientY: 10, buttons: 1 });
     h.fire('pointermove', { clientX: 210, clientY: 10, buttons: 1 });
     h.fire('pointerup', { clientX: 10, clientY: 10, buttons: 0 });
@@ -337,7 +337,7 @@ describe('no orphaned drag candidate', () => {
 
     h.scene.addChild(a);
 
-    // pointerover alone only registers the pointer with InputManager - hover
+    // pointerover alone only registers the pointer with InputSystem - hover
     // tracking (_lastHit) is driven by an actual dispatched phase, same as a
     // real cursor settling with an immediate pointermove after entering.
     h.fire('pointerover', { clientX: 10, clientY: 10 });

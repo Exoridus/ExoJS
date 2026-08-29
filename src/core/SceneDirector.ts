@@ -175,7 +175,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * `Promise.resolve()` when it has no outgoing scope of its own), which
    * would leave {@link SceneDirector._dispose} - and therefore
    * `Application.destroy()` - no longer waiting for a `Scene.unload()` that
-   * is still running against the very managers it is about to destroy.
+   * is still running against the very systems it is about to destroy.
    * Folding into the single handle instead would fix that at the cost of
    * making an ordinary `change()` wait on an unrelated, possibly
    * never-settling teardown, so the two are tracked apart.
@@ -247,7 +247,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * @internal `true` while a {@link SceneTransitionSession} is in flight -
-   * used by {@link SceneInputs} (`when` policy) and {@link InteractionManager}
+   * used by {@link SceneInputs} (`when` policy) and {@link InteractionSystem}
    * to suppress scene input/interaction dispatch for the transition's
    * duration, regardless of `when: 'always'`. A
    * `change()` call with no `transition` option never opens this gate.
@@ -554,10 +554,10 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    *
    * The disposal is registered in `_pendingTeardowns`, so
    * {@link SceneDirector._dispose} waits for it before letting any other
-   * manager be torn down. Callers of this operation are typically
+   * system be torn down. Callers of this operation are typically
    * fire-and-forget ({@link Application.stop} does not await it), so without
    * that registration a `destroy()` following close behind a `stop()` would
-   * start destroying the loader, rendering context, audio manager and backend
+   * start destroying the loader, rendering context, audio system and backend
    * while the scene's own async `unload()` was still running against them.
    *
    * No-op on the scene side when no scene is active. Failure semantics stay

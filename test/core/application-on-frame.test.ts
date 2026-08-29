@@ -81,8 +81,8 @@ const loadOnFrameHarness = async (): Promise<OnFrameTestHarness> => {
     buildCoreRendererBindings: vi.fn().mockReturnValue([]),
   }));
   const onCanvasFocusChange = { add: vi.fn(), remove: vi.fn(), dispatch: vi.fn(), destroy: vi.fn() };
-  vi.doMock('#input/InputManager', () => ({
-    InputManager: vi.fn(function () {
+  vi.doMock('#input/InputSystem', () => ({
+    InputSystem: vi.fn(function () {
       return { update: vi.fn(), destroy: vi.fn(), onKeyDown, onCanvasFocusChange };
     }),
   }));
@@ -102,8 +102,8 @@ const loadOnFrameHarness = async (): Promise<OnFrameTestHarness> => {
       };
     }),
   }));
-  vi.doMock('#input/InteractionManager', () => ({
-    InteractionManager: vi.fn(function () {
+  vi.doMock('#input/InteractionSystem', () => ({
+    InteractionSystem: vi.fn(function () {
       return {
         update: vi.fn(),
         destroy: vi.fn(),

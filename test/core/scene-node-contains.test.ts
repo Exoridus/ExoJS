@@ -4,7 +4,7 @@ import { SceneNode } from '#core/SceneNode';
 //
 // Before this fix contains() tested the axis-aligned bounding box even for
 // rotated/skewed nodes, so a rotated sprite reported pointer hits in the empty
-// corners of its AABB. Because the InteractionManager's narrow phase is
+// corners of its AABB. Because the InteractionSystem's narrow phase is
 // node.contains (broad phase stays AABB via the quadtree), this over-reported
 // picks on rotated nodes. contains() now maps the point into local space with
 // the inverse of the global transform and tests the untransformed local bounds

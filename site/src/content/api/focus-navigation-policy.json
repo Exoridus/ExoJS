@@ -1,6 +1,6 @@
 {
   "title": "FocusNavigationPolicy",
-  "description": "Which nodes the arrow keys and the D-pad may move focus to - see InteractionManager.focusNavigation. - `'ui'` restricts navigation to the scene's UI layer, so the arrow keys stay available to the game itself. - `'always'` navigates both layers, exactly the set Tab traverses. - `'never'` turns directional navigation off, including InteractionManager.focusInDirection. An active interaction scope replaces the candidate set with its own subtree whichever layer it lives in - a modal is navigable regardless of the policy, which only ever decides what an UNSCOPED navigation may reach.",
+  "description": "Which nodes the arrow keys and the D-pad may move focus to - see InteractionSystem.focusNavigation. - `'ui'` restricts navigation to the scene's UI layer, so the arrow keys stay available to the game itself. - `'always'` navigates both layers, exactly the set Tab traverses. - `'never'` turns directional navigation off, including InteractionSystem.focusInDirection. An active interaction scope replaces the candidate set with its own subtree whichever layer it lives in - a modal is navigable regardless of the policy, which only ever decides what an UNSCOPED navigation may reach.",
   "symbol": "FocusNavigationPolicy",
   "kind": "type",
   "subsystem": "input",
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Which nodes the arrow keys and the D-pad may move focus to - see InteractionManager.focusNavigation.",
-        "- `'ui'` restricts navigation to the scene's UI layer, so the arrow keys stay available to the game itself. - `'always'` navigates both layers, exactly the set Tab traverses. - `'never'` turns directional navigation off, including InteractionManager.focusInDirection.",
+        "Which nodes the arrow keys and the D-pad may move focus to - see InteractionSystem.focusNavigation.",
+        "- `'ui'` restricts navigation to the scene's UI layer, so the arrow keys stay available to the game itself. - `'always'` navigates both layers, exactly the set Tab traverses. - `'never'` turns directional navigation off, including InteractionSystem.focusInDirection.",
         "An active interaction scope replaces the candidate set with its own subtree whichever layer it lives in - a modal is navigable regardless of the policy, which only ever decides what an UNSCOPED navigation may reach."
       ],
       "importLine": "import { FocusNavigationPolicy } from '@codexo/exojs'",

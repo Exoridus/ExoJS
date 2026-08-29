@@ -1,7 +1,7 @@
 {
-  "title": "AudioManager",
-  "description": "Per-Application owner of the audio mix: three pre-configured AudioBus instances (`master` ← `music` + `sound`), a single AudioListener for spatial audio, and a registry of any extra busses the user constructs. The `AudioContext` is shared process-wide, but each Application owns its own bus subtree, so multiple Applications mix independently. Access it via `app.audio`. Drives the per-frame `_tick()` on the listener and every spatial voice, and propagates visibility-driven mute when AudioManager.muteOnHidden is enabled.",
-  "symbol": "AudioManager",
+  "title": "AudioSystem",
+  "description": "Per-Application owner of the audio mix: three pre-configured AudioBus instances (`master` ← `music` + `sound`), a single AudioListener for spatial audio, and a registry of any extra busses the user constructs. The `AudioContext` is shared process-wide, but each Application owns its own bus subtree, so multiple Applications mix independently. Access it via `app.audio`. Drives the per-frame `_tick()` on the listener and every spatial voice, and propagates visibility-driven mute when AudioSystem.muteOnHidden is enabled.",
+  "symbol": "AudioSystem",
   "kind": "class",
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
@@ -20,9 +20,9 @@
       "members": [],
       "paragraphs": [
         "Per-Application owner of the audio mix: three pre-configured AudioBus instances (`master` ← `music` + `sound`), a single AudioListener for spatial audio, and a registry of any extra busses the user constructs.",
-        "The `AudioContext` is shared process-wide, but each Application owns its own bus subtree, so multiple Applications mix independently. Access it via `app.audio`. Drives the per-frame `_tick()` on the listener and every spatial voice, and propagates visibility-driven mute when AudioManager.muteOnHidden is enabled."
+        "The `AudioContext` is shared process-wide, but each Application owns its own bus subtree, so multiple Applications mix independently. Access it via `app.audio`. Drives the per-frame `_tick()` on the listener and every spatial voice, and propagates visibility-driven mute when AudioSystem.muteOnHidden is enabled."
       ],
-      "importLine": "import { AudioManager } from '@codexo/exojs'",
+      "importLine": "import { AudioSystem } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(): AudioManager",
+          "signature": "new(): AudioSystem",
           "signatureTokens": [
             {
               "text": "new",
@@ -50,12 +50,12 @@
               "kind": "punctuation"
             },
             {
-              "text": "AudioManager",
+              "text": "AudioSystem",
               "kind": "type"
             }
           ],
           "params": [],
-          "returnType": "AudioManager",
+          "returnType": "AudioSystem",
           "description": ""
         }
       ],
@@ -206,7 +206,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Internal: track a live voice so AudioManager.destroy can stop it. Called from the voice's own constructor, which covers every creation path - play(), open(), sprite playback, and pooled replays alike."
+          "description": "Internal: track a live voice so AudioSystem.destroy can stop it. Called from the voice's own constructor, which covers every creation path - play(), open(), sprite playback, and pooled replays alike."
         },
         {
           "name": "_unregisterSpatial",
@@ -329,7 +329,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Tear the mix down: stop every voice still playing, then the listener and every bus. Terminal - AudioManager.play and AudioManager.open throw afterwards. Effects you attached to a bus or a voice are detached but not destroyed - they are yours (see AudioBus.addEffect), so destroy() each one yourself as part of your own teardown."
+          "description": "Tear the mix down: stop every voice still playing, then the listener and every bus. Terminal - AudioSystem.play and AudioSystem.open throw afterwards. Effects you attached to a bus or a voice are detached but not destroyed - they are yours (see AudioBus.addEffect), so destroy() each one yourself as part of your own teardown."
         },
         {
           "name": "getBus",
@@ -708,7 +708,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Register a user-constructed AudioBus so it can be looked up by name via AudioManager.getBus. Throws if a bus with the same name is already registered."
+          "description": "Register a user-constructed AudioBus so it can be looked up by name via AudioSystem.getBus. Throws if a bus with the same name is already registered."
         },
         {
           "name": "unregisterBus",
@@ -848,7 +848,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires once when the AudioContext transitions to \"running\" - i.e. the first user gesture unlocks audio under the browser's autoplay policy. This is the canonical place to start anything that must play as soon as audio is available: ts app.audio.onUnlock.add(() => app.audio.play(music, { loop: true }));  Every handler runs **exactly once, as soon as audio is usable**, whenever it subscribes: already unlocked replays it on a microtask, still locked (including a re-lock after an earlier unlock - an iOS audio-session interruption, a bfcache restore) registers it for the next unlock. A handler that has already run is never fired again by a later unlock, so looping music started here does not stack a second copy after an interruption. remove() cancels either case, and nothing fires once the manager is destroyed. Check AudioManager.locked for the current state. See AudioManager.play for what each asset kind does when played before the gesture."
+          "description": "Fires once when the AudioContext transitions to \"running\" - i.e. the first user gesture unlocks audio under the browser's autoplay policy. This is the canonical place to start anything that must play as soon as audio is available: ts app.audio.onUnlock.add(() => app.audio.play(music, { loop: true }));  Every handler runs **exactly once, as soon as audio is usable**, whenever it subscribes: already unlocked replays it on a microtask, still locked (including a re-lock after an earlier unlock - an iOS audio-session interruption, a bfcache restore) registers it for the next unlock. A handler that has already run is never fired again by a later unlock, so looping music started here does not stack a second copy after an interruption. remove() cancels either case, and nothing fires once the system is destroyed. Check AudioSystem.locked for the current state. See AudioSystem.play for what each asset kind does when played before the gesture."
         },
         {
           "name": "sound",
@@ -932,7 +932,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true while audio is blocked by the browser's autoplay policy - no user gesture has resumed the AudioContext yet. What a play call does while locked depends on the asset: an AudioStream is deferred and starts on the gesture, because a media element owns its own playhead and can simply be told to play later. A Sound or an AudioGenerator is **skipped** - it returns an already-ended voice and never makes a sound. Neither can be deferred honestly: a suspended context's currentTime stands still, so every source scheduled while locked lands on the same instant and the entire backlog would fire simultaneously on the gesture. Start such playback from AudioManager.onUnlock instead."
+          "description": "true while audio is blocked by the browser's autoplay policy - no user gesture has resumed the AudioContext yet. What a play call does while locked depends on the asset: an AudioStream is deferred and starts on the gesture, because a media element owns its own playhead and can simply be told to play later. A Sound or an AudioGenerator is **skipped** - it returns an already-ended voice and never makes a sound. Neither can be deferred honestly: a suspended context's currentTime stands still, so every source scheduled while locked lands on the same instant and the entire backlog would fire simultaneously on the gesture. Start such playback from AudioSystem.onUnlock instead."
         },
         {
           "name": "muteOnHidden",
@@ -953,7 +953,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When true, the master bus is muted while document.hidden is true. Wired to Application.onVisibilityChange via AudioManager._applyVisibility; the application calls that hook automatically - set this flag to opt in to the behavior."
+          "description": "When true, the master bus is muted while document.hidden is true. Wired to Application.onVisibilityChange via AudioSystem._applyVisibility; the application calls that hook automatically - set this flag to opt in to the behavior."
         }
       ],
       "paragraphs": [],
@@ -967,11 +967,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/audio/AudioManager.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioManager.ts"
+        "label": "src/audio/AudioSystem.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioSystem.ts"
       }
     }
   ],
-  "sourcePath": "src/audio/AudioManager.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioManager.ts"
+  "sourcePath": "src/audio/AudioSystem.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioSystem.ts"
 }

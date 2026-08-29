@@ -11,7 +11,7 @@ import SourceSnippet from '../../../components/SourceSnippet.astro';
 ExoJS gives you three layers of animation control, each suited to a different kind of motion:
 
 1. **Manual frame-loop animation** — you write `update(delta)` logic that mutates transforms or values directly. Covered in [Scenes & lifecycle](/ExoJS/en/guide/runtime/scenes-and-lifecycle/).
-2. **Tweens** — automated interpolation of numeric properties over time, with easing, delay, repeat, yoyo, chaining, and lifecycle callbacks. Driven by the application's `TweenManager` (`app.tweens`).
+2. **Tweens** — automated interpolation of numeric properties over time, with easing, delay, repeat, yoyo, chaining, and lifecycle callbacks. Driven by the application's `TweenSystem` (`app.tweens`).
 3. **Animated sprites** — frame-based sprite animation from named clips (`AnimatedSprite`), optionally sourced from a `Spritesheet`.
 
 All three can coexist in one scene. Use tweens for UI transitions and canned motion paths; use manual updates for physics, input-driven movement, and any logic where the next position depends on something other than time alone; use animated sprites for character animation playback.
@@ -283,7 +283,7 @@ player.onComplete.add(clip => {
 ```
 
 Playback advances by itself. Once the sprite is part of the scene tree, the engine's
-`AnimationManager` (`app.animations`) ticks every playing `AnimatedSprite` once per frame — there is
+`AnimationSystem` (`app.animations`) ticks every playing `AnimatedSprite` once per frame — there is
 nothing to call from your own `update`:
 
 <SourceSnippet
@@ -329,7 +329,7 @@ Use `AnimatedSprite` when you have frame strips from a texture atlas and want cl
 
 ## Standing tween vs. frame-loop animation
 
-Tweens are driven by the `TweenManager` on every frame via `app.tweens.update(delta)`, which happens automatically. You never call `update` on individual tweens unless you created them standalone (without a manager).
+Tweens are driven by the `TweenSystem` on every frame via `app.tweens.update(delta)`, which happens automatically. You never call `update` on individual tweens unless you created them standalone (without a system).
 
 Frame-loop animation — the `update(delta)` pattern where you read `delta` and multiply transforms — is the right choice for continuous motion that doesn't have a defined endpoint: character movement, physics, any state that evolves based on input or simulation. Tweens are the right choice for motion with a clear start and end: UI transitions, camera pans, scripted sequences, one-shot effects.
 

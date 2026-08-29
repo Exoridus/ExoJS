@@ -265,7 +265,7 @@ export class Gamepad {
 
   /**
    * Attach a physical browser gamepad to this slot. Called by
-   * {@link InputManager} on connect.
+   * {@link InputSystem} on connect.
    *
    * @internal
    */
@@ -286,7 +286,7 @@ export class Gamepad {
    * Re-point this slot at the latest browser gamepad snapshot. The Web Gamepad
    * API hands back a fresh, immutable snapshot object on every
    * `navigator.getGamepads()` poll, so a slot that keeps the object captured at
-   * connect time would freeze its button/axis state. {@link InputManager} calls
+   * connect time would freeze its button/axis state. {@link InputSystem} calls
    * this each frame for already-connected pads; no signals fire.
    *
    * @internal
@@ -314,7 +314,7 @@ export class Gamepad {
 
   /**
    * Detach the physical gamepad and clear channels without firing
-   * {@link onDisconnect}. Used by {@link InputManager} during the compact
+   * {@link onDisconnect}. Used by {@link InputSystem} during the compact
    * slot-shift to silently vacate a slot before another pad shifts into
    * its place; the disconnect signal is fired separately on the slot that
    * ends up empty after compaction.
@@ -334,7 +334,7 @@ export class Gamepad {
 
   /**
    * Dispatch this slot's {@link onDisconnect} signal without altering its
-   * state. Used by {@link InputManager} after a compact-mode shift, when a
+   * state. Used by {@link InputSystem} after a compact-mode shift, when a
    * slot has already been emptied by {@link _rebindFrom} and now needs to
    * notify subscribers that its mailbox is no longer occupied.
    *
@@ -346,7 +346,7 @@ export class Gamepad {
 
   /**
    * Reassign this slot to take over another slot's physical gamepad without
-   * firing the full disconnect / connect cycle. Used by {@link InputManager}
+   * firing the full disconnect / connect cycle. Used by {@link InputSystem}
    * when the `'compact'` slot strategy shuffles pads after a disconnect.
    *
    * @internal

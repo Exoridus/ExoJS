@@ -5,9 +5,9 @@ import { Signal } from '#core/Signal';
 import type { ContextMenuRequest } from '#input/ContextMenuRequest';
 import type { Gamepad } from '#input/Gamepad';
 import type { GamepadButton } from '#input/GamepadButton';
-import type { InputManager } from '#input/InputManager';
+import type { InputSystem } from '#input/InputSystem';
 import type { InteractionEvent } from '#input/InteractionEvent';
-import { InteractionManager } from '#input/InteractionManager';
+import { InteractionSystem } from '#input/InteractionSystem';
 import type { Pointer } from '#input/Pointer';
 import { Quadtree } from '#math/Quadtree';
 import { Rectangle } from '#math/Rectangle';
@@ -101,7 +101,7 @@ const createApp = (): {
     onPointerCancel: new Signal<[Pointer, number, number]>(),
     onPointerLeave: new Signal<[Pointer, number, number]>(),
     onContextMenu: new Signal<[ContextMenuRequest]>(),
-    // InteractionManager owns the focus controller, which listens for keys.
+    // InteractionSystem owns the focus controller, which listens for keys.
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
     onAnyGamepadButtonDown: new Signal<[Gamepad, GamepadButton, number]>(),
@@ -120,7 +120,7 @@ const createApp = (): {
     platform: new BrowserPlatform(canvas),
     width: 800,
     height: 600,
-    input: signals as unknown as InputManager,
+    input: signals as unknown as InputSystem,
     focus: { focused: null, focus() {}, blur() {}, _notifyNodeRemoved() {} },
     // Default centered camera: design-space pointer coords pass through to
     // world space unchanged (identity screenToWorld).
@@ -141,7 +141,7 @@ const createApp = (): {
   return { app, scene, signals, canvas };
 };
 
-const flushInteractions = (im: InteractionManager): void => {
+const flushInteractions = (im: InteractionSystem): void => {
   im.preUpdate(frameDelta);
 };
 
@@ -356,13 +356,13 @@ describe('Quadtree — remove', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 2. InteractionManager - persistent spatial index lifecycle
+// 2. InteractionSystem - persistent spatial index lifecycle
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — lazy-init: quadtree null with no interactive nodes', () => {
+describe('InteractionSystem — lazy-init: quadtree null with no interactive nodes', () => {
   test('_getDebugQuadtree() returns null before any interactive node is added', () => {
     const { app, scene } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -372,10 +372,10 @@ describe('InteractionManager — lazy-init: quadtree null with no interactive no
   });
 });
 
-describe('InteractionManager — lazy-init: quadtree created on first interactive node', () => {
+describe('InteractionSystem — lazy-init: quadtree created on first interactive node', () => {
   test('setting interactive=true on a node creates the quadtree', () => {
     const { app, scene } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
     im.attachRoot(scene.root);
@@ -392,10 +392,10 @@ describe('InteractionManager — lazy-init: quadtree created on first interactiv
   });
 });
 
-describe('InteractionManager — lazy-dispose: quadtree null when last interactive node removed', () => {
+describe('InteractionSystem — lazy-dispose: quadtree null when last interactive node removed', () => {
   test('quadtree is destroyed when last interactive node becomes non-interactive', () => {
     const { app, scene } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
     im.attachRoot(scene.root);
@@ -412,7 +412,7 @@ describe('InteractionManager — lazy-dispose: quadtree null when last interacti
 
   test('quadtree is destroyed when last interactive node is removed from scene', () => {
     const { app, scene } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
     im.attachRoot(scene.root);
@@ -428,10 +428,10 @@ describe('InteractionManager — lazy-dispose: quadtree null when last interacti
   });
 });
 
-describe('InteractionManager — spatial index: basic hit', () => {
+describe('InteractionSystem — spatial index: basic hit', () => {
   test('pointerdown over interactive sprite fires onPointerDown', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -455,7 +455,7 @@ describe('InteractionManager — spatial index: basic hit', () => {
 
   test('pointer missing sprite does NOT fire onPointerDown', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -477,10 +477,10 @@ describe('InteractionManager — spatial index: basic hit', () => {
   });
 });
 
-describe('InteractionManager — spatial index: z-order preserved', () => {
+describe('InteractionSystem — spatial index: z-order preserved', () => {
   test('top sprite (added last, higher order) wins over bottom sprite at same point', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -512,10 +512,10 @@ describe('InteractionManager — spatial index: z-order preserved', () => {
   });
 });
 
-describe('InteractionManager — spatial index: addChild registers subtree', () => {
+describe('InteractionSystem — spatial index: addChild registers subtree', () => {
   test('addChild of Container with interactive descendants registers all of them', () => {
     const { app, scene } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -542,10 +542,10 @@ describe('InteractionManager — spatial index: addChild registers subtree', () 
   });
 });
 
-describe('InteractionManager — spatial index: removeChild unregisters subtree', () => {
+describe('InteractionSystem — spatial index: removeChild unregisters subtree', () => {
   test('removeChild unregisters all interactive descendants', () => {
     const { app, scene } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -568,10 +568,10 @@ describe('InteractionManager — spatial index: removeChild unregisters subtree'
   });
 });
 
-describe('InteractionManager — spatial index: transform mutation reflected at next query', () => {
+describe('InteractionSystem — spatial index: transform mutation reflected at next query', () => {
   test('moving node between queries updates its quadtree entry', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -605,10 +605,10 @@ describe('InteractionManager — spatial index: transform mutation reflected at 
   });
 });
 
-describe('InteractionManager — spatial index: query results match recursive-walk results', () => {
+describe('InteractionSystem — spatial index: query results match recursive-walk results', () => {
   test('indexed hit result matches recursive-walk hit result for same scene', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -648,10 +648,10 @@ describe('InteractionManager — spatial index: query results match recursive-wa
   });
 });
 
-describe('InteractionManager — spatial index: removing all interactive nodes mid-frame', () => {
+describe('InteractionSystem — spatial index: removing all interactive nodes mid-frame', () => {
   test('quadtree disposes correctly when all interactive nodes are removed', () => {
     const { app, scene } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 

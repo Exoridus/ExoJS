@@ -70,7 +70,7 @@ Two *different* objects under the same id throw. That is not a bug to work aroun
 
 ## Lifetime: install and dispose
 
-The binding arrays cover contributions the engine knows how to materialise for you. `install(app)` covers the rest: an app-level `System` on `app.systems`, a subscription on an application signal, a debug overlay next to the canvas, a worker, an observer. It runs once per `Application`, as the **final** construction step — every core manager and every materialised binding already exists — and dependencies listed in `dependencies` are installed before their dependents.
+The binding arrays cover contributions the engine knows how to materialise for you. `install(app)` covers the rest: an app-level `System` on `app.systems`, a subscription on an application signal, a debug overlay next to the canvas, a worker, an observer. It runs once per `Application`, as the **final** construction step — every core system and every materialised binding already exists — and dependencies listed in `dependencies` are installed before their dependents.
 
 Return a function to undo it. The application holds those disposers and runs them in **reverse installation order** when it goes down:
 

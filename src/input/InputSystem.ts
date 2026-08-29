@@ -62,8 +62,8 @@ const normalizeWheelDelta = (delta: number, deltaMode: number): number => {
 };
 
 /**
- * Strategy used by {@link InputManager} when assigning physical gamepads to
- * slot indices in {@link InputManager.gamepads}.
+ * Strategy used by {@link InputSystem} when assigning physical gamepads to
+ * slot indices in {@link InputSystem.gamepads}.
  *
  * - `'sticky'` (default): each physical pad keeps its slot until a new pad
  *   fills an empty slot. A disconnect leaves a gap; reconnect later fills
@@ -74,7 +74,7 @@ const normalizeWheelDelta = (delta: number, deltaMode: number): number => {
  */
 export type GamepadSlotStrategy = 'sticky' | 'compact';
 
-enum InputManagerFlag {
+enum InputSystemFlag {
   None = 0,
   KeyChange = 1 << 0,
   MouseWheel = 1 << 1,
@@ -124,8 +124,8 @@ interface ContextMenuJournalEntry {
  * `P1 Down -> P2 Down -> P1 Up`: per-pointer buffering, dispatched one
  * pointer's whole list at a time, would silently turn that into
  * `P1 Down, P1 Up, P2 Down`. Drained once per frame by
- * {@link InputManager._drainJournal}, in this same order, then cleared -
- * mirroring {@link InputManager.keyEvents}'s own append/drain/clear
+ * {@link InputSystem._drainJournal}, in this same order, then cleared -
+ * mirroring {@link InputSystem.keyEvents}'s own append/drain/clear
  * lifecycle, just for pointers and context-menu requests together.
  */
 type JournalEntry = PointerJournalEntry | ContextMenuJournalEntry | GestureJournalEvent;
@@ -148,9 +148,9 @@ type JournalEntry = PointerJournalEntry | ContextMenuJournalEntry | GestureJourn
  * (first, ahead of interaction/audio/tweens/rendering); constructed
  * automatically - you do not instantiate this class yourself.
  */
-export class InputManager {
+export class InputSystem {
   private readonly _app: Application;
-  /** The one seam between this manager and its host: events, focus, gamepads, capture. */
+  /** The one seam between this system and its host: events, focus, gamepads, capture. */
   private readonly platform: PlatformAdapter;
   private readonly channels: Float32Array = new Float32Array(ChannelSize.Container);
   /**
@@ -194,7 +194,7 @@ export class InputManager {
   private readonly scopeHosts = new Set<ActionScopeHost>();
   /**
    * Reused view over the channel buffers, handed to action maps each frame.
-   * `frameId` is bumped once per {@link InputManager.update} - the mechanism an
+   * `frameId` is bumped once per {@link InputSystem.update} - the mechanism an
    * action shared by two attached maps uses to sample itself only once per
    * real frame no matter how many owners reach it.
    */
@@ -220,7 +220,7 @@ export class InputManager {
     },
   };
   private readonly wheelOffset = new Vector();
-  private readonly flags = new Flags<InputManagerFlag>();
+  private readonly flags = new Flags<InputSystemFlag>();
   /** Keyboard transitions since the last flush, in true chronological order (see updateEvents). */
   private readonly keyEvents: KeyChannelEvent[] = [];
   private readonly gamepadDefinitions: GamepadDefinition[];
@@ -243,7 +243,7 @@ export class InputManager {
    */
   private readonly journal: JournalEntry[] = [];
 
-  /** Platform subscriptions held for the manager's lifetime, undone on destroy. */
+  /** Platform subscriptions held for the system's lifetime, undone on destroy. */
   private readonly listeners: PlatformSubscription[] = [];
 
   public readonly onCanvasFocusChange = new Signal<[focused: boolean]>();
@@ -300,7 +300,7 @@ export class InputManager {
    * carries its own coordinates instead of forcing the contract onto a
    * {@link Pointer}. A request over a specific interactive node additionally
    * bubbles as a scene-graph `contextmenu` {@link InteractionEvent} (see
-   * {@link InteractionManager}), which only fires when a node is actually hit
+   * {@link InteractionSystem}), which only fires when a node is actually hit
    * and can be stopped with {@link InteractionEvent.stopPropagation}; use that
    * one for a per-node menu instead. Do not confuse either with
    * {@link GestureRecognizer.onLongPress} - a separate, purely informational
@@ -346,7 +346,7 @@ export class InputManager {
   /**
    * Fires when a pointer has been held without significant movement for
    * ≥ 500 ms of ENGINE time - frame deltas summed across the frames this
-   * manager actually ran, not wall-clock time. A hold therefore freezes while
+   * system actually ran, not wall-clock time. A hold therefore freezes while
    * the active scene is paused and while the application is stopped, and
    * resumes from where it left off; it never completes in the background.
    */
@@ -438,7 +438,7 @@ export class InputManager {
     return this._gamepads;
   }
 
-  /** The slot strategy active for this `InputManager`. */
+  /** The slot strategy active for this `InputSystem`. */
   public get gamepadSlotStrategy(): GamepadSlotStrategy {
     return this.slotStrategy;
   }
@@ -527,7 +527,7 @@ export class InputManager {
    *
    * A host drives its own maps rather than registering each of them here,
    * because a scope stack has to update its levels in priority order and mask
-   * each one with what the levels above it claim. This manager stays the one
+   * each one with what the levels above it claim. This system stays the one
    * input clock: it owns the channel buffer, the batch log and the frame id,
    * and simply hands them to each host once per frame.
    *
@@ -697,7 +697,7 @@ export class InputManager {
       this.gestureRecognizer.update(delta);
     }
 
-    if (this.flags.value !== InputManagerFlag.None || this.journal.length > 0) {
+    if (this.flags.value !== InputSystemFlag.None || this.journal.length > 0) {
       this.updateEvents();
     }
 
@@ -1034,7 +1034,7 @@ export class InputManager {
     }
 
     this.keyEvents.push({ channel, pressed: true });
-    this.flags.addMask(InputManagerFlag.KeyChange);
+    this.flags.addMask(InputSystemFlag.KeyChange);
   }
 
   /**
@@ -1068,7 +1068,7 @@ export class InputManager {
     }
 
     this.keyEvents.push({ channel, pressed: false });
-    this.flags.addMask(InputManagerFlag.KeyChange);
+    this.flags.addMask(InputSystemFlag.KeyChange);
 
     if (capturedByAggregate || this.capturedKeyChannels.has(channel)) {
       stopEvent(event);
@@ -1269,7 +1269,7 @@ export class InputManager {
     // would be silently lost. `updateEvents` resets this to zero once the
     // accumulated total has been dispatched for the frame.
     this.wheelOffset.add(normalizeWheelDelta(event.deltaX, event.deltaMode), normalizeWheelDelta(event.deltaY, event.deltaMode));
-    this.flags.addMask(InputManagerFlag.MouseWheel);
+    this.flags.addMask(InputSystemFlag.MouseWheel);
 
     stopEvent(event);
   }
@@ -1305,13 +1305,13 @@ export class InputManager {
         this.channels[channel] = 0;
         this._recordChannelChanges(channel, 1);
         this.keyEvents.push({ channel, pressed: false });
-        this.flags.addMask(InputManagerFlag.KeyChange);
+        this.flags.addMask(InputSystemFlag.KeyChange);
       }
     }
   }
 
   /**
-   * Subscribe to every platform event this manager consumes. Which events are
+   * Subscribe to every platform event this system consumes. Which events are
    * listened for, and which are suppressed, stays here rather than in the
    * platform: that is input policy, not host mechanics.
    */
@@ -1491,7 +1491,7 @@ export class InputManager {
   }
 
   private updateEvents(): this {
-    if (this.flags.popMask(InputManagerFlag.KeyChange)) {
+    if (this.flags.popMask(InputSystemFlag.KeyChange)) {
       // In true arrival order - a Shift-up followed by a Tab-down must
       // dispatch in that same order, or FocusController would still see
       // Shift held when Tab's handler runs and misread it as Shift+Tab.
@@ -1506,7 +1506,7 @@ export class InputManager {
       this.keyEvents.length = 0;
     }
 
-    if (this.flags.popMask(InputManagerFlag.MouseWheel)) {
+    if (this.flags.popMask(InputSystemFlag.MouseWheel)) {
       this.onMouseWheel.dispatch(this.wheelOffset.x, this.wheelOffset.y);
       this.wheelOffset.set(0, 0);
     }
@@ -1618,11 +1618,11 @@ export class InputManager {
 
   /**
    * Finalize retirement of every pointer {@link _drainJournal} identified as
-   * terminal this flush, once `InteractionManager` has fully drained its own
-   * node-level dispatch for the frame. `InputManager._drainJournal` only
+   * terminal this flush, once `InteractionSystem` has fully drained its own
+   * node-level dispatch for the frame. `InputSystem._drainJournal` only
    * flags a terminal pointer as PENDING - it must not destroy it itself,
-   * because `InteractionManager._prepareFrame` (a separate top-level call the
-   * app's frame loop makes right after `InputManager._prepareFrame` returns)
+   * because `InteractionSystem._prepareFrame` (a separate top-level call the
+   * app's frame loop makes right after `InputSystem._prepareFrame` returns)
    * still has queued node-level events - e.g. a `contextmenu` request - that
    * reference that same `Pointer` object and dispatch only during ITS OWN
    * pass. Destroying the pointer any earlier would hand a node handler an
@@ -1634,7 +1634,7 @@ export class InputManager {
    *
    * Re-validates BOTH that a pending pointer is still genuinely terminal AND
    * that it's still the live map entry for its id before destroying it - a
-   * node handler running during `InteractionManager._prepareFrame` can
+   * node handler running during `InteractionSystem._prepareFrame` can
    * synchronously drive a same-`pointerId` re-entry (see
    * {@link handlePointerOver}'s doc comment) that replaces the map entry with
    * a fresh, non-terminal `Pointer` for that same id; that new object must

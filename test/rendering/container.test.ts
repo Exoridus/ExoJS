@@ -241,7 +241,7 @@ describe('Container children view', () => {
   // splice `_children` and run every removal side effect (bounds cascade,
   // _setParent(null), interaction notify, focus notify) BEFORE invalidating
   // `_childrenView` - invalidation was the very last statement in the
-  // method. The stage's focus manager's `_notifyNodeRemoved` synchronously
+  // method. The stage's focus system's `_notifyNodeRemoved` synchronously
   // dispatches the public `onBlur` signal, i.e. arbitrary user code, from
   // inside that window. A handler reading `container.children` from onBlur
   // would therefore see the STALE cached snapshot (still containing the
@@ -293,7 +293,7 @@ describe('Container children view', () => {
 });
 
 // `_childrenInPaintOrder`/`_invalidateChildOrder`/the `getChildIndex` map cache
-// move InteractionManager's per-hit-test sort onto Container itself. These
+// move InteractionSystem's per-hit-test sort onto Container itself. These
 // tests pin down the cache's own correctness independent of any one consumer.
 describe('Container paint-order cache', () => {
   test('equal zIndex returns the same reference as the document-order view — no allocation, no sort', () => {

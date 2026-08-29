@@ -1,7 +1,7 @@
 {
-  "title": "AnimationManager",
+  "title": "AnimationSystem",
   "description": "Owns and advances the AnimatedSprites whose frame playback is currently running, driving them once per frame from Application.update - the SystemMethods.preUpdate phase, at SystemOrder.CoreAnimation. Registration is automatic and requires no user wiring: an AnimatedSprite registers itself here as soon as it is both *playing* and *attached* to a scene tree owned by an Application, and deregisters on `stop()`/`pause()`, on clip completion, on detach from the tree, and on `destroy()`. A sprite that is never attached to a tree (e.g. one drawn immediate-mode via `context.render(sprite)`) is never registered, and must be ticked by hand with AnimatedSprite.update - which stays public exactly for that case. Update iteration uses a snapshot so `onFrame`/`onComplete` handlers may freely play, stop, add or destroy sprites during the same frame without corrupting the loop.",
-  "symbol": "AnimationManager",
+  "symbol": "AnimationSystem",
   "kind": "class",
   "subsystem": "animation",
   "importPath": "@codexo/exojs",
@@ -23,7 +23,7 @@
         "Registration is automatic and requires no user wiring: an AnimatedSprite registers itself here as soon as it is both *playing* and *attached* to a scene tree owned by an Application, and deregisters on `stop()`/`pause()`, on clip completion, on detach from the tree, and on `destroy()`. A sprite that is never attached to a tree (e.g. one drawn immediate-mode via `context.render(sprite)`) is never registered, and must be ticked by hand with AnimatedSprite.update - which stays public exactly for that case.",
         "Update iteration uses a snapshot so `onFrame`/`onComplete` handlers may freely play, stop, add or destroy sprites during the same frame without corrupting the loop."
       ],
-      "importLine": "import { AnimationManager } from '@codexo/exojs'",
+      "importLine": "import { AnimationSystem } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(): AnimationManager",
+          "signature": "new(): AnimationSystem",
           "signatureTokens": [
             {
               "text": "new",
@@ -51,12 +51,12 @@
               "kind": "punctuation"
             },
             {
-              "text": "AnimationManager",
+              "text": "AnimationSystem",
               "kind": "type"
             }
           ],
           "params": [],
-          "returnType": "AnimationManager",
+          "returnType": "AnimationSystem",
           "description": ""
         }
       ],
@@ -113,7 +113,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Register sprite so it is advanced once per frame. Idempotent, and a no-op for a destroyed sprite or a destroyed manager. Called automatically by AnimatedSprite; there is no need to call it by hand."
+          "description": "Register sprite so it is advanced once per frame. Idempotent, and a no-op for a destroyed sprite or a destroyed system. Called automatically by AnimatedSprite; there is no need to call it by hand."
         },
         {
           "name": "clear",
@@ -142,7 +142,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": "Deregister every sprite immediately. Playback state is left as-is - the sprites are simply no longer advanced by this manager."
+          "description": "Deregister every sprite immediately. Playback state is left as-is - the sprites are simply no longer advanced by this system."
         },
         {
           "name": "destroy",
@@ -171,7 +171,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Tear down the manager. Deregisters every sprite and makes subsequent updates no-ops."
+          "description": "Tear down the system. Deregisters every sprite and makes subsequent updates no-ops."
         },
         {
           "name": "has",
@@ -312,7 +312,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Remove sprite from the manager. Called automatically on stop/pause/complete/detach/destroy."
+          "description": "Remove sprite from the system. Called automatically on stop/pause/complete/detach/destroy."
         }
       ],
       "paragraphs": [],
@@ -356,11 +356,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/animation/AnimationManager.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/AnimationManager.ts"
+        "label": "src/animation/AnimationSystem.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/AnimationSystem.ts"
       }
     }
   ],
-  "sourcePath": "src/animation/AnimationManager.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/AnimationManager.ts"
+  "sourcePath": "src/animation/AnimationSystem.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/AnimationSystem.ts"
 }

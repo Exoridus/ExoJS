@@ -77,7 +77,7 @@ if (this.app.audio.locked) {
 }
 ```
 
-The first skipped play logs one warning per `AudioManager`; further ones stay quiet until audio unlocks, so a menu full of click sounds cannot flood the console.
+The first skipped play logs one warning per `AudioSystem`; further ones stay quiet until audio unlocks, so a menu full of click sounds cannot flood the console.
 
 <Callout type="warning" title="Audio needs a user gesture">
 Browsers won't start audio until the user interacts with the page. Trigger the first sound or music from a click, tap, or key press — the embedded examples below ask for a click for exactly this reason.
@@ -207,7 +207,7 @@ application.audio.play(sound, { playbackRate: Math.pow(2, cents / 1200) });
 
 ## Buses
 
-The audio manager exposes three built-in buses: `app.audio.master`, `app.audio.music`, and `app.audio.sound`. Each play routes to a default bus (`music` for `AudioStream`, `sound` for `Sound` and `AudioGenerator`). Buses form a tree — `music` and `sound` are children of `master`, and `master` connects to the audio destination.
+The audio system exposes three built-in buses: `app.audio.master`, `app.audio.music`, and `app.audio.sound`. Each play routes to a default bus (`music` for `AudioStream`, `sound` for `Sound` and `AudioGenerator`). Buses form a tree — `music` and `sound` are children of `master`, and `master` connects to the audio destination.
 
 Route a play through a specific bus with the `bus` option, or reassign a live voice's `bus`:
 
@@ -286,7 +286,7 @@ Two looping `AudioStream` tracks crossfading back and forth with `crossFade()`.
 
 <TryIt
   examples={['audio-basics/play-sound', 'audio-basics/crossfade-tracks']}
-  api={['sound', 'audio-stream', 'audio-manager']}
+  api={['sound', 'audio-stream', 'audio-system']}
 />
 
 ## Where to go next

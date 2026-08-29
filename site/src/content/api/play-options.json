@@ -1,6 +1,6 @@
 {
   "title": "PlayOptions",
-  "description": "Per-play overrides passed to AudioManager.play.",
+  "description": "Per-play overrides passed to AudioSystem.play.",
   "symbol": "PlayOptions",
   "kind": "interface",
   "subsystem": "audio",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Per-play overrides passed to AudioManager.play."
+        "Per-play overrides passed to AudioSystem.play."
       ],
       "importLine": "import { PlayOptions } from '@codexo/exojs'",
       "sourceLink": null

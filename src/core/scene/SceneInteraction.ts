@@ -58,7 +58,7 @@ interface TrackedScope extends InteractionScope {
  * engine, just tracking of what this facade attached/pushed so it can
  * detach/release on teardown. Pause-aware dispatch gating (state
  * Active/Paused, transition gate) is enforced once, centrally, in
- * {@link InteractionManager.update} - not duplicated here.
+ * {@link InteractionSystem.update} - not duplicated here.
  *
  * While the owning scope is not `Active` (`Preparing`, `Ready`, or
  * `Suspended`), `observe()`/`scope()` track their registration locally but
@@ -139,7 +139,7 @@ export class SceneInteraction implements Destroyable {
 
   /**
    * Detach every currently-attached observation and pop every
-   * currently-attached scope off the manager's stack, without discarding
+   * currently-attached scope off the system's stack, without discarding
    * local tracking - so {@link SceneInteraction.resume} can reattach exactly
    * the same set in the same order. A retained scene must not keep
    * receiving pointer dispatch alongside whichever scope is now active.
@@ -157,7 +157,7 @@ export class SceneInteraction implements Destroyable {
 
     for (const scope of this._scopes) {
       if (scope.token !== null) {
-        // A targeted release - InteractionManager.popScope finds this exact
+        // A targeted release - InteractionSystem.popScope finds this exact
         // entry by its token wherever it sits, so entries can be released in
         // ANY order here without disturbing the others; no rebuild needed.
         this._app.interaction.popScope(scope.token);
@@ -216,7 +216,7 @@ export class SceneInteraction implements Destroyable {
 
   /**
    * Release `scope`, wherever it sits in tracking order - released in ANY
-   * order relative to its siblings, since {@link InteractionManager.popScope}
+   * order relative to its siblings, since {@link InteractionSystem.popScope}
    * removes exactly this scope's own token, never anything above or below it.
    */
   private _releaseScope(scope: TrackedScope): void {

@@ -28,19 +28,19 @@ interface Ticker {
  * Owns and advances a collection of {@link Tween} instances, driving them
  * once per frame from {@link Application.update}. A tween enters the update
  * list when {@link Tween.start} is called and leaves it again on completion or
- * {@link Tween.stop}, so the manager only ever holds tweens that are running
+ * {@link Tween.stop}, so the system only ever holds tweens that are running
  * or paused - regardless of whether it was created here or handed over via
- * {@link TweenManager.add}.
+ * {@link TweenSystem.add}.
  *
  * Custom updatables (such as {@link TweenSequencer}) can be registered via
- * {@link TweenManager.addTicker} so they share the same frame tick.
+ * {@link TweenSystem.addTicker} so they share the same frame tick.
  *
  * Update iteration uses a snapshot so callbacks may freely add or remove
  * tweens during the same frame without corrupting the loop. Completed and
  * stopped tweens are evicted automatically.
  * @stable
  */
-export class TweenManager {
+export class TweenSystem {
   private _tweens: Tween[] = [];
   private _tickers: Ticker[] = [];
   private _destroyed = false;
@@ -60,7 +60,7 @@ export class TweenManager {
   private readonly _tickerCursor: Ticker[] = [];
 
   /**
-   * Create a new Tween bound to this manager and return it. Call
+   * Create a new Tween bound to this system and return it. Call
    * `.to(...).start()` on the result to begin animating.
    *
    * The tween is only entered into the update list by {@link Tween.start} - a
@@ -69,7 +69,7 @@ export class TweenManager {
    */
   public create<T extends object>(target: T): Tween<T> {
     const tween = new Tween(target);
-    tween._attachManager(this);
+    tween._attachSystem(this);
 
     return tween;
   }
@@ -79,23 +79,23 @@ export class TweenManager {
    * previous one completes. Returns the first tween; call `.start()` on it
    * to kick off the whole sequence.
    *
-   * All tweens are bound to this manager, but only enter the update list when
+   * All tweens are bound to this system, but only enter the update list when
    * they are actually started - the first through your own `.start()` call,
    * every later one through the chain. A sequence that is composed and never
    * started therefore leaves nothing behind here.
    *
    * @example
    * ```ts
-   * const move = manager.create(sprite).to({ x: 400 }, 0.5);
-   * const fade = manager.create(sprite.tint).to({ a: 0 }, 0.3);
-   * manager.sequence([move, fade]).start();
+   * const move = app.tweens.create(sprite).to({ x: 400 }, 0.5);
+   * const fade = app.tweens.create(sprite.tint).to({ a: 0 }, 0.3);
+   * app.tweens.sequence([move, fade]).start();
    * ```
    */
   public sequence(tweens: readonly Tween[]): Tween {
     const [first] = tweens;
 
     if (first === undefined) {
-      throw new Error('[ExoJS] TweenManager.sequence() requires at least one tween.');
+      throw new Error('[ExoJS] TweenSystem.sequence() requires at least one tween.');
     }
 
     for (let i = 0; i < tweens.length - 1; i++) {
@@ -107,16 +107,16 @@ export class TweenManager {
     // Bind only - `Tween.start` does the registering, and every link after the
     // first is started by `_complete()` on its predecessor. Pre-registering
     // them here would be redundant and would pin an unstarted sequence (and
-    // its targets) in the application-wide manager for good.
+    // its targets) in the application-wide system for good.
     for (const tween of tweens) {
-      tween._attachManager(this);
+      tween._attachSystem(this);
     }
 
     return first;
   }
 
   /**
-   * Create a new {@link TweenSequencer} bound to this manager and return it.
+   * Create a new {@link TweenSequencer} bound to this system and return it.
    * The sequencer registers itself automatically when {@link TweenSequencer.start}
    * is called, so no manual wiring is needed.
    *
@@ -136,7 +136,7 @@ export class TweenManager {
 
   /**
    * Take ownership of a stand-alone Tween (created via `new Tween(target)`, or
-   * previously bound to a different manager) so it participates in this update
+   * previously bound to a different system) so it participates in this update
    * loop: from here on, {@link Tween.start} enters it and completion or
    * {@link Tween.stop} evicts it again.
    *
@@ -144,11 +144,11 @@ export class TweenManager {
    * running or paused is live - nothing will call `start()` on it again to
    * enter it - so it goes into the update list right away. An idle, completed
    * or stopped tween is bound only: retaining it would pin it, and through it
-   * its target, in this manager for the lifetime of the application while the
+   * its target, in this system for the lifetime of the application while the
    * update loop has nothing to do with it.
    */
   public add(tween: Tween): this {
-    tween._attachManager(this);
+    tween._attachSystem(this);
 
     const isLive = tween.state === TweenState.Active || tween.state === TweenState.Paused;
 
@@ -159,7 +159,7 @@ export class TweenManager {
     return this;
   }
 
-  /** Remove a tween from the manager. Called automatically on stop/complete. */
+  /** Remove a tween from the system. Called automatically on stop/complete. */
   public remove(tween: Tween): this {
     const index = this._tweens.indexOf(tween);
 
@@ -230,7 +230,7 @@ export class TweenManager {
    * Remove all tweens and tickers immediately. No callbacks fire.
    * Each tracked tween is {@link Tween.stop}ped first, so `tween.state`
    * reflects the eviction instead of staying `Active`/`Paused` on a tween the
-   * manager no longer drives - a `Stopped` tween's own manager binding
+   * system no longer drives - a `Stopped` tween's own system binding
    * survives, so a later {@link Tween.start} re-enters it as usual.
    */
   public clear(): this {
@@ -251,7 +251,7 @@ export class TweenManager {
     return this;
   }
 
-  /** Tear down the manager. Clears tweens and tickers and makes subsequent updates no-ops. */
+  /** Tear down the system. Clears tweens and tickers and makes subsequent updates no-ops. */
   public destroy(): void {
     this.clear();
     this._destroyed = true;

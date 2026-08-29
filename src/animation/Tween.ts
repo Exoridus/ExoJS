@@ -1,7 +1,7 @@
 import { logger } from '#core/logging';
 
 import { Ease } from './Easing';
-import type { TweenManager } from './TweenManager';
+import type { TweenSystem } from './TweenSystem';
 import type { EasingFunction, TweenLifecycleCallback, TweenUpdateCallback } from './types';
 import { TweenState } from './types';
 
@@ -16,8 +16,8 @@ type NumericKeys<T> = {
  * ({@link Tween.onStart}, {@link Tween.onUpdate}, {@link Tween.onComplete},
  * {@link Tween.onRepeat}).
  *
- * Tweens are typically created via {@link TweenManager.create}, which binds
- * them to that manager; {@link Tween.start} then enters them into its update
+ * Tweens are typically created via {@link TweenSystem.create}, which binds
+ * them to that system; {@link Tween.start} then enters them into its update
  * loop so they advance once per frame. Stand-alone usage is supported by
  * calling {@link Tween.update} manually with a frame delta.
  *
@@ -69,7 +69,7 @@ export class Tween<T extends object = object> {
   private _onRepeat: TweenLifecycleCallback | null = null;
 
   private _chained: Tween | null = null;
-  private _manager: TweenManager | null = null;
+  private _system: TweenSystem | null = null;
 
   /** Whether onStart has already fired this tween lifecycle. */
   private _startFired = false;
@@ -211,10 +211,10 @@ export class Tween<T extends object = object> {
    * Start or restart the tween. Resets all elapsed time, the start-value
    * snapshot, playback direction, and repeat counter.
    *
-   * Registers the tween with its manager, if one is assigned - both for the
+   * Registers the tween with its system, if one is assigned - both for the
    * first start and after an eviction caused by natural completion or
    * {@link Tween.stop}, so it (re)starts receiving frame updates either way.
-   * Stand-alone tweens (no manager) are unaffected.
+   * Stand-alone tweens (no system) are unaffected.
    */
   public start(): this {
     this._state = TweenState.Active;
@@ -224,7 +224,7 @@ export class Tween<T extends object = object> {
     this._startFired = false;
     this._direction = 1;
     this._repeatCount = this._repeatTotal;
-    this._manager?.add(this);
+    this._system?.add(this);
 
     return this;
   }
@@ -250,9 +250,9 @@ export class Tween<T extends object = object> {
   /**
    * Stop the tween without finishing. Target properties stay at their
    * current interpolated values. onComplete does NOT fire. The tween is
-   * removed from its manager if one is assigned - unconditionally rather
-   * than state-gated, which for anything the manager does not hold (an idle
-   * or already-finished tween) is simply a no-op. The manager binding itself
+   * removed from its system if one is assigned - unconditionally rather
+   * than state-gated, which for anything the system does not hold (an idle
+   * or already-finished tween) is simply a no-op. The system binding itself
    * survives, so a later {@link Tween.start} re-enters the update list.
    */
   public stop(): this {
@@ -260,7 +260,7 @@ export class Tween<T extends object = object> {
       this._state = TweenState.Stopped;
     }
 
-    this._manager?.remove(this);
+    this._system?.remove(this);
 
     return this;
   }
@@ -278,18 +278,18 @@ export class Tween<T extends object = object> {
   }
 
   /**
-   * Bind this tween to a manager, without entering it into that manager's
+   * Bind this tween to a system, without entering it into that system's
    * update list - {@link Tween.start} does the entering. Called by
-   * TweenManager.create(), TweenManager.sequence(), TweenManager.add() and
+   * TweenSystem.create(), TweenSystem.sequence(), TweenSystem.add() and
    * TweenSequencer. Not part of the public fluent API.
    * @internal
    */
-  public _attachManager(manager: TweenManager): void {
-    this._manager = manager;
+  public _attachSystem(system: TweenSystem): void {
+    this._system = system;
   }
 
   /**
-   * Advance the tween by deltaSeconds. Called by TweenManager each frame, or
+   * Advance the tween by deltaSeconds. Called by TweenSystem each frame, or
    * manually for stand-alone usage. No-ops when Paused, Stopped, or Complete.
    */
   public update(deltaSeconds: number): void {
@@ -410,7 +410,7 @@ export class Tween<T extends object = object> {
     this._applyProgress();
 
     this._state = TweenState.Complete;
-    this._manager?.remove(this);
+    this._system?.remove(this);
     this._onComplete?.();
 
     // Fire chained tween, if any.

@@ -4,8 +4,8 @@ import type { Application } from './Application';
 
 /**
  * Friend-class hooks a scene node uses to notify its owning interaction service
- * of lifecycle and bounds changes. Implemented by `InteractionManager`. Kept on
- * the {@link Stage} so a node never needs a direct reference to the manager.
+ * of lifecycle and bounds changes. Implemented by `InteractionSystem`. Kept on
+ * the {@link Stage} so a node never needs a direct reference to the system.
  */
 export interface InteractionHooks {
   _notifyNodeAdded(node: RenderNode): void;
@@ -25,7 +25,7 @@ export interface InteractionHooks {
 /**
  * Friend-class hooks a scene node uses to reach its owning keyboard-focus
  * service. Implemented by `FocusController`. Kept on the {@link Stage} so a node
- * never needs a direct reference to the manager.
+ * never needs a direct reference to the system.
  */
 export interface FocusHooks {
   /** The node that currently holds keyboard focus, or `null`. */
@@ -42,7 +42,7 @@ export interface FocusHooks {
  * Per-Application service bundle that scene nodes reach through their owning
  * tree - set on attach via `SceneNode._setStage` and cleared on detach.
  *
- * Replaces the former process-global active-manager singleton: each Application
+ * Replaces the former process-global active-system singleton: each Application
  * owns its own stage, so multiple Applications coexist on one page without
  * cross-talk (a node always routes to *its* app's services). The interface is
  * intentionally a bundle so additional app-scoped services (UI/focus, ...) can be
@@ -53,7 +53,7 @@ export interface Stage {
   readonly focus: FocusHooks;
   /**
    * The owning {@link Application}. Present in all production stages created by
-   * {@link InteractionManager}; may be absent in lightweight test stubs (hence
+   * {@link InteractionSystem}; may be absent in lightweight test stubs (hence
    * optional). Widgets that need input access should use `this._stage?.app`.
    */
   readonly app?: Application;

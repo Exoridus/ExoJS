@@ -48,7 +48,7 @@ export const DEFAULT_OCCLUSION_ATTENUATION = 0.25;
 
 /**
  * Tunable smoothing settings shared by the listener and all spatial voices. Owned
- * by {@link AudioManager} and reachable as `app.audio.spatial`.
+ * by {@link AudioSystem} and reachable as `app.audio.spatial`.
  */
 export interface SpatialSmoothingSettings {
   /**
@@ -166,7 +166,7 @@ export class SmoothedAudioParam {
  * Guards {@link deriveVelocity} against a divide-by-zero (or a near-infinite
  * velocity spike) when two samples land on the same `AudioContext.currentTime`
  * - which is not just a test artifact: an explicit `voice.position = ...`
- * write immediately followed by `AudioManager.update()`'s per-frame tick can
+ * write immediately followed by `AudioSystem.update()`'s per-frame tick can
  * genuinely both land inside the same audio-render quantum, before
  * `currentTime` has advanced at all.
  */

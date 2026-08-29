@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import { getAudioContext } from '#audio/audio-context';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
 
@@ -127,10 +127,10 @@ describe('SoundVoice — capabilities', () => {
 
   test('seek() recreates the buffer source at the new offset', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(2));
 
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
     expect(factory.sources.length).toBe(1);
 
     voice.seek(1);
@@ -148,10 +148,10 @@ describe('SoundVoice — capabilities', () => {
 
   test('voice.time setter delegates to seek()', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(4));
 
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
     voice.time = 2;
 
     expect(factory.sources.length).toBe(2);
@@ -163,10 +163,10 @@ describe('SoundVoice — capabilities', () => {
 
   test('duration reflects the playback span', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(3.5));
 
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
     expect(voice.duration).toBe(3.5);
 
     factory.restore();
@@ -183,10 +183,10 @@ describe('SoundVoice — capabilities', () => {
   // mechanism `seek()` uses.
   test('enabling loop rebuilds the source without a duration cap', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(2));
 
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
     const first = factory.sources[0];
     expect(first.start).toHaveBeenCalledWith(0, 0, 2);
 
@@ -216,10 +216,10 @@ describe('SoundVoice — capabilities', () => {
 
   test('detune setter updates the live source detune', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
 
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
     voice.detune = 75;
 
     expect(factory.sources[0].detune.setTargetAtTime).toHaveBeenCalledWith(75, expect.any(Number), expect.any(Number));
@@ -231,10 +231,10 @@ describe('SoundVoice — capabilities', () => {
 
   test('playbackRate setter retunes the live source', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
 
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
     voice.playbackRate = 2;
 
     expect(factory.sources[0].playbackRate.setTargetAtTime).toHaveBeenCalledWith(2, expect.any(Number), expect.any(Number));
@@ -249,10 +249,10 @@ describe('SoundVoice — capabilities', () => {
   test('setting voice.position spatializes a non-spatial sound voice', () => {
     const factory = setupSourceSpy();
     const pannerSpy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub()); // no descriptor position
 
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
     expect(pannerSpy.panners.length).toBe(0);
 
     voice.position = { x: 3, y: 4 };
@@ -269,10 +269,10 @@ describe('SoundVoice — capabilities', () => {
 
   test('time returns 0 once the voice has ended', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(2));
 
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
     voice.stop();
 
     expect(voice.time).toBe(0);
@@ -283,10 +283,10 @@ describe('SoundVoice — capabilities', () => {
 
   test('time wraps into [0, duration) for a looping voice, forward and backward', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(2)); // duration/span = 2
 
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
     voice.loop = true;
 
     const ctx = getAudioContext();
@@ -309,10 +309,10 @@ describe('SoundVoice — capabilities', () => {
 
   test('loop setter is a no-op when the value is unchanged', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(2));
 
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
     expect(voice.loop).toBe(false);
 
     voice.loop = false; // same value — should not touch the source at all
@@ -325,10 +325,10 @@ describe('SoundVoice — capabilities', () => {
 
   test('loop setter is a no-op once the voice has ended', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(2));
 
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
     voice.stop();
 
     voice.loop = true;
@@ -344,10 +344,10 @@ describe('SoundVoice — capabilities', () => {
 
   test('playbackRate setter is a no-op when the (clamped) value is unchanged', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
 
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
     expect(voice.playbackRate).toBe(1);
 
     voice.playbackRate = 1; // same value — should not retune the live source
@@ -360,10 +360,10 @@ describe('SoundVoice — capabilities', () => {
 
   test('playbackRate setter is a no-op once the voice has ended', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
 
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
     voice.stop();
 
     voice.playbackRate = 2;
@@ -376,10 +376,10 @@ describe('SoundVoice — capabilities', () => {
 
   test('seek() is a no-op once the voice has ended', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(2));
 
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
     voice.stop();
 
     voice.seek(1);
@@ -392,10 +392,10 @@ describe('SoundVoice — capabilities', () => {
 
   test('loop setter clears the source loop window when disabling loop', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(2));
 
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
     voice.loop = true;
     expect(factory.sources[1].loopStart).toBe(0);
 
@@ -411,11 +411,11 @@ describe('SoundVoice — capabilities', () => {
 
   test('a non-looping sprite voice still carries its clip window on the source', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(10));
     sound.defineSprite('hit', { start: 2, end: 3 });
 
-    manager.play(sound.sprite('hit'));
+    system.play(sound.sprite('hit'));
 
     expect(factory.sources[0].loopStart).toBe(2);
     expect(factory.sources[0].loopEnd).toBe(3);
@@ -426,11 +426,11 @@ describe('SoundVoice — capabilities', () => {
 
   test('disabling loop keeps a sprite voice inside its clip window', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(10));
     sound.defineSprite('hit', { start: 2, end: 3, loop: true });
 
-    const voice = manager.play(sound.sprite('hit')) as SoundVoice;
+    const voice = system.play(sound.sprite('hit')) as SoundVoice;
     const first = factory.sources[0];
 
     // A looping start passes no duration, so nothing bounds the source yet.
@@ -459,11 +459,11 @@ describe('SoundVoice — capabilities', () => {
   // rate param - neither of which an absolute `stop(when)` would survive.
   test('the clip bound survives a later playback-rate change without rescheduling', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(10));
     sound.defineSprite('hit', { start: 2, end: 3, loop: true });
 
-    const voice = manager.play(sound.sprite('hit')) as SoundVoice;
+    const voice = system.play(sound.sprite('hit')) as SoundVoice;
 
     setCurrentTime(0.25);
     voice.loop = false;
@@ -484,11 +484,11 @@ describe('SoundVoice — capabilities', () => {
 
   test('disabling loop rebases the reported playhead after the clip has wrapped', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(10));
     sound.defineSprite('hit', { start: 2, end: 3, loop: true });
 
-    const voice = manager.play(sound.sprite('hit')) as SoundVoice;
+    const voice = system.play(sound.sprite('hit')) as SoundVoice;
 
     setCurrentTime(2.5); // 2.5 passes through the 1s clip
     expect(voice.time).toBeCloseTo(0.5, 6);
@@ -510,11 +510,11 @@ describe('SoundVoice — capabilities', () => {
   // not fall back to an uncapped start that spills into the rest of the atlas.
   test('seeking to the very end of a non-looping clip does not spill into the buffer', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(10));
     sound.defineSprite('hit', { start: 2, end: 3 });
 
-    const voice = manager.play(sound.sprite('hit')) as SoundVoice;
+    const voice = system.play(sound.sprite('hit')) as SoundVoice;
     voice.seek(voice.duration);
 
     expect(factory.sources).toHaveLength(2);
@@ -526,10 +526,10 @@ describe('SoundVoice — capabilities', () => {
 
   test('detune setter is a no-op once the voice has ended', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
 
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
     voice.stop();
 
     voice.detune = 42;
@@ -540,19 +540,19 @@ describe('SoundVoice — capabilities', () => {
     sound.destroy();
   });
 
-  test('follow(node) tracks the node WORLD transform on each manager tick', () => {
+  test('follow(node) tracks the node WORLD transform on each system tick', () => {
     const factory = setupSourceSpy();
     const pannerSpy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
 
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
     const node = { getWorldTransform: vi.fn().mockReturnValue({ x: 10, y: 20 }) };
     voice.follow(node as never);
 
     expect(pannerSpy.panners.length).toBe(1);
 
-    manager.preUpdate(frameDelta);
+    system.preUpdate(frameDelta);
 
     expect(node.getWorldTransform).toHaveBeenCalled();
     expect(pannerSpy.panners[0].positionX.setValueAtTime).toHaveBeenCalledWith(10, expect.any(Number));

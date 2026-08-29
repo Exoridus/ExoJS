@@ -171,7 +171,7 @@ const NO_PARENT_VERSION = 0;
  * `isAlignedBox` getter reports that predicate for this node's own rotation only.
  *
  * `_invalidate*` methods are exported as `public` for friend-class access
- * from {@link Container} and {@link InteractionManager}; treat them as
+ * from {@link Container} and {@link InteractionSystem}; treat them as
  * `@internal`.
  *
  * Subclasses: {@link Container} (carries children), {@link RenderNode}
@@ -1086,7 +1086,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    */
   protected _invalidateBoundsFlags(): void {
     // Mark own bounds + notify interaction for THIS node unconditionally -
-    // the manager filters to tracked interactive nodes so this call is O(1)
+    // the system filters to tracked interactive nodes so this call is O(1)
     // for the common case (non-interactive node - fast Set.has miss).
     this.flags.addMask(SceneNodeTransformFlags.BoundsRect);
     this._stage?.interaction._notifyBoundsInvalidated(this as unknown as RenderNode);

@@ -12,8 +12,8 @@ import { Signal } from '#core/Signal';
 import type { ContextMenuRequest } from '#input/ContextMenuRequest';
 import type { Gamepad } from '#input/Gamepad';
 import type { GamepadButton } from '#input/GamepadButton';
-import type { InputManager } from '#input/InputManager';
-import { InteractionManager } from '#input/InteractionManager';
+import type { InputSystem } from '#input/InputSystem';
+import { InteractionSystem } from '#input/InteractionSystem';
 import type { Pointer } from '#input/Pointer';
 import { Rectangle } from '#math/Rectangle';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
@@ -65,7 +65,7 @@ const dispatchPointer = (signal: Signal<[Pointer, number, number]>, x: number, y
   return pointer;
 };
 
-const createApp = (dragThreshold?: number): { app: Application; scene: Scene; signals: Signals; im: InteractionManager } => {
+const createApp = (dragThreshold?: number): { app: Application; scene: Scene; signals: Signals; im: InteractionSystem } => {
   const signals = {
     onPointerDown: new Signal<[Pointer, number, number]>(),
     onPointerMove: new Signal<[Pointer, number, number]>(),
@@ -93,7 +93,7 @@ const createApp = (dragThreshold?: number): { app: Application; scene: Scene; si
     width: 800,
     height: 600,
     options: { input: dragThreshold === undefined ? {} : { dragThreshold } },
-    input: signals as unknown as InputManager,
+    input: signals as unknown as InputSystem,
     rendering: { view: identity, screenView: identity },
     scenes: {
       get currentScene(): Scene | null {
@@ -104,7 +104,7 @@ const createApp = (dragThreshold?: number): { app: Application; scene: Scene; si
     },
   } as unknown as Application;
 
-  const im = new InteractionManager(app);
+  const im = new InteractionSystem(app);
 
   im.attachRoot(scene.root);
 
@@ -328,7 +328,7 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
     scene.addChild(sprite);
     sprite.onDragStart.add(started);
     // No removeChild first - the harder case: destroy() alone does not
-    // unregister the node from the interaction manager on its own.
+    // unregister the node from the interaction system on its own.
     sprite.onPointerDown.add(() => sprite.destroy());
 
     dispatchPointer(signals.onPointerDown, 50, 50);

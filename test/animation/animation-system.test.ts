@@ -1,4 +1,4 @@
-import { AnimationManager } from '#animation/AnimationManager';
+import { AnimationSystem } from '#animation/AnimationSystem';
 import { type Seconds, Time } from '#core/units';
 import { Rectangle } from '#math/Rectangle';
 import { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
@@ -10,95 +10,95 @@ const createSprite = (): AnimatedSprite => new AnimatedSprite(null, { walk: { fr
 
 const frame = (milliseconds: number): Seconds => Time.toSeconds(Time.milliseconds(milliseconds));
 
-describe('AnimationManager', () => {
+describe('AnimationSystem', () => {
   test('advances registered sprites by the frame delta converted to seconds', () => {
-    const manager = new AnimationManager();
+    const system = new AnimationSystem();
     const sprite = createSprite();
 
     sprite.play('walk');
-    manager.add(sprite);
+    system.add(sprite);
 
-    manager.preUpdate(frame(100));
+    system.preUpdate(frame(100));
     expect(sprite.currentFrame).toBe(1);
 
-    manager.preUpdate(frame(100));
+    system.preUpdate(frame(100));
     expect(sprite.currentFrame).toBe(2);
   });
 
   test('add() is idempotent and remove() drops the registration', () => {
-    const manager = new AnimationManager();
+    const system = new AnimationSystem();
     const sprite = createSprite();
 
-    manager.add(sprite).add(sprite);
-    expect(manager.size).toBe(1);
-    expect(manager.has(sprite)).toBe(true);
+    system.add(sprite).add(sprite);
+    expect(system.size).toBe(1);
+    expect(system.has(sprite)).toBe(true);
 
-    manager.remove(sprite);
-    expect(manager.size).toBe(0);
-    expect(manager.has(sprite)).toBe(false);
+    system.remove(sprite);
+    expect(system.size).toBe(0);
+    expect(system.has(sprite)).toBe(false);
   });
 
   test('refuses to register a destroyed sprite', () => {
-    const manager = new AnimationManager();
+    const system = new AnimationSystem();
     const sprite = createSprite();
 
     sprite.destroy();
-    manager.add(sprite);
+    system.add(sprite);
 
-    expect(manager.size).toBe(0);
+    expect(system.size).toBe(0);
   });
 
   test('evicts a sprite destroyed between frames instead of ticking it', () => {
-    const manager = new AnimationManager();
+    const system = new AnimationSystem();
     const sprite = createSprite();
 
     sprite.play('walk');
-    manager.add(sprite);
-    expect(manager.size).toBe(1);
+    system.add(sprite);
+    expect(system.size).toBe(1);
 
     sprite.destroy();
 
     expect(() => {
-      manager.preUpdate(frame(100));
+      system.preUpdate(frame(100));
     }).not.toThrow();
-    expect(manager.size).toBe(0);
+    expect(system.size).toBe(0);
   });
 
   test('a callback that registers or deregisters sprites mid-tick does not corrupt the loop', () => {
-    const manager = new AnimationManager();
+    const system = new AnimationSystem();
     const first = createSprite();
     const second = createSprite();
 
     first.play('walk');
     second.play('walk');
-    manager.add(first);
+    system.add(first);
 
     first.onFrame.add(() => {
-      manager.add(second);
-      manager.remove(first);
+      system.add(second);
+      system.remove(first);
     });
 
-    manager.preUpdate(frame(100));
+    system.preUpdate(frame(100));
 
     expect(first.currentFrame).toBe(1);
-    expect(manager.has(first)).toBe(false);
-    expect(manager.has(second)).toBe(true);
+    expect(system.has(first)).toBe(false);
+    expect(system.has(second)).toBe(true);
   });
 
   test('destroy() releases every sprite and makes later updates no-ops', () => {
-    const manager = new AnimationManager();
+    const system = new AnimationSystem();
     const sprite = createSprite();
 
     sprite.play('walk');
-    manager.add(sprite);
+    system.add(sprite);
 
-    manager.destroy();
-    expect(manager.size).toBe(0);
+    system.destroy();
+    expect(system.size).toBe(0);
 
-    manager.add(sprite);
-    manager.preUpdate(frame(100));
+    system.add(sprite);
+    system.preUpdate(frame(100));
 
-    expect(manager.size).toBe(0);
+    expect(system.size).toBe(0);
     expect(sprite.currentFrame).toBe(0);
   });
 });

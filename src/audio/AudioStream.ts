@@ -4,8 +4,8 @@ import type { PlaybackOptions } from '#core/types';
 import { clamp } from '#math/utils';
 
 import { getAudioContext } from './audio-context';
-import type { AudioManager } from './AudioManager';
 import { AudioStreamVoice } from './AudioStreamVoice';
+import type { AudioSystem } from './AudioSystem';
 import type { Playable, PlayOptions, Voice } from './Playable';
 import { seedVoiceFromPlayOptions, seedVoiceSends } from './spatial-options';
 
@@ -17,12 +17,12 @@ import { seedVoiceFromPlayOptions, seedVoiceSends } from './spatial-options';
  *
  * `AudioStream` is a **data descriptor**: it holds the media element and default
  * playback parameters but does not play itself. Playback is driven by
- * `AudioManager.play(stream, options)`, which returns an {@link AudioStreamVoice}
+ * `AudioSystem.play(stream, options)`, which returns an {@link AudioStreamVoice}
  * for fine-grained control (pause/resume, seek, loop, rate, volume, spatial).
  *
  * Because an `HTMLAudioElement` has a single playhead, a stream has **one active
  * voice at a time** - playing again stops the previous voice. Routes through the
- * manager's `music` bus by default (override via {@link PlayOptions.bus}).
+ * system's `music` bus by default (override via {@link PlayOptions.bus}).
  *
  * Use {@link Sound} for short, frequently-triggered clips that benefit from
  * pre-decoded `AudioBuffer` storage and pooled overlapping playback.
@@ -88,7 +88,7 @@ export class AudioStream implements Playable {
   }
 
   /**
-   * Implements {@link Playable}. Called by {@link AudioManager.play}.
+   * Implements {@link Playable}. Called by {@link AudioSystem.play}.
    *
    * Stops any previously active voice (a stream has a single playhead), then
    * starts a fresh {@link AudioStreamVoice}.
@@ -98,7 +98,7 @@ export class AudioStream implements Playable {
    * and the second call raises `InvalidStateError` in the browser - a hard,
    * hard-to-trace runtime failure that a production build must not walk into.
    */
-  public _createVoice(manager: AudioManager, options: PlayOptions): Voice {
+  public _createVoice(system: AudioSystem, options: PlayOptions): Voice {
     if (this._destroyed) {
       throw new Error(
         'Cannot play a destroyed AudioStream. `destroy()` releases the MediaElementAudioSourceNode that is ' +
@@ -107,7 +107,7 @@ export class AudioStream implements Playable {
       );
     }
 
-    const bus = options.bus ?? manager.music;
+    const bus = options.bus ?? system.music;
     const audioContext = getAudioContext();
 
     if (this._activeVoice !== null && !this._activeVoice.ended) {
@@ -130,7 +130,7 @@ export class AudioStream implements Playable {
       audioContext,
       output,
       bus,
-      manager,
+      system,
       volume,
       element: this._audioElement,
       sourceNode: this._sourceNode,

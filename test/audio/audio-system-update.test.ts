@@ -1,5 +1,5 @@
 import { getAudioContext } from '#audio/audio-context';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
 import { Time } from '#core/units';
@@ -40,14 +40,14 @@ const setupPannerSpy = () => {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('AudioManager.update()', () => {
+describe('AudioSystem.update()', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
   // 1. mixer.preUpdate() ticks listener
   test('update() calls listener._tick()', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     const tickSpy = vi.spyOn(mixer.listener, '_tick');
     mixer.preUpdate(frameDelta);
     expect(tickSpy).toHaveBeenCalledTimes(1);
@@ -56,7 +56,7 @@ describe('AudioManager.update()', () => {
   // 2. mixer.preUpdate() ticks all registered spatial voices
   test('update() calls _tickSpatial() on all registered spatial voices', () => {
     const pannerSpy = setupPannerSpy();
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     const sound1 = new Sound(createAudioBufferStub());
     const sound2 = new Sound(createAudioBufferStub());
 
@@ -78,7 +78,7 @@ describe('AudioManager.update()', () => {
 
   // 3. Non-spatial voices NOT ticked
   test('update() does NOT call _tickSpatial() on non-spatial voices', () => {
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
     // sound.position remains null - not spatial
     const voice = mixer.play(sound) as SoundVoice;
@@ -88,11 +88,11 @@ describe('AudioManager.update()', () => {
     sound.destroy();
   });
 
-  // 4. The engine's own core managers run as `preUpdate` systems, ahead of the
+  // 4. The engine's own core systems run as `preUpdate` systems, ahead of the
   // fixed steps, in a fixed relative order pinned by their `SystemOrder.Core*`
   // values: input, interaction (which retires the pointers input flagged
   // terminal, in its own `finally`), audio, tweens, rendering.
-  test('Application.update() runs the core managers in order at the head of preUpdate', async () => {
+  test('Application.update() runs the core systems in order at the head of preUpdate', async () => {
     vi.resetModules();
 
     const callOrder: string[] = [];
@@ -181,7 +181,7 @@ describe('AudioManager.update()', () => {
 
   test('update() still works after all spatial voices end', () => {
     const pannerSpy = setupPannerSpy();
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
     const voice = mixer.play(sound, { position: { x: 0, y: 0 } });
     voice.stop(); // mark ended
@@ -193,7 +193,7 @@ describe('AudioManager.update()', () => {
 
   test('destroy() clears the spatial voices set', () => {
     const pannerSpy = setupPannerSpy();
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
     const voice = mixer.play(sound, { position: { x: 0, y: 0 } }) as SoundVoice;
 

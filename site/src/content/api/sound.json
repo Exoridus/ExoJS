@@ -1,6 +1,6 @@
 {
   "title": "Sound",
-  "description": "Pre-decoded short audio clip backed by an `AudioBuffer`. Sound is a **data descriptor** - it holds the decoded audio buffer, sprite definitions, and default playback parameters but does NOT start playback itself, and holds no per-playback spatial state (that lives on the Voice returned by playing it). Playback is driven by `AudioManager.play(sound, options)` which returns a Voice handle. Multiple concurrent plays of the same Sound are supported up to `poolSize`. When the pool is full the configured SoundPoolStrategy decides which active voice to evict. Use AudioStream for long-form streaming audio (single source, decoded lazily) - `Sound` is best for short, frequently-triggered clips.",
+  "description": "Pre-decoded short audio clip backed by an `AudioBuffer`. Sound is a **data descriptor** - it holds the decoded audio buffer, sprite definitions, and default playback parameters but does NOT start playback itself, and holds no per-playback spatial state (that lives on the Voice returned by playing it). Playback is driven by `AudioSystem.play(sound, options)` which returns a Voice handle. Multiple concurrent plays of the same Sound are supported up to `poolSize`. When the pool is full the configured SoundPoolStrategy decides which active voice to evict. Use AudioStream for long-form streaming audio (single source, decoded lazily) - `Sound` is best for short, frequently-triggered clips.",
   "symbol": "Sound",
   "kind": "class",
   "subsystem": "audio",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Pre-decoded short audio clip backed by an `AudioBuffer`.",
-        "Sound is a **data descriptor** - it holds the decoded audio buffer, sprite definitions, and default playback parameters but does NOT start playback itself, and holds no per-playback spatial state (that lives on the Voice returned by playing it). Playback is driven by `AudioManager.play(sound, options)` which returns a Voice handle.",
+        "Sound is a **data descriptor** - it holds the decoded audio buffer, sprite definitions, and default playback parameters but does NOT start playback itself, and holds no per-playback spatial state (that lives on the Voice returned by playing it). Playback is driven by `AudioSystem.play(sound, options)` which returns a Voice handle.",
         "Multiple concurrent plays of the same Sound are supported up to `poolSize`. When the pool is full the configured SoundPoolStrategy decides which active voice to evict.",
         "Use AudioStream for long-form streaming audio (single source, decoded lazily) - `Sound` is best for short, frequently-triggered clips."
       ],
@@ -118,7 +118,7 @@
       "members": [
         {
           "name": "_createVoice",
-          "signature": "_createVoice(manager: AudioManager, options: SoundPlayOptions): Voice",
+          "signature": "_createVoice(system: AudioSystem, options: SoundPlayOptions): Voice",
           "signatureTokens": [
             {
               "text": "_createVoice",
@@ -129,7 +129,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "manager",
+              "text": "system",
               "kind": "param"
             },
             {
@@ -137,7 +137,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "AudioManager",
+              "text": "AudioSystem",
               "kind": "type"
             },
             {
@@ -171,8 +171,8 @@
           ],
           "params": [
             {
-              "name": "manager",
-              "type": "AudioManager",
+              "name": "system",
+              "type": "AudioSystem",
               "optional": false
             },
             {
@@ -182,7 +182,7 @@
             }
           ],
           "returnType": "Voice",
-          "description": "Implements Playable. Called by AudioManager.play; do not call directly - use manager.play(sound, options) instead. Creates one SoundVoice backed by a single AudioBufferSourceNode. Pool limits are enforced: if the pool is full the configured eviction strategy picks a victim to stop before the new voice starts."
+          "description": "Implements Playable. Called by AudioSystem.play; do not call directly - use app.audio.play(sound, options) instead. Creates one SoundVoice backed by a single AudioBufferSourceNode. Pool limits are enforced: if the pool is full the configured eviction strategy picks a victim to stop before the new voice starts."
         },
         {
           "name": "_stopAllVoices",

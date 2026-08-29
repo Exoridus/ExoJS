@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import { getAudioContext } from '#audio/audio-context';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import { Sound } from '#audio/Sound';
 
 const makeBuffer = (duration = 2): AudioBuffer => ({ duration }) as AudioBuffer;
@@ -75,11 +75,11 @@ describe('Sound.clip', () => {
 
   test('playing a clip starts at the clip offset for the clip duration', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(makeBuffer(2));
     const clip = sound.clip(0.5, 1);
 
-    manager.play(clip);
+    system.play(clip);
 
     expect(factory.sources[0].start).toHaveBeenCalledWith(0, 0.5, 1);
 
@@ -92,7 +92,7 @@ describe('Sound.clip', () => {
   // buffer would keep the evicted one alive and play stale data after a reload.
   test('a clip follows the parent through evict + reload instead of pinning the old buffer', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const original = makeBuffer(2);
     const sound = new Sound(original);
     const clip = sound.clip(0.5, 1);
@@ -101,7 +101,7 @@ describe('Sound.clip', () => {
     const reloaded = makeBuffer(2);
     sound._setBuffer(reloaded);
 
-    manager.play(clip);
+    system.play(clip);
 
     expect(factory.sources[0].buffer).toBe(reloaded);
     expect(factory.sources[0].buffer).not.toBe(original);
@@ -113,7 +113,7 @@ describe('Sound.clip', () => {
 
   test('a sprite sub-Sound follows the parent through evict + reload', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const original = makeBuffer(2);
     const sound = new Sound(original, { sprites: { hit: { start: 0.5, end: 1.5 } } });
     const hit = sound.sprite('hit');
@@ -122,7 +122,7 @@ describe('Sound.clip', () => {
     const reloaded = makeBuffer(2);
     sound._setBuffer(reloaded);
 
-    manager.play(hit);
+    system.play(hit);
 
     expect(factory.sources[0].buffer).toBe(reloaded);
 

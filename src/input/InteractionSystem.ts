@@ -30,7 +30,7 @@ const defaultDragThreshold = 8;
 
 /**
  * Which discrete signal a queued {@link InteractionJournalEntry} corresponds
- * to - the same shape {@link InputManager}'s own signals dispatch in,
+ * to - the same shape {@link InputSystem}'s own signals dispatch in,
  * appended to one flat, globally ordered journal exactly as its signal
  * handler fires rather than folded into a bitmask, or grouped per pointer
  * (see {@link InteractionJournalEntry}'s doc comment for why that
@@ -51,9 +51,9 @@ const enum InteractionPhaseKind {
 
 /**
  * One queued occurrence, in the exact GLOBAL chronological position
- * {@link InteractionManager}'s own signal handler appended it - spanning
+ * {@link InteractionSystem}'s own signal handler appended it - spanning
  * every tracked pointer AND every context-menu request together in one flat
- * sequence, mirroring {@link InputManager}'s own journal one layer up (see
+ * sequence, mirroring {@link InputSystem}'s own journal one layer up (see
  * that class's `JournalEntry` doc comment for why a flat, cross-pointer
  * structure is required: per-pointer buffering, drained one pointer's whole
  * list at a time, cannot represent `P1 Down -> P2 Down -> P1 Up` in that true
@@ -62,7 +62,7 @@ const enum InteractionPhaseKind {
  * the only way two press/release cycles sharing one flush stay two cycles,
  * and a same-flush Up-before-Down dispatches in that true order instead of
  * always Down-before-Up. `x`/`y` are design-space, captured at enqueue time
- * (the phase's own coordinates, per {@link InputManager}'s per-phase
+ * (the phase's own coordinates, per {@link InputSystem}'s per-phase
  * dispatch) rather than read back later from whichever position the pointer
  * has since moved to.
  */
@@ -72,7 +72,7 @@ interface InteractionJournalEntry {
   readonly x: number;
   readonly y: number;
   /**
-   * `Up` only. `InputManager` dispatches `onPointerUp` then, synchronously
+   * `Up` only. `InputSystem` dispatches `onPointerUp` then, synchronously
    * and immediately after, conditionally `onPointerTap` - nothing else runs
    * in between, so by the time `_handlePointerTap` fires, the entry this
    * SAME pointer's `onPointerUp` handler just pushed is guaranteed to still
@@ -147,10 +147,10 @@ const isSelfOrDescendant = (node: RenderNode, root: RenderNode): boolean => {
 // ---------------------------------------------------------------------------
 
 /**
- * Routes pointer events from the {@link InputManager} to interactive
+ * Routes pointer events from the {@link InputSystem} to interactive
  * scene-graph nodes via DOM-style event bubbling. Maintains a persistent
  * dynamic-AABB-tree spatial index of interactive {@link RenderNode}s for
- * hit-testing and updates it incrementally - nodes notify the manager via the
+ * hit-testing and updates it incrementally - nodes notify the system via the
  * `_notify*` hooks when they enter/leave the scene, change interactivity,
  * or move (causing bounds to dirty).
  *
@@ -178,7 +178,7 @@ const isSelfOrDescendant = (node: RenderNode, root: RenderNode): boolean => {
  * Constructed automatically by {@link Application}; you do not instantiate
  * this class yourself.
  */
-export class InteractionManager implements InteractionHooks {
+export class InteractionSystem implements InteractionHooks {
   private readonly _app: Application;
 
   // Persistent spatial index (dynamic AABB tree) - null when no interactive
@@ -234,7 +234,7 @@ export class InteractionManager implements InteractionHooks {
   // under in `_groupWorldDescendants` (for O(1) removal on re-index/unregister).
   private readonly _nodeBoundaryGroup = new Map<RenderNode, RenderNode>();
 
-  /** This manager's service bundle, installed on a scene root via {@link attachRoot}. */
+  /** This system's service bundle, installed on a scene root via {@link attachRoot}. */
   private readonly _stage: Stage;
 
   /**
@@ -296,7 +296,7 @@ export class InteractionManager implements InteractionHooks {
    */
   private readonly _scopeStack: Array<{ token: ScopeToken; root: RenderNode }> = [];
 
-  /** Keyboard focus for this application. Public access goes through this manager. */
+  /** Keyboard focus for this application. Public access goes through this system. */
   private readonly _focus: FocusController;
 
   /** Distance in design pixels a press must travel before it becomes a drag. */
@@ -326,7 +326,7 @@ export class InteractionManager implements InteractionHooks {
    * Every pointer with at least one live phase, kept so the scene-driven
    * hover pass ({@link _hoverDirty}) has something to re-resolve on a frame
    * with no pointer events of its own. Entries are dropped when a pointer's
-   * own Cancel/Leave retires it, which is the same moment `InputManager`
+   * own Cancel/Leave retires it, which is the same moment `InputSystem`
    * stops tracking it.
    */
   private readonly _livePointers = new Map<number, Pointer>();
@@ -466,7 +466,7 @@ export class InteractionManager implements InteractionHooks {
    * {@link popScope} with the returned token. Pointer events outside the
    * subtree hit nothing, Tab traversal stays inside it, and - since the
    * scope is a real focus trap - so does every programmatic
-   * {@link InteractionManager.focus} call; a modal dialog (optionally with a
+   * {@link InteractionSystem.focus} call; a modal dialog (optionally with a
    * full-screen backdrop to swallow clicks) shields everything beneath it.
    * Scopes stack - the most recently pushed one wins - and nest freely with
    * scopes pushed at any other level (app-wide or scene-scoped alike).
@@ -606,9 +606,9 @@ export class InteractionManager implements InteractionHooks {
 
   /**
    * {@link SystemMethods.preUpdate} phase: dispatch this frame's node-level
-   * pointer events, then retire the pointers {@link InputManager} flagged
+   * pointer events, then retire the pointers {@link InputSystem} flagged
    * terminal. Registered on `app.systems` by the {@link Application} at
-   * {@link SystemOrder.CoreInteraction}, directly after {@link InputManager}.
+   * {@link SystemOrder.CoreInteraction}, directly after {@link InputSystem}.
    *
    * The retirement runs in a `finally` because node-level dispatch above may
    * still reference pointers flagged terminal this flush; only once it has
@@ -626,7 +626,7 @@ export class InteractionManager implements InteractionHooks {
   }
 
   /**
-   * Bind a root node to this manager: install the manager's {@link Stage} on
+   * Bind a root node to this system: install the system's {@link Stage} on
    * the subtree (so its nodes route their hooks here) and register the
    * subtree's interactive nodes. `root` accepts any {@link RenderNode} (not
    * just a {@link Container}) so it also serves {@link SceneInteraction.observe}'s
@@ -694,7 +694,7 @@ export class InteractionManager implements InteractionHooks {
   }
 
   /**
-   * Bind a scene's UI layer to this manager. Installs the UI stage (no-op world
+   * Bind a scene's UI layer to this system. Installs the UI stage (no-op world
    * hooks, shared focus) so its nodes route focus here but stay out of the world
    * tree; the layer is hit-tested by a direct walk in screen space.
    *
@@ -842,7 +842,7 @@ export class InteractionManager implements InteractionHooks {
 
   /**
    * No entry of its own - see {@link InteractionJournalEntry.tap}'s doc
-   * comment. `InputManager` dispatches `onPointerUp` then, synchronously and
+   * comment. `InputSystem` dispatches `onPointerUp` then, synchronously and
    * immediately after, conditionally `onPointerTap` for the SAME occurrence,
    * so the journal's own last entry is guaranteed to still be the `Up` this
    * pointer's `onPointerUp` handler just pushed; mutated in place rather than
@@ -854,7 +854,7 @@ export class InteractionManager implements InteractionHooks {
 
     // Matched by id, not object identity - the true correlation key every
     // other per-pointer map in this class (`_pressTargets`, `_lastHit`,
-    // `_drags`, ...) already uses, and the one real `InputManager` itself
+    // `_drags`, ...) already uses, and the one real `InputSystem` itself
     // guarantees stays stable for a pointer's whole lifetime even though a
     // fresh `Pointer`-shaped object could in principle arrive per dispatch.
     if (last !== undefined && last.kind === InteractionPhaseKind.Up && last.pointer.id === pointer.id) {
@@ -872,7 +872,7 @@ export class InteractionManager implements InteractionHooks {
    * doc comment.
    *
    * Enqueued into the SAME flat, globally ordered journal as every pointer's
-   * other phases - fired here means it is appended right where `InputManager`
+   * other phases - fired here means it is appended right where `InputSystem`
    * dispatched it relative to any phase already queued this flush, for ANY
    * pointer, preserving their true relative order rather than routing
    * context-menu requests through a separate, disconnected slot.
@@ -895,16 +895,16 @@ export class InteractionManager implements InteractionHooks {
 
   /**
    * Append `kind` at `(x, y)` to the flat, globally ordered journal - passed
-   * explicitly by the `InputManager` signal for that exact phase, an
+   * explicitly by the `InputSystem` signal for that exact phase, an
    * immutable snapshot rather than a value read back off the pointer (which
    * always reads live; see {@link Pointer.position}'s doc comment). Two
    * `Move` entries coalesce ONLY when they are immediately adjacent in this
-   * GLOBAL order for the SAME pointer id, mirroring {@link InputManager}'s
+   * GLOBAL order for the SAME pointer id, mirroring {@link InputSystem}'s
    * own rule one layer up: `P1 Move, P2 Move, P1 Move` stays three entries (a
    * `P2` entry sits between the two `P1` moves), so a caller dispatching two
    * raw moves back to back for the SAME pointer, with nothing from any other
-   * pointer in between, cannot desync InteractionManager's journal from what
-   * a real `InputManager` would ever actually produce; every other phase, or
+   * pointer in between, cannot desync InteractionSystem's journal from what
+   * a real `InputSystem` would ever actually produce; every other phase, or
    * a `Move` separated from the last one by any other kind or pointer, is its
    * own entry. Matched by `pointer.id` rather than object identity - the same
    * correlation key every other per-pointer map in this class already uses.
@@ -937,7 +937,7 @@ export class InteractionManager implements InteractionHooks {
 
   /**
    * Drain the WHOLE flat journal for this flush in one pass, strictly in the
-   * GLOBAL order {@link InputManager} dispatched it - the true fix for the
+   * GLOBAL order {@link InputSystem} dispatched it - the true fix for the
    * defect BOTH the aggregated-bitmask design AND a per-pointer-bucketed
    * queue had: an Up→Down within one flush dispatched Down-before-Up
    * regardless (bitmasks cannot represent order), two full press/release
@@ -978,9 +978,9 @@ export class InteractionManager implements InteractionHooks {
   private _drainJournal(): void {
     // Capture the complete failed batch up front. If a user handler throws,
     // Application's frame guard propagates the error but the interaction
-    // manager must fail closed: never retain a half-consumed journal, drag,
+    // system must fail closed: never retain a half-consumed journal, drag,
     // press target, hover target, or pointer capture that can be replayed on a
-    // later frame after InputManager has already retired the Pointer object.
+    // later frame after InputSystem has already retired the Pointer object.
     const touchedIds = new Set<number>();
 
     for (const entry of this._journal) {
@@ -1821,7 +1821,7 @@ export class InteractionManager implements InteractionHooks {
 
     // Lazy-init the tree on the first interactive node.
     if (this._tree === null) {
-      this._tree = new DynamicAabbTree<IndexedNode>(InteractionManager._treeMargin);
+      this._tree = new DynamicAabbTree<IndexedNode>(InteractionSystem._treeMargin);
     }
 
     this._insertNode(node);
@@ -2053,7 +2053,7 @@ export class InteractionManager implements InteractionHooks {
   /**
    * One-shot dev diagnostic (belt-and-braces telemetry): an
    * interactive node under an engaged transform-group boundary works - the
-   * manager maps pointers through the group's world matrix - but its public
+   * system maps pointers through the group's world matrix - but its public
    * `getBounds()`/`position` remain GROUP-LOCAL, which regularly surprises
    * gameplay code. Dev builds only; stripped in production via `__DEV__`.
    */

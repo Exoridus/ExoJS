@@ -2,7 +2,7 @@ import type { MockInstance } from 'vitest';
 
 import { getAudioContext } from '#audio/audio-context';
 import { AudioInput } from '#audio/AudioInput';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import { AudioUnsupportedError } from '#audio/AudioUnsupportedError';
 import type { InputVoice } from '#audio/InputVoice';
 import { Sound } from '#audio/Sound';
@@ -87,21 +87,21 @@ describe('AudioInput / InputVoice', () => {
     }
   });
 
-  test('manager.open creates a MediaStreamSource and returns a live, analysis-only voice', async () => {
+  test('system.open creates a MediaStreamSource and returns a live, analysis-only voice', async () => {
     const stream = makeStream();
     stubGetUserMedia(stream);
     const input = await AudioInput.open();
 
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const ctx = getAudioContext();
     const sourceSpy = vi.spyOn(ctx, 'createMediaStreamSource');
 
-    const voice = manager.open(input);
+    const voice = system.open(input);
 
     expect(sourceSpy).toHaveBeenCalledWith(stream);
     expect(voice.ended).toBe(false);
     // Analysis-only: routing to a bus does not throw and is opt-in.
-    expect(() => voice.routeTo(manager.master)).not.toThrow();
+    expect(() => voice.routeTo(system.master)).not.toThrow();
 
     voice.stop();
   });
@@ -110,8 +110,8 @@ describe('AudioInput / InputVoice', () => {
     const stream = makeStream();
     stubGetUserMedia(stream);
     const input = await AudioInput.open();
-    const manager = new AudioManager();
-    const voice = manager.open(input);
+    const system = new AudioSystem();
+    const voice = system.open(input);
 
     // The output node is the analysis tap (e.g. new AudioAnalyser({ source: voice })).
     expect(voice.output).toBeDefined();
@@ -124,11 +124,11 @@ describe('AudioInput / InputVoice', () => {
     const stream = makeStream();
     stubGetUserMedia(stream);
     const input = await AudioInput.open();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const ctx = getAudioContext();
     const pannerSpy = vi.spyOn(ctx, 'createPanner');
 
-    const voice = manager.open(input) as InputVoice;
+    const voice = system.open(input) as InputVoice;
     voice.position = { x: 3, y: 4 };
 
     expect(pannerSpy).toHaveBeenCalledTimes(1);
@@ -145,8 +145,8 @@ describe('AudioInput / InputVoice', () => {
     const stream = makeStream();
     stubGetUserMedia(stream);
     const input = await AudioInput.open();
-    const manager = new AudioManager();
-    const voice = manager.open(input);
+    const system = new AudioSystem();
+    const voice = system.open(input);
 
     const promise = voice.record(50);
     await vi.advanceTimersByTimeAsync(60);
@@ -162,14 +162,14 @@ describe('AudioInput / InputVoice', () => {
     const stream = makeStream();
     stubGetUserMedia(stream);
     const input = await AudioInput.open();
-    const manager = new AudioManager();
-    const voice = manager.open(input) as InputVoice;
+    const system = new AudioSystem();
+    const voice = system.open(input) as InputVoice;
 
     voice.stop();
     expect(voice.ended).toBe(true);
 
     const busBefore = voice.bus;
-    expect(voice.routeTo(manager.master)).toBe(voice);
+    expect(voice.routeTo(system.master)).toBe(voice);
     expect(voice.bus).toBe(busBefore);
   });
 
@@ -183,8 +183,8 @@ describe('AudioInput / InputVoice', () => {
     const stream = makeStream();
     stubGetUserMedia(stream);
     const input = await AudioInput.open();
-    const manager = new AudioManager();
-    const voice = manager.open(input);
+    const system = new AudioSystem();
+    const voice = system.open(input);
 
     const promise = voice.record(10);
     await vi.advanceTimersByTimeAsync(20);
@@ -203,8 +203,8 @@ describe('AudioInput / InputVoice', () => {
     const stream = makeStream();
     stubGetUserMedia(stream);
     const input = await AudioInput.open();
-    const manager = new AudioManager();
-    const voice = manager.open(input);
+    const system = new AudioSystem();
+    const voice = system.open(input);
 
     const promise = voice.record(50);
     const recorder = MockMediaRecorder.instances[0]!;
@@ -230,8 +230,8 @@ describe('AudioInput / InputVoice', () => {
     const stream = makeStream();
     stubGetUserMedia(stream);
     const input = await AudioInput.open();
-    const manager = new AudioManager();
-    const voice = manager.open(input);
+    const system = new AudioSystem();
+    const voice = system.open(input);
 
     const promise = voice.record(1000);
     const recorder = MockMediaRecorder.instances[0]!;
@@ -252,8 +252,8 @@ describe('AudioInput / InputVoice', () => {
     const stream = makeStream();
     stubGetUserMedia(stream);
     const input = await AudioInput.open();
-    const manager = new AudioManager();
-    const voice = manager.open(input);
+    const system = new AudioSystem();
+    const voice = system.open(input);
 
     const promise = voice.record(1000);
     const recorder = MockMediaRecorder.instances[0]!;
@@ -272,8 +272,8 @@ describe('AudioInput / InputVoice', () => {
     const stream = makeStream();
     stubGetUserMedia(stream);
     const input = await AudioInput.open();
-    const manager = new AudioManager();
-    const voice = manager.open(input);
+    const system = new AudioSystem();
+    const voice = system.open(input);
 
     const promise = voice.record(1000);
     const recorder = MockMediaRecorder.instances[0]!;
@@ -292,8 +292,8 @@ describe('AudioInput / InputVoice', () => {
     const stream = makeStream();
     stubGetUserMedia(stream);
     const input = await AudioInput.open();
-    const manager = new AudioManager();
-    const voice = manager.open(input);
+    const system = new AudioSystem();
+    const voice = system.open(input);
 
     const promise = voice.record(1000);
     const recorder = MockMediaRecorder.instances[0]!;

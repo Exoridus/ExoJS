@@ -27,10 +27,10 @@ interface AudioBusSetup {
  * pan, output gain) and routes its output into its parent's input - the
  * root bus connects to the destination.
  *
- * The three engine-built-in busses are constructed by {@link AudioManager}:
+ * The three engine-built-in busses are constructed by {@link AudioSystem}:
  * `master` (root), `music` (child of master), `sound` (child of master).
  * User code creates additional busses via `new AudioBus(name, { parent })`
- * and registers them via {@link AudioManager.registerBus}.
+ * and registers them via {@link AudioSystem.registerBus}.
  *
  * Volume is in 0..2 (1 = unity), pan is -1..1, mute is a boolean override.
  * {@link AudioBus.fadeIn} / {@link AudioBus.fadeOut} produce smooth ramps
@@ -357,7 +357,7 @@ export class AudioBus {
     // An effect attached via `addEffect()` before the shared AudioContext became
     // ready may not have finished its OWN setup yet: `onAudioContextReady`
     // dispatches to every registered listener in a single synchronous pass, and
-    // this bus's listener - typically registered early, e.g. at AudioManager
+    // this bus's listener - typically registered early, e.g. at AudioSystem
     // construction - can run before an attached effect's listener (registered
     // later, e.g. from a Scene's async `init()`). Touching that effect's
     // `inputNode`/`outputNode` here would throw ("not yet initialized").

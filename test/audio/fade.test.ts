@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import { getAudioContext } from '#audio/audio-context';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import { Sound } from '#audio/Sound';
 
 const createAudioBufferStub = (): AudioBuffer => ({ duration: 5 }) as AudioBuffer;
@@ -49,9 +49,9 @@ describe('Audio fade helpers', () => {
   test('Voice.stop(0) stops immediately (ended becomes true)', () => {
     const { restore } = setupGainSpy();
     const sound = new Sound(createAudioBufferStub());
-    const manager = new AudioManager();
+    const system = new AudioSystem();
 
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     expect(voice.ended).toBe(false);
 
     voice.stop(0);
@@ -66,9 +66,9 @@ describe('Audio fade helpers', () => {
     const { gainNode, restore } = setupGainSpy();
     const ctx = getAudioContext();
     const sound = new Sound(createAudioBufferStub());
-    const manager = new AudioManager();
+    const system = new AudioSystem();
 
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     voice.stop(500);
 
     expect(gainNode.gain.cancelScheduledValues).toHaveBeenCalled();
@@ -87,9 +87,9 @@ describe('Audio fade helpers', () => {
     const { gainNode, restore } = setupGainSpy();
     const ctx = getAudioContext();
     const sound = new Sound(createAudioBufferStub());
-    const manager = new AudioManager();
+    const system = new AudioSystem();
 
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     voice.volume = 0.5;
 
     expect(gainNode.gain.setTargetAtTime).toHaveBeenCalledWith(0.5, ctx.currentTime, 0.01);
@@ -101,9 +101,9 @@ describe('Audio fade helpers', () => {
   test('Voice.stop() marks voice as ended immediately', () => {
     const { restore } = setupGainSpy();
     const sound = new Sound(createAudioBufferStub());
-    const manager = new AudioManager();
+    const system = new AudioSystem();
 
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     expect(voice.ended).toBe(false);
 
     voice.stop();
@@ -117,9 +117,9 @@ describe('Audio fade helpers', () => {
     vi.useFakeTimers();
     const { restore } = setupGainSpy();
     const sound = new Sound(createAudioBufferStub());
-    const manager = new AudioManager();
+    const system = new AudioSystem();
 
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     voice.stop(500);
 
     // Stop before timer fires
@@ -138,9 +138,9 @@ describe('Audio fade helpers', () => {
     vi.useFakeTimers();
     const { restore } = setupGainSpy();
     const sound = new Sound(createAudioBufferStub());
-    const manager = new AudioManager();
+    const system = new AudioSystem();
 
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     voice.stop(500); // schedules a timer
 
     // Destroying Sound stops all voices without throwing

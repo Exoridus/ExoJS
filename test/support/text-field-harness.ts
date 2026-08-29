@@ -8,8 +8,8 @@ import type { ContextMenuRequest } from '#input/ContextMenuRequest';
 import { FocusController } from '#input/FocusController';
 import type { Gamepad } from '#input/Gamepad';
 import type { GamepadButton } from '#input/GamepadButton';
-import type { InputManager } from '#input/InputManager';
-import { InteractionManager } from '#input/InteractionManager';
+import type { InputSystem } from '#input/InputSystem';
+import { InteractionSystem } from '#input/InteractionSystem';
 import type { Pointer } from '#input/Pointer';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
@@ -21,7 +21,7 @@ import { frameDelta } from './frame-delta';
 
 /**
  * Shared fixture for the canvas text fields: a UI layer wired to real focus
- * and interaction managers, a deterministic glyph atlas (advance 10, ink width
+ * and interaction systems, a deterministic glyph atlas (advance 10, ink width
  * 8, so glyph k spans [10k, 10k + 8]), and the transport-level helpers a field
  * test drives it with.
  */
@@ -67,7 +67,7 @@ afterEach(() => {
 
 export interface Harness {
   scene: Scene;
-  im: InteractionManager;
+  im: InteractionSystem;
   signals: {
     onPointerEnter: Signal<[Pointer]>;
     onPointerLeave: Signal<[Pointer]>;
@@ -106,10 +106,10 @@ export const createUIApp = (platform: unknown = null): Harness => {
     platform: platform ?? new BrowserPlatform(canvas),
     width: 800,
     height: 600,
-    input: signals as unknown as InputManager,
+    input: signals as unknown as InputSystem,
     onFrame: new Signal<[Seconds]>(),
     focus: null as FocusController | null,
-    interaction: null as InteractionManager | null,
+    interaction: null as InteractionSystem | null,
     rendering: {
       view: { screenToWorld: (x: number, y: number): { x: number; y: number } => ({ x, y }) },
       screenView: { screenToWorld: (x: number, y: number): { x: number; y: number } => ({ x, y }) },
@@ -125,7 +125,7 @@ export const createUIApp = (platform: unknown = null): Harness => {
   const typed = app as unknown as Application;
 
   app.focus = new FocusController(typed);
-  app.interaction = new InteractionManager(typed);
+  app.interaction = new InteractionSystem(typed);
   scene._attach(typed, {} as unknown as SceneScope<void>);
   app.interaction.attachRoot(scene.root);
 

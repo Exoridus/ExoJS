@@ -1,6 +1,6 @@
 {
   "title": "SoundPoolStrategy",
-  "description": "Eviction strategy used when the pool is full and a new play is requested. At the per-Sound level all pooled instances share the same priority, so `LowestPriority` degenerates to `FirstInFirstOut`. The enum is forward-compatible with a future global voice manager that culls across multiple Sound instances.",
+  "description": "Eviction strategy used when the pool is full and a new play is requested. At the per-Sound level all pooled instances share the same priority, so `LowestPriority` degenerates to `FirstInFirstOut`. The enum is forward-compatible with a future global voice system that culls across multiple Sound instances.",
   "symbol": "SoundPoolStrategy",
   "kind": "enum",
   "subsystem": "audio",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Eviction strategy used when the pool is full and a new play is requested.",
-        "At the per-Sound level all pooled instances share the same priority, so `LowestPriority` degenerates to `FirstInFirstOut`. The enum is forward-compatible with a future global voice manager that culls across multiple Sound instances."
+        "At the per-Sound level all pooled instances share the same priority, so `LowestPriority` degenerates to `FirstInFirstOut`. The enum is forward-compatible with a future global voice system that culls across multiple Sound instances."
       ],
       "importLine": "import { SoundPoolStrategy } from '@codexo/exojs'",
       "sourceLink": null

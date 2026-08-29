@@ -27,7 +27,7 @@ if (pad0.connected) {
 }
 ```
 
-The `gamepads` array is always length 4. Check `pad.connected` before reading pad state. Convenience accessors on the input manager:
+The `gamepads` array is always length 4. Check `pad.connected` before reading pad state. Convenience accessors on the input system:
 
 ```ts
 import type { Application } from '@codexo/exojs';
@@ -326,7 +326,7 @@ Four sprites, each controlled by a separate gamepad slot via aggregate signed st
 
 <TryIt
   examples={['input/gamepad', 'input/multi-gamepad']}
-  api={['gamepad', 'input-manager']}
+  api={['gamepad', 'input-system']}
 />
 
 ## Where to go next

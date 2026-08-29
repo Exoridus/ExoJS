@@ -9,11 +9,11 @@ import Callout from '../../../components/Callout.astro';
 
 # Mouse and pointer
 
-ExoJS unifies mouse, touch, and pen input under a single pointer system built on the browser's Pointer Events API. Every pointer is represented by a [`Pointer`](/ExoJS/en/api/pointer/) instance with a canvas-local design-space position, button state, pressure, tilt, and a slot index. The [`InputManager`](/ExoJS/en/api/input-manager/) tracks up to 16 simultaneous pointers — enough for ten-finger multitouch, plus a mouse, plus a pen — with no additional configuration.
+ExoJS unifies mouse, touch, and pen input under a single pointer system built on the browser's Pointer Events API. Every pointer is represented by a [`Pointer`](/ExoJS/en/api/pointer/) instance with a canvas-local design-space position, button state, pressure, tilt, and a slot index. The [`InputSystem`](/ExoJS/en/api/input-system/) tracks up to 16 simultaneous pointers — enough for ten-finger multitouch, plus a mouse, plus a pen — with no additional configuration.
 
 ## Pointer signals
 
-The application's input manager emits these pointer signals:
+The application's input system emits these pointer signals:
 
 | Signal | Fires when |
 |--------|------------|
@@ -85,7 +85,7 @@ For most multi-touch use cases, tracking pointer instances by ID via the signal 
 
 ## Gesture recognition
 
-The input manager includes built-in gesture recognizers for common multi-touch patterns:
+The input system includes built-in gesture recognizers for common multi-touch patterns:
 
 ```ts
 import { type Application, Container } from '@codexo/exojs';

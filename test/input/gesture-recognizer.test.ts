@@ -1,6 +1,6 @@
 /**
  * Direct unit tests for GestureRecognizer (long-press timing, two-touch
- * pinch/rotate derivation). Constructed standalone - no InputManager/DOM
+ * pinch/rotate derivation). Constructed standalone - no InputSystem/DOM
  * involved - for precise control over pointer positions and elapsed time.
  *
  * The long-press hold runs on ENGINE time: the recognizer accumulates the
@@ -8,11 +8,11 @@
  * tests advance it by calling `update()` - deliberately NOT with
  * `vi.useFakeTimers()`, which would only prove that a `setTimeout` still
  * exists. The pause behaviour that engine time buys lives one level up, in
- * InputManager (see test/input/gesture-journal-ordering.test.ts).
+ * InputSystem (see test/input/gesture-journal-ordering.test.ts).
  *
  * GestureRecognizer holds no Signal of its own: every occurrence is handed to
  * the `_enqueue` callback supplied at construction (in production, that
- * pushes onto InputManager's frame journal). These tests capture that
+ * pushes onto InputSystem's frame journal). These tests capture that
  * callback into a plain array and assert directly on the emitted
  * `GestureJournalEvent` objects - the same path production actually runs,
  * rather than a parallel test-only dispatch fallback.

@@ -7,7 +7,7 @@ export interface QuadtreeItem<T> {
 }
 
 /**
- * Generic recursive spatial index used by the engine's `InteractionManager`
+ * Generic recursive spatial index used by the engine's `InteractionSystem`
  * to accelerate per-frame hit-testing of scene nodes.
  *
  * Items are inserted with their axis-aligned bounding box; the tree
