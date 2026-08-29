@@ -83,9 +83,13 @@ describe('local lane commands', () => {
   it('marks every browser-driven lane so --quick can skip it', () => {
     for (const lane of LOCAL_LANES) {
       // `test:examples:smoke` drives a real Chromium too - it boots the whole
-      // example catalog - so the flag has to follow what a lane actually does,
-      // not just the `test:browser*` naming the vitest projects happen to use.
-      const drivesBrowser = laneScripts(lane.command).some(script => script.startsWith('test:browser') || script === 'test:examples:smoke');
+      // example catalog - and so does the bench structural gate, which runs the
+      // benchmark harness on the software rasterizer. The flag has to follow what
+      // a lane actually does, not just the `test:browser*` naming the vitest
+      // projects happen to use.
+      const drivesBrowser = laneScripts(lane.command).some(
+        script => script.startsWith('test:browser') || script === 'test:examples:smoke' || script === 'gate:bench:structural',
+      );
 
       expect(lane.browser ?? false).toBe(drivesBrowser);
     }

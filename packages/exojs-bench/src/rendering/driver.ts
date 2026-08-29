@@ -107,6 +107,17 @@ export const LAUNCH_FLAGS: readonly string[] = ['--force-device-scale-factor=1']
  */
 export const WEBGPU_LAUNCH_FLAGS: readonly string[] = [...LAUNCH_FLAGS, '--enable-unsafe-webgpu'];
 
+/**
+ * Chromium flags that force the software rasterizer.
+ *
+ * Every TIMING path must avoid these - a software number presented as a GPU
+ * number is the worst failure this harness can produce, which is why
+ * {@link LAUNCH_FLAGS} deliberately omits them. The structural gate is the one
+ * caller that wants them: it compares integer draw/bind/upload counters, which
+ * are decided CPU-side, so it needs no GPU at all and can therefore run in CI.
+ */
+export const SOFTWARE_LAUNCH_FLAGS: readonly string[] = [...LAUNCH_FLAGS, '--use-angle=swiftshader'];
+
 /** Adapter identity substrings that name a software WebGPU implementation rather than a real GPU. */
 const SOFTWARE_WEBGPU_PATTERN = /swiftshader|lavapipe|llvmpipe|warp|software|basic render/i;
 
@@ -450,9 +461,11 @@ const runBackend = async (options: {
   cells: CellSpec[];
   engineVersion: string;
   onCellResult: CellResultSink;
+  /** Replaces the per-backend launch flags; see {@link runMatrix}. */
+  launchFlags?: readonly string[];
 }): Promise<{ provenance: Provenance; results: CellResult[] }> => {
   const { baseUrl, backend, cells, engineVersion, onCellResult } = options;
-  const flags = backend === 'webgpu' ? WEBGPU_LAUNCH_FLAGS : LAUNCH_FLAGS;
+  const flags = options.launchFlags ?? (backend === 'webgpu' ? WEBGPU_LAUNCH_FLAGS : LAUNCH_FLAGS);
 
   // Group cells by arm (engine|config) in first-seen order so each arm runs in its
   // own browser session, isolated from every other arm's accumulated state.
@@ -830,6 +843,17 @@ export const runMatrix = async (options: {
   timedFramesOverride?: number;
   /** Invoked once per completed cell, in order, for incremental checkpointing. */
   onCellResult?: CellResultSink;
+  /**
+   * Replaces the Chromium launch flags for every backend in this run.
+   *
+   * Exists for the structural gate, which passes {@link SOFTWARE_LAUNCH_FLAGS}:
+   * it reads integer counters decided CPU-side, so it wants a rasterizer it can
+   * get on any machine rather than the real GPU the timing paths require. Every
+   * timing caller leaves this unset - the resulting provenance still records
+   * `software: true`, so a number produced under it can never be mistaken for a
+   * GPU number.
+   */
+  launchFlags?: readonly string[];
 }): Promise<MatrixOutcome> => {
   const engineVersion = readEngineVersion();
   const libraries = readLibraryProvenance(LIBRARY_ARMS);
@@ -862,7 +886,14 @@ export const runMatrix = async (options: {
         continue;
       }
 
-      const outcome = await runBackend({ baseUrl, backend, cells: backendCells, engineVersion, onCellResult });
+      const outcome = await runBackend({
+        baseUrl,
+        backend,
+        cells: backendCells,
+        engineVersion,
+        onCellResult,
+        ...(options.launchFlags !== undefined && { launchFlags: options.launchFlags }),
+      });
 
       provenance.push(outcome.provenance);
       results.push(...outcome.results);
