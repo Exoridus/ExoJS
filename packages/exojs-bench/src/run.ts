@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 // graph - the `@codexo/exojs-physics` source arm - is loaded lazily via a
 // dynamic `import()` inside `runPhysicsDomain`, so a rendering run never pays for it.
 import type { PhysicsAdapter, PhysicsCellResult, PhysicsCellSpec } from './physics';
-import type { ArchetypeId, Backend, CellResult, CellSpec, MatrixSelection } from './rendering';
+import type { ArchetypeId, Backend, CellResult, MatrixSelection } from './rendering';
 import { isHitching, profileCell, runMatrix, writeReport } from './rendering';
 import { parseArgs } from './shared/args';
 import { createCheckpointWriter } from './shared/checkpoint';
@@ -119,11 +119,6 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
 
   const backends: readonly Backend[] = backendArg ? (backendArg.split(',').map(value => value.trim()) as Backend[]) : DEFAULT_BACKENDS;
 
-  // Mutable filter (CellSpec's fields are readonly; a Partial keeps that, so
-  // build the filter through a writable shape and hand it to runMatrix as the
-  // Partial<CellSpec> it accepts).
-  const filter: { -readonly [K in keyof CellSpec]?: CellSpec[K] } = {};
-
   // `--archetype`, `--engine`, `--config` and `--nodes` each accept a
   // COMMA-SEPARATED list. A single value behaves exactly as before; a list
   // routes through `MatrixSelection` so one invocation - and therefore ONE
@@ -203,7 +198,6 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
 
   const data = await runMatrix({
     backends,
-    filter,
     ...(hasSelection && { selection }),
     ...(timedFramesOverride !== undefined && { timedFramesOverride }),
     onCellResult: result => checkpoint.append(result),

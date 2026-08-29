@@ -27,8 +27,6 @@ export interface ArmWorldOps<TBody> {
 
 /** The extra work one step of a query or churn archetype performs, plus its structural receipt. */
 export interface PerStepWork {
-  /** Whether this archetype performs any extra per-step work at all. */
-  readonly active: boolean;
   /** Run the extra work for step index `step`. */
   run(step: number): void;
   /** Rays that hit on the most recent {@link run}; `0` for an archetype that casts none. */
@@ -37,7 +35,6 @@ export interface PerStepWork {
 
 /** A no-op for the archetypes whose step is nothing but `world.step`. */
 const IDLE: PerStepWork = {
-  active: false,
   run(): void {
     /* nothing to do */
   },
@@ -64,8 +61,6 @@ export const createPerStepWork = <TBody>(spec: PhysicsArchetypeSpec, scene: Scen
   let rayHits = 0;
 
   return {
-    active: true,
-
     run(step: number): void {
       // Churn first, so the rays of this step traverse the structure the churn
       // left behind rather than the one it is about to invalidate - a query

@@ -1,10 +1,10 @@
 import * as ex from 'excalibur';
 
-import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
-import { createDigitAtlasCanvas, DIGIT_ALPHABET, DIGIT_CELL_HEIGHT, DIGIT_CELL_WIDTH } from '../digitAtlas';
+import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
+import { createDigitAtlasCanvas, createDistinctTextureCanvas, DIGIT_ALPHABET, DIGIT_CELL_HEIGHT, DIGIT_CELL_WIDTH, TEXT_FONT_SIZE } from '../sceneAssets';
 import { isChurning, isTextArchetype, isTextUpdating, textForLeaf, usesRenderTargets } from '../traits';
-import { isScrolling } from '../world';
+import { GRID_MARGIN, gridLayout, gridPosition, isScrolling, SPRITE_SIZE, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '../world';
 
 /**
  * Excalibur 0.32 arm of the rendering benchmark.
@@ -34,21 +34,8 @@ import { isScrolling } from '../world';
  * (matching `cullingEnabled: false` on every archetype).
  */
 
-/** Fixed design-space viewport the harness canvas renders (see `page/index.html`). Identical to the ExoJS/Pixi arms. */
-const VIEWPORT_WIDTH = 1280;
-const VIEWPORT_HEIGHT = 720;
-/** Inset that keeps every gridded sprite (plus its mutation wobble) inside the view so culling never removes it mid-run. */
-const GRID_MARGIN = 32;
-/** Side length of the generated per-archetype textures / sprites, in pixels. */
-const SPRITE_SIZE = 8;
-/** Peak per-axis displacement applied to a mutated leaf; small enough to never cross the viewport edge. */
-const WOBBLE_AMPLITUDE = 2;
-/** Phase step per frame for the mutation wobble. */
-const WOBBLE_SPEED = 0.15;
 /** Constant elapsed-ms handed to the draw path each frame (the harness, not this value, owns timing). */
 const FRAME_ELAPSED_MS = 16;
-/** Font size, in logical pixels, of every text leaf - identical on every arm. */
-const TEXT_FONT_SIZE = 12;
 
 /**
  * A pre-selected leaf actor and its resting grid position - the only nodes
@@ -97,25 +84,8 @@ const createGlyphFont = (): ex.SpriteFont =>
  * `fromHtmlCanvasElement`, whose `canvas.toBlob` round-trip loads
  * asynchronously and would leave the first rendered frames untextured.
  */
-const createDistinctImage = (index: number, total: number): ex.ImageSource => {
-  const canvas = document.createElement('canvas');
-
-  canvas.width = SPRITE_SIZE;
-  canvas.height = SPRITE_SIZE;
-
-  const context = canvas.getContext('2d');
-
-  if (context === null) {
-    throw new Error('A 2D context is required to generate benchmark textures.');
-  }
-
-  const hue = total > 1 ? Math.round((index / total) * 360) : 210;
-
-  context.fillStyle = `hsl(${hue}, 70%, 55%)`;
-  context.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
-
-  return ex.ImageSource.fromHtmlImageElement(canvas as unknown as HTMLImageElement);
-};
+const createDistinctImage = (index: number, total: number): ex.ImageSource =>
+  ex.ImageSource.fromHtmlImageElement(createDistinctTextureCanvas(index, total) as unknown as HTMLImageElement);
 
 export const createExcaliburAdapter = (): EngineAdapter => {
   let engine: ex.Engine | null = null;
@@ -218,10 +188,10 @@ export const createExcaliburAdapter = (): EngineAdapter => {
         spine.push(container);
       }
 
-      const columns = Math.max(1, Math.ceil(Math.sqrt(nodeCount)));
-      const rows = Math.max(1, Math.ceil(nodeCount / columns));
-      const cellWidth = (VIEWPORT_WIDTH - 2 * GRID_MARGIN) / columns;
-      const cellHeight = (VIEWPORT_HEIGHT - 2 * GRID_MARGIN) / rows;
+      // The SHARED grid, not a transcription of it: this arm places leaf `i` at
+      // the position `world.ts` computes, so a change to the layout cannot move
+      // one arm's scene without moving every arm's.
+      const layout = gridLayout(nodeCount, VIEWPORT_WIDTH, VIEWPORT_HEIGHT, GRID_MARGIN);
       const overdraw = spec.id === 'overdraw';
 
       // Shared, canonical mutation selection - the SAME helper every arm routes
@@ -239,14 +209,8 @@ export const createExcaliburAdapter = (): EngineAdapter => {
       // instead of text.
       glyphFont = textGlyphs > 0 ? createGlyphFont() : null;
 
-      /** Resting grid position of leaf `index`, on this arm's transcription of the shared grid. */
-      const leafPosition = (index: number): { x: number; y: number } =>
-        overdraw
-          ? { x: 0, y: 0 }
-          : {
-              x: GRID_MARGIN + (index % columns) * cellWidth + cellWidth / 2,
-              y: GRID_MARGIN + Math.floor(index / columns) * cellHeight + cellHeight / 2,
-            };
+      /** Resting grid position of leaf `index`, from the shared layout helpers. */
+      const leafPosition = (index: number): { x: number; y: number } => (overdraw ? { x: 0, y: 0 } : gridPosition(index, layout, GRID_MARGIN));
 
       /** Build (but do not parent) the leaf at global index `index`; reused by the churn mutation. */
       const makeLeaf = (index: number): { actor: ex.Actor; text: ex.Text | null } => {
@@ -353,9 +317,7 @@ export const createExcaliburAdapter = (): EngineAdapter => {
         return;
       }
 
-      const phase = frame * WOBBLE_SPEED;
-      const dx = Math.sin(phase) * WOBBLE_AMPLITUDE;
-      const dy = Math.cos(phase) * WOBBLE_AMPLITUDE;
+      const { dx, dy } = wobbleOffsetAt(frame);
 
       for (const leaf of mutableLeaves) {
         scratch.x = leaf.baseX + dx;

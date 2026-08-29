@@ -12,21 +12,11 @@ import {
   type WebGPURenderer,
 } from 'pixi.js';
 
-import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
+import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
+import { createDistinctTextureCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
 import { filterChainDepth, isChurning, isTextArchetype, isTextUpdating, maskDepth, textForLeaf } from '../traits';
-import {
-  cameraCenterAt,
-  GRID_MARGIN,
-  gridLayout,
-  gridPosition,
-  isScrolling,
-  maskRect,
-  SPRITE_SIZE,
-  VIEWPORT_HEIGHT,
-  VIEWPORT_WIDTH,
-  worldExtent,
-} from '../world';
+import { cameraCenterAt, GRID_MARGIN, gridLayout, gridPosition, isScrolling, maskRect, VIEWPORT_HEIGHT, VIEWPORT_WIDTH, worldExtent } from '../world';
 
 /**
  * Pixi.js v8 arm of the rendering benchmark - the direct renderer comparison and
@@ -46,11 +36,6 @@ import {
  * false, `sharedTicker` false) and one frame is produced by a single explicit
  * `renderer.render(...)` - the same shape as the ExoJS adapter's one-call frame.
  */
-
-/** Peak per-axis displacement applied to a mutated leaf; small enough to never cross the viewport edge. */
-const WOBBLE_AMPLITUDE = 2;
-/** Phase step per frame for the mutation wobble. */
-const WOBBLE_SPEED = 0.15;
 
 /**
  * Pixi blend-mode names matching, one-to-one and in the same order, the ExoJS
@@ -73,9 +58,6 @@ interface MutableLeaf {
   readonly baseX: number;
   readonly baseY: number;
 }
-
-/** Font size, in logical pixels, of every text leaf - identical on every arm. */
-const TEXT_FONT_SIZE = 12;
 
 /**
  * Text leaf for the text archetypes.
@@ -142,25 +124,7 @@ const EXPECTED_RENDERER_TYPE: Record<Backend, number> = {
  * canvas - the same construction the ExoJS arm uses, so the `batch-breaking`
  * archetype breaks batches on both arms for the same reason (distinct GPU binds).
  */
-const createDistinctTexture = (index: number, total: number): Texture => {
-  const canvas = document.createElement('canvas');
-
-  canvas.width = SPRITE_SIZE;
-  canvas.height = SPRITE_SIZE;
-
-  const context = canvas.getContext('2d');
-
-  if (context === null) {
-    throw new Error('A 2D context is required to generate benchmark textures.');
-  }
-
-  const hue = total > 1 ? Math.round((index / total) * 360) : 210;
-
-  context.fillStyle = `hsl(${hue}, 70%, 55%)`;
-  context.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
-
-  return Texture.from(canvas);
-};
+const createDistinctTexture = (index: number, total: number): Texture => Texture.from(createDistinctTextureCanvas(index, total));
 
 /**
  * Which Pixi arm this adapter represents.
@@ -474,9 +438,7 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
         return;
       }
 
-      const phase = frame * WOBBLE_SPEED;
-      const dx = Math.sin(phase) * WOBBLE_AMPLITUDE;
-      const dy = Math.cos(phase) * WOBBLE_AMPLITUDE;
+      const { dx, dy } = wobbleOffsetAt(frame);
 
       for (const leaf of mutableLeaves) {
         leaf.node.position.set(leaf.baseX + dx, leaf.baseY + dy);

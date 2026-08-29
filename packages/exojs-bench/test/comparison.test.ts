@@ -1,4 +1,4 @@
-import { buildPhysicsComparison, buildRenderingComparison, chooseHeadlineNodeCount } from '../src/comparison/build';
+import { buildPhysicsComparison, buildRenderingComparison, chooseHeadlineCount } from '../src/comparison/build';
 import { physicsMechanism, renderingMechanism } from '../src/comparison/mechanism';
 import { renderComparison } from '../src/comparison/render';
 import { compareMedians, NOISE_HIGH, NOISE_LOW, STRUCTURAL_FACTOR } from '../src/comparison/verdict';
@@ -89,10 +89,10 @@ describe('compareMedians', () => {
   });
 });
 
-describe('chooseHeadlineNodeCount', () => {
+describe('chooseHeadlineCount', () => {
   test('takes the largest count shared by every ladder', () => {
     expect(
-      chooseHeadlineNodeCount(
+      chooseHeadlineCount(
         [
           [1_000, 5_000, 25_000],
           [200, 1_000, 5_000],
@@ -104,7 +104,7 @@ describe('chooseHeadlineNodeCount', () => {
 
   test('lowers the choice when the larger candidate has no valid cell', () => {
     expect(
-      chooseHeadlineNodeCount(
+      chooseHeadlineCount(
         [
           [1_000, 5_000, 25_000],
           [1_000, 5_000, 25_000],
@@ -115,11 +115,11 @@ describe('chooseHeadlineNodeCount', () => {
   });
 
   test('returns null when the ladders share nothing', () => {
-    expect(chooseHeadlineNodeCount([[1_000], [2_000]], () => true)).toBeNull();
+    expect(chooseHeadlineCount([[1_000], [2_000]], () => true)).toBeNull();
   });
 
   test('returns null when no candidate has a valid cell', () => {
-    expect(chooseHeadlineNodeCount([[1_000, 5_000]], () => false)).toBeNull();
+    expect(chooseHeadlineCount([[1_000, 5_000]], () => false)).toBeNull();
   });
 });
 

@@ -17,7 +17,7 @@ import { compareMedians } from './verdict';
  * - No aggregation across archetypes, anywhere. Categories are section headings,
  *   never rows, because any mean over a category hides its worst cell.
  * - One node count for the whole headline table, chosen from the archetype
- *   ladders before any timing is read (see {@link chooseHeadlineNodeCount}), so
+ *   ladders before any timing is read (see {@link chooseHeadlineCount}), so
  *   it can never be picked per row to suit the outcome.
  * - A row with no evidenced mechanism does not enter the table.
  */
@@ -131,7 +131,8 @@ const cellKey = (engine: string, config: string, archetype: string, count: numbe
 const isComparable = (result: { status: string; note?: string }): boolean => result.status === 'ok';
 
 /**
- * The single node count the headline table uses.
+ * The single count - nodes for a rendering block, bodies for the physics one -
+ * that the headline table uses.
  *
  * Chosen from the ARCHETYPE LADDERS first - the largest count present in every
  * comparable archetype's ladder - and then lowered until every arm actually
@@ -141,7 +142,7 @@ const isComparable = (result: { status: string; note?: string }): boolean => res
  * candidate survives, and a candidate that some arm failed to measure is not a
  * comparison at all.
  */
-export const chooseHeadlineNodeCount = (archetypeLadders: ReadonlyArray<readonly number[]>, hasValidCell: (count: number) => boolean): number | null => {
+export const chooseHeadlineCount = (archetypeLadders: ReadonlyArray<readonly number[]>, hasValidCell: (count: number) => boolean): number | null => {
   if (archetypeLadders.length === 0) {
     return null;
   }
@@ -199,7 +200,7 @@ const buildBackend = (backend: Backend, results: readonly CellResult[]): Backend
       });
     });
 
-  const headlineCount = chooseHeadlineNodeCount(
+  const headlineCount = chooseHeadlineCount(
     comparable.map(archetype => archetype.nodeCounts),
     hasValidCell,
   );
@@ -315,17 +316,12 @@ const buildBackend = (backend: Backend, results: readonly CellResult[]): Backend
       }
 
       if (cells.length > 0) {
-        rowsIntoWebgl1(webgl1, archetype.id, CATEGORY_TITLES[archetype.category], headlineCount, cells);
+        webgl1.push({ archetype: archetype.id, category: CATEGORY_TITLES[archetype.category], count: headlineCount, cells });
       }
     }
   }
 
   return { backend, headlineCount, competitors, sections, excluded, webgl1 };
-};
-
-/** Append one WebGL1-block row; extracted only so the block's construction reads as one statement. */
-const rowsIntoWebgl1 = (target: ComparisonRow[], archetype: string, category: string, count: number, cells: readonly ComparisonCell[]): void => {
-  target.push({ archetype, category, count, cells });
 };
 
 /** The published comparison for a rendering run: one block per backend exercised. */
@@ -343,7 +339,7 @@ export const buildPhysicsComparison = (results: readonly PhysicsCellResult[]): C
   // table. One that WAS measured and failed still lowers the choice.
   const measured = new Set(results.filter(result => result.spec.engine === 'exojs-physics').map(result => result.spec.archetype));
   const comparable = PHYSICS_ARCHETYPES.filter(archetype => measured.has(archetype.id));
-  const headlineCount = chooseHeadlineNodeCount(
+  const headlineCount = chooseHeadlineCount(
     comparable.map(archetype => archetype.bodyCounts),
     count =>
       comparable.every(archetype => {

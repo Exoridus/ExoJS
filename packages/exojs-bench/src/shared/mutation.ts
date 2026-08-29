@@ -63,3 +63,33 @@ export const mutationSignature = (indices: readonly number[]): string => {
 
   return (hash >>> 0).toString(16).padStart(8, '0');
 };
+
+/** Peak per-axis displacement applied to a mutated leaf; small enough to never cross the viewport edge. */
+const WOBBLE_AMPLITUDE = 2;
+
+/** Phase step per frame for the mutation wobble. */
+const WOBBLE_SPEED = 0.15;
+
+/** Per-axis displacement a mutated leaf is moved by on a given frame. */
+export interface WobbleOffset {
+  /** X displacement, in world units. */
+  readonly dx: number;
+  /** Y displacement, in world units. */
+  readonly dy: number;
+}
+
+/**
+ * Displacement every arm applies to its selected leaves on `frame`.
+ *
+ * Shared for the same reason {@link selectMutationIndices} is, and with a sharper
+ * edge: the SELECTION is asserted cross-arm through {@link mutationSignature},
+ * but the amplitude is not. Four private copies of the same two constants could
+ * drift without any check noticing, and the arms would then be moving the
+ * identical leaves by different distances - a scene difference the matrix would
+ * report as an engine difference.
+ */
+export const wobbleOffsetAt = (frame: number): WobbleOffset => {
+  const phase = frame * WOBBLE_SPEED;
+
+  return { dx: Math.sin(phase) * WOBBLE_AMPLITUDE, dy: Math.cos(phase) * WOBBLE_AMPLITUDE };
+};
