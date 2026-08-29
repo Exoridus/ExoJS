@@ -131,19 +131,3 @@ export const getVoronoiRegion = (line: Vector, point: Vector): VoronoiRegion => 
     return VoronoiRegion.middle;
   }
 };
-
-/**
- * Angle + curve/geometry math helpers, grouped as a namespace. The common
- * scalar utilities (`clamp`, `lerp`, `sign`, `inRange`, `isPowerOfTwo`, `TAU`)
- * are free top-level exports instead - see `src/math/index.ts`. This facade
- * groups the less-common angle/curve/geometry helpers that don't warrant
- * their own top-level export.
- */
-export const MathUtils = {
-  distance: getDistance,
-  trimRotation,
-  degreesToRadians,
-  radiansToDegrees,
-  bezierCurveTo,
-  quadraticCurveTo,
-} as const;

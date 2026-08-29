@@ -8,7 +8,6 @@ import {
   inRange,
   isPowerOfTwo,
   lerp,
-  MathUtils,
   quadraticCurveTo,
   RADIANS_PER_DEGREE,
   radiansToDegrees,
@@ -306,20 +305,5 @@ describe('getVoronoiRegion', () => {
 
     line.destroy();
     point.destroy();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// MathUtils facade
-// ---------------------------------------------------------------------------
-
-describe('MathUtils', () => {
-  test('exposes the angle/curve/geometry helpers by reference', () => {
-    expect(MathUtils.distance).toBe(getDistance);
-    expect(MathUtils.trimRotation).toBe(trimRotation);
-    expect(MathUtils.degreesToRadians).toBe(degreesToRadians);
-    expect(MathUtils.radiansToDegrees).toBe(radiansToDegrees);
-    expect(MathUtils.bezierCurveTo).toBe(bezierCurveTo);
-    expect(MathUtils.quadraticCurveTo).toBe(quadraticCurveTo);
   });
 });

@@ -1,4 +1,4 @@
-import { MathUtils, type SceneNode } from '@codexo/exojs';
+import { radiansToDegrees, type SceneNode } from '@codexo/exojs';
 
 import type { PhysicsBody } from '../PhysicsBody';
 
@@ -23,7 +23,7 @@ export class PhysicsBinding {
   /** Write the body's current transform (position + rotation) onto the bound node. */
   public sync(): void {
     this.node.setPosition(this.body.x, this.body.y);
-    this.node.setRotation(MathUtils.radiansToDegrees(this.body.angle));
+    this.node.setRotation(radiansToDegrees(this.body.angle));
   }
 
   /**
@@ -43,6 +43,6 @@ export class PhysicsBinding {
     const previousAngle = body.previousAngle;
 
     this.node.setPosition(previousX + (body.x - previousX) * alpha, previousY + (body.y - previousY) * alpha);
-    this.node.setRotation(MathUtils.radiansToDegrees(previousAngle + (body.angle - previousAngle) * alpha));
+    this.node.setRotation(radiansToDegrees(previousAngle + (body.angle - previousAngle) * alpha));
   }
 }
