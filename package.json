@@ -95,6 +95,8 @@
     "release:prepare": "tsx ./scripts/release/run.ts prepare",
     "release:full-zip": "tsx ./scripts/release/run.ts full-zip",
     "release:publish": "tsx ./scripts/release/run.ts publish",
+    "release:bootstrap": "tsx ./scripts/release/run.ts bootstrap",
+    "release:publish-independent": "tsx ./scripts/release/run.ts publish-independent",
     "verify:external-consumers": "tsx ./scripts/release/external-consumers.ts",
     "release:notes": "tsx ./scripts/generate-release-notes.ts",
     "docs:api:generate": "pnpm site:build:api",

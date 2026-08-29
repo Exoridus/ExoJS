@@ -6,6 +6,8 @@
  *   tsx scripts/release/run.ts prepare   [--build] [--skip-attw] [--skip-consumers] [--skip-zip]
  *   tsx scripts/release/run.ts full-zip
  *   tsx scripts/release/run.ts publish   [--execute] [--no-check-existing]
+ *   tsx scripts/release/run.ts bootstrap <package> [--execute] [--skip-build]
+ *   tsx scripts/release/run.ts publish-independent <package> [--execute] [--skip-build]
  *
  * `prepare` builds (optionally), freezes the exact source revision (failing on
  * a dirty tree or unknown revision), packs one tarball per lockstep package WITHOUT
@@ -14,6 +16,12 @@
  * assembles the Full GitHub Release ZIP. `publish` consumes only the prepared
  * artifacts - it re-hashes them (build-once guard) and never builds. The real
  * publish is gated behind `--execute`; the default is a dry-run.
+ *
+ * `bootstrap` is the one-off first publish of a package name npm has never
+ * seen, which the coordinated release cannot do - see `bootstrap-publish.ts`.
+ * `publish-independent` publishes a further version of a package that is off
+ * the engine's lockstep line, which no coordinated release ever touches. Both
+ * stand outside the build-once pipeline and touch one package each.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -21,6 +29,7 @@ import { fileURLToPath } from 'node:url';
 
 import { resolveRevision } from '@codexo/exojs-config/build-defines';
 import { checkAllTarballTypes } from './attw.ts';
+import { bootstrapPublish, bootstrapTargets } from './bootstrap-publish.ts';
 import { createExecRunner } from './command-runner.ts';
 import { verifyExternalConsumers } from './external-consumers.ts';
 import { LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
@@ -203,6 +212,39 @@ const doPublish = (): void => {
   log(`\n✓ publish ${options.dryRun ? 'dry-run' : 'run'} complete (ok).`);
 };
 
+const doSinglePackage = (mode: 'bootstrap' | 'release'): void => {
+  const command = mode === 'bootstrap' ? 'bootstrap' : 'publish-independent';
+  const name = argv.find(arg => !arg.startsWith('--') && arg !== command);
+
+  if (name === undefined) {
+    die(
+      `${command} needs a package name. Candidates: ${bootstrapTargets()
+        .map(target => target.name)
+        .join(', ')}`,
+    );
+  }
+
+  const dryRun = !has('--execute');
+
+  log(`
+→ ${command} (${dryRun ? 'DRY-RUN' : 'EXECUTE'}) — ${name}`);
+
+  if (mode === 'bootstrap') {
+    log('  This publishes WITHOUT provenance, on purpose: a package that does not exist yet');
+    log('  cannot have a trusted publisher configured. Authenticate with a granular token.');
+  }
+
+  const report = bootstrapPublish(name, { dryRun, skipBuild: has('--skip-build'), mode }, runner, repoRoot);
+
+  if (!report.ok) {
+    die(`${command} failed at ${report.failedStep ?? 'unknown step'}: ${report.reason ?? 'no reason reported'}`);
+  }
+
+  log(`
+✓ ${name}@${report.version ?? '?'} ${dryRun ? 'would be published' : 'published'}.`);
+  log(`  Next: ${report.followUp ?? ''}`);
+};
+
 const command = argv[0];
 switch (command) {
   case 'prepare':
@@ -214,6 +256,12 @@ switch (command) {
   case 'publish':
     doPublish();
     break;
+  case 'bootstrap':
+    doSinglePackage('bootstrap');
+    break;
+  case 'publish-independent':
+    doSinglePackage('release');
+    break;
   default:
-    die(`Unknown command "${command ?? ''}". Use: prepare | full-zip | publish.`);
+    die(`Unknown command "${command ?? ''}". Use: prepare | full-zip | publish | bootstrap | publish-independent.`);
 }
