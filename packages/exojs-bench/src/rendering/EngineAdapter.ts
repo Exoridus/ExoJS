@@ -27,10 +27,35 @@ export type ArchetypeId =
   | 'filter-chain-4'
   | 'mask-clip';
 
+/**
+ * Workload category an archetype belongs to. Categories are SECTION HEADINGS in
+ * the published comparison, never rows: a category row would have to average
+ * several archetypes into one number, and any average over them hides the worst
+ * cell. Nothing in the report aggregates across archetypes.
+ */
+export type ArchetypeCategory = 'node-scaling' | 'fill-and-state' | 'material-variety' | 'text' | 'render-targets' | 'camera-and-world' | 'submission';
+
 /** Structural definition of a scene archetype, independent of any engine or backend. */
 export interface ArchetypeSpec {
   /** Archetype identifier. */
   readonly id: ArchetypeId;
+  /** Workload category this archetype is filed under in the published comparison. */
+  readonly category: ArchetypeCategory;
+  /**
+   * Whether a cross-arm wall-clock comparison of this archetype is meaningful.
+   *
+   * `false` for the ExoJS-internal structural probes - `split-screen`,
+   * `instanced-batch`, the two mesh-interleave rows and the atlas controls - which
+   * a competitor arm renders as some OTHER scene entirely because it has no
+   * counterpart API. Those rows are measured and reported, but they are excluded
+   * from the published comparison table rather than presented beside rows where
+   * both arms did the same work.
+   *
+   * Required rather than optional: an archetype added without stating this would
+   * silently default into the comparison, which is the one direction the mistake
+   * must not go.
+   */
+  readonly crossArm: boolean;
   /** Node counts swept for this archetype, smallest to largest. */
   readonly nodeCounts: readonly number[];
   /** Depth of the parent-child nesting used to build the scene. */
