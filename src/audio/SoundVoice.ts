@@ -28,7 +28,7 @@ export interface SoundVoiceInit extends BaseVoiceInit {
 
 /**
  * Active playback handle for one {@link Sound} play call, backed by a single
- * `AudioBufferSourceNode`. Each `AudioManager.play(sound)` creates an
+ * `AudioBufferSourceNode`. Each `AudioSystem.play(sound)` creates an
  * independent SoundVoice; concurrent plays each get their own.
  *
  * Mixes in {@link Seekable}, {@link Loopable} and {@link Pausable} - all three
@@ -145,7 +145,7 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
     // past its window end while the callback is still in flight. Retiring it
     // clears that callback, so pausing here would strand the voice as
     // permanently paused-but-not-ended: holding its pool slot, its entry in the
-    // manager's voice registry, and its place in `SceneAudio._suspended`, with
+    // system's voice registry, and its place in `SceneAudio._suspended`, with
     // nothing left that could ever finish it. It is over - end it properly.
     if (this._reachedWindowEnd()) {
       this._finish();

@@ -1,6 +1,6 @@
 {
   "title": "InputBinding",
-  "description": "One subscription to one or more input channels. Tracks active state, fires the onStart / onActive / onStop / onTrigger Signals each frame, and registers itself with whichever owner created it (typically an InputManager, Gamepad, or scene-bound proxy). Construct via the owner's `onStart` / `onActive` / `onStop` / `onTrigger` factory methods rather than `new InputBinding(...)` directly - the returned binding is caller-owned from that point on. Lifecycle: a binding lives until unbind is called, the owner disposes it, or - for scene-bound bindings - the scene unloads.",
+  "description": "One subscription to one or more input channels. Tracks active state, fires the onStart / onActive / onStop / onTrigger Signals each frame, and registers itself with whichever owner created it (typically an InputSystem, Gamepad, or scene-bound proxy). Construct via the owner's `onStart` / `onActive` / `onStop` / `onTrigger` factory methods rather than `new InputBinding(...)` directly - the returned binding is caller-owned from that point on. Lifecycle: a binding lives until unbind is called, the owner disposes it, or - for scene-bound bindings - the scene unloads.",
   "symbol": "InputBinding",
   "kind": "class",
   "subsystem": "input",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "One subscription to one or more input channels. Tracks active state, fires the onStart / onActive / onStop / onTrigger Signals each frame, and registers itself with whichever owner created it (typically an InputManager, Gamepad, or scene-bound proxy).",
+        "One subscription to one or more input channels. Tracks active state, fires the onStart / onActive / onStop / onTrigger Signals each frame, and registers itself with whichever owner created it (typically an InputSystem, Gamepad, or scene-bound proxy).",
         "Construct via the owner's `onStart` / `onActive` / `onStop` / `onTrigger` factory methods rather than `new InputBinding(...)` directly - the returned binding is caller-owned from that point on.",
         "Lifecycle: a binding lives until unbind is called, the owner disposes it, or - for scene-bound bindings - the scene unloads."
       ],
@@ -237,7 +237,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Explicit Resource Management alias for unbind - enables using binding = input.onStart(...). Idempotent, same as unbind itself: disposing a binding that is already unbound (manually, or because a tracking owner like SceneInputs unbound it first on scene teardown) is a no-op, so mixing using with a manual unbind() call in either order is safe. Only caller-owned binding handles expose this protocol; engine-owned managers and nodes do not become caller-disposable. Runtime using support requires the environment to provide a real Symbol.dispose, or a Symbol.for('Symbol.dispose')-registry polyfill installed before this module is imported (see the disposeSymbol fallback above) - without either, this method is installed under a key using's lowering will never look up. Plain unbind() has no such requirement."
+          "description": "Explicit Resource Management alias for unbind - enables using binding = input.onStart(...). Idempotent, same as unbind itself: disposing a binding that is already unbound (manually, or because a tracking owner like SceneInputs unbound it first on scene teardown) is a no-op, so mixing using with a manual unbind() call in either order is safe. Only caller-owned binding handles expose this protocol; engine-owned systems and nodes do not become caller-disposable. Runtime using support requires the environment to provide a real Symbol.dispose, or a Symbol.for('Symbol.dispose')-registry polyfill installed before this module is imported (see the disposeSymbol fallback above) - without either, this method is installed under a key using's lowering will never look up. Plain unbind() has no such requirement."
         },
         {
           "name": "unbind",

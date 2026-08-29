@@ -1027,6 +1027,25 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
 
 ### Changed
 
+- **BREAKING - the five core `*Manager` classes are now `*System`.**
+  `AudioManager`, `InputManager`, `InteractionManager`, `TweenManager`, and
+  `AnimationManager` become `AudioSystem`, `InputSystem`, `InteractionSystem`,
+  `TweenSystem`, and `AnimationSystem`. All five implement the `System`
+  contract and are registered as the application's core systems, so the old
+  suffix contradicted the contract they fulfil.
+
+  The accessors are unchanged - `app.audio`, `app.input`, `app.interaction`,
+  `app.tweens`, `app.animations` - so only explicit type annotations and
+  imports need updating. Internally, `Tween._attachManager` becomes
+  `_attachSystem`, and the `manager` field of the voice initializer becomes
+  `system`.
+
+- **BREAKING - the `MathUtils` namespace is gone.** Its six members are free
+  top-level exports: `trimRotation`, `degreesToRadians`, `radiansToDegrees`,
+  `bezierCurveTo`, `quadraticCurveTo`, and `getDistance` (previously
+  `MathUtils.distance`). The scalar helpers alongside them (`clamp`, `lerp`,
+  `sign`, `inRange`, `isPowerOfTwo`, `TAU`) were already exported this way.
+
 - **BREAKING - `Color` keeps eleven named constants instead of 142.** The class
   predefined every CSS named colour as a shared static. They cost 1.6 kB gzip in
   the bundle, cannot be tree-shaken (a `static readonly` is part of one class

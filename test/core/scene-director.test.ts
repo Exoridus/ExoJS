@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import type { Tween } from '#animation/Tween';
-import { TweenManager } from '#animation/TweenManager';
+import { TweenSystem } from '#animation/TweenSystem';
 import { TweenState } from '#animation/types';
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
@@ -41,7 +41,7 @@ import type { Pointer } from '#input/Pointer';
 import { Rectangle } from '#math/Rectangle';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 
-interface InputManagerStub {
+interface InputSystemStub {
   readonly onKeyDown: Signal<[number]>;
   readonly onKeyUp: Signal<[number]>;
   readonly onAnyGamepadButtonDown: Signal<[Gamepad, GamepadButton, number]>;
@@ -56,7 +56,7 @@ interface InputManagerStub {
   readonly onMouseWheel: Signal<[deltaX: number, deltaY: number]>;
 }
 
-const createInputManagerStub = (): InputManagerStub => ({
+const createInputSystemStub = (): InputSystemStub => ({
   onKeyDown: new Signal<[number]>(),
   onKeyUp: new Signal<[number]>(),
   onAnyGamepadButtonDown: new Signal<[Gamepad, GamepadButton, number]>(),
@@ -72,7 +72,7 @@ const createInputManagerStub = (): InputManagerStub => ({
 });
 
 type ApplicationStub = Application & {
-  input: InputManagerStub;
+  input: InputSystemStub;
   onError: Signal<[Error]>;
   loader: { _releaseScope: MockInstance };
   canvas: HTMLCanvasElement;
@@ -111,10 +111,10 @@ const createApplicationStub = (): ApplicationStub => {
 
   return {
     loader: { _releaseScope: vi.fn() },
-    input: createInputManagerStub(),
+    input: createInputSystemStub(),
     interaction: { attachRoot: vi.fn(), detachRoot: vi.fn() },
     onError: new Signal<[Error]>(),
-    tweens: new TweenManager(),
+    tweens: new TweenSystem(),
     canvas: { width: 320, height: 180 } as HTMLCanvasElement,
     onResize: new Signal<[number, number, Application]>(),
     clearColor: Color.black,

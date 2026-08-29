@@ -1,6 +1,6 @@
 {
   "title": "AudioStream",
-  "description": "Streaming long-form audio backed by an `HTMLAudioElement` - background tracks, voice-over, **and internet radio** (same mechanism, low CPU/RAM). Decoded lazily via the browser's media pipeline, so memory cost scales with the decode buffer rather than total duration. `AudioStream` is a **data descriptor**: it holds the media element and default playback parameters but does not play itself. Playback is driven by `AudioManager.play(stream, options)`, which returns an AudioStreamVoice for fine-grained control (pause/resume, seek, loop, rate, volume, spatial). Because an `HTMLAudioElement` has a single playhead, a stream has **one active voice at a time** - playing again stops the previous voice. Routes through the manager's `music` bus by default (override via PlayOptions.bus). Use Sound for short, frequently-triggered clips that benefit from pre-decoded `AudioBuffer` storage and pooled overlapping playback.",
+  "description": "Streaming long-form audio backed by an `HTMLAudioElement` - background tracks, voice-over, **and internet radio** (same mechanism, low CPU/RAM). Decoded lazily via the browser's media pipeline, so memory cost scales with the decode buffer rather than total duration. `AudioStream` is a **data descriptor**: it holds the media element and default playback parameters but does not play itself. Playback is driven by `AudioSystem.play(stream, options)`, which returns an AudioStreamVoice for fine-grained control (pause/resume, seek, loop, rate, volume, spatial). Because an `HTMLAudioElement` has a single playhead, a stream has **one active voice at a time** - playing again stops the previous voice. Routes through the system's `music` bus by default (override via PlayOptions.bus). Use Sound for short, frequently-triggered clips that benefit from pre-decoded `AudioBuffer` storage and pooled overlapping playback.",
   "symbol": "AudioStream",
   "kind": "class",
   "subsystem": "audio",
@@ -20,8 +20,8 @@
       "members": [],
       "paragraphs": [
         "Streaming long-form audio backed by an `HTMLAudioElement` - background tracks, voice-over, **and internet radio** (same mechanism, low CPU/RAM). Decoded lazily via the browser's media pipeline, so memory cost scales with the decode buffer rather than total duration.",
-        "`AudioStream` is a **data descriptor**: it holds the media element and default playback parameters but does not play itself. Playback is driven by `AudioManager.play(stream, options)`, which returns an AudioStreamVoice for fine-grained control (pause/resume, seek, loop, rate, volume, spatial).",
-        "Because an `HTMLAudioElement` has a single playhead, a stream has **one active voice at a time** - playing again stops the previous voice. Routes through the manager's `music` bus by default (override via PlayOptions.bus).",
+        "`AudioStream` is a **data descriptor**: it holds the media element and default playback parameters but does not play itself. Playback is driven by `AudioSystem.play(stream, options)`, which returns an AudioStreamVoice for fine-grained control (pause/resume, seek, loop, rate, volume, spatial).",
+        "Because an `HTMLAudioElement` has a single playhead, a stream has **one active voice at a time** - playing again stops the previous voice. Routes through the system's `music` bus by default (override via PlayOptions.bus).",
         "Use Sound for short, frequently-triggered clips that benefit from pre-decoded `AudioBuffer` storage and pooled overlapping playback."
       ],
       "importLine": "import { AudioStream } from '@codexo/exojs'",
@@ -126,7 +126,7 @@
       "members": [
         {
           "name": "_createVoice",
-          "signature": "_createVoice(manager: AudioManager, options: PlayOptions): Voice",
+          "signature": "_createVoice(system: AudioSystem, options: PlayOptions): Voice",
           "signatureTokens": [
             {
               "text": "_createVoice",
@@ -137,7 +137,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "manager",
+              "text": "system",
               "kind": "param"
             },
             {
@@ -145,7 +145,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "AudioManager",
+              "text": "AudioSystem",
               "kind": "type"
             },
             {
@@ -179,8 +179,8 @@
           ],
           "params": [
             {
-              "name": "manager",
-              "type": "AudioManager",
+              "name": "system",
+              "type": "AudioSystem",
               "optional": false
             },
             {
@@ -190,7 +190,7 @@
             }
           ],
           "returnType": "Voice",
-          "description": "Implements Playable. Called by AudioManager.play. Stops any previously active voice (a stream has a single playhead), then starts a fresh AudioStreamVoice. Throws on a destroyed stream. The check is unconditional, not __DEV__-only: createMediaElementSource() may be called exactly once per media element, and the second call raises InvalidStateError in the browser - a hard, hard-to-trace runtime failure that a production build must not walk into."
+          "description": "Implements Playable. Called by AudioSystem.play. Stops any previously active voice (a stream has a single playhead), then starts a fresh AudioStreamVoice. Throws on a destroyed stream. The check is unconditional, not __DEV__-only: createMediaElementSource() may be called exactly once per media element, and the second call raises InvalidStateError in the browser - a hard, hard-to-trace runtime failure that a production build must not walk into."
         },
         {
           "name": "destroy",

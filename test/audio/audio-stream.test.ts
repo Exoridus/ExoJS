@@ -1,7 +1,7 @@
 import { getAudioContext, onAudioContextReady } from '#audio/audio-context';
-import { AudioManager } from '#audio/AudioManager';
 import { AudioStream } from '#audio/AudioStream';
 import type { AudioStreamVoice } from '#audio/AudioStreamVoice';
+import { AudioSystem } from '#audio/AudioSystem';
 
 import { frameDelta } from '../support/frame-delta';
 import { mutable } from '../support/mutable';
@@ -44,12 +44,12 @@ describe('AudioStream', () => {
   });
 
   test('play() seeds the element loop/rate from the descriptor and starts playback', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const playSpy = vi.spyOn(el, 'play');
     const stream = new AudioStream(el, { loop: true, playbackRate: 1.25 });
 
-    manager.play(stream);
+    system.play(stream);
 
     expect(el.loop).toBe(true);
     expect(el.playbackRate).toBe(1.25);
@@ -59,10 +59,10 @@ describe('AudioStream', () => {
   });
 
   test('voice.pause()/resume() drive the underlying element', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const stream = new AudioStream(el);
-    const voice = manager.play(stream) as AudioStreamVoice;
+    const voice = system.play(stream) as AudioStreamVoice;
 
     const pauseSpy = vi.spyOn(el, 'pause');
     const playSpy = vi.spyOn(el, 'play');
@@ -77,10 +77,10 @@ describe('AudioStream', () => {
   });
 
   test('voice.seek() / voice.time set the element currentTime', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const stream = new AudioStream(el);
-    const voice = manager.play(stream) as AudioStreamVoice;
+    const voice = system.play(stream) as AudioStreamVoice;
 
     voice.seek(12);
     expect(el.currentTime).toBe(12);
@@ -94,10 +94,10 @@ describe('AudioStream', () => {
   });
 
   test('voice.loop reflects the element loop flag', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const stream = new AudioStream(el);
-    const voice = manager.play(stream) as AudioStreamVoice;
+    const voice = system.play(stream) as AudioStreamVoice;
 
     voice.loop = true;
     expect(el.loop).toBe(true);
@@ -107,9 +107,9 @@ describe('AudioStream', () => {
   });
 
   test('voice.detune is stored but inert (HTMLMediaElement has no detune)', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const stream = new AudioStream(createAudioElementStub());
-    const voice = manager.play(stream) as AudioStreamVoice;
+    const voice = system.play(stream) as AudioStreamVoice;
 
     voice.detune = 600;
     expect(voice.detune).toBe(600);
@@ -118,11 +118,11 @@ describe('AudioStream', () => {
   });
 
   test('setting voice.position spatializes the stream (creates a PannerNode)', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const ctx = getAudioContext();
     const pannerSpy = vi.spyOn(ctx, 'createPanner');
     const stream = new AudioStream(createAudioElementStub());
-    const voice = manager.play(stream) as AudioStreamVoice;
+    const voice = system.play(stream) as AudioStreamVoice;
 
     voice.position = { x: 5, y: 6 };
     expect(pannerSpy).toHaveBeenCalledTimes(1);
@@ -133,25 +133,25 @@ describe('AudioStream', () => {
     stream.destroy();
   });
 
-  test('a spatialized stream voice is ticked by the manager', () => {
-    const manager = new AudioManager();
+  test('a spatialized stream voice is ticked by the system', () => {
+    const system = new AudioSystem();
     const stream = new AudioStream(createAudioElementStub());
-    const voice = manager.play(stream) as AudioStreamVoice;
+    const voice = system.play(stream) as AudioStreamVoice;
 
     voice.position = { x: 1, y: 2 };
     const tickSpy = vi.spyOn(voice, '_tickSpatial');
-    manager.preUpdate(frameDelta);
+    system.preUpdate(frameDelta);
     expect(tickSpy).toHaveBeenCalledTimes(1);
 
     stream.destroy();
   });
 
   test('playing again stops the previous voice and reuses the element', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const stream = new AudioStream(createAudioElementStub());
 
-    const first = manager.play(stream);
-    const second = manager.play(stream);
+    const first = system.play(stream);
+    const second = system.play(stream);
 
     expect(first.ended).toBe(true);
     expect(second.ended).toBe(false);
@@ -160,19 +160,19 @@ describe('AudioStream', () => {
   });
 
   test('destroy() stops the active voice', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const stream = new AudioStream(createAudioElementStub());
-    const voice = manager.play(stream);
+    const voice = system.play(stream);
 
     stream.destroy();
     expect(voice.ended).toBe(true);
   });
 
   test('the element "ended" event finishes the voice', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const stream = new AudioStream(el);
-    const voice = manager.play(stream) as AudioStreamVoice;
+    const voice = system.play(stream) as AudioStreamVoice;
 
     expect(voice.ended).toBe(false);
     el.dispatchEvent(new Event('ended'));
@@ -182,11 +182,11 @@ describe('AudioStream', () => {
   });
 
   test('play({ time }) seeds the element currentTime from startTime', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const stream = new AudioStream(el);
 
-    manager.play(stream, { time: 5 });
+    system.play(stream, { time: 5 });
 
     expect(el.currentTime).toBe(5);
 
@@ -194,10 +194,10 @@ describe('AudioStream', () => {
   });
 
   test('voice.time getter reads the element currentTime', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const stream = new AudioStream(el);
-    const voice = manager.play(stream) as AudioStreamVoice;
+    const voice = system.play(stream) as AudioStreamVoice;
 
     el.currentTime = 9;
     expect(voice.time).toBe(9);
@@ -206,10 +206,10 @@ describe('AudioStream', () => {
   });
 
   test('voice.paused reflects the element paused flag', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const stream = new AudioStream(el);
-    const voice = manager.play(stream) as AudioStreamVoice;
+    const voice = system.play(stream) as AudioStreamVoice;
 
     mutable(el).paused = false;
     expect(voice.paused).toBe(false);
@@ -220,10 +220,10 @@ describe('AudioStream', () => {
   });
 
   test('voice.playbackRate getter/setter reads and clamps the element playbackRate', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const stream = new AudioStream(el);
-    const voice = manager.play(stream) as AudioStreamVoice;
+    const voice = system.play(stream) as AudioStreamVoice;
 
     voice.playbackRate = 2;
     expect(el.playbackRate).toBe(2);
@@ -237,10 +237,10 @@ describe('AudioStream', () => {
   });
 
   test('seek()/pause()/resume() are no-ops once the voice has ended', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const stream = new AudioStream(el);
-    const voice = manager.play(stream) as AudioStreamVoice;
+    const voice = system.play(stream) as AudioStreamVoice;
 
     voice.stop();
     expect(voice.ended).toBe(true);
@@ -260,10 +260,10 @@ describe('AudioStream', () => {
   });
 
   test('the loop setter is a no-op once the voice has ended', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const stream = new AudioStream(el, { loop: false });
-    const voice = manager.play(stream) as AudioStreamVoice;
+    const voice = system.play(stream) as AudioStreamVoice;
 
     voice.stop();
     expect(voice.ended).toBe(true);
@@ -275,13 +275,13 @@ describe('AudioStream', () => {
   });
 
   test('an ended voice cannot retarget the loop flag of the next voice on the same element', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const stream = new AudioStream(el, { loop: false });
-    const first = manager.play(stream) as AudioStreamVoice;
+    const first = system.play(stream) as AudioStreamVoice;
 
     // Starting a second voice stops the first - both share one `<audio>` element.
-    const second = manager.play(stream) as AudioStreamVoice;
+    const second = system.play(stream) as AudioStreamVoice;
     expect(first.ended).toBe(true);
     expect(second.ended).toBe(false);
 
@@ -294,10 +294,10 @@ describe('AudioStream', () => {
   });
 
   test('the playbackRate setter is a no-op once the voice has ended', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const stream = new AudioStream(el, { playbackRate: 1 });
-    const voice = manager.play(stream) as AudioStreamVoice;
+    const voice = system.play(stream) as AudioStreamVoice;
 
     voice.stop();
     expect(voice.ended).toBe(true);
@@ -314,12 +314,12 @@ describe('AudioStream', () => {
   });
 
   test('an ended voice cannot retarget the playback rate of the next voice on the same element', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const stream = new AudioStream(el, { playbackRate: 1 });
-    const first = manager.play(stream) as AudioStreamVoice;
+    const first = system.play(stream) as AudioStreamVoice;
 
-    const second = manager.play(stream) as AudioStreamVoice;
+    const second = system.play(stream) as AudioStreamVoice;
     expect(first.ended).toBe(true);
     expect(second.ended).toBe(false);
 
@@ -336,12 +336,12 @@ describe('AudioStream', () => {
     const originalState = ctx.state;
     mutable(ctx).state = 'suspended';
 
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const playSpy = vi.spyOn(el, 'play');
     const stream = new AudioStream(el);
 
-    const voice = manager.play(stream) as AudioStreamVoice;
+    const voice = system.play(stream) as AudioStreamVoice;
     expect(playSpy).not.toHaveBeenCalled();
 
     mutable(ctx).state = originalState;
@@ -357,7 +357,7 @@ describe('AudioStream', () => {
     const originalState = ctx.state;
     mutable(ctx).state = 'suspended';
 
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const stream = new AudioStream(el);
 
@@ -367,7 +367,7 @@ describe('AudioStream', () => {
     const stopFirst = (): void => holder.voice?.stop();
     onAudioContextReady.add(stopFirst);
 
-    const voice = manager.play(stream) as AudioStreamVoice;
+    const voice = system.play(stream) as AudioStreamVoice;
     holder.voice = voice;
     const playSpy = vi.spyOn(el, 'play');
 
@@ -423,11 +423,11 @@ describe('AudioStream', () => {
   // ---- volume/muted option resolution (per-play override chain) ----
 
   test('options.muted overrides both options.volume and the descriptor volume to 0', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const stream = new AudioStream(el, { volume: 1 });
 
-    const voice = manager.play(stream, { muted: true, volume: 0.7 }) as AudioStreamVoice;
+    const voice = system.play(stream, { muted: true, volume: 0.7 }) as AudioStreamVoice;
 
     expect(voice.volume).toBe(0);
 
@@ -435,11 +435,11 @@ describe('AudioStream', () => {
   });
 
   test('options.volume overrides the descriptor volume when not muted', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const stream = new AudioStream(el, { volume: 1 });
 
-    const voice = manager.play(stream, { volume: 0.4 }) as AudioStreamVoice;
+    const voice = system.play(stream, { volume: 0.4 }) as AudioStreamVoice;
 
     expect(voice.volume).toBe(0.4);
 
@@ -447,11 +447,11 @@ describe('AudioStream', () => {
   });
 
   test('descriptor muted=true zeroes the voice volume when no per-play override is given', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const stream = new AudioStream(el, { volume: 1, muted: true });
 
-    const voice = manager.play(stream) as AudioStreamVoice;
+    const voice = system.play(stream) as AudioStreamVoice;
 
     expect(voice.volume).toBe(0);
 
@@ -468,13 +468,13 @@ describe('AudioStream', () => {
   // first voice's listener attached to the (shared) element alongside the
   // second's.
   test("a stale voice's own end does not clear a newer, already-active voice", () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const stream = new AudioStream(el);
 
-    const first = stream._createVoice(manager, {}) as AudioStreamVoice;
+    const first = stream._createVoice(system, {}) as AudioStreamVoice;
     (stream as unknown as { _activeVoice: unknown })._activeVoice = null;
-    const second = stream._createVoice(manager, {}) as AudioStreamVoice;
+    const second = stream._createVoice(system, {}) as AudioStreamVoice;
 
     // Both voices' 'ended' listeners are still attached to the shared element.
     el.dispatchEvent(new Event('ended'));
@@ -498,17 +498,17 @@ describe('AudioStream', () => {
   });
 
   test('playing a destroyed stream throws instead of re-sourcing the media element', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const el = createAudioElementStub();
     const stream = new AudioStream(el);
     const ctx = getAudioContext();
 
-    manager.play(stream);
+    system.play(stream);
     stream.destroy();
 
     const sourceSpy = vi.spyOn(ctx, 'createMediaElementSource');
 
-    expect(() => manager.play(stream)).toThrow(/destroyed AudioStream/);
+    expect(() => system.play(stream)).toThrow(/destroyed AudioStream/);
     // A second createMediaElementSource() on the same element is exactly the
     // InvalidStateError this guard exists to prevent.
     expect(sourceSpy).not.toHaveBeenCalled();
@@ -517,9 +517,9 @@ describe('AudioStream', () => {
   });
 
   test('destroy() is idempotent', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const stream = new AudioStream(createAudioElementStub());
-    manager.play(stream);
+    system.play(stream);
 
     stream.destroy();
     expect(() => stream.destroy()).not.toThrow();

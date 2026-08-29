@@ -121,7 +121,7 @@ export enum PointerState {
  * writes are normalized to 0..1 (position, size, twist, tilt) for
  * backend-agnostic sampling.
  *
- * Pointers are owned by the {@link InputManager}, which assigns them a slot
+ * Pointers are owned by the {@link InputSystem}, which assigns them a slot
  * index in 0..15 (see {@link maxPointers}) and exposes their per-slot
  * channel offsets via the {@link Pointer} class namespace constants.
  */
@@ -396,7 +396,7 @@ export class Pointer {
   /**
    * Promote the phases accumulated since the last boundary into this frame's
    * snapshot and recompute {@link delta}. Called once per frame by the
-   * {@link InputManager} before anything reads the pointer.
+   * {@link InputSystem} before anything reads the pointer.
    *
    * @internal
    */
@@ -416,7 +416,7 @@ export class Pointer {
 
   /**
    * This frame's phases, in the exact order they happened - the
-   * {@link InputManager}'s signal dispatch iterates this directly instead of
+   * {@link InputSystem}'s signal dispatch iterates this directly instead of
    * checking a bitmask in a fixed order, so an Up followed by a Down within
    * one frame dispatches in that same order, and two discrete presses in one
    * frame each get their own `onPointerDown`.

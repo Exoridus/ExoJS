@@ -2,7 +2,7 @@ import { clamp } from '#math/utils';
 
 import { getAudioContext, isAudioContextReady } from './audio-context';
 import { AudioGeneratorVoice } from './AudioGeneratorVoice';
-import type { AudioManager } from './AudioManager';
+import type { AudioSystem } from './AudioSystem';
 import type { Envelope } from './Envelope';
 import { NoopVoice } from './NoopVoice';
 import type { Playable, PlayOptions, Voice } from './Playable';
@@ -46,7 +46,7 @@ interface PooledGeneratorVoice {
  *
  * `AudioGenerator` is a **data descriptor**: it holds the current synth settings
  * (`frequency`, `type`, `detune`, `envelope`) and default playback parameters.
- * Each `AudioManager.play(generator, options)` snapshots those settings into a
+ * Each `AudioSystem.play(generator, options)` snapshots those settings into a
  * fresh {@link AudioGeneratorVoice} and returns it. For per-note playback, set
  * `generator.frequency` (or use {@link AudioGenerator.setNote}) before playing:
  *
@@ -58,7 +58,7 @@ interface PooledGeneratorVoice {
  * voice.stop();                     // triggers the envelope release, if any
  * ```
  *
- * Routes through the manager's `sound` bus by default.
+ * Routes through the system's `sound` bus by default.
  */
 export class AudioGenerator implements Playable {
   /** Current oscillator frequency in Hz. Snapshotted into each new voice. */
@@ -122,18 +122,18 @@ export class AudioGenerator implements Playable {
   }
 
   /**
-   * Implements {@link Playable}. Called by {@link AudioManager.play}.
+   * Implements {@link Playable}. Called by {@link AudioSystem.play}.
    *
    * Snapshots the current synth settings into a new {@link AudioGeneratorVoice}.
    * Returns an already-ended {@link NoopVoice} when the `AudioContext` is still
    * locked by the autoplay policy - oscillators are ephemeral and cannot be
    * deferred.
    */
-  public _createVoice(manager: AudioManager, options: PlayOptions): Voice {
-    const bus = options.bus ?? manager.sound;
+  public _createVoice(system: AudioSystem, options: PlayOptions): Voice {
+    const bus = options.bus ?? system.sound;
 
     if (!isAudioContextReady()) {
-      manager._warnPlaybackWhileLocked('generator');
+      system._warnPlaybackWhileLocked('generator');
       return new NoopVoice(bus);
     }
 
@@ -157,7 +157,7 @@ export class AudioGenerator implements Playable {
       audioContext,
       output,
       bus,
-      manager,
+      system,
       volume,
       frequency: this.frequency,
       type: this.type,

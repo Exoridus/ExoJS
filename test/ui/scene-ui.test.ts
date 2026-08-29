@@ -7,8 +7,8 @@ import type { ContextMenuRequest } from '#input/ContextMenuRequest';
 import { FocusController } from '#input/FocusController';
 import type { Gamepad } from '#input/Gamepad';
 import type { GamepadButton } from '#input/GamepadButton';
-import type { InputManager } from '#input/InputManager';
-import { InteractionManager } from '#input/InteractionManager';
+import type { InputSystem } from '#input/InputSystem';
+import { InteractionSystem } from '#input/InteractionSystem';
 import type { Pointer } from '#input/Pointer';
 import { Keyboard } from '#input/types';
 import { Rectangle } from '#math/Rectangle';
@@ -54,7 +54,7 @@ const dispatchPointer = (signal: Signal<[Pointer, number, number]>, x: number, y
 
 const createUIApp = (): {
   scene: Scene;
-  im: InteractionManager;
+  im: InteractionSystem;
   focus: FocusController;
   signals: {
     onPointerDown: Signal<[Pointer, number, number]>;
@@ -81,9 +81,9 @@ const createUIApp = (): {
     platform: new BrowserPlatform(canvas),
     width: 800,
     height: 600,
-    input: signals as unknown as InputManager,
+    input: signals as unknown as InputSystem,
     focus: null as FocusController | null,
-    interaction: null as InteractionManager | null,
+    interaction: null as InteractionSystem | null,
     rendering: {
       view: { screenToWorld: (x: number, y: number): { x: number; y: number } => ({ x: x + CAMERA_OFFSET, y: y + CAMERA_OFFSET }) },
       screenView: { screenToWorld: (x: number, y: number): { x: number; y: number } => ({ x, y }) },
@@ -99,7 +99,7 @@ const createUIApp = (): {
   const typed = app as unknown as Application;
 
   app.focus = new FocusController(typed);
-  app.interaction = new InteractionManager(typed);
+  app.interaction = new InteractionSystem(typed);
   scene._attach(typed, {} as unknown as SceneScope<void>);
   app.interaction.attachRoot(scene.root);
 
@@ -278,7 +278,7 @@ describe('UI scope reactivation re-enforces the focus trap immediately', () => {
 
     // Pushed (and later checked) through `im`, not the standalone `focus`
     // returned by `createUIApp` - the scope trap this exercises is enforced
-    // by `InteractionManager`'s own internal FocusController, reached via
+    // by `InteractionSystem`'s own internal FocusController, reached via
     // `im.pushScope`/`im.focus`/`im.focused`, not a separately constructed one.
     const token = im.pushScope(modal);
 
@@ -295,7 +295,7 @@ describe('UI scope reactivation re-enforces the focus trap immediately', () => {
     expect(im.focused).toBe(outside);
 
     // Reattaching to the UI layer must re-enforce the trap immediately - this
-    // exercises InteractionManager's UI hook bundle specifically, since the
+    // exercises InteractionSystem's UI hook bundle specifically, since the
     // UI layer never registers nodes into the world tree.
     scene.ui.addChild(modal);
 

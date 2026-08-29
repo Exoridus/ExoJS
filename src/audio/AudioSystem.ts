@@ -14,7 +14,7 @@ import { createSpatialSmoothingSettings, type SpatialSmoothingSettings } from '.
 import { SpatialZones } from './SpatialZones';
 
 /**
- * The signal behind {@link AudioManager.onUnlock}. A plain one-shot `Signal`
+ * The signal behind {@link AudioSystem.onUnlock}. A plain one-shot `Signal`
  * would be a trap here: `onUnlock` is the documented place to start playback
  * that cannot be deferred past the autoplay gesture, so it has to answer the
  * question every subscriber is really asking - *"run this as soon as audio is
@@ -50,7 +50,7 @@ class UnlockSignal extends Signal {
    * and `destroy()` nothing to find, so the pending set is what they cancel
    * against. Without it a scene that subscribes in `init` and unsubscribes in
    * `unload` still starts music for a scene that is already gone, and a
-   * handler surviving `destroy()` calls `play()` on a destroyed manager, which
+   * handler surviving `destroy()` calls `play()` on a destroyed system, which
    * throws unobserved out of the microtask.
    */
   private readonly _pendingReplays = new Set<() => void>();
@@ -121,9 +121,9 @@ class UnlockSignal extends Signal {
  * bus subtree, so multiple Applications mix independently. Access it via
  * `app.audio`. Drives the per-frame `_tick()` on the listener and every spatial
  * voice, and propagates visibility-driven mute when
- * {@link AudioManager.muteOnHidden} is enabled.
+ * {@link AudioSystem.muteOnHidden} is enabled.
  */
-export class AudioManager {
+export class AudioSystem {
   public readonly master: AudioBus;
   public readonly music: AudioBus;
   public readonly sound: AudioBus;
@@ -161,15 +161,15 @@ export class AudioManager {
    * handler that has already run is never fired again by a later unlock, so
    * looping music started here does not stack a second copy after an
    * interruption. `remove()` cancels either case, and nothing fires once the
-   * manager is destroyed.
+   * system is destroyed.
    *
-   * Check {@link AudioManager.locked} for the current state. See
-   * {@link AudioManager.play} for what each asset kind does when played before
+   * Check {@link AudioSystem.locked} for the current state. See
+   * {@link AudioSystem.play} for what each asset kind does when played before
    * the gesture.
    */
   public readonly onUnlock: Signal;
   /**
-   * The same object as {@link AudioManager.onUnlock}, kept at its concrete type
+   * The same object as {@link AudioSystem.onUnlock}, kept at its concrete type
    * so the internal `_unlock()` edge is reachable without a cast - `onUnlock`
    * is deliberately published as a plain {@link Signal}.
    */
@@ -178,8 +178,8 @@ export class AudioManager {
   private readonly _registered = new Map<string, AudioBus>();
   private readonly _spatial = new Set<SpatialVoice>();
   /**
-   * Every voice created against this manager that has not ended yet - the
-   * registry {@link AudioManager.destroy} needs in order to actually silence
+   * Every voice created against this system that has not ended yet - the
+   * registry {@link AudioSystem.destroy} needs in order to actually silence
    * playback. `_spatial` only ever holds the subset that is being panned per
    * frame, which is why it cannot serve this purpose.
    */
@@ -188,18 +188,18 @@ export class AudioManager {
   private _destroyed = false;
   /**
    * Whether the "played while locked" warning has already been issued for this
-   * manager. Throttled per manager rather than per call: a menu can fire dozens
+   * system. Throttled per system rather than per call: a menu can fire dozens
    * of click sounds a second while audio is still locked, and every one of them
    * would produce the identical message - one line names the problem, a flood
    * buries it (and every other log the developer is reading). Re-armed by
-   * {@link AudioManager.preUpdate} once the context runs, so a context that
+   * {@link AudioSystem.preUpdate} once the context runs, so a context that
    * drops back to suspended later (an iOS audio-session interruption, a bfcache
    * restore) reports its own first occurrence again.
    */
   private _lockedWarningIssued = false;
   /**
-   * Whether this manager has already seen the current run of usable audio.
-   * Drives the locked→unlocked edge that fires {@link AudioManager.onUnlock};
+   * Whether this system has already seen the current run of usable audio.
+   * Drives the locked→unlocked edge that fires {@link AudioSystem.onUnlock};
    * reset the moment the context is observed suspended again, so the next
    * unlock is a fresh edge.
    */
@@ -226,7 +226,7 @@ export class AudioManager {
     //   the unlock gesture, so playback starts on the same tick as the click.
     //   But it is a documented ONE-SHOT (`readyDispatched`): it cannot report a
     //   context that drops back to suspended and is resumed again, and it is
-    //   already spent for any manager constructed after the first gesture.
+    //   already spent for any system constructed after the first gesture.
     //   Subscribing to it while already running would therefore only leak a
     //   handler that can never fire.
     // - `preUpdate` closes both gaps by polling the transition. It already
@@ -247,7 +247,7 @@ export class AudioManager {
   /**
    * When `true`, the master bus is muted while `document.hidden` is true.
    * Wired to {@link Application.onVisibilityChange} via
-   * {@link AudioManager._applyVisibility}; the application calls that
+   * {@link AudioSystem._applyVisibility}; the application calls that
    * hook automatically - set this flag to opt in to the behavior.
    */
   public get muteOnHidden(): boolean {
@@ -274,16 +274,16 @@ export class AudioManager {
    * source scheduled while locked lands on the same instant and the entire
    * backlog would fire simultaneously on the gesture.
    *
-   * Start such playback from {@link AudioManager.onUnlock} instead.
+   * Start such playback from {@link AudioSystem.onUnlock} instead.
    */
   public get locked(): boolean {
     return !isAudioContextReady();
   }
 
   /**
-   * Report the first play call this manager skipped because audio was still
+   * Report the first play call this system skipped because audio was still
    * locked, then stay quiet until audio unlocks - see
-   * {@link AudioManager._lockedWarningIssued} for why it is throttled.
+   * {@link AudioSystem._lockedWarningIssued} for why it is throttled.
    * @internal Called by the {@link Playable} implementations that skip.
    */
   public _warnPlaybackWhileLocked(asset: string): void {
@@ -293,10 +293,10 @@ export class AudioManager {
 
     this._lockedWarningIssued = true;
     logger.warn(
-      `AudioManager.play() was called while audio is still locked by the browser's autoplay policy; the ${asset} was skipped. ` +
+      `AudioSystem.play() was called while audio is still locked by the browser's autoplay policy; the ${asset} was skipped. ` +
         'Start playback from the unlock gesture instead — `app.audio.onUnlock.add(() => app.audio.play(music, { loop: true }))` — ' +
         'or gate it on `app.audio.locked`. Further skipped plays are not reported until audio unlocks.',
-      { source: 'AudioManager' },
+      { source: 'AudioSystem' },
     );
   }
 
@@ -320,16 +320,16 @@ export class AudioManager {
    * ```
    *
    * While audio is still locked by the browser's autoplay policy
-   * ({@link AudioManager.locked}), a {@link Sound} or {@link AudioGenerator}
+   * ({@link AudioSystem.locked}), a {@link Sound} or {@link AudioGenerator}
    * play call is a **no-op**: it returns an already-ended voice and warns once.
    * An {@link AudioStream} is deferred and starts on the unlock gesture. Start
-   * the former from {@link AudioManager.onUnlock}:
+   * the former from {@link AudioSystem.onUnlock}:
    *
    * ```ts
    * app.audio.onUnlock.add(() => app.audio.play(music, { loop: true }));
    * ```
    *
-   * Throws once the manager has been destroyed - see {@link AudioManager.destroy}.
+   * Throws once the system has been destroyed - see {@link AudioSystem.destroy}.
    *
    * @param source - Any {@link Playable} asset (Sound, AudioStream, AudioGenerator).
    * @param options - Per-play overrides (bus, volume, loop, playbackRate, detune,
@@ -366,7 +366,7 @@ export class AudioManager {
       audioContext,
       output,
       bus: this.sound,
-      manager: this,
+      system: this,
       volume: 1,
       sourceNode,
       stream: input.stream,
@@ -407,7 +407,7 @@ export class AudioManager {
   }
 
   /**
-   * Internal: track a live voice so {@link AudioManager.destroy} can stop it.
+   * Internal: track a live voice so {@link AudioSystem.destroy} can stop it.
    * Called from the voice's own constructor, which covers every creation path -
    * `play()`, `open()`, sprite playback, and pooled replays alike.
    */
@@ -425,7 +425,7 @@ export class AudioManager {
 
   /**
    * Observe the current autoplay-lock state and act on a transition: fire
-   * {@link AudioManager.onUnlock} on the locked→unlocked edge, and re-arm the
+   * {@link AudioSystem.onUnlock} on the locked→unlocked edge, and re-arm the
    * one-shot locked-playback warning while audio is usable so a later re-lock
    * reports its own first occurrence.
    *
@@ -463,7 +463,7 @@ export class AudioManager {
 
   /**
    * Register a user-constructed {@link AudioBus} so it can be looked up by
-   * name via {@link AudioManager.getBus}. Throws if a bus with the same
+   * name via {@link AudioSystem.getBus}. Throws if a bus with the same
    * name is already registered.
    */
   public registerBus(bus: AudioBus): this {
@@ -512,8 +512,8 @@ export class AudioManager {
 
   /**
    * Tear the mix down: stop every voice still playing, then the listener and
-   * every bus. Terminal - {@link AudioManager.play} and
-   * {@link AudioManager.open} throw afterwards.
+   * every bus. Terminal - {@link AudioSystem.play} and
+   * {@link AudioSystem.open} throw afterwards.
    *
    * Effects you attached to a bus or a voice are detached but not destroyed -
    * they are yours (see {@link AudioBus.addEffect}), so `destroy()` each one
@@ -525,9 +525,9 @@ export class AudioManager {
     this._destroyed = true;
 
     // Silence the unlock path first: a queued replay or a handler still waiting
-    // for the gesture would otherwise call `play()` on this very manager after
+    // for the gesture would otherwise call `play()` on this very system after
     // it has gone terminal. Dropping the global subscription matters beyond
-    // this manager - a handler that throws inside `onAudioContextReady`'s
+    // this system - a handler that throws inside `onAudioContextReady`'s
     // dispatch terminates that dispatch outright, so a dead Application could
     // otherwise stop a live one's buses from ever being set up. Symmetric with
     // `AudioBus.destroy` and `AudioListener.destroy`.
@@ -566,14 +566,14 @@ export class AudioManager {
     this.listener.destroy();
     this._spatial.clear();
     for (const bus of this._registered.values()) {
-      // Note: destroying built-ins too - AudioManager is destroyed only when app shuts down.
+      // Note: destroying built-ins too - AudioSystem is destroyed only when app shuts down.
       bus.destroy();
     }
     this._registered.clear();
 
     for (const error of failures) {
-      logger.error('AudioManager.destroy(): a voice threw while being stopped.', {
-        source: 'AudioManager',
+      logger.error('AudioSystem.destroy(): a voice threw while being stopped.', {
+        source: 'AudioSystem',
         ...(error instanceof Error && { error }),
       });
     }
@@ -582,7 +582,7 @@ export class AudioManager {
   private _assertLive(method: string): void {
     if (this._destroyed) {
       throw new Error(
-        `AudioManager.${method}() was called on a destroyed AudioManager. Its buses and listener are gone and it no ` +
+        `AudioSystem.${method}() was called on a destroyed AudioSystem. Its buses and listener are gone and it no ` +
           'longer tracks what it starts, so the voice would render into a dead graph with nothing left to stop it. ' +
           'Check the teardown order — the owning Application has already been destroyed.',
       );

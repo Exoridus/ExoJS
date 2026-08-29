@@ -21,7 +21,7 @@ import type { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
  * corrupting the loop.
  * @stable
  */
-export class AnimationManager {
+export class AnimationSystem {
   private _sprites = new Set<AnimatedSprite>();
   private _destroyed = false;
 
@@ -32,7 +32,7 @@ export class AnimationManager {
 
   /**
    * Register `sprite` so it is advanced once per frame. Idempotent, and a
-   * no-op for a destroyed sprite or a destroyed manager. Called automatically
+   * no-op for a destroyed sprite or a destroyed system. Called automatically
    * by {@link AnimatedSprite}; there is no need to call it by hand.
    */
   public add(sprite: AnimatedSprite): this {
@@ -45,7 +45,7 @@ export class AnimationManager {
     return this;
   }
 
-  /** Remove `sprite` from the manager. Called automatically on stop/pause/complete/detach/destroy. */
+  /** Remove `sprite` from the system. Called automatically on stop/pause/complete/detach/destroy. */
   public remove(sprite: AnimatedSprite): this {
     this._sprites.delete(sprite);
 
@@ -83,7 +83,7 @@ export class AnimationManager {
 
   /**
    * Deregister every sprite immediately. Playback state is left as-is - the
-   * sprites are simply no longer advanced by this manager.
+   * sprites are simply no longer advanced by this system.
    */
   public clear(): this {
     this._sprites = new Set();
@@ -91,7 +91,7 @@ export class AnimationManager {
     return this;
   }
 
-  /** Tear down the manager. Deregisters every sprite and makes subsequent updates no-ops. */
+  /** Tear down the system. Deregisters every sprite and makes subsequent updates no-ops. */
   public destroy(): void {
     this.clear();
     this._destroyed = true;

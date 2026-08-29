@@ -187,7 +187,7 @@ if (typeof (globalThis as Record<string, unknown>)['AudioWorkletNode'] === 'unde
 // ---------------------------------------------------------------------------
 
 import { getAudioContext } from '../../src/audio/audio-context';
-import { AudioManager } from '../../src/audio/AudioManager';
+import { AudioSystem } from '../../src/audio/AudioSystem';
 import { Sound } from '../../src/audio/Sound';
 import { getCollisionSat } from '../../src/math/collision-detection';
 import { Polygon } from '../../src/math/Polygon';
@@ -237,7 +237,7 @@ const makeAudioBuffer = (duration = 2, sampleRate = 44100): AudioBuffer =>
     getChannelData: () => new Float32Array(duration * sampleRate),
   }) as unknown as AudioBuffer;
 
-// Inlined recursive hit-test (mirrors InteractionManager._hitTestNode)
+// Inlined recursive hit-test (mirrors InteractionSystem._hitTestNode)
 const hitTestRecursive = (node: RenderNode, x: number, y: number): RenderNode | null => {
   if (!node.visible) return null;
   if (node instanceof Container) {
@@ -522,14 +522,14 @@ const scenarioResults: ProfileScenarioResult[] = [];
   getAudioContext();
 
   const sounds: Sound[] = [];
-  let manager: AudioManager | null = null;
+  let system: AudioSystem | null = null;
 
   scenarioResults.push(
     runProfile({
       name: 'many-sounds-play',
       iterations: 1000,
       setup() {
-        manager = new AudioManager();
+        system = new AudioSystem();
         for (let i = 0; i < 50; i++) {
           sounds.push(new Sound(makeAudioBuffer(), { poolSize: 4 }));
         }
@@ -541,7 +541,7 @@ const scenarioResults: ProfileScenarioResult[] = [];
           const stopPlay = timings.start('sound.play');
           // Stopping within the tick returns the voice to the sound's pool, so the
           // measured cost stays "50 plays" instead of growing by 50 each iteration.
-          manager!.play(s).stop();
+          system!.play(s).stop();
           stopPlay();
         }
       },
@@ -550,8 +550,8 @@ const scenarioResults: ProfileScenarioResult[] = [];
           s.destroy();
         }
         sounds.length = 0;
-        manager!.destroy();
-        manager = null;
+        system!.destroy();
+        system = null;
       },
     }),
   );
@@ -623,7 +623,7 @@ const deriveWins = (results: ProfileScenarioResult[]): Win[] => {
         `Memory delta ${heapMb.toFixed(2)} MB.`;
       recommendation =
         'Use the quadtree-accelerated path (hit-test-quadtree-1k is 5× faster per the baseline). ' +
-        'InteractionManager should maintain a persistent spatial index rebuilt only on scene-graph changes, ' +
+        'InteractionSystem should maintain a persistent spatial index rebuilt only on scene-graph changes, ' +
         'not every frame. Amortizes the build cost across all queries in the frame.';
     } else if (r.name.startsWith('deep-tree-invalidation')) {
       observation =

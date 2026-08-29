@@ -10,7 +10,7 @@ const inaudibleSend = 0.0005;
  * The optional zone layer: which {@link AudioZone}s exist, and the sends they
  * currently hold open.
  *
- * Owned by {@link AudioManager} and reachable as `app.audio.zones`. Completely
+ * Owned by {@link AudioSystem} and reachable as `app.audio.zones`. Completely
  * inert until a zone is added - the per-frame tick returns immediately, so an
  * application that never uses zones pays one branch.
  *
@@ -101,7 +101,7 @@ export class SpatialZones {
    * `voices` is the live set of spatial voices; a voice that has ended is skipped
    * and its sends released - the voice tears them down itself, so this only drops
    * the bookkeeping.
-   * @internal - driven once per frame by {@link AudioManager.preUpdate}.
+   * @internal - driven once per frame by {@link AudioSystem.preUpdate}.
    */
   public _tick(listener: AudioListener, voices: Iterable<Voice>): void {
     if (this._zones.length === 0) {

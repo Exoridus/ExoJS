@@ -12,7 +12,7 @@ const longPressSeconds = 0.5;
  */
 const angleEpsilon = 0.0001;
 
-/** Immutable gesture occurrence queued onto InputManager's frame journal. @internal */
+/** Immutable gesture occurrence queued onto InputSystem's frame journal. @internal */
 export type GestureJournalEvent =
   | { readonly kind: 'pinch'; readonly scale: number; readonly x: number; readonly y: number }
   | { readonly kind: 'rotate'; readonly angleDelta: number; readonly x: number; readonly y: number }
@@ -28,7 +28,7 @@ interface LongPressEntry {
 }
 
 /**
- * Internal multi-touch gesture recognizer used by {@link InputManager}.
+ * Internal multi-touch gesture recognizer used by {@link InputSystem}.
  * Tracks active touch pointers, derives pinch/rotate deltas from **all** of
  * them, and reports a long-press occurrence when a single pointer is held still
  * for {@link longPressSeconds} (0.5 s). Long-press cancels if the pointer moves
@@ -52,7 +52,7 @@ interface LongPressEntry {
  *
  * Every occurrence (pinch, rotate, long-press) is handed to the `_enqueue`
  * callback supplied at construction rather than dispatched here - that
- * callback pushes it onto {@link InputManager}'s own frame journal, which
+ * callback pushes it onto {@link InputSystem}'s own frame journal, which
  * owns the actual `onPinch`/`onRotate`/`onLongPress` Signals and dispatches
  * them from there, in true chronological order relative to the pointer
  * phases that produced them. This class holds no Signal of its own.
@@ -92,16 +92,16 @@ export class GestureRecognizer {
    * Long-press is the one gesture with a duration, so it is the one that needs
    * a clock, and taking that clock from the frame delta rather than from a
    * `setTimeout` is what makes it behave like the rest of the simulation: a
-   * hold advances only on frames the owning {@link InputManager} actually
+   * hold advances only on frames the owning {@link InputSystem} actually
    * runs, so it freezes with a stopped application instead of maturing in the
    * background. The caller decides whether the current frame counts at all -
-   * {@link InputManager.preUpdate} skips this call entirely while the active
+   * {@link InputSystem.preUpdate} skips this call entirely while the active
    * scene is paused, so a finger left on the screen through a pause menu does
    * not complete a long-press behind it.
    *
    * A matured hold is dropped from the pending set and handed to the
    * construction-time enqueue callback, exactly like a pinch or rotate - it is
-   * dispatched from {@link InputManager}'s frame journal, not from here.
+   * dispatched from {@link InputSystem}'s frame journal, not from here.
    *
    * @internal
    */

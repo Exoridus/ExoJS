@@ -1,16 +1,16 @@
 /**
- * Tests for InputManager's DOM event-driven signal paths: keyboard, mouse
+ * Tests for InputSystem's DOM event-driven signal paths: keyboard, mouse
  * wheel, canvas/window focus-blur, pointer signal flushing (update()-based),
  * binding factories (onStart/onActive/onStop/onTrigger + captured-channel
  * preventDefault), destroy cleanup, and gamepad-slot edge cases not covered
- * by `input-manager.test.ts` (which focuses on the gamepad lifecycle) or
+ * by `input-system.test.ts` (which focuses on the gamepad lifecycle) or
  * `pointer-channels.test.ts` (which focuses on the raw channel buffer).
  */
 
 import type { Application } from '#core/Application';
 import { Gamepad } from '#input/Gamepad';
 import { GamepadButton } from '#input/GamepadButton';
-import { InputManager } from '#input/InputManager';
+import { InputSystem } from '#input/InputSystem';
 import { Pointer } from '#input/Pointer';
 import { Keyboard } from '#input/types';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
@@ -56,7 +56,7 @@ const createMockApp = (canvas: HTMLCanvasElement, pixelRatio = 1): Application =
         pointerDistanceThreshold: 10,
       },
     },
-    // `InputManager` reads `scenes.paused` to decide whether a long-press hold
+    // `InputSystem` reads `scenes.paused` to decide whether a long-press hold
     // advances this frame.
     scenes: { paused: false },
     _backingStoreToLogical: (backingStoreX: number, backingStoreY: number): { x: number; y: number } => ({
@@ -66,13 +66,13 @@ const createMockApp = (canvas: HTMLCanvasElement, pixelRatio = 1): Application =
   } as unknown as Application;
 };
 
-const createInputManager = (canvas?: HTMLCanvasElement): { im: InputManager; canvas: HTMLCanvasElement } => {
+const createInputSystem = (canvas?: HTMLCanvasElement): { im: InputSystem; canvas: HTMLCanvasElement } => {
   const c = canvas ?? createCanvas();
 
-  return { im: new InputManager(createMockApp(c)), canvas: c };
+  return { im: new InputSystem(createMockApp(c)), canvas: c };
 };
 
-const ch = (im: InputManager, channel: number): number => (im as unknown as { channels: Float32Array }).channels[channel];
+const ch = (im: InputSystem, channel: number): number => (im as unknown as { channels: Float32Array }).channels[channel];
 
 const fire = (canvas: HTMLCanvasElement, type: string, init: PointerEventInit): PointerEvent => {
   const evt = new PointerEvent(type, { bubbles: true, ...init });
@@ -96,7 +96,7 @@ const createNativeGamepad = (id: string, index = 0, buttonValues: number[] = [],
     vibrationActuator: null,
   }) as unknown as BrowserGamepad;
 
-// `InputManager.update()` unconditionally polls `navigator.getGamepads()`,
+// `InputSystem.update()` unconditionally polls `navigator.getGamepads()`,
 // which jsdom does not implement at all (not merely empty - the property is
 // undefined). Stub it to an empty snapshot for every test in this file;
 // `withMockedGetGamepads` below layers a per-test snapshot on top for the
@@ -148,11 +148,11 @@ const withMockedGetGamepads = (run: (setSnapshot: (snapshot: Array<BrowserGamepa
 // Constructor defaults
 // ---------------------------------------------------------------------------
 
-describe('InputManager — constructor option defaults', () => {
+describe('InputSystem — constructor option defaults', () => {
   test('falls back to defaults when app.options.input is entirely absent', () => {
     const canvas = createCanvas();
     const app = { canvas, platform: new BrowserPlatform(canvas), options: {} } as unknown as Application;
-    const im = new InputManager(app);
+    const im = new InputSystem(app);
 
     expect(im.gamepadSlotStrategy).toBe('sticky');
     expect(im.gamepads).toHaveLength(4);
@@ -165,9 +165,9 @@ describe('InputManager — constructor option defaults', () => {
 // Keyboard
 // ---------------------------------------------------------------------------
 
-describe('InputManager — keyboard', () => {
+describe('InputSystem — keyboard', () => {
   test('keydown/keyup are ignored while the canvas is not focused', () => {
-    const { im } = createInputManager();
+    const { im } = createInputSystem();
     const onKeyDown = vi.fn();
     const onKeyUp = vi.fn();
 
@@ -185,7 +185,7 @@ describe('InputManager — keyboard', () => {
   });
 
   test('canvas focus dispatch enables keyboard channels and fires onCanvasFocusChange(true) exactly once', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onFocusChange = vi.fn();
 
     im.onCanvasFocusChange.add(onFocusChange);
@@ -201,7 +201,7 @@ describe('InputManager — keyboard', () => {
   });
 
   test('keydown while focused sets channel=1, pushes to pressed queue, and dispatches onKeyDown on update()', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onKeyDown = vi.fn();
 
     im.onKeyDown.add(onKeyDown);
@@ -221,7 +221,7 @@ describe('InputManager — keyboard', () => {
   });
 
   test('an OS auto-repeat keydown dispatches no second onKeyDown', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onKeyDown = vi.fn();
 
     im.onKeyDown.add(onKeyDown);
@@ -249,7 +249,7 @@ describe('InputManager — keyboard', () => {
   });
 
   test('an auto-repeat keydown on a modifier leaves the aggregate channel set without a second dispatch', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onKeyDown = vi.fn();
 
     im.onKeyDown.add(onKeyDown);
@@ -268,7 +268,7 @@ describe('InputManager — keyboard', () => {
   });
 
   test('a captured key still suppresses its browser default on every auto-repeat', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
 
     canvas.dispatchEvent(new FocusEvent('focus'));
     const binding = im.onStart(Keyboard.Space, () => {});
@@ -286,7 +286,7 @@ describe('InputManager — keyboard', () => {
   });
 
   test('keyup while focused clears channel and dispatches onKeyUp on update()', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onKeyUp = vi.fn();
 
     im.onKeyUp.add(onKeyUp);
@@ -307,7 +307,7 @@ describe('InputManager — keyboard', () => {
   });
 
   test('canvas blur releases every pressed keyboard channel and fires onCanvasFocusChange(false)', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onKeyUp = vi.fn();
     const onFocusChange = vi.fn();
 
@@ -340,7 +340,7 @@ describe('InputManager — keyboard', () => {
   });
 
   test('window blur behaves like canvas blur: releases keys and fires onCanvasFocusChange(false)', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onFocusChange = vi.fn();
 
     im.onCanvasFocusChange.add(onFocusChange);
@@ -359,7 +359,7 @@ describe('InputManager — keyboard', () => {
   });
 
   test('window blur while the canvas was never focused is a no-op', () => {
-    const { im } = createInputManager();
+    const { im } = createInputSystem();
     const onFocusChange = vi.fn();
 
     im.onCanvasFocusChange.add(onFocusChange);
@@ -373,7 +373,7 @@ describe('InputManager — keyboard', () => {
   });
 
   test('a captured key channel (bound via onStart) suppresses the default keydown/keyup behavior', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
 
     canvas.dispatchEvent(new FocusEvent('focus'));
     const binding = im.onStart(Keyboard.Space, () => {});
@@ -393,7 +393,7 @@ describe('InputManager — keyboard', () => {
   });
 
   test('an uncaptured key channel does not suppress default keydown behavior', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
 
     canvas.dispatchEvent(new FocusEvent('focus'));
 
@@ -407,7 +407,7 @@ describe('InputManager — keyboard', () => {
   });
 
   test('a binding captured on the aggregate modifier channel still suppresses the default for a side-key event', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
 
     canvas.dispatchEvent(new FocusEvent('focus'));
     const binding = im.onStart(Keyboard.Control, () => {});
@@ -427,7 +427,7 @@ describe('InputManager — keyboard', () => {
   });
 
   test('ref-counts captured channels: unbinding one of two bindings on the same channel keeps it captured', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
 
     canvas.dispatchEvent(new FocusEvent('focus'));
     const bindingA = im.onStart(Keyboard.Space, () => {});
@@ -451,7 +451,7 @@ describe('InputManager — keyboard', () => {
   });
 
   test('a binding created while a key is already held reports its later release without fabricating a trigger', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onStart = vi.fn();
     const onStop = vi.fn();
     const onTrigger = vi.fn();
@@ -489,9 +489,9 @@ describe('InputManager — keyboard', () => {
 // Mouse wheel
 // ---------------------------------------------------------------------------
 
-describe('InputManager — mouse wheel', () => {
+describe('InputSystem — mouse wheel', () => {
   test('wheel events are ignored while the canvas is not focused', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onWheel = vi.fn();
 
     im.onMouseWheel.add(onWheel);
@@ -504,7 +504,7 @@ describe('InputManager — mouse wheel', () => {
   });
 
   test('wheel event while focused writes the offset, dispatches onMouseWheel, then resets to zero', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     // The payload is two plain numbers, so `mock.calls` stays valid after the
     // internal accumulator is reset - that is the point of not handing out a
     // reused Vector here.
@@ -533,7 +533,7 @@ describe('InputManager — mouse wheel', () => {
   // the payload was that very Vector instance, anything a listener retained
   // silently turned into (0, 0) one statement later; two numbers cannot.
   test('a listener that keeps the wheel payload still holds the right values after the accumulator resets', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const retained: Array<[number, number]> = [];
 
     im.onMouseWheel.add((deltaX, deltaY) => {
@@ -558,7 +558,7 @@ describe('InputManager — mouse wheel', () => {
   });
 
   test('multiple wheel events within one frame accumulate instead of overwriting, normalized across deltaModes', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const seen: Array<{ x: number; y: number }> = [];
     const onWheel = vi.fn((deltaX: number, deltaY: number) => {
       seen.push({ x: deltaX, y: deltaY });
@@ -590,9 +590,9 @@ describe('InputManager — mouse wheel', () => {
 // Pointer signal flushing (update()-based)
 // ---------------------------------------------------------------------------
 
-describe('InputManager — pointer signal lifecycle', () => {
+describe('InputSystem — pointer signal lifecycle', () => {
   test('onPointerEnter fires on update() after pointerover', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onEnter = vi.fn();
 
     im.onPointerEnter.add(onEnter);
@@ -606,7 +606,7 @@ describe('InputManager — pointer signal lifecycle', () => {
   });
 
   test('a tracked pointer with no pending state change is skipped without affecting others', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onEnter = vi.fn();
     const onMove = vi.fn();
 
@@ -630,7 +630,7 @@ describe('InputManager — pointer signal lifecycle', () => {
   });
 
   test('onPointerDown fires on update() after pointerdown', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onDown = vi.fn();
 
     im.onPointerDown.add(onDown);
@@ -644,7 +644,7 @@ describe('InputManager — pointer signal lifecycle', () => {
   });
 
   test('onPointerMove fires on update() after pointermove', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onMove = vi.fn();
 
     im.onPointerMove.add(onMove);
@@ -658,7 +658,7 @@ describe('InputManager — pointer signal lifecycle', () => {
   });
 
   test('release close to the press position fires onPointerUp + onPointerTap (not swipe)', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onUp = vi.fn();
     const onTap = vi.fn();
     const onSwipe = vi.fn();
@@ -680,7 +680,7 @@ describe('InputManager — pointer signal lifecycle', () => {
   });
 
   test('release far from the press position fires onPointerUp + onPointerSwipe (not tap)', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onUp = vi.fn();
     const onTap = vi.fn();
     const onSwipe = vi.fn();
@@ -702,7 +702,7 @@ describe('InputManager — pointer signal lifecycle', () => {
   });
 
   test('onPointerCancel fires on update() after pointercancel', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onCancel = vi.fn();
 
     im.onPointerCancel.add(onCancel);
@@ -717,7 +717,7 @@ describe('InputManager — pointer signal lifecycle', () => {
   });
 
   test('onPointerLeave fires on update() and removes the pointer from tracking', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onLeave = vi.fn();
 
     im.onPointerLeave.add(onLeave);
@@ -733,7 +733,7 @@ describe('InputManager — pointer signal lifecycle', () => {
   });
 
   test('a cancelled pointer does not linger in tracking — it is retired exactly like a leave', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
 
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
@@ -752,7 +752,7 @@ describe('InputManager — pointer signal lifecycle', () => {
   });
 
   test('leave then re-enter for the same pointerId before update() keeps both phases on one pointer, with no lost leave and no leaked object', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onLeave = vi.fn();
     const onEnter = vi.fn();
     const pointers = (im as unknown as { pointers: Map<number, Pointer> }).pointers;
@@ -787,7 +787,7 @@ describe('InputManager — pointer signal lifecycle', () => {
   });
 
   test('pointer events for an unknown pointerId (no prior pointerover) are safely ignored', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onMove = vi.fn();
     const onDown = vi.fn();
     const onUp = vi.fn();
@@ -819,7 +819,7 @@ describe('InputManager — pointer signal lifecycle', () => {
   });
 
   test('a second pointerleave before update() flushes the first does not double-free the pointer slot', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
 
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'touch', clientX: 1, clientY: 1, isPrimary: true });
     expect(ch(im, Pointer.Slot0Active)).toBe(1);
@@ -828,7 +828,7 @@ describe('InputManager — pointer signal lifecycle', () => {
     // still present in the internal map and its slot is still reserved -
     // both are only released together once update() dispatches the Leave
     // phase and _finishInteractionFrame() actually retires it (see
-    // InputManager._retirePointer's doc comment) - so the handler runs
+    // InputSystem._retirePointer's doc comment) - so the handler runs
     // twice, but retirement must only happen once.
     expect(() => {
       fire(canvas, 'pointerleave', { pointerId: 1, pointerType: 'touch', clientX: 1, clientY: 1, isPrimary: true });
@@ -847,7 +847,7 @@ describe('InputManager — pointer signal lifecycle', () => {
   });
 
   test('pointerup without a prior pointerdown fires onPointerUp but neither onPointerTap nor onPointerSwipe', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onUp = vi.fn();
     const onTap = vi.fn();
     const onSwipe = vi.fn();
@@ -872,9 +872,9 @@ describe('InputManager — pointer signal lifecycle', () => {
 // getPrimaryPointerPosition / pointersInCanvas
 // ---------------------------------------------------------------------------
 
-describe('InputManager — getPrimaryPointerPosition / pointersInCanvas', () => {
+describe('InputSystem — getPrimaryPointerPosition / pointersInCanvas', () => {
   test('returns null and false when no pointers are tracked', () => {
-    const { im } = createInputManager();
+    const { im } = createInputSystem();
 
     expect(im.getPrimaryPointerPosition()).toBeNull();
     expect(im.pointersInCanvas).toBe(false);
@@ -883,7 +883,7 @@ describe('InputManager — getPrimaryPointerPosition / pointersInCanvas', () => 
   });
 
   test('returns the primary pointer position when one exists', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
 
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 123, clientY: 45, isPrimary: true });
 
@@ -894,7 +894,7 @@ describe('InputManager — getPrimaryPointerPosition / pointersInCanvas', () => 
   });
 
   test('falls back to the first non-cancelled pointer when none is primary', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
 
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 20, isPrimary: false });
     fire(canvas, 'pointerover', { pointerId: 2, pointerType: 'touch', clientX: 30, clientY: 40, isPrimary: false });
@@ -905,7 +905,7 @@ describe('InputManager — getPrimaryPointerPosition / pointersInCanvas', () => 
   });
 
   test('a cancelled pointer is excluded from both getPrimaryPointerPosition and pointersInCanvas', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
 
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 20, isPrimary: true });
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 20, isPrimary: true });
@@ -922,9 +922,9 @@ describe('InputManager — getPrimaryPointerPosition / pointersInCanvas', () => 
 // Pointer slot re-assignment for a repeated pointerover on the same id
 // ---------------------------------------------------------------------------
 
-describe('InputManager — pointer slot allocation', () => {
+describe('InputSystem — pointer slot allocation', () => {
   test('a repeated pointerover for an already-tracked pointerId does not consume another slot', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
 
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'touch', clientX: 1, clientY: 1, isPrimary: true });
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'touch', clientX: 2, clientY: 2, isPrimary: true });
@@ -947,9 +947,9 @@ describe('InputManager — pointer slot allocation', () => {
 // Binding factories: onStart / onActive / onStop / onTrigger
 // ---------------------------------------------------------------------------
 
-describe('InputManager — binding factories', () => {
+describe('InputSystem — binding factories', () => {
   test('onStart/onActive fire while the channel is active; onStop/onTrigger fire on release', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onStart = vi.fn();
     const onActive = vi.fn();
     const onStop = vi.fn();
@@ -982,7 +982,7 @@ describe('InputManager — binding factories', () => {
   });
 
   test('onStart accepts an array of channels — any one going active triggers it', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onStart = vi.fn();
 
     im.onStart([Keyboard.A, Keyboard.B], onStart);
@@ -997,7 +997,7 @@ describe('InputManager — binding factories', () => {
   });
 
   test('gamepadSlot option remaps a gamepad channel to the requested slot', () => {
-    const { im } = createInputManager();
+    const { im } = createInputSystem();
     const onActive = vi.fn();
 
     im.onActive(GamepadButton.South, onActive, { gamepadSlot: 2 });
@@ -1020,7 +1020,7 @@ describe('InputManager — binding factories', () => {
   });
 
   test('unbind() detaches the binding: further channel activity does not dispatch', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onActive = vi.fn();
     const binding = im.onActive(Keyboard.Space, onActive);
 
@@ -1040,9 +1040,9 @@ describe('InputManager — binding factories', () => {
 // destroy()
 // ---------------------------------------------------------------------------
 
-describe('InputManager — destroy', () => {
+describe('InputSystem — destroy', () => {
   test('unbinds outstanding bindings created via onStart/onActive/onStop/onTrigger', () => {
-    const { im } = createInputManager();
+    const { im } = createInputSystem();
     const binding = im.onActive(Keyboard.Space, () => {});
 
     expect((binding as unknown as { _unbound: boolean })._unbound).toBe(false);
@@ -1053,7 +1053,7 @@ describe('InputManager — destroy', () => {
   });
 
   test('removes DOM listeners: events dispatched after destroy() have no effect', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
     const onKeyDown = vi.fn();
     const onPointerDown = vi.fn();
 
@@ -1072,7 +1072,7 @@ describe('InputManager — destroy', () => {
   });
 
   test('clears tracked pointers so getPrimaryPointerPosition() returns null afterwards', () => {
-    const { im, canvas } = createInputManager();
+    const { im, canvas } = createInputSystem();
 
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 1, clientY: 1, isPrimary: true });
     expect(im.getPrimaryPointerPosition()).not.toBeNull();
@@ -1084,12 +1084,12 @@ describe('InputManager — destroy', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Gamepad edge cases not covered by input-manager.test.ts
+// Gamepad edge cases not covered by input-system.test.ts
 // ---------------------------------------------------------------------------
 
-describe('InputManager — gamepad edge cases', () => {
+describe('InputSystem — gamepad edge cases', () => {
   test('gamepadSlotStrategy exposes the resolved strategy ("sticky" by default)', () => {
-    const { im } = createInputManager();
+    const { im } = createInputSystem();
 
     expect(im.gamepadSlotStrategy).toBe('sticky');
 
@@ -1097,7 +1097,7 @@ describe('InputManager — gamepad edge cases', () => {
   });
 
   test('a browserGamepad snapshot entry with a negative index is skipped', () => {
-    const { im } = createInputManager();
+    const { im } = createInputSystem();
     const onConnected = vi.fn();
 
     im.onGamepadConnected.add(onConnected);
@@ -1114,7 +1114,7 @@ describe('InputManager — gamepad edge cases', () => {
   });
 
   test('a 5th connecting pad is silently ignored once all 4 slots are filled', () => {
-    const { im } = createInputManager();
+    const { im } = createInputSystem();
     const onConnected = vi.fn();
 
     im.onGamepadConnected.add(onConnected);
@@ -1147,7 +1147,7 @@ describe('InputManager — gamepad edge cases', () => {
   });
 
   test('onAnyGamepadAxisChange fires when an axis value changes between frames', () => {
-    const { im } = createInputManager();
+    const { im } = createInputSystem();
     const onAxisChange = vi.fn();
 
     im.onAnyGamepadAxisChange.add(onAxisChange);
@@ -1171,7 +1171,7 @@ describe('InputManager — gamepad edge cases', () => {
   });
 
   test('onAnyGamepadButtonDown/Up fire for any slot', () => {
-    const { im } = createInputManager();
+    const { im } = createInputSystem();
     const onButtonDown = vi.fn();
     const onButtonUp = vi.fn();
 

@@ -204,7 +204,7 @@ export class Video extends Sprite {
   /**
    * The {@link AudioBus} this video's audio routes into, or `null` when none
    * has been assigned. Set `video.bus = app.audio.master` to route through a
-   * manager's mix; assigning `null` routes straight to the context destination.
+   * system's mix; assigning `null` routes straight to the context destination.
    */
   public get bus(): AudioBus | null {
     return this._bus;

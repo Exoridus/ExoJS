@@ -2,11 +2,11 @@
  * Tests for the frame-snapshot contract on Pointer: several platform events
  * collapsing into one frame must not lose phases or phase-specific data.
  * Complements `pointer-channels.test.ts` (raw channel buffer) and
- * `input-manager-events.test.ts` (signal wiring).
+ * `input-system-events.test.ts` (signal wiring).
  */
 
 import type { Application } from '#core/Application';
-import { InputManager } from '#input/InputManager';
+import { InputSystem } from '#input/InputSystem';
 import type { Pointer } from '#input/Pointer';
 import { Keyboard } from '#input/types';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
@@ -40,7 +40,7 @@ const createMockApp = (canvas: HTMLCanvasElement): Application =>
     height: canvas.height,
     pixelRatio: 1,
     options: { input: { gamepadDefinitions: [], pointerDistanceThreshold: 10 } },
-    // `InputManager` reads `scenes.paused` to decide whether a long-press hold
+    // `InputSystem` reads `scenes.paused` to decide whether a long-press hold
     // advances this frame.
     scenes: { paused: false },
     _backingStoreToLogical: (x: number, y: number): { x: number; y: number } => ({ x, y }),
@@ -51,9 +51,9 @@ const fire = (canvas: HTMLCanvasElement, type: string, init: PointerEventInit): 
 };
 
 let canvas: HTMLCanvasElement;
-let im: InputManager;
+let im: InputSystem;
 
-// `InputManager.update()` unconditionally polls `navigator.getGamepads()`,
+// `InputSystem.update()` unconditionally polls `navigator.getGamepads()`,
 // which jsdom does not implement.
 beforeAll(() => {
   Object.defineProperty(window.navigator, 'getGamepads', {
@@ -64,7 +64,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   canvas = createCanvas();
-  im = new InputManager(createMockApp(canvas));
+  im = new InputSystem(createMockApp(canvas));
 });
 
 afterEach(() => {
@@ -319,9 +319,9 @@ describe('ordered channel event log', () => {
     readonly channels: readonly RawChannelEvent[];
   }
 
-  const frameBatches = (manager: InputManager): RawChannelEventBatch[] => (manager as unknown as { frameBatches: RawChannelEventBatch[] }).frameBatches;
-  const forSpace = (manager: InputManager): number[] =>
-    frameBatches(manager)
+  const frameBatches = (system: InputSystem): RawChannelEventBatch[] => (system as unknown as { frameBatches: RawChannelEventBatch[] }).frameBatches;
+  const forSpace = (system: InputSystem): number[] =>
+    frameBatches(system)
       .flatMap(batch => batch.channels)
       .filter(e => e.channel === (Keyboard.Space as number))
       .map(e => e.value);
@@ -454,7 +454,7 @@ describe('pointer dispatch order', () => {
 });
 
 describe('context menu policy', () => {
-  const createManager = (input?: { allowNativeContextMenu?: boolean; allowTextSelection?: boolean }): { im: InputManager; canvas: HTMLCanvasElement } => {
+  const createManager = (input?: { allowNativeContextMenu?: boolean; allowTextSelection?: boolean }): { im: InputSystem; canvas: HTMLCanvasElement } => {
     const c = createCanvas();
     const app = {
       canvas: c,
@@ -467,93 +467,93 @@ describe('context menu policy', () => {
       _backingStoreToLogical: (x: number, y: number): { x: number; y: number } => ({ x, y }),
     } as unknown as Application;
 
-    return { im: new InputManager(app), canvas: c };
+    return { im: new InputSystem(app), canvas: c };
   };
 
   it('suppresses the browser menu by default', () => {
-    const { im: manager, canvas: c } = createManager();
+    const { im: system, canvas: c } = createManager();
     const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
 
     c.dispatchEvent(event);
 
     expect(event.defaultPrevented).toBe(true);
-    manager.destroy();
+    system.destroy();
   });
 
   it('leaves the browser menu alone when the application opted in', () => {
-    const { im: manager, canvas: c } = createManager({ allowNativeContextMenu: true });
+    const { im: system, canvas: c } = createManager({ allowNativeContextMenu: true });
     const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
 
     c.dispatchEvent(event);
 
     expect(event.defaultPrevented).toBe(false);
-    manager.destroy();
+    system.destroy();
   });
 
   it('routes a semantic engine event either way', () => {
-    const { im: manager, canvas: c } = createManager({ allowNativeContextMenu: true });
+    const { im: system, canvas: c } = createManager({ allowNativeContextMenu: true });
     const seen = vi.fn();
 
-    manager.onContextMenu.add(seen);
+    system.onContextMenu.add(seen);
     c.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerId: 1, isPrimary: true, clientX: 10, clientY: 10 }));
-    manager.preUpdate(0 as never);
+    system.preUpdate(0 as never);
 
     c.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 50 }));
-    manager.preUpdate(0 as never);
+    system.preUpdate(0 as never);
 
     expect(seen).toHaveBeenCalledTimes(1);
     expect(seen.mock.calls[0]![0].x).toBe(40);
     expect(seen.mock.calls[0]![0].y).toBe(50);
-    manager.destroy();
+    system.destroy();
   });
 
   it('dispatches at the coordinates the menu was requested at, not where the pointer has since moved', () => {
-    const { im: manager, canvas: c } = createManager();
+    const { im: system, canvas: c } = createManager();
     const seen: Array<[number, number]> = [];
 
-    manager.onContextMenu.add(request => void seen.push([request.x, request.y]));
+    system.onContextMenu.add(request => void seen.push([request.x, request.y]));
     c.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerId: 1, isPrimary: true, clientX: 10, clientY: 10 }));
-    manager.preUpdate(0 as never);
+    system.preUpdate(0 as never);
 
     c.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 200, clientY: 150 }));
     c.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 1, isPrimary: true, clientX: 400, clientY: 400 }));
-    manager.preUpdate(0 as never);
+    system.preUpdate(0 as never);
 
     expect(seen).toEqual([[200, 150]]);
-    manager.destroy();
+    system.destroy();
   });
 
   it('fires app.input.onContextMenu with a null pointer when no pointer has ever touched the surface', () => {
-    const { im: manager, canvas: c } = createManager({ allowNativeContextMenu: true });
+    const { im: system, canvas: c } = createManager({ allowNativeContextMenu: true });
     const seen = vi.fn();
 
-    manager.onContextMenu.add(seen);
+    system.onContextMenu.add(seen);
 
     // The keyboard context-menu key / Shift+F10 funnel into this same native
     // event - no prior pointerover/pointerdown means no pointer was ever
     // tracked, but the request itself must still carry real coordinates.
     c.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 50 }));
-    manager.preUpdate(0 as never);
+    system.preUpdate(0 as never);
 
     expect(seen).toHaveBeenCalledTimes(1);
     expect(seen.mock.calls[0]![0]).toEqual({ x: 40, y: 50, pointer: null });
-    manager.destroy();
+    system.destroy();
   });
 
   it('dispatches the engine event once per request', () => {
-    const { im: manager, canvas: c } = createManager();
+    const { im: system, canvas: c } = createManager();
     const seen = vi.fn();
 
-    manager.onContextMenu.add(seen);
+    system.onContextMenu.add(seen);
     c.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerId: 1, isPrimary: true, clientX: 10, clientY: 10 }));
-    manager.preUpdate(0 as never);
+    system.preUpdate(0 as never);
 
     c.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-    manager.preUpdate(0 as never);
-    manager.preUpdate(0 as never);
+    system.preUpdate(0 as never);
+    system.preUpdate(0 as never);
 
     expect(seen).toHaveBeenCalledTimes(1);
-    manager.destroy();
+    system.destroy();
   });
 
   it('suppresses text selection by default and honours the opt-in', () => {

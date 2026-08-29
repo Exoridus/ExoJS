@@ -84,7 +84,7 @@ const copyPoint = (target: Vector | null, value: Vector | SpatialPoint | null): 
  * cancels playback entirely - the real voice is never created. Narrower than a
  * real `Voice`: capability mixins (`Pausable`, `Seekable`, ...) are unavailable
  * until flush, and reading `bus` before flush returns `undefined` (despite the
- * type) unless an explicit `options.bus` override was given - the manager's
+ * type) unless an explicit `options.bus` override was given - the system's
  * default bus isn't resolvable until the real voice exists. A documented
  * limitation of Preparing-phase playback, not a general `Voice` capability.
  * @internal
@@ -578,7 +578,7 @@ export class SceneAudio implements Destroyable {
   ) {}
 
   /**
-   * Play `source` through the application audio manager and track the
+   * Play `source` through the application audio system and track the
    * resulting {@link Voice} for scene-lifetime cleanup. While the scope is
    * `Preparing`, `Ready`, or `Suspended`, returns a {@link PendingVoice}
    * stand-in immediately and defers the real `app.audio.play(...)` call

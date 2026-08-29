@@ -1,5 +1,5 @@
 import { AudioGenerator } from '#audio/AudioGenerator';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import { Envelope } from '#audio/Envelope';
 import type { Pausable, Playable, Voice } from '#audio/Playable';
 import { Sound } from '#audio/Sound';
@@ -366,12 +366,12 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
   // The mocks above satisfy that by construction, so they cannot catch a real
   // voice type that never implemented `Pausable` - which is exactly how every
   // `Sound` ambience kept playing through scene.pause()/suspend(). These two
-  // drive a real AudioManager and a real Sound.
+  // drive a real AudioSystem and a real Sound.
   describe('with a real Sound voice', () => {
     const makeRealSetup = (): { app: Application; sound: Sound; audio: SceneAudio } => {
-      const manager = new AudioManager();
+      const system = new AudioSystem();
       const sound = new Sound({ duration: 10 } as AudioBuffer);
-      const app = { audio: manager } as unknown as Application;
+      const app = { audio: system } as unknown as Application;
 
       return { app, sound, audio: new SceneAudio(app, () => SceneState.Active) };
     };
@@ -401,9 +401,9 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
     // the running context clock). restore() then skips it - it is `ended`, not
     // `paused` - and the ambience is silently gone.
     test('a suspended ambience survives pool pressure and comes back on restore', () => {
-      const manager = new AudioManager();
+      const system = new AudioSystem();
       const sound = new Sound({ duration: 10 } as AudioBuffer, { poolSize: 2 });
-      const app = { audio: manager } as unknown as Application;
+      const app = { audio: system } as unknown as Application;
       const audio = new SceneAudio(app, () => SceneState.Active);
 
       const ambience = audio.play(sound, { loop: true }) as Voice & Pausable;
@@ -412,7 +412,7 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
       expect(ambience.paused).toBe(true);
 
       for (let i = 0; i < 4; i++) {
-        manager.play(sound);
+        system.play(sound);
       }
 
       expect(ambience.ended).toBe(false);
@@ -423,7 +423,7 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
 
       ambience.stop();
       sound.destroy();
-      manager.destroy();
+      system.destroy();
     });
 
     test('pause()/resume() honour the `when: active` policy for a Sound voice', () => {
@@ -447,9 +447,9 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
   // through scene.pause()/suspend().
   describe('with a real AudioGenerator voice', () => {
     const makeRealSetup = (envelope: Envelope | null = null): { app: Application; generator: AudioGenerator; audio: SceneAudio } => {
-      const manager = new AudioManager();
+      const system = new AudioSystem();
       const generator = new AudioGenerator({ frequency: 440, envelope });
-      const app = { audio: manager } as unknown as Application;
+      const app = { audio: system } as unknown as Application;
 
       return { app, generator, audio: new SceneAudio(app, () => SceneState.Active) };
     };

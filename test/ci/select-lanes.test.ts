@@ -345,8 +345,8 @@ describe('CI lane selection - bench structural gate', () => {
   });
 
   it('engine code that cannot move a draw-call count does NOT run it', () => {
-    expect(decide('src/audio/AudioManager.ts').lanes.benchStructural).toBe(false);
-    expect(decide('src/input/InputManager.ts').lanes.benchStructural).toBe(false);
+    expect(decide('src/audio/AudioSystem.ts').lanes.benchStructural).toBe(false);
+    expect(decide('src/input/InputSystem.ts').lanes.benchStructural).toBe(false);
   });
 
   it('a docs-only change runs nothing', () => {

@@ -7,7 +7,7 @@ const PAUSE_FADE_SECONDS = 0.35;
  * Pause without a scene stack: a pause overlay lives on `scene.ui` (always
  * above the world) and is toggled together with a scene-local `frozen` flag,
  * which the scene's own `update()` checks to skip gameplay while it keeps
- * drawing. The blur tween runs on the app-level TweenManager, so it still
+ * drawing. The blur tween runs on the app-level TweenSystem, so it still
  * animates while the scene is frozen.
  */
 class GameScene extends Scene {

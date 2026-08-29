@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import { getAudioContext } from '#audio/audio-context';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
 import { Drawable } from '#rendering/Drawable';
@@ -81,9 +81,9 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('a plain play() with no spatial options creates no PannerNode', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     expect(spy.panners.length).toBe(0);
     expect(voice.position).toBeNull();
     spy.restore();
@@ -92,9 +92,9 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('PlayOptions.position creates a PannerNode with correct default spatial parameters', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 10, y: 20 } });
+    const voice = system.play(sound, { position: { x: 10, y: 20 } });
     expect(spy.panners.length).toBe(1);
     expect(voice.position!.x).toBe(10);
     expect(voice.position!.y).toBe(20);
@@ -110,9 +110,9 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('PlayOptions.distanceModel/refDistance/maxDistance/rolloffFactor configure the PannerNode', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    manager.play(sound, {
+    system.play(sound, {
       position: { x: 0, y: 0 },
       distanceModel: 'exponential',
       refDistance: 20,
@@ -130,9 +130,9 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('setting voice.position after play creates a PannerNode', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     expect(spy.panners.length).toBe(0);
     voice.position = { x: 5, y: 6 };
     expect(spy.panners.length).toBe(1);
@@ -142,7 +142,7 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('voice is registered as spatial in the mixer when created with a position', () => {
     const spy = setupPannerSpy();
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
     const voice = mixer.play(sound, { position: { x: 0, y: 0 } }) as SoundVoice;
     const tickSpy = vi.spyOn(voice, '_tickSpatial');
@@ -154,7 +154,7 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('update() writes voice position x/y to PannerNode, then skips a stationary source', () => {
     const spy = setupPannerSpy();
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
     mixer.play(sound, { position: { x: 55, y: 66 } });
     const panner = spy.panners[0];
@@ -175,9 +175,9 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('setting voice.position to null clears it and stops further panner writes', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 1, y: 2 } });
+    const voice = system.play(sound, { position: { x: 1, y: 2 } });
     voice.position = null;
     expect(voice.position).toBeNull();
     spy.restore();
@@ -186,10 +186,10 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('two plays of the same Sound each get an independent Voice and PannerNode', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voiceA = manager.play(sound, { position: { x: 0, y: 0 } });
-    const voiceB = manager.play(sound, { position: { x: 100, y: 0 } });
+    const voiceA = system.play(sound, { position: { x: 0, y: 0 } });
+    const voiceB = system.play(sound, { position: { x: 100, y: 0 } });
     expect(spy.panners.length).toBe(2);
     expect(voiceA.position!.x).toBe(0);
     expect(voiceB.position!.x).toBe(100);
@@ -199,9 +199,9 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('voice.stop() disconnects the PannerNode', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+    const voice = system.play(sound, { position: { x: 0, y: 0 } });
     const panner = spy.panners[0];
 
     voice.stop();
@@ -212,7 +212,7 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('ended voice is removed from spatial tracking after update()', () => {
     const spy = setupPannerSpy();
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
     const voice = mixer.play(sound, { position: { x: 0, y: 0 } }) as SoundVoice;
 
@@ -229,9 +229,9 @@ describe('Voice — spatial (PannerNode)', () => {
   // AU1: voice.follow must track WORLD positions, not group-local ones.
   test('voice.follow of a node inside a translated RetainedContainer writes the WORLD position to the panner', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
 
     const group = new RetainedContainer();
     const emitter = new Drawable();
@@ -262,9 +262,9 @@ describe('Voice — spatial (PannerNode)', () => {
   });
 
   test('voice.distanceModel/refDistance/maxDistance/rolloffFactor round-trip and clamp to valid numeric ranges', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
 
     expect(voice.distanceModel).toBe('linear');
     voice.distanceModel = 'exponential';
@@ -301,9 +301,9 @@ describe('Voice — spatial (PannerNode)', () => {
   });
 
   test('refDistance no longer silently mutates maxDistance (independent clamps, no forced equality)', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
 
     expect(voice.maxDistance).toBe(1000); // default
 
@@ -319,9 +319,9 @@ describe('Voice — spatial (PannerNode)', () => {
   });
 
   test('coneInnerAngle/coneOuterAngle/coneOuterGain clamp finite out-of-range values', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
 
     voice.coneInnerAngle = 400;
     expect(voice.coneInnerAngle).toBe(360);
@@ -343,9 +343,9 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('changing distanceModel/refDistance/maxDistance/rolloffFactor after the panner exists writes through live', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+    const voice = system.play(sound, { position: { x: 0, y: 0 } });
     const panner = spy.panners[0];
 
     voice.distanceModel = 'inverse';
@@ -364,7 +364,7 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('destroy() stops all active voices', () => {
     const spy = setupPannerSpy();
-    const mixer = new AudioManager();
+    const mixer = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
     const voice = mixer.play(sound, { position: { x: 0, y: 0 } });
 
@@ -381,9 +381,9 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('panningModel defaults to the app-wide equalpower setting', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    manager.play(sound, { position: { x: 0, y: 0 } });
+    system.play(sound, { position: { x: 0, y: 0 } });
     expect(spy.panners[0].panningModel).toBe('equalpower');
     spy.restore();
     sound.destroy();
@@ -391,9 +391,9 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('PlayOptions.panningModel overrides the app-wide default for one voice', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    manager.play(sound, { position: { x: 0, y: 0 }, panningModel: 'HRTF' });
+    system.play(sound, { position: { x: 0, y: 0 }, panningModel: 'HRTF' });
     expect(spy.panners[0].panningModel).toBe('HRTF');
     spy.restore();
     sound.destroy();
@@ -401,9 +401,9 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('voice.panningModel round-trips and writes through live to an existing panner', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+    const voice = system.play(sound, { position: { x: 0, y: 0 } });
 
     expect(voice.panningModel).toBeNull();
     voice.panningModel = 'HRTF';
@@ -419,11 +419,11 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('changing app.audio.spatial.panningModel affects only voices with no per-voice override', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
-    manager.spatial.panningModel = 'HRTF';
+    const system = new AudioSystem();
+    system.spatial.panningModel = 'HRTF';
     const sound = new Sound(createAudioBufferStub());
-    manager.play(sound, { position: { x: 0, y: 0 } });
-    manager.play(sound, { position: { x: 0, y: 0 }, panningModel: 'equalpower' });
+    system.play(sound, { position: { x: 0, y: 0 } });
+    system.play(sound, { position: { x: 0, y: 0 }, panningModel: 'equalpower' });
     expect(spy.panners[0].panningModel).toBe('HRTF');
     expect(spy.panners[1].panningModel).toBe('equalpower');
     spy.restore();
@@ -432,9 +432,9 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('orientation and cone angles default to omnidirectional (no cone)', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    manager.play(sound, { position: { x: 0, y: 0 } });
+    system.play(sound, { position: { x: 0, y: 0 } });
     const panner = spy.panners[0];
     expect(panner.coneInnerAngle).toBe(360);
     expect(panner.coneOuterAngle).toBe(360);
@@ -445,9 +445,9 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('PlayOptions cone fields configure the PannerNode at play time', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    manager.play(sound, {
+    system.play(sound, {
       position: { x: 0, y: 0 },
       orientation: 90,
       coneInnerAngle: 30,
@@ -466,9 +466,9 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('orientation degree 0 maps to the local +X axis (SceneNode.rotation convention)', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    manager.play(sound, { position: { x: 0, y: 0 }, orientation: 0, coneInnerAngle: 10 });
+    system.play(sound, { position: { x: 0, y: 0 }, orientation: 0, coneInnerAngle: 10 });
     const panner = spy.panners[0];
     expect(panner.orientationX.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(1, 5), expect.any(Number));
     expect(panner.orientationY.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0, 5), expect.any(Number));
@@ -478,9 +478,9 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('voice.orientation and cone setters round-trip and write through live', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+    const voice = system.play(sound, { position: { x: 0, y: 0 } });
 
     voice.coneInnerAngle = 45;
     voice.coneOuterAngle = 90;
@@ -494,11 +494,11 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('dopplerFactor 0 (default) applies no playbackRate modulation regardless of velocity', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 }, velocity: { x: 100, y: 0 } }) as SoundVoice;
+    const voice = system.play(sound, { position: { x: 0, y: 0 }, velocity: { x: 100, y: 0 } }) as SoundVoice;
     const rateSpy = vi.spyOn(voice, 'playbackRate', 'set');
-    manager.preUpdate(frameDelta);
+    system.preUpdate(frameDelta);
     expect(rateSpy).not.toHaveBeenCalled();
     spy.restore();
     sound.destroy();
@@ -506,16 +506,16 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('a source approaching a stationary listener with dopplerFactor > 0 raises its effective playbackRate', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
-    manager.spatial.dopplerFactor = 1;
-    manager.spatial.speedOfSound = 100;
-    manager.listener.position.set(0, 0);
+    const system = new AudioSystem();
+    system.spatial.dopplerFactor = 1;
+    system.spatial.speedOfSound = 100;
+    system.listener.position.set(0, 0);
     const sound = new Sound(createAudioBufferStub());
     // Source starts far away on the +X axis and, between ticks, moves toward the listener.
-    const voice = manager.play(sound, { position: { x: 500, y: 0 } }) as SoundVoice;
-    manager.preUpdate(frameDelta);
+    const voice = system.play(sound, { position: { x: 500, y: 0 } }) as SoundVoice;
+    system.preUpdate(frameDelta);
     voice.position = { x: 400, y: 0 }; // moved 100 units toward the listener
-    manager.preUpdate(frameDelta);
+    system.preUpdate(frameDelta);
     // Exact rate value depends on the implementer's chosen formula (see plan Task 5 Step 3) -
     // assert direction (> 1, i.e. pitched up while approaching), not an exact number.
     const source = (voice as unknown as { _source: { playbackRate: { setTargetAtTime: MockInstance } } })._source;
@@ -527,21 +527,21 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('dopplerFactor dropping to 0 actively restores the base playbackRate (no stale ratio)', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
-    manager.spatial.dopplerFactor = 1;
-    manager.spatial.speedOfSound = 100;
-    manager.listener.position.set(0, 0);
+    const system = new AudioSystem();
+    system.spatial.dopplerFactor = 1;
+    system.spatial.speedOfSound = 100;
+    system.listener.position.set(0, 0);
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 100, y: 0 }, velocity: { x: -50, y: 0 } }) as SoundVoice;
-    manager.preUpdate(frameDelta);
+    const voice = system.play(sound, { position: { x: 100, y: 0 }, velocity: { x: -50, y: 0 } }) as SoundVoice;
+    system.preUpdate(frameDelta);
 
     const source = (voice as unknown as { _source: { playbackRate: { setTargetAtTime: MockInstance } } })._source;
     // Sanity: a real Doppler shift is in effect before we disable it.
     expect(source.playbackRate.setTargetAtTime.mock.calls.at(-1)?.[0]).not.toBe(voice.playbackRate);
 
     source.playbackRate.setTargetAtTime.mockClear();
-    manager.spatial.dopplerFactor = 0;
-    manager.preUpdate(frameDelta);
+    system.spatial.dopplerFactor = 0;
+    system.preUpdate(frameDelta);
 
     expect(source.playbackRate.setTargetAtTime).toHaveBeenCalledWith(voice.playbackRate, expect.any(Number), expect.any(Number));
 
@@ -551,13 +551,13 @@ describe('Voice — spatial (PannerNode)', () => {
 
   test('the source becoming coincident with the listener actively restores the base playbackRate (no stale ratio)', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
-    manager.spatial.dopplerFactor = 1;
-    manager.spatial.speedOfSound = 100;
-    manager.listener.position.set(0, 0);
+    const system = new AudioSystem();
+    system.spatial.dopplerFactor = 1;
+    system.spatial.speedOfSound = 100;
+    system.listener.position.set(0, 0);
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 100, y: 0 }, velocity: { x: -50, y: 0 } }) as SoundVoice;
-    manager.preUpdate(frameDelta);
+    const voice = system.play(sound, { position: { x: 100, y: 0 }, velocity: { x: -50, y: 0 } }) as SoundVoice;
+    system.preUpdate(frameDelta);
 
     const source = (voice as unknown as { _source: { playbackRate: { setTargetAtTime: MockInstance } } })._source;
     expect(source.playbackRate.setTargetAtTime.mock.calls.at(-1)?.[0]).not.toBe(voice.playbackRate);
@@ -572,9 +572,9 @@ describe('Voice — spatial (PannerNode)', () => {
   });
 
   test('velocity round-trips and can be cleared back to auto-derivation', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+    const voice = system.play(sound, { position: { x: 0, y: 0 } });
     expect(voice.velocity).toBeNull();
     voice.velocity = { x: 10, y: -5 };
     expect(voice.velocity!.x).toBe(10);
@@ -588,9 +588,9 @@ describe('Voice — spatial parameter sanitization (NaN/±Infinity rejection)', 
   afterEach(() => vi.restoreAllMocks());
 
   test('refDistance/maxDistance/cone setters reject NaN and ±Infinity, keeping the last valid value', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
 
     voice.refDistance = 30;
     voice.refDistance = NaN;
@@ -639,9 +639,9 @@ describe('Voice — spatial parameter sanitization (NaN/±Infinity rejection)', 
 
   test('a NaN/Infinity spatial setter never reaches the live PannerNode', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+    const voice = system.play(sound, { position: { x: 0, y: 0 } });
     const panner = spy.panners[0];
 
     voice.refDistance = NaN;
@@ -663,9 +663,9 @@ describe('Voice — spatial parameter sanitization (NaN/±Infinity rejection)', 
   });
 
   test('velocity setter rejects a non-finite component outright, keeping the previous velocity', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+    const voice = system.play(sound, { position: { x: 0, y: 0 } });
 
     voice.velocity = { x: 10, y: -5 };
 
@@ -686,9 +686,9 @@ describe('Voice — spatial parameter sanitization (NaN/±Infinity rejection)', 
 
   test('a non-finite position component never reaches the live PannerNode and does not poison later writes', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 1, y: 2 } }) as SoundVoice;
+    const voice = system.play(sound, { position: { x: 1, y: 2 } }) as SoundVoice;
     const panner = spy.panners[0];
 
     panner.positionX.setValueAtTime.mockClear();
@@ -709,9 +709,9 @@ describe('Voice — spatial parameter sanitization (NaN/±Infinity rejection)', 
 
   test('a non-finite orientation never reaches the live PannerNode and does not poison later writes', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 }, orientation: 0 }) as SoundVoice;
+    const voice = system.play(sound, { position: { x: 0, y: 0 }, orientation: 0 }) as SoundVoice;
     const panner = spy.panners[0];
 
     panner.orientationX.setValueAtTime.mockClear();
@@ -730,21 +730,21 @@ describe('Voice — spatial parameter sanitization (NaN/±Infinity rejection)', 
 
   test('a NaN speedOfSound never applies a NaN Doppler ratio — falls back to the base playback rate', () => {
     const spy = setupPannerSpy();
-    const manager = new AudioManager();
-    manager.spatial.dopplerFactor = 1;
-    manager.spatial.speedOfSound = 100;
-    manager.listener.position.set(0, 0);
+    const system = new AudioSystem();
+    system.spatial.dopplerFactor = 1;
+    system.spatial.speedOfSound = 100;
+    system.listener.position.set(0, 0);
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 100, y: 0 }, velocity: { x: -50, y: 0 } }) as SoundVoice;
-    manager.preUpdate(frameDelta);
+    const voice = system.play(sound, { position: { x: 100, y: 0 }, velocity: { x: -50, y: 0 } }) as SoundVoice;
+    system.preUpdate(frameDelta);
 
     const source = (voice as unknown as { _source: { playbackRate: { setTargetAtTime: MockInstance } } })._source;
     // Sanity: a real (finite, non-1) Doppler shift is in effect first.
     expect(source.playbackRate.setTargetAtTime.mock.calls.at(-1)?.[0]).not.toBe(voice.playbackRate);
 
     source.playbackRate.setTargetAtTime.mockClear();
-    manager.spatial.speedOfSound = NaN;
-    manager.preUpdate(frameDelta);
+    system.spatial.speedOfSound = NaN;
+    system.preUpdate(frameDelta);
 
     // Whatever writes DO happen after the settings object turns NaN must
     // never carry that NaN through to the live AudioParam.

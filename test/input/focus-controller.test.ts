@@ -5,7 +5,7 @@ import type { InteractionHooks, Stage } from '#core/Stage';
 import { FocusController } from '#input/FocusController';
 import type { Gamepad } from '#input/Gamepad';
 import { GamepadButton } from '#input/GamepadButton';
-import type { InputManager } from '#input/InputManager';
+import type { InputSystem } from '#input/InputSystem';
 import type { KeyEvent } from '#input/KeyEvent';
 import { createScopeToken } from '#input/ScopeToken';
 import { Keyboard } from '#input/types';
@@ -47,7 +47,7 @@ const createFocusApp = (): {
   const onAnyGamepadButtonDown = new Signal<[Gamepad, GamepadButton, number]>();
   const scene = new Scene();
   const app = {
-    input: { onKeyDown, onKeyUp, onAnyGamepadButtonDown } as unknown as InputManager,
+    input: { onKeyDown, onKeyUp, onAnyGamepadButtonDown } as unknown as InputSystem,
     scenes: {
       get currentScene(): Scene | null {
         return scene;
@@ -221,7 +221,7 @@ describe('FocusController', () => {
     onKeyDown.dispatch(Keyboard.Tab);
     expect(focus.focused).toBe(c);
 
-    // The real InputManager dispatches onKeyDown/onKeyUp with the
+    // The real InputSystem dispatches onKeyDown/onKeyUp with the
     // side-specific channel only (see Keyboard's own doc comment) - never
     // the aggregate Shift channel directly - so either physical Shift key
     // must be recognized here.
@@ -357,7 +357,7 @@ describe('FocusController', () => {
     expect(focus.focused).toBeNull();
   });
 
-  test('destroy() detaches from InputManager and clears state', () => {
+  test('destroy() detaches from InputSystem and clears state', () => {
     const { scene, focus, onKeyDown, onKeyUp } = createFocusApp();
     const node = focusable();
 
@@ -399,7 +399,7 @@ describe('FocusController', () => {
     const onKeyUp = new Signal<[number]>();
     const onAnyGamepadButtonDown = new Signal<[Gamepad, GamepadButton, number]>();
     const app = {
-      input: { onKeyDown, onKeyUp, onAnyGamepadButtonDown } as unknown as InputManager,
+      input: { onKeyDown, onKeyUp, onAnyGamepadButtonDown } as unknown as InputSystem,
       scenes: {
         get currentScene(): Scene | null {
           return null;

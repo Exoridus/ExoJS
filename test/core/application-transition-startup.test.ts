@@ -56,7 +56,7 @@ describe('Application.start() with a real FadeSceneTransition', () => {
     const app = new Application({ backend: { type: 'webgl2' }, scenes: { title: TitleScene } });
 
     // jsdom has no Gamepad API (`window.navigator.getGamepads` is undefined),
-    // which InputManager.update() calls unconditionally every frame - the
+    // which InputSystem.update() calls unconditionally every frame - the
     // same pre-existing test-environment gap application-loop.test.ts's
     // beforeEach works around identically. This test drives many real
     // frames, so without this stub every frame throws, and 3 consecutive

@@ -3,7 +3,7 @@ import type { MockInstance } from 'vitest';
 import { getAudioContext } from '#audio/audio-context';
 import { AudioBus } from '#audio/AudioBus';
 import type { AudioEffect } from '#audio/AudioEffect';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import { Sound } from '#audio/Sound';
 
 const makeBufferStub = (): AudioBuffer => ({ duration: 2 }) as AudioBuffer;
@@ -69,11 +69,11 @@ describe('Voice — per-voice effects', () => {
   });
 
   test('addEffect inserts the effect between the voice output and the bus', () => {
-    const manager = new AudioManager(); // before spy so bus gains are not captured
+    const system = new AudioSystem(); // before spy so bus gains are not captured
     const out = captureVoiceOutput();
     const sound = new Sound(makeBufferStub());
 
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     const fx = makeStubEffect();
 
     voice.addEffect(fx);
@@ -88,9 +88,9 @@ describe('Voice — per-voice effects', () => {
   });
 
   test('addEffect refuses the same effect twice - a second attach would feed the effect its own output', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(makeBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     const fx = makeStubEffect();
 
     voice.addEffect(fx);
@@ -101,9 +101,9 @@ describe('Voice — per-voice effects', () => {
   });
 
   test('addEffect returns the voice for chaining', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(makeBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
 
     expect(voice.addEffect(makeStubEffect())).toBe(voice);
 
@@ -111,9 +111,9 @@ describe('Voice — per-voice effects', () => {
   });
 
   test('removeEffect detaches the effect from the chain', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(makeBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     const fx = makeStubEffect();
 
     voice.addEffect(fx);
@@ -126,9 +126,9 @@ describe('Voice — per-voice effects', () => {
   });
 
   test('an effect shared with a bus survives that bus being destroyed', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(makeBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     const fx = makeStubEffect();
     const bus = new AudioBus('shared-effect-bus');
 
@@ -156,9 +156,9 @@ describe('Voice — per-voice effects', () => {
   // to isolate the detach-path guard under test.
 
   test('removeEffect() tolerates an effect whose nodes are not ready yet', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(makeBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     const unready = makeUnreadyEffect();
 
     (voice as unknown as { _effects: AudioEffect[] })._effects.push(unready);
@@ -169,9 +169,9 @@ describe('Voice — per-voice effects', () => {
   });
 
   test('stopping the voice tolerates an effect whose nodes are not ready yet', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(makeBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     const unready = makeUnreadyEffect();
 
     (voice as unknown as { _effects: AudioEffect[] })._effects.push(unready);
@@ -183,9 +183,9 @@ describe('Voice — per-voice effects', () => {
   });
 
   test('stopping the voice detaches its effects', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(makeBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     const fx = makeStubEffect();
 
     voice.addEffect(fx);

@@ -4,7 +4,7 @@ import type { Pointer } from './Pointer';
 
 /**
  * String literal union of every interaction event the
- * {@link InteractionManager} can deliver to a {@link RenderNode}.
+ * {@link InteractionSystem} can deliver to a {@link RenderNode}.
  * Handlers attach via the node's `interactive*` API.
  */
 export type InteractionEventType =
@@ -20,7 +20,7 @@ export type InteractionEventType =
   | 'dragend';
 
 /**
- * DOM-Event-shaped envelope dispatched by {@link InteractionManager} to
+ * DOM-Event-shaped envelope dispatched by {@link InteractionSystem} to
  * interactive scene nodes. Bubbles up the *entire* parent chain - `target`
  * stays pinned to the hit-deepest node while `currentTarget` advances to each
  * ancestor, whether or not that ancestor is itself interactive. Handlers may
@@ -33,7 +33,7 @@ export type InteractionEventType =
  * drag-candidate creation a `pointerdown` would otherwise start - see that
  * method's own doc comment). It never suppresses a *browser*-native default
  * (touch scrolling, text selection, the native context menu, ...); those are
- * handled separately and synchronously at the `InputManager` platform-event
+ * handled separately and synchronously at the `InputSystem` platform-event
  * boundary, before this engine-level event is even constructed.
  */
 export class InteractionEvent {
@@ -91,7 +91,7 @@ export class InteractionEvent {
    * {@link InteractionEvent.stopPropagation}: propagation still bubbles
    * normally unless that is also called. Also independent of the browser's
    * own native default (e.g. touch scrolling, text selection, the native
-   * context menu) - those are suppressed synchronously in `InputManager`,
+   * context menu) - those are suppressed synchronously in `InputSystem`,
    * at the platform-event boundary, before this engine-level event is even
    * constructed; calling this method has no effect on them.
    */

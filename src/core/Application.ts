@@ -1,16 +1,16 @@
-import { AnimationManager } from '#animation/AnimationManager';
-import { TweenManager } from '#animation/TweenManager';
+import { AnimationSystem } from '#animation/AnimationSystem';
+import { TweenSystem } from '#animation/TweenSystem';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, type LoaderOptions } from '#assets/Loader';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import type { Extension, ExtensionDisposer } from '#extensions/Extension';
 import { disposeExtensions, installExtensions } from '#extensions/lifetime';
 import { materializeAssetTypes, materializeRendererBindings, materializeSerializerBindings } from '#extensions/materialize';
 import { buildSnapshot, type ExtensionSnapshot } from '#extensions/snapshot';
 import type { GamepadDefinition } from '#input/GamepadDefinitions';
-import type { GamepadSlotStrategy } from '#input/InputManager';
-import { InputManager } from '#input/InputManager';
-import { InteractionManager } from '#input/InteractionManager';
+import type { GamepadSlotStrategy } from '#input/InputSystem';
+import { InputSystem } from '#input/InputSystem';
+import { InteractionSystem } from '#input/InteractionSystem';
 import type { PointLike } from '#math/PointLike';
 import { Random } from '#math/Random';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
@@ -463,7 +463,7 @@ const defaultInputSettings: Required<InputApplicationOptions> = {
 
 /**
  * Top-level engine instance. Owns the canvas, render backend, scene-stack
- * controller, the core managers (input, interaction, audio, tweens,
+ * controller, the core systems (input, interaction, audio, tweens,
  * animations, rendering), the app-level {@link SystemRegistry} for user/extension
  * systems, asset loader, and the per-frame loop.
  *
@@ -519,21 +519,21 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   public readonly connectivity: Connectivity;
   public readonly loader: Loader;
-  public readonly input: InputManager;
-  public readonly interaction: InteractionManager;
+  public readonly input: InputSystem;
+  public readonly interaction: InteractionSystem;
   public readonly scenes: SceneDirector<Registry>;
   /** Per-Application seedable RNG. Isolated from other Applications and from the global `rand()`. */
   public readonly random: Random;
-  public readonly tweens: TweenManager = new TweenManager();
+  public readonly tweens: TweenSystem = new TweenSystem();
   /**
    * Drives frame playback for every {@link AnimatedSprite} that is playing and
    * attached to this application's scene tree. Registration is automatic - see
-   * {@link AnimationManager}.
+   * {@link AnimationSystem}.
    */
-  public readonly animations: AnimationManager = new AnimationManager();
+  public readonly animations: AnimationSystem = new AnimationSystem();
   /**
    * App-level system registry for user/extension systems - Application
-   * lifetime, independent of the active scene. The core managers (input,
+   * lifetime, independent of the active scene. The core systems (input,
    * interaction, audio, tweens, animations, rendering) are driven directly by the
    * internal per-frame prepare stage and never occupy this registry, so any
    * `order` is available; see {@link SystemOrder} for common reference
@@ -664,7 +664,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private readonly _ownsCanvas: boolean;
   private _visibilitySubscription: PlatformSubscription | null = null;
   private _sizing: CanvasSizing | null = null;
-  private readonly _audio: AudioManager = new AudioManager();
+  private readonly _audio: AudioSystem = new AudioSystem();
 
   public constructor(appSettings: ApplicationOptions<Registry> = {}) {
     const canvasOptions = appSettings.canvas ?? {};
@@ -823,8 +823,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // ResizeObserver, and a DOM node holding an observer whose callback closes
       // over a half-built application is a live leak rather than an inert one.
       this._attachSizing(canvasOptions.sizing ?? null);
-      this.input = constructed.track(new InputManager(this));
-      this.interaction = constructed.track(new InteractionManager(this));
+      this.input = constructed.track(new InputSystem(this));
+      this.interaction = constructed.track(new InteractionSystem(this));
       this.scenes = constructed.track(new SceneDirector<Registry>(this, appSettings.scenes));
       this.random = new Random(this.options.seed);
       this._updateHandler = (timestamp: number): void => {
@@ -865,9 +865,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._coreSystems = [this.input, this.interaction, this._audio, this.tweens, this.animations, this._rendering];
 
       // The last construction step, so `install(app)` sees a complete
-      // application - every manager and every materialised binding already in
+      // application - every system and every materialised binding already in
       // place, so an installer may add its own systems and capture references
-      // to the core managers. Its mirror image is the first step of teardown,
+      // to the core systems. Its mirror image is the first step of teardown,
       // in both `_disposeManagedResources` and the rollback below.
       installExtensions(this, this._snapshot.extensions, this._extensionDisposers);
     } catch (error) {
@@ -970,7 +970,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     // Application systems materialised before the failure go next: they are
     // the last thing constructed before installation, and their own
-    // `destroy()` may read the core managers. Those managers are registered
+    // `destroy()` may read the core systems. Those systems are registered
     // here too but are owned by the Application, so unregister them and let
     // `constructed` destroy each exactly once - same reason
     // `_disposeManagedResources` does it.
@@ -1148,7 +1148,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._backend.clearColor.copy(color);
   }
 
-  public get audio(): AudioManager {
+  public get audio(): AudioSystem {
     return this._audio;
   }
 
@@ -1394,7 +1394,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    *
    * 1. **Pre-update** - `app.systems` pre-update phase, then the scene's
    *    `preUpdate()` hook and its own systems' pre-update phase. The engine's
-   *    input, interaction, audio, tween, animation and rendering managers are
+   *    input, interaction, audio, tween, animation and rendering systems are
    *    ordinary systems in this phase, pinned to the head of it by their
    *    {@link SystemOrder} `Core*` values, so this frame's input snapshot is
    *    current before anything simulates. An application system registered
@@ -1906,7 +1906,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Tear down every owned subsystem (loader, the core managers - input,
+   * Tear down every owned subsystem (loader, the core systems - input,
    * interaction, audio, tweens, animations, rendering - the app system registry, backend,
    * scene director, all clocks, all signals) and release event listeners. The
    * application instance is unusable after this call.
@@ -1921,7 +1921,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * call returns) and returns a Promise that fulfils once the rest of teardown
    * has run: `scenes` - including every retained and preloaded scope, and any
    * scene's own async `unload()` - is fully disposed FIRST, before the Loader,
-   * rendering context, audio manager, or backend are destroyed, so a scene's
+   * rendering context, audio system, or backend are destroyed, so a scene's
    * teardown code never touches an already-destroyed dependency. This
    * intentionally does not route through the public {@link Application.stop},
    * which fire-and-forgets its own scene-clear - that would race against
@@ -2037,7 +2037,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     this.loader.destroy();
 
-    // The core managers run as systems but belong to the application, not to
+    // The core systems run as systems but belong to the application, not to
     // the registry - which destroys whatever is still registered when it goes
     // down. Unregister them first so they are torn down exactly once, here, in
     // reverse registration order.

@@ -1,7 +1,7 @@
 {
-  "title": "TweenManager",
-  "description": "Owns and advances a collection of Tween instances, driving them once per frame from Application.update. A tween enters the update list when Tween.start is called and leaves it again on completion or Tween.stop, so the manager only ever holds tweens that are running or paused - regardless of whether it was created here or handed over via TweenManager.add. Custom updatables (such as TweenSequencer) can be registered via TweenManager.addTicker so they share the same frame tick. Update iteration uses a snapshot so callbacks may freely add or remove tweens during the same frame without corrupting the loop. Completed and stopped tweens are evicted automatically.",
-  "symbol": "TweenManager",
+  "title": "TweenSystem",
+  "description": "Owns and advances a collection of Tween instances, driving them once per frame from Application.update. A tween enters the update list when Tween.start is called and leaves it again on completion or Tween.stop, so the system only ever holds tweens that are running or paused - regardless of whether it was created here or handed over via TweenSystem.add. Custom updatables (such as TweenSequencer) can be registered via TweenSystem.addTicker so they share the same frame tick. Update iteration uses a snapshot so callbacks may freely add or remove tweens during the same frame without corrupting the loop. Completed and stopped tweens are evicted automatically.",
+  "symbol": "TweenSystem",
   "kind": "class",
   "subsystem": "animation",
   "importPath": "@codexo/exojs",
@@ -19,11 +19,11 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Owns and advances a collection of Tween instances, driving them once per frame from Application.update. A tween enters the update list when Tween.start is called and leaves it again on completion or Tween.stop, so the manager only ever holds tweens that are running or paused - regardless of whether it was created here or handed over via TweenManager.add.",
-        "Custom updatables (such as TweenSequencer) can be registered via TweenManager.addTicker so they share the same frame tick.",
+        "Owns and advances a collection of Tween instances, driving them once per frame from Application.update. A tween enters the update list when Tween.start is called and leaves it again on completion or Tween.stop, so the system only ever holds tweens that are running or paused - regardless of whether it was created here or handed over via TweenSystem.add.",
+        "Custom updatables (such as TweenSequencer) can be registered via TweenSystem.addTicker so they share the same frame tick.",
         "Update iteration uses a snapshot so callbacks may freely add or remove tweens during the same frame without corrupting the loop. Completed and stopped tweens are evicted automatically."
       ],
-      "importLine": "import { TweenManager } from '@codexo/exojs'",
+      "importLine": "import { TweenSystem } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(): TweenManager",
+          "signature": "new(): TweenSystem",
           "signatureTokens": [
             {
               "text": "new",
@@ -51,12 +51,12 @@
               "kind": "punctuation"
             },
             {
-              "text": "TweenManager",
+              "text": "TweenSystem",
               "kind": "type"
             }
           ],
           "params": [],
-          "returnType": "TweenManager",
+          "returnType": "TweenSystem",
           "description": ""
         }
       ],
@@ -113,7 +113,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Take ownership of a stand-alone Tween (created via new Tween(target), or previously bound to a different manager) so it participates in this update loop: from here on, Tween.start enters it and completion or Tween.stop evicts it again. Binding and entering are two separate steps. A tween that is already running or paused is live - nothing will call start() on it again to enter it - so it goes into the update list right away. An idle, completed or stopped tween is bound only: retaining it would pin it, and through it its target, in this manager for the lifetime of the application while the update loop has nothing to do with it."
+          "description": "Take ownership of a stand-alone Tween (created via new Tween(target), or previously bound to a different system) so it participates in this update loop: from here on, Tween.start enters it and completion or Tween.stop evicts it again. Binding and entering are two separate steps. A tween that is already running or paused is live - nothing will call start() on it again to enter it - so it goes into the update list right away. An idle, completed or stopped tween is bound only: retaining it would pin it, and through it its target, in this system for the lifetime of the application while the update loop has nothing to do with it."
         },
         {
           "name": "addTicker",
@@ -189,7 +189,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": "Remove all tweens and tickers immediately. No callbacks fire. Each tracked tween is Tween.stopped first, so tween.state reflects the eviction instead of staying Active/Paused on a tween the manager no longer drives - a Stopped tween's own manager binding survives, so a later Tween.start re-enters it as usual."
+          "description": "Remove all tweens and tickers immediately. No callbacks fire. Each tracked tween is Tween.stopped first, so tween.state reflects the eviction instead of staying Active/Paused on a tween the system no longer drives - a Stopped tween's own system binding survives, so a later Tween.start re-enters it as usual."
         },
         {
           "name": "create",
@@ -248,7 +248,7 @@
             }
           ],
           "returnType": "Tween<T>",
-          "description": "Create a new Tween bound to this manager and return it. Call .to(...).start() on the result to begin animating. The tween is only entered into the update list by Tween.start - a tween that is configured but never started is not retained here, so it cannot keep its target alive for the lifetime of the application."
+          "description": "Create a new Tween bound to this system and return it. Call .to(...).start() on the result to begin animating. The tween is only entered into the update list by Tween.start - a tween that is configured but never started is not retained here, so it cannot keep its target alive for the lifetime of the application."
         },
         {
           "name": "createSequencer",
@@ -277,7 +277,7 @@
           ],
           "params": [],
           "returnType": "TweenSequencer",
-          "description": "Create a new TweenSequencer bound to this manager and return it. The sequencer registers itself automatically when TweenSequencer.start is called, so no manual wiring is needed."
+          "description": "Create a new TweenSequencer bound to this system and return it. The sequencer registers itself automatically when TweenSequencer.start is called, so no manual wiring is needed."
         },
         {
           "name": "destroy",
@@ -306,7 +306,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Tear down the manager. Clears tweens and tickers and makes subsequent updates no-ops."
+          "description": "Tear down the system. Clears tweens and tickers and makes subsequent updates no-ops."
         },
         {
           "name": "preUpdate",
@@ -400,7 +400,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Remove a tween from the manager. Called automatically on stop/complete."
+          "description": "Remove a tween from the system. Called automatically on stop/complete."
         },
         {
           "name": "removeTicker",
@@ -518,7 +518,7 @@
             }
           ],
           "returnType": "Tween",
-          "description": "Chain tweens in sequence: each tween starts automatically when the previous one completes. Returns the first tween; call .start() on it to kick off the whole sequence. All tweens are bound to this manager, but only enter the update list when they are actually started - the first through your own .start() call, every later one through the chain. A sequence that is composed and never started therefore leaves nothing behind here."
+          "description": "Chain tweens in sequence: each tween starts automatically when the previous one completes. Returns the first tween; call .start() on it to kick off the whole sequence. All tweens are bound to this system, but only enter the update list when they are actually started - the first through your own .start() call, every later one through the chain. A sequence that is composed and never started therefore leaves nothing behind here."
         }
       ],
       "paragraphs": [],
@@ -532,11 +532,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/animation/TweenManager.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/TweenManager.ts"
+        "label": "src/animation/TweenSystem.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/TweenSystem.ts"
       }
     }
   ],
-  "sourcePath": "src/animation/TweenManager.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/TweenManager.ts"
+  "sourcePath": "src/animation/TweenSystem.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/TweenSystem.ts"
 }

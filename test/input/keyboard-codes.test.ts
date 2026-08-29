@@ -6,7 +6,7 @@
 
 import type { Application } from '#core/Application';
 import { Time } from '#core/units';
-import { InputManager } from '#input/InputManager';
+import { InputSystem } from '#input/InputSystem';
 import { keyboardChannelFromCode } from '#input/keyboardCodes';
 import { Keyboard } from '#input/types';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
@@ -28,21 +28,21 @@ const createMockApp = (canvas: HTMLCanvasElement): Application =>
     height: canvas.height,
     pixelRatio: 1,
     options: { input: {} },
-    // `InputManager` reads `scenes.paused` to decide whether a long-press hold
+    // `InputSystem` reads `scenes.paused` to decide whether a long-press hold
     // advances this frame.
     scenes: { paused: false },
   }) as unknown as Application;
 
-const createFocusedInputManager = (): { im: InputManager; canvas: HTMLCanvasElement } => {
+const createFocusedInputSystem = (): { im: InputSystem; canvas: HTMLCanvasElement } => {
   const canvas = createCanvas();
-  const im = new InputManager(createMockApp(canvas));
+  const im = new InputSystem(createMockApp(canvas));
 
   canvas.dispatchEvent(new FocusEvent('focus'));
 
   return { im, canvas };
 };
 
-const ch = (im: InputManager, channel: number): number => (im as unknown as { channels: Float32Array }).channels[channel]!;
+const ch = (im: InputSystem, channel: number): number => (im as unknown as { channels: Float32Array }).channels[channel]!;
 
 const press = (init: KeyboardEventInit & { keyCode?: number }): void => {
   window.dispatchEvent(new KeyboardEvent('keydown', init as KeyboardEventInit));
@@ -103,13 +103,13 @@ describe('keyboardChannelFromCode', () => {
   });
 });
 
-describe('InputManager — layout-independent keyboard channels', () => {
+describe('InputSystem — layout-independent keyboard channels', () => {
   test('a physical key maps to the same channel on AZERTY as on QWERTY', () => {
     // The physical key at the QWERTY "A" position reports `code: 'KeyA'` on
     // every layout; on a French AZERTY keyboard it produces the character "q"
     // and the legacy keyCode 81 ("Q"), on US QWERTY the character "a" and
     // keyCode 65. Only the physical position may decide the channel.
-    const { im } = createFocusedInputManager();
+    const { im } = createFocusedInputSystem();
 
     press({ code: 'KeyA', key: 'q', keyCode: 81 });
 
@@ -126,7 +126,7 @@ describe('InputManager — layout-independent keyboard channels', () => {
   test('a physical key maps to the same channel on QWERTZ as on QWERTY', () => {
     // German QWERTZ swaps Y and Z: the physical `KeyZ` key produces "y"
     // (legacy keyCode 89) there and "z" (keyCode 90) on US QWERTY.
-    const { im } = createFocusedInputManager();
+    const { im } = createFocusedInputSystem();
 
     press({ code: 'KeyZ', key: 'y', keyCode: 89 });
 
@@ -140,7 +140,7 @@ describe('InputManager — layout-independent keyboard channels', () => {
     // On QWERTZ the physical `Semicolon` key prints "ö"; on AZERTY it prints
     // "m". Neither changes the channel - the member is named for the US-QWERTY
     // legend of that position, not for the character produced.
-    const { im } = createFocusedInputManager();
+    const { im } = createFocusedInputSystem();
 
     press({ code: 'Semicolon', key: 'ö', keyCode: 192 });
 
@@ -150,7 +150,7 @@ describe('InputManager — layout-independent keyboard channels', () => {
   });
 
   test('the legacy keyCode is never consulted', () => {
-    const { im } = createFocusedInputManager();
+    const { im } = createFocusedInputSystem();
 
     press({ code: 'Space', keyCode: 0 });
 
@@ -160,7 +160,7 @@ describe('InputManager — layout-independent keyboard channels', () => {
   });
 
   test('either shift key drives the aggregate Shift channel', () => {
-    const { im } = createFocusedInputManager();
+    const { im } = createFocusedInputSystem();
 
     press({ code: 'ShiftRight', key: 'Shift', keyCode: 16 });
 
@@ -175,7 +175,7 @@ describe('InputManager — layout-independent keyboard channels', () => {
   });
 
   test('an unmapped code writes no channel and dispatches no key signal', () => {
-    const { im } = createFocusedInputManager();
+    const { im } = createFocusedInputSystem();
     const onKeyDown = vi.fn();
     const onKeyUp = vi.fn();
 
@@ -195,7 +195,7 @@ describe('InputManager — layout-independent keyboard channels', () => {
   });
 
   test('a mapped keydown still reaches the onKeyDown signal with its channel', () => {
-    const { im } = createFocusedInputManager();
+    const { im } = createFocusedInputSystem();
     const onKeyDown = vi.fn();
 
     im.onKeyDown.add(onKeyDown);
@@ -209,9 +209,9 @@ describe('InputManager — layout-independent keyboard channels', () => {
   });
 });
 
-describe('InputManager — modifier side and aggregate channels', () => {
+describe('InputSystem — modifier side and aggregate channels', () => {
   test('a modifier keydown writes both its side channel and the aggregate channel', () => {
-    const { im } = createFocusedInputManager();
+    const { im } = createFocusedInputSystem();
 
     press({ code: 'ControlLeft', key: 'Control', keyCode: 17 });
 
@@ -223,7 +223,7 @@ describe('InputManager — modifier side and aggregate channels', () => {
   });
 
   test('both sides held, one released: the aggregate stays active until the second release', () => {
-    const { im } = createFocusedInputManager();
+    const { im } = createFocusedInputSystem();
 
     press({ code: 'ControlLeft', key: 'Control', keyCode: 17 });
     press({ code: 'ControlRight', key: 'Control', keyCode: 17 });
@@ -245,7 +245,7 @@ describe('InputManager — modifier side and aggregate channels', () => {
   });
 
   test('one physical modifier press produces exactly one onKeyDown dispatch, carrying the side channel', () => {
-    const { im } = createFocusedInputManager();
+    const { im } = createFocusedInputSystem();
     const onKeyDown = vi.fn();
 
     im.onKeyDown.add(onKeyDown);
@@ -259,7 +259,7 @@ describe('InputManager — modifier side and aggregate channels', () => {
   });
 
   test('a binding on the aggregate channel activates from either physical side', () => {
-    const { im } = createFocusedInputManager();
+    const { im } = createFocusedInputSystem();
     const onStart = vi.fn();
 
     im.onStart(Keyboard.Control, onStart);
@@ -273,7 +273,7 @@ describe('InputManager — modifier side and aggregate channels', () => {
   });
 
   test('a binding on one side channel does not activate from the other side', () => {
-    const { im } = createFocusedInputManager();
+    const { im } = createFocusedInputSystem();
     const onStart = vi.fn();
 
     im.onStart(Keyboard.ControlLeft, onStart);
@@ -287,7 +287,7 @@ describe('InputManager — modifier side and aggregate channels', () => {
   });
 
   test('canvas blur releases both side and aggregate channels together', () => {
-    const { im, canvas } = createFocusedInputManager();
+    const { im, canvas } = createFocusedInputSystem();
 
     press({ code: 'ShiftLeft', key: 'Shift', keyCode: 16 });
 

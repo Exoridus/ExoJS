@@ -109,7 +109,7 @@ export class RetainedContainer extends Container {
 
     // The whole group moved: anchored interactive descendants are hit-tested
     // live, but world-space (escaped) ones are indexed in the world quadtree
-    // with bounds captured at insert time and must be re-indexed. The manager
+    // with bounds captured at insert time and must be re-indexed. The system
     // resolves exactly that set in O(1) (no-op when the group has none).
     this._getStage()?.interaction._notifyTransformGroupMoved(this);
   }
@@ -540,8 +540,8 @@ export class RetainedContainer extends Container {
   /**
    * An escape flip changes the transform SPACE of the whole branch without
    * touching its bounds flags or revisions, so spatial-index consumers
-   * (InteractionManager buckets nodes by group anchor) must be told per-node.
-   * The manager filters to tracked interactive nodes (O(1) Set-miss for the
+   * (InteractionSystem buckets nodes by group anchor) must be told per-node.
+   * The system filters to tracked interactive nodes (O(1) Set-miss for the
    * rest); flips are rare and already pay an O(subtree) barrier scan, so the
    * walk is in budget - and it is scoped to the flipped branch only,
    * never the whole group.

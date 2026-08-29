@@ -100,7 +100,7 @@ For a smoother skip, fast-forward remaining tweens to completion rather than cut
 
 ## When not to build a cinematic system
 
-For a single boss intro, the flat approach above — one scene, many tweens with delays — is sufficient. For a game with many cutscenes, you might wrap the pattern in a `Sequence` class that accepts an array of `{ time, tween }` entries and starts them at the right moments. ExoJS does not ship this abstraction — it's a few dozen lines of your own code on top of `Tween.delay()` and `TweenManager.create()`.
+For a single boss intro, the flat approach above — one scene, many tweens with delays — is sufficient. For a game with many cutscenes, you might wrap the pattern in a `Sequence` class that accepts an array of `{ time, tween }` entries and starts them at the right moments. ExoJS does not ship this abstraction — it's a few dozen lines of your own code on top of `Tween.delay()` and `TweenSystem.create()`.
 
 ## Examples
 

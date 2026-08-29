@@ -154,20 +154,20 @@ describe('audio', () => {
 
   bench('50 Sound instances play() (1 iteration = 50 play() calls)', async () => {
     const { getAudioContext } = await import('../../src/audio/audio-context');
-    const { AudioManager } = await import('../../src/audio/AudioManager');
+    const { AudioSystem } = await import('../../src/audio/AudioSystem');
     // Nothing bootstraps the shared context eagerly, and a Sound whose context
     // does not exist yet hands out a `NoopVoice` - the bench would then measure
     // the silent path.
     getAudioContext();
     const { Sound } = await import('../../src/audio/Sound');
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sounds: Array<InstanceType<typeof Sound>> = [];
     for (let i = 0; i < 50; i++) sounds.push(new Sound(makeAudioBuffer(), { poolSize: 4 }));
     // Stopping within the iteration returns each voice to its sound's pool, so
     // the measured cost stays "50 plays" across iterations.
-    for (const s of sounds) manager.play(s).stop();
+    for (const s of sounds) system.play(s).stop();
     for (const s of sounds) s.destroy();
-    manager.destroy();
+    system.destroy();
   });
 
   bench('AudioListener._tick() (60 position updates)', async () => {

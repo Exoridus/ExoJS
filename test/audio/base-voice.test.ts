@@ -14,7 +14,7 @@ import type { MockInstance } from 'vitest';
 import { getAudioContext, onAudioContextReady } from '#audio/audio-context';
 import { AudioBus } from '#audio/AudioBus';
 import type { AudioEffect } from '#audio/AudioEffect';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
 
@@ -140,10 +140,10 @@ describe('BaseVoice — post-ended no-ops', () => {
   afterEach(() => vi.restoreAllMocks());
 
   test('volume setter is a no-op once the voice has ended', () => {
-    const manager = new AudioManager(); // before capture, so bus gains are not captured
+    const system = new AudioSystem(); // before capture, so bus gains are not captured
     const out = captureVoiceOutput();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
 
     voice.stop();
     out.node!.gain.setTargetAtTime.mockClear();
@@ -157,12 +157,12 @@ describe('BaseVoice — post-ended no-ops', () => {
   });
 
   test('bus setter after ended just swaps the reference without touching the graph', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
 
     voice.stop();
-    const newBus = new AudioBus('side', { parent: manager.master });
+    const newBus = new AudioBus('side', { parent: system.master });
 
     voice.bus = newBus;
     expect(voice.bus).toBe(newBus);
@@ -171,9 +171,9 @@ describe('BaseVoice — post-ended no-ops', () => {
   });
 
   test('addEffect() after ended is a no-op that still returns the voice', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     const fx = makeStubEffect();
 
     voice.stop();
@@ -184,9 +184,9 @@ describe('BaseVoice — post-ended no-ops', () => {
   });
 
   test('removeEffect() with an effect that was never added is a no-op', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     const fx = makeStubEffect();
 
     expect(voice.removeEffect(fx)).toBe(voice);
@@ -196,10 +196,10 @@ describe('BaseVoice — post-ended no-ops', () => {
   });
 
   test('fade() after ended is a no-op', () => {
-    const manager = new AudioManager(); // before capture, so bus gains are not captured
+    const system = new AudioSystem(); // before capture, so bus gains are not captured
     const out = captureVoiceOutput();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
 
     voice.stop();
     out.node!.gain.setTargetAtTime.mockClear();
@@ -212,9 +212,9 @@ describe('BaseVoice — post-ended no-ops', () => {
   });
 
   test('stop() a second time is a no-op (idempotent _finish)', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
 
     voice.stop();
     expect(voice.ended).toBe(true);
@@ -227,9 +227,9 @@ describe('BaseVoice — post-ended no-ops', () => {
     // the test above); this exercises `_finish()`'s own internal guard, which
     // protects against a second trigger reaching it via a different path (e.g.
     // a subclass's natural-end callback firing after an explicit stop()).
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     const onEndSpy = vi.fn();
     voice.onEnd.add(onEndSpy);
 
@@ -242,9 +242,9 @@ describe('BaseVoice — post-ended no-ops', () => {
   });
 
   test('position setter after ended is a no-op', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
 
     voice.stop();
     voice.position = { x: 1, y: 2 };
@@ -254,9 +254,9 @@ describe('BaseVoice — post-ended no-ops', () => {
   });
 
   test('follow() after ended is a no-op', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
 
     voice.stop();
     const node = { getGlobalTransform: vi.fn() };
@@ -271,10 +271,10 @@ describe('BaseVoice — fade()', () => {
   afterEach(() => vi.restoreAllMocks());
 
   test('fade(to, 0) applies the target value immediately via setTargetAtTime', () => {
-    const manager = new AudioManager(); // before capture, so bus gains are not captured
+    const system = new AudioSystem(); // before capture, so bus gains are not captured
     const out = captureVoiceOutput();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
 
     voice.fade(0.2, 0);
 
@@ -287,10 +287,10 @@ describe('BaseVoice — fade()', () => {
   });
 
   test('fade(to, ms) schedules a linear ramp and clamps the target to [0, 1]', () => {
-    const manager = new AudioManager(); // before capture, so bus gains are not captured
+    const system = new AudioSystem(); // before capture, so bus gains are not captured
     const out = captureVoiceOutput();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
 
     voice.fade(5, 300);
 
@@ -309,9 +309,9 @@ describe('BaseVoice — position edge cases', () => {
 
   test('setting position to null when a position exists destroys the vector', () => {
     const pannerSpy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
 
     voice.position = { x: 1, y: 2 };
     expect(voice.position).not.toBeNull();
@@ -324,9 +324,9 @@ describe('BaseVoice — position edge cases', () => {
   });
 
   test('setting position to null when already null is a no-op', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
 
     expect(voice.position).toBeNull();
     expect(() => (voice.position = null)).not.toThrow();
@@ -337,9 +337,9 @@ describe('BaseVoice — position edge cases', () => {
 
   test('setting position twice updates the existing Vector in place and does not recreate the panner', () => {
     const pannerSpy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
 
     voice.position = { x: 1, y: 2 };
     voice.position = { x: 3, y: 4 };
@@ -355,9 +355,9 @@ describe('BaseVoice — position edge cases', () => {
 
   test('follow(null) clears the follow target without touching the panner', () => {
     const pannerSpy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
 
     expect(() => voice.follow(null)).not.toThrow();
     // No spatialization was ever triggered by following null.
@@ -372,9 +372,9 @@ describe('BaseVoice — _tickSpatial()', () => {
   afterEach(() => vi.restoreAllMocks());
 
   test('_tickSpatial() is a no-op if the voice was never spatialized (no panner)', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
 
     expect(() => voice._tickSpatial()).not.toThrow();
 
@@ -383,9 +383,9 @@ describe('BaseVoice — _tickSpatial()', () => {
 
   test('_tickSpatial() is a no-op once the voice has ended', () => {
     const pannerSpy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
 
     voice.position = { x: 1, y: 2 };
     voice.stop();
@@ -398,9 +398,9 @@ describe('BaseVoice — _tickSpatial()', () => {
 
   test('_tickSpatial() returns without writing to the panner once position is cleared and there is no follow target', () => {
     const pannerSpy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
 
     voice.position = { x: 1, y: 2 }; // creates the panner, registers as spatial
     // Clears position with no follow target active - this actually tears down
@@ -433,9 +433,9 @@ describe('BaseVoice — _tickSpatial()', () => {
       setPosition,
     } as unknown as PannerNode);
 
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
 
     voice.position = { x: 7, y: 8 };
     voice._tickSpatial();
@@ -458,9 +458,9 @@ describe('BaseVoice — _tickSpatial()', () => {
       rolloffFactor: 1,
     } as unknown as PannerNode);
 
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
 
     voice.position = { x: 1, y: 2 };
     expect(() => voice._tickSpatial()).not.toThrow();
@@ -474,13 +474,13 @@ describe('BaseVoice — effect chain / bus routing', () => {
   afterEach(() => vi.restoreAllMocks());
 
   test('_tail() returns the last effect output once an effect chain exists (bus change rewires it)', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
     const fx = makeStubEffect();
 
     voice.addEffect(fx);
-    const newBus = new AudioBus('side', { parent: manager.master });
+    const newBus = new AudioBus('side', { parent: system.master });
     voice.bus = newBus;
 
     // The effect's outputNode (not the raw voice output) was connected onward
@@ -496,13 +496,13 @@ describe('BaseVoice — spatial registration internals', () => {
 
   test('_ensurePanner() does not re-register as a spatial voice once already registered (defensive guard)', () => {
     const pannerSpy = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound) as SoundVoice;
+    const voice = system.play(sound) as SoundVoice;
 
     voice.position = { x: 1, y: 2 }; // creates the panner and registers as spatial
 
-    const registerSpy = vi.spyOn(manager, '_registerSpatial');
+    const registerSpy = vi.spyOn(system, '_registerSpatial');
     // Force back past the "already have a panner" short-circuit to exercise the
     // (structurally unreachable via the public API) `_spatialRegistered` guard.
     (voice as unknown as { _panner: unknown })._panner = null;
@@ -515,9 +515,9 @@ describe('BaseVoice — spatial registration internals', () => {
   });
 
   test('_rebuildEffectChain() is a no-op once the voice has ended (defensive guard)', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
 
     voice.stop();
     expect(() => (voice as unknown as { _rebuildEffectChain: () => void })._rebuildEffectChain()).not.toThrow();
@@ -531,7 +531,7 @@ describe('BaseVoice — deferred bus connect while the bus is not yet set up', (
 
   test('a voice created before its bus is ready connects to the destination, then reconnects once the bus comes online', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager(); // constructed while the context is running — its own busses set up normally
+    const system = new AudioSystem(); // constructed while the context is running — its own busses set up normally
     const ctx = getAudioContext();
     const destination = ctx.destination;
 
@@ -546,7 +546,7 @@ describe('BaseVoice — deferred bus connect while the bus is not yet set up', (
 
     const sound = new Sound(createAudioBufferStub());
     const output = captureVoiceOutput();
-    const voice = manager.play(sound, { bus });
+    const voice = system.play(sound, { bus });
 
     // Routed to the destination for now (bus is still locked).
     expect(output.node!.connect).toHaveBeenCalledWith(destination);
@@ -574,7 +574,7 @@ describe('BaseVoice — deferred bus connect while the bus is not yet set up', (
   // reconnect from the bus.
   test('voices queue their deferred reconnect on the bus (not the global signal), and drop it on stop() (AU3)', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const ctx = getAudioContext();
 
     const originalState = ctx.state;
@@ -586,7 +586,7 @@ describe('BaseVoice — deferred bus connect while the bus is not yet set up', (
     const signalCountBefore = onAudioContextReady.count;
 
     const sound = new Sound(createAudioBufferStub());
-    const voices = [manager.play(sound, { bus }), manager.play(sound, { bus }), manager.play(sound, { bus })];
+    const voices = [system.play(sound, { bus }), system.play(sound, { bus }), system.play(sound, { bus })];
 
     // Each voice queued exactly one reconnect on the BUS; the global unlock
     // signal did not grow per voice (only the bus's own subscription lives there).

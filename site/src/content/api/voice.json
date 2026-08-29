@@ -1,6 +1,6 @@
 {
   "title": "Voice",
-  "description": "A live playback instance in the audio graph with a control surface. A Voice is created by playing a Playable via AudioManager.play (and, later, by opening an `AudioInput`). Each `play()` returns an independent Voice, so overlapping concurrent playback of the same asset is just multiple Voices. Concrete voices mix in the capability interfaces (Seekable, Pausable, Loopable, RatePitched) for whatever their backing Web Audio node actually supports - narrow with a capability check (`'seek' in voice`) before using one. Spatializable is not one of those: every voice carries it. The panner is inserted lazily, so a voice that is never positioned costs nothing, and PlayOptions already accepts the full spatial set at play time - a returned voice must be able to keep steering what the play call was allowed to start.",
+  "description": "A live playback instance in the audio graph with a control surface. A Voice is created by playing a Playable via AudioSystem.play (and, later, by opening an `AudioInput`). Each `play()` returns an independent Voice, so overlapping concurrent playback of the same asset is just multiple Voices. Concrete voices mix in the capability interfaces (Seekable, Pausable, Loopable, RatePitched) for whatever their backing Web Audio node actually supports - narrow with a capability check (`'seek' in voice`) before using one. Spatializable is not one of those: every voice carries it. The panner is inserted lazily, so a voice that is never positioned costs nothing, and PlayOptions already accepts the full spatial set at play time - a returned voice must be able to keep steering what the play call was allowed to start.",
   "symbol": "Voice",
   "kind": "interface",
   "subsystem": "audio",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "A live playback instance in the audio graph with a control surface.",
-        "A Voice is created by playing a Playable via AudioManager.play (and, later, by opening an `AudioInput`). Each `play()` returns an independent Voice, so overlapping concurrent playback of the same asset is just multiple Voices.",
+        "A Voice is created by playing a Playable via AudioSystem.play (and, later, by opening an `AudioInput`). Each `play()` returns an independent Voice, so overlapping concurrent playback of the same asset is just multiple Voices.",
         "Concrete voices mix in the capability interfaces (Seekable, Pausable, Loopable, RatePitched) for whatever their backing Web Audio node actually supports - narrow with a capability check (`'seek' in voice`) before using one.",
         "Spatializable is not one of those: every voice carries it. The panner is inserted lazily, so a voice that is never positioned costs nothing, and PlayOptions already accepts the full spatial set at play time - a returned voice must be able to keep steering what the play call was allowed to start."
       ],

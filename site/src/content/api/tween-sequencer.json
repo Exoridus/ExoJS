@@ -1,6 +1,6 @@
 {
   "title": "TweenSequencer",
-  "description": "Composes multiple Tween instances into a multi-stage animation. Each stage added via TweenSequencer.then plays after the previous one finishes. Within a single stage, multiple tweens run simultaneously (parallel); the stage advances when **all** of them complete. Delay stages inserted via TweenSequencer.wait create a timed pause between stages without needing a dummy tween. The sequencer integrates with TweenManager via TweenManager.addTicker so it is driven automatically each frame. It can also be used stand-alone by calling TweenSequencer.update manually - in that mode the sequencer also advances its child tweens.",
+  "description": "Composes multiple Tween instances into a multi-stage animation. Each stage added via TweenSequencer.then plays after the previous one finishes. Within a single stage, multiple tweens run simultaneously (parallel); the stage advances when **all** of them complete. Delay stages inserted via TweenSequencer.wait create a timed pause between stages without needing a dummy tween. The sequencer integrates with TweenSystem via TweenSystem.addTicker so it is driven automatically each frame. It can also be used stand-alone by calling TweenSequencer.update manually - in that mode the sequencer also advances its child tweens.",
   "symbol": "TweenSequencer",
   "kind": "class",
   "subsystem": "animation",
@@ -22,7 +22,7 @@
         "Composes multiple Tween instances into a multi-stage animation.",
         "Each stage added via TweenSequencer.then plays after the previous one finishes. Within a single stage, multiple tweens run simultaneously (parallel); the stage advances when **all** of them complete.",
         "Delay stages inserted via TweenSequencer.wait create a timed pause between stages without needing a dummy tween.",
-        "The sequencer integrates with TweenManager via TweenManager.addTicker so it is driven automatically each frame. It can also be used stand-alone by calling TweenSequencer.update manually - in that mode the sequencer also advances its child tweens."
+        "The sequencer integrates with TweenSystem via TweenSystem.addTicker so it is driven automatically each frame. It can also be used stand-alone by calling TweenSequencer.update manually - in that mode the sequencer also advances its child tweens."
       ],
       "importLine": "import { TweenSequencer } from '@codexo/exojs'",
       "sourceLink": null
@@ -33,7 +33,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(manager?: TweenManager): TweenSequencer",
+          "signature": "new(system?: TweenSystem): TweenSequencer",
           "signatureTokens": [
             {
               "text": "new",
@@ -44,7 +44,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "manager",
+              "text": "system",
               "kind": "param"
             },
             {
@@ -56,7 +56,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "TweenManager",
+              "text": "TweenSystem",
               "kind": "type"
             },
             {
@@ -74,8 +74,8 @@
           ],
           "params": [
             {
-              "name": "manager",
-              "type": "TweenManager",
+              "name": "system",
+              "type": "TweenSystem",
               "optional": true
             }
           ],
@@ -333,7 +333,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": "Start (or restart) the sequence from stage 0. Resets all internal state and re-registers with the manager if one is attached."
+          "description": "Start (or restart) the sequence from stage 0. Resets all internal state and re-registers with the system if one is attached."
         },
         {
           "name": "stop",
@@ -362,7 +362,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": "Stop the sequence without finishing. Active tweens are stopped. TweenSequencer.onComplete does NOT fire. The sequencer is removed from its manager if one is assigned."
+          "description": "Stop the sequence without finishing. Active tweens are stopped. TweenSequencer.onComplete does NOT fire. The sequencer is removed from its system if one is assigned."
         },
         {
           "name": "then",
@@ -492,7 +492,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Advance the sequencer by deltaSeconds. Called automatically by the attached TweenManager each frame. When used stand-alone (no manager), call this manually and child tweens will also be advanced."
+          "description": "Advance the sequencer by deltaSeconds. Called automatically by the attached TweenSystem each frame. When used stand-alone (no system), call this manually and child tweens will also be advanced."
         },
         {
           "name": "wait",

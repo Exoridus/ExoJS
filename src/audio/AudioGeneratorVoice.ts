@@ -13,7 +13,7 @@ export interface AudioGeneratorVoiceInit extends BaseVoiceInit {
 
 /**
  * Active playback handle for one {@link AudioGenerator} play call, backed by an
- * `OscillatorNode` plus a per-voice envelope gain. Each `AudioManager.play`
+ * `OscillatorNode` plus a per-voice envelope gain. Each `AudioSystem.play`
  * creates an independent voice.
  *
  * Exposes the generator parameters (`frequency`, `type`), mixes in

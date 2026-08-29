@@ -77,7 +77,7 @@ export function verifyCoreProtocols(container: Container): void {
 
     // The binding is constructed (and therefore owned) right here, not
     // accepted as a parameter — \`using\` disposes what this scope created,
-    // mirroring \`InputManager.onStart\`'s own "manual lifecycle" contract
+    // mirroring \`InputSystem.onStart\`'s own "manual lifecycle" contract
     // rather than disposing a caller's binding out from under them.
     const app = new Application();
     using ownedBinding = app.input.onStart(Keyboard.Space, () => {});

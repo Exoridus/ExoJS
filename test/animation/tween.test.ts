@@ -1,10 +1,10 @@
 ﻿import { Ease } from '#animation/Easing';
 import { Tween } from '#animation/Tween';
-import { TweenManager } from '#animation/TweenManager';
+import { TweenSystem } from '#animation/TweenSystem';
 import { TweenState } from '#animation/types';
 import { type Seconds, Time } from '#core/units';
 
-/** TweenManager.update() takes a Time; tests express their deltas in seconds. */
+/** TweenSystem.update() takes a Time; tests express their deltas in seconds. */
 const sec = (seconds: number): Seconds => Time.seconds(seconds);
 
 // Minimal sprite-like target.
@@ -286,15 +286,15 @@ describe('Tween', () => {
       expect(tween.state).toBe(TweenState.Stopped);
     });
 
-    test('stop() removes tween from manager', () => {
-      const manager = new TweenManager();
+    test('stop() removes tween from system', () => {
+      const system = new TweenSystem();
       const sprite = makeSprite();
-      const tween = manager.create(sprite).to({ x: 100 }, 1.0).start();
+      const tween = system.create(sprite).to({ x: 100 }, 1.0).start();
 
       tween.stop();
-      // After stop, updating manager should not move sprite.
+      // After stop, updating system should not move sprite.
       const xAtStop = sprite.x;
-      manager.preUpdate(sec(1.0));
+      system.preUpdate(sec(1.0));
       expect(sprite.x).toBe(xAtStop);
     });
   });
@@ -446,30 +446,30 @@ describe('Tween', () => {
 
   describe('restart after complete or stop', () => {
     test('managed tween driven to completion a second time after start() re-call', () => {
-      // After complete(), the tween is evicted from the manager.
-      // start() must re-register it so the manager drives the next run.
-      const manager = new TweenManager();
+      // After complete(), the tween is evicted from the system.
+      // start() must re-register it so the system drives the next run.
+      const system = new TweenSystem();
       const target = makeSprite();
-      const tween = manager.create(target).to({ x: 100 }, 1.0).start();
+      const tween = system.create(target).to({ x: 100 }, 1.0).start();
 
-      manager.preUpdate(sec(1.0)); // complete — tween removed from manager
+      system.preUpdate(sec(1.0)); // complete — tween removed from system
       expect(tween.state).toBe(TweenState.Complete);
 
       const secondComplete = vi.fn();
       tween.onComplete(secondComplete).start();
       expect(tween.state).toBe(TweenState.Active);
 
-      manager.preUpdate(sec(1.0)); // manager must drive it — second completion fires
+      system.preUpdate(sec(1.0)); // system must drive it — second completion fires
       expect(secondComplete).toHaveBeenCalledTimes(1);
       expect(tween.state).toBe(TweenState.Complete);
     });
 
     test('managed tween driven to completion after start() following stop()', () => {
-      const manager = new TweenManager();
+      const system = new TweenSystem();
       const target = makeSprite();
-      const tween = manager.create(target).to({ x: 100 }, 1.0).start();
+      const tween = system.create(target).to({ x: 100 }, 1.0).start();
 
-      manager.preUpdate(sec(0.3));
+      system.preUpdate(sec(0.3));
       tween.stop();
       expect(tween.state).toBe(TweenState.Stopped);
 
@@ -477,20 +477,20 @@ describe('Tween', () => {
       tween.onComplete(onComplete).start();
       expect(tween.state).toBe(TweenState.Active);
 
-      manager.preUpdate(sec(1.0)); // manager drives the restarted tween
+      system.preUpdate(sec(1.0)); // system drives the restarted tween
       expect(onComplete).toHaveBeenCalledTimes(1);
       expect(tween.state).toBe(TweenState.Complete);
     });
 
     test('start() on already-active managed tween does not cause double advancement', () => {
-      // TweenManager.add() deduplicates; calling start() while active must not
+      // TweenSystem.add() deduplicates; calling start() while active must not
       // register the tween twice, causing double-speed advancement.
-      const manager = new TweenManager();
+      const system = new TweenSystem();
       const target = makeSprite();
-      const tween = manager.create(target).to({ x: 100 }, 1.0).start();
+      const tween = system.create(target).to({ x: 100 }, 1.0).start();
 
       tween.start(); // re-call while active — resets elapsed, no double-registration
-      manager.preUpdate(sec(0.5));
+      system.preUpdate(sec(0.5));
       expect(target.x).toBeCloseTo(50, 5); // exactly one advancement
     });
 
@@ -498,16 +498,16 @@ describe('Tween', () => {
       // Uses 0.1s steps to avoid both tweens completing in the same frame
       // (which happens with a 1.0s single-step due to the snapshot-update order).
       // Before M1: forward.start() from backward's onComplete was a no-op because
-      // forward had been evicted from the manager, so the ping-pong stopped after
+      // forward had been evicted from the system, so the ping-pong stopped after
       // one round trip. After M1 it should cycle at least twice each.
-      const manager = new TweenManager();
+      const system = new TweenSystem();
       const target = makeSprite();
 
       let forwardCompleteCount = 0;
       let backwardCompleteCount = 0;
 
-      const forward = manager.create(target).to({ x: 100 }, 1.0);
-      const backward = manager.create(target).to({ x: 0 }, 1.0);
+      const forward = system.create(target).to({ x: 100 }, 1.0);
+      const backward = system.create(target).to({ x: 0 }, 1.0);
 
       forward.onComplete(() => {
         forwardCompleteCount++;
@@ -520,7 +520,7 @@ describe('Tween', () => {
       forward.start();
 
       // 50 × 0.1s = 5 seconds; enough for ≥2 complete cycles of each tween
-      for (let i = 0; i < 50; i++) manager.preUpdate(sec(0.1));
+      for (let i = 0; i < 50; i++) system.preUpdate(sec(0.1));
 
       expect(forwardCompleteCount).toBeGreaterThanOrEqual(2);
       expect(backwardCompleteCount).toBeGreaterThanOrEqual(2);

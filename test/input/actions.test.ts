@@ -1,7 +1,7 @@
 /**
  * Tests for the action layer: threshold/edge semantics on ButtonAction,
  * composite and alternative-binding resolution on AxisAction/VectorAction,
- * and ActionMap attachment lifetime against InputManager and SceneInputs.
+ * and ActionMap attachment lifetime against InputSystem and SceneInputs.
  */
 
 import type { Application } from '#core/Application';
@@ -13,7 +13,7 @@ import type { ActionSample, ChannelEvent } from '#input/actions/types';
 import { VectorAction } from '#input/actions/VectorAction';
 import { GamepadAxis } from '#input/GamepadAxis';
 import { GamepadButton } from '#input/GamepadButton';
-import { InputManager } from '#input/InputManager';
+import { InputSystem } from '#input/InputSystem';
 import { ChannelSize, Keyboard, PointerButton } from '#input/types';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 
@@ -21,12 +21,12 @@ import { BrowserPlatform } from '#platform/BrowserPlatform';
  * Builds an `ActionSample` and the operations a test drives it with:
  * `set()` mimics a single-channel platform write (one keyboard event, or one
  * standalone channel of a pointer/gamepad write) as its own atomic
- * `ChannelEventBatch`, exactly like `InputManager._recordChannelChanges`
+ * `ChannelEventBatch`, exactly like `InputSystem._recordChannelChanges`
  * does for a single-channel range. `setBatch()` mimics several channels
  * written TOGETHER by one real-world event (e.g. a pointer's whole slot) as
  * ONE batch - for tests specifically about batch-vs-per-channel evaluation.
  * `frame()` closes the frame (clearing the batch log and bumping `frameId`,
- * mirroring `InputManager.update`).
+ * mirroring `InputSystem.update`).
  */
 const createSample = (): {
   sample: ActionSample;
@@ -672,8 +672,8 @@ describe('ActionMap', () => {
   });
 });
 
-describe('ActionMap × InputManager lifecycle', () => {
-  const createManager = (): InputManager => {
+describe('ActionMap × InputSystem lifecycle', () => {
+  const createManager = (): InputSystem => {
     const canvas = document.createElement('canvas');
     canvas.width = 800;
     canvas.height = 600;
@@ -688,7 +688,7 @@ describe('ActionMap × InputManager lifecycle', () => {
       _backingStoreToLogical: (x: number, y: number): { x: number; y: number } => ({ x, y }),
     } as unknown as Application;
 
-    return new InputManager(app);
+    return new InputSystem(app);
   };
 
   beforeAll(() => {
@@ -745,7 +745,7 @@ describe('ActionMap × InputManager lifecycle', () => {
     other.destroy();
   });
 
-  it('moving an attached map to a different InputManager re-baselines its actions against the new owner, with no synthetic edge', () => {
+  it('moving an attached map to a different InputSystem re-baselines its actions against the new owner, with no synthetic edge', () => {
     const im = createManager();
     const other = createManager();
     const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
@@ -761,7 +761,7 @@ describe('ActionMap × InputManager lifecycle', () => {
     expect(map.jump.active).toBe(true);
     expect(map.jump.pressed).toBe(true);
 
-    // The map moves to a different manager - an entirely unrelated channel
+    // The map moves to a different system - an entirely unrelated channel
     // buffer, where Space was never pressed.
     other.attach(map);
     other.preUpdate(0 as never);
@@ -802,7 +802,7 @@ describe('ActionMap × InputManager lifecycle', () => {
     map._reset();
     expect(map.jump.active).toBe(false);
 
-    // Resume: re-arm against the manager's live sample, exactly as
+    // Resume: re-arm against the system's live sample, exactly as
     // `SceneInputs.resume` does, before the map is fed again.
     map._armBaseline(im._currentBatchSequence(), im._snapshotActionChannels());
     map._update(im._actionSample());
@@ -843,7 +843,7 @@ describe('ActionMap × InputManager lifecycle', () => {
     im.destroy();
   });
 
-  it('reattaching to the same InputManager forces a fresh baseline resolution', () => {
+  it('reattaching to the same InputSystem forces a fresh baseline resolution', () => {
     const im = createManager();
     const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
     const canvas = (im as unknown as { platform: BrowserPlatform }).platform.surface;

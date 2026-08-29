@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import { getAudioContext } from '#audio/audio-context';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import { Sound } from '#audio/Sound';
 import { Time } from '#core/units';
 
@@ -61,7 +61,7 @@ const getGlobalListener = (): Record<string, MockParam> => (getAudioContext() as
 // global object every frame - last writer per frame wins, and both apps pan
 // against whichever listener happened to tick last. The fix is a virtual
 // listener: the global one is pinned at the origin and each voice writes its
-// position RELATIVE to its own manager's listener.
+// position RELATIVE to its own system's listener.
 describe('per-Application virtual listener', () => {
   afterEach(() => vi.restoreAllMocks());
 
@@ -72,28 +72,28 @@ describe('per-Application virtual listener', () => {
     listener.positionZ.setValueAtTime.mockClear();
     listener.positionX.setTargetAtTime.mockClear();
 
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     expect(listener.positionX.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
     expect(listener.positionY.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
     expect(listener.positionZ.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
 
     listener.positionX.setValueAtTime.mockClear();
 
-    manager.listener.target = { x: 500, y: 300 };
-    manager.preUpdate(frame);
-    manager.preUpdate(frame);
+    system.listener.target = { x: 500, y: 300 };
+    system.preUpdate(frame);
+    system.preUpdate(frame);
 
     expect(listener.positionX.setValueAtTime).not.toHaveBeenCalled();
     expect(listener.positionX.setTargetAtTime).not.toHaveBeenCalled();
 
-    manager.destroy();
+    system.destroy();
   });
 
-  test('two managers on the same context each pan their own voices correctly', () => {
+  test('two systems on the same context each pan their own voices correctly', () => {
     const factory = setupPannerSpy();
 
-    const first = new AudioManager();
-    const second = new AudioManager();
+    const first = new AudioSystem();
+    const second = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
 
     first.listener.position.set(1000, 0);
@@ -108,7 +108,7 @@ describe('per-Application virtual listener', () => {
     expect(factory.panners[0].positionX.setValueAtTime).toHaveBeenCalledWith(-800, expect.any(Number));
     expect(factory.panners[1].positionX.setValueAtTime).toHaveBeenCalledWith(1200, expect.any(Number));
 
-    // A frame tick must not let one manager's listener bleed into the other's pan.
+    // A frame tick must not let one system's listener bleed into the other's pan.
     first.preUpdate(frame);
     second.preUpdate(frame);
 
@@ -123,10 +123,10 @@ describe('per-Application virtual listener', () => {
 
   test('moving the listener re-pans a stationary voice', () => {
     const factory = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
 
-    manager.play(sound, { position: { x: 100, y: 0 } });
+    system.play(sound, { position: { x: 100, y: 0 } });
     const panner = factory.panners[0];
     expect(panner.positionX.setValueAtTime).toHaveBeenCalledWith(100, expect.any(Number));
 
@@ -136,23 +136,23 @@ describe('per-Application virtual listener', () => {
     // The source has not moved, but the listener has - the relative offset it
     // is panned by must follow, which is exactly what the old central listener
     // smoothing used to cover.
-    manager.listener.target = { x: 40, y: 0 };
-    manager.preUpdate(frame);
+    system.listener.target = { x: 40, y: 0 };
+    system.preUpdate(frame);
 
     expect(panner.positionX.setTargetAtTime).toHaveBeenCalledWith(60, expect.any(Number), expect.any(Number));
 
     factory.restore();
-    manager.destroy();
+    system.destroy();
     sound.destroy();
   });
 
   test('distance to the listener is preserved, so attenuation is unchanged', () => {
     const factory = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
 
-    manager.listener.position.set(300, 400);
-    manager.play(sound, { position: { x: 300 + 30, y: 400 + 40 } });
+    system.listener.position.set(300, 400);
+    system.play(sound, { position: { x: 300 + 30, y: 400 + 40 } });
 
     const panner = factory.panners[0];
     const x = panner.positionX.setValueAtTime.mock.calls[0][0] as number;
@@ -162,7 +162,7 @@ describe('per-Application virtual listener', () => {
     expect(Math.hypot(x, y)).toBeCloseTo(50, 6);
 
     factory.restore();
-    manager.destroy();
+    system.destroy();
     sound.destroy();
   });
 
@@ -170,23 +170,23 @@ describe('per-Application virtual listener', () => {
   // sides, so virtualizing the panner position must not disturb it.
   test('the Doppler path still works off absolute world positions', () => {
     const factory = setupPannerSpy();
-    const manager = new AudioManager();
-    manager.spatial.dopplerFactor = 1;
-    manager.spatial.speedOfSound = 1000;
+    const system = new AudioSystem();
+    system.spatial.dopplerFactor = 1;
+    system.spatial.speedOfSound = 1000;
     const sound = new Sound(createAudioBufferStub());
 
-    manager.listener.position.set(5000, 0);
+    system.listener.position.set(5000, 0);
 
-    const voice = manager.play(sound, { position: { x: 5100, y: 0 } });
+    const voice = system.play(sound, { position: { x: 5100, y: 0 } });
     // Receding from the listener along +X at 500 u/s => ratio 1 - 0.5 = 0.5.
     voice.velocity = { x: 500, y: 0 };
-    manager.preUpdate(frame);
+    system.preUpdate(frame);
 
     const rate = (voice as unknown as { _source: { playbackRate: MockParam } })._source.playbackRate;
     expect(rate.setTargetAtTime).toHaveBeenCalledWith(0.5, expect.any(Number), expect.any(Number));
 
     factory.restore();
-    manager.destroy();
+    system.destroy();
     sound.destroy();
   });
 });

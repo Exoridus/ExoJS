@@ -33,7 +33,7 @@ const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
  * destination rectangle.
  *
  * Intentionally not a {@link AbstractWebGl2Renderer} subclass: this
- * compositor is invoked directly by the manager for non-Drawable
+ * compositor is invoked directly by the system for non-Drawable
  * compositing operations and never participates in the renderer
  * registry dispatch path.
  */

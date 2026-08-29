@@ -7,8 +7,8 @@ import { Vector } from '#math/Vector';
 import type { AudioBus } from './AudioBus';
 import type { AudioEffect } from './AudioEffect';
 import { isEffectReady } from './AudioEffect';
-import type { AudioManager } from './AudioManager';
 import { AudioSend } from './AudioSend';
+import type { AudioSystem } from './AudioSystem';
 import type { DistanceModel, Spatializable, SpatialPoint, Voice } from './Playable';
 import {
   createVelocitySample,
@@ -46,7 +46,7 @@ export interface BaseVoiceInit {
   /** The voice's output gain - the last node before the bus. */
   output: GainNode;
   bus: AudioBus;
-  manager: AudioManager;
+  system: AudioSystem;
   /** Initial volume, range [0, 1]. */
   volume: number;
   /**
@@ -57,7 +57,7 @@ export interface BaseVoiceInit {
   autoConnect?: boolean;
 }
 
-/** A voice the {@link AudioManager} ticks each frame for spatial updates. */
+/** A voice the {@link AudioSystem} ticks each frame for spatial updates. */
 export interface SpatialVoice {
   readonly ended: boolean;
   _tickSpatial(): void;
@@ -81,7 +81,7 @@ export interface SpatialVoice {
 export abstract class BaseVoice implements Voice, SpatialVoice {
   protected readonly _audioContext: AudioContext;
   protected readonly _output: GainNode;
-  protected readonly _manager: AudioManager;
+  protected readonly _system: AudioSystem;
   protected _bus: AudioBus;
   protected _volume: number;
   protected _ended = false;
@@ -126,7 +126,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     this._audioContext = init.audioContext;
     this._output = init.output;
     this._bus = init.bus;
-    this._manager = init.manager;
+    this._system = init.system;
     this._volume = clamp(init.volume, 0, 1);
     this._spatialConfig = { ...defaultSpatialConfig };
 
@@ -135,10 +135,10 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
       this._connectOutput();
     }
 
-    // Registered here rather than in `AudioManager.play` so that every voice is
+    // Registered here rather than in `AudioSystem.play` so that every voice is
     // covered regardless of how it was constructed - `open()`, sprite playback
     // and pooled replays all go through this constructor. `_finish` deregisters.
-    this._manager._registerVoice(this);
+    this._system._registerVoice(this);
   }
 
   // -------------------------------------------------------------------------
@@ -381,7 +381,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
   public set panningModel(value: PanningModelType | null) {
     this._panningModel = value;
     if (this._panner !== null) {
-      this._panner.panningModel = value ?? this._manager.spatial.panningModel;
+      this._panner.panningModel = value ?? this._system.spatial.panningModel;
     }
   }
 
@@ -578,7 +578,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     return this;
   }
 
-  /** @internal Called once per frame by {@link AudioManager.update} for spatial voices. */
+  /** @internal Called once per frame by {@link AudioSystem.update} for spatial voices. */
   public _tickSpatial(): void {
     if (this._panner === null || this._ended) return;
 
@@ -607,15 +607,15 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
       setPosition: (x: number, y: number, z: number) => void;
     }>;
     const t = this._audioContext.currentTime;
-    const settings = this._manager.spatial;
+    const settings = this._system.spatial;
 
-    // Written RELATIVE to this manager's own listener, which is virtual - the
+    // Written RELATIVE to this system's own listener, which is virtual - the
     // real `AudioContext.listener` is process-wide and stays pinned at the
     // origin, so two Applications cannot fight over it (see
     // {@link AudioListener}). With the listener at the origin the offset vector
     // is all a panner needs: distance, attenuation and the distance model come
     // out mathematically identical to writing absolute positions.
-    const listener = this._manager.listener;
+    const listener = this._system.listener;
     const listenerPosition = listener.position;
     const relativeX = x - listenerPosition.x;
     const relativeY = y - listenerPosition.y;
@@ -683,7 +683,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
       vy = this._velocitySample.y;
     }
 
-    const listener = this._manager.listener;
+    const listener = this._system.listener;
     const dx = x - listener.position.x;
     const dy = y - listener.position.y;
     const dz = z - listener.elevation;
@@ -743,7 +743,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
       setOrientation: (x: number, y: number, z: number) => void;
     }>;
     const t = this._audioContext.currentTime;
-    const settings = this._manager.spatial;
+    const settings = this._system.spatial;
 
     if (panner.orientationX) {
       this._smoothOrientX.write(panner.orientationX, x, t, settings);
@@ -813,7 +813,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
       return;
     }
 
-    const settings = this._manager.spatial;
+    const settings = this._system.spatial;
     const now = this._audioContext.currentTime;
     const open = this._openCutoff();
     const closed = clamp(settings.occlusionCutoff, 20, open);
@@ -893,7 +893,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     if (this._panner !== null || this._ended) return;
 
     const panner = this._audioContext.createPanner();
-    panner.panningModel = this._panningModel ?? this._manager.spatial.panningModel;
+    panner.panningModel = this._panningModel ?? this._system.spatial.panningModel;
     panner.distanceModel = this._spatialConfig.distanceModel;
     panner.refDistance = this._spatialConfig.refDistance;
     panner.maxDistance = this._spatialConfig.maxDistance;
@@ -908,7 +908,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
 
     if (!this._spatialRegistered) {
       this._spatialRegistered = true;
-      this._manager._registerSpatial(this);
+      this._system._registerSpatial(this);
     }
   }
 
@@ -934,7 +934,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     this._smoothOrientZ.reset();
     if (this._spatialRegistered) {
       this._spatialRegistered = false;
-      this._manager._unregisterSpatial(this);
+      this._system._unregisterSpatial(this);
     }
   }
 
@@ -989,10 +989,10 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
 
     if (this._spatialRegistered) {
       this._spatialRegistered = false;
-      this._manager._unregisterSpatial(this);
+      this._system._unregisterSpatial(this);
     }
 
-    this._manager._unregisterVoice(this);
+    this._system._unregisterVoice(this);
 
     this.onEnd.dispatch();
     this.onEnd.destroy();

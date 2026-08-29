@@ -5,7 +5,7 @@
 
 import type { Application } from '#core/Application';
 import { Time } from '#core/units';
-import { InputManager } from '#input/InputManager';
+import { InputSystem } from '#input/InputSystem';
 import { Pointer, PointerState } from '#input/Pointer';
 import { ChannelSize, PointerButton } from '#input/types';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
@@ -60,7 +60,7 @@ const createMockApp = (canvas: HTMLCanvasElement, pixelRatio = 1): Application =
         pointerDistanceThreshold: 10,
       },
     },
-    // `InputManager` reads `scenes.paused` to decide whether a long-press hold
+    // `InputSystem` reads `scenes.paused` to decide whether a long-press hold
     // advances this frame.
     scenes: { paused: false },
     _backingStoreToLogical: (backingStoreX: number, backingStoreY: number): { x: number; y: number } => ({
@@ -70,10 +70,10 @@ const createMockApp = (canvas: HTMLCanvasElement, pixelRatio = 1): Application =
   } as unknown as Application;
 };
 
-const createInputManager = (canvas?: HTMLCanvasElement, pixelRatio = 1): InputManager => {
+const createInputSystem = (canvas?: HTMLCanvasElement, pixelRatio = 1): InputSystem => {
   const c = canvas ?? createCanvas();
 
-  return new InputManager(createMockApp(c, pixelRatio));
+  return new InputSystem(createMockApp(c, pixelRatio));
 };
 
 /** Fire a pointer event on the canvas and return it. */
@@ -111,7 +111,7 @@ const pointerCancel = (canvas: HTMLCanvasElement, init: PointerEventInit): void 
 };
 
 // Channel accessors directly via Pointer namespace consts.
-const ch = (im: InputManager, channel: number): number => (im as unknown as { channels: Float32Array }).channels[channel];
+const ch = (im: InputSystem, channel: number): number => (im as unknown as { channels: Float32Array }).channels[channel];
 
 // ---------------------------------------------------------------------------
 // 1. Single mouse pointer-down sets Active=1, IsMouse=1, IsTouch=0
@@ -120,7 +120,7 @@ const ch = (im: InputManager, channel: number): number => (im as unknown as { ch
 describe('Pointer channel buffer — mouse', () => {
   test('single mouse pointer-down writes Active=1, IsMouse=1, IsTouch=0', () => {
     const canvas = createCanvas();
-    const im = createInputManager(canvas);
+    const im = createInputSystem(canvas);
 
     pointerOver(canvas, { pointerId: 1, pointerType: 'mouse', clientX: 100, clientY: 200, isPrimary: true });
     pointerDown(canvas, {
@@ -147,7 +147,7 @@ describe('Pointer channel buffer — mouse', () => {
 describe('Pointer channel buffer — touch', () => {
   test('single touch pointer-down writes Active=1, IsTouch=1, IsMouse=0', () => {
     const canvas = createCanvas();
-    const im = createInputManager(canvas);
+    const im = createInputSystem(canvas);
 
     pointerOver(canvas, { pointerId: 10, pointerType: 'touch', clientX: 50, clientY: 80, isPrimary: true });
     pointerDown(canvas, { pointerId: 10, pointerType: 'touch', clientX: 50, clientY: 80, isPrimary: true });
@@ -167,7 +167,7 @@ describe('Pointer channel buffer — touch', () => {
 describe('Pointer channel buffer — multi-touch', () => {
   test('two simultaneous touch pointers occupy slot 0 and slot 1', () => {
     const canvas = createCanvas();
-    const im = createInputManager(canvas);
+    const im = createInputSystem(canvas);
 
     // First touch.
     pointerOver(canvas, { pointerId: 1, pointerType: 'touch', clientX: 100, clientY: 100, isPrimary: true });
@@ -191,7 +191,7 @@ describe('Pointer channel buffer — multi-touch', () => {
 describe('Pointer channel buffer — slot reuse', () => {
   test('after slot 0 is released, the next new pointer lands in slot 0', () => {
     const canvas = createCanvas();
-    const im = createInputManager(canvas);
+    const im = createInputSystem(canvas);
 
     // Pointer 1 takes slot 0.
     pointerOver(canvas, { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
@@ -226,7 +226,7 @@ describe('Pointer channel buffer — slot reuse', () => {
 describe('Pointer channel buffer — 16 pointer maximum', () => {
   test('the 17th simultaneous pointer is silently dropped', () => {
     const canvas = createCanvas();
-    const im = createInputManager(canvas);
+    const im = createInputSystem(canvas);
 
     // Allocate all 16 slots.
     for (let i = 1; i <= 16; i++) {
@@ -254,7 +254,7 @@ describe('Pointer channel buffer — 16 pointer maximum', () => {
 describe('Pointer channel buffer — move normalization', () => {
   test('pointermove writes normalized x/y to channels', () => {
     const canvas = createCanvas(800, 600); // 0..1 maps to 0..800 / 0..600
-    const im = createInputManager(canvas);
+    const im = createInputSystem(canvas);
 
     pointerOver(canvas, { pointerId: 1, pointerType: 'mouse', clientX: 0, clientY: 0, isPrimary: true });
     pointerMove(canvas, { pointerId: 1, pointerType: 'mouse', clientX: 400, clientY: 300, isPrimary: true });
@@ -267,7 +267,7 @@ describe('Pointer channel buffer — move normalization', () => {
 
   test('off-canvas coordinates are clamped to [0, 1]', () => {
     const canvas = createCanvas(800, 600);
-    const im = createInputManager(canvas);
+    const im = createInputSystem(canvas);
 
     pointerOver(canvas, { pointerId: 1, pointerType: 'mouse', clientX: 0, clientY: 0, isPrimary: true });
     pointerMove(canvas, { pointerId: 1, pointerType: 'mouse', clientX: -100, clientY: 900, isPrimary: true });
@@ -286,7 +286,7 @@ describe('Pointer channel buffer — move normalization', () => {
 describe('Pointer channel buffer — extended properties', () => {
   test('pressure, width, height, twist, tiltX, tiltY are normalized and written', () => {
     const canvas = createCanvas(800, 600);
-    const im = createInputManager(canvas);
+    const im = createInputSystem(canvas);
 
     pointerOver(canvas, {
       pointerId: 1,
@@ -321,7 +321,7 @@ describe('Pointer channel buffer — extended properties', () => {
 describe('Gesture — pinch', () => {
   test('two touch pointers spreading apart fire onPinch with scale > 1', () => {
     const canvas = createCanvas(800, 600);
-    const im = createInputManager(canvas);
+    const im = createInputSystem(canvas);
 
     const pinchSpy = vi.fn();
 
@@ -338,7 +338,7 @@ describe('Gesture — pinch', () => {
     pointerMove(canvas, { pointerId: 1, pointerType: 'touch', clientX: 100, clientY: 300, isPrimary: true });
 
     // Second move increases the distance → pinch fires. The gesture is queued
-    // onto InputManager's frame journal (to preserve true event order relative
+    // onto InputSystem's frame journal (to preserve true event order relative
     // to the pointer-move phase that produced it), so it only dispatches on
     // the next update(), not synchronously.
     pointerMove(canvas, { pointerId: 1, pointerType: 'touch', clientX: 50, clientY: 300, isPrimary: true });
@@ -357,7 +357,7 @@ describe('Gesture — pinch', () => {
 
   test('two mouse pointers do not fire onPinch (mice cannot pinch)', () => {
     const canvas = createCanvas(800, 600);
-    const im = createInputManager(canvas);
+    const im = createInputSystem(canvas);
 
     const pinchSpy = vi.fn();
 
@@ -382,8 +382,8 @@ describe('Gesture — pinch', () => {
 // ---------------------------------------------------------------------------
 
 describe('Gesture — long press', () => {
-  /** Feed `milliseconds` of engine time through the manager, in 16 ms frames. */
-  const advanceFrames = (im: InputManager, milliseconds: number): void => {
+  /** Feed `milliseconds` of engine time through the system, in 16 ms frames. */
+  const advanceFrames = (im: InputSystem, milliseconds: number): void => {
     let remaining = milliseconds;
 
     while (remaining > 0) {
@@ -396,7 +396,7 @@ describe('Gesture — long press', () => {
 
   test('pointer held 600ms of engine time without moving fires onLongPress', () => {
     const canvas = createCanvas();
-    const im = createInputManager(canvas);
+    const im = createInputSystem(canvas);
 
     const longPressSpy = vi.fn();
 
@@ -422,7 +422,7 @@ describe('Gesture — long press', () => {
 
   test('pointer that moves beyond threshold cancels long-press', () => {
     const canvas = createCanvas();
-    const im = createInputManager(canvas);
+    const im = createInputSystem(canvas);
     const longPressSpy = vi.fn();
 
     im.onLongPress.add(longPressSpy);
@@ -474,11 +474,11 @@ describe('Pointer coordinate mapping — scaled canvas', () => {
     return canvas;
   };
 
-  const getPointer = (im: InputManager, id: number): Pointer => (im as unknown as { pointers: Map<number, Pointer> }).pointers.get(id)!;
+  const getPointer = (im: InputSystem, id: number): Pointer => (im as unknown as { pointers: Map<number, Pointer> }).pointers.get(id)!;
 
   test('constructor maps CSS-display coordinates to design pixels', () => {
     const canvas = createScaledCanvas();
-    const im = createInputManager(canvas);
+    const im = createInputSystem(canvas);
 
     // Display center (200,150) → design center (400,300) - 2x, since the canvas
     // is shown at half its size and design == backing store at pixelRatio 1.
@@ -498,7 +498,7 @@ describe('Pointer coordinate mapping — scaled canvas', () => {
 
   test('pointermove keeps the mapping (handleEvent path)', () => {
     const canvas = createScaledCanvas();
-    const im = createInputManager(canvas);
+    const im = createInputSystem(canvas);
 
     pointerOver(canvas, { pointerId: 1, pointerType: 'mouse', clientX: 0, clientY: 0, isPrimary: true });
     pointerMove(canvas, { pointerId: 1, pointerType: 'mouse', clientX: 100, clientY: 75, isPrimary: true });
@@ -541,11 +541,11 @@ describe('Pointer coordinate mapping — pixelRatio > 1', () => {
     return canvas;
   };
 
-  const getPointer = (im: InputManager, id: number): Pointer => (im as unknown as { pointers: Map<number, Pointer> }).pointers.get(id)!;
+  const getPointer = (im: InputSystem, id: number): Pointer => (im as unknown as { pointers: Map<number, Pointer> }).pointers.get(id)!;
 
   test('pointer position is in design pixels regardless of pixelRatio', () => {
     const canvas = createDprCanvas();
-    const im = createInputManager(canvas, 2);
+    const im = createInputSystem(canvas, 2);
 
     // Display center (400,300) → design center (400,300), not the physical
     // backing-store center (800,600).
@@ -566,8 +566,8 @@ describe('Pointer coordinate mapping — pixelRatio > 1', () => {
 
 // ---------------------------------------------------------------------------
 // 12. Direct Pointer unit tests - construct the class standalone (bypassing
-//     InputManager) for precise control over getters, defensive branches,
-//     and destroy()/handleEnter() paths that InputManager never exercises.
+//     InputSystem) for precise control over getters, defensive branches,
+//     and destroy()/handleEnter() paths that InputSystem never exercises.
 // ---------------------------------------------------------------------------
 
 describe('Pointer — direct construction and getters', () => {

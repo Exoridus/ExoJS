@@ -1,6 +1,6 @@
 {
   "title": "AnimatedSprite",
-  "description": "A Sprite that advances through a sequence of texture-frame Rectangles over time to produce frame-based animation. Multiple named clips can be registered via defineClip or the constructor. Call play to start a clip. Playback then advances by itself: a playing sprite attached to an Application's scene tree registers with that application's AnimationManager and is ticked once per frame, with no `update()` call of your own. A sprite that is never attached to a tree - one drawn immediate-mode via `context.render(sprite)`, say - has no owning application to reach, so drive it by calling update with the frame delta in **seconds** yourself. The `onFrame` signal fires on every frame advance and `onComplete` fires when a clip completes its final AnimatedSpriteClipDefinition.repeat cycle. Use AnimatedSprite.fromSpritesheet to create an instance directly from a Spritesheet's named animations.",
+  "description": "A Sprite that advances through a sequence of texture-frame Rectangles over time to produce frame-based animation. Multiple named clips can be registered via defineClip or the constructor. Call play to start a clip. Playback then advances by itself: a playing sprite attached to an Application's scene tree registers with that application's AnimationSystem and is ticked once per frame, with no `update()` call of your own. A sprite that is never attached to a tree - one drawn immediate-mode via `context.render(sprite)`, say - has no owning application to reach, so drive it by calling update with the frame delta in **seconds** yourself. The `onFrame` signal fires on every frame advance and `onComplete` fires when a clip completes its final AnimatedSpriteClipDefinition.repeat cycle. Use AnimatedSprite.fromSpritesheet to create an instance directly from a Spritesheet's named animations.",
   "symbol": "AnimatedSprite",
   "kind": "class",
   "subsystem": "rendering",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "A Sprite that advances through a sequence of texture-frame Rectangles over time to produce frame-based animation.",
-        "Multiple named clips can be registered via defineClip or the constructor. Call play to start a clip. Playback then advances by itself: a playing sprite attached to an Application's scene tree registers with that application's AnimationManager and is ticked once per frame, with no `update()` call of your own. A sprite that is never attached to a tree - one drawn immediate-mode via `context.render(sprite)`, say - has no owning application to reach, so drive it by calling update with the frame delta in **seconds** yourself.",
+        "Multiple named clips can be registered via defineClip or the constructor. Call play to start a clip. Playback then advances by itself: a playing sprite attached to an Application's scene tree registers with that application's AnimationSystem and is ticked once per frame, with no `update()` call of your own. A sprite that is never attached to a tree - one drawn immediate-mode via `context.render(sprite)`, say - has no owning application to reach, so drive it by calling update with the frame delta in **seconds** yourself.",
         "The `onFrame` signal fires on every frame advance and `onComplete` fires when a clip completes its final AnimatedSpriteClipDefinition.repeat cycle.",
         "Use AnimatedSprite.fromSpritesheet to create an instance directly from a Spritesheet's named animations."
       ],
@@ -1058,7 +1058,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Start playing the named clip. By default restarts from frame 0; pass { restart: false } to resume from the current frame if the same clip is already active. Optionally overrides the clip's repeat setting. Safe to call before the sprite is attached to a scene tree (in a constructor, ahead of addChild): the sprite simply has no owning AnimationManager to register with yet, and joins one the moment it is attached."
+          "description": "Start playing the named clip. By default restarts from frame 0; pass { restart: false } to resume from the current frame if the same clip is already active. Optionally overrides the clip's repeat setting. Safe to call before the sprite is attached to a scene tree (in a constructor, ahead of addChild): the sprite simply has no owning AnimationSystem to register with yet, and joins one the moment it is attached."
         },
         {
           "name": "project",
@@ -2139,7 +2139,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Advance playback by deltaSeconds - seconds, the same unit as Tween.update, and the unit a Time delta reports through delta.seconds. Clip authoring stays in its own units: AnimatedSpriteClipDefinition.frameDurations is still milliseconds per frame and fps is still frames per second; only this argument is seconds. Called automatically once per frame by the owning AnimationManager for a playing, attached sprite - call it yourself only for a sprite that is not part of an application's scene tree, or to step playback manually. Dispatches onFrame for each frame boundary crossed and onComplete when the clip completes its final AnimatedSpriteClipDefinition.repeat cycle."
+          "description": "Advance playback by deltaSeconds - seconds, the same unit as Tween.update, and the unit a Time delta reports through delta.seconds. Clip authoring stays in its own units: AnimatedSpriteClipDefinition.frameDurations is still milliseconds per frame and fps is still frames per second; only this argument is seconds. Called automatically once per frame by the owning AnimationSystem for a playing, attached sprite - call it yourself only for a sprite that is not part of an application's scene tree, or to step playback manually. Dispatches onFrame for each frame boundary crossed and onComplete when the clip completes its final AnimatedSpriteClipDefinition.repeat cycle."
         },
         {
           "name": "updateBounds",

@@ -1,5 +1,5 @@
 import type { Tween } from './Tween';
-import type { TweenManager } from './TweenManager';
+import type { TweenSystem } from './TweenSystem';
 import { TweenState } from './types';
 
 interface TweenStage {
@@ -38,8 +38,8 @@ export enum TweenSequencerState {
  * Delay stages inserted via {@link TweenSequencer.wait} create a timed pause
  * between stages without needing a dummy tween.
  *
- * The sequencer integrates with {@link TweenManager} via
- * {@link TweenManager.addTicker} so it is driven automatically each frame.
+ * The sequencer integrates with {@link TweenSystem} via
+ * {@link TweenSystem.addTicker} so it is driven automatically each frame.
  * It can also be used stand-alone by calling {@link TweenSequencer.update}
  * manually - in that mode the sequencer also advances its child tweens.
  *
@@ -58,7 +58,7 @@ export enum TweenSequencerState {
 export class TweenSequencer {
   private readonly _stages: Stage[] = [];
   private _state: TweenSequencerState = TweenSequencerState.Idle;
-  private _manager: TweenManager | null;
+  private _system: TweenSystem | null;
 
   /** Index into `_stages` for the current pass (0-based). */
   private _currentStageIndex = 0;
@@ -79,19 +79,19 @@ export class TweenSequencer {
   private _onCompleteCb: (() => void) | null = null;
   private _startFired = false;
 
-  public constructor(manager?: TweenManager) {
-    this._manager = manager ?? null;
+  public constructor(system?: TweenSystem) {
+    this._system = system ?? null;
   }
 
   /**
-   * Attach this sequencer to a manager after construction - used by
+   * Attach this sequencer to a system after construction - used by
    * `SceneTweens` to bind a cold (buffered) sequencer, constructed without
-   * a manager while its owning scope was dormant, once the scope becomes
-   * `Active`. Mirrors {@link Tween._attachManager}.
+   * a system while its owning scope was dormant, once the scope becomes
+   * `Active`. Mirrors {@link Tween._attachSystem}.
    * @internal
    */
-  public _attachManager(manager: TweenManager): void {
-    this._manager = manager;
+  public _attachSystem(system: TweenSystem): void {
+    this._system = system;
   }
 
   // ── State ────────────────────────────────────────────────────────────────
@@ -175,7 +175,7 @@ export class TweenSequencer {
 
   /**
    * Start (or restart) the sequence from stage 0. Resets all internal state
-   * and re-registers with the manager if one is attached.
+   * and re-registers with the system if one is attached.
    */
   public start(): this {
     this._state = TweenSequencerState.Active;
@@ -183,7 +183,7 @@ export class TweenSequencer {
     this._direction = 1;
     this._repeatCount = this._repeatTotal;
     this._startFired = false;
-    this._manager?.addTicker(this);
+    this._system?.addTicker(this);
     this._startCurrentStage();
     return this;
   }
@@ -212,13 +212,13 @@ export class TweenSequencer {
   /**
    * Stop the sequence without finishing. Active tweens are stopped.
    * {@link TweenSequencer.onComplete} does NOT fire. The sequencer is removed
-   * from its manager if one is assigned.
+   * from its system if one is assigned.
    */
   public stop(): this {
     if (this._state === TweenSequencerState.Active || this._state === TweenSequencerState.Paused) {
       this._state = TweenSequencerState.Stopped;
       this._stopCurrentStageTweens();
-      this._manager?.removeTicker(this);
+      this._system?.removeTicker(this);
     }
     return this;
   }
@@ -227,8 +227,8 @@ export class TweenSequencer {
 
   /**
    * Advance the sequencer by `deltaSeconds`. Called automatically by the
-   * attached {@link TweenManager} each frame. When used stand-alone (no
-   * manager), call this manually and child tweens will also be advanced.
+   * attached {@link TweenSystem} each frame. When used stand-alone (no
+   * system), call this manually and child tweens will also be advanced.
    */
   public update(deltaSeconds: number): void {
     if (this._state !== TweenSequencerState.Active) return;
@@ -253,8 +253,8 @@ export class TweenSequencer {
         this._advanceStage();
       }
     } else {
-      // In stand-alone mode (no manager), the sequencer ticks tweens itself.
-      if (this._manager === null) {
+      // In stand-alone mode (no system), the sequencer ticks tweens itself.
+      if (this._system === null) {
         for (const tween of stage.tweens) {
           if (tween.state === TweenState.Active) {
             tween.update(deltaSeconds);
@@ -291,11 +291,11 @@ export class TweenSequencer {
 
     if (stage.type === 'tweens') {
       for (const tween of stage.tweens) {
-        if (this._manager !== null) {
+        if (this._system !== null) {
           // Bind only - a stage tween may have been built stand-alone and know
-          // no manager yet. The `start()` below is what enters it into the
-          // update list, so the manager ticks it each frame.
-          tween._attachManager(this._manager);
+          // no system yet. The `start()` below is what enters it into the
+          // update list, so the system ticks it each frame.
+          tween._attachSystem(this._system);
         }
         tween.start();
       }
@@ -331,7 +331,7 @@ export class TweenSequencer {
 
   private _finish(): void {
     this._state = TweenSequencerState.Complete;
-    this._manager?.removeTicker(this);
+    this._system?.removeTicker(this);
     this._onCompleteCb?.();
   }
 

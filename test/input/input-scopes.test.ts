@@ -12,7 +12,7 @@ import { ButtonAction } from '#input/actions/ButtonAction';
 import { InputScope } from '#input/actions/InputScope';
 import type { ActionSample, ChannelEvent, ChannelEventBatch } from '#input/actions/types';
 import { VectorAction } from '#input/actions/VectorAction';
-import type { ActionScopeHost } from '#input/InputManager';
+import type { ActionScopeHost } from '#input/InputSystem';
 import { ChannelSize, Keyboard } from '#input/types';
 
 interface Harness {

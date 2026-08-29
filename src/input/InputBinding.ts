@@ -76,7 +76,7 @@ interface InternalChannelDetacher {
  * One subscription to one or more input channels. Tracks active state, fires
  * the {@link onStart} / {@link onActive} / {@link onStop} / {@link onTrigger}
  * Signals each frame, and registers itself with whichever owner created it
- * (typically an {@link InputManager}, {@link Gamepad}, or scene-bound
+ * (typically an {@link InputSystem}, {@link Gamepad}, or scene-bound
  * proxy).
  *
  * Construct via the owner's `onStart` / `onActive` / `onStop` /
@@ -131,7 +131,7 @@ export class InputBinding {
   /**
    * Values of this binding's resolved channels at the exact construction
    * boundary, in the same order as {@link channels}. Supplied by the
-   * {@link InputManager} when it creates a binding; direct/internal callers
+   * {@link InputSystem} when it creates a binding; direct/internal callers
    * may omit it and retain the legacy watermark reconstruction fallback.
    */
   private readonly _constructionBaseline: Float32Array | null;
@@ -167,7 +167,7 @@ export class InputBinding {
 
   /**
    * Read the latest channel state and dispatch the appropriate Signals.
-   * Called once per frame by the owning manager.
+   * Called once per frame by the owning system.
    *
    * `batches`, when supplied, is replayed in true order, evaluating the
    * aggregate value once per whole batch (see {@link ChannelEventBatch}'s
@@ -244,7 +244,7 @@ export class InputBinding {
    * replay) does NOT touch, directly from the live buffer - with no
    * synthetic edge, exactly like a plain live-value read. A channel `relevant`
    * DOES touch is seeded from the exact construction-time snapshot when the
-   * real InputManager supplied one. That closes the case a watermark alone
+   * real InputSystem supplied one. That closes the case a watermark alone
    * cannot reconstruct: a source held since a PREVIOUS frame (there is no
    * stale press batch left in this frame's log), followed by its first
    * post-construction release batch. Legacy/direct callers without a snapshot
@@ -410,7 +410,7 @@ export class InputBinding {
    * because a tracking owner like `SceneInputs` unbound it first on scene
    * teardown) is a no-op, so mixing `using` with a manual `unbind()` call in
    * either order is safe. Only caller-owned binding handles expose this
-   * protocol; engine-owned managers and nodes do not become
+   * protocol; engine-owned systems and nodes do not become
    * caller-disposable.
    *
    * Runtime `using` support requires the environment to provide a real

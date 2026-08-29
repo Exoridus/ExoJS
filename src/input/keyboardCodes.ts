@@ -18,7 +18,7 @@ import { Keyboard } from './types';
  *
  * A modifier resolves to its SIDE-SPECIFIC channel here (`'ShiftLeft'` →
  * {@link Keyboard.ShiftLeft}, not the aggregate {@link Keyboard.Shift}) -
- * {@link InputManager} derives the aggregate from it via
+ * {@link InputSystem} derives the aggregate from it via
  * {@link modifierChannelInfo}. The legacy `OSLeft`/`OSRight` spellings some
  * browsers still emit alias onto {@link Keyboard.MetaLeft}/
  * {@link Keyboard.MetaRight}. Codes with no entry here (media keys,
@@ -166,11 +166,11 @@ const channelsByCode = new Map<string, Keyboard>([
  * used.
  *
  * For a modifier this returns the SIDE-SPECIFIC channel (`'ShiftLeft'` →
- * {@link Keyboard.ShiftLeft}), never the aggregate - {@link InputManager}
+ * {@link Keyboard.ShiftLeft}), never the aggregate - {@link InputSystem}
  * writes the aggregate channel alongside it on every keydown/keyup.
  *
  * Useful in a rebinding UI that has a raw DOM event rather than an engine
- * channel; {@link InputManager.onKeyDown} already reports the resolved channel.
+ * channel; {@link InputSystem.onKeyDown} already reports the resolved channel.
  *
  * @example
  * ```ts
@@ -185,7 +185,7 @@ export const keyboardChannelFromCode = (code: string): Keyboard | undefined => c
 
 /**
  * A modifier's side-specific channel's aggregate and sibling - the two facts
- * {@link InputManager} needs to keep both channel kinds in sync. `aggregate`
+ * {@link InputSystem} needs to keep both channel kinds in sync. `aggregate`
  * is the OR-channel written alongside a side channel (`ShiftLeft` ->
  * `Shift`). `sibling` is the other physical side of the same modifier,
  * consulted on release: the aggregate is set to the sibling's CURRENT value
@@ -202,7 +202,7 @@ interface ModifierChannelInfo {
 /**
  * Side-specific modifier channel → {@link ModifierChannelInfo}. Every
  * modifier side channel from {@link channelsByCode} has an entry; every other
- * channel (non-modifier keys) has none, which is how {@link InputManager}
+ * channel (non-modifier keys) has none, which is how {@link InputSystem}
  * tells a plain key apart from a modifier side.
  */
 const modifierChannelInfo = new Map<Keyboard, ModifierChannelInfo>([

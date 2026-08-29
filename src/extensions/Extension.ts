@@ -91,7 +91,7 @@ export interface Extension {
    * overlay appended next to the canvas.
    *
    * Runs once per Application, as the final construction step: every core
-   * manager and every materialised binding already exists, and dependencies
+   * system and every materialised binding already exists, and dependencies
    * listed in {@link Extension.dependencies} are installed first.
    *
    * Return an {@link ExtensionDisposer} to undo it. The Application holds the

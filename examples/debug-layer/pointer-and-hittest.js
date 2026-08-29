@@ -16,7 +16,7 @@ class PointerAndHittestScene extends Scene {
       sprite.interactive = true;
       sprite.draggable = true;
       sprite.setTint([new Color(255, 130, 130), new Color(130, 255, 170), new Color(140, 190, 255), new Color(255, 230, 130), new Color(220, 140, 255)][i]);
-      // The hitTest layer (and the interaction manager itself) walk the
+      // The hitTest layer (and the interaction system itself) walk the
       // scene graph, so interactive nodes must live under scene.root.
       this.root.addChild(sprite);
       this.sprites.push(sprite);

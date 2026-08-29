@@ -147,7 +147,7 @@ describe('SceneInteraction', () => {
 });
 
 describe('SceneInteraction.scope()', () => {
-  test('capture() pushes the root onto the manager capture stack', () => {
+  test('capture() pushes the root onto the system capture stack', () => {
     const app = createAppStub();
     const interaction = new SceneInteraction(app, () => SceneState.Active);
     const root = fakeRoot();
@@ -213,7 +213,7 @@ describe('SceneInteraction.scope()', () => {
 
     scopeA.release(); // out-of-order: A is at the bottom, B and C are above it
 
-    // Exactly one targeted popScope call for A's own token - InteractionManager
+    // Exactly one targeted popScope call for A's own token - InteractionSystem
     // finds and splices that entry itself, wherever it sits; B and C, still
     // active, are never popped or re-pushed to make room for it.
     expect(app.interaction.popScope).toHaveBeenCalledTimes(1);
@@ -268,7 +268,7 @@ describe('SceneInteraction.scope()', () => {
     vi.mocked(app.interaction.popScope).mockClear();
     vi.mocked(app.interaction.pushScope).mockClear();
 
-    scopeB.release(); // out-of-order release while suspended: must not touch the live manager at all
+    scopeB.release(); // out-of-order release while suspended: must not touch the live system at all
 
     expect(app.interaction.popScope).not.toHaveBeenCalled();
     expect(app.interaction.pushScope).not.toHaveBeenCalled();

@@ -28,7 +28,7 @@ export type AudioListenerTarget = SceneNode | View | { x: number; y: number } | 
  * class therefore pins the real WebAudio listener at the origin (orientation
  * forward = -Z, up = +Y for 2D scenes, identical for every app) and each
  * spatial {@link BaseVoice} writes its panner position **relative** to its own
- * manager's listener (`source − listener`). Distance, attenuation and the
+ * system's listener (`source − listener`). Distance, attenuation and the
  * distance model are unaffected: only the offset vector matters to a panner
  * whose listener sits at the origin.
  *
@@ -41,7 +41,7 @@ export type AudioListenerTarget = SceneNode | View | { x: number; y: number } | 
  * than snapping the listener once - and a moving listener costs one
  * `setTargetAtTime` per spatial voice per frame instead of three in total.
  *
- * Owned by {@link AudioManager}; one instance per Application. `velocity` feeds
+ * Owned by {@link AudioSystem}; one instance per Application. `velocity` feeds
  * the Doppler calculation on every spatial {@link BaseVoice} - explicit when
  * set, else auto-derived each frame from the listener's own position delta
  * (same fallback {@link BaseVoice.velocity} uses). That path is unaffected by
@@ -80,7 +80,7 @@ export class AudioListener {
 
   /**
    * @param settings - Shared position-smoothing settings (normally
-   *   `app.audio.spatial`, supplied by {@link AudioManager}). Defaults to a
+   *   `app.audio.spatial`, supplied by {@link AudioSystem}). Defaults to a
    *   fresh settings object with the standard 20 ms time constant when omitted.
    */
   public constructor(settings: SpatialSmoothingSettings = createSpatialSmoothingSettings()) {
@@ -102,7 +102,7 @@ export class AudioListener {
   }
 
   /**
-   * Internal: called by AudioManager.update() once per frame. Refreshes
+   * Internal: called by AudioSystem.update() once per frame. Refreshes
    * {@link AudioListener.position} (and the derived velocity) from
    * {@link AudioListener.target}. Deliberately writes nothing to the WebAudio
    * listener - that one is global and stays pinned at the origin; the voices
@@ -186,7 +186,7 @@ export class AudioListener {
     }
 
     // Pin the global listener at the origin, once. Voices supply their position
-    // relative to their own manager's listener, so this never moves again - and
+    // relative to their own system's listener, so this never moves again - and
     // a second Application writing the same zeroes here cannot disturb the first.
     if (listener.positionX && listener.positionY && listener.positionZ) {
       listener.positionX.setValueAtTime(0, t);

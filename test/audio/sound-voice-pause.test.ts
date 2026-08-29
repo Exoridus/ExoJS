@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import { getAudioContext } from '#audio/audio-context';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import type { Pausable } from '#audio/Playable';
 import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
@@ -80,7 +80,7 @@ const setupPannerSpy = (): { panners: PannerNode[]; restore: () => void } => {
 };
 
 /** A voice over the sprite window [2, 3] of a 10s buffer. */
-const playClipVoice = (manager: AudioManager, sound: Sound): SoundVoice & Pausable => manager.play(sound.sprite('hit')) as SoundVoice & Pausable;
+const playClipVoice = (system: AudioSystem, sound: Sound): SoundVoice & Pausable => system.play(sound.sprite('hit')) as SoundVoice & Pausable;
 
 describe('SoundVoice — Pausable', () => {
   beforeEach(() => setCurrentTime(0));
@@ -95,9 +95,9 @@ describe('SoundVoice — Pausable', () => {
   // ambience kept playing straight through scene.pause()/suspend().
   test('pause() retires the running source without ending the voice', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { sprites: { hit: { start: 2, end: 3 } } });
-    const voice = playClipVoice(manager, sound);
+    const voice = playClipVoice(system, sound);
 
     setCurrentTime(0.25);
     voice.pause();
@@ -115,9 +115,9 @@ describe('SoundVoice — Pausable', () => {
 
   test('time freezes while paused and resumes from exactly there', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { sprites: { hit: { start: 2, end: 3 } } });
-    const voice = playClipVoice(manager, sound);
+    const voice = playClipVoice(system, sound);
 
     setCurrentTime(0.25);
     voice.pause();
@@ -143,9 +143,9 @@ describe('SoundVoice — Pausable', () => {
 
   test('pause() and resume() are idempotent', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { sprites: { hit: { start: 2, end: 3 } } });
-    const voice = playClipVoice(manager, sound);
+    const voice = playClipVoice(system, sound);
 
     voice.resume(); // not paused — no-op
     expect(factory.sources).toHaveLength(1);
@@ -166,9 +166,9 @@ describe('SoundVoice — Pausable', () => {
   // stay inert while paused - none of them may resurrect audible playback.
   test('seek() while paused moves the resume point without starting a source', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { sprites: { hit: { start: 2, end: 3 } } });
-    const voice = playClipVoice(manager, sound);
+    const voice = playClipVoice(system, sound);
 
     voice.pause();
     voice.seek(0.5);
@@ -185,9 +185,9 @@ describe('SoundVoice — Pausable', () => {
 
   test('flipping loop while paused does not start a source, and the resumed source honours it', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { sprites: { hit: { start: 2, end: 3 } } });
-    const voice = playClipVoice(manager, sound);
+    const voice = playClipVoice(system, sound);
 
     setCurrentTime(0.25);
     voice.pause();
@@ -207,9 +207,9 @@ describe('SoundVoice — Pausable', () => {
 
   test('playbackRate and detune while paused are stored, not written to the retired source', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { sprites: { hit: { start: 2, end: 3 } } });
-    const voice = playClipVoice(manager, sound);
+    const voice = playClipVoice(system, sound);
 
     voice.pause();
     const retired = factory.sources[0];
@@ -234,10 +234,10 @@ describe('SoundVoice — Pausable', () => {
 
   test('the Doppler tick does not write to a paused voice', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
-    manager.spatial.dopplerFactor = 1;
+    const system = new AudioSystem();
+    system.spatial.dopplerFactor = 1;
     const sound = new Sound(createAudioBufferStub(), { sprites: { hit: { start: 2, end: 3 } } });
-    const voice = playClipVoice(manager, sound);
+    const voice = playClipVoice(system, sound);
 
     voice.position = { x: 100, y: 0 };
     voice.velocity = { x: 200, y: 0 };
@@ -247,7 +247,7 @@ describe('SoundVoice — Pausable', () => {
     retired.playbackRate.setTargetAtTime.mockClear();
 
     setCurrentTime(0.1);
-    manager.preUpdate(Time.seconds(0.1));
+    system.preUpdate(Time.seconds(0.1));
 
     expect(retired.playbackRate.setTargetAtTime).not.toHaveBeenCalled();
     expect(factory.sources).toHaveLength(1);
@@ -258,9 +258,9 @@ describe('SoundVoice — Pausable', () => {
 
   test('stop() while paused ends the voice and resume() cannot revive it', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { sprites: { hit: { start: 2, end: 3 } } });
-    const voice = playClipVoice(manager, sound);
+    const voice = playClipVoice(system, sound);
 
     voice.pause();
     voice.stop();
@@ -278,14 +278,14 @@ describe('SoundVoice — Pausable', () => {
   // source can be past its window end while the callback is still in flight.
   // `pause()` retires the source and clears `onended` - which used to strand
   // the voice as permanently `paused` with `ended === false`, holding its pool
-  // slot, its entry in the manager's voice registry and its place in
+  // slot, its entry in the system's voice registry and its place in
   // `SceneAudio._suspended` forever. The mocks here never auto-fire `onended`,
   // which is exactly that in-flight window.
   test('pausing a source that already reached its window end finishes the voice instead', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { sprites: { hit: { start: 2, end: 3 } } });
-    const voice = playClipVoice(manager, sound);
+    const voice = playClipVoice(system, sound);
     const onEnd = vi.fn();
     voice.onEnd.add(onEnd);
 
@@ -297,7 +297,7 @@ describe('SoundVoice — Pausable', () => {
 
     expect(voice.ended).toBe(true);
     expect(voice.paused).toBe(false);
-    // `_finish` is what releases the pool slot and the manager registry.
+    // `_finish` is what releases the pool slot and the system registry.
     expect(onEnd).toHaveBeenCalledTimes(1);
 
     factory.restore();
@@ -306,9 +306,9 @@ describe('SoundVoice — Pausable', () => {
 
   test('a late onended can no longer resurrect or double-finish the voice', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { sprites: { hit: { start: 2, end: 3 } } });
-    const voice = playClipVoice(manager, sound);
+    const voice = playClipVoice(system, sound);
     const onEnd = vi.fn();
     voice.onEnd.add(onEnd);
 
@@ -327,9 +327,9 @@ describe('SoundVoice — Pausable', () => {
 
   test('a looping voice is never mistaken for one that reached its end', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { sprites: { hit: { start: 2, end: 3, loop: true } } });
-    const voice = playClipVoice(manager, sound);
+    const voice = playClipVoice(system, sound);
 
     setCurrentTime(50); // many wraps through the 1s clip
     voice.pause();
@@ -344,9 +344,9 @@ describe('SoundVoice — Pausable', () => {
   test('a paused voice keeps its spatial routing and pans correctly after resume', () => {
     const factory = setupSourceSpy();
     const panners = setupPannerSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { sprites: { hit: { start: 2, end: 3 } } });
-    const voice = playClipVoice(manager, sound);
+    const voice = playClipVoice(system, sound);
 
     voice.pause();
     voice.position = { x: 50, y: 20 }; // inserts the panner while paused

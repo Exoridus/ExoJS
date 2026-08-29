@@ -3,7 +3,7 @@ import type { MockInstance } from 'vitest';
 import { getAudioContext } from '#audio/audio-context';
 import { AudioGenerator } from '#audio/AudioGenerator';
 import type { AudioGeneratorVoice } from '#audio/AudioGeneratorVoice';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import { Envelope } from '#audio/Envelope';
 
 // ---------------------------------------------------------------------------
@@ -60,7 +60,7 @@ const createGainMock = (): MockGainNode => ({
   disconnect: vi.fn(),
 });
 
-/** Spy on createOscillator / createGain / createPanner. Create the AudioManager BEFORE calling this. */
+/** Spy on createOscillator / createGain / createPanner. Create the AudioSystem BEFORE calling this. */
 const setupSpy = (): {
   oscillators: MockOscillatorNode[];
   gains: MockGainNode[];
@@ -108,11 +108,11 @@ describe('AudioGeneratorVoice', () => {
   // ---- frequency / type / playbackRate / detune getters ----
 
   test('frequency getter reflects the snapshotted value', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator({ frequency: 523 });
 
-    const voice = manager.play(gen) as AudioGeneratorVoice;
+    const voice = system.play(gen) as AudioGeneratorVoice;
     expect(voice.frequency).toBe(523);
 
     spy.restore();
@@ -120,11 +120,11 @@ describe('AudioGeneratorVoice', () => {
   });
 
   test('type getter/setter reflects and updates the live oscillator type', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator({ type: 'sawtooth' });
 
-    const voice = manager.play(gen) as AudioGeneratorVoice;
+    const voice = system.play(gen) as AudioGeneratorVoice;
     expect(voice.type).toBe('sawtooth');
 
     voice.type = 'square';
@@ -136,11 +136,11 @@ describe('AudioGeneratorVoice', () => {
   });
 
   test('playbackRate getter/setter is stored but inert (no oscillator API to drive)', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator();
 
-    const voice = manager.play(gen) as AudioGeneratorVoice;
+    const voice = system.play(gen) as AudioGeneratorVoice;
     expect(voice.playbackRate).toBe(1);
 
     voice.playbackRate = 2.5;
@@ -151,11 +151,11 @@ describe('AudioGeneratorVoice', () => {
   });
 
   test('detune getter reflects the current value after the setter updates it', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator({ detune: 10 });
 
-    const voice = manager.play(gen) as AudioGeneratorVoice;
+    const voice = system.play(gen) as AudioGeneratorVoice;
     expect(voice.detune).toBe(10);
 
     voice.detune = 250;
@@ -167,11 +167,11 @@ describe('AudioGeneratorVoice', () => {
   });
 
   test('type setter still updates the descriptor snapshot after the voice ends (but not the dead oscillator)', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator();
 
-    const voice = manager.play(gen) as AudioGeneratorVoice;
+    const voice = system.play(gen) as AudioGeneratorVoice;
     voice.stop();
     expect(voice.ended).toBe(true);
 
@@ -187,11 +187,11 @@ describe('AudioGeneratorVoice', () => {
   });
 
   test('frequency setter still updates the snapshot after end but skips the dead oscillator', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator({ frequency: 440 });
 
-    const voice = manager.play(gen) as AudioGeneratorVoice;
+    const voice = system.play(gen) as AudioGeneratorVoice;
     voice.stop();
     spy.oscillators[0].frequency.setTargetAtTime.mockClear();
 
@@ -205,11 +205,11 @@ describe('AudioGeneratorVoice', () => {
   });
 
   test('detune setter still updates the snapshot after end but skips the dead oscillator', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator({ detune: 0 });
 
-    const voice = manager.play(gen) as AudioGeneratorVoice;
+    const voice = system.play(gen) as AudioGeneratorVoice;
     voice.stop();
     spy.oscillators[0].detune.setTargetAtTime.mockClear();
 
@@ -225,11 +225,11 @@ describe('AudioGeneratorVoice', () => {
   // ---- oscillator natural end (onended) ----
 
   test('the oscillator natural end (onended) finishes the voice', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator();
 
-    const voice = manager.play(gen) as AudioGeneratorVoice;
+    const voice = system.play(gen) as AudioGeneratorVoice;
     expect(voice.ended).toBe(false);
 
     spy.oscillators[0].onended?.();
@@ -243,11 +243,11 @@ describe('AudioGeneratorVoice', () => {
   // ---- stop(): double-stop is a no-op ----
 
   test('calling stop() twice is idempotent', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator();
 
-    const voice = manager.play(gen) as AudioGeneratorVoice;
+    const voice = system.play(gen) as AudioGeneratorVoice;
     voice.stop();
     expect(spy.oscillators[0].stop).toHaveBeenCalledTimes(1);
 
@@ -262,13 +262,13 @@ describe('AudioGeneratorVoice', () => {
   // ---- stop(fadeMs): delegates to the base fade-out path, bypassing the envelope release ----
 
   test('stop(fadeMs) with fadeMs > 0 fades out via BaseVoice instead of releasing the envelope', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const env = new Envelope({ releaseMs: 500 });
     const releaseSpy = vi.spyOn(env, 'release');
     const gen = new AudioGenerator({ envelope: env });
 
-    const voice = manager.play(gen) as AudioGeneratorVoice;
+    const voice = system.play(gen) as AudioGeneratorVoice;
     voice.stop(200);
 
     // The envelope's own release() is bypassed entirely for a faded stop.
@@ -285,13 +285,13 @@ describe('AudioGeneratorVoice', () => {
   // ---- spatialization routes the envelope gain through the panner ----
 
   test('setting voice.position spatializes the generator voice through the panner', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const ctx = getAudioContext();
     const pannerSpy = vi.spyOn(ctx, 'createPanner');
     const gen = new AudioGenerator();
 
-    const voice = manager.play(gen) as AudioGeneratorVoice;
+    const voice = system.play(gen) as AudioGeneratorVoice;
     voice.position = { x: 3, y: 4 };
 
     expect(pannerSpy).toHaveBeenCalledTimes(1);

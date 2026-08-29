@@ -1,15 +1,15 @@
 /**
- * Real end-to-end ordering guarantees spanning `InputManager` and
- * `InteractionManager` together: a single global chronological journal
+ * Real end-to-end ordering guarantees spanning `InputSystem` and
+ * `InteractionSystem` together: a single global chronological journal
  * across every tracked pointer AND every context-menu request, driven by
  * real `PointerEvent`/`contextmenu` dispatches through a real `<canvas>` via
- * `BrowserPlatform`, into a real `InputManager`, and (for the
- * `InteractionManager` cases) a real `InteractionManager` attached to a real
+ * `BrowserPlatform`, into a real `InputSystem`, and (for the
+ * `InteractionSystem` cases) a real `InteractionSystem` attached to a real
  * `Scene` root - not manual `app.input.onPointerX.dispatch(...)` calls in
  * isolation. Covers the four confirmed defects this file's tests were
  * written against:
  *
- *  - Bug A: `InputManager` used to dispatch one pointer's WHOLE per-frame
+ *  - Bug A: `InputSystem` used to dispatch one pointer's WHOLE per-frame
  *    phase list before moving to the next pointer's, silently losing true
  *    cross-pointer arrival order (`P1 Down -> P2 Down -> P1 Up` became
  *    `P1 Down, P1 Up, P2 Down`).
@@ -17,7 +17,7 @@
  *    flushed after every pointer phase in a fixed type-order - a second
  *    request in the same frame silently clobbered the first, and neither
  *    ever interleaved with a pointer phase in true arrival order.
- *  - Bug C: `InteractionManager` re-grouped `InputManager`'s (now correctly
+ *  - Bug C: `InteractionSystem` re-grouped `InputSystem`'s (now correctly
  *    ordered) signals back into per-pointer buckets internally, losing the
  *    same cross-pointer ordering a second time even once Bug A was fixed.
  *  - Bug D: a swipe (or any `Up` that does not produce a tap) left
@@ -29,8 +29,8 @@ import type { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
 import { SceneState } from '#core/SceneState';
 import { Time } from '#core/units';
-import { InputManager } from '#input/InputManager';
-import { InteractionManager } from '#input/InteractionManager';
+import { InputSystem } from '#input/InputSystem';
+import { InteractionSystem } from '#input/InteractionSystem';
 import type { Pointer } from '#input/Pointer';
 import { Rectangle } from '#math/Rectangle';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
@@ -68,9 +68,9 @@ class TestSprite extends Drawable {
 }
 
 // ---------------------------------------------------------------------------
-// Harness: a real InputManager + real InteractionManager, both wired to a
+// Harness: a real InputSystem + real InteractionSystem, both wired to a
 // real Scene root, driven by real dispatched events through a real canvas
-// (mirrors test/input/input-manager-events.test.ts's createMockApp/fire).
+// (mirrors test/input/input-system-events.test.ts's createMockApp/fire).
 // ---------------------------------------------------------------------------
 
 const createCanvas = (width = 800, height = 600): HTMLCanvasElement => {
@@ -98,8 +98,8 @@ interface Harness {
   app: Application;
   canvas: HTMLCanvasElement;
   scene: Scene;
-  input: InputManager;
-  interaction: InteractionManager;
+  input: InputSystem;
+  interaction: InteractionSystem;
 }
 
 const createHarness = (): Harness => {
@@ -130,11 +130,11 @@ const createHarness = (): Harness => {
     },
   } as unknown as Application;
 
-  const input = new InputManager(app);
+  const input = new InputSystem(app);
 
-  (app as unknown as { input: InputManager }).input = input;
+  (app as unknown as { input: InputSystem }).input = input;
 
-  const interaction = new InteractionManager(app);
+  const interaction = new InteractionSystem(app);
 
   interaction.attachRoot(scene.root);
 
@@ -179,10 +179,10 @@ const fireContextMenu = (canvas: HTMLCanvasElement, clientX: number, clientY: nu
 };
 
 // ---------------------------------------------------------------------------
-// Bug A - cross-pointer chronological order at InputManager
+// Bug A - cross-pointer chronological order at InputSystem
 // ---------------------------------------------------------------------------
 
-describe('InputManager — cross-pointer chronological order (Bug A)', () => {
+describe('InputSystem — cross-pointer chronological order (Bug A)', () => {
   test('P1 Down -> P2 Down -> P1 Up dispatches in exactly that order, not grouped per pointer', () => {
     const { input, canvas } = createHarness();
     const calls: string[] = [];
@@ -258,7 +258,7 @@ describe('InputManager — cross-pointer chronological order (Bug A)', () => {
 // Bug B - context-menu requests: true interleaving + queue (not a slot)
 // ---------------------------------------------------------------------------
 
-describe('InputManager — context-menu ordering and queuing (Bug B)', () => {
+describe('InputSystem — context-menu ordering and queuing (Bug B)', () => {
   test('a context-menu request dispatches relative to a pointer move in true arrival order, not always after every pointer phase', () => {
     const { input, canvas } = createHarness();
     const calls: string[] = [];
@@ -345,8 +345,8 @@ describe('InputManager — context-menu ordering and queuing (Bug B)', () => {
 
     expect(receivedPointer).toBe(pointer);
     expect(wasAlreadyDestroyedWhenMenuFired).toBe(false);
-    // InputManager's OWN journal drain only flags the pointer as PENDING
-    // retirement now - InteractionManager still owns queued node-level
+    // InputSystem's OWN journal drain only flags the pointer as PENDING
+    // retirement now - InteractionSystem still owns queued node-level
     // events (e.g. app-level onContextMenu subscribers aside, a real node's
     // onContextMenu handler) that reference this same Pointer, and those only
     // dispatch in ITS pass, which runs strictly after this input.preUpdate().
@@ -364,11 +364,11 @@ describe('InputManager — context-menu ordering and queuing (Bug B)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Bug C - InteractionManager preserves the SAME global order internally
+// Bug C - InteractionSystem preserves the SAME global order internally
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — cross-pointer order preserved end-to-end (Bug C)', () => {
-  test("scene-node dispatch order mirrors InputManager's true cross-pointer arrival order: P1 Down -> P2 Down -> P1 Up", () => {
+describe('InteractionSystem — cross-pointer order preserved end-to-end (Bug C)', () => {
+  test("scene-node dispatch order mirrors InputSystem's true cross-pointer arrival order: P1 Down -> P2 Down -> P1 Up", () => {
     const h = createHarness();
     const { canvas, scene } = h;
     const spriteA = new TestSprite().setBounds(0, 0, 50, 50);
@@ -396,8 +396,8 @@ describe('InteractionManager — cross-pointer order preserved end-to-end (Bug C
     tick(h);
 
     // The old per-pointer-bucketed `_pending: Map<number, PointerQueue>`
-    // would have produced ['down:A', 'up:A', 'down:B'] - InteractionManager
-    // re-losing the same ordering InputManager had just fixed.
+    // would have produced ['down:A', 'up:A', 'down:B'] - InteractionSystem
+    // re-losing the same ordering InputSystem had just fixed.
     expect(calls).toEqual(['down:A', 'down:B', 'up:A']);
 
     destroyHarness(h);
@@ -567,13 +567,13 @@ describe('InteractionManager — cross-pointer order preserved end-to-end (Bug C
 // Bug D - a swipe must not leave a stale press-target for the NEXT cycle
 // ---------------------------------------------------------------------------
 
-describe('InteractionManager — swipe does not corrupt the next unrelated press cycle (Bug D)', () => {
+describe('InteractionSystem — swipe does not corrupt the next unrelated press cycle (Bug D)', () => {
   test('press+swipe on A, then a Down in empty space, then Up over A: no bogus pointertap on A', () => {
     const h = createHarness();
     const { canvas, scene } = h;
     const sprite = new TestSprite().setBounds(0, 0, 50, 50);
 
-    // NOT draggable - this must exercise InputManager's own swipe/tap
+    // NOT draggable - this must exercise InputSystem's own swipe/tap
     // classification (pointerDistanceThreshold), not drag-candidate capture.
     sprite.interactive = true;
     scene.addChild(sprite);

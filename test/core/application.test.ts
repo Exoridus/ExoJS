@@ -31,7 +31,7 @@ interface ApplicationTestHarness {
   readonly Application: typeof import('#core/Application').Application;
   readonly ApplicationState: typeof import('#core/Application').ApplicationState;
   readonly LoaderMock: MockInstance;
-  readonly InputManagerMock: MockInstance;
+  readonly InputSystemMock: MockInstance;
   readonly webglManager: {
     initialize: MockInstance;
     flush: MockInstance;
@@ -107,7 +107,7 @@ const loadApplicationHarness = async (
     change: vi.fn().mockResolvedValue(undefined),
     destroy: vi.fn(),
   };
-  const inputManager = {
+  const inputSystem = {
     update: vi.fn(),
     destroy: vi.fn(),
     onCanvasFocusChange: { add: vi.fn(), remove: vi.fn(), dispatch: vi.fn(), destroy: vi.fn() },
@@ -131,8 +131,8 @@ const loadApplicationHarness = async (
   const LoaderMock = vi.fn(function () {
     return loader;
   });
-  const InputManagerMock = vi.fn(function () {
-    return inputManager;
+  const InputSystemMock = vi.fn(function () {
+    return inputSystem;
   });
 
   vi.resetModules();
@@ -153,8 +153,8 @@ const loadApplicationHarness = async (
   vi.doMock('#rendering/coreRendererBindings', () => ({
     buildCoreRendererBindings: vi.fn().mockReturnValue([]),
   }));
-  vi.doMock('#input/InputManager', () => ({
-    InputManager: InputManagerMock,
+  vi.doMock('#input/InputSystem', () => ({
+    InputSystem: InputSystemMock,
   }));
   vi.doMock('#input/FocusController', () => ({
     FocusController: vi.fn(function () {
@@ -172,8 +172,8 @@ const loadApplicationHarness = async (
       };
     }),
   }));
-  vi.doMock('#input/InteractionManager', () => ({
-    InteractionManager: vi.fn(function () {
+  vi.doMock('#input/InteractionSystem', () => ({
+    InteractionSystem: vi.fn(function () {
       return {
         update: vi.fn(),
         destroy: vi.fn(),
@@ -193,7 +193,7 @@ const loadApplicationHarness = async (
     Application,
     ApplicationState,
     LoaderMock,
-    InputManagerMock,
+    InputSystemMock,
     webglManager,
     webgpuManager,
     BackendMock,
@@ -485,8 +485,8 @@ describe('Application', () => {
     });
   });
 
-  test('passes grouped input options to InputManager', async () => {
-    const { Application, InputManagerMock } = await loadApplicationHarness();
+  test('passes grouped input options to InputSystem', async () => {
+    const { Application, InputSystemMock } = await loadApplicationHarness();
 
     new Application({
       input: {
@@ -496,7 +496,7 @@ describe('Application', () => {
       },
     });
 
-    const appArg = InputManagerMock.mock.calls[0][0] as import('#core/Application').Application;
+    const appArg = InputSystemMock.mock.calls[0][0] as import('#core/Application').Application;
 
     expect(appArg.options.input?.gamepadSlotStrategy).toBe('compact');
     expect(appArg.options.input?.pointerDistanceThreshold).toBe(24);

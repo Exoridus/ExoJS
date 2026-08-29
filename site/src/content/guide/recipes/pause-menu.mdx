@@ -40,7 +40,7 @@ This recipe's overlay is informational only — `scene.ui` widgets stay clickabl
 
 - **Freezes `update()`** — the director skips `update()` and all scene-level systems. No game logic runs.
 - **Keeps drawing** — the scene still renders every frame, so the world remains visible behind the overlay.
-- **Tweens on `app.tweens` still run** — the application-level tween manager is unaffected, so blur animations and UI transitions animate smoothly while the game is frozen.
+- **Tweens on `app.tweens` still run** — the application-level tween system is unaffected, so blur animations and UI transitions animate smoothly while the game is frozen.
 - **Scene input bindings default to `SceneAvailability.Active` only** — pass `{ when: SceneAvailability.Paused }` for a binding that should fire only while paused (e.g. a menu confirm button), or `{ when: SceneAvailability.Always }` for one that must work in both states (the Escape toggle above).
 
 `scene.ui` widgets are always interactive regardless of pause state, so the pause panel's buttons remain clickable during the pause.

@@ -2,8 +2,8 @@ import type { MockInstance } from 'vitest';
 
 import { getAudioContext } from '#audio/audio-context';
 import { AudioBus } from '#audio/AudioBus';
-import { AudioManager } from '#audio/AudioManager';
 import { AudioStream } from '#audio/AudioStream';
+import { AudioSystem } from '#audio/AudioSystem';
 import { Sound } from '#audio/Sound';
 import { Video } from '#rendering/video/Video';
 
@@ -77,30 +77,30 @@ describe('Bus routing (Sound / AudioStream / Video)', () => {
     vi.restoreAllMocks();
   });
 
-  // 1. Default bus for a Sound voice (via manager.play)
-  test('manager.play(sound) routes the voice output to the sound bus by default', () => {
-    // Create manager BEFORE spy so bus setup doesn't consume the firstCall slot.
-    const manager = new AudioManager();
+  // 1. Default bus for a Sound voice (via system.play)
+  test('system.play(sound) routes the voice output to the sound bus by default', () => {
+    // Create system BEFORE spy so bus setup doesn't consume the firstCall slot.
+    const system = new AudioSystem();
     const spy = spyOnGainConnect();
     const sound = new Sound(createAudioBufferStub());
 
-    manager.play(sound);
+    system.play(sound);
 
     // The voice's output gain should connect to the sound bus input.
-    const soundBusInput = manager.sound._getInputNode();
+    const soundBusInput = system.sound._getInputNode();
     expect(spy.gainNode.connect).toHaveBeenCalledWith(soundBusInput);
 
     spy.restore();
     sound.destroy();
   });
 
-  // 2. Passing a bus option to manager.play() routes to that bus
-  test('manager.play(sound, { bus }) routes the voice to the specified bus — voice is created alive', () => {
-    const manager = new AudioManager();
+  // 2. Passing a bus option to system.play() routes to that bus
+  test('system.play(sound, { bus }) routes the voice to the specified bus — voice is created alive', () => {
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
 
     const customBus = new AudioBus('custom');
-    const voice = manager.play(sound, { bus: customBus });
+    const voice = system.play(sound, { bus: customBus });
     expect(voice.ended).toBe(false);
     expect(voice.bus).toBe(customBus);
 
@@ -111,16 +111,16 @@ describe('Bus routing (Sound / AudioStream / Video)', () => {
 
   // 3. Playing same sound twice: each voice is independent
   test('each play() call creates an independent voice with its own bus routing', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
 
     const customBus = new AudioBus('custom2');
-    const voice1 = manager.play(sound);
-    const voice2 = manager.play(sound, { bus: customBus });
+    const voice1 = system.play(sound);
+    const voice2 = system.play(sound, { bus: customBus });
 
     expect(voice1.ended).toBe(false);
     expect(voice2.ended).toBe(false);
-    expect(voice1.bus).toBe(manager.sound);
+    expect(voice1.bus).toBe(system.sound);
     expect(voice2.bus).toBe(customBus);
 
     sound.destroy();
@@ -128,16 +128,16 @@ describe('Bus routing (Sound / AudioStream / Video)', () => {
   });
 
   // 4. AudioStream voice routes to the music bus by default
-  test('manager.play(stream) routes the voice output to the music bus by default', () => {
-    const manager = new AudioManager();
+  test('system.play(stream) routes the voice output to the music bus by default', () => {
+    const system = new AudioSystem();
     const spy = spyOnGainConnect();
     const stream = new AudioStream(createAudioElementStub());
 
-    const voice = manager.play(stream);
+    const voice = system.play(stream);
 
-    const musicBusInput = manager.music._getInputNode();
+    const musicBusInput = system.music._getInputNode();
     expect(spy.gainNode.connect).toHaveBeenCalledWith(musicBusInput);
-    expect(voice.bus).toBe(manager.music);
+    expect(voice.bus).toBe(system.music);
 
     spy.restore();
     stream.destroy();
@@ -145,10 +145,10 @@ describe('Bus routing (Sound / AudioStream / Video)', () => {
 
   // 5. Reassigning voice.bus reconnects the output to the new bus
   test('setting voice.bus reconnects the output to a custom bus inputNode', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = spyOnGainConnect();
     const stream = new AudioStream(createAudioElementStub());
-    const voice = manager.play(stream);
+    const voice = system.play(stream);
 
     const customBus = new AudioBus('custom3');
     voice.bus = customBus;
@@ -163,10 +163,10 @@ describe('Bus routing (Sound / AudioStream / Video)', () => {
 
   // 6. Setting voice.bus to the same bus is a no-op
   test('setting voice.bus to the same bus is a no-op', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = spyOnGainConnect();
     const stream = new AudioStream(createAudioElementStub());
-    const voice = manager.play(stream);
+    const voice = system.play(stream);
 
     const customBus = new AudioBus('custom-noop');
     voice.bus = customBus;
@@ -184,11 +184,11 @@ describe('Bus routing (Sound / AudioStream / Video)', () => {
 
   // 7. Playing a stream again stops the previous voice (single playhead)
   test('playing an AudioStream again stops the previous voice', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const stream = new AudioStream(createAudioElementStub());
 
-    const first = manager.play(stream);
-    const second = manager.play(stream);
+    const first = system.play(stream);
+    const second = system.play(stream);
 
     expect(first.ended).toBe(true);
     expect(second.ended).toBe(false);
@@ -204,13 +204,13 @@ describe('Bus routing (Sound / AudioStream / Video)', () => {
   });
 
   test('setting video.bus routes its gain to that bus inputNode', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = spyOnGainConnect();
     const video = new Video(createVideoElementStub());
 
-    video.bus = manager.master;
+    video.bus = system.master;
 
-    expect(spy.gainNode.connect).toHaveBeenCalledWith(manager.master._getInputNode());
+    expect(spy.gainNode.connect).toHaveBeenCalledWith(system.master._getInputNode());
 
     spy.restore();
     video.destroy();

@@ -3,7 +3,7 @@ import type { MockInstance } from 'vitest';
 import { getAudioContext } from '#audio/audio-context';
 import { AudioGenerator } from '#audio/AudioGenerator';
 import type { AudioGeneratorVoice } from '#audio/AudioGeneratorVoice';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import { Envelope } from '#audio/Envelope';
 
 // ---------------------------------------------------------------------------
@@ -72,7 +72,7 @@ interface Spy {
   restore: () => void;
 }
 
-/** Spy on createOscillator / createGain. Create the AudioManager BEFORE calling this. */
+/** Spy on createOscillator / createGain. Create the AudioSystem BEFORE calling this. */
 const setupSpy = (): Spy => {
   const ctx = getAudioContext() as AudioContext & {
     createOscillator: () => OscillatorNode;
@@ -115,7 +115,7 @@ const envelopeGainOf = (spy: Spy): MockGainNode => {
 };
 
 interface Setup {
-  manager: AudioManager;
+  system: AudioSystem;
   generator: AudioGenerator;
   voice: AudioGeneratorVoice;
   spy: Spy;
@@ -124,24 +124,24 @@ interface Setup {
 
 const play = (options: { envelope?: Envelope; frequency?: number; detune?: number } = {}): Setup => {
   setCurrentTime(0);
-  const manager = new AudioManager();
+  const system = new AudioSystem();
   const spy = setupSpy();
   const generator = new AudioGenerator({
     frequency: options.frequency ?? 440,
     detune: options.detune ?? 0,
     envelope: options.envelope ?? null,
   });
-  const voice = manager.play(generator) as AudioGeneratorVoice;
+  const voice = system.play(generator) as AudioGeneratorVoice;
 
   return {
-    manager,
+    system,
     generator,
     voice,
     spy,
     dispose: (): void => {
       spy.restore();
       generator.destroy();
-      manager.destroy();
+      system.destroy();
     },
   };
 };
@@ -450,11 +450,11 @@ describe('AudioGeneratorVoice — Pausable', () => {
 
   test('a paused voice is not the eviction victim while unpaused voices exist', () => {
     setCurrentTime(0);
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const generator = new AudioGenerator({ poolSize: 2 });
 
-    const held = manager.play(generator) as AudioGeneratorVoice;
+    const held = system.play(generator) as AudioGeneratorVoice;
     held.pause();
 
     // A paused voice looks oldest under FIFO - its pool bookkeeping ages against
@@ -462,7 +462,7 @@ describe('AudioGeneratorVoice — Pausable', () => {
     // for good, and `SceneAudio.restore()` would then pass over it (`ended`, not
     // `paused`): the held note is silently gone.
     for (let index = 0; index < 4; index++) {
-      manager.play(generator);
+      system.play(generator);
     }
 
     expect(held.ended).toBe(false);
@@ -470,26 +470,26 @@ describe('AudioGeneratorVoice — Pausable', () => {
 
     spy.restore();
     generator.destroy();
-    manager.destroy();
+    system.destroy();
   });
 
   test('an all-paused pool still evicts, so a full pool never blocks new playback', () => {
     setCurrentTime(0);
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const generator = new AudioGenerator({ poolSize: 1 });
 
-    const held = manager.play(generator) as AudioGeneratorVoice;
+    const held = system.play(generator) as AudioGeneratorVoice;
     held.pause();
 
-    const next = manager.play(generator) as AudioGeneratorVoice;
+    const next = system.play(generator) as AudioGeneratorVoice;
 
     expect(held.ended).toBe(true);
     expect(next.ended).toBe(false);
 
     spy.restore();
     generator.destroy();
-    manager.destroy();
+    system.destroy();
   });
 
   // ---- pitch / rate across a pause ----

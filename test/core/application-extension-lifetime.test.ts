@@ -75,7 +75,7 @@ describe('Extension install()', () => {
     void app.destroy();
   });
 
-  test('runs after every core manager, so an installer may register a system that reads them', () => {
+  test('runs after every core system, so an installer may register a system that reads them', () => {
     const system: System = { update: vi.fn() };
     let sawManagers = false;
 
@@ -342,7 +342,7 @@ describe('Systems registered by an extension install()', () => {
 
     const app = new Application({ backend: { type: 'webgl2' }, extensions: [ext] });
 
-    // The engine's own core managers are always registered; the extension
+    // The engine's own core systems are always registered; the extension
     // contributes nothing on top of them.
     expect(app.systems.size).toBe(coreSystemCount);
     void app.destroy();

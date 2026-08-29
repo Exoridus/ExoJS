@@ -1459,7 +1459,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   /**
    * Pre-create render pipelines for every blend-mode × target-format
    * combination this renderer can produce, asynchronously and in
-   * parallel. Called from the render manager's init path so by the time
+   * parallel. Called from the render system's init path so by the time
    * the first frame draws, all pipelines exist in cache.
    *
    * Without prewarm, the first draw of any new (blendMode, format)

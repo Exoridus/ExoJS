@@ -25,7 +25,7 @@ describe('AnimatedSprite', () => {
   test('update() reads its argument as seconds, not milliseconds', () => {
     // Regression: `update()` used to take `Time | number`, where the plain
     // number was MILLISECONDS - the opposite unit to `Tween.update`, which is
-    // always seconds. A caller who forwarded `delta.seconds` (or a manager
+    // always seconds. A caller who forwarded `delta.seconds` (or a system
     // that did) advanced playback 1000x too slowly. The signature is now
     // seconds-only, matching Tween.
     const sprite = new AnimatedSprite(null, {

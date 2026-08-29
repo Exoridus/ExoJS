@@ -144,7 +144,7 @@ export class PointerStackLayer extends DebugLayer {
 
     const { x: sx, y: sy } = pos;
 
-    // The pointer x/y is canvas-relative. InteractionManager passes this
+    // The pointer x/y is canvas-relative. InteractionSystem passes this
     // directly to node.contains(), so we do the same.
     const worldX = sx;
     const worldY = sy;

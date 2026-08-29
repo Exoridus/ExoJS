@@ -188,7 +188,7 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
     _dispose: vi.fn().mockResolvedValue(undefined),
     destroy: vi.fn(),
   };
-  const inputManager = {
+  const inputSystem = {
     update: vi.fn(),
     destroy: vi.fn(),
     canvasFocused: false,
@@ -229,9 +229,9 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
   vi.doMock('#rendering/coreRendererBindings', () => ({
     buildCoreRendererBindings: vi.fn().mockReturnValue([]),
   }));
-  vi.doMock('#input/InputManager', () => ({
-    InputManager: vi.fn(function () {
-      return inputManager;
+  vi.doMock('#input/InputSystem', () => ({
+    InputSystem: vi.fn(function () {
+      return inputSystem;
     }),
   }));
   vi.doMock('#input/FocusController', () => ({
@@ -250,8 +250,8 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
       };
     }),
   }));
-  vi.doMock('#input/InteractionManager', () => ({
-    InteractionManager: vi.fn(function () {
+  vi.doMock('#input/InteractionSystem', () => ({
+    InteractionSystem: vi.fn(function () {
       return {
         update: vi.fn(),
         destroy: vi.fn(),

@@ -75,7 +75,7 @@ export interface BindingConflict {
  * this interface: {@link ActionMapBase._attach} falls back to `0` when it is
  * absent, which reproduces the OLD (pre-watermark) behavior for that owner -
  * replay every batch in the first post-attach sample rather than filtering
- * out anything that predates the attach. A real owner (an `InputManager`)
+ * out anything that predates the attach. A real owner (an `InputSystem`)
  * always implements it.
  */
 export interface ActionMapOwner {
@@ -98,7 +98,7 @@ export interface ActionMapOwner {
    * (attach or resync) - optional for the same reason
    * `_currentBatchSequence` is: a stub/legacy owner without it reproduces
    * the OLD (watermark-only) behavior, see {@link ActionOwnership.arm}'s doc
-   * comment. A real owner (an `InputManager`) always implements it.
+   * comment. A real owner (an `InputSystem`) always implements it.
    */
   _snapshotActionChannels?(): Float32Array;
 }
@@ -431,7 +431,7 @@ class ActionMapBase<T extends ActionRecord> {
 
   /**
    * Re-arm the ownership watermark without a fresh `_attach` - used by
-   * `InputManager._resyncActionMap` (scene resume), which resyncs a map that
+   * `InputSystem._resyncActionMap` (scene resume), which resyncs a map that
    * stays with the SAME owner throughout a suspend/resume cycle and so never
    * goes through `_attach` again.
    *

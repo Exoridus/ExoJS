@@ -86,7 +86,7 @@ class ScrollContent extends Container {
  * updates it. A change the container cannot observe - a child of the content
  * that resized itself - needs {@link ScrollContainer.refresh}.
  *
- * Mouse-wheel events from the global {@link InputManager} are consumed only
+ * Mouse-wheel events from the global {@link InputSystem} are consumed only
  * when the pointer is within the widget's bounds. The container subscribes to
  * the app's `onMouseWheel` signal when it enters the scene tree, and
  * unsubscribes on detach.

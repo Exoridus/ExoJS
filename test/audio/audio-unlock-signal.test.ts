@@ -1,5 +1,5 @@
 import { getAudioContext, onAudioContextReady } from '#audio/audio-context';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import { Time } from '#core/units';
 
 const frame = Time.seconds(0.016);
@@ -21,7 +21,7 @@ const settleFirstUnlock = async (): Promise<void> => {
   await Promise.resolve();
 };
 
-describe('AudioManager.onUnlock contract', () => {
+describe('AudioSystem.onUnlock contract', () => {
   beforeEach(async () => {
     await settleFirstUnlock();
   });
@@ -32,16 +32,16 @@ describe('AudioManager.onUnlock contract', () => {
   });
 
   test('a handler added while audio is usable is replayed exactly once', async () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const handler = vi.fn();
 
-    manager.onUnlock.add(handler);
+    system.onUnlock.add(handler);
     expect(handler).not.toHaveBeenCalled(); // never synchronously inside add()
 
     await Promise.resolve();
     expect(handler).toHaveBeenCalledTimes(1);
 
-    manager.destroy();
+    system.destroy();
   });
 
   // Finding 1: `add()` used to look only at "has this signal ever dispatched",
@@ -50,189 +50,189 @@ describe('AudioManager.onUnlock contract', () => {
   // immediately into a locked context, where `play()` answers with a NoopVoice
   // and warns - recommending `onUnlock`, the path that had just failed.
   test('a handler added during a re-lock window waits for the next unlock', async () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
 
     setContextState('suspended');
-    manager.preUpdate(frame);
+    system.preUpdate(frame);
 
     const handler = vi.fn();
-    manager.onUnlock.add(handler);
+    system.onUnlock.add(handler);
     await Promise.resolve();
 
     expect(handler).not.toHaveBeenCalled();
 
     setContextState('running');
-    manager.preUpdate(frame);
+    system.preUpdate(frame);
 
     expect(handler).toHaveBeenCalledTimes(1);
 
-    manager.destroy();
+    system.destroy();
   });
 
   test('a re-unlock never re-fires a handler that already ran', async () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
 
     setContextState('suspended');
-    manager.preUpdate(frame);
+    system.preUpdate(frame);
 
     const registered = vi.fn();
-    manager.onUnlock.add(registered);
+    system.onUnlock.add(registered);
 
     setContextState('running');
-    manager.preUpdate(frame);
+    system.preUpdate(frame);
     expect(registered).toHaveBeenCalledTimes(1);
 
     // A replayed handler and a registered one must both stay at one call
     // across any number of further lock cycles - otherwise the menu music
     // starts a second time on top of the first after every interruption.
     const replayed = vi.fn();
-    manager.onUnlock.add(replayed);
+    system.onUnlock.add(replayed);
     await Promise.resolve();
     expect(replayed).toHaveBeenCalledTimes(1);
 
     for (let i = 0; i < 3; i++) {
       setContextState('suspended');
-      manager.preUpdate(frame);
+      system.preUpdate(frame);
       setContextState('running');
-      manager.preUpdate(frame);
+      system.preUpdate(frame);
     }
 
     expect(registered).toHaveBeenCalledTimes(1);
     expect(replayed).toHaveBeenCalledTimes(1);
 
-    manager.destroy();
+    system.destroy();
   });
 
-  // Finding 2: a manager constructed inside a re-lock window took the
+  // Finding 2: a system constructed inside a re-lock window took the
   // `onAudioContextReady.add(...)` branch - but that signal is a documented
   // one-shot guarded by `readyDispatched`, which had long since fired. The
-  // handler was never called, so `onUnlock` was dead for the manager's whole
+  // handler was never called, so `onUnlock` was dead for the system's whole
   // lifetime.
-  test('a manager constructed during a re-lock window still unlocks', async () => {
+  test('a system constructed during a re-lock window still unlocks', async () => {
     setContextState('suspended');
 
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const handler = vi.fn();
 
-    manager.onUnlock.add(handler);
+    system.onUnlock.add(handler);
     await Promise.resolve();
     expect(handler).not.toHaveBeenCalled();
 
     setContextState('running');
-    manager.preUpdate(frame);
+    system.preUpdate(frame);
 
     expect(handler).toHaveBeenCalledTimes(1);
 
-    manager.destroy();
+    system.destroy();
   });
 
   test('the locked-playback warning re-arms across a lock cycle without preUpdate ordering luck', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
 
     setContextState('suspended');
-    manager.preUpdate(frame);
+    system.preUpdate(frame);
     setContextState('running');
-    manager.preUpdate(frame);
-    manager.preUpdate(frame);
+    system.preUpdate(frame);
+    system.preUpdate(frame);
 
-    expect(manager.locked).toBe(false);
+    expect(system.locked).toBe(false);
 
-    manager.destroy();
+    system.destroy();
   });
 
   // Finding 3: a queued replay could not be cancelled, because the replay path
   // never registered the handler for `remove()` to find. A scene subscribing in
   // `init` and cleaning up in `unload` still started music for a dead scene -
-  // and a handler surviving `destroy()` calls `play()` on a destroyed manager,
+  // and a handler surviving `destroy()` calls `play()` on a destroyed system,
   // which throws unobserved out of the microtask.
   describe('cancellation', () => {
     test('remove() cancels a replay queued in the same tick', async () => {
-      const manager = new AudioManager();
+      const system = new AudioSystem();
       // Let construction settle, so the `add` below really takes the REPLAY
       // path rather than registering into a not-yet-dispatched signal.
       await Promise.resolve();
 
       const handler = vi.fn();
 
-      manager.onUnlock.add(handler);
-      manager.onUnlock.remove(handler);
+      system.onUnlock.add(handler);
+      system.onUnlock.remove(handler);
       await Promise.resolve();
 
       expect(handler).not.toHaveBeenCalled();
 
-      manager.destroy();
+      system.destroy();
     });
 
     test('remove() cancels a handler registered while locked', () => {
-      const manager = new AudioManager();
+      const system = new AudioSystem();
 
       setContextState('suspended');
-      manager.preUpdate(frame);
+      system.preUpdate(frame);
 
       const handler = vi.fn();
-      manager.onUnlock.add(handler);
-      manager.onUnlock.remove(handler);
+      system.onUnlock.add(handler);
+      system.onUnlock.remove(handler);
 
       setContextState('running');
-      manager.preUpdate(frame);
+      system.preUpdate(frame);
 
       expect(handler).not.toHaveBeenCalled();
 
-      manager.destroy();
+      system.destroy();
     });
 
     test('destroy() cancels a replay queued in the same tick', async () => {
-      const manager = new AudioManager();
+      const system = new AudioSystem();
       await Promise.resolve(); // as above: force the replay path
 
       const handler = vi.fn();
 
-      manager.onUnlock.add(handler);
-      manager.destroy();
+      system.onUnlock.add(handler);
+      system.destroy();
       await Promise.resolve();
 
       expect(handler).not.toHaveBeenCalled();
     });
 
     test('nothing fires for a handler added after destroy()', async () => {
-      const manager = new AudioManager();
-      manager.destroy();
+      const system = new AudioSystem();
+      system.destroy();
 
       const handler = vi.fn();
-      manager.onUnlock.add(handler);
+      system.onUnlock.add(handler);
       await Promise.resolve();
 
       expect(handler).not.toHaveBeenCalled();
     });
 
-    test('a manager destroyed while locked never unlocks afterwards', () => {
+    test('a system destroyed while locked never unlocks afterwards', () => {
       setContextState('suspended');
 
-      const manager = new AudioManager();
+      const system = new AudioSystem();
       const handler = vi.fn();
-      manager.onUnlock.add(handler);
-      manager.destroy();
+      system.onUnlock.add(handler);
+      system.destroy();
 
       setContextState('running');
-      manager.preUpdate(frame);
+      system.preUpdate(frame);
 
       expect(handler).not.toHaveBeenCalled();
     });
   });
 
   // Finding 8: AudioBus and AudioListener both drop their global-ready
-  // subscription in destroy(); AudioManager did not. A manager destroyed before
+  // subscription in destroy(); AudioSystem did not. A system destroyed before
   // the first gesture still ran its handler from inside the global dispatch -
   // and per Signal's contract a handler that throws there terminates the OUTER
   // dispatch, taking every other Application's bus setup down with it.
-  test('destroy() unsubscribes the manager from the global ready signal', () => {
+  test('destroy() unsubscribes the system from the global ready signal', () => {
     setContextState('suspended');
 
     const before = onAudioContextReady.count;
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     expect(onAudioContextReady.count).toBeGreaterThan(before);
 
-    manager.destroy();
+    system.destroy();
 
     expect(onAudioContextReady.count).toBe(before);
   });

@@ -13,8 +13,8 @@ import { Signal } from '#core/Signal';
 import type { ContextMenuRequest } from '#input/ContextMenuRequest';
 import type { Gamepad } from '#input/Gamepad';
 import type { GamepadButton } from '#input/GamepadButton';
-import type { InputManager } from '#input/InputManager';
-import { InteractionManager } from '#input/InteractionManager';
+import type { InputSystem } from '#input/InputSystem';
+import { InteractionSystem } from '#input/InteractionSystem';
 import type { Pointer } from '#input/Pointer';
 import { Rectangle } from '#math/Rectangle';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
@@ -79,7 +79,7 @@ const createApp = (): { app: Application; scene: Scene; signals: { onPointerDown
     platform: new BrowserPlatform(canvas),
     width: 800,
     height: 600,
-    input: signals as unknown as InputManager,
+    input: signals as unknown as InputSystem,
     rendering: { view: identity, screenView: identity },
     scenes: {
       get currentScene(): Scene | null {
@@ -94,7 +94,7 @@ const createApp = (): { app: Application; scene: Scene; signals: { onPointerDown
 };
 
 /** Dispatch a pointerdown at (x, y) and report which node the event targeted. */
-const pick = (im: InteractionManager, signals: { onPointerDown: Signal<[Pointer]> }, scene: Scene, x: number, y: number): unknown => {
+const pick = (im: InteractionSystem, signals: { onPointerDown: Signal<[Pointer]> }, scene: Scene, x: number, y: number): unknown => {
   let target: unknown = null;
   const probe = (): void => {
     target = im.getHoveredNode(1);
@@ -164,7 +164,7 @@ const topmostPaintedNode = (root: Container): RenderNode | null => {
 describe('siblings', () => {
   it('lets the higher zIndex win regardless of document order', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -183,7 +183,7 @@ describe('siblings', () => {
 
   it('falls back to document order when zIndex ties', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -200,7 +200,7 @@ describe('siblings', () => {
 
   it('follows a zIndex changed after the nodes were registered', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -221,7 +221,7 @@ describe('siblings', () => {
 describe('nesting', () => {
   it('keeps a deep descendant inside its ancestors scope', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -247,7 +247,7 @@ describe('nesting', () => {
 
   it('resolves a deep child against a root-level sibling by their diverging branches', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -275,7 +275,7 @@ describe('nesting', () => {
 
   it('paints a child above its own interactive ancestor', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -293,7 +293,7 @@ describe('nesting', () => {
 
   it('finds an interactive child under a non-interactive parent', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -313,7 +313,7 @@ describe('nesting', () => {
 describe('visibility', () => {
   it('does not hit an invisible node', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -332,7 +332,7 @@ describe('visibility', () => {
 
   it('does not hit a visible node inside an invisible container', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -352,7 +352,7 @@ describe('visibility', () => {
 describe('scoped hit-testing', () => {
   it('resolves order the same way inside an interaction scope', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -382,7 +382,7 @@ describe('scoped hit-testing', () => {
 describe('renderer / hit-test agreement', () => {
   it('the renderer, the indexed hit-test path, and the scoped hit-test path all pick the same topmost sibling', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 
@@ -398,7 +398,7 @@ describe('renderer / hit-test agreement', () => {
     scene.root.addChild(above);
     scene.root.addChild(below);
 
-    // Indexed path: every sprite here is `interactive`, so InteractionManager
+    // Indexed path: every sprite here is `interactive`, so InteractionSystem
     // already built its spatial-index tree and `_hitTest` takes `_hitTestIndexed`.
     expect(pick(im, signals, scene, 50, 50)).toBe(above);
 
@@ -419,7 +419,7 @@ describe('renderer / hit-test agreement', () => {
 
   it('repeated picks against the same wide, overlapping sibling set return the same node every time, and the renderer agrees', () => {
     const { app, scene, signals } = createApp();
-    const im = new InteractionManager(app);
+    const im = new InteractionSystem(app);
 
     im.attachRoot(scene.root);
 

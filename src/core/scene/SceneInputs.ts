@@ -42,13 +42,13 @@ type BindingKind = 'onStart' | 'onActive' | 'onStop' | 'onTrigger';
  * Every `SceneInputs.onXxx()` call must construct exactly one underlying
  * {@link InputBinding} (via a single `app.input` factory call) and wire the
  * edge-rule bookkeeping onto that one binding's own `onStart`/`onActive`/
- * `onStop`/`onTrigger` signals - `InputManager.onStart`/`onActive`/`onStop`/
+ * `onStop`/`onTrigger` signals - `InputSystem.onStart`/`onActive`/`onStop`/
  * `onTrigger` each construct a *fresh, independent* `InputBinding` internally
- * (confirmed in `src/input/InputManager.ts`), so calling two different
+ * (confirmed in `src/input/InputSystem.ts`), so calling two different
  * `SceneInputs` factories for "the same" channel would silently create two
  * unrelated bindings with two unrelated edge-rule sessions. `onStart` is used
  * as the anchor factory call below purely to obtain the binding object -
- * every one of the four `InputManager` factories constructs an identical
+ * every one of the four `InputSystem` factories constructs an identical
  * binding underneath (`createBinding(channel, options)`), so which one is
  * used to obtain the reference makes no behavioral difference.
  */
@@ -234,7 +234,7 @@ export class SceneInputs implements Destroyable {
   /**
    * Register with the one input clock, once, as soon as there is anything to
    * sample. A facade that only creates `on*` bindings never reaches the clock
-   * at all - those are driven by the manager's own binding list.
+   * at all - those are driven by the system's own binding list.
    */
   private _track(): void {
     if (this._tracked || this._suspended || (this._base.maps.size === 0 && this._scopes.length === 0)) {
@@ -269,7 +269,7 @@ export class SceneInputs implements Destroyable {
   }
 
   /**
-   * Browser-default capture is forwarded, never held here: the manager keeps
+   * Browser-default capture is forwarded, never held here: the system keeps
    * the single refcount, so a key bound by a scene map and by a direct binding
    * is one entry with two claims rather than two ledgers that can disagree.
    *
@@ -316,8 +316,8 @@ export class SceneInputs implements Destroyable {
   }
 
   /**
-   * Forwards to the underlying `InputManager` - see
-   * `InputManager._currentBatchSequence`'s doc comment. Implementing this
+   * Forwards to the underlying `InputSystem` - see
+   * `InputSystem._currentBatchSequence`'s doc comment. Implementing this
    * lets a map attached here (rather than directly on `app.input`) get the
    * same mid-frame-attach protection.
    *
@@ -328,8 +328,8 @@ export class SceneInputs implements Destroyable {
   }
 
   /**
-   * Forwards to the underlying `InputManager` - see
-   * `InputManager._snapshotActionChannels`'s doc comment. Lets a map
+   * Forwards to the underlying `InputSystem` - see
+   * `InputSystem._snapshotActionChannels`'s doc comment. Lets a map
    * attached here get the same attach-time baseline truth as one attached
    * directly on `app.input`.
    *

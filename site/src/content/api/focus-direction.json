@@ -1,6 +1,6 @@
 {
   "title": "FocusDirection",
-  "description": "A direction for spatial focus navigation - see InteractionManager.focusInDirection.",
+  "description": "A direction for spatial focus navigation - see InteractionSystem.focusInDirection.",
   "symbol": "FocusDirection",
   "kind": "type",
   "subsystem": "input",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A direction for spatial focus navigation - see InteractionManager.focusInDirection."
+        "A direction for spatial focus navigation - see InteractionSystem.focusInDirection."
       ],
       "importLine": "import { FocusDirection } from '@codexo/exojs'",
       "sourceLink": null

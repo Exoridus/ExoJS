@@ -1,13 +1,13 @@
 /**
  * Interaction benchmark - hit-test and pointer-event overhead.
  *
- * Drives the real InputManager → InteractionManager pipeline through
+ * Drives the real InputSystem → InteractionSystem pipeline through
  * {@link createInteractionHarness} (a fake, DOM-free PlatformAdapter + a real
- * InputManager/InteractionManager pair) so every scenario measures actual
+ * InputSystem/InteractionSystem pair) so every scenario measures actual
  * engine code, not a hand-copied stand-in:
  *
  *   1. World hit-testing - nodes live directly under the scene root, which
- *      auto-maintains InteractionManager's internal spatial index (a
+ *      auto-maintains InteractionSystem's internal spatial index (a
  *      DynamicAabbTree), exercising `_hitTestIndexed`.
  *   2. Scoped hit-testing - the same node count confined under an
  *      `interaction.pushScope(...)` root, which bypasses the spatial index
@@ -45,7 +45,7 @@ const makeInteractiveDrawable = (x: number, y: number, size = 32): Drawable => {
   return d;
 };
 
-/** Establish pointer id 1 (a `pointerover`) before any move/down/up - InputManager ignores events for an unknown pointer id. */
+/** Establish pointer id 1 (a `pointerover`) before any move/down/up - InputSystem ignores events for an unknown pointer id. */
 const primePointer = (harness: InteractionHarness, x: number, y: number): void => {
   harness.firePointer('pointerover', { clientX: x, clientY: y });
   harness.flush();
@@ -59,7 +59,7 @@ const results: BenchmarkResult[] = [];
 
 // ---------------------------------------------------------------------------
 // Scenario 1 - World (indexed) hit-test: 1 000 nodes under the scene root,
-// 100 pointer queries per iteration. InteractionManager auto-builds and
+// 100 pointer queries per iteration. InteractionSystem auto-builds and
 // maintains its DynamicAabbTree as soon as the first node turns interactive,
 // so this exercises `_hitTestIndexed` for real.
 // ---------------------------------------------------------------------------
@@ -146,7 +146,7 @@ const results: BenchmarkResult[] = [];
 // ---------------------------------------------------------------------------
 // Scenario 3 - Drag-move: one draggable node, a real press + 50
 // pointermoves-past-threshold per iteration, driven through the actual
-// gesture-recognizer + drag state machine (InteractionManager._advanceDragOnMove),
+// gesture-recognizer + drag state machine (InteractionSystem._advanceDragOnMove),
 // not a hand-simulated `position.x = ...` write.
 // ---------------------------------------------------------------------------
 

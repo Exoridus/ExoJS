@@ -17,7 +17,7 @@ export interface AudioInputOptions {
 /**
  * A live audio capture source - a microphone or WebRTC `MediaStream` obtained
  * via `getUserMedia`. **Not a {@link Playable}**: you don't "play" a mic, you
- * *open* it. Pass it to {@link AudioManager.open} to get an
+ * *open* it. Pass it to {@link AudioSystem.open} to get an
  * {@link InputVoice} for monitoring, analysis, or recording.
  *
  * ```ts

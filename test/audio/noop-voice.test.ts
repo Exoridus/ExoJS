@@ -1,6 +1,6 @@
 import { AudioBus } from '#audio/AudioBus';
 import type { AudioEffect } from '#audio/AudioEffect';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import { NoopVoice } from '#audio/NoopVoice';
 import { Sound } from '#audio/Sound';
 
@@ -117,12 +117,12 @@ describe('NoopVoice — real trigger paths', () => {
     });
 
     const { AudioGenerator: LockedAudioGenerator } = await import('#audio/AudioGenerator');
-    const { AudioManager: LockedAudioManager } = await import('#audio/AudioManager');
+    const { AudioSystem: LockedAudioSystem } = await import('#audio/AudioSystem');
     const { NoopVoice: LockedNoopVoice } = await import('#audio/NoopVoice');
 
-    const manager = new LockedAudioManager();
+    const system = new LockedAudioSystem();
     const gen = new LockedAudioGenerator();
-    const voice = manager.play(gen);
+    const voice = system.play(gen);
 
     expect(voice).toBeInstanceOf(LockedNoopVoice);
     expect(voice.ended).toBe(true);
@@ -132,14 +132,14 @@ describe('NoopVoice — real trigger paths', () => {
   });
 
   test('Sound.play() with a seek offset past the asset duration returns a NoopVoice', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound({ duration: 2 } as AudioBuffer);
 
-    const voice = manager.play(sound, { time: 5 });
+    const voice = system.play(sound, { time: 5 });
 
     expect(voice).toBeInstanceOf(NoopVoice);
     expect(voice.ended).toBe(true);
-    expect(voice.bus).toBe(manager.sound);
+    expect(voice.bus).toBe(system.sound);
 
     sound.destroy();
   });

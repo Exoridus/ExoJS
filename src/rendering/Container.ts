@@ -272,7 +272,7 @@ export class Container extends RenderNode {
    * Move a node that already belongs to this container to `index`. Routing a
    * same-parent insert through `removeChild()` would tear the node off the
    * stage and blur it, so a pure reorder used to steal keyboard focus and
-   * re-announce the node to the interaction manager. Neither the child's
+   * re-announce the node to the interaction system. Neither the child's
    * transform nor the aggregate bounds change, so only the order-dependent
    * caches are invalidated.
    */

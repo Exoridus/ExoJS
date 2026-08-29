@@ -162,7 +162,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
           width: VIEWPORT_WIDTH,
           height: VIEWPORT_HEIGHT,
           backgroundColor: '#000000',
-          // Fixed backing store; never let Phaser's Scale manager resize the
+          // Fixed backing store; never let Phaser's Scale Manager resize the
           // shared harness canvas out from under the fixed 1280x720 viewport.
           scale: { mode: Phaser.Scale.NONE, autoCenter: Phaser.Scale.NO_CENTER, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT },
           render: { antialias: false, powerPreference: 'high-performance', clearBeforeRender: true, transparent: false, pixelArt: true },

@@ -1,6 +1,6 @@
 import { getAudioContext } from '#audio/audio-context';
 import { AudioGenerator } from '#audio/AudioGenerator';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import { NoopVoice } from '#audio/NoopVoice';
 import { Sound } from '#audio/Sound';
 import { logger, LogSeverity } from '#core/logging';
@@ -60,11 +60,11 @@ describe('playback while the AudioContext is locked', () => {
   // answer for a one-shot buffer sound.
   test('a Sound played while locked is a no-op and never creates a buffer source', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(makeBuffer(2));
 
     setContextState('suspended');
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
 
     expect(voice).toBeInstanceOf(NoopVoice);
     expect(voice.ended).toBe(true);
@@ -74,15 +74,15 @@ describe('playback while the AudioContext is locked', () => {
     sound.destroy();
   });
 
-  test('the "played while locked" warning is throttled to one per manager', () => {
+  test('the "played while locked" warning is throttled to one per system', () => {
     const factory = setupSourceSpy();
     const sink = collectWarnings();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(makeBuffer(2));
 
     setContextState('suspended');
     for (let i = 0; i < 5; i++) {
-      manager.play(sound);
+      system.play(sound);
     }
 
     const locked = sink.warnings.filter(message => /unlock/i.test(message));
@@ -94,11 +94,11 @@ describe('playback while the AudioContext is locked', () => {
     sound.destroy();
   });
 
-  test('each manager warns independently', () => {
+  test('each system warns independently', () => {
     const factory = setupSourceSpy();
     const sink = collectWarnings();
-    const first = new AudioManager();
-    const second = new AudioManager();
+    const first = new AudioSystem();
+    const second = new AudioSystem();
     const sound = new Sound(makeBuffer(2));
 
     setContextState('suspended');
@@ -116,20 +116,20 @@ describe('playback while the AudioContext is locked', () => {
   test('the warning re-arms once the context runs again', () => {
     const factory = setupSourceSpy();
     const sink = collectWarnings();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(makeBuffer(2));
 
     setContextState('suspended');
-    manager.play(sound);
+    system.play(sound);
     expect(sink.warnings.filter(message => /unlock/i.test(message))).toHaveLength(1);
 
     // Unlocked: the frame tick re-arms the one-shot.
     setContextState('running');
-    manager.preUpdate(Time.seconds(0.016));
+    system.preUpdate(Time.seconds(0.016));
 
     // ...and suspended again (an iOS audio-session interruption, a bfcache restore).
     setContextState('suspended');
-    manager.play(sound);
+    system.play(sound);
     expect(sink.warnings.filter(message => /unlock/i.test(message))).toHaveLength(2);
 
     sink.restore();
@@ -139,10 +139,10 @@ describe('playback while the AudioContext is locked', () => {
 
   test('an AudioGenerator played while locked warns through the same throttle', () => {
     const sink = collectWarnings();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
 
     setContextState('suspended');
-    const voice = manager.play(new AudioGenerator({ frequency: 220 }));
+    const voice = system.play(new AudioGenerator({ frequency: 220 }));
 
     expect(voice).toBeInstanceOf(NoopVoice);
     expect(sink.warnings.filter(message => /unlock/i.test(message))).toHaveLength(1);
@@ -154,11 +154,11 @@ describe('playback while the AudioContext is locked', () => {
   // subscriber that arrives after the gesture (a scene loaded mid-session) must
   // not be met with silence.
   test('onUnlock replays for a subscriber that arrives after audio already unlocked', async () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     await Promise.resolve(); // let the constructor's queued unlock run
 
     const late = vi.fn();
-    manager.onUnlock.add(late);
+    system.onUnlock.add(late);
     expect(late).not.toHaveBeenCalled(); // never synchronously inside add()
 
     await Promise.resolve();
@@ -167,10 +167,10 @@ describe('playback while the AudioContext is locked', () => {
 
   test('a Sound plays normally once unlocked', () => {
     const factory = setupSourceSpy();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(makeBuffer(2));
 
-    const voice = manager.play(sound);
+    const voice = system.play(sound);
 
     expect(voice).not.toBeInstanceOf(NoopVoice);
     expect(factory.sources).toHaveLength(1);

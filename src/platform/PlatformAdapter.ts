@@ -194,7 +194,7 @@ export interface PlatformWindowEventMap {
  * document visibility, frame scheduling, and the delivery of input events.
  *
  * One adapter serves the whole {@link Application} - `app.platform` - and both
- * the {@link InputManager} and the {@link InteractionManager} read it from
+ * the {@link InputSystem} and the {@link InteractionSystem} read it from
  * there, so there is exactly one seam between the engine and its host.
  * {@link BrowserPlatform} is the default; pass your own through
  * {@link ApplicationOptions.platform} to run the engine somewhere else, or to

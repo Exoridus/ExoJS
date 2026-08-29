@@ -4,7 +4,7 @@ import { getAudioContext } from '#audio/audio-context';
 import { AudioBus } from '#audio/AudioBus';
 import { AudioGenerator } from '#audio/AudioGenerator';
 import type { AudioGeneratorVoice } from '#audio/AudioGeneratorVoice';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import { Envelope } from '#audio/Envelope';
 import { SoundPoolStrategy } from '#audio/Sound';
 
@@ -60,7 +60,7 @@ const createGainMock = (): MockGainNode => ({
 
 /**
  * Spy on createOscillator / createGain of the live mock AudioContext. Create
- * the AudioManager BEFORE calling this so its bus gains don't land in `gains`.
+ * the AudioSystem BEFORE calling this so its bus gains don't land in `gains`.
  */
 const setupSpy = (): {
   oscillators: MockOscillatorNode[];
@@ -153,14 +153,14 @@ describe('AudioGenerator', () => {
     expect(AudioGenerator.midiToFrequency(57)).toBeCloseTo(220, 2);
   });
 
-  // ---- Playback (manager.play -> voice) ----
+  // ---- Playback (system.play -> voice) ----
 
-  test('manager.play() creates an OscillatorNode with the descriptor type and frequency', () => {
-    const manager = new AudioManager();
+  test('system.play() creates an OscillatorNode with the descriptor type and frequency', () => {
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator({ frequency: 440, type: 'sine' });
 
-    manager.play(gen);
+    system.play(gen);
 
     expect(spy.oscillators.length).toBe(1);
     expect(spy.oscillators[0].type).toBe('sine');
@@ -172,12 +172,12 @@ describe('AudioGenerator', () => {
   });
 
   test('the descriptor frequency is snapshotted into the voice at play time', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator({ frequency: 440 });
 
     gen.frequency = 880;
-    manager.play(gen);
+    system.play(gen);
 
     expect(spy.oscillators[0].frequency.value).toBe(880);
 
@@ -186,11 +186,11 @@ describe('AudioGenerator', () => {
   });
 
   test('voice.frequency setter retunes the live oscillator', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator({ frequency: 440 });
 
-    const voice = manager.play(gen) as AudioGeneratorVoice;
+    const voice = system.play(gen) as AudioGeneratorVoice;
     voice.frequency = 660;
 
     expect(spy.oscillators[0].frequency.setTargetAtTime).toHaveBeenCalledWith(660, expect.any(Number), expect.any(Number));
@@ -200,11 +200,11 @@ describe('AudioGenerator', () => {
   });
 
   test('voice.detune setter updates the live oscillator detune', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator();
 
-    const voice = manager.play(gen) as AudioGeneratorVoice;
+    const voice = system.play(gen) as AudioGeneratorVoice;
     voice.detune = 1200;
 
     expect(spy.oscillators[0].detune.setTargetAtTime).toHaveBeenCalledWith(1200, expect.any(Number), expect.any(Number));
@@ -214,16 +214,16 @@ describe('AudioGenerator', () => {
   });
 
   test('play past the pool limit evicts the oldest voice (FIFO)', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator({ poolSize: 2 });
 
-    manager.play(gen);
-    manager.play(gen);
+    system.play(gen);
+    system.play(gen);
     expect(spy.oscillators[0].stop).not.toHaveBeenCalled();
     expect(spy.oscillators[1].stop).not.toHaveBeenCalled();
 
-    manager.play(gen);
+    system.play(gen);
     expect(spy.oscillators[0].stop).toHaveBeenCalled();
 
     spy.restore();
@@ -231,13 +231,13 @@ describe('AudioGenerator', () => {
   });
 
   test('with an envelope, play() triggers it on the voice envelope gain', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const env = new Envelope({ attackMs: 10, decayMs: 50, sustainLevel: 0.8, releaseMs: 100 });
     const triggerSpy = vi.spyOn(env, 'trigger');
     const gen = new AudioGenerator({ envelope: env });
 
-    manager.play(gen);
+    system.play(gen);
 
     expect(triggerSpy).toHaveBeenCalledTimes(1);
     const [gainParam, atTime] = triggerSpy.mock.calls[0];
@@ -249,13 +249,13 @@ describe('AudioGenerator', () => {
   });
 
   test('with an envelope, voice.stop() releases it and stops the oscillator after releaseMs', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const env = new Envelope({ attackMs: 10, decayMs: 50, sustainLevel: 0.8, releaseMs: 200 });
     const releaseSpy = vi.spyOn(env, 'release');
     const gen = new AudioGenerator({ envelope: env });
 
-    const voice = manager.play(gen);
+    const voice = system.play(gen);
     voice.stop();
 
     expect(releaseSpy).toHaveBeenCalledTimes(1);
@@ -267,11 +267,11 @@ describe('AudioGenerator', () => {
   });
 
   test('without an envelope, voice.stop() stops the oscillator immediately', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator();
 
-    const voice = manager.play(gen);
+    const voice = system.play(gen);
     voice.stop();
 
     expect(spy.oscillators[0].stop).toHaveBeenCalled();
@@ -283,25 +283,25 @@ describe('AudioGenerator', () => {
 
   // ---- Bus routing ----
 
-  test('voice routes to manager.sound by default', () => {
-    const manager = new AudioManager();
+  test('voice routes to system.sound by default', () => {
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator();
 
-    const voice = manager.play(gen);
-    expect(voice.bus).toBe(manager.sound);
+    const voice = system.play(gen);
+    expect(voice.bus).toBe(system.sound);
 
     spy.restore();
     gen.destroy();
   });
 
   test('options.bus routes the voice to a custom bus', () => {
-    const manager = new AudioManager();
-    const customBus = new AudioBus('gen-custom', { parent: manager.master });
+    const system = new AudioSystem();
+    const customBus = new AudioBus('gen-custom', { parent: system.master });
     const spy = setupSpy();
     const gen = new AudioGenerator();
 
-    const voice = manager.play(gen, { bus: customBus });
+    const voice = system.play(gen, { bus: customBus });
     expect(voice.bus).toBe(customBus);
 
     spy.restore();
@@ -312,12 +312,12 @@ describe('AudioGenerator', () => {
   // ---- Lifecycle ----
 
   test('stopAll() stops all active voices', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator();
 
-    manager.play(gen);
-    manager.play(gen);
+    system.play(gen);
+    system.play(gen);
     gen.stopAll();
 
     for (const osc of spy.oscillators) {
@@ -329,12 +329,12 @@ describe('AudioGenerator', () => {
   });
 
   test('destroy() stops all active voices', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator();
 
-    manager.play(gen);
-    manager.play(gen);
+    system.play(gen);
+    system.play(gen);
     gen.destroy();
 
     for (const osc of spy.oscillators) {
@@ -377,16 +377,16 @@ describe('AudioGenerator', () => {
     });
 
     const { AudioGenerator: LockedAudioGenerator } = await import('#audio/AudioGenerator');
-    const { AudioManager: LockedAudioManager } = await import('#audio/AudioManager');
+    const { AudioSystem: LockedAudioSystem } = await import('#audio/AudioSystem');
     const { NoopVoice } = await import('#audio/NoopVoice');
 
-    const manager = new LockedAudioManager();
+    const system = new LockedAudioSystem();
     const gen = new LockedAudioGenerator();
-    const voice = manager.play(gen);
+    const voice = system.play(gen);
 
     expect(voice).toBeInstanceOf(NoopVoice);
     expect(voice.ended).toBe(true);
-    expect(voice.bus).toBe(manager.sound);
+    expect(voice.bus).toBe(system.sound);
 
     vi.doUnmock('#audio/audio-context');
     vi.resetModules();
@@ -401,11 +401,11 @@ describe('AudioGenerator', () => {
   // that (otherwise unreachable) state directly to exercise the defensive
   // pruning branch.
   test('_pruneEndedVoices() removes a stale ended entry so it does not count against the pool limit', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator({ poolSize: 1 });
 
-    manager.play(gen);
+    system.play(gen);
     expect(spy.oscillators[0].stop).not.toHaveBeenCalled();
 
     // Forge a stale "already ended" entry sitting in the pool without going
@@ -416,7 +416,7 @@ describe('AudioGenerator', () => {
 
     // Playing again prunes the stale entry first, so the pool isn't
     // considered full and nothing is evicted.
-    manager.play(gen);
+    system.play(gen);
     expect(spy.oscillators[0].stop).not.toHaveBeenCalled();
     expect(spy.oscillators.length).toBe(2);
 
@@ -427,22 +427,22 @@ describe('AudioGenerator', () => {
   // ---- _pickEvictionVictim(): LeastRecentlyUsed strategy ----
 
   test('LeastRecentlyUsed strategy evicts the voice with the smallest startedAt', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator({ poolSize: 2, poolStrategy: SoundPoolStrategy.LeastRecentlyUsed });
     const ctx = getAudioContext() as AudioContext & { currentTime: number };
 
     ctx.currentTime = 0;
-    manager.play(gen); // oldest
+    system.play(gen); // oldest
 
     ctx.currentTime = 5;
-    manager.play(gen); // newer
+    system.play(gen); // newer
 
     expect(spy.oscillators[0].stop).not.toHaveBeenCalled();
     expect(spy.oscillators[1].stop).not.toHaveBeenCalled();
 
     ctx.currentTime = 10;
-    manager.play(gen); // triggers eviction — the oldest (index 0) must go
+    system.play(gen); // triggers eviction — the oldest (index 0) must go
 
     expect(spy.oscillators[0].stop).toHaveBeenCalled();
     expect(spy.oscillators[1].stop).not.toHaveBeenCalled();
@@ -453,18 +453,18 @@ describe('AudioGenerator', () => {
   });
 
   test('_pickEvictionVictim() returning an out-of-range index is a defensive no-op (nothing evicted)', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator({ poolSize: 1 });
 
-    manager.play(gen);
+    system.play(gen);
     // Structurally, `_pickEvictionVictim()` always returns a valid index into
     // a non-empty `_activeVoices` (guaranteed by the `length >= poolSize`
     // check that gates the call), so `victim` can never actually be
     // `undefined`. Forced here via a spy purely for coverage of that guard.
     vi.spyOn(gen as unknown as { _pickEvictionVictim: () => number }, '_pickEvictionVictim').mockReturnValue(99);
 
-    manager.play(gen);
+    system.play(gen);
 
     expect(spy.oscillators[0].stop).not.toHaveBeenCalled();
 
@@ -475,11 +475,11 @@ describe('AudioGenerator', () => {
   // ---- volume/muted option resolution (per-play override chain) ----
 
   test('options.muted overrides both options.volume and the descriptor volume to 0', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator({ volume: 1 });
 
-    manager.play(gen, { muted: true, volume: 0.8 });
+    system.play(gen, { muted: true, volume: 0.8 });
 
     expect(spy.gains[0].gain.setTargetAtTime).toHaveBeenCalledWith(0, expect.any(Number), expect.any(Number));
 
@@ -488,11 +488,11 @@ describe('AudioGenerator', () => {
   });
 
   test('options.volume overrides the descriptor volume when not muted', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator({ volume: 1 });
 
-    manager.play(gen, { volume: 0.3 });
+    system.play(gen, { volume: 0.3 });
 
     expect(spy.gains[0].gain.setTargetAtTime).toHaveBeenCalledWith(0.3, expect.any(Number), expect.any(Number));
 
@@ -501,11 +501,11 @@ describe('AudioGenerator', () => {
   });
 
   test('descriptor muted=true zeroes the voice volume when no per-play override is given', () => {
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const spy = setupSpy();
     const gen = new AudioGenerator({ volume: 1, muted: true });
 
-    manager.play(gen);
+    system.play(gen);
 
     expect(spy.gains[0].gain.setTargetAtTime).toHaveBeenCalledWith(0, expect.any(Number), expect.any(Number));
 

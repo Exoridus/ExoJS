@@ -3,7 +3,7 @@ import type { MockInstance } from 'vitest';
 /**
  * Tests for Sound pool behaviour:
  *  - Default poolSize = 8, poolStrategy = FirstInFirstOut, priority = 0
- *  - manager.play() is multi-instance (pooled) by default
+ *  - system.play() is multi-instance (pooled) by default
  *  - _stopAllVoices() stops all active voices (replace mode)
  *  - FIFO eviction (FirstInFirstOut strategy)
  *  - LRU eviction (LeastRecentlyUsed strategy - closest to natural end)
@@ -11,7 +11,7 @@ import type { MockInstance } from 'vitest';
  *  - Voices are removed from pool when they end naturally
  */
 import { getAudioContext } from '#audio/audio-context';
-import { AudioManager } from '#audio/AudioManager';
+import { AudioSystem } from '#audio/AudioSystem';
 import type { Pausable, Voice } from '#audio/Playable';
 import { Sound, SoundPoolStrategy } from '#audio/Sound';
 
@@ -151,12 +151,12 @@ describe('Sound — pool defaults', () => {
   // setPoolSize() shrinking below the active voice count trims (evicts) the excess
   test('setPoolSize() shrink trims active voices down to the new capacity', () => {
     const factory = setupSourceFactory();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
 
-    manager.play(sound); // src[0]
-    manager.play(sound); // src[1]
-    manager.play(sound); // src[2]
+    system.play(sound); // src[0]
+    system.play(sound); // src[1]
+    system.play(sound); // src[2]
 
     sound.setPoolSize(1);
 
@@ -189,12 +189,12 @@ describe('Sound — multi-instance play() (pooled default)', () => {
   // 4. play() below pool limit creates new source, no eviction
   test('play() below pool limit creates a new source without stopping others', () => {
     const factory = setupSourceFactory();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 8 });
 
-    manager.play(sound);
-    manager.play(sound);
-    manager.play(sound);
+    system.play(sound);
+    system.play(sound);
+    system.play(sound);
 
     expect(factory.sources.length).toBe(3);
     for (const src of factory.sources) {
@@ -208,15 +208,15 @@ describe('Sound — multi-instance play() (pooled default)', () => {
   // 5. FIFO eviction when pool is full
   test('play() past pool limit evicts oldest source first (FIFO)', () => {
     const factory = setupSourceFactory();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), {
       poolSize: 2,
       poolStrategy: SoundPoolStrategy.FirstInFirstOut,
     });
 
-    manager.play(sound); // src[0] — oldest
-    manager.play(sound); // src[1]
-    manager.play(sound); // src[2] — pool at 2, so src[0] evicted
+    system.play(sound); // src[0] — oldest
+    system.play(sound); // src[1]
+    system.play(sound); // src[2] — pool at 2, so src[0] evicted
 
     expect(factory.sources.length).toBe(3);
     expect(factory.sources[0].stop).toHaveBeenCalledTimes(1); // evicted (FIFO)
@@ -235,7 +235,7 @@ describe('Sound — LeastRecentlyUsed eviction', () => {
   test('LRU strategy evicts the source with least remaining time', () => {
     const timeMock = mockCurrentTime(0);
     const factory = setupSourceFactory();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
 
     // Buffer duration = 4 s
     const sound = new Sound(createAudioBufferStub(4), {
@@ -245,15 +245,15 @@ describe('Sound — LeastRecentlyUsed eviction', () => {
 
     // src[0] - started at t=0, duration=4s → remaining at t=3: 4-3=1s
     timeMock.setTime(0);
-    manager.play(sound);
+    system.play(sound);
 
     // src[1] - started at t=2, duration=4s → remaining at t=3: 4-(3-2)=3s
     timeMock.setTime(2);
-    manager.play(sound);
+    system.play(sound);
 
     // At t=3, pool is full (2). Next play should evict src[0] (least remaining).
     timeMock.setTime(3);
-    manager.play(sound); // src[2] — triggers eviction
+    system.play(sound); // src[2] — triggers eviction
 
     expect(factory.sources.length).toBe(3);
     expect(factory.sources[0].stop).toHaveBeenCalledTimes(1); // evicted (closest to end)
@@ -275,14 +275,14 @@ describe('Sound — LeastRecentlyUsed eviction while the audio context is not re
   // a victim, and must do so without spawning a context to read the clock from.
   test('LRU eviction still picks a victim when isAudioContextReady() is false', () => {
     const factory = setupSourceFactory();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(4), {
       poolSize: 2,
       poolStrategy: SoundPoolStrategy.LeastRecentlyUsed,
     });
 
-    manager.play(sound); // src[0]
-    manager.play(sound); // src[1]
+    system.play(sound); // src[0]
+    system.play(sound); // src[1]
 
     const ctx = getAudioContext();
     const originalState = ctx.state;
@@ -306,15 +306,15 @@ describe('Sound — LowestPriority eviction', () => {
   // 7. LowestPriority degenerates to FIFO within a single Sound (all instances share priority)
   test('LowestPriority strategy degenerates to FIFO within a single Sound', () => {
     const factory = setupSourceFactory();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), {
       poolSize: 2,
       poolStrategy: SoundPoolStrategy.LowestPriority,
     });
 
-    manager.play(sound); // src[0] — oldest
-    manager.play(sound); // src[1]
-    manager.play(sound); // src[2] — evicts src[0] (FIFO fallback since same priority)
+    system.play(sound); // src[0] — oldest
+    system.play(sound); // src[1]
+    system.play(sound); // src[2] — evicts src[0] (FIFO fallback since same priority)
 
     expect(factory.sources.length).toBe(3);
     expect(factory.sources[0].stop).toHaveBeenCalledTimes(1); // FIFO victim
@@ -332,12 +332,12 @@ describe('Sound — _stopAllVoices() (replace mode)', () => {
   // 8. _stopAllVoices() stops all active voices
   test('_stopAllVoices() stops all active voices', () => {
     const factory = setupSourceFactory();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
 
-    manager.play(sound); // src[0]
-    manager.play(sound); // src[1]
-    manager.play(sound); // src[2]
+    system.play(sound); // src[0]
+    system.play(sound); // src[1]
+    system.play(sound); // src[2]
 
     sound._stopAllVoices(); // should stop src[0..2]
 
@@ -353,13 +353,13 @@ describe('Sound — _stopAllVoices() (replace mode)', () => {
   // 9. play() after _stopAllVoices() starts fresh
   test('play() after _stopAllVoices() accumulates normally', () => {
     const factory = setupSourceFactory();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
 
-    manager.play(sound); // src[0]
+    system.play(sound); // src[0]
     sound._stopAllVoices();
-    manager.play(sound); // src[1] — regular pooled
-    manager.play(sound); // src[2] — regular pooled
+    system.play(sound); // src[1] — regular pooled
+    system.play(sound); // src[2] — regular pooled
 
     expect(factory.sources.length).toBe(3);
     expect(factory.sources[0].stop).toHaveBeenCalledTimes(1);
@@ -373,15 +373,15 @@ describe('Sound — _stopAllVoices() (replace mode)', () => {
   // _stopAllVoices() with poolSize=1 exactly replicates old singleton behavior
   test('_stopAllVoices() + play() with poolSize=1 replicates old singleton-replace behavior', () => {
     const factory = setupSourceFactory();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 1 });
 
     sound._stopAllVoices();
-    manager.play(sound); // src[0]
+    system.play(sound); // src[0]
     sound._stopAllVoices();
-    manager.play(sound); // src[1]
+    system.play(sound); // src[1]
     sound._stopAllVoices();
-    manager.play(sound); // src[2]
+    system.play(sound); // src[2]
 
     expect(factory.sources.length).toBe(3);
     expect(factory.sources[0].stop).toHaveBeenCalledTimes(1);
@@ -399,11 +399,11 @@ describe('Sound — natural pool cleanup', () => {
   // 10. Voices are removed from pool when they end naturally
   test('voices are removed from the pool when they end naturally (no eviction)', () => {
     const factory = setupSourceFactory();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
 
-    manager.play(sound); // src[0]
-    manager.play(sound); // src[1]
+    system.play(sound); // src[0]
+    system.play(sound); // src[1]
 
     expect(factory.sources.length).toBe(2);
 
@@ -416,7 +416,7 @@ describe('Sound — natural pool cleanup', () => {
     factory.sources[1].onended?.();
 
     // Pool should now be empty - a 3rd play creates a fresh voice without evicting
-    manager.play(sound); // src[2]
+    system.play(sound); // src[2]
     expect(factory.sources[2].stop).not.toHaveBeenCalled();
 
     factory.restore();
@@ -428,10 +428,10 @@ describe('Sound — natural pool cleanup', () => {
   // next play() rather than being left to accumulate.
   test('_pruneEndedVoices() removes a stale entry pointing at an already-ended voice', () => {
     const factory = setupSourceFactory();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
 
-    const voice = manager.play(sound); // src[0], auto-removed from the pool via onEnd on stop()
+    const voice = system.play(sound); // src[0], auto-removed from the pool via onEnd on stop()
     voice.stop();
 
     // Re-seed a stale entry directly, simulating the pool bookkeeping having
@@ -442,7 +442,7 @@ describe('Sound — natural pool cleanup', () => {
       effectiveDuration: 1,
     });
 
-    manager.play(sound); // src[1] — _pruneEndedVoices() drops the stale entry first
+    system.play(sound); // src[1] — _pruneEndedVoices() drops the stale entry first
 
     expect(factory.sources.length).toBe(2);
     expect(factory.sources[1].stop).not.toHaveBeenCalled();
@@ -454,12 +454,12 @@ describe('Sound — natural pool cleanup', () => {
   // voice.stop() ends the voice immediately
   test('voice.stop() marks the voice as ended', () => {
     const factory = setupSourceFactory();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
 
-    const voice = manager.play(sound);
-    const voice2 = manager.play(sound);
-    const voice3 = manager.play(sound);
+    const voice = system.play(sound);
+    const voice2 = system.play(sound);
+    const voice3 = system.play(sound);
 
     voice.stop();
     voice2.stop();
@@ -485,14 +485,14 @@ describe('Sound — paused voices are deprioritized as eviction victims', () => 
 
   test('FIFO evicts the oldest UNPAUSED voice, not the paused one in front of it', () => {
     const factory = setupSourceFactory();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(10), { poolSize: 2 });
 
-    const paused = manager.play(sound) as Voice & Pausable;
+    const paused = system.play(sound) as Voice & Pausable;
     paused.pause();
-    const playing = manager.play(sound);
+    const playing = system.play(sound);
 
-    manager.play(sound); // pool is full — someone has to go
+    system.play(sound); // pool is full — someone has to go
 
     expect(paused.ended).toBe(false);
     expect(paused.paused).toBe(true);
@@ -505,22 +505,22 @@ describe('Sound — paused voices are deprioritized as eviction victims', () => 
   test('LRU skips a paused voice even when its stale bookkeeping looks closest to the end', () => {
     const factory = setupSourceFactory();
     const clock = mockCurrentTime(0);
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(10), {
       poolSize: 2,
       poolStrategy: SoundPoolStrategy.LeastRecentlyUsed,
     });
 
-    const paused = manager.play(sound) as Voice & Pausable;
+    const paused = system.play(sound) as Voice & Pausable;
     paused.pause();
 
     // The context clock runs on while the voice is frozen, so its recorded
     // remaining time shrinks to the smallest in the pool.
     clock.setTime(9);
-    const playing = manager.play(sound);
+    const playing = system.play(sound);
 
     clock.setTime(9.1);
-    manager.play(sound);
+    system.play(sound);
 
     expect(paused.ended).toBe(false);
     expect(playing.ended).toBe(true);
@@ -532,15 +532,15 @@ describe('Sound — paused voices are deprioritized as eviction victims', () => 
 
   test('an all-paused pool still evicts rather than growing past its size', () => {
     const factory = setupSourceFactory();
-    const manager = new AudioManager();
+    const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(10), { poolSize: 2 });
 
-    const first = manager.play(sound) as Voice & Pausable;
-    const second = manager.play(sound) as Voice & Pausable;
+    const first = system.play(sound) as Voice & Pausable;
+    const second = system.play(sound) as Voice & Pausable;
     first.pause();
     second.pause();
 
-    const third = manager.play(sound);
+    const third = system.play(sound);
 
     // Nothing else could go, so the oldest paused voice is the fallback victim.
     expect(first.ended).toBe(true);

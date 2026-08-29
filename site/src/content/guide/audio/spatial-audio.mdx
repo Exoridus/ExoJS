@@ -254,7 +254,7 @@ const voice = application.audio.play(waterfall, {
 
 ## Sounds per frame
 
-Spatial updates happen automatically — each frame the `AudioManager` updates the listener from its target and ticks every spatial `Voice`, writing the resolved position (relative to that application's listener) to the Web Audio `PannerNode`. You do not need to call any per-frame update on spatial sources: pass `position` in `PlayOptions` at play time, set it live on the returned `Voice`, or call `voice.follow(node)`, and the engine handles the rest.
+Spatial updates happen automatically — each frame the `AudioSystem` updates the listener from its target and ticks every spatial `Voice`, writing the resolved position (relative to that application's listener) to the Web Audio `PannerNode`. You do not need to call any per-frame update on spatial sources: pass `position` in `PlayOptions` at play time, set it live on the returned `Voice`, or call `voice.follow(node)`, and the engine handles the rest.
 
 ## Elevation: the third axis
 
