@@ -62,6 +62,10 @@ class FakePlatformAdapter implements PlatformAdapter {
     this.surfaceFocused = true;
   }
 
+  public createTextInput(): null {
+    return null;
+  }
+
   public getSurfaceMetrics(): PlatformSurfaceMetrics {
     return this._metrics;
   }
