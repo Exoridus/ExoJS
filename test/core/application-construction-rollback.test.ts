@@ -90,6 +90,7 @@ const createRecordingPlatform = (): PlatformAdapter & {
     documentVisible: true,
     networkHint: 'online',
     focusSurface: () => undefined,
+    createTextInput: () => null,
     getSurfaceMetrics: () => ({ left: 0, top: 0, width: 800, height: 600, backingWidth: 800, backingHeight: 600 }),
     setCursor: () => undefined,
     setTouchAction: () => undefined,

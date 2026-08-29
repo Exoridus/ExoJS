@@ -1,0 +1,433 @@
+{
+  "recorded": {
+    "at": "2026-08-29T11:27:41.910Z",
+    "engineVersion": "0.15.2",
+    "adapters": {
+      "webgl2": "ANGLE (NVIDIA, NVIDIA GeForce RTX 5070 Ti (0x00002C05) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    "cpu": "AMD Ryzen 7 3700X 8-Core Processor             ",
+    "confirmedIdle": false
+  },
+  "cells": [
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "batch-breaking-atlased",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.08500000834465027,
+      "cpuMsP95": 0.10999999940395355,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "batch-breaking",
+      "nodeCount": 5000,
+      "cpuMsMedian": 2.0174999982118607,
+      "cpuMsP95": 2.7950000017881393,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "deep-hierarchy",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.4074999988079071,
+      "cpuMsP95": 0.5799999982118607,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "dynamic-heavy",
+      "nodeCount": 5000,
+      "cpuMsMedian": 1.155000001192093,
+      "cpuMsP95": 1.9350000023841858,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "filter-chain-1",
+      "nodeCount": 5000,
+      "cpuMsMedian": 2.7550000101327896,
+      "cpuMsP95": 3.239999994635582,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "filter-chain-2",
+      "nodeCount": 5000,
+      "cpuMsMedian": 2.6099999994039536,
+      "cpuMsP95": 3.0999999940395355,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "filter-chain-4",
+      "nodeCount": 5000,
+      "cpuMsMedian": 2.5250000059604645,
+      "cpuMsP95": 3.1649999916553497,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "instanced-batch",
+      "nodeCount": 5000,
+      "cpuMsMedian": 1.0150000005960464,
+      "cpuMsP95": 1.2999999970197678,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "lifecycle-churn",
+      "nodeCount": 5000,
+      "cpuMsMedian": 4.582500010728836,
+      "cpuMsP95": 5.310000002384186,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "mask-clip",
+      "nodeCount": 5000,
+      "cpuMsMedian": 2.4249999970197678,
+      "cpuMsP95": 3.219999998807907,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "mixed-blend",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.33000000566244125,
+      "cpuMsP95": 0.4449999928474426,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "mixed-material-atlased",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.3499999940395355,
+      "cpuMsP95": 0.4699999988079071,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "mixed-material",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.4699999988079071,
+      "cpuMsP95": 0.7300000041723251,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "mixed-sprite-mesh-array",
+      "nodeCount": 5000,
+      "cpuMsMedian": 5.322500005364418,
+      "cpuMsP95": 6.3599999994039536,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "mixed-sprite-mesh-static",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.09999999403953552,
+      "cpuMsP95": 0.125,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "overdraw",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.14750000089406967,
+      "cpuMsP95": 0.2900000065565109,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "scrolling-world",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.14000000059604645,
+      "cpuMsP95": 0.45499999821186066,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "split-screen",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.1550000011920929,
+      "cpuMsP95": 0.23000000417232513,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "static-heavy",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.19499999284744263,
+      "cpuMsP95": 0.32500000298023224,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "text-dynamic",
+      "nodeCount": 5000,
+      "cpuMsMedian": 16.73250000178814,
+      "cpuMsP95": 20.32999999821186,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "text-static",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.0949999988079071,
+      "cpuMsP95": 0.13500000536441803,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "batch-breaking-atlased",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.06000000238418579,
+      "cpuMsP95": 0.07500000298023224,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "batch-breaking",
+      "nodeCount": 5000,
+      "cpuMsMedian": 1.2650000005960464,
+      "cpuMsP95": 1.979999989271164,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "deep-hierarchy",
+      "nodeCount": 5000,
+      "cpuMsMedian": 2.0424999967217445,
+      "cpuMsP95": 3.0750000029802322,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "dynamic-heavy",
+      "nodeCount": 5000,
+      "cpuMsMedian": 1.9550000056624413,
+      "cpuMsP95": 2.7549999952316284,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "filter-chain-1",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.21000000089406967,
+      "cpuMsP95": 0.3050000071525574,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "filter-chain-2",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.20750000327825546,
+      "cpuMsP95": 0.2750000059604645,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "filter-chain-4",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.20999999344348907,
+      "cpuMsP95": 0.26000000536441803,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "instanced-batch",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.8275000005960464,
+      "cpuMsP95": 1.040000006556511,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "lifecycle-churn",
+      "nodeCount": 5000,
+      "cpuMsMedian": 4.570000007748604,
+      "cpuMsP95": 5.2349999994039536,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "mask-clip",
+      "nodeCount": 5000,
+      "cpuMsMedian": 1.6050000041723251,
+      "cpuMsP95": 1.979999989271164,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "mixed-blend",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.25999999046325684,
+      "cpuMsP95": 0.3449999988079071,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "mixed-material-atlased",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.3400000035762787,
+      "cpuMsP95": 0.4650000035762787,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "mixed-material",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.3499999940395355,
+      "cpuMsP95": 0.4450000077486038,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "mixed-sprite-mesh-array",
+      "nodeCount": 5000,
+      "cpuMsMedian": 4.554999999701977,
+      "cpuMsP95": 5.4000000059604645,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "mixed-sprite-mesh-static",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.09000000357627869,
+      "cpuMsP95": 0.12000000476837158,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "overdraw",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.10999999940395355,
+      "cpuMsP95": 0.1899999976158142,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "scrolling-world",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.0949999988079071,
+      "cpuMsP95": 0.125,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "split-screen",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.10499998927116394,
+      "cpuMsP95": 0.14499999582767487,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "static-heavy",
+      "nodeCount": 5000,
+      "cpuMsMedian": 0.12999999523162842,
+      "cpuMsP95": 0.18000000715255737,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "text-dynamic",
+      "nodeCount": 5000,
+      "cpuMsMedian": 15.117499992251396,
+      "cpuMsP95": 20.974999994039536,
+      "timedFrames": 90
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "text-static",
+      "nodeCount": 5000,
+      "cpuMsMedian": 5.419999994337559,
+      "cpuMsP95": 6.469999998807907,
+      "timedFrames": 90
+    }
+  ]
+}

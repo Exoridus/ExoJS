@@ -44,6 +44,7 @@ jobs:
       audioFx: ${{ steps.decide.outputs.audioFx }}
       tilemapWorker: ${{ steps.decide.outputs.tilemapWorker }}
       exampleCatalog: ${{ steps.decide.outputs.exampleCatalog }}
+      benchStructural: ${{ steps.decide.outputs.benchStructural }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -755,6 +756,57 @@ jobs:
           retention-days: 1
           if-no-files-found: warn
 
+  # The benchmark harness's structural gate: exact draw/bind/upload counters
+  # compared against a committed baseline.
+  #
+  # It runs in CI - unlike the rest of `@codexo/exojs-bench`, which deliberately
+  # has no lane - because it needs neither a GPU nor a competitor library. The
+  # counters are integers decided CPU-side, so the run asks for the software
+  # rasterizer explicitly and only measures the ExoJS arms; nothing here installs
+  # `bench:setup`, so the competitor packages never enter the CI trust boundary.
+  bench-structural-gate:
+    name: Bench Structural Gate
+    needs: [changes]
+    if: ${{ needs.changes.outputs.benchStructural == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm-version }}
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm bootstrap
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Structural counter gate (software rasterizer)
+        run: pnpm gate:bench:structural
+
   # Aggregates the JUnit report every test lane above just uploaded and runs
   # the skip-budget gate against ALL of them combined — one global budget per
   # suite file, not one per lane (see scripts/check-skipped-tests.ts). This is
@@ -1193,6 +1245,7 @@ jobs:
         package-verify,
         site-build,
         example-smoke,
+        bench-structural-gate,
       ]
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -1204,6 +1257,7 @@ jobs:
           AUDIOFX: ${{ needs.changes.outputs.audioFx }}
           TILEMAPWORKER: ${{ needs.changes.outputs.tilemapWorker }}
           EXAMPLECATALOG: ${{ needs.changes.outputs.exampleCatalog }}
+          BENCHSTRUCTURAL: ${{ needs.changes.outputs.benchStructural }}
           CHANGES_RESULT: ${{ needs.changes.result }}
           TYPECHECK_RESULT: ${{ needs.typecheck.result }}
           LINT_RESULT: ${{ needs.lint.result }}
@@ -1220,8 +1274,9 @@ jobs:
           PACKAGE_VERIFY_RESULT: ${{ needs['package-verify'].result }}
           SITE_BUILD_RESULT: ${{ needs['site-build'].result }}
           EXAMPLE_SMOKE_RESULT: ${{ needs['example-smoke'].result }}
+          BENCH_STRUCTURAL_RESULT: ${{ needs['bench-structural-gate'].result }}
         run: |
-          echo "areas: engine=$ENGINE site=$SITE audioFx=$AUDIOFX tilemapWorker=$TILEMAPWORKER exampleCatalog=$EXAMPLECATALOG"
+          echo "areas: engine=$ENGINE site=$SITE audioFx=$AUDIOFX tilemapWorker=$TILEMAPWORKER exampleCatalog=$EXAMPLECATALOG benchStructural=$BENCHSTRUCTURAL"
           echo "changes: $CHANGES_RESULT"
           echo "typecheck: $TYPECHECK_RESULT"
           echo "lint: $LINT_RESULT"
@@ -1238,6 +1293,7 @@ jobs:
           echo "package-verify: $PACKAGE_VERIFY_RESULT"
           echo "site-build: $SITE_BUILD_RESULT"
           echo "example-smoke: $EXAMPLE_SMOKE_RESULT"
+          echo "bench-structural-gate: $BENCH_STRUCTURAL_RESULT"
 
           failed=0
 
@@ -1268,7 +1324,8 @@ jobs:
             "build=$BUILD_RESULT" \
             "package-verify=$PACKAGE_VERIFY_RESULT" \
             "site-build=$SITE_BUILD_RESULT" \
-            "example-smoke=$EXAMPLE_SMOKE_RESULT"; do
+            "example-smoke=$EXAMPLE_SMOKE_RESULT" \
+            "bench-structural-gate=$BENCH_STRUCTURAL_RESULT"; do
             name="${entry%%=*}"
             result="${entry#*=}"
             if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
@@ -1303,6 +1360,12 @@ jobs:
                 failed=1
               fi
             done
+          fi
+
+          # A rendering / bench change must run the structural counter gate.
+          if [ "$BENCHSTRUCTURAL" = "true" ] && [ "$BENCH_STRUCTURAL_RESULT" = "skipped" ]; then
+            echo "::error::Rendering or bench change detected but 'bench-structural-gate' was skipped (path-filter regression)."
+            failed=1
           fi
 
           # An audio-fx change must run the browser-audio lane.

@@ -1,0 +1,458 @@
+{
+  "title": "TextInputOptions",
+  "description": "Options for TextInput.",
+  "symbol": "TextInputOptions",
+  "kind": "interface",
+  "subsystem": "ui",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 12,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 12,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for TextInput."
+      ],
+      "importLine": "import { TextInputOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "enterKeyHint",
+          "signature": "enterKeyHint?: \"done\" | \"enter\" | \"go\" | \"next\" | \"search\" | \"send\"",
+          "signatureTokens": [
+            {
+              "text": "enterKeyHint",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"done\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"enter\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"go\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"next\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"search\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"send\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "What the field's confirm key should be labelled as."
+        },
+        {
+          "name": "filter",
+          "signature": "filter?: (candidate: string) => boolean",
+          "signatureTokens": [
+            {
+              "text": "filter",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "candidate",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Gate on the value an edit would produce. An edit whose resulting value is rejected does not happen at all - a refused paste is dropped whole."
+        },
+        {
+          "name": "height",
+          "signature": "height?: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Visible height in pixels. Default 36."
+        },
+        {
+          "name": "inputMode",
+          "signature": "inputMode?: \"decimal\" | \"email\" | \"numeric\" | \"search\" | \"tel\" | \"text\" | \"url\"",
+          "signatureTokens": [
+            {
+              "text": "inputMode",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"decimal\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"email\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"numeric\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"search\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"tel\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"text\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"url\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "What kind of content the field holds, so mobile keyboards can adapt."
+        },
+        {
+          "name": "maskChar",
+          "signature": "maskChar?: string",
+          "signatureTokens": [
+            {
+              "text": "maskChar",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When set, every grapheme of the value renders as this character; clipboard reads are refused."
+        },
+        {
+          "name": "maxLength",
+          "signature": "maxLength?: number",
+          "signatureTokens": [
+            {
+              "text": "maxLength",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Maximum value length in UTF-16 code units. Unlimited when absent."
+        },
+        {
+          "name": "multiline",
+          "signature": "multiline?: boolean",
+          "signatureTokens": [
+            {
+              "text": "multiline",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether newlines are accepted. Default false."
+        },
+        {
+          "name": "placeholder",
+          "signature": "placeholder?: string",
+          "signatureTokens": [
+            {
+              "text": "placeholder",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Hint shown while the field holds no text. Default ''."
+        },
+        {
+          "name": "readOnly",
+          "signature": "readOnly?: boolean",
+          "signatureTokens": [
+            {
+              "text": "readOnly",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When set, the field renders and takes focus but rejects every edit. Default false."
+        },
+        {
+          "name": "textStyle",
+          "signature": "textStyle?: TextStyleOptions",
+          "signatureTokens": [
+            {
+              "text": "textStyle",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextStyleOptions",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Text style overrides on top of the surface skin's."
+        },
+        {
+          "name": "value",
+          "signature": "value?: string",
+          "signatureTokens": [
+            {
+              "text": "value",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial value. Default ''."
+        },
+        {
+          "name": "width",
+          "signature": "width?: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Visible width in pixels. Default 200."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/ui/TextInput.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/TextInput.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/ui/TextInput.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/TextInput.ts"
+}

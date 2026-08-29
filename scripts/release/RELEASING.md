@@ -74,9 +74,18 @@ on the registry ([npm/cli#8544](https://github.com/npm/cli/issues/8544)). If a n
 extension package is part of a release, the coordinated publish will abort the
 first time it reaches that package. Bootstrap it ahead of time instead:
 
-1. As soon as `@codexo/exojs-<new>` exists in the monorepo, publish a one-off
-   placeholder **manually** (e.g. a `0.0.0` or `x.y.z-next.0` prerelease, or the
-   first real tarball with a local `npm login`).
+1. As soon as `@codexo/exojs-<new>` exists in the monorepo, publish it once with
+   the bootstrap command. It builds, packs and publishes that one package
+   **without** `--provenance` (there is no trusted publisher to attest against
+   yet), refuses a name that is already on the registry, and is a dry-run until
+   `--execute`:
+
+   ```bash
+   npm login                                                    # granular token, publish scope
+   pnpm release:bootstrap @codexo/exojs-<new>                   # dry-run
+   pnpm release:bootstrap @codexo/exojs-<new> --execute
+   ```
+
 2. **Immediately** create its Trusted Publisher config on npmjs.com:
    - Repository `Exoridus/ExoJS`, workflow `release.yml`, no environment.
    - Enable the **publish** action (OIDC publishes directly to `latest` — no
@@ -96,3 +105,41 @@ first time it reaches that package. Bootstrap it ahead of time instead:
 
 From then on every publish (including the new package's first real release) flows
 through OIDC with provenance, with no manual step during the release itself.
+
+## Packages off the lockstep line
+
+`@codexo/exojs-build` and `create-exo-app` are published on their own version
+lines (`INDEPENDENT_PACKAGES` in `scripts/release/lockstep-packages.ts`): the
+first is build tooling a consumer keeps across engine upgrades, the second is a
+scaffolder run once via `npx`. Neither is in `PUBLISH_ORDER`, so **no
+coordinated release ever publishes them** - they are released one at a time,
+whenever their own version is bumped:
+
+```bash
+pnpm release:publish-independent create-exo-app              # dry-run
+pnpm release:publish-independent create-exo-app --execute    # publishes with --provenance
+```
+
+The command refuses a lockstep package (the coordinated release owns those), is
+a no-op for a version already on the registry, and points at
+`release:bootstrap` when the name does not exist yet. The very first publish of
+one of these names goes through `release:bootstrap` like any other new package,
+followed by its Trusted Publisher config on npmjs.com.
+
+### Open at the time of writing (checked against the registry 2026-08-29)
+
+- `@codexo/exojs-tilemap-physics` is in `LOCKSTEP_PACKAGES` and therefore in
+  `PUBLISH_ORDER`, but has never been published (npm answers E404). The next
+  coordinated release would reach it and abort the chain there.
+
+  **Bootstrap it as part of that release, not before it:** run `release:cut`
+  first so the package carries the release version, then
+  `pnpm release:bootstrap @codexo/exojs-tilemap-physics --execute`, then
+  register its trusted publisher, and only then run the coordinated publish -
+  which skips it as already-published and publishes everything else with
+  provenance. Bootstrapping it earlier publishes a version (today `0.15.2`)
+  that no release will ever correspond to.
+
+- `create-exo-app` and `@codexo/exojs-build` **are** published, both at `0.1.0`,
+  which is what their `package.json` says. They need no bootstrap; their next
+  versions go out with `release:publish-independent`.

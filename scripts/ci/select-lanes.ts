@@ -33,6 +33,7 @@ export interface LaneAreas {
   audioFx: boolean;
   tilemapWorker: boolean;
   exampleCatalog: boolean;
+  benchStructural: boolean;
 }
 
 /** The concrete CI lanes those areas enable. */
@@ -48,6 +49,7 @@ export interface EffectiveLanes {
   browserTilemapWorker: boolean;
   packageVerify: boolean;
   siteBuild: boolean;
+  benchStructural: boolean;
   exampleSmoke: boolean;
 }
 
@@ -199,12 +201,32 @@ const isSitePath = (file: string): boolean => {
 /**
  * Classify a list of changed files into the effective validation areas.
  */
+/**
+ * Bench structural-gate area: the gate compares the draw/bind/upload counters the
+ * rendering path submits against a committed baseline, so it has to run when
+ * either side of that comparison moves - the rendering source, the harness that
+ * drives it, or the baseline itself.
+ *
+ * Narrower than `engine` on purpose: a change to audio, assets or input cannot
+ * move a draw-call count, and the gate costs a browser run.
+ */
+const isBenchStructuralPath = (file: string): boolean => {
+  if (file.startsWith('src/rendering/')) return true;
+  if (file.startsWith('packages/exojs-bench/src/')) return true;
+  if (file.startsWith('packages/exojs-bench/baselines/')) return true;
+  if (file === 'packages/exojs-bench/package.json') return true;
+  if (file.startsWith('.github/workflows/')) return true;
+
+  return false;
+};
+
 export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
   let engine = false;
   let site = false;
   let audioFx = false;
   let tilemapWorker = false;
   let exampleCatalog = false;
+  let benchStructural = false;
   for (const raw of changedFiles) {
     // Normalise Windows separators and trim stray whitespace/blank entries.
     const file = String(raw).replace(/\\/g, '/').trim();
@@ -214,9 +236,10 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
     if (!audioFx && isAudioFxPath(file)) audioFx = true;
     if (!tilemapWorker && isTilemapWorkerPath(file)) tilemapWorker = true;
     if (!exampleCatalog && isExampleCatalogPath(file)) exampleCatalog = true;
-    if (engine && site && audioFx && tilemapWorker && exampleCatalog) break;
+    if (!benchStructural && isBenchStructuralPath(file)) benchStructural = true;
+    if (engine && site && audioFx && tilemapWorker && exampleCatalog && benchStructural) break;
   }
-  return { engine, site, audioFx, tilemapWorker, exampleCatalog };
+  return { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural };
 };
 
 /**
@@ -230,10 +253,12 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
  *   - the browser-audio lane gates on `audioFx` (a narrow subset of engine);
  *   - example-smoke gates on `exampleCatalog` (a narrow subset of site) and
  *     additionally waits for site-build, because it smokes that job's artifact
- *     rather than building the site a second time.
+ *     rather than building the site a second time;
+ *   - bench-structural-gate gates on `benchStructural` (rendering source, the
+ *     bench harness, or the committed counter baseline).
  */
 export const effectiveLanes = (areas: LaneAreas): EffectiveLanes => {
-  const { engine, site, audioFx, tilemapWorker, exampleCatalog } = areas;
+  const { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural } = areas;
   return {
     typecheck: true,
     lint: true,
@@ -247,6 +272,7 @@ export const effectiveLanes = (areas: LaneAreas): EffectiveLanes => {
     packageVerify: engine,
     siteBuild: site,
     exampleSmoke: exampleCatalog,
+    benchStructural,
   };
 };
 

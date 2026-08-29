@@ -96,6 +96,19 @@ const matchesMp4Video = (arrayBuffer: ArrayBuffer): boolean => {
   return String.fromCharCode(...header.subarray(4, 11)) === 'ftypmp4';
 };
 
+/** The four-character brand starting at `offset`, or `''` when it is out of range. */
+const brandAt = (header: Uint8Array, offset: number): string =>
+  offset + 4 > header.length ? '' : String.fromCharCode(header[offset] ?? 0, header[offset + 1] ?? 0, header[offset + 2] ?? 0, header[offset + 3] ?? 0);
+
+const isAvifBrand = (brand: string): boolean => brand === 'avif' || brand === 'avis';
+
+/**
+ * An AVIF is allowed to declare a generic HEIF major brand (`mif1`, `msf1`) and
+ * name `avif` only among the compatible brands, which is what HEIF toolchains
+ * emit. Reading the major brand alone would sniff those as `text/plain`, so the
+ * compatible-brand list is scanned too - bounded by the `ftyp` box size the file
+ * declares, clamped to the data actually present.
+ */
 const matchesAvifImage = (arrayBuffer: ArrayBuffer): boolean => {
   if (arrayBuffer.byteLength < 12) {
     return false;
@@ -103,13 +116,24 @@ const matchesAvifImage = (arrayBuffer: ArrayBuffer): boolean => {
 
   const header = new Uint8Array(arrayBuffer);
 
-  if (String.fromCharCode(header[4] ?? 0, header[5] ?? 0, header[6] ?? 0, header[7] ?? 0) !== 'ftyp') {
+  if (brandAt(header, 4) !== 'ftyp') {
     return false;
   }
 
-  const brand = String.fromCharCode(header[8] ?? 0, header[9] ?? 0, header[10] ?? 0, header[11] ?? 0);
+  if (isAvifBrand(brandAt(header, 8))) {
+    return true;
+  }
 
-  return brand === 'avif' || brand === 'avis';
+  const boxSize = new DataView(arrayBuffer).getUint32(0, false);
+  const end = Math.min(boxSize >= 16 ? boxSize : header.length, header.length);
+
+  for (let offset = 16; offset + 4 <= end; offset += 4) {
+    if (isAvifBrand(brandAt(header, offset))) {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 const matchesWebmVideo = (arrayBuffer: ArrayBuffer): boolean => {

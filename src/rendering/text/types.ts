@@ -111,6 +111,13 @@ export interface TextLayoutResult {
   /** Per-glyph quad placements in local text space. */
   readonly placements: readonly GlyphPlacement[];
   /**
+   * One entry per laid-out line, in order, including lines that placed no
+   * glyph at all. A caret or a hit test needs the lines a string broke into,
+   * which the placement array alone cannot answer: a line break places no
+   * glyph, and an empty line places nothing.
+   */
+  readonly lines: readonly TextLineMetrics[];
+  /**
    * Advance extent - where the cursor ends up. Width is the widest line's
    * advance (letterSpacing and kerning included, no trailing gap), height is
    * `lineCount * (fontSize * lineHeight + leading)`. This is the measure a
@@ -126,6 +133,22 @@ export interface TextLayoutResult {
 }
 
 /**
+ * One laid-out line, in the same local space as {@link GlyphPlacement}.
+ */
+export interface TextLineMetrics {
+  /** Index of this line's first glyph in `placements`. */
+  readonly start: number;
+  /** How many glyphs this line placed. Zero for an empty line. */
+  readonly count: number;
+  /** Pen origin of the line's first glyph, so the alignment offset is included. */
+  readonly x: number;
+  /** Top of this line's box. */
+  readonly y: number;
+  /** Advance width of the line, with no trailing letter spacing. */
+  readonly width: number;
+}
+
+/**
  * A single glyph's quad placement in local text space.
  * Origin is the top-left of the first line.
  */
@@ -134,6 +157,15 @@ export interface GlyphPlacement {
   readonly y: number;
   readonly width: number;
   readonly height: number;
+  /**
+   * Pen origin of this glyph on its line - the advance box's left edge, with
+   * the alignment offset applied and the glyph's bearing excluded. This is the
+   * boundary a caret sits on; `x` is the ink edge and in SDF mode sits left of
+   * the pen by the atlas padding.
+   */
+  readonly penX: number;
+  /** Pen step from this glyph to the next, `letterSpacing` included. */
+  readonly penAdvance: number;
   /** Which {@link AtlasPage} within the atlas holds this glyph's texture data. */
   readonly page: number;
   readonly uvLeft: number;

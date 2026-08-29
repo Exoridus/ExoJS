@@ -30,10 +30,50 @@
       "members": [
         {
           "name": "UIThemeRole",
-          "signature": "\"button\" | \"label\" | \"panel\" | \"progressBarFill\" | \"progressBarTrack\"",
+          "signature": "\"button\" | \"caret\" | \"checkbox\" | \"checkboxMark\" | \"dropdownItem\" | \"dropdownList\" | \"label\" | \"panel\" | \"placeholder\" | \"progressBarFill\" | \"progressBarTrack\" | \"scrollbarThumb\" | \"scrollbarTrack\" | \"selection\" | \"sliderFill\" | \"sliderThumb\" | \"sliderTrack\" | \"textFieldSurface\" | \"toggleKnob\" | \"toggleTrack\"",
           "signatureTokens": [
             {
               "text": "\"button\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"caret\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"checkbox\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"checkboxMark\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"dropdownItem\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"dropdownList\"",
               "kind": "keyword"
             },
             {
@@ -57,6 +97,14 @@
               "kind": "punctuation"
             },
             {
+              "text": "\"placeholder\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
               "text": "\"progressBarFill\"",
               "kind": "keyword"
             },
@@ -66,6 +114,78 @@
             },
             {
               "text": "\"progressBarTrack\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"scrollbarThumb\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"scrollbarTrack\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"selection\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"sliderFill\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"sliderThumb\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"sliderTrack\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"textFieldSurface\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"toggleKnob\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"toggleTrack\"",
               "kind": "keyword"
             }
           ],

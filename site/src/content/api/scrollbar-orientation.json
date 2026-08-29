@@ -1,0 +1,71 @@
+{
+  "title": "ScrollbarOrientation",
+  "description": "The axis a Scrollbar runs along.",
+  "symbol": "ScrollbarOrientation",
+  "kind": "type",
+  "subsystem": "ui",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The axis a Scrollbar runs along."
+      ],
+      "importLine": "import { ScrollbarOrientation } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ScrollbarOrientation",
+          "signature": "\"horizontal\" | \"vertical\"",
+          "signatureTokens": [
+            {
+              "text": "\"horizontal\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"vertical\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/ui/Scrollbar.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Scrollbar.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/ui/Scrollbar.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Scrollbar.ts"
+}

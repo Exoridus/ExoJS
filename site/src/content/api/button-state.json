@@ -1,6 +1,6 @@
 {
   "title": "ButtonState",
-  "description": "The states a button paints in.",
+  "description": "The states a button's skin can be stated for.",
   "symbol": "ButtonState",
   "kind": "type",
   "subsystem": "ui",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The states a button paints in."
+        "The states a button's skin can be stated for."
       ],
       "importLine": "import { ButtonState } from '@codexo/exojs'",
       "sourceLink": null

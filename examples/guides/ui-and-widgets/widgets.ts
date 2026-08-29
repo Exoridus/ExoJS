@@ -1,4 +1,24 @@
-import { Button, DockContainer, Keyboard, Label, Panel, ProgressBar, Scene, ScrollContainer, Stack, Tooltip } from '@codexo/exojs';
+import {
+  Button,
+  Checkbox,
+  Color,
+  DockContainer,
+  Dropdown,
+  GamepadButton,
+  Keyboard,
+  Label,
+  Panel,
+  ProgressBar,
+  Scene,
+  ScrollContainer,
+  Slider,
+  Stack,
+  TextArea,
+  TextInput,
+  Toggle,
+  Tooltip,
+  UIRoot,
+} from '@codexo/exojs';
 
 // #region guide:anchoring
 class HudScene extends Scene {
@@ -56,7 +76,13 @@ class DockedHudScene extends Scene {
 // #region guide:scrolling
 class InventoryScene extends Scene {
   override init(): void {
-    const scroll = new ScrollContainer({ width: 280, height: 320, direction: 'vertical' });
+    const scroll = new ScrollContainer({
+      width: 280,
+      height: 320,
+      direction: 'vertical',
+      background: new Color(20, 24, 32, 0.9),
+      scrollbars: 'auto',
+    });
     scroll.anchorIn(this.ui, 'center');
 
     for (let i = 0; i < 20; i++) {
@@ -90,6 +116,27 @@ class FormScene extends Scene {
 }
 // #endregion guide:focus
 
+// #region guide:ui-scale
+class SettingsScene extends Scene {
+  override init(): void {
+    // Snap the factor so nine-slice corners resample predictably.
+    this.ui.uiScaleStep = 0.25;
+
+    // A user-facing "UI scale" setting.
+    this.ui.uiScale = 1.5;
+
+    // Or start from how large a 24-pixel control ends up physically, and grow
+    // the layer until it reaches a 9mm touch target.
+    this.ui.uiScale = UIRoot.scaleForTouchTarget(24, 9);
+
+    const quit = new Button({ label: 'Quit', width: 160, height: 44 });
+    // Anchoring works against the scaled box, so this stays in the corner.
+    quit.anchorIn(this.ui, 'bottom-right', -24, -24);
+    this.ui.addChild(quit);
+  }
+}
+// #endregion guide:ui-scale
+
 // #region guide:tooltip
 class ShopScene extends Scene {
   private tooltip!: Tooltip;
@@ -105,4 +152,107 @@ class ShopScene extends Scene {
 }
 // #endregion guide:tooltip
 
-export { DockedHudScene, FormScene, HudScene, InventoryScene, MenuScene, ShopScene };
+// #region guide:controls
+class OptionsScene extends Scene {
+  override init(): void {
+    const options = new Stack({ direction: 'column', spacing: 12, padding: 16 });
+
+    const fullscreen = new Checkbox({ label: 'Fullscreen' });
+    fullscreen.onChange.add(checked => console.log('fullscreen', checked));
+
+    const vsync = new Toggle({ label: 'V-Sync', checked: true });
+
+    const volume = new Slider({ width: 240, min: 0, max: 1, value: 0.8, step: 0.05 });
+    volume.onChange.add(value => console.log('volume', value));
+
+    const quality = new Dropdown({
+      width: 240,
+      items: [
+        { label: 'Low', value: 'low' },
+        { label: 'Medium', value: 'medium' },
+        { label: 'High', value: 'high' },
+      ],
+      selectedIndex: 1,
+    });
+    quality.onChange.add(value => console.log('quality', value));
+
+    options.addChild(fullscreen).addChild(vsync).addChild(volume).addChild(quality);
+    options.anchorIn(this.ui, 'center');
+    this.ui.addChild(options);
+  }
+}
+// #endregion guide:controls
+
+// #region guide:text-input
+class LoginScene extends Scene {
+  override init(): void {
+    const form = new Stack({ direction: 'column', spacing: 12, padding: 16 });
+
+    const name = new TextInput({
+      width: 260,
+      placeholder: 'Player name',
+      maxLength: 24,
+      enterKeyHint: 'next',
+    });
+
+    const password = new TextInput({
+      width: 260,
+      placeholder: 'Password',
+      maskChar: '•',
+      enterKeyHint: 'go',
+    });
+
+    // The value the gate sees is the value the edit would produce, so a paste
+    // that would break the rule is dropped whole rather than truncated.
+    const code = new TextInput({
+      width: 260,
+      inputMode: 'numeric',
+      filter: candidate => /^\d*$/.test(candidate),
+    });
+
+    const notes = new TextArea({
+      width: 260,
+      height: 120,
+      placeholder: 'Notes',
+      maxLength: 500,
+    });
+
+    notes.onChange.add(value => console.log(value.split('\n').length, 'lines'));
+
+    name.onSubmit.add(() => password.focus());
+    password.onSubmit.add(value => console.log('sign in', name.value, value.length));
+    code.onChange.add(value => console.log('code', value));
+
+    form.addChild(name).addChild(password).addChild(code).addChild(notes);
+    form.anchorIn(this.ui, 'center');
+    this.ui.addChild(form);
+  }
+}
+// #endregion guide:text-input
+
+// #region guide:focus-navigation
+class GamepadMenuScene extends Scene {
+  override init(): void {
+    const interaction = this.app.interaction;
+
+    // The default: the arrow keys and a D-pad walk the UI layer, and the game
+    // keeps the arrow keys for everything else.
+    interaction.focusNavigation = 'ui';
+
+    // Enter the menu with something already focused, so the first D-pad press
+    // moves rather than picks a starting point.
+    const first = new Button({ label: 'Continue', width: 200, height: 44 });
+    this.ui.addChild(first);
+    interaction.focus(first);
+
+    // Any other trigger can navigate too - a shoulder button, a stick tilt.
+    this.app.input.onAnyGamepadButtonDown.add((_pad, button) => {
+      if (button.channel === GamepadButton.RightShoulder) {
+        interaction.focusInDirection('down');
+      }
+    });
+  }
+}
+// #endregion guide:focus-navigation
+
+export { DockedHudScene, FormScene, GamepadMenuScene, HudScene, InventoryScene, LoginScene, MenuScene, OptionsScene, SettingsScene, ShopScene };

@@ -1,5 +1,7 @@
 import type { BrowserGamepad } from '#input/GamepadDefinitions';
 
+import { BrowserTextInput } from './BrowserTextInput';
+import { editContextSupported, EditContextTextInput } from './EditContextTextInput';
 import { browserNetworkHints, type OwnedNetworkHintSource, readBrowserNetworkHint } from './networkHints';
 import type {
   NetworkHint,
@@ -10,6 +12,7 @@ import type {
   PlatformSurfaceMetrics,
   PlatformWindowEventMap,
 } from './PlatformAdapter';
+import type { PlatformTextInput } from './PlatformTextInput';
 
 const noGamepads: ReadonlyArray<BrowserGamepad | null> = [];
 
@@ -119,6 +122,20 @@ export class BrowserPlatform implements PlatformAdapter {
     }
 
     return navigator.getGamepads();
+  }
+
+  /**
+   * Builds a text-input transport: `EditContext` where the host has it, a
+   * hidden `<textarea>` everywhere else. Created per call, so a text widget
+   * owns its transport's lifetime; callers that never ask for one never
+   * create the element.
+   */
+  public createTextInput(): PlatformTextInput | null {
+    if (typeof document === 'undefined') {
+      return null;
+    }
+
+    return editContextSupported() ? new EditContextTextInput(this._canvas) : new BrowserTextInput(this._canvas);
   }
 
   public onVisibilityChange(listener: (visible: boolean) => void): PlatformSubscription {

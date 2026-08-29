@@ -1,5 +1,5 @@
 import type { LayoutOptions } from './LayoutOptions';
-import type { GlyphInfo, GlyphPlacement, GlyphProvider, TextLayoutResult, TextLayoutStyle, TextPageQuads } from './types';
+import type { GlyphInfo, GlyphPlacement, GlyphProvider, TextLayoutResult, TextLayoutStyle, TextLineMetrics, TextPageQuads } from './types';
 
 interface LinePlacement {
   placements: Array<{ info: GlyphInfo; x: number; y: number; char: string }>;
@@ -13,7 +13,12 @@ interface LinePlacement {
  * a glyph provider it would not use.
  * @internal
  */
-export const emptyTextLayout = (): TextLayoutResult => ({ placements: [], advance: { width: 0, height: 0 }, ink: { x: 0, y: 0, width: 0, height: 0 } });
+export const emptyTextLayout = (): TextLayoutResult => ({
+  placements: [],
+  lines: [],
+  advance: { width: 0, height: 0 },
+  ink: { x: 0, y: 0, width: 0, height: 0 },
+});
 
 /**
  * Computes per-glyph quad placements for the given text, style, and layout
@@ -126,6 +131,7 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
   // the first glyph starts at a negative x/y because the atlas hands out
   // bearings that pull the padded tile back around the cursor.
   const result: GlyphPlacement[] = [];
+  const lines: TextLineMetrics[] = [];
   const lastLineIndex = linePlacements.length - 1;
   let inkMinX = Infinity;
   let inkMinY = Infinity;
@@ -144,6 +150,7 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
   for (let li = 0; li < linePlacements.length; li++) {
     // In-bounds: li < linePlacements.length.
     const line = linePlacements[li]!;
+    const lineStart = result.length;
     let offsetX = 0;
 
     if (align === 'right') {
@@ -170,6 +177,8 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
           y: entry.y + (entry.info.yBearing ?? 0),
           width: entry.info.width,
           height: entry.info.height,
+          penX: entry.x + offsetX + wordIdx * extraPerGap,
+          penAdvance: entry.info.advance + letterSpacing,
           page: entry.info.page,
           uvLeft: entry.info.uvLeft,
           uvTop: entry.info.uvTop,
@@ -177,6 +186,8 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
           uvBottom: entry.info.uvBottom,
         });
       }
+
+      lines.push({ start: lineStart, count: result.length - lineStart, x: offsetX, y: li * computedLineHeight, width: line.width });
       continue;
     }
 
@@ -186,6 +197,8 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
         y: y + (info.yBearing ?? 0),
         width: info.width,
         height: info.height,
+        penX: x + offsetX,
+        penAdvance: info.advance + letterSpacing,
         page: info.page,
         uvLeft: info.uvLeft,
         uvTop: info.uvTop,
@@ -193,12 +206,24 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
         uvBottom: info.uvBottom,
       });
     }
+
+    lines.push({ start: lineStart, count: result.length - lineStart, x: offsetX, y: li * computedLineHeight, width: line.width });
   }
 
-  if (result.length === 0) return emptyTextLayout();
+  // Text that is nothing but line breaks places no glyph yet still occupies
+  // the line boxes it broke into - a caret has to be able to sit on them.
+  if (result.length === 0) {
+    return {
+      placements: result,
+      lines,
+      advance: { width: maxLineWidth, height: allLines.length * computedLineHeight },
+      ink: { x: 0, y: 0, width: 0, height: 0 },
+    };
+  }
 
   return {
     placements: result,
+    lines,
     advance: { width: maxLineWidth, height: allLines.length * computedLineHeight },
     ink: { x: inkMinX, y: inkMinY, width: inkMaxX - inkMinX, height: inkMaxY - inkMinY },
   };

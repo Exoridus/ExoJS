@@ -1,16 +1,16 @@
 {
   "title": "ScrollContainer",
-  "description": "Clipped container that scrolls its content via the mouse wheel. Add child nodes to ScrollContainer.content rather than to the `ScrollContainer` itself. The content container is offset as the user scrolls, while the outer widget is clipped to its declared `width` × `height`. Mouse-wheel events from the global InputManager are consumed only when the pointer is within the widget's bounds. The container subscribes to the app's `onMouseWheel` signal when it enters the scene tree, and unsubscribes on detach.",
+  "description": "Clipped container that scrolls its content with the mouse wheel or its scrollbars. Add child nodes to ScrollContainer.content rather than to the `ScrollContainer` itself. The content container is offset as the user scrolls, while the outer widget is clipped to its declared `width` × `height`. Scrollbars overlay the content rather than shrinking it, so the visible box stays the size it was declared at whether or not a bar is showing. With the default `'auto'` policy a bar appears only while its axis actually overflows; `'always'` keeps it, and `'never'` builds none at all. They paint the `scrollbarTrack` and `scrollbarThumb` roles of the inherited theme. The scroll range follows what the content holds: adding or removing an item updates it. A change the container cannot observe - a child of the content that resized itself - needs ScrollContainer.refresh. Mouse-wheel events from the global InputManager are consumed only when the pointer is within the widget's bounds. The container subscribes to the app's `onMouseWheel` signal when it enters the scene tree, and unsubscribes on detach.",
   "symbol": "ScrollContainer",
   "kind": "class",
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 121,
+  "memberCount": 131,
   "counts": {
     "constructors": 1,
-    "methods": 59,
-    "properties": 47,
+    "methods": 63,
+    "properties": 53,
     "events": 14
   },
   "sections": [
@@ -19,8 +19,10 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Clipped container that scrolls its content via the mouse wheel.",
+        "Clipped container that scrolls its content with the mouse wheel or its scrollbars.",
         "Add child nodes to ScrollContainer.content rather than to the `ScrollContainer` itself. The content container is offset as the user scrolls, while the outer widget is clipped to its declared `width` × `height`.",
+        "Scrollbars overlay the content rather than shrinking it, so the visible box stays the size it was declared at whether or not a bar is showing. With the default `'auto'` policy a bar appears only while its axis actually overflows; `'always'` keeps it, and `'never'` builds none at all. They paint the `scrollbarTrack` and `scrollbarThumb` roles of the inherited theme.",
+        "The scroll range follows what the content holds: adding or removing an item updates it. A change the container cannot observe - a child of the content that resized itself - needs ScrollContainer.refresh.",
         "Mouse-wheel events from the global InputManager are consumed only when the pointer is within the widget's bounds. The container subscribes to the app's `onMouseWheel` signal when it enters the scene tree, and unsubscribes on detach."
       ],
       "importLine": "import { ScrollContainer } from '@codexo/exojs'",
@@ -347,6 +349,53 @@
           "description": "React to an effectiveEnabled change - fired whenever it flips, whether the widget's own enabled flag changed or an ancestor widget's did. Override in subclasses."
         },
         {
+          "name": "_onFocusChanged",
+          "signature": "_onFocusChanged(_focused: boolean): void",
+          "signatureTokens": [
+            {
+              "text": "_onFocusChanged",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_focused",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "_focused",
+              "type": "boolean",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "React to a focus change on this widget. Override in subclasses that repaint for it; the default does nothing, so opting into tracking alone does not change how a widget looks."
+        },
+        {
           "name": "_onThemeChanged",
           "signature": "_onThemeChanged(): void",
           "signatureTokens": [
@@ -555,6 +604,35 @@
           ],
           "returnType": "UISkin",
           "description": "The skin role paints with in this widget's current state."
+        },
+        {
+          "name": "_trackFocus",
+          "signature": "_trackFocus(): void",
+          "signatureTokens": [
+            {
+              "text": "_trackFocus",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Follow keyboard focus on this widget, so it can paint the focused state and react in Widget._onFocusChanged. Interactive subclasses call this in their constructor; it is opt-in because subscribing allocates the focus signals, which a decorative widget would never fire."
         },
         {
           "name": "[iterator]",
@@ -1695,6 +1773,35 @@
           "description": "Project this shape onto axis and write the scalar min/max into interval. Used internally by the SAT solver."
         },
         {
+          "name": "refresh",
+          "signature": "refresh(): this",
+          "signatureTokens": [
+            {
+              "text": "refresh",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Re-measure the content and update the scroll range and the scrollbars. Adding and removing content does this on its own; this is for the change the container cannot observe - a child of the content that resized itself."
+        },
+        {
           "name": "removeChild",
           "signature": "removeChild(child: RenderNode): this",
           "signatureTokens": [
@@ -2132,6 +2239,82 @@
           ],
           "returnType": "void",
           "description": "Scroll to an absolute (x, y) position in pixels, clamped to the content range so the content never scrolls past its edges."
+        },
+        {
+          "name": "setBackground",
+          "signature": "setBackground(background: UIBackgroundInput | null, options: UIBackgroundOptions): this",
+          "signatureTokens": [
+            {
+              "text": "setBackground",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "background",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIBackgroundInput",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIBackgroundOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "background",
+              "type": "UIBackgroundInput | null",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "UIBackgroundOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Set the surface painted behind the content from a colour, a texture, a region or a descriptor; null returns the container to transparent."
         },
         {
           "name": "setChildIndex",
@@ -3167,6 +3350,64 @@
           "description": "Tab-traversal order among focusable nodes in the same focus scope. Lower values are visited first; equal values keep document (tree) order."
         },
         {
+          "name": "background",
+          "signature": "background: UIBackground | null",
+          "signatureTokens": [
+            {
+              "text": "background",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIBackground",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The background this container paints, or null while it paints none."
+        },
+        {
+          "name": "backgroundNode",
+          "signature": "backgroundNode: BackgroundNode | null",
+          "signatureTokens": [
+            {
+              "text": "backgroundNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BackgroundNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node painting the background, or null while it paints nothing."
+        },
+        {
           "name": "bottom",
           "signature": "bottom: number",
           "signatureTokens": [
@@ -3488,6 +3729,27 @@
           "description": ""
         },
         {
+          "name": "focused",
+          "signature": "focused: boolean",
+          "signatureTokens": [
+            {
+              "text": "focused",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether this widget holds keyboard focus. Only tracked for widgets that opted in with Widget._trackFocus; a widget that never takes focus always reports false."
+        },
+        {
           "name": "height",
           "signature": "height: number",
           "signatureTokens": [
@@ -3507,6 +3769,35 @@
           "params": [],
           "returnType": null,
           "description": "Rendered height of the whole subtree - see width."
+        },
+        {
+          "name": "horizontalScrollbar",
+          "signature": "horizontalScrollbar: Scrollbar | null",
+          "signatureTokens": [
+            {
+              "text": "horizontalScrollbar",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scrollbar",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The horizontal scrollbar, or null when this container has none."
         },
         {
           "name": "interactive",
@@ -3746,6 +4037,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "scrollbars",
+          "signature": "scrollbars: ScrollbarVisibility",
+          "signatureTokens": [
+            {
+              "text": "scrollbars",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ScrollbarVisibility",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When the scrollbars are shown. Fixed at construction."
         },
         {
           "name": "scrollX",
@@ -4043,6 +4355,35 @@
           "params": [],
           "returnType": null,
           "description": "Explicit layout width in pixels (not derived from children or scale)."
+        },
+        {
+          "name": "verticalScrollbar",
+          "signature": "verticalScrollbar: Scrollbar | null",
+          "signatureTokens": [
+            {
+              "text": "verticalScrollbar",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scrollbar",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The vertical scrollbar, or null when this container has none."
         },
         {
           "name": "visible",

@@ -8,6 +8,24 @@ export { createRng };
 
 const SCALING_COUNTS = [1_000, 5_000, 25_000, 100_000] as const;
 const GPU_BOUND_COUNTS = [1_000, 5_000, 25_000] as const;
+/**
+ * Node counts for the text archetypes. A text leaf costs one to two orders of
+ * magnitude more than a sprite leaf (layout, glyph lookup, per-glyph quad
+ * generation), so the sprite ladder's top steps would be pure abort cells on
+ * every arm and would say nothing about text scaling. These three steps still
+ * span 25x, which is enough to fit a slope, and their glyph totals -
+ * `nodeCount * TEXT_GLYPHS_PER_NODE` - reach 60k glyphs, well past what any
+ * real HUD or dialogue scene contains.
+ */
+const TEXT_COUNTS = [200, 1_000, 5_000] as const;
+
+/**
+ * Characters per text leaf across both text archetypes. Twelve is the length of
+ * an ordinary label (a score, a name, a damage number) - long enough that layout
+ * and glyph iteration dominate the per-node cost, short enough that no arm's
+ * line-breaking policy enters the measurement.
+ */
+const TEXT_GLYPHS_PER_NODE = 12;
 
 /**
  * Scene archetypes. `SCALING_COUNTS` sweeps 100x over four geometric steps -
@@ -35,9 +53,36 @@ const GPU_BOUND_COUNTS = [1_000, 5_000, 25_000] as const;
 // and `culled` (explicit per-frame `Culler.shared.cull`) - instead of resolving
 // the asymmetry by assumption.
 export const ARCHETYPES: readonly ArchetypeSpec[] = [
-  { id: 'static-heavy', nodeCounts: SCALING_COUNTS, nestingDepth: 4, textureCount: 1, mutationFraction: 0, cullingEnabled: false },
-  { id: 'dynamic-heavy', nodeCounts: SCALING_COUNTS, nestingDepth: 4, textureCount: 1, mutationFraction: 0.075, cullingEnabled: false },
-  { id: 'deep-hierarchy', nodeCounts: SCALING_COUNTS, nestingDepth: 16, textureCount: 1, mutationFraction: 0.01, cullingEnabled: false },
+  {
+    id: 'static-heavy',
+    category: 'node-scaling',
+    crossArm: true,
+    nodeCounts: SCALING_COUNTS,
+    nestingDepth: 4,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+  },
+  {
+    id: 'dynamic-heavy',
+    category: 'node-scaling',
+    crossArm: true,
+    nodeCounts: SCALING_COUNTS,
+    nestingDepth: 4,
+    textureCount: 1,
+    mutationFraction: 0.075,
+    cullingEnabled: false,
+  },
+  {
+    id: 'deep-hierarchy',
+    category: 'node-scaling',
+    crossArm: true,
+    nodeCounts: SCALING_COUNTS,
+    nestingDepth: 16,
+    textureCount: 1,
+    mutationFraction: 0.01,
+    cullingEnabled: false,
+  },
   // Sprites are stretched to the full viewport by the exojs adapter (see the
   // `overdraw` branch in `adapters/exojs.ts::buildScene`) so stacking
   // nodeCount of them is genuine fill-bound overdraw, not 8x8px noise (review
@@ -45,7 +90,16 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // analyzed). NOTE: this changes the benchmark definition - results measured
   // before this fix (8x8px stacked sprites) are not comparable on this
   // archetype.
-  { id: 'overdraw', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 1, mutationFraction: 0, cullingEnabled: false },
+  {
+    id: 'overdraw',
+    category: 'fill-and-state',
+    crossArm: true,
+    nodeCounts: GPU_BOUND_COUNTS,
+    nestingDepth: 2,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+  },
   // 40 textures: must exceed EVERY sprite-batcher slot ceiling any granted
   // backend/tier reaches, or the archetype silently stops breaking batches on
   // the machines that don't. The binding ceiling is the WebGPU sprite batcher's
@@ -61,7 +115,16 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // invalidating this archetype. NOTE: this changes the benchmark definition -
   // results measured with a lower textureCount are not comparable on this
   // archetype.
-  { id: 'batch-breaking', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 40, mutationFraction: 0, cullingEnabled: false },
+  {
+    id: 'batch-breaking',
+    category: 'fill-and-state',
+    crossArm: true,
+    nodeCounts: GPU_BOUND_COUNTS,
+    nestingDepth: 2,
+    textureCount: 40,
+    mutationFraction: 0,
+    cullingEnabled: false,
+  },
   // Otherwise identical to `static-heavy` (same nesting/texture/mutation
   // shape), so the retained tier fully retains it - but rendered through 4
   // simultaneous `View`s instead of 1 (split-screen / multi-viewport). Only
@@ -71,7 +134,17 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // O(batches) per view, not O(nodes) per view) and is NOT a cross-arm
   // wall-clock comparison - a competitor arm renders it as an ordinary
   // single-view static-heavy scene instead.
-  { id: 'split-screen', nodeCounts: SCALING_COUNTS, nestingDepth: 4, textureCount: 1, mutationFraction: 0, cullingEnabled: false, viewCount: 4 },
+  {
+    id: 'split-screen',
+    category: 'submission',
+    crossArm: false,
+    nodeCounts: SCALING_COUNTS,
+    nestingDepth: 4,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    viewCount: 4,
+  },
   // State-churn archetypes. `batch-breaking` already covers ONE batch-breaking
   // axis (texture-slot exhaustion); these two cover the other two axes a real
   // mixed scene hits - blend mode, and (ExoJS-only) custom material - because
@@ -89,6 +162,8 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // measured CPU cost can be read per batch rather than per node.
   {
     id: 'mixed-blend',
+    category: 'fill-and-state',
+    crossArm: true,
     nodeCounts: GPU_BOUND_COUNTS,
     nestingDepth: 2,
     textureCount: 4,
@@ -104,6 +179,8 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // `ArchetypeSpec.materialCount`).
   {
     id: 'mixed-material',
+    category: 'material-variety',
+    crossArm: false,
     nodeCounts: GPU_BOUND_COUNTS,
     nestingDepth: 2,
     textureCount: 4,
@@ -123,7 +200,16 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // atlas packer could buy on this hardware, with no modelling or estimation in
   // between. `textureCount: 1` is the ideal case (zero packing waste, one page,
   // no per-frame repack cost), so the delta is an upper bound, never a forecast.
-  { id: 'batch-breaking-atlased', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 1, mutationFraction: 0, cullingEnabled: false },
+  {
+    id: 'batch-breaking-atlased',
+    category: 'material-variety',
+    crossArm: true,
+    nodeCounts: GPU_BOUND_COUNTS,
+    nestingDepth: 2,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+  },
   // The only archetype that leaves the scene graph behind: it drives
   // `RenderingContext.drawBatch` directly, the explicit instanced-submission
   // path, which every other archetype misses entirely. `batchSize: 64` mirrors
@@ -133,7 +219,17 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // measures: on WebGPU that path used to end and submit its own render pass per
   // call, so the frame cost scaled with the CALL count rather than the instance
   // count. ExoJS-only - see `ArchetypeSpec.batchSize`.
-  { id: 'instanced-batch', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 1, textureCount: 1, mutationFraction: 0, cullingEnabled: false, batchSize: 64 },
+  {
+    id: 'instanced-batch',
+    category: 'submission',
+    crossArm: false,
+    nodeCounts: GPU_BOUND_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    batchSize: 64,
+  },
   // The only archetypes that put TWO renderers in one frame. Every other one
   // draws through a single renderer, so the cost of handing the draw stream
   // from one to the next was invisible to the matrix. Both use the same
@@ -149,6 +245,8 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // its semantics had not changed. ExoJS-only - see `ArchetypeSpec.meshEvery`.
   {
     id: 'mixed-sprite-mesh-static',
+    category: 'submission',
+    crossArm: false,
     nodeCounts: GPU_BOUND_COUNTS,
     nestingDepth: 2,
     textureCount: 1,
@@ -160,6 +258,8 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   },
   {
     id: 'mixed-sprite-mesh-array',
+    category: 'submission',
+    crossArm: false,
     nodeCounts: GPU_BOUND_COUNTS,
     nestingDepth: 2,
     textureCount: 1,
@@ -191,6 +291,8 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // and nothing else.
   {
     id: 'scrolling-world',
+    category: 'camera-and-world',
+    crossArm: true,
     nodeCounts: SCALING_COUNTS,
     nestingDepth: 4,
     textureCount: 1,
@@ -201,6 +303,8 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   },
   {
     id: 'mixed-material-atlased',
+    category: 'material-variety',
+    crossArm: false,
     nodeCounts: GPU_BOUND_COUNTS,
     nestingDepth: 2,
     textureCount: 1,
@@ -210,6 +314,135 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     blendRunLength: 64,
     materialCount: 4,
     materialRunLength: 64,
+  },
+  // TEXT. The largest cost class the matrix did not cover: every archetype above
+  // draws quads, and none of them pays for layout or glyph lookup. All four arms
+  // have real text nodes, so these two rows carry full cross-arm meaning.
+  //
+  // The pair differs in exactly ONE field - `textUpdate` - so the delta between
+  // them is the cost of invalidating a laid-out string and nothing else.
+  // `text-static` lays out once at build time and then only draws; `text-dynamic`
+  // re-sets a quarter of its leaves' strings every frame, which is the shape a
+  // real HUD produces (a few counters change, the rest of the labels do not).
+  // A fraction of 1 was rejected: re-laying out every label in the scene every
+  // frame is not a workload anything ships, and at the top step it would abort on
+  // every arm, replacing three comparable rows with three aborts.
+  {
+    id: 'text-static',
+    category: 'text',
+    crossArm: true,
+    nodeCounts: TEXT_COUNTS,
+    nestingDepth: 4,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    textGlyphsPerNode: TEXT_GLYPHS_PER_NODE,
+  },
+  {
+    id: 'text-dynamic',
+    category: 'text',
+    crossArm: true,
+    nodeCounts: TEXT_COUNTS,
+    nestingDepth: 4,
+    textureCount: 1,
+    mutationFraction: 0.25,
+    cullingEnabled: false,
+    textGlyphsPerNode: TEXT_GLYPHS_PER_NODE,
+    textUpdate: true,
+  },
+  // STRUCTURAL INVALIDATION. `dynamic-heavy` moves existing leaves; this one
+  // destroys them and builds replacements. The two share every other field -
+  // depth 4, one texture, the same `mutationFraction: 0.075`, hence the same
+  // selected leaf set - so the delta between the rows is exactly what structural
+  // churn costs over transform mutation, per arm.
+  //
+  // That distinction is where a retained tier is vulnerable: a moved leaf can be
+  // absorbed by re-uploading a transform, while a destroyed one invalidates the
+  // recorded instruction stream its group owned. The ladder stops at 25k rather
+  // than following `dynamic-heavy` to 100k because churn at 100k means 7 500
+  // node constructions and destructions per frame, which is an allocator
+  // benchmark, not a renderer one; the three shared steps are what the delta is
+  // read on.
+  {
+    id: 'lifecycle-churn',
+    category: 'node-scaling',
+    crossArm: true,
+    nodeCounts: GPU_BOUND_COUNTS,
+    nestingDepth: 4,
+    textureCount: 1,
+    mutationFraction: 0.075,
+    cullingEnabled: false,
+    churn: true,
+  },
+  // RENDER-TARGET PING-PONG. Three rows sweeping chain depth 1 / 2 / 4 as
+  // separate archetypes rather than as an extra axis, because the matrix sweeps
+  // exactly one axis (`nodeCounts`) per archetype and a second one would make
+  // every cell's identity ambiguous in `results.json`.
+  //
+  // Otherwise identical to `static-heavy` at depth 2, so `filter-chain-1 minus
+  // static-heavy` is one target pass and the step from 1 to 2 to 4 is the
+  // marginal cost of each further pass. The filter is a colour matrix (cheap per
+  // fragment, one full-target pass): the archetype measures target allocation,
+  // binding and blit, so a heavy kernel would move the bottleneck into the
+  // fragment shader and hide the thing under test.
+  //
+  // WebGL2/WebGPU arms only. The Phaser arm renders WebGL1, so its gap here
+  // would be attributable to the backend generation rather than to the engine.
+  {
+    id: 'filter-chain-1',
+    category: 'render-targets',
+    crossArm: true,
+    nodeCounts: GPU_BOUND_COUNTS,
+    nestingDepth: 2,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    filterChainDepth: 1,
+  },
+  {
+    id: 'filter-chain-2',
+    category: 'render-targets',
+    crossArm: true,
+    nodeCounts: GPU_BOUND_COUNTS,
+    nestingDepth: 2,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    filterChainDepth: 2,
+  },
+  {
+    id: 'filter-chain-4',
+    category: 'render-targets',
+    crossArm: true,
+    nodeCounts: GPU_BOUND_COUNTS,
+    nestingDepth: 2,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    filterChainDepth: 4,
+  },
+  // NESTED CLIPPING. One axis-aligned rectangle mask per spine container, each
+  // inset inside its parent's rect so no level is a no-op. Both arms implement an
+  // unrotated rect mask as GPU scissor/clip state, so the row measures the
+  // nesting rather than one arm's intermediate-target policy.
+  //
+  // Shares the render-target machinery of the filter rows and the same WebGL1
+  // exclusion; otherwise identical to `static-heavy` at depth 4.
+  //
+  // The nesting depth is one greater than the mask depth on purpose: the scene
+  // root stays unmasked so the Pixi arm has somewhere to host its mask sources
+  // (a Pixi mask source parented under the container it masks would be clipped by
+  // its own mask), and both arms therefore clip spine levels 1..3.
+  {
+    id: 'mask-clip',
+    category: 'render-targets',
+    crossArm: true,
+    nodeCounts: GPU_BOUND_COUNTS,
+    nestingDepth: 4,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    maskDepth: 3,
   },
 ];
 

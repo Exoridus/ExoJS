@@ -9,6 +9,7 @@ import type {
   PlatformSurfaceMetrics,
   PlatformWindowEventMap,
 } from './PlatformAdapter';
+import type { PlatformTextInput } from './PlatformTextInput';
 import type { RenderSurface } from './RenderSurface';
 
 const noGamepads: ReadonlyArray<BrowserGamepad | null> = [];
@@ -217,6 +218,15 @@ export class OffscreenPlatform implements PlatformAdapter {
 
   public pollGamepads(): ReadonlyArray<BrowserGamepad | null> {
     return this._gamepads;
+  }
+
+  /**
+   * There is nothing to attach a keyboard or IME to inside a worker realm:
+   * a text widget on this adapter renders and takes focus, but rejects
+   * edits.
+   */
+  public createTextInput(): PlatformTextInput | null {
+    return null;
   }
 
   public onVisibilityChange(listener: (visible: boolean) => void): PlatformSubscription {

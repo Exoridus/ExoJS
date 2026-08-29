@@ -55,6 +55,15 @@ export abstract class Widget extends ThemedContainer {
   private _uiAnchorOffsetX = 0;
   private _uiAnchorOffsetY = 0;
   private _uiAnchorRoot: UIRoot | null = null;
+  private _focusedNow = false;
+  private readonly _onFocusGained = (): void => {
+    this._focusedNow = true;
+    this._onFocusChanged(true);
+  };
+  private readonly _onFocusLost = (): void => {
+    this._focusedNow = false;
+    this._onFocusChanged(false);
+  };
   private readonly _onAnchorResize = (width: number, height: number): void => {
     this._applyAnchor(width, height);
   };
@@ -203,6 +212,35 @@ export abstract class Widget extends ThemedContainer {
     if (this._uiAnchorRoot !== null) {
       this._applyAnchor(this._uiAnchorRoot.screenWidth, this._uiAnchorRoot.screenHeight);
     }
+  }
+
+  /**
+   * Whether this widget holds keyboard focus. Only tracked for widgets that
+   * opted in with {@link Widget._trackFocus}; a widget that never takes focus
+   * always reports `false`.
+   */
+  public get focused(): boolean {
+    return this._focusedNow;
+  }
+
+  /**
+   * Follow keyboard focus on this widget, so it can paint the `focused` state
+   * and react in {@link Widget._onFocusChanged}. Interactive subclasses call
+   * this in their constructor; it is opt-in because subscribing allocates the
+   * focus signals, which a decorative widget would never fire.
+   */
+  protected _trackFocus(): void {
+    this.onFocus.add(this._onFocusGained);
+    this.onBlur.add(this._onFocusLost);
+  }
+
+  /**
+   * React to a focus change on this widget. Override in subclasses that repaint
+   * for it; the default does nothing, so opting into tracking alone does not
+   * change how a widget looks.
+   */
+  protected _onFocusChanged(_focused: boolean): void {
+    // Overridden by subclasses that paint a focus ring.
   }
 
   /** The skin `role` paints with in this widget's current state. */

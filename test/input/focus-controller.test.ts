@@ -3,6 +3,8 @@ import { Scene } from '#core/Scene';
 import { Signal } from '#core/Signal';
 import type { InteractionHooks, Stage } from '#core/Stage';
 import { FocusController } from '#input/FocusController';
+import type { Gamepad } from '#input/Gamepad';
+import { GamepadButton } from '#input/GamepadButton';
 import type { InputManager } from '#input/InputManager';
 import type { KeyEvent } from '#input/KeyEvent';
 import { createScopeToken } from '#input/ScopeToken';
@@ -38,12 +40,14 @@ const createFocusApp = (): {
   focus: FocusController;
   onKeyDown: Signal<[number]>;
   onKeyUp: Signal<[number]>;
+  onAnyGamepadButtonDown: Signal<[Gamepad, GamepadButton, number]>;
 } => {
   const onKeyDown = new Signal<[number]>();
   const onKeyUp = new Signal<[number]>();
+  const onAnyGamepadButtonDown = new Signal<[Gamepad, GamepadButton, number]>();
   const scene = new Scene();
   const app = {
-    input: { onKeyDown, onKeyUp } as unknown as InputManager,
+    input: { onKeyDown, onKeyUp, onAnyGamepadButtonDown } as unknown as InputManager,
     scenes: {
       get currentScene(): Scene | null {
         return scene;
@@ -55,7 +59,7 @@ const createFocusApp = (): {
 
   scene.root._setStage(stage);
 
-  return { app, scene, focus, onKeyDown, onKeyUp };
+  return { app, scene, focus, onKeyDown, onKeyUp, onAnyGamepadButtonDown };
 };
 
 const focusable = (tabIndex = 0): Container => {
@@ -66,6 +70,19 @@ const focusable = (tabIndex = 0): Container => {
 
   return node;
 };
+
+/** A focusable node with a real extent, so directional navigation has geometry to compare. */
+const spatial = (x: number, y: number, size = 10): Container => {
+  const node = focusable();
+
+  node._setLocalBounds(0, 0, size, size);
+  node.setPosition(x, y);
+
+  return node;
+};
+
+/** The gamepad signal reports a button object; only its channel matters here. */
+const padButton = (channel: number): GamepadButton => ({ channel }) as GamepadButton;
 
 const focusableWidget = (tabIndex = 0): Widget => {
   const widget = new TestWidget();
@@ -380,8 +397,9 @@ describe('FocusController', () => {
   test('Tab is a no-op when there is no active scene (root resolves to null)', () => {
     const onKeyDown = new Signal<[number]>();
     const onKeyUp = new Signal<[number]>();
+    const onAnyGamepadButtonDown = new Signal<[Gamepad, GamepadButton, number]>();
     const app = {
-      input: { onKeyDown, onKeyUp } as unknown as InputManager,
+      input: { onKeyDown, onKeyUp, onAnyGamepadButtonDown } as unknown as InputManager,
       scenes: {
         get currentScene(): Scene | null {
           return null;
@@ -728,6 +746,160 @@ describe('FocusController — ownership hardening', () => {
     focus.focus(inScene);
 
     expect(focus.focused).toBe(inScene);
+
+    focus.popScope(token);
+  });
+});
+
+describe('FocusController directional navigation', () => {
+  /**
+   * Four nodes on a grid, all in the world layer - reached only with the
+   * `'always'` policy, which keeps these tests independent of a UI layer:
+   *
+   * ```
+   * topLeft   topRight
+   * bottomLeft bottomRight
+   * ```
+   */
+  const createGrid = (): {
+    focus: FocusController;
+    onKeyDown: Signal<[number]>;
+    onAnyGamepadButtonDown: Signal<[Gamepad, GamepadButton, number]>;
+    nodes: { topLeft: Container; topRight: Container; bottomLeft: Container; bottomRight: Container };
+  } => {
+    const { scene, focus, onKeyDown, onAnyGamepadButtonDown } = createFocusApp();
+    const topLeft = spatial(0, 0);
+    const topRight = spatial(100, 0);
+    const bottomLeft = spatial(0, 100);
+    const bottomRight = spatial(100, 100);
+
+    scene.root.addChild(topLeft).addChild(topRight).addChild(bottomLeft).addChild(bottomRight);
+    focus.navigation = 'always';
+
+    return { focus, onKeyDown, onAnyGamepadButtonDown, nodes: { topLeft, topRight, bottomLeft, bottomRight } };
+  };
+
+  test('the arrow keys move focus to the neighbour in that direction', () => {
+    const { focus, onKeyDown, nodes } = createGrid();
+
+    focus.focus(nodes.topLeft);
+
+    onKeyDown.dispatch(Keyboard.Right);
+    expect(focus.focused).toBe(nodes.topRight);
+
+    onKeyDown.dispatch(Keyboard.Down);
+    expect(focus.focused).toBe(nodes.bottomRight);
+
+    onKeyDown.dispatch(Keyboard.Left);
+    expect(focus.focused).toBe(nodes.bottomLeft);
+
+    onKeyDown.dispatch(Keyboard.Up);
+    expect(focus.focused).toBe(nodes.topLeft);
+  });
+
+  test('navigation does not wrap at the edge of the layout', () => {
+    const { focus, onKeyDown, nodes } = createGrid();
+
+    focus.focus(nodes.topLeft);
+
+    onKeyDown.dispatch(Keyboard.Left);
+    expect(focus.focused).toBe(nodes.topLeft);
+
+    onKeyDown.dispatch(Keyboard.Up);
+    expect(focus.focused).toBe(nodes.topLeft);
+  });
+
+  test('a node roughly straight ahead beats a closer one off to the side', () => {
+    const { scene, focus } = createFocusApp();
+    const origin = spatial(0, 0);
+    const ahead = spatial(100, 0);
+    const offAxis = spatial(60, 90);
+
+    scene.root.addChild(origin).addChild(offAxis).addChild(ahead);
+    focus.navigation = 'always';
+    focus.focus(origin);
+
+    focus.focusInDirection('right');
+
+    expect(focus.focused).toBe(ahead);
+  });
+
+  test('with nothing focused, navigating enters at the first candidate', () => {
+    const { focus, onKeyDown, nodes } = createGrid();
+
+    onKeyDown.dispatch(Keyboard.Down);
+
+    expect(focus.focused).toBe(nodes.topLeft);
+  });
+
+  test('a D-pad press navigates like the matching arrow key', () => {
+    const { focus, onAnyGamepadButtonDown, nodes } = createGrid();
+
+    focus.focus(nodes.topLeft);
+
+    onAnyGamepadButtonDown.dispatch({} as Gamepad, padButton(GamepadButton.DPadRight), 1);
+    expect(focus.focused).toBe(nodes.topRight);
+
+    onAnyGamepadButtonDown.dispatch({} as Gamepad, padButton(GamepadButton.DPadDown), 1);
+    expect(focus.focused).toBe(nodes.bottomRight);
+  });
+
+  test("the default 'ui' policy leaves world-layer nodes alone", () => {
+    const { focus, onKeyDown, nodes } = createGrid();
+
+    focus.navigation = 'ui';
+    focus.focus(nodes.topLeft);
+
+    onKeyDown.dispatch(Keyboard.Right);
+
+    expect(focus.focused).toBe(nodes.topLeft);
+  });
+
+  test("'never' turns directional navigation off entirely", () => {
+    const { focus, onKeyDown, onAnyGamepadButtonDown, nodes } = createGrid();
+
+    focus.navigation = 'never';
+    focus.focus(nodes.topLeft);
+
+    onKeyDown.dispatch(Keyboard.Right);
+    onAnyGamepadButtonDown.dispatch({} as Gamepad, padButton(GamepadButton.DPadRight), 1);
+    focus.focusInDirection('right');
+
+    expect(focus.focused).toBe(nodes.topLeft);
+  });
+
+  test('a focused node consuming the arrow key keeps focus where it is', () => {
+    const { focus, onKeyDown, nodes } = createGrid();
+
+    nodes.topLeft.onKeyDown.add(event => event.preventDefault());
+    focus.focus(nodes.topLeft);
+
+    onKeyDown.dispatch(Keyboard.Right);
+
+    expect(focus.focused).toBe(nodes.topLeft);
+  });
+
+  test('an active scope confines navigation to its subtree, whatever the policy', () => {
+    const { scene, focus } = createFocusApp();
+    const modal = new Container();
+    const inModal = spatial(0, 0);
+    const alsoInModal = spatial(100, 0);
+    const outside = spatial(200, 0);
+
+    modal.addChild(inModal).addChild(alsoInModal);
+    scene.root.addChild(modal).addChild(outside);
+
+    const token = createScopeToken();
+
+    focus.pushScope(token, modal);
+    focus.focus(inModal);
+
+    focus.focusInDirection('right');
+    expect(focus.focused).toBe(alsoInModal);
+
+    // `outside` is further right still, but the scope ends the list.
+    focus.focusInDirection('right');
+    expect(focus.focused).toBe(alsoInModal);
 
     focus.popScope(token);
   });

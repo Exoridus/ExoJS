@@ -3,7 +3,7 @@ import type { ReadonlyRectangle } from '#math/Rectangle';
 import { Drawable } from '#rendering/Drawable';
 
 import type { LayoutOptions } from './LayoutOptions';
-import { buildTextPageQuads } from './TextLayout';
+import { buildTextPageQuads, emptyTextLayout } from './TextLayout';
 import type { StyleChangeHint, TextStyle } from './TextStyle';
 import { mergeHint } from './TextStyle';
 import type { TextLayoutResult, TextPageQuads, TextSize } from './types';
@@ -30,6 +30,8 @@ export abstract class AbstractText extends Drawable {
   /** Per-page quad geometry built by the layout pass. */
   private _pageQuads: TextPageQuads[] = [];
   private _advance: TextSize = { width: 0, height: 0 };
+  /** The last settled layout result, retained so caret geometry can read placements without re-measuring. */
+  private _lastLayout: TextLayoutResult | null = null;
   /** Heaviest change awaiting a layout pass, or `null` when settled. */
   private _pendingHint: StyleChangeHint | null = 'font';
 
@@ -116,6 +118,24 @@ export abstract class AbstractText extends Drawable {
   }
 
   /**
+   * The layout result of the string currently displayed - per-glyph
+   * placements included - settled on the same pass the node already ran.
+   *
+   * Caret geometry and hit testing read this instead of re-measuring:
+   * calling {@link layoutText} again for a string the node already laid out
+   * would duplicate the one measurement the on-demand protocol exists to
+   * avoid. Indexes are per glyph (one placement each), the unit the
+   * placements are expressed in.
+   *
+   * @internal
+   */
+  public get currentLayout(): TextLayoutResult {
+    this.syncDirty();
+
+    return this._lastLayout ?? emptyTextLayout();
+  }
+
+  /**
    * Advance extent of the laid-out text - where the cursor ends up, which is
    * the number to size a panel or place a caret against.
    *
@@ -167,6 +187,7 @@ export abstract class AbstractText extends Drawable {
 
     const result = this._runLayout(hint);
 
+    this._lastLayout = result;
     this._advance = result.advance;
     this._pageQuads = buildTextPageQuads(result.placements);
     // Unstamped on purpose: `_markDirty` already stamped when the change came

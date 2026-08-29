@@ -3,6 +3,8 @@ import { Scene } from '#core/Scene';
 import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
 import type { ContextMenuRequest } from '#input/ContextMenuRequest';
+import type { Gamepad } from '#input/Gamepad';
+import type { GamepadButton } from '#input/GamepadButton';
 import type { InputManager } from '#input/InputManager';
 import type { InteractionEvent } from '#input/InteractionEvent';
 import { InteractionManager } from '#input/InteractionManager';
@@ -72,6 +74,7 @@ interface MockSignals {
   onContextMenu: Signal<[ContextMenuRequest]>;
   onKeyDown: Signal<[number]>;
   onKeyUp: Signal<[number]>;
+  onAnyGamepadButtonDown: Signal<[Gamepad, GamepadButton, number]>;
   _finishInteractionFrame(): void;
 }
 
@@ -101,6 +104,7 @@ const createApp = (): {
     // InteractionManager owns the focus controller, which listens for keys.
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
+    onAnyGamepadButtonDown: new Signal<[Gamepad, GamepadButton, number]>(),
     _finishInteractionFrame: (): void => undefined,
   };
 

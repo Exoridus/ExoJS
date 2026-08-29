@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 27,
+  "memberCount": 28,
   "counts": {
     "constructors": 1,
-    "methods": 17,
+    "methods": 18,
     "properties": 9,
     "events": 0
   },
@@ -133,6 +133,43 @@
           ],
           "returnType": "void",
           "description": "Cancel a frame scheduled by FrameScheduler.requestFrame."
+        },
+        {
+          "name": "createTextInput",
+          "signature": "createTextInput(): PlatformTextInput | null",
+          "signatureTokens": [
+            {
+              "text": "createTextInput",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlatformTextInput",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "PlatformTextInput | null",
+          "description": "There is nothing to attach a keyboard or IME to inside a worker realm: a text widget on this adapter renders and takes focus, but rejects edits."
         },
         {
           "name": "destroy",

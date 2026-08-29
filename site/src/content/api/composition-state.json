@@ -1,0 +1,175 @@
+{
+  "title": "CompositionState",
+  "description": "Progress of a host-side composition (an IME candidate). While one is in flight its text lives only here; it merges into the value when the composition ends.",
+  "symbol": "CompositionState",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Progress of a host-side composition (an IME candidate). While one is in flight its text lives only here; it merges into the value when the composition ends."
+      ],
+      "importLine": "import { CompositionState } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "CompositionState",
+          "signature": "{ caret: number; phase: \"update\"; text: string } | { phase: \"end\"; text: string } | { phase: \"start\" }",
+          "signatureTokens": [
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "caret",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "phase",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"update\"",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "text",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "phase",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"end\"",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "text",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "phase",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"start\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/platform/PlatformTextInput.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformTextInput.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/platform/PlatformTextInput.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformTextInput.ts"
+}

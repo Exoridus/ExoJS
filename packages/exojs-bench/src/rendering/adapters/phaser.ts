@@ -1,7 +1,9 @@
 import * as Phaser from 'phaser';
 
 import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
+import { createDigitAtlasCanvas, DIGIT_ALPHABET, DIGIT_CELL_HEIGHT, DIGIT_CELL_WIDTH } from '../digitAtlas';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
+import { isChurning, isTextArchetype, isTextUpdating, textForLeaf, usesRenderTargets } from '../traits';
 import { isScrolling } from '../world';
 
 /**
@@ -58,10 +60,23 @@ const WOBBLE_AMPLITUDE = 2;
 const WOBBLE_SPEED = 0.15;
 /** TextureManager key of the scene the game boots (fixed; the game is destroyed and rebuilt per cell). */
 const SCENE_KEY = 'bench';
+/** Font size, in logical pixels, of every text leaf - identical on every arm. */
+const TEXT_FONT_SIZE = 12;
+/** TextureManager key of the digit glyph sheet the `RetroFont` grid is parsed from. */
+const GLYPH_TEXTURE_KEY = `${SCENE_KEY}-glyphs`;
+/** BitmapFont cache key the parsed retro font is registered under. */
+const GLYPH_FONT_KEY = `${SCENE_KEY}-font`;
 
-/** A pre-selected leaf sprite and its resting grid position - the only nodes `mutate` disturbs. */
+/**
+ * A pre-selected leaf and its resting grid position - the only nodes `mutate`
+ * disturbs. `node` is mutable because the churn archetype replaces it every
+ * frame; `parent` and `index` are what the replacement needs to land in the
+ * identical place with the identical content.
+ */
 interface MutableLeaf {
-  readonly sprite: Phaser.GameObjects.Sprite;
+  node: Phaser.GameObjects.Sprite | Phaser.GameObjects.BitmapText;
+  readonly parent: Phaser.GameObjects.Container;
+  readonly index: number;
   readonly baseX: number;
   readonly baseY: number;
 }
@@ -91,6 +106,44 @@ const createTextureCanvas = (index: number, total: number): HTMLCanvasElement =>
   return canvas;
 };
 
+/**
+ * Register the shared digit sheet as a uniform-grid `RetroFont` in the game's
+ * bitmap-font cache, so `BitmapText` can lay text out of a glyph atlas.
+ *
+ * Idempotent per cell: the game (and its caches) is destroyed and rebuilt for
+ * every cell, but `buildScene` may run more than once against one game, and
+ * re-adding an existing texture key throws.
+ */
+const installGlyphFont = (game: Phaser.Game, scene: Phaser.Scene): void => {
+  if (!game.textures.exists(GLYPH_TEXTURE_KEY)) {
+    game.textures.addCanvas(GLYPH_TEXTURE_KEY, createDigitAtlasCanvas(TEXT_FONT_SIZE));
+  }
+
+  if (game.cache.bitmapFont.exists(GLYPH_FONT_KEY)) {
+    return;
+  }
+
+  // `Parse` returns a complete cache ENTRY (`{ data, texture, frame }`) in
+  // Phaser 4, not the bare font data its return type names - verified against the
+  // installed 4.2.1 dist, where the parser's tail wraps the glyph table itself.
+  // Wrapping it again produces an entry whose `data.chars` is undefined, and
+  // `BitmapText` then fails on the first glyph lookup.
+  const entry = Phaser.GameObjects.RetroFont.Parse(scene, {
+    image: GLYPH_TEXTURE_KEY,
+    width: DIGIT_CELL_WIDTH,
+    height: DIGIT_CELL_HEIGHT,
+    chars: DIGIT_ALPHABET,
+    charsPerRow: DIGIT_ALPHABET.length,
+    'offset.x': 0,
+    'offset.y': 0,
+    'spacing.x': 0,
+    'spacing.y': 0,
+    lineSpacing: 0,
+  });
+
+  game.cache.bitmapFont.add(GLYPH_FONT_KEY, entry);
+};
+
 export const createPhaserAdapter = (): EngineAdapter => {
   let game: Phaser.Game | null = null;
   let scene: Phaser.Scene | null = null;
@@ -99,6 +152,13 @@ export const createPhaserAdapter = (): EngineAdapter => {
   let mutableLeaves: MutableLeaf[] = [];
   /** Leaf indices the most recent buildScene selected for mutation - the source of {@link EngineAdapter.mutationSignature}. */
   let mutableIndices: number[] = [];
+  /** Rebuilds the leaf at a global index exactly as `buildScene` built it; non-null only for a churning archetype. */
+  let rebuildLeaf: ((index: number) => Phaser.GameObjects.Sprite | Phaser.GameObjects.BitmapText) | null = null;
+  /** Per-frame mutation mode of the built archetype; see `traits.ts`. */
+  let churning = false;
+  let textUpdating = false;
+  /** Characters per text leaf of the built archetype; `0` when it has no text. */
+  let textGlyphs = 0;
 
   return {
     engine: 'phaser',
@@ -116,7 +176,12 @@ export const createPhaserAdapter = (): EngineAdapter => {
       // scrolling archetype would silently render as an ordinary fully-visible
       // one here, i.e. a row that looks comparable and is not - so the arm sits
       // the archetype out instead.
-      return !isScrolling(spec);
+      //
+      // The render-target archetypes are sat out for the reason this arm's header
+      // comment establishes empirically: Phaser 4 renders a WebGL1 context, so a
+      // filter- or mask-heavy row's gap would be attributable to the backend
+      // generation rather than to the engine.
+      return !isScrolling(spec) && !usesRenderTargets(spec);
     },
 
     async init(canvas: HTMLCanvasElement, target: Backend): Promise<void> {
@@ -211,12 +276,45 @@ export const createPhaserAdapter = (): EngineAdapter => {
       const selectedSet = new Set(selectedIndices);
       const leaves: MutableLeaf[] = [];
 
-      for (let i = 0; i < nodeCount; i++) {
+      textGlyphs = isTextArchetype(spec) ? Math.max(1, Math.trunc(spec.textGlyphsPerNode ?? 0)) : 0;
+      churning = isChurning(spec);
+      textUpdating = isTextUpdating(spec);
+
+      // A text archetype needs a glyph-atlas font. Phaser 4 has no dynamically
+      // generated bitmap font, so the shared digit sheet is registered as a
+      // uniform-grid `RetroFont` - the atlas text path a Phaser app writes when it
+      // has no font asset (see `digitAtlas.ts` for the disclosure this carries).
+      if (textGlyphs > 0) {
+        installGlyphFont(game, scene);
+      }
+
+      /** Resting grid position of leaf `index`, on this arm's transcription of the shared grid. */
+      const leafPosition = (index: number): { x: number; y: number } =>
+        overdraw
+          ? { x: 0, y: 0 }
+          : {
+              x: GRID_MARGIN + (index % columns) * cellWidth + cellWidth / 2,
+              y: GRID_MARGIN + Math.floor(index / columns) * cellHeight + cellHeight / 2,
+            };
+
+      /** Build (but do not parent) the leaf at global index `index`; reused by the churn mutation. */
+      const makeLeaf = (index: number): Phaser.GameObjects.Sprite | Phaser.GameObjects.BitmapText => {
+        const i = index;
+        const { x, y } = leafPosition(i);
+
+        if (textGlyphs > 0) {
+          const label = new Phaser.GameObjects.BitmapText(scene!, x, y, GLYPH_FONT_KEY, textForLeaf(i, textGlyphs));
+
+          label.setOrigin(0, 0);
+
+          return label;
+        }
+
         // Texture indexed by position WITHIN the spine bucket, not the global
         // index - identical to the other arms, so the batch-breaking archetype
         // overflows the batcher's texture slots the same way everywhere.
         const key = textureKeys[Math.floor(i / spine.length) % textureKeys.length]!;
-        const sprite = new Phaser.GameObjects.Sprite(scene, 0, 0, key);
+        const sprite = new Phaser.GameObjects.Sprite(scene!, 0, 0, key);
 
         // Top-left anchor to match the other arms (Pixi/ExoJS default anchor is
         // (0,0)); Phaser sprites default to a centred (0.5,0.5) origin, which
@@ -231,16 +329,25 @@ export const createPhaserAdapter = (): EngineAdapter => {
           sprite.setDisplaySize(VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
         }
 
-        const x = overdraw ? 0 : GRID_MARGIN + (i % columns) * cellWidth + cellWidth / 2;
-        const y = overdraw ? 0 : GRID_MARGIN + Math.floor(i / columns) * cellHeight + cellHeight / 2;
-
         sprite.setPosition(x, y);
-        spine[i % spine.length]!.add(sprite);
+
+        return sprite;
+      };
+
+      for (let i = 0; i < nodeCount; i++) {
+        const leaf = makeLeaf(i);
+        const parent = spine[i % spine.length]!;
+
+        parent.add(leaf);
 
         if (selectedSet.has(i)) {
-          leaves.push({ sprite, baseX: x, baseY: y });
+          const { x, y } = leafPosition(i);
+
+          leaves.push({ node: leaf, parent, index: i, baseX: x, baseY: y });
         }
       }
+
+      rebuildLeaf = churning ? makeLeaf : null;
 
       // Attach the spine root to the scene display list so it is rendered.
       scene.add.existing(sceneRoot);
@@ -255,12 +362,41 @@ export const createPhaserAdapter = (): EngineAdapter => {
     },
 
     mutate(frame: number): void {
+      // Structural churn: destroy each selected leaf and build its replacement in
+      // the same place. Phaser's `destroy` removes the object from its parent
+      // container itself, so nothing detaches it first.
+      if (churning && rebuildLeaf !== null) {
+        for (const leaf of mutableLeaves) {
+          leaf.node.destroy();
+
+          const replacement = rebuildLeaf(leaf.index);
+
+          leaf.parent.add(replacement);
+          leaf.node = replacement;
+        }
+
+        return;
+      }
+
+      // Text invalidation: re-set the string, discarding that leaf's layout. The
+      // frame index shifts the run so no leaf is ever assigned the string it
+      // already has.
+      if (textUpdating) {
+        for (const leaf of mutableLeaves) {
+          if (leaf.node instanceof Phaser.GameObjects.BitmapText) {
+            leaf.node.setText(textForLeaf(leaf.index + frame, textGlyphs));
+          }
+        }
+
+        return;
+      }
+
       const phase = frame * WOBBLE_SPEED;
       const dx = Math.sin(phase) * WOBBLE_AMPLITUDE;
       const dy = Math.cos(phase) * WOBBLE_AMPLITUDE;
 
       for (const leaf of mutableLeaves) {
-        leaf.sprite.setPosition(leaf.baseX + dx, leaf.baseY + dy);
+        leaf.node.setPosition(leaf.baseX + dx, leaf.baseY + dy);
       }
     },
 
@@ -297,6 +433,10 @@ export const createPhaserAdapter = (): EngineAdapter => {
       textureKeys = [];
       mutableLeaves = [];
       mutableIndices = [];
+      rebuildLeaf = null;
+      churning = false;
+      textUpdating = false;
+      textGlyphs = 0;
     },
   };
 };

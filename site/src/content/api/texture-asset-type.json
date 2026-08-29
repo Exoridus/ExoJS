@@ -1,6 +1,6 @@
 {
   "title": "TextureAssetType",
-  "description": "GPU-ready Textures decoded from PNG, JPG, WebP, AVIF, GIF, BMP and ICO bytes, or from a KTX2 container holding a hardware-compressed payload. One type covers both because the payload kind is a property of the bytes, not of the asset: an AssetVariantSet rule may resolve one logical source to a compressed container where the device supports the format and to an image elsewhere, and a caller holding the handle sees a `Texture` either way. An `.ico` file may hold several resolutions of one image. Which of them the decode yields is the browser's choice and is not specified anywhere, so an icon whose exact size matters should be shipped as the single image it is meant to be rather than as a multi-resolution container.",
+  "description": "GPU-ready Textures decoded from PNG, APNG, JPG, WebP, AVIF, GIF, BMP and ICO bytes, or from a KTX2 container holding a hardware-compressed payload. One type covers both because the payload kind is a property of the bytes, not of the asset: an AssetVariantSet rule may resolve one logical source to a compressed container where the device supports the format and to an image elsewhere, and a caller holding the handle sees a `Texture` either way. An animated source (APNG, animated WebP or GIF, an AVIF sequence) decodes to its first frame - a texture is a still image. Use the animation asset types for playback. An `.ico` file may hold several resolutions of one image. Which of them the decode yields is the browser's choice and is not specified anywhere, so an icon whose exact size matters should be shipped as the single image it is meant to be rather than as a multi-resolution container.",
   "symbol": "TextureAssetType",
   "kind": "class",
   "subsystem": "assets",
@@ -19,8 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "GPU-ready Textures decoded from PNG, JPG, WebP, AVIF, GIF, BMP and ICO bytes, or from a KTX2 container holding a hardware-compressed payload.",
+        "GPU-ready Textures decoded from PNG, APNG, JPG, WebP, AVIF, GIF, BMP and ICO bytes, or from a KTX2 container holding a hardware-compressed payload.",
         "One type covers both because the payload kind is a property of the bytes, not of the asset: an AssetVariantSet rule may resolve one logical source to a compressed container where the device supports the format and to an image elsewhere, and a caller holding the handle sees a `Texture` either way.",
+        "An animated source (APNG, animated WebP or GIF, an AVIF sequence) decodes to its first frame - a texture is a still image. Use the animation asset types for playback.",
         "An `.ico` file may hold several resolutions of one image. Which of them the decode yields is the browser's choice and is not specified anywhere, so an icon whose exact size matters should be shipped as the single image it is meant to be rather than as a multi-resolution container."
       ],
       "importLine": "import { TextureAssetType } from '@codexo/exojs'",

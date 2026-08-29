@@ -1,5 +1,7 @@
 import type { BrowserGamepad } from '#input/GamepadDefinitions';
 
+import type { PlatformTextInput } from './PlatformTextInput';
+
 /**
  * Undo function returned by every `PlatformAdapter` subscription. Calling it
  * twice is a no-op.
@@ -234,6 +236,14 @@ export interface PlatformAdapter extends TimeSource, FrameScheduler {
 
   /** Sample every connected gamepad. Entries may be `null` for vacated slots. */
   pollGamepads(): ReadonlyArray<BrowserGamepad | null>;
+
+  /**
+   * A transport for text editing - keyboard and IME input routed as edit
+   * intents (`insert`, `deleteContent`, undo/redo) - or `null` where the
+   * host has no way to receive text. `null` is a supported outcome, not an
+   * error: a text widget renders and takes focus, but rejects edits.
+   */
+  createTextInput(): PlatformTextInput | null;
 
   /** Whether the document showing the surface is currently visible to the user. */
   readonly documentVisible: boolean;

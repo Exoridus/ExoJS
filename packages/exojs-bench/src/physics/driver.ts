@@ -73,15 +73,15 @@ const applyFilter = (cells: readonly PhysicsCellSpec[], filter: Partial<PhysicsC
   return cells.filter(cell => entries.every(([key, value]) => cell[key as keyof PhysicsCellSpec] === value));
 };
 
-/** The archetype spec and its ordinal (for the deterministic seed) for a cell. */
-const archetypeFor = (id: PhysicsCellSpec['archetype']): { spec: (typeof PHYSICS_ARCHETYPES)[number]; ordinal: number } => {
-  const ordinal = PHYSICS_ARCHETYPES.findIndex(archetype => archetype.id === id);
+/** The archetype spec for a cell. */
+const archetypeFor = (id: PhysicsCellSpec['archetype']): (typeof PHYSICS_ARCHETYPES)[number] => {
+  const spec = PHYSICS_ARCHETYPES.find(archetype => archetype.id === id);
 
-  if (ordinal === -1) {
+  if (spec === undefined) {
     throw new Error(`Unknown physics archetype '${id}'.`);
   }
 
-  return { spec: PHYSICS_ARCHETYPES[ordinal]!, ordinal };
+  return spec;
 };
 
 /**
@@ -90,8 +90,8 @@ const archetypeFor = (id: PhysicsCellSpec['archetype']): { spec: (typeof PHYSICS
  * Aborts to `exceeded` on a sustained runaway (see {@link STEP_BUDGET_MS}).
  */
 const runCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec): PhysicsCellResult => {
-  const { spec: archetype, ordinal } = archetypeFor(spec.archetype);
-  const seed = seedFor(ordinal, spec.bodyCount);
+  const archetype = archetypeFor(spec.archetype);
+  const seed = seedFor(archetype.scene, spec.bodyCount);
 
   adapter.setup(archetype, spec.bodyCount, seed);
 

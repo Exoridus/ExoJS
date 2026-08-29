@@ -1,0 +1,155 @@
+{
+  "title": "TextLineMetrics",
+  "description": "One laid-out line, in the same local space as GlyphPlacement.",
+  "symbol": "TextLineMetrics",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One laid-out line, in the same local space as GlyphPlacement."
+      ],
+      "importLine": "import { TextLineMetrics } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "count",
+          "signature": "count: number",
+          "signatureTokens": [
+            {
+              "text": "count",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How many glyphs this line placed. Zero for an empty line."
+        },
+        {
+          "name": "start",
+          "signature": "start: number",
+          "signatureTokens": [
+            {
+              "text": "start",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Index of this line's first glyph in placements."
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Advance width of the line, with no trailing letter spacing."
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "signatureTokens": [
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Pen origin of the line's first glyph, so the alignment offset is included."
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "signatureTokens": [
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Top of this line's box."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/text/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/text/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/types.ts"
+}

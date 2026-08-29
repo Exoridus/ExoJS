@@ -1,0 +1,92 @@
+{
+  "title": "DropdownItem",
+  "description": "One selectable entry of a Dropdown.",
+  "symbol": "DropdownItem",
+  "kind": "interface",
+  "subsystem": "ui",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One selectable entry of a Dropdown."
+      ],
+      "importLine": "import { DropdownItem } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "label",
+          "signature": "label: string",
+          "signatureTokens": [
+            {
+              "text": "label",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Text shown for this entry."
+        },
+        {
+          "name": "value",
+          "signature": "value: T",
+          "signatureTokens": [
+            {
+              "text": "value",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The value Dropdown.onChange reports when it is picked."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/ui/Dropdown.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Dropdown.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/ui/Dropdown.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Dropdown.ts"
+}

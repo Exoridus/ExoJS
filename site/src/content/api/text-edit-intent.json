@@ -1,0 +1,223 @@
+{
+  "title": "TextEditIntent",
+  "description": "One edit the host wants applied to the text model. `insert` carries the text to place over the current selection (an IME commit, a typed character, a paste); `deleteContent` removes the selection, or the range a granularity step spans next to the caret; `historyUndo`/`historyRedo` ask for the widget's own undo ring, not the host's.",
+  "symbol": "TextEditIntent",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One edit the host wants applied to the text model. `insert` carries the text to place over the current selection (an IME commit, a typed character, a paste); `deleteContent` removes the selection, or the range a granularity step spans next to the caret; `historyUndo`/`historyRedo` ask for the widget's own undo ring, not the host's."
+      ],
+      "importLine": "import { TextEditIntent } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "TextEditIntent",
+          "signature": "{ direction: \"backward\" | \"forward\"; granularity: \"character\" | \"line\" | \"word\"; kind: \"deleteContent\" } | { kind: \"historyRedo\" } | { kind: \"historyUndo\" } | { kind: \"insert\"; text: string }",
+          "signatureTokens": [
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "direction",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"backward\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"forward\"",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "granularity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"character\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"line\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"word\"",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "kind",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"deleteContent\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "kind",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"historyRedo\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "kind",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"historyUndo\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "kind",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"insert\"",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "text",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/platform/PlatformTextInput.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformTextInput.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/platform/PlatformTextInput.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformTextInput.ts"
+}

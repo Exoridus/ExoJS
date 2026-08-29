@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 18,
+  "memberCount": 19,
   "counts": {
     "constructors": 0,
-    "methods": 15,
+    "methods": 16,
     "properties": 3,
     "events": 0
   },
@@ -124,6 +124,43 @@
           ],
           "returnType": "void",
           "description": "Route all further events for pointerId to the surface. Best-effort."
+        },
+        {
+          "name": "createTextInput",
+          "signature": "createTextInput(): PlatformTextInput | null",
+          "signatureTokens": [
+            {
+              "text": "createTextInput",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlatformTextInput",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "PlatformTextInput | null",
+          "description": "A transport for text editing - keyboard and IME input routed as edit intents (insert, deleteContent, undo/redo) - or null where the host has no way to receive text. null is a supported outcome, not an error: a text widget renders and takes focus, but rejects edits."
         },
         {
           "name": "destroy",

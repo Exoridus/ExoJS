@@ -106,7 +106,27 @@ export type UISkinSet = { readonly normal: UISkin } & Partial<Readonly<Record<Ex
  * A themed surface. Roles are per painted surface, not per widget class: a
  * progress bar draws its track and its fill from two independent roles.
  */
-export type UIThemeRole = 'panel' | 'button' | 'label' | 'progressBarTrack' | 'progressBarFill';
+export type UIThemeRole =
+  | 'panel'
+  | 'button'
+  | 'label'
+  | 'progressBarTrack'
+  | 'progressBarFill'
+  | 'scrollbarTrack'
+  | 'scrollbarThumb'
+  | 'checkbox'
+  | 'checkboxMark'
+  | 'toggleTrack'
+  | 'toggleKnob'
+  | 'sliderTrack'
+  | 'sliderFill'
+  | 'sliderThumb'
+  | 'dropdownList'
+  | 'dropdownItem'
+  | 'textFieldSurface'
+  | 'placeholder'
+  | 'caret'
+  | 'selection';
 
 /** Skins for every role, as resolved for a widget. */
 export type UITheme = Readonly<Record<UIThemeRole, UISkinSet>>;
@@ -193,6 +213,10 @@ const skin = (background: UIBackground, text: TextStyleOptions = {}, insets: UII
 
 const buttonText: TextStyleOptions = { fillColor: new Color(255, 255, 255, 1), fontSize: 16, align: 'center' };
 
+const controlText: TextStyleOptions = { fillColor: new Color(255, 255, 255, 1), fontSize: 16 };
+
+const disabledText: TextStyleOptions = { fillColor: new Color(150, 156, 168, 1), fontSize: 16 };
+
 /**
  * The theme a UI layer uses until one is assigned. It reproduces the widgets'
  * built-in look, so assigning a patch changes only what the patch names.
@@ -206,6 +230,7 @@ export const defaultUITheme: UITheme = {
     hover: skin(fill(new Color(74, 140, 240, 1), 8), buttonText),
     pressed: skin(fill(new Color(40, 96, 180, 1), 8), buttonText),
     disabled: skin(fill(new Color(70, 76, 90, 1), 8), buttonText),
+    focused: skin(fill(new Color(54, 120, 220, 1), 8, new Color(255, 255, 255, 0.85), 2), buttonText),
   },
   label: {
     normal: skin(noBackground, { fillColor: new Color(255, 255, 255, 1), fontSize: 16 }),
@@ -215,6 +240,74 @@ export const defaultUITheme: UITheme = {
   },
   progressBarFill: {
     normal: skin(fill(new Color(80, 220, 120, 1), 4)),
+  },
+  scrollbarTrack: {
+    normal: skin(fill(new Color(255, 255, 255, 0.08), 6)),
+  },
+  scrollbarThumb: {
+    normal: skin(fill(new Color(255, 255, 255, 0.28), 6)),
+    hover: skin(fill(new Color(255, 255, 255, 0.42), 6)),
+    pressed: skin(fill(new Color(255, 255, 255, 0.56), 6)),
+  },
+  checkbox: {
+    normal: skin(fill(new Color(255, 255, 255, 0.12), 4, new Color(255, 255, 255, 0.35), 2), controlText),
+    hover: skin(fill(new Color(255, 255, 255, 0.2), 4, new Color(255, 255, 255, 0.5), 2), controlText),
+    pressed: skin(fill(new Color(255, 255, 255, 0.28), 4, new Color(255, 255, 255, 0.6), 2), controlText),
+    disabled: skin(fill(new Color(255, 255, 255, 0.06), 4, new Color(255, 255, 255, 0.15), 2), disabledText),
+    focused: skin(fill(new Color(255, 255, 255, 0.12), 4, new Color(120, 180, 255, 1), 2), controlText),
+  },
+  checkboxMark: {
+    normal: skin(fill(new Color(80, 220, 120, 1), 2)),
+    disabled: skin(fill(new Color(120, 130, 140, 1), 2)),
+  },
+  toggleTrack: {
+    normal: skin(fill(new Color(255, 255, 255, 0.16), 999, new Color(255, 255, 255, 0.28), 2), controlText),
+    hover: skin(fill(new Color(255, 255, 255, 0.24), 999, new Color(255, 255, 255, 0.4), 2), controlText),
+    pressed: skin(fill(new Color(255, 255, 255, 0.3), 999, new Color(255, 255, 255, 0.5), 2), controlText),
+    disabled: skin(fill(new Color(255, 255, 255, 0.08), 999, new Color(255, 255, 255, 0.12), 2), disabledText),
+    focused: skin(fill(new Color(255, 255, 255, 0.16), 999, new Color(120, 180, 255, 1), 2), controlText),
+  },
+  toggleKnob: {
+    normal: skin(fill(new Color(240, 244, 250, 1), 999)),
+    disabled: skin(fill(new Color(130, 138, 150, 1), 999)),
+  },
+  sliderTrack: {
+    normal: skin(fill(new Color(255, 255, 255, 0.16), 3)),
+    disabled: skin(fill(new Color(255, 255, 255, 0.08), 3)),
+  },
+  sliderFill: {
+    normal: skin(fill(new Color(54, 120, 220, 1), 3)),
+    disabled: skin(fill(new Color(90, 96, 110, 1), 3)),
+  },
+  sliderThumb: {
+    normal: skin(fill(new Color(240, 244, 250, 1), 999)),
+    hover: skin(fill(new Color(255, 255, 255, 1), 999)),
+    pressed: skin(fill(new Color(210, 220, 235, 1), 999)),
+    disabled: skin(fill(new Color(130, 138, 150, 1), 999)),
+    focused: skin(fill(new Color(240, 244, 250, 1), 999, new Color(120, 180, 255, 1), 2)),
+  },
+  dropdownList: {
+    normal: skin(fill(new Color(24, 28, 38, 0.98), 8, new Color(255, 255, 255, 0.18), 1)),
+  },
+  dropdownItem: {
+    normal: skin(fill(new Color(255, 255, 255, 0), 4), controlText),
+    hover: skin(fill(new Color(255, 255, 255, 0.14), 4), controlText),
+    pressed: skin(fill(new Color(54, 120, 220, 1), 4), controlText),
+    disabled: skin(fill(new Color(255, 255, 255, 0), 4), disabledText),
+  },
+  textFieldSurface: {
+    normal: skin(fill(new Color(255, 255, 255, 0.08), 6, new Color(255, 255, 255, 0.18), 1), controlText, { left: 8, top: 6, right: 8, bottom: 6 }),
+    disabled: skin(fill(new Color(255, 255, 255, 0.04), 6, new Color(255, 255, 255, 0.08), 1), disabledText, { left: 8, top: 6, right: 8, bottom: 6 }),
+    focused: skin(fill(new Color(255, 255, 255, 0.1), 6, new Color(120, 180, 255, 1), 1), controlText, { left: 8, top: 6, right: 8, bottom: 6 }),
+  },
+  placeholder: {
+    normal: skin(noBackground, { fillColor: new Color(255, 255, 255, 0.35), fontSize: 16 }),
+  },
+  caret: {
+    normal: skin(fill(new Color(120, 180, 255, 1), 0)),
+  },
+  selection: {
+    normal: skin(fill(new Color(54, 120, 220, 0.35), 0)),
   },
 };
 

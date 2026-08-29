@@ -519,6 +519,7 @@ describe('layoutText advance', () => {
 
     expect(layoutText('', style, {}, provider)).toEqual({
       placements: [],
+      lines: [],
       advance: { width: 0, height: 0 },
       ink: { x: 0, y: 0, width: 0, height: 0 },
     });
@@ -686,6 +687,8 @@ describe('buildTextPageQuads', () => {
       y: 0,
       width: 8,
       height: 12,
+      penX: 0,
+      penAdvance: 8,
       page: 0,
       uvLeft: 0,
       uvTop: 0,

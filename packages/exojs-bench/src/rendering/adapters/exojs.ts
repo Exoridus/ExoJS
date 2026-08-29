@@ -1,7 +1,10 @@
 import { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Matrix } from '#math/Matrix';
+import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
+import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
+import type { Filter } from '#rendering/filters/Filter';
 import { Geometry } from '#rendering/geometry/Geometry';
 import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
@@ -12,6 +15,7 @@ import { RenderBatch } from '#rendering/RenderBatch';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { spriteVertexGlsl } from '#rendering/sprite/spriteMaterialSources';
+import { Text } from '#rendering/text/Text';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
 import { View } from '#rendering/View';
@@ -19,7 +23,19 @@ import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
-import { cameraCenterAt, GRID_MARGIN, gridLayout, gridPosition, isScrolling, SPRITE_SIZE, VIEWPORT_HEIGHT, VIEWPORT_WIDTH, worldExtent } from '../world';
+import { filterChainDepth, isChurning, isTextArchetype, isTextUpdating, maskDepth, textForLeaf } from '../traits';
+import {
+  cameraCenterAt,
+  GRID_MARGIN,
+  gridLayout,
+  gridPosition,
+  isScrolling,
+  maskRect,
+  SPRITE_SIZE,
+  VIEWPORT_HEIGHT,
+  VIEWPORT_WIDTH,
+  worldExtent,
+} from '../world';
 
 /**
  * One array-backed mesh leaf: the same SPRITE_SIZE quad a sprite leaf covers,
@@ -129,12 +145,44 @@ const createDistinctMaterial = (index: number, total: number): SpriteMaterial =>
     uniforms: { u_userColor: [1, 1 - index / Math.max(1, total), 1, 1] },
   });
 
-/** A pre-selected leaf sprite and its resting grid position - the only nodes `mutate` disturbs. */
+/**
+ * A pre-selected leaf and its resting grid position - the only nodes `mutate`
+ * disturbs.
+ *
+ * `node` is mutable because the churn archetype replaces it with a freshly built
+ * leaf every frame; `parent` and `index` are what such a replacement needs in
+ * order to land in the identical place in the tree, with the identical texture
+ * and glyph run, as the leaf it succeeds.
+ */
 interface MutableLeaf {
-  readonly sprite: Sprite;
+  node: Sprite | Text;
+  readonly parent: Container;
+  readonly index: number;
   readonly baseX: number;
   readonly baseY: number;
 }
+
+/**
+ * Text leaf for the text archetypes: an SDF {@link Text} node carrying the
+ * shared, index-derived glyph run.
+ *
+ * `fontSize` is fixed across the arms rather than scaled with the node count, so
+ * the glyph raster - and therefore the atlas pressure a text scene puts on the
+ * engine - is a property of the archetype instead of a property of the cell.
+ */
+const createTextLeaf = (index: number, glyphs: number): Text => new Text(textForLeaf(index, glyphs), { fontSize: TEXT_FONT_SIZE });
+
+/** Font size, in logical pixels, of every text leaf on every arm. */
+const TEXT_FONT_SIZE = 12;
+
+/**
+ * One link of a filter chain. A colour matrix at a near-identity saturation: it
+ * is a single full-target pass with trivial fragment work, which is what leaves
+ * the archetype measuring target allocation, binding and blit rather than
+ * fragment ALU. Each link gets a slightly different matrix so no arm can
+ * collapse the chain by recognising two identical filters.
+ */
+const createChainFilter = (link: number): Filter => new ColorMatrixFilter().saturate(1 + link * 0.05);
 
 /**
  * Generate one of `total` visually distinct solid-colour textures from a small
@@ -299,6 +347,18 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
    * translating the world, which is the same distinction a game makes.
    */
   let scrollingSpec: ArchetypeSpec | null = null;
+  /**
+   * Rebuilds the leaf at a given global index exactly as `buildScene` built it -
+   * same texture, same glyph run, same position. Non-null only while a churning
+   * archetype is built, which is the only caller: every other archetype keeps
+   * its leaves for the life of the cell.
+   */
+  let rebuildLeaf: ((index: number) => Sprite | Text) | null = null;
+  /** Per-frame mutation mode of the built archetype; see `traits.ts`. */
+  let churning = false;
+  let textUpdating = false;
+  /** Characters per text leaf of the built archetype; `0` when it has no text. */
+  let textGlyphs = 0;
 
   /** Drop the `instanced-batch` scene so a rebuild (or teardown) leaks no GPU resources. */
   const releaseBatchScene = (): void => {
@@ -476,7 +536,27 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       const selectedSet = new Set(selectedIndices);
       const leaves: MutableLeaf[] = [];
 
-      for (let i = 0; i < nodeCount; i++) {
+      textGlyphs = isTextArchetype(spec) ? Math.max(1, Math.trunc(spec.textGlyphsPerNode ?? 0)) : 0;
+      churning = isChurning(spec);
+      textUpdating = isTextUpdating(spec);
+
+      /** Resting grid position of leaf `index` - the origin every leaf is built at and the churn replacement returns to. */
+      const leafPosition = (index: number): { x: number; y: number } => {
+        if (overdraw) {
+          return { x: 0, y: 0 };
+        }
+
+        return gridPosition(index, layout, GRID_MARGIN);
+      };
+
+      /**
+       * Build (but do not parent) the leaf at global index `index`. Extracted from
+       * the build loop because the churn archetype has to reproduce a leaf
+       * mid-run, and reproducing it from a second, parallel construction site is
+       * exactly how the replacement ends up differing from the leaf it replaces.
+       */
+      const makeLeaf = (index: number): Sprite | Mesh | Text => {
+        const i = index;
         // Index the texture by the sprite's position WITHIN its spine bucket,
         // not by the global index. Leaves are round-robined across the spine via
         // `i % spine.length`, so a global `i % textureCount` would alias with
@@ -496,9 +576,15 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         const leafTexture = textures[Math.floor(i / spine.length) % textures.length]!;
         const isMesh = meshEvery > 0 && i % meshEvery >= meshEvery - meshRunLength;
 
-        let leaf: Sprite | Mesh;
+        let leaf: Sprite | Mesh | Text;
 
-        if (isMesh) {
+        if (textGlyphs > 0) {
+          // A text archetype replaces the leaf entirely rather than decorating a
+          // sprite with a label: the cost under study is the text node's own
+          // layout and glyph path, and a sprite beside it would add per-node
+          // quad cost to every arm's number for no comparative gain.
+          leaf = createTextLeaf(i, textGlyphs);
+        } else if (isMesh) {
           leaf = sharedMeshGeometry === null ? createArrayLeafMesh(leafTexture) : createStaticLeafMesh(leafTexture, sharedMeshGeometry);
         } else {
           leaf = new Sprite(leafTexture);
@@ -539,18 +625,61 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
           leaf.height = VIEWPORT_HEIGHT;
         }
 
-        const cell = gridPosition(i, layout, GRID_MARGIN);
-        const x = overdraw ? 0 : cell.x;
-        const y = overdraw ? 0 : cell.y;
+        const { x, y } = leafPosition(i);
 
         leaf.setPosition(x, y);
-        spine[i % spine.length]!.addChild(leaf);
+
+        return leaf;
+      };
+
+      for (let i = 0; i < nodeCount; i++) {
+        const leaf = makeLeaf(i);
+        const parent = spine[i % spine.length]!;
+
+        parent.addChild(leaf);
 
         // Mesh leaves have no mutable-leaf shape (the archetype that builds them
         // sets `mutationFraction: 0`, so `selectedSet` is empty there anyway).
-        if (selectedSet.has(i) && leaf instanceof Sprite) {
-          leaves.push({ sprite: leaf, baseX: x, baseY: y });
+        if (selectedSet.has(i) && !(leaf instanceof Mesh)) {
+          const { x, y } = leafPosition(i);
+
+          leaves.push({ node: leaf, parent, index: i, baseX: x, baseY: y });
         }
+      }
+
+      // Churn needs to reproduce a leaf mid-run; nothing else does, so the
+      // factory is retained only for that archetype and the closure it captures
+      // (textures, spine, layout) dies with the scene otherwise.
+      rebuildLeaf = churning ? (index: number): Sprite | Text => makeLeaf(index) as Sprite | Text : null;
+
+      // Post-process filter chain on the scene ROOT, so one chain covers the
+      // whole scene and its depth - not the number of filtered subtrees - is the
+      // measured axis.
+      const chainDepth = filterChainDepth(spec);
+
+      if (chainDepth > 0) {
+        const chain: Filter[] = [];
+
+        for (let link = 0; link < chainDepth; link++) {
+          chain.push(createChainFilter(link));
+        }
+
+        // Ownership transfers to the node, which destroys the chain in its own
+        // `destroy()` - so teardown must not destroy these a second time.
+        sceneRoot.filters = chain;
+      }
+
+      // Nested rectangle masks, each inset inside its parent's rect (see
+      // `world.ts::maskRect`) so no level is a no-op. Masking starts one level
+      // BELOW the scene root, matching the Pixi arm - which has to keep its root
+      // unmasked to host the mask sources - so both arms clip the identical set
+      // of containers with the identical rects.
+      const masks = Math.min(maskDepth(spec), spine.length - 1);
+
+      for (let level = 0; level < masks; level++) {
+        const rect = maskRect(level, masks, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+
+        spine[level + 1]!.mask = new Rectangle(rect.x, rect.y, rect.width, rect.height);
       }
 
       root = sceneRoot;
@@ -591,12 +720,42 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         app.rendering.view.setCenter(centre.x, centre.y);
       }
 
+      // Structural churn: destroy each selected leaf and build its replacement in
+      // the same place. `destroy()` detaches the node from its parent itself, so
+      // the tree is never left holding a destroyed child.
+      if (churning && rebuildLeaf !== null) {
+        for (const leaf of mutableLeaves) {
+          leaf.node.destroy();
+
+          const replacement = rebuildLeaf(leaf.index);
+
+          leaf.parent.addChild(replacement);
+          leaf.node = replacement;
+        }
+
+        return;
+      }
+
+      // Text invalidation: re-set the string, which discards that leaf's layout
+      // and glyph run. The frame index shifts the run so no leaf ever re-sets the
+      // string it already has - an unchanged assignment is free on both arms and
+      // would measure nothing.
+      if (textUpdating) {
+        for (const leaf of mutableLeaves) {
+          if (leaf.node instanceof Text) {
+            leaf.node.text = textForLeaf(leaf.index + frame, textGlyphs);
+          }
+        }
+
+        return;
+      }
+
       const phase = frame * WOBBLE_SPEED;
       const dx = Math.sin(phase) * WOBBLE_AMPLITUDE;
       const dy = Math.cos(phase) * WOBBLE_AMPLITUDE;
 
       for (const leaf of mutableLeaves) {
-        leaf.sprite.setPosition(leaf.baseX + dx, leaf.baseY + dy);
+        leaf.node.setPosition(leaf.baseX + dx, leaf.baseY + dy);
       }
     },
 
@@ -691,6 +850,10 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       mutableIndices = [];
       views = [];
       scrollingSpec = null;
+      rebuildLeaf = null;
+      churning = false;
+      textUpdating = false;
+      textGlyphs = 0;
 
       if (app !== null) {
         app.destroy();

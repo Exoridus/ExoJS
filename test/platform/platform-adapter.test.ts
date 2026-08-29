@@ -73,6 +73,7 @@ const createRecordingPlatform = (): PlatformAdapter & {
       }
     },
     focusSurface: () => void calls.push('focusSurface'),
+    createTextInput: () => null,
     getSurfaceMetrics: () => ({ left: 0, top: 0, width: 800, height: 600, backingWidth: 800, backingHeight: 600 }),
     setCursor: (value: string) => void calls.push(`setCursor:${value}`),
     setTouchAction: (value: string) => void calls.push(`setTouchAction:${value}`),

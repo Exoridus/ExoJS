@@ -1,0 +1,81 @@
+{
+  "title": "FocusNavigationPolicy",
+  "description": "Which nodes the arrow keys and the D-pad may move focus to - see InteractionManager.focusNavigation. - `'ui'` restricts navigation to the scene's UI layer, so the arrow keys stay available to the game itself. - `'always'` navigates both layers, exactly the set Tab traverses. - `'never'` turns directional navigation off, including InteractionManager.focusInDirection. An active interaction scope replaces the candidate set with its own subtree whichever layer it lives in - a modal is navigable regardless of the policy, which only ever decides what an UNSCOPED navigation may reach.",
+  "symbol": "FocusNavigationPolicy",
+  "kind": "type",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Which nodes the arrow keys and the D-pad may move focus to - see InteractionManager.focusNavigation.",
+        "- `'ui'` restricts navigation to the scene's UI layer, so the arrow keys stay available to the game itself. - `'always'` navigates both layers, exactly the set Tab traverses. - `'never'` turns directional navigation off, including InteractionManager.focusInDirection.",
+        "An active interaction scope replaces the candidate set with its own subtree whichever layer it lives in - a modal is navigable regardless of the policy, which only ever decides what an UNSCOPED navigation may reach."
+      ],
+      "importLine": "import { FocusNavigationPolicy } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "FocusNavigationPolicy",
+          "signature": "\"always\" | \"never\" | \"ui\"",
+          "signatureTokens": [
+            {
+              "text": "\"always\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"never\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"ui\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/FocusController.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/FocusController.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/FocusController.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/FocusController.ts"
+}

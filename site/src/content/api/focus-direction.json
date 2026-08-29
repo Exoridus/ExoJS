@@ -1,0 +1,87 @@
+{
+  "title": "FocusDirection",
+  "description": "A direction for spatial focus navigation - see InteractionManager.focusInDirection.",
+  "symbol": "FocusDirection",
+  "kind": "type",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A direction for spatial focus navigation - see InteractionManager.focusInDirection."
+      ],
+      "importLine": "import { FocusDirection } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "FocusDirection",
+          "signature": "\"down\" | \"left\" | \"right\" | \"up\"",
+          "signatureTokens": [
+            {
+              "text": "\"down\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"left\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"right\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"up\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/FocusController.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/FocusController.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/FocusController.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/FocusController.ts"
+}

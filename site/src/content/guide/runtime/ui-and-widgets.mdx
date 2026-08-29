@@ -12,7 +12,7 @@ import Callout from '../../../components/Callout.astro';
 
 Every scene owns a screen-fixed UI layer, [`scene.ui`](/ExoJS/en/api/uiroot/), that is rendered automatically on top of the world. It lives in screen space (origin top-left, `0..width` × `0..height`), so its contents never scroll or zoom with the camera. Add anything to it with `scene.ui.addChild(...)`.
 
-On top of that layer, ExoJS ships a small set of widgets — [`Panel`](/ExoJS/en/api/panel/), [`Button`](/ExoJS/en/api/button/), [`Label`](/ExoJS/en/api/label/), [`ProgressBar`](/ExoJS/en/api/progress-bar/), a [`Stack`](/ExoJS/en/api/stack/) layout container, a [`ScrollContainer`](/ExoJS/en/api/scroll-container/) for overflowing content, and a hover [`Tooltip`](/ExoJS/en/api/tooltip/) helper — for HUDs, menus, and pause screens without hand-built hit-tests.
+On top of that layer, ExoJS ships a small set of widgets — [`Panel`](/ExoJS/en/api/panel/), [`Button`](/ExoJS/en/api/button/), [`Label`](/ExoJS/en/api/label/), [`ProgressBar`](/ExoJS/en/api/progress-bar/), a [`Stack`](/ExoJS/en/api/stack/) layout container, a [`ScrollContainer`](/ExoJS/en/api/scroll-container/) with [`Scrollbar`](/ExoJS/en/api/scrollbar/)s for overflowing content, the form controls [`Checkbox`](/ExoJS/en/api/checkbox/), [`Toggle`](/ExoJS/en/api/toggle/), [`Slider`](/ExoJS/en/api/slider/), [`Dropdown`](/ExoJS/en/api/dropdown/), [`TextInput`](/ExoJS/en/api/text-input/) and [`TextArea`](/ExoJS/en/api/text-area/), and a hover [`Tooltip`](/ExoJS/en/api/tooltip/) helper — for HUDs, menus, and pause screens without hand-built hit-tests.
 
 ## Building blocks
 
@@ -35,9 +35,51 @@ start.onClick.add(() => console.log('clicked'));
 
 A `Label` wraps a runtime [`Text`](/ExoJS/en/api/text/), so it accepts the same style options (`fontSize`, `fillColor`, `align`, …). A `Panel` is a rounded background you can add children to. A `Button` is a clickable panel with a centered label and hover / pressed / disabled states.
 
+## Form controls
+
+Four widgets cover settings screens and in-game options: a [`Checkbox`](/ExoJS/en/api/checkbox/), a [`Toggle`](/ExoJS/en/api/toggle/), a [`Slider`](/ExoJS/en/api/slider/) and a [`Dropdown`](/ExoJS/en/api/dropdown/). All four are focusable, usable from the keyboard alone, and report changes through an `onChange` signal:
+
+<SourceSnippet
+  source="examples/guides/ui-and-widgets/widgets.ts"
+  region="controls"
+  language="ts"
+  title="examples/guides/ui-and-widgets/widgets.ts"
+/>
+
+`Checkbox` and `Toggle` are the same two-state control with a different look — `checked`, `toggle()`, `Enter` / `Space` to flip — and both size themselves to their control plus their optional label until you call `setSize()`. A `Slider` clamps its value into `[min, max]` and rounds it to `step` (`0`, the default, is continuous); the arrow keys step it, `Home` / `End` jump to the ends, and dragging the thumb or clicking the groove works everywhere the pointer goes, not only inside the widget.
+
+A `Dropdown` is generic over the value type: `items` pairs each label with the value `onChange` reports, so `selectedValue` comes back typed. With the list open the arrows move the highlight and `Enter` picks it; with it closed they change the selection directly, so a value can be changed without ever opening the list.
+
+<Callout type="note">
+A `Dropdown`'s open list is a child of the dropdown, so it draws above whatever the dropdown draws above — and is clipped by the same ancestors. Inside a `ScrollContainer`, put the dropdown where its list has room, or it will be cut off at the clip edge.
+</Callout>
+
+## Text fields
+
+A [`TextInput`](/ExoJS/en/api/text-input/) is a single-line text field drawn on the canvas like every other widget, with a real caret, selection, word jumps, undo and clipboard support:
+
+<SourceSnippet
+  source="examples/guides/ui-and-widgets/widgets.ts"
+  region="text-input"
+  language="ts"
+  title="examples/guides/ui-and-widgets/widgets.ts"
+/>
+
+Keyboard input does not come from key codes. The field owns a hidden transport element supplied by the platform adapter, and edits arrive as intents from the browser's own editing pipeline (`beforeinput`), so dead keys, IME composition, autocorrect and paste behave the way they do in any other field on the page. `Enter` fires `onSubmit`, every edit fires `onChange`, and `Escape` and `Tab` release focus without being consumed.
+
+`maxLength`, `filter` and `maskChar` are enforced in the editing model rather than in the key handler, so a paste cannot slip past them: `filter` sees the value the edit *would* produce and refuses the whole edit, never a truncated part of it. A masked field keeps the plain value in `value` and renders one mask character per grapheme; copy and cut are refused while a mask is set, so the transport can never hand the clipboard a password.
+
+`inputMode` and `enterKeyHint` are passed to the transport, which is what decides the on-screen keyboard layout and the label on its confirm key on a phone.
+
+A [`TextArea`](/ExoJS/en/api/text-area/) is the multi-line field on the same core. `Enter` inserts a line break instead of confirming, `Up` / `Down` move by line and keep the column the caret last chose, `PageUp` / `PageDown` move by as many lines as the field shows, and `Home` / `End` go to the ends of the current line. The content scrolls in both axes to keep the caret visible and is clipped to the field. Its lines are the ones the value states - a long line scrolls sideways rather than wrapping.
+
+<Callout type="note">
+A host with no text-input transport — the offscreen-canvas adapter, for instance — makes the field render and take focus but reject every edit. It is a capability, not a guarantee: check that the field is reachable before making it the only way to enter something.
+</Callout>
+
 ## Theming
 
-A widget does not carry its own colours: it paints a **skin** it resolves from the theme of the nearest themed ancestor — the layer's [`UIRoot`](/ExoJS/en/api/uiroot/), or any widget above it that set overrides. A [`UITheme`](/ExoJS/en/api/uitheme/) holds one [`UISkinSet`](/ExoJS/en/api/uiskin-set/) per role (`panel`, `button`, `label`, `progressBarTrack`, `progressBarFill`), and each skin carries a [`UIBackground`](/ExoJS/en/api/uibackground/) descriptor, a text style, and insets. Insets are layout input, so a theme change re-lays out as well as repaints.
+A widget does not carry its own colours: it paints a **skin** it resolves from the theme of the nearest themed ancestor — the layer's [`UIRoot`](/ExoJS/en/api/uiroot/), or any widget above it that set overrides. A [`UITheme`](/ExoJS/en/api/uitheme/) holds one [`UISkinSet`](/ExoJS/en/api/uiskin-set/) per role (`panel`, `button`, `label`, `progressBarTrack`, `progressBarFill`, `scrollbarTrack`, `scrollbarThumb`, `checkbox`, `checkboxMark`, `toggleTrack`, `toggleKnob`, `sliderTrack`, `sliderFill`, `sliderThumb`, `dropdownList`, `dropdownItem`, `textFieldSurface`, `placeholder`, `selection`, `caret`), and each skin carries a [`UIBackground`](/ExoJS/en/api/uibackground/) descriptor, a text style, and insets. Insets are layout input, so a theme change re-lays out as well as repaints.
 
 `createUITheme` resolves a patch against the built-in default, which reproduces the widgets' stock look. Assign the result to `scene.ui.theme` to restyle a whole layer, or call `widget.setTheme(patch)` to restyle one subtree:
 
@@ -164,9 +206,38 @@ A `ScrollContainer` clips its content to a fixed `width` × `height` and scrolls
 
 `scroll.scrollTo(x, y)` and `scroll.scrollBy(dx, dy)` move the content programmatically, clamped so it never scrolls past its edges; `direction` restricts the wheel to `'vertical'`, `'horizontal'`, or `'both'`.
 
+A container paints a [`Scrollbar`](/ExoJS/en/api/scrollbar/) per scrollable axis, themed through the `scrollbarTrack` and `scrollbarThumb` roles. The bars overlay the content instead of shrinking it, so the visible box stays the size you declared. `scrollbars` decides when they show:
+
+- `'auto'` (the default) shows a bar only while its axis actually overflows,
+- `'always'` keeps it visible as a permanent affordance,
+- `'never'` builds none at all, leaving the wheel and `scrollTo` as the only way to move.
+
+Dragging a thumb scrolls the content, and scrolling by any other means moves the thumb. The range follows what `scroll.content` holds — adding or removing an item updates it. A child that resized *itself* is the one change the container cannot observe; call `scroll.refresh()` after it.
+
 <Callout type="pitfall" title="Items go on scroll.content, not the container">
 Parent scrollable items to `scroll.content`, never to the `ScrollContainer` itself. Children added straight to the container sit outside the clipped, scrolling region — they render at a fixed spot and ignore the wheel.
 </Callout>
+
+## Scaling the UI
+
+A HUD authored at one size is not automatically readable on every screen. `scene.ui.uiScale` is one factor over the whole layer, default `1`: raise it and every widget, its text and its touch target grow together.
+
+<SourceSnippet
+  source="examples/guides/ui-and-widgets/widgets.ts"
+  region="ui-scale"
+  language="ts"
+  title="examples/guides/ui-and-widgets/widgets.ts"
+/>
+
+The factor is applied as the layer's transform, so hit-testing follows it for free — pointer routing already goes through that transform, and a widget's own `uiWidth`/`uiHeight` never change. `scene.ui.screenWidth` and `screenHeight` report the box in the scaled units widgets lay out in, and `onResize` fires when the factor changes, so anchored widgets re-place themselves.
+
+`uiScaleStep` snaps the factor — set it to `0.25` before wiring a slider to it. An arbitrary factor resamples nine-slice corners and pixel art; a handful of discrete sizes usually looks better. Text is SDF and stays crisp either way.
+
+<Callout type="note" title="Scale and adaptation are two different mechanisms">
+`uiScale` is a readability and touch-size control. It is **not** a resolution policy: which logical coordinate system the game is authored in — and so how much of the world is visible — belongs to the application's [`CanvasSizing`](/ExoJS/en/api/canvas-sizing/), and a HUD authored against the base resolution therefore does not shrink on a 4K display to begin with. Adapting to a *different shape* of screen is layout's job: anchors, `DockContainer` and a reactive `Stack`. A phone usually wants both — reflow for the aspect ratio, a factor for the finger.
+</Callout>
+
+`UIRoot.scaleForTouchTarget(sizePixels, millimeters)` turns "a 24-pixel button should be at least 9mm across" into a factor. It converts through the CSS reference pixel (96 per inch), which is all a browser exposes — there is no API for the display's real physical size, and `devicePixelRatio` describes the backing store, not how large a pixel is. Treat it as a starting point for a density heuristic, not a measurement.
 
 ## Clicks and keyboard focus
 
@@ -193,6 +264,23 @@ RenderNode focus lives on [`app.interaction`](/ExoJS/en/api/interaction-manager/
 Key events bubble from the focused node up through its entire ancestor chain, same as pointer events: a container can listen on `onKeyDown` for a key pressed anywhere inside it, without every descendant needing its own handler, and call `event.stopPropagation()` to halt the bubble early. `event.currentTarget` tracks whichever ancestor is dispatching; `event.target` stays pinned to the actually-focused node throughout.
 
 Do not confuse this with canvas focus — whether the browser is sending the page's keyboard input to the ExoJS canvas at all — which lives on `app.input.canvasFocused` and `app.input.onCanvasFocusChange`.
+
+### Arrow keys and the D-pad
+
+Beyond `Tab`, focus also moves spatially: the arrow keys and a gamepad D-pad move it to the nearest focusable node in that direction, comparing the centres of their global bounds and weighing sideways offset heavier than distance along the direction. Navigation does not wrap — at the edge of the layout nothing moves — and with nothing focused yet, the first candidate takes focus, which is how a controller enters a menu.
+
+`app.interaction.focusNavigation` decides what that reaches: `'ui'` (the default) stays inside the UI layer so the game keeps the arrow keys, `'always'` navigates the world layer too — the same set `Tab` traverses — and `'never'` turns it off. An active interaction scope replaces the candidate set with its own subtree either way, so a modal stays navigable whatever the policy says. `app.interaction.focusInDirection('down')` performs one step directly, for binding navigation to anything else:
+
+<SourceSnippet
+  source="examples/guides/ui-and-widgets/widgets.ts"
+  region="focus-navigation"
+  language="ts"
+  title="examples/guides/ui-and-widgets/widgets.ts"
+/>
+
+A focused widget that wants an arrow key for itself calls `event.preventDefault()` on its `onKeyDown` event, exactly as it would to keep `Tab`. `Slider` and `Dropdown` do this, so the arrows adjust the focused control instead of leaving it.
+
+Every interactive widget also paints a `focused` state while it holds focus, resolved from its theme like every other state — so keyboard and controller users can see where they are without any extra wiring.
 
 ## Tooltips
 

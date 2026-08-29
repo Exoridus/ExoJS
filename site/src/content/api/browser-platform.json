@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 20,
+  "memberCount": 21,
   "counts": {
     "constructors": 1,
-    "methods": 15,
+    "methods": 16,
     "properties": 4,
     "events": 0
   },
@@ -178,6 +178,43 @@
           ],
           "returnType": "void",
           "description": "Route all further events for pointerId to the surface. Best-effort."
+        },
+        {
+          "name": "createTextInput",
+          "signature": "createTextInput(): PlatformTextInput | null",
+          "signatureTokens": [
+            {
+              "text": "createTextInput",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlatformTextInput",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "PlatformTextInput | null",
+          "description": "Builds a text-input transport: EditContext where the host has it, a hidden <textarea> everywhere else. Created per call, so a text widget owns its transport's lifetime; callers that never ask for one never create the element."
         },
         {
           "name": "destroy",

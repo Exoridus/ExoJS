@@ -25,6 +25,8 @@ const COLUMNS = [
   'stepMsP95',
   'bodies',
   'contacts',
+  'joints',
+  'rayHits',
   'status',
   'note',
 ] as const;
@@ -43,6 +45,8 @@ const toRow = (result: PhysicsCellResult): string[] => {
     ms(result.stepMsP95),
     count(structural.bodyCount),
     count(structural.contactCount),
+    count(structural.jointCount),
+    count(structural.rayHits),
     result.status,
     result.note ?? '',
   ];
@@ -54,9 +58,9 @@ const toCsv = (data: PhysicsReportData): string => [COLUMNS.join(','), ...data.r
  * Human-readable Markdown: the arm versions and the host/provenance block first
  * (a step-time number is only comparable if the CPU + Node + exojs-physics
  * version that produced it are on the record), the disclosed caveats, then one
- * table with the structural counters (bodies, contacts) sitting BESIDE the
- * timings - a fast step that came from fewer contacts must be visible in the
- * same row.
+ * table with the structural counters (bodies, contacts, joints, ray hits)
+ * sitting BESIDE the timings - a fast step that came from fewer contacts, or a
+ * query row whose rays all missed, must be visible in the same row.
  */
 const toMarkdown = (data: PhysicsReportData): string => {
   const { provenance } = data;

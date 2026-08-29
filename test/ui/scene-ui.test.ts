@@ -5,6 +5,8 @@ import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
 import type { ContextMenuRequest } from '#input/ContextMenuRequest';
 import { FocusController } from '#input/FocusController';
+import type { Gamepad } from '#input/Gamepad';
+import type { GamepadButton } from '#input/GamepadButton';
 import type { InputManager } from '#input/InputManager';
 import { InteractionManager } from '#input/InteractionManager';
 import type { Pointer } from '#input/Pointer';
@@ -13,6 +15,7 @@ import { Rectangle } from '#math/Rectangle';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
+import { Panel } from '#ui/Panel';
 
 import { frameDelta } from '../support/frame-delta';
 
@@ -68,6 +71,7 @@ const createUIApp = (): {
     onContextMenu: new Signal<[ContextMenuRequest]>(),
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
+    onAnyGamepadButtonDown: new Signal<[Gamepad, GamepadButton, number]>(),
     _finishInteractionFrame: (): void => undefined,
   };
   const canvas = document.createElement('canvas');
@@ -130,6 +134,31 @@ describe('UI interaction routing', () => {
     im.preUpdate(frameDelta);
 
     expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  test('hit-testing follows the UI scale', () => {
+    const { scene, im, signals } = createUIApp();
+    const panel = new Panel({ width: 100, height: 50 });
+    const handler = vi.fn();
+
+    panel.interactive = true;
+    scene.ui.addChild(panel);
+    panel.onPointerDown.add(handler);
+
+    // (150, 50) is outside the unscaled 100x50 panel...
+    dispatchPointer(signals.onPointerDown, 150, 50);
+    im.preUpdate(frameDelta);
+
+    expect(handler).not.toHaveBeenCalled();
+
+    // ...and inside it once the layer is drawn at twice the size, without the
+    // panel's own layout size changing.
+    scene.ui.uiScale = 2;
+    dispatchPointer(signals.onPointerDown, 150, 50);
+    im.preUpdate(frameDelta);
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(panel.uiWidth).toBe(100);
   });
 
   test('UI layer takes precedence over the world at the same screen point', () => {
@@ -379,5 +408,40 @@ describe('UI Tab traversal excludes destroyed nodes', () => {
     signals.onKeyDown.dispatch(Keyboard.Tab);
     // Wraps back to `a` - the sole surviving candidate - `b` is never a stop.
     expect(focus.focused).toBe(a);
+  });
+});
+
+describe('UI directional navigation', () => {
+  /** A focusable node with a real extent, so directional navigation has geometry to compare. */
+  const spatial = (x: number, y: number): Container => {
+    const node = new Container();
+
+    node.focusable = true;
+    node._setLocalBounds(0, 0, 10, 10);
+    node.setPosition(x, y);
+
+    return node;
+  };
+
+  test("the default 'ui' policy navigates the UI layer and stops at its edge", () => {
+    const { scene, focus, signals } = createUIApp();
+    const left = spatial(0, 0);
+    const right = spatial(100, 0);
+    const inWorld = spatial(200, 0);
+
+    scene.ui.addChild(left).addChild(right);
+    scene.root.addChild(inWorld);
+    focus.focus(left);
+
+    signals.onKeyDown.dispatch(Keyboard.Right);
+    expect(focus.focused).toBe(right);
+
+    // `inWorld` lies further right, but the UI layer is the whole candidate set.
+    signals.onKeyDown.dispatch(Keyboard.Right);
+    expect(focus.focused).toBe(right);
+
+    focus.navigation = 'always';
+    signals.onKeyDown.dispatch(Keyboard.Right);
+    expect(focus.focused).toBe(inWorld);
   });
 });

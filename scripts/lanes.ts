@@ -73,6 +73,9 @@ export const LOCAL_LANES: readonly Lane[] = [
   { key: 'browserAudio', name: 'browser: audio worklets', command: ['pnpm', 'test:browser:audio'], browser: true },
   { key: 'browserTilemapWorker', name: 'browser: tilemap worker', command: ['pnpm', 'test:browser:tilemap'], browser: true },
   { key: 'siteBuild', name: 'site gates', command: ['pnpm', 'gates', 'site'], gate: true },
+  // Drives headless Chromium on the software rasterizer, so it is a browser lane
+  // for `--quick`'s purposes even though it needs no GPU.
+  { key: 'benchStructural', name: 'bench: structural counter gate', command: ['pnpm', 'gate:bench:structural'], browser: true },
   // The harness serves `site/dist`, so locally the build is part of the lane -
   // smoking a stale dist is the false green this lane exists to prevent. CI
   // gets the build for free by reusing the site-build job's artifact.
@@ -132,7 +135,7 @@ const main = (): void => {
   const base = readFlag(argv, '--base') ?? 'origin/main';
 
   const files = all ? [] : changedFiles(base);
-  const areas = all ? { engine: true, site: true, audioFx: true, tilemapWorker: true, exampleCatalog: true } : selectAreas(files);
+  const areas = all ? { engine: true, site: true, audioFx: true, tilemapWorker: true, exampleCatalog: true, benchStructural: true } : selectAreas(files);
   const effective = effectiveLanes(areas);
 
   const selected = LOCAL_LANES.filter(lane => lane.key === 'always' || effective[lane.key])

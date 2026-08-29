@@ -25,7 +25,7 @@ const noopInteraction: InteractionHooks = {
  * effects run genuine user code from inside the structural methods.
  */
 const createStage = (): { stage: Stage; focus: FocusController } => {
-  const stubInput = { onKeyDown: { add() {}, remove() {} }, onKeyUp: { add() {}, remove() {} } };
+  const stubInput = { onKeyDown: { add() {}, remove() {} }, onKeyUp: { add() {}, remove() {} }, onAnyGamepadButtonDown: { add() {}, remove() {} } };
   const focus = new FocusController({ input: stubInput } as unknown as Application);
 
   return { stage: { interaction: noopInteraction, focus }, focus };

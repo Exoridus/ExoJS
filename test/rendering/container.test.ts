@@ -258,7 +258,7 @@ describe('Container children view', () => {
       _notifyBoundsInvalidated() {},
       _notifyTransformGroupMoved() {},
     };
-    const stubInput = { onKeyDown: { add() {}, remove() {} }, onKeyUp: { add() {}, remove() {} } };
+    const stubInput = { onKeyDown: { add() {}, remove() {} }, onKeyUp: { add() {}, remove() {} }, onAnyGamepadButtonDown: { add() {}, remove() {} } };
     const focusApp = { input: stubInput } as unknown as Application;
     const focus = new FocusController(focusApp);
     const stage: Stage = { interaction: noopInteraction, focus };
@@ -782,7 +782,9 @@ describe('SceneNode.destroy() detaches the node from its parent', () => {
     const container = new Container();
     const child = new DummyDrawable();
     const removed: RenderNode[] = [];
-    const focus = new FocusController({ input: { onKeyDown: { add() {}, remove() {} }, onKeyUp: { add() {}, remove() {} } } } as unknown as Application);
+    const focus = new FocusController({
+      input: { onKeyDown: { add() {}, remove() {} }, onKeyUp: { add() {}, remove() {} }, onAnyGamepadButtonDown: { add() {}, remove() {} } },
+    } as unknown as Application);
     const interaction = {
       _notifyNodeAdded() {},
       _notifyNodeRemoved(node: RenderNode) {

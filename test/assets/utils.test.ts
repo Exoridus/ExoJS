@@ -93,8 +93,24 @@ describe('determineMimeType', () => {
       expect(determineMimeType(toBuffer(bytes))).toBe('text/plain');
     });
 
-    test('does not match (falls through) when brand is neither "avif" nor "avis"', () => {
-      const bytes = [0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x69, 0x66, 0x31]; // 'ftyp' + 'mif1' (HEIC)
+    test('does not match (falls through) when neither the major nor a compatible brand is AVIF', () => {
+      // 'ftyp' + 'mif1' (HEIC), compatible brands 'mif1' and 'heic'.
+      const bytes = [0, 0, 0, 0x1c, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x69, 0x66, 0x31, 0, 0, 0, 0, 0x6d, 0x69, 0x66, 0x31, 0x68, 0x65, 0x69, 0x63];
+
+      expect(determineMimeType(toBuffer(bytes))).toBe('text/plain');
+    });
+
+    test('detects an AVIF that names "avif" only among the compatible brands', () => {
+      // 'ftyp' + 'mif1' major brand, compatible brands 'mif1' and 'avif'.
+      const bytes = [0, 0, 0, 0x1c, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x69, 0x66, 0x31, 0, 0, 0, 0, 0x6d, 0x69, 0x66, 0x31, 0x61, 0x76, 0x69, 0x66];
+
+      expect(determineMimeType(toBuffer(bytes))).toBe('image/avif');
+    });
+
+    test('stops scanning compatible brands at the declared "ftyp" box size', () => {
+      // Box size 0x14 ends the brand list before the trailing 'avif', which
+      // belongs to whatever box follows and must not be read as a brand.
+      const bytes = [0, 0, 0, 0x14, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x69, 0x66, 0x31, 0, 0, 0, 0, 0x6d, 0x69, 0x66, 0x31, 0x61, 0x76, 0x69, 0x66];
 
       expect(determineMimeType(toBuffer(bytes))).toBe('text/plain');
     });

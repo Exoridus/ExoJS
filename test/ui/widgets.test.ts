@@ -12,12 +12,16 @@ import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import type { GlyphInfo } from '#rendering/text/types';
 import type { Texture } from '#rendering/texture/Texture';
 import { Button } from '#ui/Button';
+import { Checkbox } from '#ui/Checkbox';
+import { Dropdown } from '#ui/Dropdown';
 import { Label } from '#ui/Label';
 import { Panel } from '#ui/Panel';
 import { ProgressBar } from '#ui/ProgressBar';
+import { Slider } from '#ui/Slider';
 import { Stack } from '#ui/Stack';
 import type { UITheme } from '#ui/theme';
 import { createUITheme } from '#ui/theme';
+import { Toggle } from '#ui/Toggle';
 import { UIRoot } from '#ui/UIRoot';
 
 // Text (used by Label/Button) needs a glyph atlas; inject a deterministic mock
@@ -607,5 +611,360 @@ describe('ProgressBar fill modes', () => {
 
     expect((bar.barNode as NineSliceSprite).width).toBe(200);
     expect(bar.barVisibleWidth).toBe(50);
+  });
+});
+
+describe('Checkbox', () => {
+  test('is interactive and focusable and starts unchecked', () => {
+    const checkbox = new Checkbox();
+
+    expect(checkbox.interactive).toBe(true);
+    expect(checkbox.focusable).toBe(true);
+    expect(checkbox.checked).toBe(false);
+  });
+
+  test('a tap flips it and reports the new value once', () => {
+    const checkbox = new Checkbox();
+    const handler = vi.fn();
+
+    checkbox.onChange.add(handler);
+    checkbox.onPointerTap.dispatch({} as never);
+
+    expect(checkbox.checked).toBe(true);
+    expect(handler).toHaveBeenCalledWith(true, checkbox);
+
+    // Assigning the value it already has changes nothing and stays silent.
+    checkbox.checked = true;
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  test('Enter and Space flip it, other keys do not', () => {
+    const checkbox = new Checkbox();
+
+    checkbox.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Enter, checkbox));
+    expect(checkbox.checked).toBe(true);
+
+    checkbox.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Space, checkbox));
+    expect(checkbox.checked).toBe(false);
+
+    checkbox.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Escape, checkbox));
+    expect(checkbox.checked).toBe(false);
+  });
+
+  test('disabled it ignores activation and paints its disabled state', () => {
+    const checkbox = new Checkbox();
+
+    checkbox.enabled = false;
+    checkbox.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Enter, checkbox));
+    checkbox.onPointerTap.dispatch({} as never);
+
+    expect(checkbox.checked).toBe(false);
+    expect(checkbox.interactive).toBe(false);
+    expect(checkbox.state).toBe('disabled');
+  });
+
+  test('the tick is painted only while it is checked', () => {
+    const checkbox = new Checkbox({ size: 20 });
+
+    new UIRoot().addChild(checkbox);
+
+    expect(checkbox.boxNode).toBeInstanceOf(Graphics);
+    expect(checkbox.markNode).toBeNull();
+
+    checkbox.checked = true;
+
+    expect(checkbox.markNode).toBeInstanceOf(Graphics);
+  });
+
+  test('it sizes itself to the box plus its label', () => {
+    const bare = new Checkbox({ size: 20 });
+    const labelled = new Checkbox({ size: 20, label: 'Fullscreen', labelGap: 8 });
+
+    new UIRoot().addChild(bare).addChild(labelled);
+
+    expect(bare.uiWidth).toBe(20);
+    expect(labelled.label).toBe('Fullscreen');
+    expect(labelled.uiWidth).toBeGreaterThan(28);
+    expect(labelled.labelNode).not.toBeNull();
+  });
+
+  test('an explicit size wins over its measurement', () => {
+    const checkbox = new Checkbox({ size: 20, label: 'On' });
+
+    new UIRoot().addChild(checkbox);
+    checkbox.setSize(200, 40);
+
+    expect(checkbox.uiWidth).toBe(200);
+    expect(checkbox.uiHeight).toBe(40);
+  });
+
+  test('focus paints the focused state', () => {
+    const checkbox = new Checkbox();
+
+    checkbox.onFocus.dispatch(checkbox);
+    expect(checkbox.focused).toBe(true);
+    expect(checkbox.state).toBe('focused');
+
+    checkbox.onBlur.dispatch(checkbox);
+    expect(checkbox.focused).toBe(false);
+    expect(checkbox.state).toBe('normal');
+  });
+});
+
+describe('Toggle', () => {
+  test('the knob slides to the side the value selects', () => {
+    const toggle = new Toggle({ width: 44, height: 24, knobInset: 3 });
+
+    new UIRoot().addChild(toggle);
+
+    const offX = toggle.knobNode?.x;
+
+    toggle.checked = true;
+
+    expect(offX).toBe(3);
+    expect(toggle.knobNode?.x).toBeGreaterThan(3);
+    expect(toggle.trackNode).toBeInstanceOf(Graphics);
+  });
+
+  test('it flips on a tap like a checkbox does', () => {
+    const toggle = new Toggle();
+    const handler = vi.fn();
+
+    toggle.onChange.add(handler);
+    toggle.onPointerTap.dispatch({} as never);
+
+    expect(toggle.checked).toBe(true);
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Slider', () => {
+  test('it clamps and quantizes the value it is given', () => {
+    const slider = new Slider({ min: 0, max: 10, step: 2, value: 3 });
+
+    expect(slider.value).toBe(4);
+
+    slider.value = 99;
+    expect(slider.value).toBe(10);
+
+    slider.value = -5;
+    expect(slider.value).toBe(0);
+  });
+
+  test('fraction reports the value as a share of the range', () => {
+    const slider = new Slider({ min: 10, max: 20, value: 15 });
+
+    expect(slider.fraction).toBeCloseTo(0.5);
+  });
+
+  test('the arrow keys step it and consume the key', () => {
+    const slider = new Slider({ min: 0, max: 10, step: 1, value: 5 });
+    const right = new KeyEvent('keydown', Keyboard.Right, slider);
+
+    slider.onKeyDown.dispatch(right);
+    expect(slider.value).toBe(6);
+    // Without this the same press would also move focus to the next widget.
+    expect(right.defaultPrevented).toBe(true);
+
+    slider.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Left, slider));
+    expect(slider.value).toBe(5);
+
+    slider.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Home, slider));
+    expect(slider.value).toBe(0);
+
+    slider.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.End, slider));
+    expect(slider.value).toBe(10);
+  });
+
+  test('a continuous slider steps by a twentieth of its range', () => {
+    const slider = new Slider({ min: 0, max: 20, value: 10 });
+
+    slider.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Right, slider));
+
+    expect(slider.value).toBeCloseTo(11);
+  });
+
+  test('an unrelated key is left to the focus controller', () => {
+    const slider = new Slider({ value: 0.5, min: 0, max: 1 });
+    const event = new KeyEvent('keydown', Keyboard.Tab, slider);
+
+    slider.onKeyDown.dispatch(event);
+
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  test('onChange fires only when the value actually moves', () => {
+    const slider = new Slider({ min: 0, max: 1, step: 0.5, value: 0 });
+    const handler = vi.fn();
+
+    slider.onChange.add(handler);
+    slider.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Left, slider));
+    expect(handler).not.toHaveBeenCalled();
+
+    slider.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Right, slider));
+    expect(handler).toHaveBeenCalledWith(0.5, slider);
+  });
+
+  test('disabled it ignores the keyboard and paints its disabled state', () => {
+    const slider = new Slider({ min: 0, max: 10, step: 1, value: 5 });
+
+    slider.enabled = false;
+    slider.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Right, slider));
+
+    expect(slider.value).toBe(5);
+    expect(slider.interactive).toBe(false);
+    expect(slider.state).toBe('disabled');
+  });
+
+  test('it paints track, fill and thumb', () => {
+    const slider = new Slider({ width: 200, height: 20, value: 0.5, min: 0, max: 1 });
+
+    new UIRoot().addChild(slider);
+
+    expect(slider.trackNode).toBeInstanceOf(Graphics);
+    expect(slider.fillNode).toBeInstanceOf(Graphics);
+    expect(slider.thumbNode).toBeInstanceOf(Graphics);
+    expect(slider.thumbNode?.x).toBeCloseTo((200 - 20) / 2);
+  });
+});
+
+describe('Dropdown', () => {
+  const items = [
+    { label: 'Low', value: 'low' },
+    { label: 'Medium', value: 'medium' },
+    { label: 'High', value: 'high' },
+  ];
+
+  test('it starts closed with nothing selected', () => {
+    const dropdown = new Dropdown({ items });
+
+    expect(dropdown.isOpen).toBe(false);
+    expect(dropdown.selectedIndex).toBe(-1);
+    expect(dropdown.selectedValue).toBeNull();
+  });
+
+  test('a tap opens the list and highlights the selection', () => {
+    const dropdown = new Dropdown({ items, selectedIndex: 1 });
+
+    dropdown.onPointerTap.dispatch({} as never);
+
+    expect(dropdown.isOpen).toBe(true);
+    expect(dropdown.highlightedIndex).toBe(1);
+    expect(dropdown.listNode.visible).toBe(true);
+    expect(dropdown.state).toBe('pressed');
+
+    dropdown.onPointerTap.dispatch({} as never);
+    expect(dropdown.isOpen).toBe(false);
+  });
+
+  test('while open, the arrows move the highlight and Enter picks it', () => {
+    const dropdown = new Dropdown({ items, selectedIndex: 0 });
+    const handler = vi.fn();
+
+    dropdown.onChange.add(handler);
+    dropdown.open();
+
+    dropdown.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Down, dropdown));
+    expect(dropdown.highlightedIndex).toBe(1);
+    expect(dropdown.selectedIndex).toBe(0);
+
+    dropdown.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Enter, dropdown));
+    expect(dropdown.selectedIndex).toBe(1);
+    expect(dropdown.selectedValue).toBe('medium');
+    expect(dropdown.isOpen).toBe(false);
+    expect(handler).toHaveBeenCalledWith('medium', 1, dropdown);
+  });
+
+  test('while closed, the arrows change the selection directly', () => {
+    const dropdown = new Dropdown({ items, selectedIndex: 0 });
+
+    dropdown.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Down, dropdown));
+
+    expect(dropdown.isOpen).toBe(false);
+    expect(dropdown.selectedIndex).toBe(1);
+  });
+
+  test('stepping stops at either end rather than wrapping', () => {
+    const dropdown = new Dropdown({ items, selectedIndex: 0 });
+
+    dropdown.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Up, dropdown));
+    expect(dropdown.selectedIndex).toBe(0);
+
+    dropdown.selectedIndex = 2;
+    dropdown.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Down, dropdown));
+    expect(dropdown.selectedIndex).toBe(2);
+  });
+
+  test('Escape closes without changing the selection', () => {
+    const dropdown = new Dropdown({ items, selectedIndex: 0 });
+
+    dropdown.open();
+    dropdown.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Down, dropdown));
+    dropdown.onKeyDown.dispatch(new KeyEvent('keydown', Keyboard.Escape, dropdown));
+
+    expect(dropdown.isOpen).toBe(false);
+    expect(dropdown.selectedIndex).toBe(0);
+  });
+
+  test('Escape with the list closed is left to the focus controller', () => {
+    const dropdown = new Dropdown({ items });
+    const event = new KeyEvent('keydown', Keyboard.Escape, dropdown);
+
+    dropdown.onKeyDown.dispatch(event);
+
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  test('losing focus closes the list', () => {
+    const dropdown = new Dropdown({ items });
+
+    dropdown.onFocus.dispatch(dropdown);
+    dropdown.open();
+    expect(dropdown.isOpen).toBe(true);
+
+    dropdown.onBlur.dispatch(dropdown);
+    expect(dropdown.isOpen).toBe(false);
+  });
+
+  test('disabling it closes the list and refuses to open', () => {
+    const dropdown = new Dropdown({ items });
+
+    dropdown.open();
+    dropdown.enabled = false;
+
+    expect(dropdown.isOpen).toBe(false);
+
+    dropdown.open();
+    expect(dropdown.isOpen).toBe(false);
+    expect(dropdown.state).toBe('disabled');
+  });
+
+  test('an empty list has nothing to open', () => {
+    const dropdown = new Dropdown<string>();
+
+    dropdown.open();
+
+    expect(dropdown.isOpen).toBe(false);
+  });
+
+  test('replacing the items keeps the selected index only while it still exists', () => {
+    const dropdown = new Dropdown({ items, selectedIndex: 2 });
+
+    dropdown.setItems(items.slice(0, 2));
+    expect(dropdown.selectedIndex).toBe(1);
+
+    dropdown.setItems([]);
+    expect(dropdown.selectedIndex).toBe(-1);
+    expect(dropdown.selectedValue).toBeNull();
+  });
+
+  test('one row per item paints the list surface', () => {
+    const dropdown = new Dropdown({ items, width: 180, height: 36 });
+
+    new UIRoot().addChild(dropdown);
+    dropdown.open();
+
+    expect(dropdown.listNode.children.length).toBeGreaterThanOrEqual(items.length);
+    expect(dropdown.backgroundNode).toBeInstanceOf(Graphics);
   });
 });
