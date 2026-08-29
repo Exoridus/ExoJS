@@ -25,7 +25,7 @@ const repoRoot = resolve(import.meta.dirname!, '../..');
  */
 const INTENTIONALLY_LOCAL_ONLY_IN_CI = new Set(['coverage', 'browserFirefox', 'packageVerify']);
 
-const allLaneKeys = Object.keys(effectiveLanes({ engine: true, site: true, audioFx: true, tilemapWorker: true, exampleCatalog: true }));
+const allLaneKeys = Object.keys(effectiveLanes({ engine: true, site: true, audioFx: true, tilemapWorker: true, exampleCatalog: true, benchStructural: true }));
 
 /**
  * The package scripts a lane runs. A lane may chain steps with `&&` - the
