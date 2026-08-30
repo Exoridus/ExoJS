@@ -513,7 +513,7 @@ export default defineConfig([
 
   // Asset internals using browser/IDB APIs with weak runtime typings.
   {
-    files: ['src/assets/IndexedDbDatabase.ts', 'src/assets/factories/**/*.ts'],
+    files: ['src/assets/storage/IndexedDbDatabase.ts', 'src/assets/factories/**/*.ts'],
     rules: {
       '@typescript-eslint/require-await': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',

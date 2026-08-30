@@ -1,10 +1,10 @@
 import type { MockedFunction } from 'vitest';
 import { vi } from 'vitest';
 
-import type { CacheContext, CachePolicy } from '#assets/CachePolicy';
-import { cacheHit, cacheMiss, type CacheReadResult } from '#assets/CacheReadResult';
-import { cacheNamespacePrefix, type CacheRecordKey, serializeCacheRecordKey } from '#assets/CacheRecordKey';
-import type { CacheStore } from '#assets/CacheStore';
+import type { CacheContext, CachePolicy } from '#assets/cache/CachePolicy';
+import { cacheHit, cacheMiss, type CacheReadResult } from '#assets/cache/CacheReadResult';
+import { cacheNamespacePrefix, type CacheRecordKey, serializeCacheRecordKey } from '#assets/cache/CacheRecordKey';
+import type { CacheStore } from '#assets/cache/CacheStore';
 
 /**
  * A working in-memory {@link CacheStore} whose every method is a spy, so a test

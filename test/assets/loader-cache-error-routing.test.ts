@@ -8,13 +8,13 @@
  * destroyed loader reachable from a cache that outlives it.
  */
 
-import { AssetCache } from '#assets/AssetCache';
-import { AssetCacheError } from '#assets/AssetCacheError';
 import type { AssetDecoder } from '#assets/AssetDecoder';
-import { CacheFirstPolicy } from '#assets/cachePolicies';
+import { AssetCache } from '#assets/cache/AssetCache';
+import { AssetCacheError } from '#assets/cache/AssetCacheError';
+import { CacheFirstPolicy } from '#assets/cache/cachePolicies';
+import { SingleEntryLayout } from '#assets/cache/SingleEntryLayout';
 import { canonicalizeSource } from '#assets/canonicalKey';
 import { Loader } from '#assets/Loader';
-import { SingleEntryLayout } from '#assets/SingleEntryLayout';
 
 import { type CacheStoreDouble, createCacheStoreDouble } from './cache-test-doubles';
 

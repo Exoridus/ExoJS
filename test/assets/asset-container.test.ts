@@ -1,6 +1,6 @@
 import { Asset } from '#assets/Asset';
-import { CONTAINER_HEADER_SIZE, CONTAINER_MAGIC, type ContainerInput, encodeContainer, parseContainer } from '#assets/assetContainer';
 import { AssetDecodeError } from '#assets/AssetDecodeError';
+import { CONTAINER_HEADER_SIZE, CONTAINER_MAGIC, type ContainerInput, encodeContainer, parseContainer } from '#assets/container/assetContainer';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { materializeAssetTypes } from '#extensions/materialize';

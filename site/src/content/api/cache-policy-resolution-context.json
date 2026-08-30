@@ -103,11 +103,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/CachePolicyResolver.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CachePolicyResolver.ts"
+        "label": "src/assets/cache/CachePolicyResolver.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cache/CachePolicyResolver.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/CachePolicyResolver.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CachePolicyResolver.ts"
+  "sourcePath": "src/assets/cache/CachePolicyResolver.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cache/CachePolicyResolver.ts"
 }

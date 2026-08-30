@@ -593,11 +593,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/Database.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Database.ts"
+        "label": "src/assets/storage/Database.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/storage/Database.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/Database.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Database.ts"
+  "sourcePath": "src/assets/storage/Database.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/storage/Database.ts"
 }

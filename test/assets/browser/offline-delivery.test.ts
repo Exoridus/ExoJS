@@ -10,12 +10,12 @@
  */
 
 import { Asset } from '#assets/Asset';
-import { AssetCache } from '#assets/AssetCache';
-import { AssetCacheMissError } from '#assets/AssetCacheMissError';
-import { ConnectivityPolicyResolver } from '#assets/ConnectivityPolicyResolver';
+import { AssetCache } from '#assets/cache/AssetCache';
+import { AssetCacheMissError } from '#assets/cache/AssetCacheMissError';
+import { ConnectivityPolicyResolver } from '#assets/cache/ConnectivityPolicyResolver';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
-import { IndexedDbStore } from '#assets/IndexedDbStore';
 import { Loader } from '#assets/Loader';
+import { IndexedDbStore } from '#assets/storage/IndexedDbStore';
 import { Connectivity } from '#core/Connectivity';
 import { materializeAssetTypes } from '#extensions/materialize';
 import type { NetworkHint, NetworkHintSource, PlatformSubscription } from '#platform/PlatformAdapter';

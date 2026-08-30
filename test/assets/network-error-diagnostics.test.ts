@@ -10,12 +10,12 @@
  * on that name.
  */
 
-import { AssetCache, type CacheAcquisition } from '#assets/AssetCache';
 import { AssetNetworkError } from '#assets/AssetNetworkError';
-import { CacheFirstPolicy, NetworkFirstPolicy, NetworkOnlyPolicy } from '#assets/cachePolicies';
-import type { CachePolicy } from '#assets/CachePolicy';
+import { AssetCache, type CacheAcquisition } from '#assets/cache/AssetCache';
+import { CacheFirstPolicy, NetworkFirstPolicy, NetworkOnlyPolicy } from '#assets/cache/cachePolicies';
+import type { CachePolicy } from '#assets/cache/CachePolicy';
+import { SingleEntryLayout } from '#assets/cache/SingleEntryLayout';
 import { fetchAsset } from '#assets/fetchAsset';
-import { SingleEntryLayout } from '#assets/SingleEntryLayout';
 import { unrestrictedNetwork } from '#core/Connectivity';
 
 import { createCacheStoreDouble } from './cache-test-doubles';

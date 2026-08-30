@@ -384,11 +384,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/MemoryStore.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/MemoryStore.ts"
+        "label": "src/assets/storage/MemoryStore.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/storage/MemoryStore.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/MemoryStore.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/MemoryStore.ts"
+  "sourcePath": "src/assets/storage/MemoryStore.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/storage/MemoryStore.ts"
 }

@@ -1,4 +1,4 @@
-import { AssetDecodeError } from './AssetDecodeError';
+import { AssetDecodeError } from '#assets/AssetDecodeError';
 
 /**
  * Binary asset container (`.exoa`) - format constants, reader, and writer.

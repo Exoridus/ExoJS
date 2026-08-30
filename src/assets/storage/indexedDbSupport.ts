@@ -1,4 +1,4 @@
-import { AssetCacheError, type AssetCacheOperation } from './AssetCacheError';
+import { AssetCacheError, type AssetCacheOperation } from '#assets/cache/AssetCacheError';
 
 /** What an {@link AssetCacheError} raised from one IndexedDB call names. @internal */
 export interface IndexedDbFailureContext {

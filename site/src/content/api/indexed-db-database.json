@@ -787,11 +787,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/IndexedDbDatabase.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/IndexedDbDatabase.ts"
+        "label": "src/assets/storage/IndexedDbDatabase.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/storage/IndexedDbDatabase.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/IndexedDbDatabase.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/IndexedDbDatabase.ts"
+  "sourcePath": "src/assets/storage/IndexedDbDatabase.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/storage/IndexedDbDatabase.ts"
 }

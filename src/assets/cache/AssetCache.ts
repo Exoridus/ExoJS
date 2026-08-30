@@ -1,3 +1,4 @@
+import type { SourceKey } from '#assets/canonicalKey';
 import type { NetworkSnapshot } from '#core/Connectivity';
 
 import { AssetCacheError, type AssetCacheOperation } from './AssetCacheError';
@@ -7,7 +8,6 @@ import { cacheMiss, type CacheReadResult } from './CacheReadResult';
 import type { CacheRecordKey } from './CacheRecordKey';
 import { CacheRoute, type CacheRouteOptions } from './CacheRoute';
 import type { CacheStore } from './CacheStore';
-import type { SourceKey } from './canonicalKey';
 
 /** Construction options for an {@link AssetCache}. */
 export interface AssetCacheOptions extends Omit<CacheRouteOptions, 'types'> {

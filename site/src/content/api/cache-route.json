@@ -303,11 +303,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/CacheRoute.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheRoute.ts"
+        "label": "src/assets/cache/CacheRoute.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cache/CacheRoute.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/CacheRoute.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheRoute.ts"
+  "sourcePath": "src/assets/cache/CacheRoute.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cache/CacheRoute.ts"
 }

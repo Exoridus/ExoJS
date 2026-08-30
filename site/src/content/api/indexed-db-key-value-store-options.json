@@ -192,11 +192,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/IndexedDbKeyValueStore.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/IndexedDbKeyValueStore.ts"
+        "label": "src/assets/storage/IndexedDbKeyValueStore.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/storage/IndexedDbKeyValueStore.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/IndexedDbKeyValueStore.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/IndexedDbKeyValueStore.ts"
+  "sourcePath": "src/assets/storage/IndexedDbKeyValueStore.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/storage/IndexedDbKeyValueStore.ts"
 }

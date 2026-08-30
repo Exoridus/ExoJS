@@ -13,13 +13,13 @@ const setGlobalIndexedDb = (factory: IDBFactory | undefined): void => {
 };
 
 interface DbHarness {
-  IndexedDbDatabase: typeof import('#assets/IndexedDbDatabase').IndexedDbDatabase;
+  IndexedDbDatabase: typeof import('#assets/storage/IndexedDbDatabase').IndexedDbDatabase;
   /**
    * Taken from the same freshly-imported module graph as `IndexedDbDatabase`.
    * A statically imported one would be a different class object after
    * `vi.resetModules()`, so every `instanceof` check would fail.
    */
-  AssetCacheError: typeof import('#assets/AssetCacheError').AssetCacheError;
+  AssetCacheError: typeof import('#assets/cache/AssetCacheError').AssetCacheError;
   fakeIdb: FakeIndexedDb;
 }
 
@@ -38,8 +38,8 @@ const loadWithFakeIndexedDb = async (): Promise<DbHarness> => {
   setGlobalIndexedDb(fakeIdb.factory);
   vi.resetModules();
 
-  const { IndexedDbDatabase } = await import('#assets/IndexedDbDatabase');
-  const { AssetCacheError } = await import('#assets/AssetCacheError');
+  const { IndexedDbDatabase } = await import('#assets/storage/IndexedDbDatabase');
+  const { AssetCacheError } = await import('#assets/cache/AssetCacheError');
 
   return { IndexedDbDatabase, AssetCacheError, fakeIdb };
 };
@@ -54,7 +54,7 @@ describe('IndexedDbDatabase', () => {
     setGlobalIndexedDb(undefined);
     vi.resetModules();
 
-    const { IndexedDbDatabase } = await import('#assets/IndexedDbDatabase');
+    const { IndexedDbDatabase } = await import('#assets/storage/IndexedDbDatabase');
 
     expect(() => new IndexedDbDatabase('unsupported-db')).toThrow('This host provides no IndexedDB, so no database can be opened.');
   });

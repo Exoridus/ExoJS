@@ -172,21 +172,21 @@ const isFp16ReportingBackend = (renderer: string): boolean => /swiftshader|angle
 // Every position/UV vertex stage the engine ships. Each file is entirely one
 // vertex stage, so a whole-file precision scan is unambiguous.
 const positionVertStages = {
-  'sprite.vert': () => import('../../../src/rendering/webgl2/glsl/sprite.vert?raw'),
-  'mesh.vert': () => import('../../../src/rendering/webgl2/glsl/mesh.vert?raw'),
+  'sprite.vert': () => import('../../../src/rendering/webgl2/shaders/sprite.vert?raw'),
+  'mesh.vert': () => import('../../../src/rendering/webgl2/shaders/mesh.vert?raw'),
   // Ships from `@codexo/exojs-particles`, not core - core carries no particle
   // stage of its own, so guarding a copy under `src/` would guard nothing.
-  'particle.vert': () => import('../../../packages/exojs-particles/src/renderers/glsl/particle.vert?raw'),
-  'text.vert': () => import('../../../src/rendering/webgl2/glsl/text.vert?raw'),
-  'mask-compose.vert': () => import('../../../src/rendering/webgl2/glsl/mask-compose.vert?raw'),
-  'backdrop-blend.vert': () => import('../../../src/rendering/webgl2/glsl/backdrop-blend.vert?raw'),
-  'stencil-clip.vert': () => import('../../../src/rendering/webgl2/glsl/stencil-clip.vert?raw'),
-  'nine-slice.vert': () => import('../../../src/rendering/webgl2/glsl/nine-slice.vert?raw'),
-  'repeating-sprite-shader-path.vert': () => import('../../../src/rendering/webgl2/glsl/repeating-sprite-shader-path.vert?raw'),
-  'repeating-sprite-geo-path.vert': () => import('../../../src/rendering/webgl2/glsl/repeating-sprite-geo-path.vert?raw'),
-  'sprite-material.vert': () => import('../../../src/rendering/sprite/glsl/sprite-material.vert?raw'),
+  'particle.vert': () => import('../../../packages/exojs-particles/src/renderers/shaders/particle.vert?raw'),
+  'text.vert': () => import('../../../src/rendering/webgl2/shaders/text.vert?raw'),
+  'mask-compose.vert': () => import('../../../src/rendering/webgl2/shaders/mask-compose.vert?raw'),
+  'backdrop-blend.vert': () => import('../../../src/rendering/webgl2/shaders/backdrop-blend.vert?raw'),
+  'stencil-clip.vert': () => import('../../../src/rendering/webgl2/shaders/stencil-clip.vert?raw'),
+  'nine-slice.vert': () => import('../../../src/rendering/webgl2/shaders/nine-slice.vert?raw'),
+  'repeating-sprite-shader-path.vert': () => import('../../../src/rendering/webgl2/shaders/repeating-sprite-shader-path.vert?raw'),
+  'repeating-sprite-geo-path.vert': () => import('../../../src/rendering/webgl2/shaders/repeating-sprite-geo-path.vert?raw'),
+  'sprite-material.vert': () => import('../../../src/rendering/sprite/shaders/sprite-material.vert?raw'),
   // Ships from `@codexo/exojs-tilemap`.
-  'tile-chunk.vert': () => import('../../../packages/exojs-tilemap/src/webgl2/glsl/tile-chunk.vert?raw'),
+  'tile-chunk.vert': () => import('../../../packages/exojs-tilemap/src/webgl2/shaders/tile-chunk.vert?raw'),
 } as const;
 
 // ---------------------------------------------------------------------------

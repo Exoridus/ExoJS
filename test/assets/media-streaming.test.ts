@@ -1,5 +1,5 @@
 import { Asset } from '#assets/Asset';
-import { encodeContainer } from '#assets/assetContainer';
+import { encodeContainer } from '#assets/container/assetContainer';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import type { MediaAssetOptions } from '#assets/factories/mediaSource';
 import { Loader } from '#assets/Loader';

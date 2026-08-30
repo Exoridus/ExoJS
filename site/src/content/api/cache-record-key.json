@@ -125,11 +125,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/CacheRecordKey.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheRecordKey.ts"
+        "label": "src/assets/cache/CacheRecordKey.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cache/CacheRecordKey.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/CacheRecordKey.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheRecordKey.ts"
+  "sourcePath": "src/assets/cache/CacheRecordKey.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cache/CacheRecordKey.ts"
 }

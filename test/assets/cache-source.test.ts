@@ -1,10 +1,10 @@
 import { Asset } from '#assets/Asset';
-import { AssetCache } from '#assets/AssetCache';
-import { AssetCacheMissError } from '#assets/AssetCacheMissError';
 import type { AssetFactory } from '#assets/AssetFactory';
 import { AssetType } from '#assets/AssetType';
-import { CacheOnlyPolicy } from '#assets/cachePolicies';
-import type { CacheRecordKey } from '#assets/CacheRecordKey';
+import { AssetCache } from '#assets/cache/AssetCache';
+import { AssetCacheMissError } from '#assets/cache/AssetCacheMissError';
+import { CacheOnlyPolicy } from '#assets/cache/cachePolicies';
+import type { CacheRecordKey } from '#assets/cache/CacheRecordKey';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { TextAsset } from '#assets/tokens';

@@ -365,11 +365,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/CacheStore.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheStore.ts"
+        "label": "src/assets/cache/CacheStore.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cache/CacheStore.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/CacheStore.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheStore.ts"
+  "sourcePath": "src/assets/cache/CacheStore.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cache/CacheStore.ts"
 }

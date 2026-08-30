@@ -252,11 +252,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/AssetCacheMissError.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetCacheMissError.ts"
+        "label": "src/assets/cache/AssetCacheMissError.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cache/AssetCacheMissError.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/AssetCacheMissError.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetCacheMissError.ts"
+  "sourcePath": "src/assets/cache/AssetCacheMissError.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cache/AssetCacheMissError.ts"
 }

@@ -9,15 +9,15 @@
  * goes through the codec on the way in and on the way back out.
  */
 
-import { AssetCache } from '#assets/AssetCache';
 import type { AssetFactory } from '#assets/AssetFactory';
 import type { AssetSourceCodec } from '#assets/AssetSourceCodec';
 import { AssetType } from '#assets/AssetType';
-import { NetworkOnlyPolicy } from '#assets/cachePolicies';
-import { serializeCacheRecordKey } from '#assets/CacheRecordKey';
-import { CacheRoute } from '#assets/CacheRoute';
+import { AssetCache } from '#assets/cache/AssetCache';
+import { NetworkOnlyPolicy } from '#assets/cache/cachePolicies';
+import { serializeCacheRecordKey } from '#assets/cache/CacheRecordKey';
+import { CacheRoute } from '#assets/cache/CacheRoute';
+import { SingleEntryLayout } from '#assets/cache/SingleEntryLayout';
 import { Loader } from '#assets/Loader';
-import { SingleEntryLayout } from '#assets/SingleEntryLayout';
 import { materializeAssetTypes } from '#extensions/materialize';
 
 import { createCacheStoreDouble } from './cache-test-doubles';
