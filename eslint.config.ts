@@ -34,7 +34,23 @@ export default defineConfig([
       // removes again. They exist only while that suite runs, so a lint pass
       // that overlaps it would otherwise report files nobody authored.
       '**/__*__/**',
+      // Private working context: plans, probes and throwaway adapters that are
+      // not repository source and are never shipped. The lint scripts reach it
+      // only through a broad glob, and when they do it reports on code nobody
+      // maintains.
+      '.workspace/**',
+      '.superpowers/**',
     ],
+  },
+
+  // A disable directive that no longer suppresses anything is a claim about the
+  // code that has stopped being true: the rule was turned off, the line was
+  // rewritten, the violation went away. Reporting them keeps the remaining ones
+  // meaningful instead of accumulating as noise nobody dares remove.
+  {
+    linterOptions: {
+      reportUnusedDisableDirectives: 'error',
+    },
   },
 
   ...languageBaselineConfig({ tsconfigRootDir: import.meta.dirname }),
