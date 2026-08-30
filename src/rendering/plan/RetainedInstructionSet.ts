@@ -1,6 +1,7 @@
 import type { Drawable } from '#rendering/Drawable';
 import { drawableHasOwnMaterial } from '#rendering/material/MaterialKey';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import { type RendererLookup, rendererLookupOf } from '#rendering/rendererLookup';
 import type { RenderNode } from '#rendering/RenderNode';
 
 import { RenderEntryKind } from './renderCommand';
@@ -310,12 +311,6 @@ export interface RetainedBatchCapableRenderer {
   _admitsRetainedRecording?(drawable: Drawable): boolean;
 }
 
-interface BackendWithRendererRegistry {
-  readonly rendererRegistry?: {
-    resolve(drawable: Drawable): unknown;
-  };
-}
-
 /**
  * A captured fragment can be recorded as an instruction set iff every draw's
  * renderer opts in via {@link RetainedBatchCapableRenderer}; no draw is vetoed
@@ -333,20 +328,16 @@ interface BackendWithRendererRegistry {
  * @internal
  */
 export const isRetainedFragmentRecordable = (entries: readonly RetainedFragmentEntry[], entryCount: number, backend: RenderBackend): boolean => {
-  const registry = (backend as BackendWithRendererRegistry).rendererRegistry;
+  const registry = rendererLookupOf(backend);
 
-  if (!registry || typeof registry.resolve !== 'function') {
+  if (registry === null) {
     return false;
   }
 
   return entriesRecordable(entries, entryCount, registry);
 };
 
-const entriesRecordable = (
-  entries: readonly RetainedFragmentEntry[],
-  entryCount: number,
-  registry: NonNullable<BackendWithRendererRegistry['rendererRegistry']>,
-): boolean => {
+const entriesRecordable = (entries: readonly RetainedFragmentEntry[], entryCount: number, registry: RendererLookup): boolean => {
   for (let index = 0; index < entryCount; index++) {
     const entry = entries[index]!;
 
