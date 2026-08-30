@@ -1,6 +1,6 @@
 ﻿import type { MockInstance } from 'vitest';
 
-import { getAudioContext, onAudioContextReady } from '#audio/audio-context';
+import { getAudioContext, onAudioContextReady } from '#audio/audioContext';
 import { WorkletEffect } from '#audio/WorkletEffect';
 
 import { mutable } from '../../support/mutable';

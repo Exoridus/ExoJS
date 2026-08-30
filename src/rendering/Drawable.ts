@@ -2,7 +2,7 @@ import { Color } from '#core/Color';
 import { SceneNodeVectorChannel } from '#core/SceneNode';
 import type { AbstractVector } from '#math/AbstractVector';
 import { ObservableVector } from '#math/ObservableVector';
-import { drawableHasOwnMaterial, type MaterialKey, writeMaterialKeyInto } from '#rendering/plan/RenderCommand';
+import { drawableHasOwnMaterial, type MaterialKey, writeMaterialKeyInto } from '#rendering/material/MaterialKey';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import type { RenderBackend } from '#rendering/RenderBackend';
 

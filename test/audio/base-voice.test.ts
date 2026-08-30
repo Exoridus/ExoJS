@@ -1,5 +1,6 @@
 import type { MockInstance } from 'vitest';
 
+import { AudioBus } from '#audio/AudioBus';
 /**
  * Focused unit tests for BaseVoice - the shared control surface (volume,
  * fade, stop, effects chain, bus routing, spatialization) mixed into every
@@ -11,8 +12,7 @@ import type { MockInstance } from 'vitest';
  * this file targets the remaining branches - post-`ended` no-ops, the
  * deferred-bus-connect path, and the panner-position fallback API.
  */
-import { getAudioContext, onAudioContextReady } from '#audio/audio-context';
-import { AudioBus } from '#audio/AudioBus';
+import { getAudioContext, onAudioContextReady } from '#audio/audioContext';
 import type { AudioEffect } from '#audio/AudioEffect';
 import { AudioSystem } from '#audio/AudioSystem';
 import { Sound } from '#audio/Sound';

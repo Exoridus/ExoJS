@@ -5,9 +5,9 @@ import { Shader } from '#rendering/shader/Shader';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
+import { createWebGl2ShaderProgram } from '#rendering/webgl2/shaderProgram';
 import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { WebGl2RenderBuffer } from '#rendering/webgl2/WebGl2RenderBuffer';
-import { createWebGl2ShaderProgram } from '#rendering/webgl2/WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject } from '#rendering/webgl2/WebGl2VertexArrayObject';
 
 import type { ShaderFilterUniformValue } from './ShaderFilter';

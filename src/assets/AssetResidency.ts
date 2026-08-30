@@ -1,5 +1,5 @@
 import type { LoadStateValue } from '#core/LoadState';
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 import type { Signal } from '#core/Signal';
 
 import type { AssetConstructor } from './AssetConstructor';

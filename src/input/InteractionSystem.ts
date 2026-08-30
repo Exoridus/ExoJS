@@ -1,5 +1,5 @@
 import type { Application } from '#core/Application';
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 import { SceneState } from '#core/SceneState';
 import type { Signal } from '#core/Signal';
 import type { InteractionHooks, Stage } from '#core/Stage';

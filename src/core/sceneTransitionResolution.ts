@@ -1,6 +1,6 @@
 import { resolvePhasedSelection } from './PhasedSceneTransition';
 import { SceneTransition, type SceneTransitionOperation } from './SceneTransition';
-import type { SceneTransitionPhases, SceneTransitionSelection } from './SceneTypes';
+import type { SceneTransitionPhases, SceneTransitionSelection } from './sceneTypes';
 
 const isPhasesSelection = (selection: SceneTransition | SceneTransitionPhases): selection is SceneTransitionPhases => !(selection instanceof SceneTransition);
 

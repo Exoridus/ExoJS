@@ -1,5 +1,5 @@
 import { Asset } from '#assets/Asset';
-import { CONTAINER_HEADER_SIZE, CONTAINER_MAGIC, type ContainerInput, encodeContainer, parseContainer } from '#assets/AssetContainer';
+import { CONTAINER_HEADER_SIZE, CONTAINER_MAGIC, type ContainerInput, encodeContainer, parseContainer } from '#assets/assetContainer';
 import { AssetDecodeError } from '#assets/AssetDecodeError';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';

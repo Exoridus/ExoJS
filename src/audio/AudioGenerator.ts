@@ -1,13 +1,13 @@
 import { clamp } from '#math/utils';
 
-import { getAudioContext, isAudioContextReady } from './audio-context';
+import { getAudioContext, isAudioContextReady } from './audioContext';
 import { AudioGeneratorVoice } from './AudioGeneratorVoice';
 import type { AudioSystem } from './AudioSystem';
 import type { Envelope } from './Envelope';
 import { NoopVoice } from './NoopVoice';
 import type { Playable, PlayOptions, Voice } from './Playable';
 import { SoundPoolStrategy } from './Sound';
-import { seedVoiceFromPlayOptions, seedVoiceSends } from './spatial-options';
+import { seedVoiceFromPlayOptions, seedVoiceSends } from './spatialOptions';
 
 export type OscillatorType = 'sine' | 'square' | 'sawtooth' | 'triangle';
 

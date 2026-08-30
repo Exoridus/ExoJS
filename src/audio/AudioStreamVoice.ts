@@ -1,6 +1,6 @@
 import { clamp } from '#math/utils';
 
-import { isAudioContextReady, onAudioContextReady } from './audio-context';
+import { isAudioContextReady, onAudioContextReady } from './audioContext';
 import { BaseVoice, type BaseVoiceInit } from './BaseVoice';
 import type { Loopable, Pausable, RatePitched, Seekable } from './Playable';
 

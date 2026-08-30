@@ -1,5 +1,5 @@
-import { getAudioContext } from '#audio/audio-context';
 import type { AudioBus } from '#audio/AudioBus';
+import { getAudioContext } from '#audio/audioContext';
 import type { AudioEffect } from '#audio/AudioEffect';
 import { AudioSend } from '#audio/AudioSend';
 import type { DistanceModel, Pausable, Playable, PlayOptions, Spatializable, SpatialPoint, Voice } from '#audio/Playable';

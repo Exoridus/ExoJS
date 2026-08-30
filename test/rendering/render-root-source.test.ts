@@ -1,12 +1,12 @@
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
-import { RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { RenderEntryKind } from '#rendering/plan/renderCommand';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
-import { LiveEntryReason, type SourceOther, type SourceScope } from '#rendering/plan/RenderSourceItem';
+import { LiveEntryReason, type SourceOther, type SourceScope } from '#rendering/plan/renderSourceItem';
 import type { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';

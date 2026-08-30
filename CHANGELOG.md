@@ -1027,6 +1027,30 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
 
 ### Changed
 
+- **BREAKING - `Ease` is a const namespace object, not a class.** It never had a
+  constructor and was never instantiated; `new Ease()` compiled anyway. Call
+  sites are unchanged (`Ease.cubicOut`), and it now matches how `Collision` and
+  `Sweep` are written.
+
+- **BREAKING - the scene errors moved out of `SceneTypes`.** The nine scene
+  navigation and registration errors, plus `SceneTransitionLifecycleError` and
+  `ShaderFilterBackendError`, now live in files named after what they hold:
+  `core/sceneErrors.ts` and `rendering/filters/ShaderFilterBackendError.ts`.
+  Every one of them is still exported from the package root, so only a deep
+  import needs changing.
+
+- **BREAKING - `MaterialKey` lives with the material system.** The interface and
+  its derivation functions move from `rendering/plan/RenderCommand` to
+  `rendering/material/MaterialKey`, which until now held only the two key-hashing
+  helpers while the type it names lived elsewhere. Drawable texture identity is
+  now allocated from one registry rather than two.
+
+- **`RenderItemVisibility` and the WebGPU retained-group resources are split by
+  symbol.** `FlatScanVisibility` and `GridVisibility` get their own files beside
+  the contract they implement; `WebGpuRetainedCaptureFrame` and
+  `WebGpuRetainedGroupBundle` likewise, with their shared types in
+  `retainedGroupResources.ts`.
+
 - **BREAKING - the five core `*Manager` classes are now `*System`.**
   `AudioManager`, `InputManager`, `InteractionManager`, `TweenManager`, and
   `AnimationManager` become `AudioSystem`, `InputSystem`, `InteractionSystem`,

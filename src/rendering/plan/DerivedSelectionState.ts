@@ -1,5 +1,5 @@
-import { RenderEntryKind } from './RenderCommand';
-import type { SourceScope } from './RenderSourceItem';
+import { RenderEntryKind } from './renderCommand';
+import type { SourceScope } from './renderSourceItem';
 import type { MembershipBits } from './SourceVisibilityIndex';
 
 /**

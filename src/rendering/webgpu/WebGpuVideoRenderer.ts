@@ -2,7 +2,7 @@
 
 import { Matrix } from '#math/Matrix';
 import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
-import { spriteFragmentMainWgsl, spriteSharedStorageWgsl, spriteVertexCoreWgsl } from '#rendering/sprite/spriteMaterialSources';
+import { spriteFragmentMainWgsl, spriteSharedStorageWgsl, spriteVertexCoreWgsl } from '#rendering/sprite/materialSources';
 import { Texture } from '#rendering/texture/Texture';
 import type { BlendModes } from '#rendering/types';
 import type { Video } from '#rendering/video/Video';
@@ -10,14 +10,14 @@ import { videoExternalTextureGroupWgsl } from '#rendering/video/webgpuVideoMater
 import type { View } from '#rendering/View';
 
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
+import { getWebGpuBlendState } from './blendState';
+import { packSnapViewport } from './snapViewport';
+import { stencilContentDepthStencilState } from './stencilState';
 import type { WebGpuBackend } from './WebGpuBackend';
-import { getWebGpuBlendState } from './WebGpuBlendState';
 import { WebGpuPassArena } from './WebGpuPassArena';
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
-import { pipelineVariantKey, WebGpuPipelineVariantCache } from './webgpuPipelineCache';
-import { packSnapViewport } from './webgpuSnapViewport';
+import { pipelineVariantKey, WebGpuPipelineVariantCache } from './WebGpuPipelineVariantCache';
 import { buildSpriteShaderSource } from './WebGpuSpriteRenderer';
-import { stencilContentDepthStencilState } from './WebGpuStencilState';
 import spriteDefaultVertexInputWgsl from './wgsl/sprite-default-vertex-input.wgsl';
 import spriteDefaultVertexMainWgsl from './wgsl/sprite-default-vertex-main.wgsl';
 

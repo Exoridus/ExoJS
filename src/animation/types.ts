@@ -1,4 +1,4 @@
-export type { EasingFunction } from './Easing';
+export type { EasingFunction } from './Ease';
 
 /**
  * Lifecycle states of a {@link Tween}. A tween starts in `Idle`, transitions

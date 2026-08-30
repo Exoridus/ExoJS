@@ -8,7 +8,7 @@
 import { Gamepad } from '#input/Gamepad';
 import { GamepadAxis } from '#input/GamepadAxis';
 import { GamepadButton } from '#input/GamepadButton';
-import type { GamepadDescriptor, ResolvedGamepadDefinition } from '#input/GamepadDefinitions';
+import type { GamepadDescriptor, ResolvedGamepadDefinition } from '#input/gamepadDefinitions';
 import type { GamepadMappingData } from '#input/GamepadMapping';
 import { GamepadMapping, GamepadMappingFamily, GamepadMappingLayout } from '#input/GamepadMapping';
 import {

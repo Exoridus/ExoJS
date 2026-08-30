@@ -1,5 +1,5 @@
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audio-context';
 import type { AudioBus } from '#audio/AudioBus';
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audioContext';
 import { mediaErrorMessage } from '#core/mediaError';
 import { Signal } from '#core/Signal';
 import type { PlaybackOptions } from '#core/types';

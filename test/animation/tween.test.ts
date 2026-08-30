@@ -1,4 +1,4 @@
-﻿import { Ease } from '#animation/Easing';
+﻿import { Ease } from '#animation/Ease';
 import { Tween } from '#animation/Tween';
 import { TweenSystem } from '#animation/TweenSystem';
 import { TweenState } from '#animation/types';

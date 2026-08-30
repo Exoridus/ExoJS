@@ -2,9 +2,19 @@ import type { RenderingContext } from '#rendering/RenderingContext';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 
 import type { Application } from './Application';
-import { logger } from './logging';
+import { logger } from './Logger';
 import { Scene } from './Scene';
 import { SceneNavigationTransaction } from './scene/SceneNavigationTransaction';
+import { SceneTransitionLifecycleError } from './sceneErrors';
+import {
+  AmbiguousSceneInstanceError,
+  ConcurrentSceneNavigationError,
+  RetainedSceneConflictError,
+  RetainedSceneNotFoundError,
+  SceneInstanceNotFoundError,
+  SceneNavigationAbortedError,
+  UnregisteredSceneError,
+} from './sceneErrors';
 import { SceneScope } from './SceneScope';
 import type { SceneState } from './SceneState';
 import type {
@@ -15,34 +25,34 @@ import type {
   SceneTransitionRequirements,
   SceneTransitionSession,
 } from './SceneTransition';
-import { SceneTransitionLifecycleError } from './SceneTransition';
-import { resolveSceneTransitionSelection } from './SceneTransitionResolution';
+import { resolveSceneTransitionSelection } from './sceneTransitionResolution';
 import {
-  AmbiguousSceneInstanceError,
   type AnySceneConstructor,
   type ChangeSceneArgs,
   type ChangeSceneOptions,
-  ConcurrentSceneNavigationError,
   type InferSceneData,
   type NavigableSceneConstructor,
   type PreloadArgs,
   type RegistryKeyOf,
   resolvePreloadArgs,
   type RestoreSceneOptions,
-  RetainedSceneConflictError,
-  RetainedSceneNotFoundError,
   type SceneInstanceKind,
-  SceneInstanceNotFoundError,
-  SceneNavigationAbortedError,
   type SceneRegistryIndex,
   type SceneRegistryShape,
   type UnloadOptions,
-  UnregisteredSceneError,
   validateSceneRegistry,
-} from './SceneTypes';
+} from './sceneTypes';
 import { Signal } from './Signal';
 import type { Seconds } from './units';
 
+export { SceneTransitionLifecycleError } from './sceneErrors';
+export {
+  AmbiguousSceneInstanceError,
+  ConcurrentSceneNavigationError,
+  RetainedSceneConflictError,
+  RetainedSceneNotFoundError,
+  SceneInstanceNotFoundError,
+} from './sceneErrors';
 export type {
   SceneTransitionContext,
   SceneTransitionEnvironment,
@@ -51,15 +61,8 @@ export type {
   SceneTransitionRequirements,
   SceneTransitionSession,
 } from './SceneTransition';
-export { SceneTransition, SceneTransitionLifecycleError } from './SceneTransition';
-export type { ChangeSceneOptions, RestoreSceneOptions, SceneInstanceKind, UnloadOptions } from './SceneTypes';
-export {
-  AmbiguousSceneInstanceError,
-  ConcurrentSceneNavigationError,
-  RetainedSceneConflictError,
-  RetainedSceneNotFoundError,
-  SceneInstanceNotFoundError,
-} from './SceneTypes';
+export { SceneTransition } from './SceneTransition';
+export type { ChangeSceneOptions, RestoreSceneOptions, SceneInstanceKind, UnloadOptions } from './sceneTypes';
 
 type PreloadStatus = 'loading' | 'ready' | 'claimed' | 'cancelling';
 

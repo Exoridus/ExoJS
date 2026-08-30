@@ -31,8 +31,8 @@ export { binarySourceCodec, jsonSourceCodec, textSourceCodec } from './AssetSour
 export type { AssetStatus } from './AssetStatus';
 export type { AnyAssetType, AssetLeaf, AssetRequest } from './AssetType';
 export { AssetType } from './AssetType';
-export type { AssetVariant, AssetVariantProfile } from './AssetVariants';
-export { AssetVariantSet } from './AssetVariants';
+export type { AssetVariant, AssetVariantProfile } from './AssetVariantSet';
+export { AssetVariantSet } from './AssetVariantSet';
 export type { CacheLayout, CacheLayoutContext } from './CacheLayout';
 export { CacheFirstPolicy, CacheOnlyPolicy, NetworkFirstPolicy, NetworkOnlyPolicy } from './cachePolicies';
 export type { CacheContext, CachePolicy } from './CachePolicy';
@@ -80,13 +80,13 @@ export {
   wasmType,
   XmlAssetType,
   xmlType,
-} from './types/dataTypes';
-export { BmFontAssetType, bmFontType, FontAssetType, fontType } from './types/fontTypes';
-export { ImageAssetType, imageType, SvgAssetType, svgType } from './types/imageTypes';
-export { MusicAssetType, musicType, VideoAssetType, videoType } from './types/mediaTypes';
-export { SoundAssetType, soundType } from './types/soundType';
-export { SubtitleAssetType, subtitleType } from './types/subtitleType';
-export { TextureAssetType, textureType } from './types/textureType';
+} from './types/data';
+export { SubtitleAssetType, subtitleType } from './types/data';
+export { BmFontAssetType, bmFontType, FontAssetType, fontType } from './types/font';
+export { ImageAssetType, imageType, SvgAssetType, svgType } from './types/image';
+export { TextureAssetType, textureType } from './types/image';
+export { MusicAssetType, musicType, VideoAssetType, videoType } from './types/media';
+export { SoundAssetType, soundType } from './types/media';
 export type { WebStorageStoreOptions } from './WebStorageStore';
 export { WebStorageStore } from './WebStorageStore';
 export type { FontAssetOptions } from '#assets/factories/FontFactory';

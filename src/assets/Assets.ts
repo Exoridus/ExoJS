@@ -1,4 +1,4 @@
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 
 import { AssetImpl } from './Asset';
 import type { AnyAssetConfig, AssetDefinitions, CatalogEntry, InferCatalogLeaf, OptionsForKind } from './AssetDefinitions';

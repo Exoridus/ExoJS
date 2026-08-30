@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
-import { getAudioContext } from '#audio/audio-context';
 import { AudioBus } from '#audio/AudioBus';
+import { getAudioContext } from '#audio/audioContext';
 import type { Rectangle } from '#math/Rectangle';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { Video } from '#rendering/video/Video';

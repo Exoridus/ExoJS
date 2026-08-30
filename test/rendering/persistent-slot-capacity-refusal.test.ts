@@ -1,6 +1,6 @@
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
-import type { PersistentSlotBundle } from '#rendering/plan/PersistentSlotDraw';
+import type { PersistentSlotBundle } from '#rendering/plan/persistentSlotDraw';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';

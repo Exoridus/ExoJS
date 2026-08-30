@@ -12,8 +12,6 @@ import {
 } from '#rendering/material/RetainedMaterialState';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
-import { fillPersistentSpriteSlotTable, writePersistentSpriteSlots } from '#rendering/sprite/persistentSpriteSlots';
-import type { Sprite } from '#rendering/sprite/Sprite';
 import {
   buildSpriteTextureSlotWgsl,
   spriteFragmentMainWgsl,
@@ -21,7 +19,9 @@ import {
   spriteMaterialTextureSlots,
   spriteSharedStorageWgsl,
   spriteVertexCoreWgsl,
-} from '#rendering/sprite/spriteMaterialSources';
+} from '#rendering/sprite/materialSources';
+import { fillPersistentSpriteSlotTable, writePersistentSpriteSlots } from '#rendering/sprite/persistentSlots';
+import type { Sprite } from '#rendering/sprite/Sprite';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
@@ -29,20 +29,15 @@ import { BlendModes } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
-import type { WebGpuBackend } from './WebGpuBackend';
-import { getWebGpuBlendState } from './WebGpuBlendState';
-import { WebGpuPassArena } from './WebGpuPassArena';
-import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
-import { persistentPremultiplyMaskIndex, persistentUniformBytes, WebGpuPersistentSlotStore } from './WebGpuPersistentSlotStore';
-import { pipelineVariantKey, WebGpuPipelineVariantCache } from './webgpuPipelineCache';
+import { getWebGpuBlendState } from './blendState';
 import {
   retainedGroupUniformBytes,
   type WebGpuRetainedBatchPayload,
   type WebGpuRetainedBatchReplayer,
   type WebGpuRetainedNodeIndexRange,
-} from './WebGpuRetainedGroupResources';
-import { packSnapViewport } from './webgpuSnapViewport';
-import { stencilContentDepthStencilState } from './WebGpuStencilState';
+} from './retainedGroupResources';
+import { packSnapViewport } from './snapViewport';
+import { stencilContentDepthStencilState } from './stencilState';
 import {
   applyUserUniformUpload,
   collectTextureBindings,
@@ -52,7 +47,12 @@ import {
   resolveUserUniformBindGroup,
   type UserUniformState,
   type UserUniformUpload,
-} from './webgpuUserUniforms';
+} from './userUniforms';
+import type { WebGpuBackend } from './WebGpuBackend';
+import { WebGpuPassArena } from './WebGpuPassArena';
+import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
+import { persistentPremultiplyMaskIndex, persistentUniformBytes, WebGpuPersistentSlotStore } from './WebGpuPersistentSlotStore';
+import { pipelineVariantKey, WebGpuPipelineVariantCache } from './WebGpuPipelineVariantCache';
 import spriteDefaultVertexInputWgsl from './wgsl/sprite-default-vertex-input.wgsl';
 import spriteDefaultVertexMainWgsl from './wgsl/sprite-default-vertex-main.wgsl';
 import spritePersistentBindingsWgsl from './wgsl/sprite-persistent-bindings.wgsl';

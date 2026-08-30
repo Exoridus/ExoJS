@@ -6,7 +6,7 @@ export type { GamepadAxisOptions } from './GamepadAxis';
 export { GamepadAxis } from './GamepadAxis';
 export type { GamepadButtonOptions } from './GamepadButton';
 export { GamepadButton } from './GamepadButton';
-export type { BrowserGamepad, GamepadDefinition, GamepadDefinitionResult, GamepadDescriptor, ResolvedGamepadDefinition } from './GamepadDefinitions';
+export type { BrowserGamepad, GamepadDefinition, GamepadDefinitionResult, GamepadDescriptor, ResolvedGamepadDefinition } from './gamepadDefinitions';
 export * from './GamepadMapping';
 export type { StandardGamepadMappingOptions } from './gamepadMappings';
 export {

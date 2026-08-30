@@ -1,6 +1,7 @@
 import type { Drawable } from '#rendering/Drawable';
+import { copyMaterialKeyInto, type MaterialKey } from '#rendering/material/MaterialKey';
 
-import { copyMaterialKeyInto, type DrawCommand, type MaterialKey } from './RenderCommand';
+import { type DrawCommand } from './renderCommand';
 
 /**
  * The replayable payload of one previously-collected draw: everything

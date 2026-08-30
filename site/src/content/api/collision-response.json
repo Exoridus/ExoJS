@@ -187,11 +187,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/math/Collision.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Collision.ts"
+        "label": "src/math/collisionTypes.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/collisionTypes.ts"
       }
     }
   ],
-  "sourcePath": "src/math/Collision.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Collision.ts"
+  "sourcePath": "src/math/collisionTypes.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/collisionTypes.ts"
 }

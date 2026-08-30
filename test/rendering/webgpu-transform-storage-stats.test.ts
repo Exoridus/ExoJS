@@ -1,6 +1,7 @@
 import { Color } from '#core/Color';
 import { Drawable } from '#rendering/Drawable';
-import { type DrawCommand, drawCommandUsesSharedTransform, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { type MaterialKey } from '#rendering/material/MaterialKey';
+import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/renderCommand';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { WebGpuTransformStorage } from '#rendering/webgpu/WebGpuTransformStorage';
 

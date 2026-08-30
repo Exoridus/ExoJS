@@ -1,6 +1,6 @@
-export { decodeAudioData, getAudioContext, getOfflineAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
 export type { AudioBusOptions } from './AudioBus';
 export { AudioBus } from './AudioBus';
+export { decodeAudioData, getAudioContext, getOfflineAudioContext, isAudioContextReady, onAudioContextReady } from './audioContext';
 export { AudioEffect } from './AudioEffect';
 export type { AudioGeneratorOptions, OscillatorType } from './AudioGenerator';
 export { AudioGenerator } from './AudioGenerator';
@@ -23,7 +23,7 @@ export { HighpassFilter, LowpassFilter } from './filters';
 export type { DistanceModel, Loopable, Pausable, Playable, PlayOptions, RatePitched, Seekable, Spatializable, SpatialPoint, Voice } from './Playable';
 export type { AudioSpriteClip, SoundOptions, SoundPlayOptions } from './Sound';
 export { Sound, SoundPoolStrategy } from './Sound';
-export type { SpatialSmoothingSettings } from './spatial-smoothing';
+export type { SpatialSmoothingSettings } from './spatialSmoothing';
 export { SpatialZones } from './SpatialZones';
 export { WorkletEffect } from './WorkletEffect';
 export { registerAudioWorkletProcessor } from '#audio/worklet/registerWorklet';

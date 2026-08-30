@@ -3,11 +3,11 @@ import { Signal } from '#core/Signal';
 import type { PlaybackOptions } from '#core/types';
 import { clamp } from '#math/utils';
 
-import { getAudioContext } from './audio-context';
+import { getAudioContext } from './audioContext';
 import { AudioStreamVoice } from './AudioStreamVoice';
 import type { AudioSystem } from './AudioSystem';
 import type { Playable, PlayOptions, Voice } from './Playable';
-import { seedVoiceFromPlayOptions, seedVoiceSends } from './spatial-options';
+import { seedVoiceFromPlayOptions, seedVoiceSends } from './spatialOptions';
 
 /**
  * Streaming long-form audio backed by an `HTMLAudioElement` - background

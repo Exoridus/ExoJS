@@ -1,5 +1,6 @@
-import { GridVisibility, type RenderItemVisibility } from './RenderItemVisibility';
-import { finalizeSourceScopes, type SourceScope } from './RenderSourceItem';
+import { GridVisibility } from './GridVisibility';
+import type { RenderItemVisibility } from './RenderItemVisibility';
+import { finalizeSourceScopes, type SourceScope } from './renderSourceItem';
 
 /**
  * @internal

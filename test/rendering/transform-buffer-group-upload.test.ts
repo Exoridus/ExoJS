@@ -1,6 +1,7 @@
 import { Color } from '#core/Color';
 import { Drawable } from '#rendering/Drawable';
-import { type DrawCommand, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { type MaterialKey } from '#rendering/material/MaterialKey';
+import { type DrawCommand, RenderEntryKind } from '#rendering/plan/renderCommand';
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
 import type { DrawScopeEntry, GroupScope, GroupScopeEntry, ScopeEntry } from '#rendering/plan/RenderScope';
 import type { RenderBackend } from '#rendering/RenderBackend';

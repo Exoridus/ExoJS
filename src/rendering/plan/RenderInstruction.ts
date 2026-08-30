@@ -1,4 +1,4 @@
-import type { DrawCommand } from './RenderCommand';
+import type { DrawCommand } from './renderCommand';
 import type { GroupScope } from './RenderScope';
 
 /**

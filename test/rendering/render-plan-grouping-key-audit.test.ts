@@ -50,9 +50,10 @@
 
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
+import { materialKeyForcesFlush } from '#rendering/material/MaterialKey';
 import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
-import { type DrawCommand, materialKeyForcesFlush, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { type DrawCommand, RenderEntryKind } from '#rendering/plan/renderCommand';
 import type { RenderPlan } from '#rendering/plan/RenderPlan';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';

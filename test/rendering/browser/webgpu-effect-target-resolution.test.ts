@@ -22,8 +22,8 @@ import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
+import { WEBGPU_DEFAULT_MAX_TEXTURE_DIMENSION_2D } from '#rendering/webgpu/storageLimits';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
-import { WEBGPU_DEFAULT_MAX_TEXTURE_DIMENSION_2D } from '#rendering/webgpu/webgpuStorageLimits';
 
 import { wireCoreRenderers } from './_coreRenderers';
 

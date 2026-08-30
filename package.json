@@ -130,6 +130,7 @@
     "lint:all:fix": "pnpm lint:fix && pnpm lint:packages:fix && pnpm lint:site --fix",
     "lint:source-hygiene": "tsx scripts/check-source-hygiene.ts",
     "lint:inline-source": "tsx scripts/check-inline-source.ts",
+    "lint:file-symbols": "tsx scripts/check-file-symbol-naming.ts",
     "lint:js-files": "tsx scripts/check-javascript-files.ts",
     "lint:shaders": "tsx scripts/check-shader-sources.ts",
     "format": "prettier --write .",

@@ -17,7 +17,7 @@ import {
   SmoothedAudioParam,
   type SpatialSmoothingSettings,
   type VelocitySample,
-} from './spatial-smoothing';
+} from './spatialSmoothing';
 
 /** Clamp range for the Doppler ratio applied to a voice's playback rate - a much
  * tighter range than the general [0.1, 20] `playbackRate` clamp, since a wide

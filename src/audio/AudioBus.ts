@@ -1,7 +1,7 @@
 import { assert } from '#core/dev';
 import { clamp } from '#math/utils';
 
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audioContext';
 import type { AudioEffect } from './AudioEffect';
 import { isEffectReady } from './AudioEffect';
 

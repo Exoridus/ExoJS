@@ -8,7 +8,7 @@
  * antialiased edge.
  */
 
-import { composeTextAtlasFragmentGlsl, textAtlasTextureSlots } from '#rendering/text/textAtlasTextureSlots';
+import { composeTextAtlasFragmentGlsl, textAtlasTextureSlots } from '#rendering/text/atlasTextureSlots';
 
 // GLSL ES 3.00 orders a qualifier list storage-then-precision, so a precision
 // qualifier sits between `uniform` and the type. Anchoring on that order is

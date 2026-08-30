@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
-import { getAudioContext } from '#audio/audio-context';
 import { AudioBus } from '#audio/AudioBus';
+import { getAudioContext } from '#audio/audioContext';
 import { AudioGenerator } from '#audio/AudioGenerator';
 import type { AudioGeneratorVoice } from '#audio/AudioGeneratorVoice';
 import { AudioSystem } from '#audio/AudioSystem';
@@ -371,8 +371,8 @@ describe('AudioGenerator', () => {
 
   test('play() returns an already-ended NoopVoice while the AudioContext is locked', async () => {
     vi.resetModules();
-    vi.doMock('#audio/audio-context', async importOriginal => {
-      const actual = await importOriginal<typeof import('#audio/audio-context')>();
+    vi.doMock('#audio/audioContext', async importOriginal => {
+      const actual = await importOriginal<typeof import('#audio/audioContext')>();
       return { ...actual, isAudioContextReady: () => false };
     });
 
@@ -388,7 +388,7 @@ describe('AudioGenerator', () => {
     expect(voice.ended).toBe(true);
     expect(voice.bus).toBe(system.sound);
 
-    vi.doUnmock('#audio/audio-context');
+    vi.doUnmock('#audio/audioContext');
     vi.resetModules();
   });
 

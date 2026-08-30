@@ -1,8 +1,8 @@
 import type { RenderNode } from '#rendering/RenderNode';
 
-import type { EntryPlacementState } from './EntryPlacement';
+import type { EntryPlacementState } from './entryPlacement';
 import { PackedSourceItems } from './PackedSourceItems';
-import { RenderEntryKind } from './RenderCommand';
+import { RenderEntryKind } from './renderCommand';
 import { SourceVisibilityIndex } from './SourceVisibilityIndex';
 
 /**

@@ -5,7 +5,8 @@
 import { bench, describe } from 'vitest';
 
 import { Drawable } from '../../src/rendering/Drawable';
-import { type DrawCommand, drawCommandUsesSharedTransform, type MaterialKey, RenderEntryKind } from '../../src/rendering/plan/RenderCommand';
+import type { MaterialKey } from '../../src/rendering/material/MaterialKey';
+import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '../../src/rendering/plan/renderCommand';
 import type { RenderBackend } from '../../src/rendering/RenderBackend';
 import { TransformBuffer } from '../../src/rendering/TransformBuffer';
 

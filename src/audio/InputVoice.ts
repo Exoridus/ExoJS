@@ -1,5 +1,5 @@
-import { decodeAudioData } from './audio-context';
 import type { AudioBus } from './AudioBus';
+import { decodeAudioData } from './audioContext';
 import { BaseVoice, type BaseVoiceInit } from './BaseVoice';
 import { Sound } from './Sound';
 

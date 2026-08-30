@@ -1,6 +1,6 @@
 import { AssetDecodeError } from '#assets/AssetDecodeError';
 import type { AssetFactory, AssetFactoryContext } from '#assets/AssetFactory';
-import { decodeAudioData } from '#audio/audio-context';
+import { decodeAudioData } from '#audio/audioContext';
 import { type AudioSpriteClip, Sound } from '#audio/Sound';
 import type { PlaybackOptions } from '#core/types';
 

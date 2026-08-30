@@ -1,7 +1,7 @@
 import type { RenderingContext } from '#rendering/RenderingContext';
 
 import type { Application } from './Application';
-import { logger } from './logging';
+import { logger } from './Logger';
 import { Perf } from './Perf';
 import type { Scene } from './Scene';
 import { SceneAudio } from './scene/SceneAudio';

@@ -3,7 +3,7 @@ import type { ReadonlyRectangle } from '#math/Rectangle';
 import { Drawable } from '#rendering/Drawable';
 
 import type { LayoutOptions } from './LayoutOptions';
-import { buildTextPageQuads, emptyTextLayout } from './TextLayout';
+import { buildTextPageQuads, emptyTextLayout } from './textLayout';
 import type { StyleChangeHint, TextStyle } from './TextStyle';
 import { mergeHint } from './TextStyle';
 import type { TextLayoutResult, TextPageQuads, TextSize } from './types';

@@ -1,4 +1,4 @@
-import type { BrowserGamepad } from '#input/GamepadDefinitions';
+import type { BrowserGamepad } from '#input/gamepadDefinitions';
 
 import { BrowserTextInput } from './BrowserTextInput';
 import { editContextSupported, EditContextTextInput } from './EditContextTextInput';

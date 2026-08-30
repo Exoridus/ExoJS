@@ -1,6 +1,6 @@
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
-import { type DrawCommand, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { type DrawCommand, RenderEntryKind } from '#rendering/plan/renderCommand';
 import type { RenderInstruction } from '#rendering/plan/RenderInstruction';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';

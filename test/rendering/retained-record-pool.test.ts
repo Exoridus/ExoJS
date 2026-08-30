@@ -12,7 +12,8 @@
 import { describe, expect, test } from 'vitest';
 
 import type { Drawable } from '#rendering/Drawable';
-import { type DrawCommand, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { type MaterialKey } from '#rendering/material/MaterialKey';
+import { type DrawCommand, RenderEntryKind } from '#rendering/plan/renderCommand';
 import { copyRetainedDrawData, type MutableRetainedDrawData, releasePooledDrawables, RetainedRecordPool } from '#rendering/plan/RetainedRecordPool';
 
 const drawableA = { id: 'a' } as unknown as Drawable;

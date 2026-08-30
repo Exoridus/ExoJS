@@ -20,7 +20,7 @@ import { Rectangle } from '#math/Rectangle';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
-import { RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { RenderEntryKind } from '#rendering/plan/renderCommand';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import type { RenderBackend } from '#rendering/RenderBackend';

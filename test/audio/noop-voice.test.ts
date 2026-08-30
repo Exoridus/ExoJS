@@ -111,8 +111,8 @@ describe('NoopVoice — real trigger paths', () => {
 
   test('AudioGenerator.play() while the AudioContext is locked returns a NoopVoice', async () => {
     vi.resetModules();
-    vi.doMock('#audio/audio-context', async importOriginal => {
-      const actual = await importOriginal<typeof import('#audio/audio-context')>();
+    vi.doMock('#audio/audioContext', async importOriginal => {
+      const actual = await importOriginal<typeof import('#audio/audioContext')>();
       return { ...actual, isAudioContextReady: () => false };
     });
 
@@ -127,7 +127,7 @@ describe('NoopVoice — real trigger paths', () => {
     expect(voice).toBeInstanceOf(LockedNoopVoice);
     expect(voice.ended).toBe(true);
 
-    vi.doUnmock('#audio/audio-context');
+    vi.doUnmock('#audio/audioContext');
     vi.resetModules();
   });
 

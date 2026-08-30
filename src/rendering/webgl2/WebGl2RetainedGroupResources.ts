@@ -1,5 +1,5 @@
 import type { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
-import type { MeshIndexFormat } from '#rendering/mesh/meshIndices';
+import type { MeshIndexFormat } from '#rendering/mesh/indices';
 import type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet';
 import {
   createTransformTextureLayout,

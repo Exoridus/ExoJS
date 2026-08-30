@@ -1,4 +1,4 @@
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audioContext';
 import { AudioEffect } from './AudioEffect';
 
 /** Construction options for {@link BiquadEffect}. */

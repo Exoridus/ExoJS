@@ -13,8 +13,8 @@ import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant }
 import type { Mesh } from '#rendering/mesh/Mesh';
 import { assertDrawsAllAttachments, assertSingleAttachmentCompose } from '#rendering/multiAttachmentGuard';
 import { isMultiAttachmentTarget, MultiRenderTarget } from '#rendering/MultiRenderTarget';
-import type { PersistentSlotBundle } from '#rendering/plan/PersistentSlotDraw';
-import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import type { PersistentSlotBundle } from '#rendering/plan/persistentSlotDraw';
+import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/renderCommand';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import type { ScopeEntry } from '#rendering/plan/RenderScope';
 import {
@@ -54,8 +54,8 @@ import { TransformBuffer } from '#rendering/TransformBuffer';
 import { BlendModes, type ColorTextureFormat, TextureFormat } from '#rendering/types';
 import type { View } from '#rendering/View';
 
+import { probeWebgl2CompressedFormats, type Webgl2CompressedFormatSupport } from './compressedFormat';
 import { WebGl2BackdropBlendCompositor } from './WebGl2BackdropBlendCompositor';
-import { probeWebgl2CompressedFormats, type Webgl2CompressedFormatSupport } from './webgl2CompressedFormat';
 import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
 import { WebGl2MeshRenderer } from './WebGl2MeshRenderer';
 import { WebGl2PassCoordinator } from './WebGl2PassCoordinator';

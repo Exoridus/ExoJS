@@ -1,16 +1,16 @@
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 import { Signal } from '#core/Signal';
 import type { Seconds } from '#core/units';
 
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
 import { AudioBus } from './AudioBus';
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audioContext';
 import type { AudioInput } from './AudioInput';
 import { AudioListener } from './AudioListener';
 import type { SpatialVoice } from './BaseVoice';
 import { InputVoice } from './InputVoice';
 import type { Playable, PlayOptions, Voice } from './Playable';
 import type { Sound, SoundPlayOptions } from './Sound';
-import { createSpatialSmoothingSettings, type SpatialSmoothingSettings } from './spatial-smoothing';
+import { createSpatialSmoothingSettings, type SpatialSmoothingSettings } from './spatialSmoothing';
 import { SpatialZones } from './SpatialZones';
 
 /**

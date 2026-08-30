@@ -1,8 +1,8 @@
 import { packedGroupChanged } from '#rendering/affinePacking';
 import type { Drawable } from '#rendering/Drawable';
 import { Shader } from '#rendering/shader/Shader';
+import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingPlan';
 import type { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
-import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingSpritePlan';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { RepeatMode } from '#rendering/texture/repeat';
 import { Texture } from '#rendering/texture/Texture';
@@ -12,10 +12,10 @@ import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import sharedFragSource from './glsl/repeating-sprite.frag';
 import geoPathVertSource from './glsl/repeating-sprite-geo-path.vert';
 import shaderPathVertSource from './glsl/repeating-sprite-shader-path.vert';
+import { createWebGl2ShaderProgram } from './shaderProgram';
 import type { WebGl2Backend } from './WebGl2Backend';
 import { uploadBufferRange, uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import type { WebGl2RetainedBatchPayload, WebGl2RetainedBatchReplayer, WebGl2RetainedNodeIndexRange } from './WebGl2RetainedGroupResources';
-import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 
 // ---------------------------------------------------------------------------

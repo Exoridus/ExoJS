@@ -648,11 +648,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/types/dataTypes.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/dataTypes.ts"
+        "label": "src/assets/types/data.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/data.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/types/dataTypes.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/dataTypes.ts"
+  "sourcePath": "src/assets/types/data.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/data.ts"
 }

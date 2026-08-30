@@ -12,7 +12,7 @@ import type { SceneLoader } from './scene/SceneLoader';
 import type { SceneTweens } from './scene/SceneTweens';
 import type { SceneScope } from './SceneScope';
 import type { SceneState } from './SceneState';
-import type { ApplicationLike, ApplicationOf } from './SceneTypes';
+import type { ApplicationLike, ApplicationOf } from './sceneTypes';
 import { deserializeInto, migrate, serializeTree } from './serialization/serialize';
 import { SERIALIZATION_VERSION, type SerializedScene } from './serialization/types';
 import { Signal } from './Signal';

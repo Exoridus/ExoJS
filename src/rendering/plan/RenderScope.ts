@@ -4,8 +4,8 @@ import type { Geometry } from '#rendering/geometry/Geometry';
 import type { MaskSource, RenderNode } from '#rendering/RenderNode';
 import type { BlendModes } from '#rendering/types';
 
-import type { PersistentSlotDrawRecord } from './PersistentSlotDraw';
-import type { DrawCommand, RenderEntryKind } from './RenderCommand';
+import type { PersistentSlotDrawRecord } from './persistentSlotDraw';
+import type { DrawCommand, RenderEntryKind } from './renderCommand';
 import type { RetainedInstructionSet } from './RetainedInstructionSet';
 
 /**

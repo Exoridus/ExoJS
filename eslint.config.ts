@@ -232,7 +232,7 @@ export default defineConfig([
       '@typescript-eslint/naming-convention': [
         'error',
         {
-          // const namespace objects (MathUtils, Perf, Collision, ...) are PascalCase
+          // const namespace objects (Ease, Perf, Collision, ...) are PascalCase
           // by convention; const constants may be UPPER_CASE - both alongside camelCase.
           selector: 'variable',
           modifiers: ['const'],
@@ -322,6 +322,22 @@ export default defineConfig([
 
       // Unicorn
       'unicorn/error-message': 'error',
+      // Two casings, and the choice carries meaning: PascalCase names a file
+      // after the single symbol it exports, camelCase marks a module that is a
+      // set of functions or constants with no such symbol. A third spelling
+      // would only add a coin flip. `check-file-symbol-naming` enforces which
+      // of the two a given file has earned.
+      'unicorn/filename-case': [
+        'error',
+        {
+          cases: { camelCase: true, pascalCase: true },
+          // A file named after a class whose acronym casing is part of the
+          // public API (`UIRoot`, `HTMLText`), an ambient declaration file, and
+          // the published `@codexo/exojs/renderer-sdk` subpath, whose file name
+          // IS the entry point consumers import.
+          ignore: [/\.d\.ts$/u, /^renderer-sdk\.ts$/u, /^(?:HTMLText|UIClipBox|UIRoot)\.ts$/u],
+        },
+      ],
       'unicorn/no-instanceof-array': 'error',
       'unicorn/no-typeof-undefined': 'error',
       'unicorn/no-useless-undefined': 'error',
@@ -803,7 +819,7 @@ export default defineConfig([
   // startup banner leave the engine through this file, so `no-console` is the
   // wrong rule here rather than a violation to silence line by line.
   {
-    files: ['src/core/logging.ts'],
+    files: ['src/core/Logger.ts'],
     rules: {
       'no-console': 'off',
     },

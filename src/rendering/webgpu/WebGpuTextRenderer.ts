@@ -6,35 +6,35 @@ import type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet
 import type { OwnTransformRowPatcher } from '#rendering/plan/retainedTransformRowPatch';
 import type { RenderNode } from '#rendering/RenderNode';
 import { fillShaderSource } from '#rendering/shader/fillShaderSource';
-import { type BitmapText } from '#rendering/text/BitmapText';
-import type { TextPageQuads } from '#rendering/text/Text';
-import { Text } from '#rendering/text/Text';
 import {
   packTextNodeAtlasSlot,
   textAtlasSlotShift,
   textAtlasTextureSlots,
   textAtlasTextureSlotWgsl,
   textNodeIndexMask,
-} from '#rendering/text/textAtlasTextureSlots';
-import { packTextNodeData, packTextNodeTransform, textNodeDataFloats } from '#rendering/text/textNodeDataPacker';
+} from '#rendering/text/atlasTextureSlots';
+import { type BitmapText } from '#rendering/text/BitmapText';
+import { packTextNodeData, packTextNodeTransform, textNodeDataFloats } from '#rendering/text/nodeDataPacker';
+import type { TextPageQuads } from '#rendering/text/Text';
+import { Text } from '#rendering/text/Text';
 import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
-import type { WebGpuBackend } from './WebGpuBackend';
-import { getWebGpuBlendState } from './WebGpuBlendState';
-import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
+import { getWebGpuBlendState } from './blendState';
 import {
   type WebGpuRetainedBatchPayload,
   type WebGpuRetainedBatchReplayer,
-  type WebGpuRetainedCaptureFrame,
-  WebGpuRetainedGroupBundle,
   type WebGpuRetainedNodeIndexRange,
   type WebGpuRetainedRendererReplayState,
-} from './WebGpuRetainedGroupResources';
-import { packSnapViewport } from './webgpuSnapViewport';
-import { stencilContentDepthStencilState } from './WebGpuStencilState';
+} from './retainedGroupResources';
+import { packSnapViewport } from './snapViewport';
+import { stencilContentDepthStencilState } from './stencilState';
+import type { WebGpuBackend } from './WebGpuBackend';
+import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
+import { type WebGpuRetainedCaptureFrame } from './WebGpuRetainedCaptureFrame';
+import { WebGpuRetainedGroupBundle } from './WebGpuRetainedGroupBundle';
 import textShaderTemplate from './wgsl/text.wgsl';
 
 // ── Node data layout (identical to WebGl2TextRenderer) ───────────────────────

@@ -1,7 +1,5 @@
 import type { SceneNode } from '#core/SceneNode';
 
-import type { Collidable, CollisionResponse } from './Collision';
-import { CollisionType } from './Collision';
 import {
   getCollisionCircleCircle,
   getCollisionCircleRectangle,
@@ -13,7 +11,9 @@ import {
   intersectionLineCircle,
   intersectionPointCircle,
   intersectionRectCircle,
-} from './collision-detection';
+} from './Collision';
+import type { Collidable, CollisionResponse } from './collisionTypes';
+import { CollisionType } from './collisionTypes';
 import type { Ellipse } from './Ellipse';
 import { Interval } from './Interval';
 import type { Line } from './Line';

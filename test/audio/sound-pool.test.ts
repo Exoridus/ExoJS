@@ -10,7 +10,7 @@ import type { MockInstance } from 'vitest';
  *  - LowestPriority degenerates to FIFO within a single Sound
  *  - Voices are removed from pool when they end naturally
  */
-import { getAudioContext } from '#audio/audio-context';
+import { getAudioContext } from '#audio/audioContext';
 import { AudioSystem } from '#audio/AudioSystem';
 import type { Pausable, Voice } from '#audio/Playable';
 import { Sound, SoundPoolStrategy } from '#audio/Sound';

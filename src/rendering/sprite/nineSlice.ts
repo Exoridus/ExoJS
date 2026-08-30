@@ -1,4 +1,4 @@
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 import type { RepeatFit, RepeatMode } from '#rendering/texture/repeat';
 import { planRepeat } from '#rendering/texture/repeat';
 import type { TextureRegion } from '#rendering/texture/TextureRegion';

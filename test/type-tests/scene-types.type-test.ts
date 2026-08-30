@@ -9,7 +9,7 @@ import type {
   InferSceneData,
   SceneRegistration,
   SceneRegistryShape,
-} from '#core/SceneTypes';
+} from '#core/sceneTypes';
 
 interface GameData {
   readonly level: number;

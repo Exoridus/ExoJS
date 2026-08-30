@@ -185,8 +185,8 @@ if (typeof (globalThis as Record<string, unknown>)['AudioWorkletNode'] === 'unde
 // We use dynamic-style imports resolved at module evaluation time via top-level await alternative:
 // tsx supports top-level await in ESM - but for simpler compat we do it synchronously here.
 
-import { getAudioContext } from '../../src/audio/audio-context';
 import { AudioBus } from '../../src/audio/AudioBus';
+import { getAudioContext } from '../../src/audio/audioContext';
 import { AudioListener } from '../../src/audio/AudioListener';
 import { AudioSystem } from '../../src/audio/AudioSystem';
 import type { SpatialVoice } from '../../src/audio/BaseVoice';

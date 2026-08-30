@@ -5,8 +5,8 @@ import type { MeshMaterial } from '#rendering/material/MeshMaterial';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 
-import type { MeshIndexArray, MeshIndexFormat } from './meshIndices';
-import { meshIndexFormatFor } from './meshIndices';
+import type { MeshIndexArray, MeshIndexFormat } from './indices';
+import { meshIndexFormatFor } from './indices';
 
 /**
  * Construction-time options for a {@link Mesh}.

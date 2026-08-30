@@ -1,7 +1,7 @@
 ﻿import { Gamepad } from '#input/Gamepad';
 import { GamepadAxis } from '#input/GamepadAxis';
 import { GamepadButton } from '#input/GamepadButton';
-import { resolveGamepadDefinition } from '#input/GamepadDefinitions';
+import { resolveGamepadDefinition } from '#input/gamepadDefinitions';
 import { GamepadMappingFamily } from '#input/GamepadMapping';
 import { createStandardGamepadMapping } from '#input/gamepadMappings';
 import { ChannelSize, Keyboard } from '#input/types';

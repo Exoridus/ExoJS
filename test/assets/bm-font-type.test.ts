@@ -1,6 +1,6 @@
 import type { AssetDependencyScope } from '#assets/AssetFactory';
 import { parseBmFontText } from '#assets/factories/parseBmFont';
-import { bmFontType } from '#assets/types/fontTypes';
+import { bmFontType } from '#assets/types/font';
 import { Texture } from '#rendering/texture/Texture';
 
 import { factoryContext } from './factory-context';

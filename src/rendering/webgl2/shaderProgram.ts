@@ -7,8 +7,8 @@ import { ShaderUniform } from '#rendering/shader/ShaderUniform';
 import { resolveTransformTextureGlsl } from '#rendering/shader/transformTextureLayout';
 import { ShaderPrimitives } from '#rendering/types';
 
+import { webGl2PrimitiveArrayConstructors, webGl2PrimitiveByteSizeMapping } from './shaderMappings';
 import { WebGl2ShaderBlock } from './WebGl2ShaderBlock';
-import { webGl2PrimitiveArrayConstructors, webGl2PrimitiveByteSizeMapping } from './WebGl2ShaderMappings';
 
 type UniformUploadFunction = (gl: WebGL2RenderingContext, location: WebGLUniformLocation, value: TypedArray) => void;
 

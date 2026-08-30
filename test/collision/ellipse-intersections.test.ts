@@ -5,7 +5,7 @@ import {
   intersectionEllipsePoly,
   intersectionLineEllipse,
   intersectionRectEllipse,
-} from '#math/collision-detection';
+} from '#math/Collision';
 import { Ellipse } from '#math/Ellipse';
 import { Line } from '#math/Line';
 import { Polygon } from '#math/Polygon';

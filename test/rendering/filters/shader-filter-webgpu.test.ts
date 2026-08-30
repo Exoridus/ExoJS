@@ -9,7 +9,8 @@ import { Color } from '#core/Color';
  * to verify the filter's construction, apply() pipeline/bind-group setup,
  * uniform marshalling, missing-source guard, and lifecycle methods.
  */
-import { ShaderFilter, ShaderFilterBackendError } from '#rendering/filters/ShaderFilter';
+import { ShaderFilter } from '#rendering/filters/ShaderFilter';
+import { ShaderFilterBackendError } from '#rendering/filters/ShaderFilterBackendError';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';

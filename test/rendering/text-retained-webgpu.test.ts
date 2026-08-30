@@ -32,7 +32,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 import { Text } from '#rendering/text/Text';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
-import { WebGpuRetainedGroupBundle } from '#rendering/webgpu/WebGpuRetainedGroupResources';
+import { WebGpuRetainedGroupBundle } from '#rendering/webgpu/WebGpuRetainedGroupBundle';
 import { WebGpuTextRenderer } from '#rendering/webgpu/WebGpuTextRenderer';
 
 interface LabeledBuffer {

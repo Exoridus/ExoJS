@@ -3,7 +3,7 @@ import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { PixelSnapMode } from '#rendering/pixelSnap';
-import { RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { RenderEntryKind } from '#rendering/plan/renderCommand';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';

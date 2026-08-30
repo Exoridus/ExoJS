@@ -13,7 +13,7 @@ import {
   TRANSFORM_TEXTURE_GLSL_INCLUDE,
   transformTextureRect,
 } from '#rendering/shader/transformTextureLayout';
-import { spriteVertexGlsl } from '#rendering/sprite/spriteMaterialSources';
+import { spriteVertexGlsl } from '#rendering/sprite/materialSources';
 import { TRANSFORM_FLOATS_PER_ROW } from '#rendering/TransformBuffer';
 
 // The limit the reproduced defect was measured against (desktop Chromium /

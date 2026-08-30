@@ -1,4 +1,4 @@
-import type { BrowserGamepad } from '#input/GamepadDefinitions';
+import type { BrowserGamepad } from '#input/gamepadDefinitions';
 
 import type {
   NetworkHint,

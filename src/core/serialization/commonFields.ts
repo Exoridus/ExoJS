@@ -1,5 +1,5 @@
 import { Color } from '#core/Color';
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 import type { SceneNode } from '#core/SceneNode';
 import { Rectangle } from '#math/Rectangle';
 import { Drawable } from '#rendering/Drawable';

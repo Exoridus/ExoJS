@@ -6,7 +6,7 @@ import { Loader } from '#assets/Loader';
 import type { LoaderScope } from '#assets/LoaderScope';
 import type { LoadingQueue } from '#assets/LoadingQueue';
 import { Json } from '#assets/tokens';
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 import { materializeAssetTypes } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes } from '#rendering/types';

@@ -1,4 +1,4 @@
-import { getCollisionRectangleRectangle } from '#math/collision-detection';
+import { getCollisionRectangleRectangle } from '#math/Collision';
 import { Rectangle } from '#math/Rectangle';
 
 const rect = (x: number, y: number, width: number, height: number): Rectangle => {

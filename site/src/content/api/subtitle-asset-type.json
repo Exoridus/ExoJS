@@ -641,11 +641,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/types/subtitleType.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/subtitleType.ts"
+        "label": "src/assets/types/data.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/data.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/types/subtitleType.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/subtitleType.ts"
+  "sourcePath": "src/assets/types/data.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/data.ts"
 }

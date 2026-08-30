@@ -1,7 +1,7 @@
 ﻿import type { MockInstance } from 'vitest';
 
-import { getAudioContext } from '#audio/audio-context';
 import { AudioBus } from '#audio/AudioBus';
+import { getAudioContext } from '#audio/audioContext';
 import type { AudioEffect } from '#audio/AudioEffect';
 import { Signal } from '#core/Signal';
 
@@ -678,7 +678,7 @@ describe('AudioBus', () => {
     vi.resetModules();
     const fakeSignal = new Signal<[AudioContext]>();
 
-    vi.doMock('#audio/audio-context', () => ({
+    vi.doMock('#audio/audioContext', () => ({
       getAudioContext: () => ({}) as AudioContext,
       isAudioContextReady: () => false,
       onAudioContextReady: fakeSignal,
@@ -697,7 +697,7 @@ describe('AudioBus', () => {
     bus.onceSetup(vi.fn());
     expect(fakeSignal.count).toBe(countAfterConstruct);
 
-    vi.doUnmock('#audio/audio-context');
+    vi.doUnmock('#audio/audioContext');
     vi.resetModules();
   });
 
@@ -713,7 +713,7 @@ describe('AudioBus', () => {
       createStereoPanner: () => ({ connect: vi.fn(), disconnect: vi.fn(), pan: { setTargetAtTime: vi.fn() } }),
     } as unknown as AudioContext;
 
-    vi.doMock('#audio/audio-context', () => ({
+    vi.doMock('#audio/audioContext', () => ({
       getAudioContext: () => fakeCtx,
       isAudioContextReady: () => false,
       onAudioContextReady: fakeSignal,
@@ -734,7 +734,7 @@ describe('AudioBus', () => {
 
     expect(callback).not.toHaveBeenCalled();
 
-    vi.doUnmock('#audio/audio-context');
+    vi.doUnmock('#audio/audioContext');
     vi.resetModules();
   });
 
@@ -750,7 +750,7 @@ describe('AudioBus', () => {
       createStereoPanner: () => ({ connect: vi.fn(), disconnect: vi.fn(), pan: { setTargetAtTime: vi.fn() } }),
     } as unknown as AudioContext;
 
-    vi.doMock('#audio/audio-context', () => ({
+    vi.doMock('#audio/audioContext', () => ({
       getAudioContext: () => fakeCtx,
       isAudioContextReady: () => false,
       onAudioContextReady: fakeSignal,
@@ -773,7 +773,7 @@ describe('AudioBus', () => {
     const dispose = bus.onceSetup(vi.fn()); // already set up → fires immediately, returns a no-op disposer
     expect(() => dispose()).not.toThrow();
 
-    vi.doUnmock('#audio/audio-context');
+    vi.doUnmock('#audio/audioContext');
     vi.resetModules();
   });
 
@@ -791,7 +791,7 @@ describe('AudioBus', () => {
       createStereoPanner: () => ({ connect: vi.fn(), disconnect: vi.fn(), pan: { setTargetAtTime: vi.fn() } }),
     } as unknown as AudioContext;
 
-    vi.doMock('#audio/audio-context', () => ({
+    vi.doMock('#audio/audioContext', () => ({
       getAudioContext: () => fakeCtx,
       isAudioContextReady: () => false,
       onAudioContextReady: fakeSignal,
@@ -828,7 +828,7 @@ describe('AudioBus', () => {
     expect(parent._getInputNode()).not.toBeNull();
     expect(childOutput.connect).toHaveBeenCalledWith(parent._getInputNode());
 
-    vi.doUnmock('#audio/audio-context');
+    vi.doUnmock('#audio/audioContext');
     vi.resetModules();
   });
 

@@ -421,11 +421,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/logging.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/logging.ts"
+        "label": "src/core/Logger.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Logger.ts"
       }
     }
   ],
-  "sourcePath": "src/core/logging.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/logging.ts"
+  "sourcePath": "src/core/Logger.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Logger.ts"
 }

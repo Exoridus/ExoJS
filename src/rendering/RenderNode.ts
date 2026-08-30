@@ -1,5 +1,5 @@
 import { Color } from '#core/Color';
-import { DirtyChannel } from '#core/NodeDirtyIndex';
+import { DirtyChannel } from '#core/nodeDirtyIndex';
 import { registerRetainedRenderRoot, SceneNode, unregisterRetainedRenderRoot } from '#core/SceneNode';
 import { Signal } from '#core/Signal';
 import type { InteractionEvent, InteractionEventType } from '#input/InteractionEvent';

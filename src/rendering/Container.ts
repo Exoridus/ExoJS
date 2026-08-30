@@ -1,7 +1,7 @@
 import { invariant } from '#core/dev';
 import type { Stage } from '#core/Stage';
 import { removeArrayItems } from '#core/utils';
-import { RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { RenderEntryKind } from '#rendering/plan/renderCommand';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RetainedPlanCache } from '#rendering/plan/RetainedPlanCache';
 

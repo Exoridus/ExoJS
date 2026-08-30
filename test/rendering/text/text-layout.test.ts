@@ -7,7 +7,7 @@
  */
 
 import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
-import { buildTextPageQuads, layoutText } from '#rendering/text/TextLayout';
+import { buildTextPageQuads, layoutText } from '#rendering/text/textLayout';
 import { TextStyle } from '#rendering/text/TextStyle';
 import type { GlyphInfo, GlyphPlacement, GlyphProvider } from '#rendering/text/types';
 

@@ -71,11 +71,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/animation/Easing.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/Easing.ts"
+        "label": "src/animation/Ease.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/Ease.ts"
       }
     }
   ],
-  "sourcePath": "src/animation/Easing.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/Easing.ts"
+  "sourcePath": "src/animation/Ease.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/Ease.ts"
 }

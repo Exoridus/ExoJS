@@ -1,6 +1,6 @@
 import type { Cloneable, Destroyable, HasBoundingBox } from '#core/types';
 
-import type { Collidable } from './Collision';
+import type { Collidable } from './collisionTypes';
 
 /**
  * Conformance contract shared by the concrete math shape values ({@link Circle},

@@ -14,7 +14,7 @@
 import { type ReadonlyRectangle, Rectangle } from '#math/Rectangle';
 import { BlurFilter } from '#rendering/filters/BlurFilter';
 import { Filter } from '#rendering/filters/Filter';
-import { EffectBoundsResolver } from '#rendering/plan/effectBounds';
+import { EffectBoundsResolver } from '#rendering/plan/EffectBoundsResolver';
 
 /** Bounds-preserving: the default contract, spelled out by not overriding it. */
 class IdentityFilter extends Filter {

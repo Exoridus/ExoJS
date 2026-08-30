@@ -26,7 +26,7 @@ const { decodeAudioDataMock } = vi.hoisted(() => ({
   decodeAudioDataMock: vi.fn(async (): Promise<AudioBuffer> => ({ duration: 2 }) as AudioBuffer),
 }));
 
-vi.mock('#audio/audio-context', () => ({
+vi.mock('#audio/audioContext', () => ({
   decodeAudioData: decodeAudioDataMock,
 }));
 

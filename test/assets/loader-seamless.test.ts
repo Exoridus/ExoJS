@@ -6,7 +6,7 @@ import { Assets } from '#assets/Assets';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, LoadPriority } from '#assets/Loader';
 import { textureSeamlessAdapter } from '#assets/seamless';
-import { logger, LogSeverity } from '#core/logging';
+import { logger, LogSeverity } from '#core/Logger';
 import { materializeAssetTypes } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes } from '#rendering/types';

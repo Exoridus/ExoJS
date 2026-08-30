@@ -621,11 +621,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/types/imageTypes.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/imageTypes.ts"
+        "label": "src/assets/types/image.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/image.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/types/imageTypes.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/imageTypes.ts"
+  "sourcePath": "src/assets/types/image.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/image.ts"
 }

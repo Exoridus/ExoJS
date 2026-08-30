@@ -1,4 +1,4 @@
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';

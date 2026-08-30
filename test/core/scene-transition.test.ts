@@ -1,9 +1,9 @@
+import { SceneTransitionLifecycleError } from '#core/sceneErrors';
 import {
   SceneTransition,
   type SceneTransitionContext,
   type SceneTransitionEnvironment,
   type SceneTransitionFrame,
-  SceneTransitionLifecycleError,
   type SceneTransitionRequirements,
   type SceneTransitionSession,
 } from '#core/SceneTransition';

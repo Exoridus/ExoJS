@@ -14,7 +14,7 @@ export { Application, ApplicationState } from './Application';
 export { Bounds } from './Bounds';
 export type { BuildInfo } from './BuildInfo';
 export { buildInfo } from './BuildInfo';
-export { Capabilities, type HostRealm } from './capabilities';
+export { Capabilities, type HostRealm } from './Capabilities';
 export { Clock } from './Clock';
 export type { DecompressFormat } from './Codec';
 export { Codec } from './Codec';
@@ -24,8 +24,8 @@ export type { ConnectivityState, NetworkMode } from './Connectivity';
 export { Connectivity } from './Connectivity';
 export { DestroyScope } from './DestroyScope';
 export type { LoadStateValue } from './LoadState';
-export type { LogEntry, LogOptions, LogSink } from './logging';
-export { Logger, logger, LogSeverity } from './logging';
+export type { LogEntry, LogOptions, LogSink } from './Logger';
+export { Logger, logger, LogSeverity } from './Logger';
 export { Perf } from './Perf';
 export type { PhasedSceneTransitionOptions, SceneTransitionPhaseContext, SceneTransitionPhaseRequirements } from './PhasedSceneTransition';
 export { PhasedSceneTransition } from './PhasedSceneTransition';
@@ -34,6 +34,18 @@ export type { SceneActionMapOptions, SceneInputBindingOptions } from './scene/Sc
 export type { InteractionObservation, InteractionScope } from './scene/SceneInteraction';
 export { SceneAvailability } from './SceneAvailability';
 export { SceneDirector } from './SceneDirector';
+export { SceneTransitionLifecycleError } from './sceneErrors';
+export {
+  AmbiguousSceneInstanceError,
+  ConcurrentSceneNavigationError,
+  DuplicateSceneRegistrationError,
+  InvalidSceneRegistrationError,
+  RetainedSceneConflictError,
+  RetainedSceneNotFoundError,
+  SceneInstanceNotFoundError,
+  SceneNavigationAbortedError,
+  UnregisteredSceneError,
+} from './sceneErrors';
 export { SceneNode } from './SceneNode';
 export { SceneState } from './SceneState';
 export type {
@@ -44,7 +56,7 @@ export type {
   SceneTransitionRequirements,
   SceneTransitionSession,
 } from './SceneTransition';
-export { SceneTransition, SceneTransitionLifecycleError } from './SceneTransition';
+export { SceneTransition } from './SceneTransition';
 export type {
   AnySceneConstructor,
   ApplicationLike,
@@ -64,18 +76,7 @@ export type {
   SceneTransitionPhases,
   SceneTransitionSelection,
   UnloadOptions,
-} from './SceneTypes';
-export {
-  AmbiguousSceneInstanceError,
-  ConcurrentSceneNavigationError,
-  DuplicateSceneRegistrationError,
-  InvalidSceneRegistrationError,
-  RetainedSceneConflictError,
-  RetainedSceneNotFoundError,
-  SceneInstanceNotFoundError,
-  SceneNavigationAbortedError,
-  UnregisteredSceneError,
-} from './SceneTypes';
+} from './sceneTypes';
 export type { DeserializeContext, NodeSerializer, SerializeContext } from './serialization/NodeSerializer';
 export { Prefab } from './serialization/Prefab';
 export type { SceneNodeConstructor } from './serialization/SerializationRegistry';

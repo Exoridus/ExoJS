@@ -3,7 +3,7 @@
  *
  * Vitest always compiles `__DEV__` to `true`, so the production severity
  * filter (`!__DEV__ && severity < Error`) is dead code in the normal unit
- * lane and cannot be exercised there. This suite instead runs `logging.ts`
+ * lane and cannot be exercised there. This suite instead runs `Logger.ts`
  * through a Rollup+terser pipeline that models the real production build's
  * stripping semantics (`@rollup/plugin-replace` with `__DEV__` set to
  * `false`, then `terser` with a `pure_funcs` list derived from
@@ -34,13 +34,13 @@ const rootDir = resolve(import.meta.dirname!, '..', '..');
 const readSource = (rel: string): string => readFileSync(resolve(rootDir, rel), 'utf8');
 
 /**
- * Bundles `src/core/logging.ts` through the exact production transform chain
+ * Bundles `src/core/Logger.ts` through the exact production transform chain
  * and returns the minified IIFE. The module imports nothing, so this bundles
  * one small file and stays fast.
  */
 const buildProductionLogging = async (pureFuncs: string[]): Promise<string> => {
   const virtualId = '\0virtual-logging.js';
-  const code = ts.transpileModule(readSource('src/core/logging.ts'), {
+  const code = ts.transpileModule(readSource('src/core/Logger.ts'), {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
   }).outputText;
 

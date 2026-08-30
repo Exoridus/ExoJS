@@ -15,7 +15,7 @@ import {
   POSITION_EPSILON,
   SmoothedAudioParam,
   type SpatialSmoothingSettings,
-} from '#audio/spatial-smoothing';
+} from '#audio/spatialSmoothing';
 
 interface MockParam {
   setValueAtTime: MockInstance;

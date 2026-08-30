@@ -1,7 +1,8 @@
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
-import type { DrawCommand, MaterialKey } from '#rendering/plan/RenderCommand';
-import { RenderEntryKind } from '#rendering/plan/RenderCommand';
+import type { MaterialKey } from '#rendering/material/MaterialKey';
+import type { DrawCommand } from '#rendering/plan/renderCommand';
+import { RenderEntryKind } from '#rendering/plan/renderCommand';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { type RetainedDrawSlot, RetainedPlanCache } from '#rendering/plan/RetainedPlanCache';
 import type { RenderBackend } from '#rendering/RenderBackend';

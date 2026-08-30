@@ -1,5 +1,5 @@
 import { CanvasSizing, type CanvasSizingContext } from './CanvasSizing';
-import { fitToHost, HostTracker, resolveHost } from './hostTracking';
+import { fitToHost, HostTracker, resolveHost } from './HostTracker';
 
 /**
  * Scales the canvas to its parent while the render resolution stays exactly at

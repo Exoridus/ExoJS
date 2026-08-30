@@ -10,7 +10,7 @@ import {
   type PersistentSlotDrawRecord,
   sourceShapeAllowsPersistentSlots,
   supportsPersistentSlots,
-} from './PersistentSlotDraw';
+} from './persistentSlotDraw';
 import { RenderRootSource } from './RenderRootSource';
 import type { ScopeEntry } from './RenderScope';
 import { type RenderTargetIdentity, RetainedCaptureSlot } from './RetainedCaptureSlot';

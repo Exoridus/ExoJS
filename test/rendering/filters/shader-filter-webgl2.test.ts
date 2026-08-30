@@ -8,7 +8,8 @@
  * methods without requiring a real WebGL2RenderingContext.
  */
 import type { ShaderFilterUniformValue } from '#rendering/filters/ShaderFilter';
-import { ShaderFilter, ShaderFilterBackendError } from '#rendering/filters/ShaderFilter';
+import { ShaderFilter } from '#rendering/filters/ShaderFilter';
+import { ShaderFilterBackendError } from '#rendering/filters/ShaderFilterBackendError';
 import { WebGl2ShaderFilterPass } from '#rendering/filters/WebGl2ShaderFilterPass';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';

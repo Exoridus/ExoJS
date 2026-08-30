@@ -1,5 +1,5 @@
-import type { EasingFunction } from '#animation/Easing';
-import { Ease } from '#animation/Easing';
+import type { EasingFunction } from '#animation/Ease';
+import { Ease } from '#animation/Ease';
 import type { SceneTransitionEnvironment, SceneTransitionFrame, SceneTransitionRequirements, SceneTransitionSession } from '#core/SceneTransition';
 import { SceneTransition } from '#core/SceneTransition';
 import type { Seconds } from '#core/units';

@@ -19,7 +19,7 @@ import type { MockInstance } from 'vitest';
  *    globally to ignore their input).
  * All mocks are installed in `beforeAll` and restored in `afterAll`/`afterEach`.
  */
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 import { HTMLText } from '#rendering/text/HTMLText';
 import type { Texture } from '#rendering/texture/Texture';
 

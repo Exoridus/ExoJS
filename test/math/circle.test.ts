@@ -1,6 +1,6 @@
 import { Circle } from '#math/Circle';
-import type { Collidable } from '#math/Collision';
-import { CollisionType } from '#math/Collision';
+import type { Collidable } from '#math/collisionTypes';
+import { CollisionType } from '#math/collisionTypes';
 import { Ellipse } from '#math/Ellipse';
 import { Interval } from '#math/Interval';
 import { Line } from '#math/Line';

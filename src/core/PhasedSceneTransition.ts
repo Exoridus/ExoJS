@@ -1,4 +1,4 @@
-import { Ease } from '#animation/Easing';
+import { Ease } from '#animation/Ease';
 import type { EasingFunction } from '#animation/types';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import { Sprite } from '#rendering/sprite/Sprite';

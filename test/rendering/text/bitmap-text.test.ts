@@ -3,7 +3,7 @@
  * (alignment, word-wrap, kerning, leading) and builds correct page quads.
  */
 
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 import type { BmFontData } from '#rendering/text/BitmapText';
 import { BitmapText, BmFontAdapter } from '#rendering/text/BitmapText';
 import { BmFont } from '#rendering/text/BmFont';
@@ -16,8 +16,8 @@ import type { Texture } from '#rendering/texture/Texture';
 
 const layoutCounter = vi.hoisted(() => ({ passes: 0 }));
 
-vi.mock('#rendering/text/TextLayout', async importOriginal => {
-  const actual = await importOriginal<typeof import('#rendering/text/TextLayout')>();
+vi.mock('#rendering/text/textLayout', async importOriginal => {
+  const actual = await importOriginal<typeof import('#rendering/text/textLayout')>();
 
   return {
     ...actual,

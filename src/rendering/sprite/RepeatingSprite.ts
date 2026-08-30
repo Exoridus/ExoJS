@@ -4,8 +4,8 @@ import type { RepeatFit, RepeatMode } from '#rendering/texture/repeat';
 import type { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
 
-import type { RepeatingSpriteOptions, RepeatingSpriteQuad } from './repeatingSpritePlan';
-import { buildRepeatingSpriteQuads, validateFit, validateMode, validateOffset, validateSizeInput } from './repeatingSpritePlan';
+import type { RepeatingSpriteOptions, RepeatingSpriteQuad } from './repeatingPlan';
+import { buildRepeatingSpriteQuads, validateFit, validateMode, validateOffset, validateSizeInput } from './repeatingPlan';
 
 /**
  * A sprite that fills its destination by repeating, mirroring, or stretching

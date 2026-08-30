@@ -8,9 +8,9 @@ import { createQuadIndices } from '#rendering/utils';
 import type { View } from '#rendering/View';
 
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
+import { createWebGl2ShaderProgram } from './shaderProgram';
 import type { WebGl2Backend } from './WebGl2Backend';
 import { uploadBufferRange, uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
-import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import type { WebGl2VertexArrayObject, WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 
 interface ManagedBufferState {

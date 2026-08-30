@@ -145,11 +145,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/math/swept-collision.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/swept-collision.ts"
+        "label": "src/math/sweptCollision.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/sweptCollision.ts"
       }
     }
   ],
-  "sourcePath": "src/math/swept-collision.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/swept-collision.ts"
+  "sourcePath": "src/math/sweptCollision.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/sweptCollision.ts"
 }

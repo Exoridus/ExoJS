@@ -187,11 +187,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/audio/spatial-smoothing.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/spatial-smoothing.ts"
+        "label": "src/audio/spatialSmoothing.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/spatialSmoothing.ts"
       }
     }
   ],
-  "sourcePath": "src/audio/spatial-smoothing.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/spatial-smoothing.ts"
+  "sourcePath": "src/audio/spatialSmoothing.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/spatialSmoothing.ts"
 }

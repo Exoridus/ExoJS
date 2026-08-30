@@ -1,7 +1,8 @@
 import type { Drawable } from '#rendering/Drawable';
+import { createEmptyMaterialKey } from '#rendering/material/MaterialKey';
 import type { RenderBackend } from '#rendering/RenderBackend';
 
-import { createEmptyMaterialKey, type DrawCommand } from './RenderCommand';
+import { type DrawCommand } from './renderCommand';
 import { copyRetainedDrawData, type MutableRetainedDrawData, releasePooledDrawables, type RetainedDrawData, RetainedRecordPool } from './RetainedRecordPool';
 
 /**

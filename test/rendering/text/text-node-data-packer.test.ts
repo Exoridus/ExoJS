@@ -16,8 +16,8 @@ import { BmFont } from '#rendering/text/BmFont';
 import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
+import { packTextNodeData, packTextNodeTransform, textNodeDataFloats, textNodeDataTexels } from '#rendering/text/nodeDataPacker';
 import { Text } from '#rendering/text/Text';
-import { packTextNodeData, packTextNodeTransform, textNodeDataFloats, textNodeDataTexels } from '#rendering/text/textNodeDataPacker';
 import type { GlyphInfo } from '#rendering/text/types';
 import type { Texture } from '#rendering/texture/Texture';
 

@@ -1,4 +1,4 @@
-import { nodeDirtyIndex } from '#core/NodeDirtyIndex';
+import { nodeDirtyIndex } from '#core/nodeDirtyIndex';
 
 /**
  * Per-frame rendering counters collected by the backend each tick.

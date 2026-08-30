@@ -4,7 +4,7 @@ import type { GamepadAxis } from './GamepadAxis';
 import type { GamepadAxisChannel } from './GamepadAxis';
 import type { GamepadButton } from './GamepadButton';
 import type { GamepadButtonChannel } from './GamepadButton';
-import type { BrowserGamepad, ResolvedGamepadDefinition } from './GamepadDefinitions';
+import type { BrowserGamepad, ResolvedGamepadDefinition } from './gamepadDefinitions';
 import type { GamepadMapping, GamepadMappingFamily } from './GamepadMapping';
 import type { GamepadPromptControl } from './GamepadPromptLayouts';
 import { GamepadPromptLayouts } from './GamepadPromptLayouts';

@@ -1,4 +1,4 @@
-import { Ease } from '#animation/Easing';
+import { Ease } from '#animation/Ease';
 import { Color } from '#core/Color';
 import type { SceneTransitionPhaseContext } from '#core/PhasedSceneTransition';
 import type { SceneTransitionContext, SceneTransitionEnvironment } from '#core/SceneTransition';

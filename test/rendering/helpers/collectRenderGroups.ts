@@ -1,4 +1,5 @@
-import { type DrawCommand, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { type MaterialKey } from '#rendering/material/MaterialKey';
+import { type DrawCommand, RenderEntryKind } from '#rendering/plan/renderCommand';
 import type { GroupScope, ScopeEntry } from '#rendering/plan/RenderScope';
 
 /**
