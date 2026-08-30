@@ -1,13 +1,14 @@
+import { binaryType, csvType, jsonType, textType, wasmType, xmlType } from '#assets/types/data';
+import { subtitleType } from '#assets/types/data';
+import { bmFontType, fontType } from '#assets/types/font';
+import { imageType, svgType } from '#assets/types/image';
+import { textureType } from '#assets/types/image';
+import { musicType, videoType } from '#assets/types/media';
+import { soundType } from '#assets/types/media';
+
 import type { AssetTypeName } from './AssetDefinitions';
 import type { AnyAssetType, AssetLeaf } from './AssetType';
 import { normalizeExtension } from './extensions';
-import { binaryType, csvType, jsonType, textType, wasmType, xmlType } from './types/data';
-import { subtitleType } from './types/data';
-import { bmFontType, fontType } from './types/font';
-import { imageType, svgType } from './types/image';
-import { textureType } from './types/image';
-import { musicType, videoType } from './types/media';
-import { soundType } from './types/media';
 
 /**
  * The asset types every {@link Application} installs.

@@ -149,11 +149,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/sceneTypes.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sceneTypes.ts"
+        "label": "src/core/scene/sceneTypes.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/sceneTypes.ts"
       }
     }
   ],
-  "sourcePath": "src/core/sceneTypes.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sceneTypes.ts"
+  "sourcePath": "src/core/scene/sceneTypes.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/sceneTypes.ts"
 }

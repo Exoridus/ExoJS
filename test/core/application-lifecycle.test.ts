@@ -12,7 +12,7 @@ import type { MockInstance } from 'vitest';
  * capture() delegation.
  */
 import { Color } from '#core/Color';
-import { Scene } from '#core/Scene';
+import { Scene } from '#core/scene/Scene';
 
 // SceneDirector is fully mocked in this file's harness (see loadHarness) -
 // its change() is a plain vi.fn() that never validates a registry, so any
@@ -259,7 +259,7 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
       };
     }),
   }));
-  vi.doMock('#core/SceneDirector', () => ({
+  vi.doMock('#core/scene/SceneDirector', () => ({
     SceneDirector: vi.fn(function () {
       return sceneDirector;
     }),

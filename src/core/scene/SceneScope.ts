@@ -1,18 +1,18 @@
+import type { Application } from '#core/Application';
+import { logger } from '#core/Logger';
+import { Perf } from '#core/Perf';
+import { hookOwnerName, requireSynchronousHook } from '#core/syncHooks';
+import { SystemRegistry } from '#core/SystemRegistry';
+import type { Seconds } from '#core/units';
 import type { RenderingContext } from '#rendering/RenderingContext';
 
-import type { Application } from './Application';
-import { logger } from './Logger';
-import { Perf } from './Perf';
 import type { Scene } from './Scene';
-import { SceneAudio } from './scene/SceneAudio';
-import { SceneInputs } from './scene/SceneInputs';
-import { SceneInteraction } from './scene/SceneInteraction';
-import { SceneLoader } from './scene/SceneLoader';
-import { SceneTweens } from './scene/SceneTweens';
+import { SceneAudio } from './SceneAudio';
+import { SceneInputs } from './SceneInputs';
+import { SceneInteraction } from './SceneInteraction';
+import { SceneLoader } from './SceneLoader';
 import { canDestroy, canRestore, canSuspend, SceneState } from './SceneState';
-import { hookOwnerName, requireSynchronousHook } from './syncHooks';
-import { SystemRegistry } from './SystemRegistry';
-import type { Seconds } from './units';
+import { SceneTweens } from './SceneTweens';
 
 // User Timing mark/measure names for the scene sub-phases dispatched here
 // (dev-only). Constant strings so the Performance panel groups every frame's

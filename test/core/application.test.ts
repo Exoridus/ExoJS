@@ -1,6 +1,6 @@
 import type { MockInstance } from 'vitest';
 
-import { Scene } from '#core/Scene';
+import { Scene } from '#core/scene/Scene';
 import { Time } from '#core/units';
 
 // SceneDirector is fully mocked in this file's harness (see
@@ -181,7 +181,7 @@ const loadApplicationHarness = async (
       };
     }),
   }));
-  vi.doMock('#core/SceneDirector', () => ({
+  vi.doMock('#core/scene/SceneDirector', () => ({
     SceneDirector: vi.fn(function () {
       return sceneDirector;
     }),

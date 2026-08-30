@@ -1,4 +1,5 @@
-import type { Application } from './Application';
+import type { Application } from '#core/Application';
+
 import type { PhasedSceneTransition } from './PhasedSceneTransition';
 import type { Scene } from './Scene';
 import { DuplicateSceneRegistrationError, InvalidSceneRegistrationError } from './sceneErrors';

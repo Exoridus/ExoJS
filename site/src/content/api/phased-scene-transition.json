@@ -743,11 +743,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/PhasedSceneTransition.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/PhasedSceneTransition.ts"
+        "label": "src/core/scene/PhasedSceneTransition.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/PhasedSceneTransition.ts"
       }
     }
   ],
-  "sourcePath": "src/core/PhasedSceneTransition.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/PhasedSceneTransition.ts"
+  "sourcePath": "src/core/scene/PhasedSceneTransition.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/PhasedSceneTransition.ts"
 }

@@ -1,9 +1,8 @@
 import { assert } from '#core/dev';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
+import type { TextureOptions } from '#rendering/texture/TextureOptions';
 import type { ColorTextureFormat } from '#rendering/types';
-
-import type { TextureOptions } from './texture/TextureOptions';
 
 /** Construction options for {@link MultiRenderTarget}. */
 export interface MultiRenderTargetOptions extends Partial<TextureOptions> {

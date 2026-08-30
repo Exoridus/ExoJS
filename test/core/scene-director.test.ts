@@ -6,11 +6,11 @@ import { TweenState } from '#animation/types';
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { logger } from '#core/Logger';
-import { PhasedSceneTransition } from '#core/PhasedSceneTransition';
-import { Scene } from '#core/Scene';
-import { SceneAvailability } from '#core/SceneAvailability';
-import { SceneDirector } from '#core/SceneDirector';
-import { SceneTransitionLifecycleError } from '#core/sceneErrors';
+import { PhasedSceneTransition } from '#core/scene/PhasedSceneTransition';
+import { Scene } from '#core/scene/Scene';
+import { SceneAvailability } from '#core/scene/SceneAvailability';
+import { SceneDirector } from '#core/scene/SceneDirector';
+import { SceneTransitionLifecycleError } from '#core/scene/sceneErrors';
 import {
   AmbiguousSceneInstanceError,
   ConcurrentSceneNavigationError,
@@ -21,9 +21,9 @@ import {
   SceneInstanceNotFoundError,
   SceneNavigationAbortedError,
   UnregisteredSceneError,
-} from '#core/sceneErrors';
-import { SceneScope } from '#core/SceneScope';
-import { SceneState } from '#core/SceneState';
+} from '#core/scene/sceneErrors';
+import { SceneScope } from '#core/scene/SceneScope';
+import { SceneState } from '#core/scene/SceneState';
 import {
   SceneTransition,
   type SceneTransitionContext,
@@ -31,8 +31,8 @@ import {
   type SceneTransitionFrame,
   type SceneTransitionRequirements,
   type SceneTransitionSession,
-} from '#core/SceneTransition';
-import type { SceneConstructor } from '#core/sceneTypes';
+} from '#core/scene/SceneTransition';
+import type { SceneConstructor } from '#core/scene/sceneTypes';
 import { Signal } from '#core/Signal';
 import { type Seconds, Time } from '#core/units';
 import type { Gamepad } from '#input/Gamepad';

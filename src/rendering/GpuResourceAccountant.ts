@@ -1,7 +1,7 @@
+import type { DataTextureFormat } from '#rendering/texture/DataTexture';
 import { TextureFormat } from '#rendering/types';
 
 import type { RenderStats } from './RenderStats';
-import type { DataTextureFormat } from './texture/DataTexture';
 
 /**
  * Per-backend GPU resource accountant.

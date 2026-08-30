@@ -111,7 +111,7 @@ const loadOnFrameHarness = async (): Promise<OnFrameTestHarness> => {
       };
     }),
   }));
-  vi.doMock('#core/SceneDirector', () => ({
+  vi.doMock('#core/scene/SceneDirector', () => ({
     SceneDirector: vi.fn(function () {
       return sceneDirector;
     }),

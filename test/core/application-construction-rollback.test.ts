@@ -11,7 +11,7 @@ import { TweenSystem } from '#animation/TweenSystem';
 import { Loader } from '#assets/Loader';
 import { AudioSystem } from '#audio/AudioSystem';
 import { Application } from '#core/Application';
-import { SceneDirector } from '#core/SceneDirector';
+import { SceneDirector } from '#core/scene/SceneDirector';
 import { ResponsiveCanvasSizing } from '#core/sizing/ResponsiveCanvasSizing';
 import type { System } from '#core/System';
 import { SystemRegistry } from '#core/SystemRegistry';

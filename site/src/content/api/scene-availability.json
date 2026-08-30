@@ -82,11 +82,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/SceneAvailability.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneAvailability.ts"
+        "label": "src/core/scene/SceneAvailability.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/SceneAvailability.ts"
       }
     }
   ],
-  "sourcePath": "src/core/SceneAvailability.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneAvailability.ts"
+  "sourcePath": "src/core/scene/SceneAvailability.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/SceneAvailability.ts"
 }

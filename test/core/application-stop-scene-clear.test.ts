@@ -6,9 +6,9 @@
  * `ConcurrentSceneNavigationError` must never escape to the user for it.
  */
 import { Application } from '#core/Application';
-import { Scene } from '#core/Scene';
-import { ConcurrentSceneNavigationError } from '#core/sceneErrors';
-import { SceneTransition, type SceneTransitionEnvironment, type SceneTransitionRequirements, type SceneTransitionSession } from '#core/SceneTransition';
+import { Scene } from '#core/scene/Scene';
+import { ConcurrentSceneNavigationError } from '#core/scene/sceneErrors';
+import { SceneTransition, type SceneTransitionEnvironment, type SceneTransitionRequirements, type SceneTransitionSession } from '#core/scene/SceneTransition';
 import { Time } from '#core/units';
 
 vi.mock('#rendering/webgl2/WebGl2Backend', () => ({

@@ -1,6 +1,6 @@
 import type { Application } from '#core/Application';
-import { SceneAvailability } from '#core/SceneAvailability';
-import { SceneState } from '#core/SceneState';
+import { SceneAvailability } from '#core/scene/SceneAvailability';
+import { SceneState } from '#core/scene/SceneState';
 import type { Destroyable } from '#core/types';
 import type { ActionMap, ActionRecord, AnyActionMap } from '#input/actions/ActionMap';
 import type { InputScope } from '#input/actions/InputScope';

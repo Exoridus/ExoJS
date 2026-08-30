@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Loadable, Loader } from '#assets/Loader';
 import { Color } from '#core/Color';
-import { Scene } from '#core/Scene';
+import { Scene } from '#core/scene/Scene';
 import { SceneNode } from '#core/SceneNode';
 import { Prefab } from '#core/serialization/Prefab';
 import { defaultSerializationRegistry, registerSerializer, SerializationRegistry } from '#core/serialization/SerializationRegistry';

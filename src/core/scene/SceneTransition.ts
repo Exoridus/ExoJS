@@ -1,7 +1,6 @@
+import type { Seconds } from '#core/units';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
-
-import type { Seconds } from './units';
 
 /**
  * What kind of navigation a {@link SceneTransitionSession} is running for.

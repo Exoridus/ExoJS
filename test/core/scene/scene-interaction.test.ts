@@ -1,6 +1,6 @@
 import type { Application } from '#core/Application';
 import { SceneInteraction } from '#core/scene/SceneInteraction';
-import { SceneState } from '#core/SceneState';
+import { SceneState } from '#core/scene/SceneState';
 import type { RenderNode } from '#rendering/RenderNode';
 
 const createAppStub = (): Application =>

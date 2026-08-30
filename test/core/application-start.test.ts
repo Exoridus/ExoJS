@@ -7,7 +7,7 @@ import type { MockInstance } from 'vitest';
  * the scene registry, and scene activation all run for real.
  */
 import { Application, ApplicationState } from '#core/Application';
-import { Scene } from '#core/Scene';
+import { Scene } from '#core/scene/Scene';
 
 // ---------------------------------------------------------------------------
 // Backend stubs - keep WebGL2 / WebGPU out of jsdom. Inline factories: vi.mock()

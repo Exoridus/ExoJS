@@ -8,8 +8,8 @@
  */
 
 import type { Application } from '#core/Application';
-import { Scene } from '#core/Scene';
-import { SceneState } from '#core/SceneState';
+import { Scene } from '#core/scene/Scene';
+import { SceneState } from '#core/scene/SceneState';
 import { InputSystem } from '#input/InputSystem';
 import { InteractionSystem } from '#input/InteractionSystem';
 import type { KeyEvent } from '#input/KeyEvent';

@@ -1,4 +1,4 @@
-import { SceneTransitionLifecycleError } from '#core/sceneErrors';
+import { SceneTransitionLifecycleError } from '#core/scene/sceneErrors';
 import {
   SceneTransition,
   type SceneTransitionContext,
@@ -6,7 +6,7 @@ import {
   type SceneTransitionFrame,
   type SceneTransitionRequirements,
   type SceneTransitionSession,
-} from '#core/SceneTransition';
+} from '#core/scene/SceneTransition';
 import type { Seconds } from '#core/units';
 import type { RenderingContext } from '#rendering/RenderingContext';
 

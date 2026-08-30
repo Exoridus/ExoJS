@@ -1,4 +1,4 @@
-import { Bounds } from '#core/Bounds';
+import { Bounds } from '#math/Bounds';
 import { type ReadonlyRectangle, Rectangle } from '#math/Rectangle';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';

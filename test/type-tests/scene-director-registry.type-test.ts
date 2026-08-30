@@ -1,6 +1,6 @@
 import type { Application } from '#core/Application';
-import { Scene } from '#core/Scene';
-import { SceneDirector } from '#core/SceneDirector';
+import { Scene } from '#core/scene/Scene';
+import { SceneDirector } from '#core/scene/SceneDirector';
 
 interface GameData {
   readonly level: number;

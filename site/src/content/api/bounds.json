@@ -3,7 +3,7 @@
   "description": "Mutable axis-aligned bounding box accumulator. Starts as the empty bounds (`-Infinity..Infinity` reversed) and grows monotonically as points or rectangles are merged in via Bounds.addCoords and Bounds.addRect. Used during scene-graph traversal to accumulate a subtree's combined extent for culling and hit-testing. The Bounds.getRect accessor lazily folds the current min/max into a shared Rectangle - copy the result if you need to retain it across further accumulation.",
   "symbol": "Bounds",
   "kind": "class",
-  "subsystem": "core",
+  "subsystem": "math",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 10,
@@ -399,11 +399,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/Bounds.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Bounds.ts"
+        "label": "src/math/Bounds.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Bounds.ts"
       }
     }
   ],
-  "sourcePath": "src/core/Bounds.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Bounds.ts"
+  "sourcePath": "src/math/Bounds.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Bounds.ts"
 }

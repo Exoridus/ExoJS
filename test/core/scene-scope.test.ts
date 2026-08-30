@@ -1,7 +1,7 @@
 import type { Application } from '#core/Application';
-import { Scene } from '#core/Scene';
-import { SceneScope } from '#core/SceneScope';
-import { SceneState } from '#core/SceneState';
+import { Scene } from '#core/scene/Scene';
+import { SceneScope } from '#core/scene/SceneScope';
+import { SceneState } from '#core/scene/SceneState';
 import { Signal } from '#core/Signal';
 import { Time } from '#core/units';
 

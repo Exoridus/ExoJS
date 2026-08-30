@@ -270,11 +270,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/transitions/CrossFadeSceneTransition.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/transitions/CrossFadeSceneTransition.ts"
+        "label": "src/core/scene/transitions/CrossFadeSceneTransition.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/transitions/CrossFadeSceneTransition.ts"
       }
     }
   ],
-  "sourcePath": "src/core/transitions/CrossFadeSceneTransition.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/transitions/CrossFadeSceneTransition.ts"
+  "sourcePath": "src/core/scene/transitions/CrossFadeSceneTransition.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/transitions/CrossFadeSceneTransition.ts"
 }

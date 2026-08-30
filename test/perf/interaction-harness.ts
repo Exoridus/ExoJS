@@ -19,8 +19,8 @@
  */
 
 import type { Application } from '../../src/core/Application';
-import { Scene } from '../../src/core/Scene';
-import { SceneState } from '../../src/core/SceneState';
+import { Scene } from '../../src/core/scene/Scene';
+import { SceneState } from '../../src/core/scene/SceneState';
 import type { BrowserGamepad } from '../../src/input/gamepadDefinitions';
 import { InputSystem } from '../../src/input/InputSystem';
 import { InteractionSystem } from '../../src/input/InteractionSystem';

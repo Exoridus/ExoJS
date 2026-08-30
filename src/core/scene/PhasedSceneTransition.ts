@@ -1,5 +1,6 @@
 import { Ease } from '#animation/Ease';
 import type { EasingFunction } from '#animation/types';
+import type { Seconds } from '#core/units';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import { Sprite } from '#rendering/sprite/Sprite';
 
@@ -11,7 +12,6 @@ import {
   type SceneTransitionRequirements,
   type SceneTransitionSession,
 } from './SceneTransition';
-import type { Seconds } from './units';
 
 /**
  * Per-phase render-resource requirements for one phase (`enter` or `exit`)

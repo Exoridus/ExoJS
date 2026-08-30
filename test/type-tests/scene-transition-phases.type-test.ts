@@ -1,6 +1,6 @@
-import type { PhasedSceneTransition } from '#core/PhasedSceneTransition';
-import type { SceneTransition } from '#core/SceneTransition';
-import type { SceneTransitionPhases, SceneTransitionSelection } from '#core/sceneTypes';
+import type { PhasedSceneTransition } from '#core/scene/PhasedSceneTransition';
+import type { SceneTransition } from '#core/scene/SceneTransition';
+import type { SceneTransitionPhases, SceneTransitionSelection } from '#core/scene/sceneTypes';
 
 declare const enterPhase: PhasedSceneTransition;
 declare const exitPhase: PhasedSceneTransition;

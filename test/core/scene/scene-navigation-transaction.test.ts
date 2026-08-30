@@ -1,8 +1,8 @@
-import { Scene } from '#core/Scene';
+import { Scene } from '#core/scene/Scene';
 import { SceneNavigationTransaction } from '#core/scene/SceneNavigationTransaction';
-import type { SceneScope } from '#core/SceneScope';
-import { SceneState } from '#core/SceneState';
-import type { AnySceneConstructor } from '#core/sceneTypes';
+import type { SceneScope } from '#core/scene/SceneScope';
+import { SceneState } from '#core/scene/SceneState';
+import type { AnySceneConstructor } from '#core/scene/sceneTypes';
 import { Signal } from '#core/Signal';
 
 class FakeTarget extends Scene {}

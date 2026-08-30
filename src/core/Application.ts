@@ -3,6 +3,18 @@ import { TweenSystem } from '#animation/TweenSystem';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, type LoaderOptions } from '#assets/Loader';
 import { AudioSystem } from '#audio/AudioSystem';
+import { SceneDirector } from '#core/scene/SceneDirector';
+import { SceneNavigationAbortedError } from '#core/scene/sceneErrors';
+import {
+  type AnySceneConstructor,
+  type ChangeSceneArgs,
+  type InferSceneData,
+  type NavigableSceneConstructor,
+  type RegistryKeyOf,
+  type SceneRegistryShape,
+} from '#core/scene/sceneTypes';
+import { defaultSerializationRegistry, SerializationRegistry } from '#core/serialization/SerializationRegistry';
+import type { CanvasSizing, CanvasSizingContext, CanvasSizingHostMetrics, CanvasSizingMetrics } from '#core/sizing/CanvasSizing';
 import type { Extension, ExtensionDisposer } from '#extensions/Extension';
 import { disposeExtensions, installExtensions } from '#extensions/lifetime';
 import { materializeAssetTypes, materializeRendererBindings, materializeSerializerBindings } from '#extensions/materialize';
@@ -37,19 +49,7 @@ import { showDevErrorOverlay } from './devErrorOverlay';
 import { FixedTimestep } from './FixedTimestep';
 import { hello, logger } from './Logger';
 import { Perf } from './Perf';
-import { SceneDirector } from './SceneDirector';
-import { SceneNavigationAbortedError } from './sceneErrors';
-import {
-  type AnySceneConstructor,
-  type ChangeSceneArgs,
-  type InferSceneData,
-  type NavigableSceneConstructor,
-  type RegistryKeyOf,
-  type SceneRegistryShape,
-} from './sceneTypes';
-import { defaultSerializationRegistry, SerializationRegistry } from './serialization/SerializationRegistry';
 import { Signal } from './Signal';
-import type { CanvasSizing, CanvasSizingContext, CanvasSizingHostMetrics, CanvasSizingMetrics } from './sizing/CanvasSizing';
 import type { System } from './System';
 import { SystemOrder } from './SystemOrder';
 import { SystemRegistry } from './SystemRegistry';
