@@ -38,6 +38,9 @@ const SCAN_ROOTS = ['src'];
 
 const SKIPPED_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage']);
 
+/** `__name__` marks a directory a suite creates and removes; it holds no authored source. */
+const isTransientDirectory = (name: string): boolean => name.startsWith('__') && name.endsWith('__');
+
 /**
  * Names that describe a module's role rather than a symbol, so neither
  * direction of the rule applies to them.
@@ -162,10 +165,19 @@ const collectFiles = async (root: string): Promise<string[]> => {
 
   if (statSync(absolute, { throwIfNoEntry: false })?.isFile()) return [relative(REPO_ROOT, absolute).replaceAll('\\', '/')];
 
-  const entries = await readdir(absolute, { withFileTypes: true });
+  // The tree is live: a suite running in parallel can remove a directory
+  // between this walk reaching it and reading it. Nothing to check is the
+  // correct answer there, not a failed gate.
+  const entries = await readdir(absolute, { withFileTypes: true }).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === 'ENOENT') return [];
+
+    throw error;
+  });
   const files = await Promise.all(
     entries.map(async (entry): Promise<string[]> => {
-      if (entry.isDirectory()) return SKIPPED_DIRECTORIES.has(entry.name) ? [] : collectFiles(join(root, entry.name));
+      if (entry.isDirectory()) {
+        return SKIPPED_DIRECTORIES.has(entry.name) || isTransientDirectory(entry.name) ? [] : collectFiles(join(root, entry.name));
+      }
 
       return entry.name.endsWith('.ts') && !entry.name.endsWith('.d.ts') ? [join(root, entry.name).replaceAll('\\', '/')] : [];
     }),
