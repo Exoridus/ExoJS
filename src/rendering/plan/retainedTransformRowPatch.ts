@@ -1,6 +1,7 @@
 import { DirtyChannel, nodeDirtyIndex } from '#core/nodeDirtyIndex';
 import type { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import { resolveRendererFor } from '#rendering/rendererLookup';
 import type { RenderNode } from '#rendering/RenderNode';
 import { packTintRow, packTransformRow, TRANSFORM_FLOATS_PER_ROW, TRANSFORM_TINT_BYTES_PER_ROW } from '#rendering/TransformBuffer';
 
@@ -17,18 +18,6 @@ import type { RetainedGroupBundle } from './RetainedInstructionSet';
 export type PatchableRetainedGroupBundle = RetainedGroupBundle & {
   _patchTransformRow: NonNullable<RetainedGroupBundle['_patchTransformRow']>;
 };
-
-/**
- * A backend exposing a renderer registry, structurally - the same narrow shape
- * `drawCommandUsesSharedTransform` (`plan/RenderCommand.ts`) resolves through,
- * so every call site agrees on what "the renderer for this drawable" means
- * without a hard dependency between the modules.
- */
-interface BackendWithRendererRegistry {
-  readonly rendererRegistry?: {
-    resolve(drawable: Drawable): unknown;
-  };
-}
 
 /**
  * Optional per-renderer escape hatch from the generic shared-`TransformBuffer`
@@ -86,18 +75,14 @@ export const tryPatchRetainedTransformRow = (
   base: number,
 ): boolean => {
   const drawable = node as unknown as Drawable;
-  const registry = (backend as BackendWithRendererRegistry).rendererRegistry;
+  const renderer = resolveRendererFor(backend, drawable);
 
-  if (registry && typeof registry.resolve === 'function') {
+  if (hasOwnTransformRowPatch(renderer)) {
     try {
-      const renderer = registry.resolve(drawable);
-
-      if (hasOwnTransformRowPatch(renderer)) {
-        return renderer._patchOwnTransformRow(node, bundle, base);
-      }
+      return renderer._patchOwnTransformRow(node, bundle, base);
     } catch {
-      // No renderer registered for this drawable (custom drawable type) - fall
-      // through to the generic shared-transform patch below.
+      // A renderer that declines mid-patch falls through to the generic
+      // shared-transform patch below, the same as one that has no patch at all.
     }
   }
 

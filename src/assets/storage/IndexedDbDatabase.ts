@@ -75,6 +75,9 @@ export class IndexedDbDatabase implements Database {
     return true;
   }
 
+  // Async to match Database.connect and the rest of the contract; closing a
+  // connection has nothing to await.
+  // eslint-disable-next-line @typescript-eslint/require-await
   public async disconnect(): Promise<boolean> {
     this._forgetConnection();
 

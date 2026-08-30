@@ -525,6 +525,9 @@ export class AssetResidency {
    * started immediately.
    * @internal
    */
+  // Claim tracking, multi-handle fill and options equivalence are one branchy
+  // state machine; splitting the branches apart would hide the transitions.
+  // eslint-disable-next-line complexity
   public _adopt(handle: object, claimer: LoaderScope, background = false): void {
     const meta = _readMeta(handle);
 
@@ -1118,6 +1121,8 @@ export class AssetResidency {
    * method.
    * @internal
    */
+  // Same state machine as _adopt, seen from the store side.
+  // eslint-disable-next-line complexity
   public _storeResource(asset: CanonicalAsset, resource: unknown): unknown {
     const key = asset.key;
 

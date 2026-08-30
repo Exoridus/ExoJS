@@ -131,6 +131,8 @@
     "lint:source-hygiene": "tsx scripts/check-source-hygiene.ts",
     "lint:inline-source": "tsx scripts/check-inline-source.ts",
     "lint:file-symbols": "tsx scripts/check-file-symbol-naming.ts",
+    "lint:config-paths": "tsx scripts/check-eslint-config-paths.ts",
+    "lint:overrides:audit": "tsx scripts/audit-eslint-overrides.ts",
     "lint:js-files": "tsx scripts/check-javascript-files.ts",
     "lint:shaders": "tsx scripts/check-shader-sources.ts",
     "format": "prettier --write .",

@@ -1,6 +1,7 @@
 import type { Drawable } from '#rendering/Drawable';
 import type { Material } from '#rendering/material/Material';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import { resolveRendererFor } from '#rendering/rendererLookup';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import type { SamplerOptions } from '#rendering/texture/TextureOptions';
@@ -189,12 +190,6 @@ export const forcesBatchFlush = (prev: MaterialKey, next: MaterialKey): boolean 
 export const materialKeyForcesFlush = (prevPipelineKey: number, prevBindKey: number, prevOwnMaterial: boolean, next: MaterialKey): boolean =>
   prevPipelineKey !== next.pipelineKey || prevOwnMaterial !== next.ownMaterial || (next.ownMaterial && prevBindKey !== next.bindKey);
 
-interface BackendWithRendererRegistry {
-  readonly rendererRegistry?: {
-    resolve(drawable: Drawable): unknown;
-  };
-}
-
 interface TextureCarrier {
   readonly texture?: Texture | RenderTexture | null;
 }
@@ -228,19 +223,12 @@ const getOrCreateId = (map: WeakMap<object, number>, target: object, allocate: (
 };
 
 const getRendererId = (drawable: Drawable, backend: RenderBackend | null): number => {
-  const registry = (backend as BackendWithRendererRegistry | null)?.rendererRegistry;
+  // A custom drawable with no registered renderer resolves to nothing; fall
+  // back to a conservative constructor-based id.
+  const renderer = resolveRendererFor(backend, drawable);
 
-  if (registry && typeof registry.resolve === 'function') {
-    try {
-      const renderer = registry.resolve(drawable);
-
-      if (renderer && typeof renderer === 'object') {
-        return getOrCreateId(rendererIds, renderer, () => nextRendererId++);
-      }
-    } catch {
-      // Resolve can throw if no renderer is registered for a custom drawable.
-      // Fall back to a conservative constructor-based id.
-    }
+  if (renderer && typeof renderer === 'object') {
+    return getOrCreateId(rendererIds, renderer, () => nextRendererId++);
   }
 
   const ctor = drawable.constructor;

@@ -1,6 +1,7 @@
 import type { Drawable } from '#rendering/Drawable';
 import type { MaterialKey } from '#rendering/material/MaterialKey';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import { resolveRendererFor } from '#rendering/rendererLookup';
 
 export const enum RenderEntryKind {
   Draw,
@@ -28,12 +29,6 @@ export interface DrawCommand {
   maxY: number;
 }
 
-interface BackendWithRendererRegistry {
-  readonly rendererRegistry?: {
-    resolve(drawable: Drawable): unknown;
-  };
-}
-
 /**
  * Whether a draw command's renderer reads the shared {@link TransformBuffer} /
  * transform storage. The render-group upload boundary packs each command's
@@ -56,26 +51,10 @@ interface SharedTransformRenderer {
   readonly _consumesSharedTransform?: boolean;
 }
 
-interface BackendWithRendererRegistry {
-  readonly rendererRegistry?: {
-    resolve(drawable: Drawable): unknown;
-  };
-}
-
 export const drawCommandUsesSharedTransform = (command: DrawCommand, backend: RenderBackend): boolean => {
-  const registry = (backend as BackendWithRendererRegistry).rendererRegistry;
+  // No renderer to ask, or none registered for a custom drawable: keep the
+  // conservative write so any consumer of the shared transform keeps working.
+  const renderer = resolveRendererFor(backend, command.drawable) as SharedTransformRenderer | null;
 
-  if (!registry || typeof registry.resolve !== 'function') {
-    return true;
-  }
-
-  try {
-    const renderer = registry.resolve(command.drawable) as SharedTransformRenderer;
-
-    return renderer._consumesSharedTransform !== false;
-  } catch {
-    // No renderer registered for a custom drawable: keep the conservative
-    // write so any consumer of the shared transform keeps working.
-    return true;
-  }
+  return renderer?._consumesSharedTransform !== false;
 };

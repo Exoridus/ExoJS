@@ -50,6 +50,9 @@ const validPositionAlignValues = new Set<string>(['auto', 'line-left', 'center',
  *
  * @internal
  */
+// One branch per WebVTT cue setting; the parser reads flatter as a single
+// dispatch than as a table of one-line handlers.
+// eslint-disable-next-line complexity
 const applyCueSettings = (cue: VTTCue, settings: string): void => {
   if (!settings) {
     return;
@@ -200,6 +203,9 @@ const parseSrt = (source: string): VTTCue[] => {
 
     const timingLine = lines[timingIndex];
 
+    // A missing line and a line without the arrow are both 'not a timing
+    // line', which is what the optional chain says.
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!timingLine?.includes('-->')) continue;
 
     const arrowIndex = timingLine.indexOf('-->');

@@ -1,3 +1,10 @@
+/*
+ * eslint-disable-next-line is not enough for `max-lines`: the rule reports the
+ * file, not a line. This backend is one cohesive GL surface that grew past the
+ * limit with instanced-draw support, and splitting it would scatter tightly
+ * coupled GL state across modules. Known deviation, candidate for extraction.
+ */
+/* eslint-disable max-lines */
 import type { Application, CanvasAlphaMode, RenderingApplicationOptions } from '#core/Application';
 import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
@@ -84,6 +91,10 @@ const glEnumToString = (gl: WebGL2RenderingContext, value: number): string => {
 const glArgsToString = (gl: WebGL2RenderingContext, args: unknown[]): string =>
   args.map(a => (typeof a === 'number' ? glEnumToString(gl, a) : String(a))).join(', ');
 
+// A dev-only call tracer: the routed logger may already be gone by the time a
+// GL call misbehaves, so this writes to the console directly. Stripped from
+// production builds with the rest of the `__DEV__` branch.
+/* eslint-disable no-console */
 const makeWebGl2DebugContext = (gl: WebGL2RenderingContext): WebGL2RenderingContext =>
   new Proxy(gl, {
     get(target, prop, receiver) {
@@ -259,6 +270,8 @@ const nativeRowCopyThreshold = 48;
  * bundles) is evicted and rebuilt against the fresh context - mirroring the
  * WebGPU backend's `_teardownDeviceState`. See {@link _reinitializeDeviceState}.
  */
+/* eslint-enable no-console */
+
 export class WebGl2Backend implements RenderBackend {
   public readonly backendType = RenderBackendType.WebGl2;
   public readonly rendererRegistry: RendererRegistry<WebGl2Backend> = new RendererRegistry<WebGl2Backend>();
@@ -545,6 +558,9 @@ export class WebGl2Backend implements RenderBackend {
     return (this._passCoordinatorInstance ??= new WebGl2PassCoordinator(this));
   }
 
+  // Async to match the RenderBackend contract that the WebGPU backend needs;
+  // acquiring a WebGL2 context is synchronous.
+  // eslint-disable-next-line @typescript-eslint/require-await
   public async initialize(): Promise<this> {
     return this;
   }
