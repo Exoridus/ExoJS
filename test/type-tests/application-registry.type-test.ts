@@ -1,5 +1,5 @@
 import { Application } from '#core/Application';
-import { Scene } from '#core/Scene';
+import { Scene } from '#core/scene/Scene';
 
 class TitleScene extends Scene {}
 interface GameData {

@@ -1,7 +1,7 @@
-import type { Scene } from '#core/Scene';
-import type { SceneScope } from '#core/SceneScope';
-import type { SceneState } from '#core/SceneState';
-import type { AnySceneConstructor } from '#core/sceneTypes';
+import type { Scene } from '#core/scene/Scene';
+import type { SceneScope } from '#core/scene/SceneScope';
+import type { SceneState } from '#core/scene/SceneState';
+import type { AnySceneConstructor } from '#core/scene/sceneTypes';
 import type { Signal } from '#core/Signal';
 
 /** An outgoing scope at a switch boundary, paired with the constructor it was activated from (needed to key it in `_retained` when suspended). */

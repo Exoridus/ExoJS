@@ -1,24 +1,24 @@
+import type { Application } from '#core/Application';
+import { DestroyScope } from '#core/DestroyScope';
+import { deserializeInto, migrate, serializeTree } from '#core/serialization/serialize';
+import { SERIALIZATION_VERSION, type SerializedScene } from '#core/serialization/types';
+import { Signal } from '#core/Signal';
+import type { SystemRegistry } from '#core/SystemRegistry';
+import type { Destroyable, Synchronous } from '#core/types';
+import type { Seconds } from '#core/units';
 import { Container } from '#rendering/Container';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import type { RenderNode } from '#rendering/RenderNode';
 import { UIRoot } from '#ui/UIRoot';
 
-import type { Application } from './Application';
-import { DestroyScope } from './DestroyScope';
-import type { SceneAudio } from './scene/SceneAudio';
-import type { SceneInputs } from './scene/SceneInputs';
-import type { SceneInteraction } from './scene/SceneInteraction';
-import type { SceneLoader } from './scene/SceneLoader';
-import type { SceneTweens } from './scene/SceneTweens';
+import type { SceneAudio } from './SceneAudio';
+import type { SceneInputs } from './SceneInputs';
+import type { SceneInteraction } from './SceneInteraction';
+import type { SceneLoader } from './SceneLoader';
 import type { SceneScope } from './SceneScope';
 import type { SceneState } from './SceneState';
+import type { SceneTweens } from './SceneTweens';
 import type { ApplicationLike, ApplicationOf } from './sceneTypes';
-import { deserializeInto, migrate, serializeTree } from './serialization/serialize';
-import { SERIALIZATION_VERSION, type SerializedScene } from './serialization/types';
-import { Signal } from './Signal';
-import type { SystemRegistry } from './SystemRegistry';
-import type { Destroyable, Synchronous } from './types';
-import type { Seconds } from './units';
 
 /**
  * A scene's lifecycle host. Subclass to define scene behavior:

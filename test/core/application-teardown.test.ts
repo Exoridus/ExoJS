@@ -6,7 +6,7 @@
  * `Scene.lifecycleSignal` that lets a scene cooperate with all of it.
  */
 import { Application, ApplicationState } from '#core/Application';
-import { Scene } from '#core/Scene';
+import { Scene } from '#core/scene/Scene';
 
 vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
   WebGl2Backend: vi.fn().mockImplementation(function () {

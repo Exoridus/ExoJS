@@ -1,5 +1,5 @@
 import type { Application } from '#core/Application';
-import { SceneState } from '#core/SceneState';
+import { SceneState } from '#core/scene/SceneState';
 import type { Destroyable } from '#core/types';
 import type { ScopeToken } from '#input/ScopeToken';
 import type { RenderNode } from '#rendering/RenderNode';

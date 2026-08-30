@@ -1,7 +1,7 @@
 import type { Application } from '#core/Application';
+import { SceneAvailability } from '#core/scene/SceneAvailability';
 import { SceneInputs } from '#core/scene/SceneInputs';
-import { SceneAvailability } from '#core/SceneAvailability';
-import { SceneState } from '#core/SceneState';
+import { SceneState } from '#core/scene/SceneState';
 import { Signal } from '#core/Signal';
 import { ActionMap } from '#input/actions/ActionMap';
 import { ButtonAction } from '#input/actions/ButtonAction';

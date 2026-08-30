@@ -7,8 +7,8 @@ import type { MockInstance } from 'vitest';
  * to Running).
  */
 import { Application, ApplicationState } from '#core/Application';
-import { Scene } from '#core/Scene';
-import { SceneTransition, type SceneTransitionEnvironment, type SceneTransitionRequirements, type SceneTransitionSession } from '#core/SceneTransition';
+import { Scene } from '#core/scene/Scene';
+import { SceneTransition, type SceneTransitionEnvironment, type SceneTransitionRequirements, type SceneTransitionSession } from '#core/scene/SceneTransition';
 
 vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
   WebGl2Backend: vi.fn().mockImplementation(function () {

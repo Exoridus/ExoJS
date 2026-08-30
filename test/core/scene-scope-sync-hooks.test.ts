@@ -31,8 +31,8 @@ import { type Plugin, rollup } from 'rollup';
 import ts from 'typescript';
 
 import type { Application } from '#core/Application';
-import { Scene } from '#core/Scene';
-import { SceneScope } from '#core/SceneScope';
+import { Scene } from '#core/scene/Scene';
+import { SceneScope } from '#core/scene/SceneScope';
 import { Signal } from '#core/Signal';
 import { SystemRegistry } from '#core/SystemRegistry';
 import { Time } from '#core/units';
@@ -423,7 +423,7 @@ describe('production parity of the synchronous-hook guard', () => {
 
   test.each([
     // SceneScope: init() plus the three frame hooks, and the shared cold-path helper.
-    { file: 'src/core/SceneScope.ts', minimumCallSites: 5 },
+    { file: 'src/core/scene/SceneScope.ts', minimumCallSites: 5 },
     // SystemRegistry: the three phase loops, and the shared cold-path helper.
     { file: 'src/core/SystemRegistry.ts', minimumCallSites: 4 },
   ])('$file invokes the guard outside every __DEV__ branch', ({ file, minimumCallSites }) => {

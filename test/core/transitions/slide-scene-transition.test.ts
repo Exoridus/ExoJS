@@ -1,6 +1,6 @@
-import type { SceneTransitionPhaseContext, SceneTransitionPhaseRequirements } from '#core/PhasedSceneTransition';
-import type { SceneTransitionContext, SceneTransitionEnvironment } from '#core/SceneTransition';
-import { SlideSceneTransition } from '#core/transitions/SlideSceneTransition';
+import type { SceneTransitionPhaseContext, SceneTransitionPhaseRequirements } from '#core/scene/PhasedSceneTransition';
+import type { SceneTransitionContext, SceneTransitionEnvironment } from '#core/scene/SceneTransition';
+import { SlideSceneTransition } from '#core/scene/transitions/SlideSceneTransition';
 import { Time } from '#core/units';
 import type { Sprite } from '#rendering/sprite/Sprite';
 

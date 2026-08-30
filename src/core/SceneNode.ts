@@ -1,4 +1,5 @@
 import type { AbstractVector } from '#math/AbstractVector';
+import { Bounds } from '#math/Bounds';
 import type { Circle } from '#math/Circle';
 import {
   getCollisionSat,
@@ -27,7 +28,6 @@ import type { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 import type { View } from '#rendering/View';
 
-import { Bounds } from './Bounds';
 import { DirtyChannel, nodeDirtyIndex } from './nodeDirtyIndex';
 import { nextNodeRevision, NodeRevision } from './NodeRevision';
 import type { Stage } from './Stage';

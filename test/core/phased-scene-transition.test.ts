@@ -7,8 +7,8 @@ import {
   resolvePhasedSelection,
   type SceneTransitionPhaseContext,
   type SceneTransitionPhaseRequirements,
-} from '#core/PhasedSceneTransition';
-import type { SceneTransitionContext, SceneTransitionEnvironment, SceneTransitionFrame } from '#core/SceneTransition';
+} from '#core/scene/PhasedSceneTransition';
+import type { SceneTransitionContext, SceneTransitionEnvironment, SceneTransitionFrame } from '#core/scene/SceneTransition';
 import { Time } from '#core/units';
 
 const fakeContext: SceneTransitionContext = { operation: 'change', hasOutgoingScene: true, hasIncomingScene: true };

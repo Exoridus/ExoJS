@@ -1,5 +1,5 @@
 import type { Application } from '#core/Application';
-import { Scene } from '#core/Scene';
+import { Scene } from '#core/scene/Scene';
 import { Signal } from '#core/Signal';
 import type { InteractionHooks, Stage } from '#core/Stage';
 import { FocusController } from '#input/FocusController';

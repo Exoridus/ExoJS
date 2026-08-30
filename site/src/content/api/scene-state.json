@@ -119,11 +119,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/SceneState.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneState.ts"
+        "label": "src/core/scene/SceneState.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/SceneState.ts"
       }
     }
   ],
-  "sourcePath": "src/core/SceneState.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneState.ts"
+  "sourcePath": "src/core/scene/SceneState.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/SceneState.ts"
 }

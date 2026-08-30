@@ -67,26 +67,6 @@ export { MemoryStore } from './MemoryStore';
 export type { PreSizeOptions, SeamlessAdapter } from './seamless';
 export { SingleEntryLayout } from './SingleEntryLayout';
 export { BinaryAsset, CsvAsset, FontAsset, ImageAsset, Json, SubtitleAsset, SvgAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
-export {
-  BinaryAssetType,
-  binaryType,
-  CsvAssetType,
-  csvType,
-  JsonAssetType,
-  jsonType,
-  TextAssetType,
-  textType,
-  WasmAssetType,
-  wasmType,
-  XmlAssetType,
-  xmlType,
-} from './types/data';
-export { SubtitleAssetType, subtitleType } from './types/data';
-export { BmFontAssetType, bmFontType, FontAssetType, fontType } from './types/font';
-export { ImageAssetType, imageType, SvgAssetType, svgType } from './types/image';
-export { TextureAssetType, textureType } from './types/image';
-export { MusicAssetType, musicType, VideoAssetType, videoType } from './types/media';
-export { SoundAssetType, soundType } from './types/media';
 export type { WebStorageStoreOptions } from './WebStorageStore';
 export { WebStorageStore } from './WebStorageStore';
 export type { FontAssetOptions } from '#assets/factories/FontFactory';
@@ -100,3 +80,23 @@ export type { SoundSpriteSheet } from '#assets/factories/soundSprites';
 export type { SvgAssetOptions } from '#assets/factories/SvgFactory';
 export type { TextureAssetOptions } from '#assets/factories/TextureFactory';
 export type { VideoAssetOptions } from '#assets/factories/VideoFactory';
+export {
+  BinaryAssetType,
+  binaryType,
+  CsvAssetType,
+  csvType,
+  JsonAssetType,
+  jsonType,
+  TextAssetType,
+  textType,
+  WasmAssetType,
+  wasmType,
+  XmlAssetType,
+  xmlType,
+} from '#assets/types/data';
+export { SubtitleAssetType, subtitleType } from '#assets/types/data';
+export { BmFontAssetType, bmFontType, FontAssetType, fontType } from '#assets/types/font';
+export { ImageAssetType, imageType, SvgAssetType, svgType } from '#assets/types/image';
+export { TextureAssetType, textureType } from '#assets/types/image';
+export { MusicAssetType, musicType, VideoAssetType, videoType } from '#assets/types/media';
+export { SoundAssetType, soundType } from '#assets/types/media';

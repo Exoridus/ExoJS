@@ -6,7 +6,7 @@
 
 import type { Application } from '#core/Application';
 import { SceneInputs } from '#core/scene/SceneInputs';
-import { SceneState } from '#core/SceneState';
+import { SceneState } from '#core/scene/SceneState';
 import { ActionMap } from '#input/actions/ActionMap';
 import { ButtonAction } from '#input/actions/ButtonAction';
 import { InputScope } from '#input/actions/InputScope';

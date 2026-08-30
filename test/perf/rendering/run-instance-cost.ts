@@ -26,8 +26,8 @@
  */
 import { spawnSync } from 'node:child_process';
 
-import { Bounds } from '#core/Bounds';
 import { Color } from '#core/Color';
+import { Bounds } from '#math/Bounds';
 import { Flags } from '#math/Flags';
 import { Matrix } from '#math/Matrix';
 import { ObservableVector } from '#math/ObservableVector';

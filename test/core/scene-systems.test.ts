@@ -1,6 +1,6 @@
 import type { Application } from '#core/Application';
-import { Scene } from '#core/Scene';
-import { SceneScope } from '#core/SceneScope';
+import { Scene } from '#core/scene/Scene';
+import { SceneScope } from '#core/scene/SceneScope';
 import { Signal } from '#core/Signal';
 import type { System } from '#core/System';
 import { type Seconds, Time } from '#core/units';

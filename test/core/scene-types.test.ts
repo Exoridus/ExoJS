@@ -1,6 +1,6 @@
-import { Scene } from '#core/Scene';
-import { DuplicateSceneRegistrationError, InvalidSceneRegistrationError } from '#core/sceneErrors';
-import { validateSceneRegistry } from '#core/sceneTypes';
+import { Scene } from '#core/scene/Scene';
+import { DuplicateSceneRegistrationError, InvalidSceneRegistrationError } from '#core/scene/sceneErrors';
+import { validateSceneRegistry } from '#core/scene/sceneTypes';
 
 // change()/restore() take a single options object, so there is no
 // (data?, options?) variadic form left to disambiguate at runtime, and

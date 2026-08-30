@@ -17,7 +17,7 @@ import './worker-dev-global';
 
 import { Application } from '#core/Application';
 import { Color } from '#core/Color';
-import { Scene } from '#core/Scene';
+import { Scene } from '#core/scene/Scene';
 import { OffscreenPlatform } from '#platform/OffscreenPlatform';
 import { Container } from '#rendering/Container';
 import type { RenderingContext } from '#rendering/RenderingContext';

@@ -1,10 +1,11 @@
+import type { Application } from '#core/Application';
+import { logger } from '#core/Logger';
+import { Signal } from '#core/Signal';
+import type { Seconds } from '#core/units';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 
-import type { Application } from './Application';
-import { logger } from './Logger';
 import { Scene } from './Scene';
-import { SceneNavigationTransaction } from './scene/SceneNavigationTransaction';
 import { SceneTransitionLifecycleError } from './sceneErrors';
 import {
   AmbiguousSceneInstanceError,
@@ -15,6 +16,7 @@ import {
   SceneNavigationAbortedError,
   UnregisteredSceneError,
 } from './sceneErrors';
+import { SceneNavigationTransaction } from './SceneNavigationTransaction';
 import { SceneScope } from './SceneScope';
 import type { SceneState } from './SceneState';
 import type {
@@ -42,8 +44,6 @@ import {
   type UnloadOptions,
   validateSceneRegistry,
 } from './sceneTypes';
-import { Signal } from './Signal';
-import type { Seconds } from './units';
 
 export { SceneTransitionLifecycleError } from './sceneErrors';
 export {

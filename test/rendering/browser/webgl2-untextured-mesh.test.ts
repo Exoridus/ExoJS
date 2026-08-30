@@ -12,7 +12,7 @@
 
 import { Application } from '#core/Application';
 import { Color } from '#core/Color';
-import { Scene } from '#core/Scene';
+import { Scene } from '#core/scene/Scene';
 import { DebugOverlay } from '#debug/DebugOverlay';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { Graphics } from '#rendering/primitives/Graphics';

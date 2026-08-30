@@ -3,8 +3,8 @@ import { TweenSequencer } from '#animation/TweenSequencer';
 import { TweenSequencerState } from '#animation/TweenSequencer';
 import { TweenState } from '#animation/types';
 import type { Application } from '#core/Application';
-import { SceneAvailability } from '#core/SceneAvailability';
-import { SceneState } from '#core/SceneState';
+import { SceneAvailability } from '#core/scene/SceneAvailability';
+import { SceneState } from '#core/scene/SceneState';
 import type { Destroyable } from '#core/types';
 
 /** Options accepted by every `SceneTweens` tracking method. */

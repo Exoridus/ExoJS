@@ -1,5 +1,5 @@
 import { Application } from '#core/Application';
-import { Scene } from '#core/Scene';
+import { Scene } from '#core/scene/Scene';
 import type {
   AnySceneConstructor,
   ApplicationLike,
@@ -9,7 +9,7 @@ import type {
   InferSceneData,
   SceneRegistration,
   SceneRegistryShape,
-} from '#core/sceneTypes';
+} from '#core/scene/sceneTypes';
 
 interface GameData {
   readonly level: number;

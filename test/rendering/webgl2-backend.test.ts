@@ -163,7 +163,7 @@ describe('Application.setCursor', () => {
         return { update: vi.fn(), destroy: vi.fn() };
       }),
     }));
-    vi.doMock('#core/SceneDirector', () => ({
+    vi.doMock('#core/scene/SceneDirector', () => ({
       SceneDirector: vi.fn(function () {
         return {
           update: vi.fn(),

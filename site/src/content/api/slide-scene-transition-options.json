@@ -173,11 +173,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/transitions/SlideSceneTransition.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/transitions/SlideSceneTransition.ts"
+        "label": "src/core/scene/transitions/SlideSceneTransition.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/transitions/SlideSceneTransition.ts"
       }
     }
   ],
-  "sourcePath": "src/core/transitions/SlideSceneTransition.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/transitions/SlideSceneTransition.ts"
+  "sourcePath": "src/core/scene/transitions/SlideSceneTransition.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/transitions/SlideSceneTransition.ts"
 }

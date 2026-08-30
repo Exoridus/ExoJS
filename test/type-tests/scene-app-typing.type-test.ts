@@ -1,5 +1,5 @@
 import type { Application } from '#core/Application';
-import { Scene } from '#core/Scene';
+import { Scene } from '#core/scene/Scene';
 
 import { type app, type GameApplication } from './helpers/scene-app-anchor-app';
 import { AppScene } from './helpers/scene-app-anchor-scene';

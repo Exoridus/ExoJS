@@ -3,8 +3,8 @@ import {
   type PhasedSceneTransitionOptions,
   type SceneTransitionPhaseContext,
   type SceneTransitionPhaseRequirements,
-} from '#core/PhasedSceneTransition';
-import type { SceneTransitionContext } from '#core/SceneTransition';
+} from '#core/scene/PhasedSceneTransition';
+import type { SceneTransitionContext } from '#core/scene/SceneTransition';
 import { Sprite } from '#rendering/sprite/Sprite';
 
 /** The edge the outgoing content exits toward - see {@link SlideSceneTransitionOptions.direction}. */

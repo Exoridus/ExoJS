@@ -1,6 +1,6 @@
 import type { Application } from '#core/Application';
-import { Scene } from '#core/Scene';
-import { SceneState } from '#core/SceneState';
+import { Scene } from '#core/scene/Scene';
+import { SceneState } from '#core/scene/SceneState';
 import { Signal } from '#core/Signal';
 import type { ContextMenuRequest } from '#input/ContextMenuRequest';
 import type { Gamepad } from '#input/Gamepad';

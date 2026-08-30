@@ -148,11 +148,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/transitions/FadeSceneTransition.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/transitions/FadeSceneTransition.ts"
+        "label": "src/core/scene/transitions/FadeSceneTransition.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/transitions/FadeSceneTransition.ts"
       }
     }
   ],
-  "sourcePath": "src/core/transitions/FadeSceneTransition.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/transitions/FadeSceneTransition.ts"
+  "sourcePath": "src/core/scene/transitions/FadeSceneTransition.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/transitions/FadeSceneTransition.ts"
 }

@@ -1,7 +1,7 @@
 import { Signal } from '#core/Signal';
 import { getPreciseTime } from '#core/utils';
+import type { ChannelEventBatch } from '#input/actions/types';
 
-import type { ChannelEventBatch } from './actions/types';
 import type { GamepadAxisChannel } from './GamepadAxis';
 import type { GamepadButtonChannel } from './GamepadButton';
 import type { PointerChannel } from './Pointer';

@@ -1,7 +1,7 @@
 import type { Application } from '#core/Application';
-import { Scene } from '#core/Scene';
-import type { SceneScope } from '#core/SceneScope';
-import { SceneState } from '#core/SceneState';
+import { Scene } from '#core/scene/Scene';
+import type { SceneScope } from '#core/scene/SceneScope';
+import { SceneState } from '#core/scene/SceneState';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';

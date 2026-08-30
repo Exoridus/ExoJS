@@ -4,7 +4,7 @@ import {
   type PhasedSceneTransitionOptions,
   type SceneTransitionPhaseContext,
   type SceneTransitionPhaseRequirements,
-} from '#core/PhasedSceneTransition';
+} from '#core/scene/PhasedSceneTransition';
 import { Matrix } from '#math/Matrix';
 import { QuadGeometry } from '#rendering/geometry/QuadGeometry';
 

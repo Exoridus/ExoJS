@@ -1,6 +1,6 @@
 import type { Application } from '#core/Application';
 import { logger } from '#core/Logger';
-import { SceneState } from '#core/SceneState';
+import { SceneState } from '#core/scene/SceneState';
 import type { Signal } from '#core/Signal';
 import type { InteractionHooks, Stage } from '#core/Stage';
 import type { Seconds } from '#core/units';

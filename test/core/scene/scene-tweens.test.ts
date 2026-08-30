@@ -5,9 +5,9 @@ import { TweenSequencer } from '#animation/TweenSequencer';
 import { TweenSystem } from '#animation/TweenSystem';
 import { TweenState } from '#animation/types';
 import type { Application } from '#core/Application';
+import { SceneAvailability } from '#core/scene/SceneAvailability';
+import { SceneState } from '#core/scene/SceneState';
 import { SceneTweens } from '#core/scene/SceneTweens';
-import { SceneAvailability } from '#core/SceneAvailability';
-import { SceneState } from '#core/SceneState';
 import { type Seconds, Time } from '#core/units';
 
 const createAppStub = (createResult: unknown, sequencerResult?: unknown): Application =>

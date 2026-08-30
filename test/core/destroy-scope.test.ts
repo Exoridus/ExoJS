@@ -1,5 +1,5 @@
 import { DestroyScope } from '#core/DestroyScope';
-import { Scene } from '#core/Scene';
+import { Scene } from '#core/scene/Scene';
 import type { Destroyable } from '#core/types';
 
 // A Destroyable that records the order in which it is torn down. `__DEV__` is

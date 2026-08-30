@@ -1,6 +1,6 @@
 import { Ease } from '#animation/Ease';
-import type { SceneTransitionContext, SceneTransitionEnvironment, SceneTransitionFrame } from '#core/SceneTransition';
-import { CrossFadeSceneTransition } from '#core/transitions/CrossFadeSceneTransition';
+import type { SceneTransitionContext, SceneTransitionEnvironment, SceneTransitionFrame } from '#core/scene/SceneTransition';
+import { CrossFadeSceneTransition } from '#core/scene/transitions/CrossFadeSceneTransition';
 import { Time } from '#core/units';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import type { Sprite } from '#rendering/sprite/Sprite';

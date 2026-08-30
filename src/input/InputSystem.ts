@@ -2,6 +2,8 @@ import type { Application } from '#core/Application';
 import { Signal } from '#core/Signal';
 import type { Seconds } from '#core/units';
 import { getPreciseTime, stopEvent } from '#core/utils';
+import type { ActionMap, ActionRecord, AnyActionMap } from '#input/actions/ActionMap';
+import type { ActionSample, ChannelEvent, ChannelEventBatch } from '#input/actions/types';
 import { Flags } from '#math/Flags';
 import type { PointLike } from '#math/PointLike';
 import { Vector } from '#math/Vector';
@@ -14,8 +16,6 @@ import type {
   PlatformWheelEvent,
 } from '#platform/PlatformAdapter';
 
-import type { ActionMap, ActionRecord, AnyActionMap } from './actions/ActionMap';
-import type { ActionSample, ChannelEvent, ChannelEventBatch } from './actions/types';
 import type { ContextMenuRequest } from './ContextMenuRequest';
 import { Gamepad } from './Gamepad';
 import type { GamepadAxis } from './GamepadAxis';

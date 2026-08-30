@@ -1,6 +1,6 @@
-import { Bounds } from '#core/Bounds';
 import { SceneNode } from '#core/SceneNode';
 import type { AbstractVector } from '#math/AbstractVector';
+import { Bounds } from '#math/Bounds';
 import { Flags } from '#math/Flags';
 import { Matrix } from '#math/Matrix';
 import { ObservableSize } from '#math/ObservableSize';

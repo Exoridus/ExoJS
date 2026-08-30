@@ -1,7 +1,7 @@
-import { Bounds } from '#core/Bounds';
 import { logger } from '#core/Logger';
 import { nextNodeRevision } from '#core/NodeRevision';
 import { registerTransformGroupBoundary, unregisterTransformGroupBoundary } from '#core/SceneNode';
+import { Bounds } from '#math/Bounds';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
 import { reconcileRetainedTransformRows } from '#rendering/plan/retainedTransformRowPatch';

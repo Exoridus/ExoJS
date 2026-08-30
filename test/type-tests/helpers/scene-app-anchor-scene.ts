@@ -1,4 +1,4 @@
-import { Scene } from '#core/Scene';
+import { Scene } from '#core/scene/Scene';
 
 import type { app } from './scene-app-anchor-app';
 

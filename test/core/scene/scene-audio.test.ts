@@ -5,8 +5,8 @@ import type { Pausable, Playable, Voice } from '#audio/Playable';
 import { Sound } from '#audio/Sound';
 import type { Application } from '#core/Application';
 import { SceneAudio } from '#core/scene/SceneAudio';
-import { SceneAvailability } from '#core/SceneAvailability';
-import { SceneState } from '#core/SceneState';
+import { SceneAvailability } from '#core/scene/SceneAvailability';
+import { SceneState } from '#core/scene/SceneState';
 import { Signal } from '#core/Signal';
 
 const makeVoice = (overrides: Partial<Voice> = {}): Voice =>

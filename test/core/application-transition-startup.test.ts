@@ -5,8 +5,8 @@
  * Running - the exact deadlock scenario that fix prevents.
  */
 import { Application, ApplicationState } from '#core/Application';
-import { Scene } from '#core/Scene';
-import { FadeSceneTransition } from '#core/transitions/FadeSceneTransition';
+import { Scene } from '#core/scene/Scene';
+import { FadeSceneTransition } from '#core/scene/transitions/FadeSceneTransition';
 
 vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
   WebGl2Backend: vi.fn().mockImplementation(function () {
