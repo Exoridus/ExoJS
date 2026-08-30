@@ -522,39 +522,6 @@ export default defineConfig([
     },
   },
 
-  // Claim/refcount tracking, multi-handle fill, and options-equivalence
-  // branching are inherently branchy state machines.
-  {
-    files: ['src/assets/AssetResidency.ts'],
-    rules: {
-      complexity: 'off',
-    },
-  },
-
-  // Asset internals using browser/IDB APIs with weak runtime typings.
-  {
-    files: ['src/assets/storage/IndexedDbDatabase.ts', 'src/assets/factories/**/*.ts'],
-    rules: {
-      '@typescript-eslint/require-await': 'off',
-      '@typescript-eslint/strict-boolean-expressions': 'off',
-      complexity: 'off',
-    },
-  },
-
-  {
-    files: ['src/rendering/webgl2/WebGl2Backend.ts'],
-    rules: {
-      '@typescript-eslint/require-await': 'off',
-      // Cohesive GL backend surface; grew just past the line limit with the
-      // instanced-draw support. Splitting would scatter tightly
-      // coupled GL state. Known deviation, candidate for a later extraction.
-      'max-lines': 'off',
-      // Context-loss and shader-compile diagnostics go straight to the console:
-      // by the time this backend reports, the routed logger may itself be gone.
-      'no-console': 'off',
-    },
-  },
-
   {
     files: [
       'src/rendering/webgpu/WebGpuBackend.ts',

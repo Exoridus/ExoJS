@@ -25,6 +25,9 @@ export class FontFactory implements AssetFactory<ArrayBuffer, FontFace, FontAsse
   public async create(source: ArrayBuffer, context: AssetFactoryContext<FontAssetOptions>): Promise<FontFace> {
     const options = context.options;
 
+    // An empty family is as unusable as a missing one, so both nullish and
+    // empty take the same branch on purpose.
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!options?.family) {
       throw new Error('A font asset requires a "family" option naming the CSS font-family it registers under.');
     }
