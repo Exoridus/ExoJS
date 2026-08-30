@@ -38,6 +38,13 @@
     "lib": ["es2023"],
     "types": ["node"],
     "moduleResolution": "bundler",
+    // `scripts/build-container.ts` imports engine source directly, which pulls
+    // that file - and its `#assets/...` specifiers - into this program. Without
+    // the source condition those resolve through the package's `types`
+    // condition to `dist/esm/*.d.ts`, so the program type-checks against
+    // whatever build output happens to be lying around, and fails outright on a
+    // clean checkout that has none.
+    "customConditions": ["@codexo/exojs-source"],
     "allowImportingTsExtensions": true,
     "allowJs": true,
     "checkJs": true,
