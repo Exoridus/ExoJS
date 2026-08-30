@@ -1,3 +1,5 @@
+import type { CacheLayout } from '#assets/cache/CacheLayout';
+import { SingleEntryLayout } from '#assets/cache/SingleEntryLayout';
 import type { NetworkSnapshot } from '#core/Connectivity';
 
 import type { Asset } from './Asset';
@@ -6,9 +8,7 @@ import type { AssetConstructor } from './AssetConstructor';
 import type { AnyAssetConfig } from './AssetDefinitions';
 import type { AssetFactory } from './AssetFactory';
 import type { AssetSourceCodec } from './AssetSourceCodec';
-import type { CacheLayout } from './CacheLayout';
 import type { SeamlessAdapter } from './seamless';
-import { SingleEntryLayout } from './SingleEntryLayout';
 
 /**
  * What an asset type hands out for one of its assets inside a catalog, before

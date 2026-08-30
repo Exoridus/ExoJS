@@ -28,8 +28,8 @@ import {
 import type { TileQuad } from '../chunkGeometry';
 import type { TileChunkNode } from '../TileChunkNode';
 import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../tileWord';
-import tileFragmentSource from './glsl/tile-chunk.frag';
-import tileVertexTemplate from './glsl/tile-chunk.vert';
+import tileFragmentSource from './shaders/tile-chunk.frag';
+import tileVertexTemplate from './shaders/tile-chunk.vert';
 
 // One instance = one tile quad. Layout matches the engine's instanced-quad
 // convention (NineSlice/Repeating): float32x4 local rect, unorm16x4 UV bounds,

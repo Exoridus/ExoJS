@@ -8,8 +8,8 @@
  * decided it would.
  */
 
-import type { CacheRecordKey } from '#assets/CacheRecordKey';
-import type { CacheStore } from '#assets/CacheStore';
+import type { CacheRecordKey } from '#assets/cache/CacheRecordKey';
+import type { CacheStore } from '#assets/cache/CacheStore';
 
 import { createFakeIndexedDb, FakeIdbKeyRange, type FakeIndexedDb } from './fake-indexed-db';
 
@@ -36,7 +36,7 @@ const loadStore = async (name = 'cache-db'): Promise<{ store: CacheStore; fake: 
   target.IDBKeyRange = FakeIdbKeyRange as unknown as typeof IDBKeyRange;
   vi.resetModules();
 
-  const { IndexedDbStore } = await import('#assets/IndexedDbStore');
+  const { IndexedDbStore } = await import('#assets/storage/IndexedDbStore');
 
   return { store: new IndexedDbStore(name), fake };
 };

@@ -111,11 +111,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/CacheReadResult.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheReadResult.ts"
+        "label": "src/assets/cache/CacheReadResult.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cache/CacheReadResult.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/CacheReadResult.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheReadResult.ts"
+  "sourcePath": "src/assets/cache/CacheReadResult.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cache/CacheReadResult.ts"
 }

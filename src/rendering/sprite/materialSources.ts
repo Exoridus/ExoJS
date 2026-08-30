@@ -32,13 +32,13 @@
  * {@link spriteMaterialTextureSlots}..N / WGSL group(2)).
  */
 
-import spriteVertexGlslModule from './glsl/sprite-material.vert';
-import spriteFragmentMainWgslModule from './wgsl/sprite-fragment-main.wgsl';
-import spriteSampleBaseWgsl from './wgsl/sprite-sample-base.wgsl';
-import spriteSharedStorageWgslModule from './wgsl/sprite-shared-storage.wgsl';
-import spriteVertexCoreWgslModule from './wgsl/sprite-vertex-core.wgsl';
-import spriteVertexInputWgsl from './wgsl/sprite-vertex-input.wgsl';
-import spriteVertexMainWgsl from './wgsl/sprite-vertex-main.wgsl';
+import spriteFragmentMainWgslModule from './shaders/sprite-fragment-main.wgsl';
+import spriteVertexGlslModule from './shaders/sprite-material.vert';
+import spriteSampleBaseWgsl from './shaders/sprite-sample-base.wgsl';
+import spriteSharedStorageWgslModule from './shaders/sprite-shared-storage.wgsl';
+import spriteVertexCoreWgslModule from './shaders/sprite-vertex-core.wgsl';
+import spriteVertexInputWgsl from './shaders/sprite-vertex-input.wgsl';
+import spriteVertexMainWgsl from './shaders/sprite-vertex-main.wgsl';
 
 /**
  * Base-texture batch slots a custom {@link SpriteMaterial} rotates through.
@@ -70,7 +70,7 @@ export const spriteVertexGlsl: string = spriteVertexGlslModule;
  * base texture through.
  *
  * The dispatch is an unrolled if/else chain, matching the default sprite
- * fragment (`webgl2/glsl/sprite.frag`): GLSL ES 3.00 forbids indexing an array
+ * fragment (`webgl2/shaders/sprite.frag`): GLSL ES 3.00 forbids indexing an array
  * of samplers with a non-dynamically-uniform expression, which a per-instance
  * slot is not.
  *

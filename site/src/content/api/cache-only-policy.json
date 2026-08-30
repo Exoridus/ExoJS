@@ -150,11 +150,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/cachePolicies.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cachePolicies.ts"
+        "label": "src/assets/cache/cachePolicies.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cache/cachePolicies.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/cachePolicies.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cachePolicies.ts"
+  "sourcePath": "src/assets/cache/cachePolicies.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cache/cachePolicies.ts"
 }

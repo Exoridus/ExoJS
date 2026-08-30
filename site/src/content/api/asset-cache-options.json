@@ -262,11 +262,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/AssetCache.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetCache.ts"
+        "label": "src/assets/cache/AssetCache.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cache/AssetCache.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/AssetCache.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetCache.ts"
+  "sourcePath": "src/assets/cache/AssetCache.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cache/AssetCache.ts"
 }

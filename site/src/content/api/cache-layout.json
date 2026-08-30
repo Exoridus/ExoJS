@@ -225,11 +225,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/CacheLayout.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheLayout.ts"
+        "label": "src/assets/cache/CacheLayout.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cache/CacheLayout.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/CacheLayout.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheLayout.ts"
+  "sourcePath": "src/assets/cache/CacheLayout.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cache/CacheLayout.ts"
 }

@@ -10,10 +10,10 @@
  * key ordering rather than a stand-in's `startsWith`.
  */
 
-import { AssetCache } from '#assets/AssetCache';
-import type { CacheRecordKey } from '#assets/CacheRecordKey';
-import { IndexedDbStore } from '#assets/IndexedDbStore';
-import { SingleEntryLayout } from '#assets/SingleEntryLayout';
+import { AssetCache } from '#assets/cache/AssetCache';
+import type { CacheRecordKey } from '#assets/cache/CacheRecordKey';
+import { SingleEntryLayout } from '#assets/cache/SingleEntryLayout';
+import { IndexedDbStore } from '#assets/storage/IndexedDbStore';
 import { unrestrictedNetwork } from '#core/Connectivity';
 
 const key = (overrides: Partial<CacheRecordKey> = {}): CacheRecordKey => ({

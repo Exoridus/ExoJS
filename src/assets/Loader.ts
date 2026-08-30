@@ -1,11 +1,13 @@
+import { AssetCache } from '#assets/cache/AssetCache';
+import type { AssetCacheError } from '#assets/cache/AssetCacheError';
+import type { CacheLayout } from '#assets/cache/CacheLayout';
+import type { CacheStore } from '#assets/cache/CacheStore';
+import { parseContainer } from '#assets/container/assetContainer';
 import type { Connectivity } from '#core/Connectivity';
 import { Signal } from '#core/Signal';
 
 import { type Asset, AssetImpl, type ValueAsset } from './Asset';
-import { AssetCache } from './AssetCache';
-import type { AssetCacheError } from './AssetCacheError';
 import type { AssetConstructor } from './AssetConstructor';
-import { parseContainer } from './assetContainer';
 import { AssetDecoder } from './AssetDecoder';
 import type { AssetDefinitions, AssetInput, AssetTypeName, CatalogEntry, InferLoadedEntry, KindByPath, LeafForPath, ResourceForKind } from './AssetDefinitions';
 import { _readMeta, type CatalogResourceLeaf, type CatalogValueLeaf } from './assetMeta';
@@ -15,8 +17,6 @@ import { _normalizeEntry, type Assets, AssetsImpl, type InferAssetsProperties } 
 import type { AnyAssetType } from './AssetType';
 import { AssetTypeRegistry } from './AssetTypeRegistry';
 import { AssetVariantSet } from './AssetVariantSet';
-import type { CacheLayout } from './CacheLayout';
-import type { CacheStore } from './CacheStore';
 import { type AssetLocator, type CanonicalAsset, canonicalizeSource, type ResourceKey, resourceKey, type SourceKey, sourceKey } from './canonicalKey';
 import { createLeaf } from './catalogLeaf';
 import { LoadBatch } from './LoadBatch';

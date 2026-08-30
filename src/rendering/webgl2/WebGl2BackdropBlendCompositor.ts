@@ -3,9 +3,9 @@ import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage } from '#rendering/types';
 
-import fragmentSource from './glsl/backdrop-blend.frag';
-import vertexSource from './glsl/backdrop-blend.vert';
 import { createWebGl2ShaderProgram } from './shaderProgram';
+import fragmentSource from './shaders/backdrop-blend.frag';
+import vertexSource from './shaders/backdrop-blend.vert';
 import type { WebGl2Backend } from './WebGl2Backend';
 import { uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';

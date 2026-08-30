@@ -1,7 +1,7 @@
+import type { SourceKey } from '#assets/canonicalKey';
 import type { NetworkSnapshot } from '#core/Connectivity';
 
 import type { CachePolicy } from './CachePolicy';
-import type { SourceKey } from './canonicalKey';
 
 /** What a {@link CachePolicyResolver} is told about the acquisition it is choosing a policy for. */
 export interface CachePolicyResolutionContext {

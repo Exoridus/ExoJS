@@ -348,11 +348,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/KeyValueStore.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/KeyValueStore.ts"
+        "label": "src/assets/storage/KeyValueStore.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/storage/KeyValueStore.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/KeyValueStore.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/KeyValueStore.ts"
+  "sourcePath": "src/assets/storage/KeyValueStore.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/storage/KeyValueStore.ts"
 }

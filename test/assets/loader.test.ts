@@ -1,12 +1,12 @@
 ﻿import type { MockInstance } from 'vitest';
 
 import { Asset } from '#assets/Asset';
-import { AssetCache } from '#assets/AssetCache';
-import { encodeContainer } from '#assets/assetContainer';
 import type { AssetInput } from '#assets/AssetDefinitions';
 import { AssetRef } from '#assets/AssetRef';
 import { Assets } from '#assets/Assets';
-import type { CacheRecordKey } from '#assets/CacheRecordKey';
+import { AssetCache } from '#assets/cache/AssetCache';
+import type { CacheRecordKey } from '#assets/cache/CacheRecordKey';
+import { encodeContainer } from '#assets/container/assetContainer';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, LoadPriority } from '#assets/Loader';
 import type { LoadingQueue } from '#assets/LoadingQueue';

@@ -4,7 +4,7 @@ const idbStorage = new Map<string, unknown>();
 // It holds values *by reference* (no structured clone) - enough to prove the
 // KV store passes values through without a JSON layer; the real backend deep-
 // clones via structured clone.
-vi.mock('#assets/IndexedDbDatabase', () => {
+vi.mock('#assets/storage/IndexedDbDatabase', () => {
   class IndexedDbDatabaseMock {
     public load(storeName: string, key: string): Promise<unknown | null> {
       const recordKey = `${storeName}:${key}`;
@@ -38,10 +38,10 @@ vi.mock('#assets/IndexedDbDatabase', () => {
   return { IndexedDbDatabase: IndexedDbDatabaseMock };
 });
 
-import { IndexedDbKeyValueStore } from '#assets/IndexedDbKeyValueStore';
-import type { KeyValueStore } from '#assets/KeyValueStore';
-import { MemoryStore } from '#assets/MemoryStore';
-import { WebStorageStore } from '#assets/WebStorageStore';
+import { IndexedDbKeyValueStore } from '#assets/storage/IndexedDbKeyValueStore';
+import type { KeyValueStore } from '#assets/storage/KeyValueStore';
+import { MemoryStore } from '#assets/storage/MemoryStore';
+import { WebStorageStore } from '#assets/storage/WebStorageStore';
 
 /** Minimal synchronous in-memory `Storage` stand-in for WebStorageStore tests. */
 const createWebStorage = (): Storage => {

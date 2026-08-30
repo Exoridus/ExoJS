@@ -9,14 +9,14 @@
  * the database is broken.
  */
 
-import { AssetCache, type CacheAcquisition } from '#assets/AssetCache';
-import { AssetCacheError } from '#assets/AssetCacheError';
-import { AssetCacheMissError } from '#assets/AssetCacheMissError';
 import { AssetNetworkError } from '#assets/AssetNetworkError';
-import { CacheFirstPolicy, CacheOnlyPolicy, NetworkFirstPolicy, NetworkOnlyPolicy } from '#assets/cachePolicies';
-import type { CachePolicy } from '#assets/CachePolicy';
-import { serializeCacheRecordKey } from '#assets/CacheRecordKey';
-import { SingleEntryLayout } from '#assets/SingleEntryLayout';
+import { AssetCache, type CacheAcquisition } from '#assets/cache/AssetCache';
+import { AssetCacheError } from '#assets/cache/AssetCacheError';
+import { AssetCacheMissError } from '#assets/cache/AssetCacheMissError';
+import { CacheFirstPolicy, CacheOnlyPolicy, NetworkFirstPolicy, NetworkOnlyPolicy } from '#assets/cache/cachePolicies';
+import type { CachePolicy } from '#assets/cache/CachePolicy';
+import { serializeCacheRecordKey } from '#assets/cache/CacheRecordKey';
+import { SingleEntryLayout } from '#assets/cache/SingleEntryLayout';
 import { unrestrictedNetwork } from '#core/Connectivity';
 
 import { type CacheStoreDouble, createCacheStoreDouble } from './cache-test-doubles';

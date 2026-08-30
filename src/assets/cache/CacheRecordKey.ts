@@ -1,4 +1,4 @@
-import type { SourceKey } from './canonicalKey';
+import type { SourceKey } from '#assets/canonicalKey';
 
 /**
  * The identity of one persisted cache record.

@@ -4,18 +4,18 @@ import { ShaderSource } from '@codexo/exojs';
 import type { ParticleBatch } from '#ParticleStorage';
 import type { ParticleSystem } from '#ParticleSystem';
 
-import fragmentSource from '../renderers/glsl/particle.frag';
-import vertexSource from '../renderers/glsl/particle.vert';
+import fragmentSource from '../renderers/shaders/particle.frag';
+import vertexSource from '../renderers/shaders/particle.vert';
 import { ParticleBufferLayout } from './ParticleBufferLayout';
 import { instanceAttributes, instanceStrideBytes, ParticleInstanceWriter } from './ParticleInstanceWriter';
 import { ParticleMaterial } from './ParticleMaterial';
 import { ParticleRenderMode } from './ParticleRenderMode';
-import quadParticleWgslModule from './wgsl/quad-particles.wgsl';
+import quadParticleWgslModule from './shaders/quad-particles.wgsl';
 
 const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 
 /**
- * WGSL counterpart of `glsl/particle.vert` + `glsl/particle.frag`. Vertex and
+ * WGSL counterpart of `shaders/particle.vert` + `shaders/particle.frag`. Vertex and
  * fragment entry points share one source per WGSL convention, and the
  * per-instance attributes bind by `@location`, matching the declaration order
  * and byte offsets of {@link QuadParticles.dataLayout}.

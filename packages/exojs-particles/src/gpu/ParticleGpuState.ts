@@ -10,7 +10,7 @@ import type { WgslContribution, WgslUniformField } from '#modules/WgslContributi
 import { getWgslUniformByteSize } from '#modules/WgslContribution';
 import type { ParticleSystem } from '#ParticleSystem';
 
-import particleSimulateWgsl from './wgsl/particle-simulate.wgsl';
+import particleSimulateWgsl from './shaders/particle-simulate.wgsl';
 
 /**
  * GPU-side mirror of one {@link ParticleSystem}. Owns:

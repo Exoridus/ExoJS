@@ -65,11 +65,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/WebStorageStore.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/WebStorageStore.ts"
+        "label": "src/assets/storage/WebStorageStore.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/storage/WebStorageStore.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/WebStorageStore.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/WebStorageStore.ts"
+  "sourcePath": "src/assets/storage/WebStorageStore.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/storage/WebStorageStore.ts"
 }

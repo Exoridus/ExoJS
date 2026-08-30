@@ -1,12 +1,12 @@
 import { describe, expect, test, vi } from 'vitest';
 
-import { AssetCache } from '#assets/AssetCache';
 import type { AssetConstructor } from '#assets/AssetConstructor';
 import { AssetDecodeError } from '#assets/AssetDecodeError';
 import { AssetDecoder } from '#assets/AssetDecoder';
 import { AssetTypeRegistry } from '#assets/AssetTypeRegistry';
-import type { CacheContext } from '#assets/CachePolicy';
-import { CacheRoute } from '#assets/CacheRoute';
+import { AssetCache } from '#assets/cache/AssetCache';
+import type { CacheContext } from '#assets/cache/CachePolicy';
+import { CacheRoute } from '#assets/cache/CacheRoute';
 import { type CanonicalAsset, canonicalizeSource, resourceKey, sourceKey } from '#assets/canonicalKey';
 import type { Loader } from '#assets/Loader';
 import type { LoaderScope } from '#assets/LoaderScope';

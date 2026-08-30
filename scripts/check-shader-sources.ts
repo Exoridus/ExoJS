@@ -31,7 +31,10 @@ const REPO_ROOT = resolve(import.meta.dirname, '..');
 /** Roots that hold engine-owned shaders and the modules importing them. */
 const SCAN_ROOTS = ['src', 'packages'];
 
-const SKIPPED_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', 'test-results', '__screenshots__']);
+const SKIPPED_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', 'test-results']);
+
+/** `__name__` marks a directory a suite creates and removes; it holds no authored source. */
+const isTransientDirectory = (name: string): boolean => name.startsWith('__') && name.endsWith('__');
 
 const IMPORTER_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts', '.js', '.mjs'];
 
@@ -59,8 +62,18 @@ const collectFiles = async (root: string, keep: (name: string) => boolean): Prom
   const found: string[] = [];
 
   const walk = async (directory: string): Promise<void> => {
-    for (const entry of await readdir(directory, { withFileTypes: true })) {
-      if (entry.name.startsWith('.') || SKIPPED_DIRECTORIES.has(entry.name)) continue;
+    // A directory can vanish between being listed and being read: a suite
+    // running in parallel writes a transient fixture into the scanned tree and
+    // removes it again. A directory that no longer exists holds no files to
+    // check, so skipping it is the correct answer, not a reason to abort.
+    const entries = await readdir(directory, { withFileTypes: true }).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') return [];
+
+      throw error;
+    });
+
+    for (const entry of entries) {
+      if (entry.name.startsWith('.') || SKIPPED_DIRECTORIES.has(entry.name) || isTransientDirectory(entry.name)) continue;
 
       const path = join(directory, entry.name);
 

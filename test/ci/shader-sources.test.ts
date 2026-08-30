@@ -20,9 +20,9 @@ const SCANNER = 'scripts/check-shader-sources.ts';
 const TSX_CLI = join('node_modules', 'tsx', 'dist', 'cli.mjs');
 
 /** A GLSL shader with an entry point, a version line and an engine directive. */
-const GLSL_TARGET = 'src/rendering/webgl2/glsl/sprite.vert';
+const GLSL_TARGET = 'src/rendering/webgl2/shaders/sprite.vert';
 /** A WGSL shader carrying substitution placeholders. */
-const WGSL_TARGET = 'src/rendering/webgpu/wgsl/text.wgsl';
+const WGSL_TARGET = 'src/rendering/webgpu/shaders/text.wgsl';
 
 const backups = new Map<string, string>();
 
@@ -54,7 +54,7 @@ afterEach(() => {
   }
 
   backups.clear();
-  rmSync(join(REPO_ROOT, 'src/rendering/webgl2/glsl/__orphan-probe.frag'), { force: true });
+  rmSync(join(REPO_ROOT, 'src/rendering/webgl2/shaders/__orphan-probe.frag'), { force: true });
 });
 
 describe('check-shader-sources', () => {
@@ -119,9 +119,9 @@ describe('check-shader-sources', () => {
   });
 
   it('rejects an orphan shader nothing imports', () => {
-    const orphan = 'src/rendering/webgl2/glsl/__orphan-probe.frag';
+    const orphan = 'src/rendering/webgl2/shaders/__orphan-probe.frag';
 
-    copyFileSync(join(REPO_ROOT, 'src/rendering/webgl2/glsl/mesh.frag'), join(REPO_ROOT, orphan));
+    copyFileSync(join(REPO_ROOT, 'src/rendering/webgl2/shaders/mesh.frag'), join(REPO_ROOT, orphan));
 
     expect(scan()).toContain('is not imported by any module');
   });

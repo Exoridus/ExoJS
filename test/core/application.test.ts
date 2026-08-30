@@ -459,7 +459,7 @@ describe('Application', () => {
   test('passes grouped loader options through to Loader constructor', async () => {
     const { Application, LoaderMock } = await loadApplicationHarness();
     const fetchOptions: RequestInit = { credentials: 'include' };
-    const cache = {} as import('#assets/CacheStore').CacheStore;
+    const cache = {} as import('#assets/cache/CacheStore').CacheStore;
 
     new Application({
       loader: {

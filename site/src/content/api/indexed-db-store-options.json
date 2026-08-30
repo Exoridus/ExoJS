@@ -86,11 +86,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/IndexedDbStore.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/IndexedDbStore.ts"
+        "label": "src/assets/storage/IndexedDbStore.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/storage/IndexedDbStore.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/IndexedDbStore.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/IndexedDbStore.ts"
+  "sourcePath": "src/assets/storage/IndexedDbStore.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/storage/IndexedDbStore.ts"
 }

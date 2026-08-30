@@ -36,6 +36,10 @@ import {
   type WebGpuRetainedBatchReplayer,
   type WebGpuRetainedNodeIndexRange,
 } from './retainedGroupResources';
+import spriteDefaultVertexInputWgsl from './shaders/sprite-default-vertex-input.wgsl';
+import spriteDefaultVertexMainWgsl from './shaders/sprite-default-vertex-main.wgsl';
+import spritePersistentBindingsWgsl from './shaders/sprite-persistent-bindings.wgsl';
+import spritePersistentVertexMainWgsl from './shaders/sprite-persistent-vertex-main.wgsl';
 import { packSnapViewport } from './snapViewport';
 import { stencilContentDepthStencilState } from './stencilState';
 import {
@@ -53,10 +57,6 @@ import { WebGpuPassArena } from './WebGpuPassArena';
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
 import { persistentPremultiplyMaskIndex, persistentUniformBytes, WebGpuPersistentSlotStore } from './WebGpuPersistentSlotStore';
 import { pipelineVariantKey, WebGpuPipelineVariantCache } from './WebGpuPipelineVariantCache';
-import spriteDefaultVertexInputWgsl from './wgsl/sprite-default-vertex-input.wgsl';
-import spriteDefaultVertexMainWgsl from './wgsl/sprite-default-vertex-main.wgsl';
-import spritePersistentBindingsWgsl from './wgsl/sprite-persistent-bindings.wgsl';
-import spritePersistentVertexMainWgsl from './wgsl/sprite-persistent-vertex-main.wgsl';
 
 /**
  * Multi-texture batch slot tiers the sprite pipeline can be generated for.

@@ -1,5 +1,5 @@
 /**
- * Shared mock source for `#rendering/webgl2/glsl/sprite.frag`.
+ * Shared mock source for `#rendering/webgl2/shaders/sprite.frag`.
  *
  * The vitest shaderPlugin stubs every `.vert`/`.frag` import to `""`, so the
  * browser specs re-mock the sprite fragment stage with valid GLSL. This helper

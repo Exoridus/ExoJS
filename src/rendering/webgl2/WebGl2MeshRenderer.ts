@@ -13,9 +13,9 @@ import { Texture } from '#rendering/texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage, IndexElementTypes, RenderingPrimitives } from '#rendering/types';
 
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
-import fragmentSource from './glsl/mesh.frag';
-import vertexSource from './glsl/mesh.vert';
 import { createWebGl2ShaderProgram } from './shaderProgram';
+import fragmentSource from './shaders/mesh.frag';
+import vertexSource from './shaders/mesh.vert';
 import type { WebGl2Backend } from './WebGl2Backend';
 import { uploadBufferRange, uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import type { WebGl2RetainedBatchPayload, WebGl2RetainedBatchReplayer, WebGl2RetainedNodeIndexRange } from './WebGl2RetainedGroupResources';

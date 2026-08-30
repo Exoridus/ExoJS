@@ -8,13 +8,13 @@
  * timing.
  */
 
-import { AssetCache, type CacheAcquisition } from '#assets/AssetCache';
-import { type AssetCacheError } from '#assets/AssetCacheError';
-import { CacheFirstPolicy, NetworkOnlyPolicy } from '#assets/cachePolicies';
-import { serializeCacheRecordKey } from '#assets/CacheRecordKey';
-import { CacheRoute } from '#assets/CacheRoute';
-import { MemoryCacheStore } from '#assets/MemoryCacheStore';
-import { SingleEntryLayout } from '#assets/SingleEntryLayout';
+import { AssetCache, type CacheAcquisition } from '#assets/cache/AssetCache';
+import { type AssetCacheError } from '#assets/cache/AssetCacheError';
+import { CacheFirstPolicy, NetworkOnlyPolicy } from '#assets/cache/cachePolicies';
+import { serializeCacheRecordKey } from '#assets/cache/CacheRecordKey';
+import { CacheRoute } from '#assets/cache/CacheRoute';
+import { MemoryCacheStore } from '#assets/cache/MemoryCacheStore';
+import { SingleEntryLayout } from '#assets/cache/SingleEntryLayout';
 import { unrestrictedNetwork } from '#core/Connectivity';
 
 import { type CacheStoreDouble, createCacheStoreDouble, createRecordingPolicy } from './cache-test-doubles';

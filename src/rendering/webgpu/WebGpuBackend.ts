@@ -59,6 +59,7 @@ import {
   type WebGpuRetainedGeometryRef,
   type WebGpuRetainedNodeIndexRange,
 } from './retainedGroupResources';
+import mipmapWgslModule from './shaders/mipmap.wgsl';
 import { WEBGPU_DEFAULT_MAX_TEXTURE_DIMENSION_2D } from './storageLimits';
 import { WebGpuBackdropBlendCompositor } from './WebGpuBackdropBlendCompositor';
 import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
@@ -69,7 +70,6 @@ import { WebGpuRetainedCaptureFrame } from './WebGpuRetainedCaptureFrame';
 import { WebGpuRetainedGroupBundle } from './WebGpuRetainedGroupBundle';
 import { baseSpriteBatchTextureSlots, maxSpriteBatchTextureSlots } from './WebGpuSpriteRenderer';
 import { WebGpuTransformStorage } from './WebGpuTransformStorage';
-import mipmapWgslModule from './wgsl/mipmap.wgsl';
 
 interface ManagedWebGpuTextureState {
   texture: GPUTexture;

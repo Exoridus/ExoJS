@@ -1,6 +1,6 @@
+import { AssetCacheError, type AssetCacheOperation } from '#assets/cache/AssetCacheError';
 import { supportsIndexedDb } from '#core/utils';
 
-import { AssetCacheError, type AssetCacheOperation } from './AssetCacheError';
 import type { Database } from './Database';
 import { openIndexedDb, requestResult, transactionComplete } from './indexedDbSupport';
 

@@ -90,11 +90,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/ConnectivityPolicyResolver.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/ConnectivityPolicyResolver.ts"
+        "label": "src/assets/cache/ConnectivityPolicyResolver.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cache/ConnectivityPolicyResolver.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/ConnectivityPolicyResolver.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/ConnectivityPolicyResolver.ts"
+  "sourcePath": "src/assets/cache/ConnectivityPolicyResolver.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cache/ConnectivityPolicyResolver.ts"
 }

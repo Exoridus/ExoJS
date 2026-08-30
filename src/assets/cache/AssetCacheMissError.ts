@@ -1,4 +1,4 @@
-import type { SourceKey } from './canonicalKey';
+import type { SourceKey } from '#assets/canonicalKey';
 
 /**
  * Raised when a cache-only acquisition found no record.

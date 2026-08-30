@@ -1,5 +1,6 @@
+import type { SourceKey } from '#assets/canonicalKey';
+
 import type { CacheReadResult } from './CacheReadResult';
-import type { SourceKey } from './canonicalKey';
 
 /**
  * The operations a {@link CachePolicy} may perform on one acquisition.

@@ -8,7 +8,7 @@
  * layout version in the key.
  */
 
-import { cacheNamespacePrefix, type CacheRecordKey, serializeCacheRecordKey } from '#assets/CacheRecordKey';
+import { cacheNamespacePrefix, type CacheRecordKey, serializeCacheRecordKey } from '#assets/cache/CacheRecordKey';
 
 const key = (overrides: Partial<CacheRecordKey> = {}): CacheRecordKey => ({
   namespace: 'com.example.world',
