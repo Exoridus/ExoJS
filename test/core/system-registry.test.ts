@@ -1,4 +1,4 @@
-import { logger, LogSeverity } from '#core/logging';
+import { logger, LogSeverity } from '#core/Logger';
 import type { System } from '#core/System';
 import { SystemRegistry } from '#core/SystemRegistry';
 import { Time } from '#core/units';

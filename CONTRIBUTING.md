@@ -74,6 +74,52 @@ Rollup uses node-resolve `exportConditions` — all pointing `#` at source in-re
 shipped `.d.ts` keep `#` verbatim and resolve through the package's own imports map,
 so there is no declaration alias-rewrite step.
 
+## File layout: one file, one primary symbol
+
+A file has exactly one primary public symbol and is named after it. Further
+declarations may live in the same file only when they are **not exported**, or
+when the file deliberately bundles a family of related declarations that
+implement one contract - and then it is named after the family.
+
+Two spellings are allowed under `src/`, and the choice is not cosmetic:
+
+| Spelling        | Promise                                                                                                               | Example                                             |
+| --------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `PascalCase.ts` | has one primary exported symbol and is named after it - class, interface, type alias, enum, or const namespace object | `Sprite.ts`, `RenderBackend.ts`, `Ease.ts`          |
+| `camelCase.ts`  | a set of functions, constants, or a family of declarations with no single symbol worth naming the file after          | `pixelSnap.ts`, `cachePolicies.ts`, `sceneTypes.ts` |
+
+`unicorn/filename-case` rejects a third spelling; `pnpm lint:file-symbols`
+checks both directions of the promise - a PascalCase file that exports no symbol
+of its own name, and a camelCase file whose entire public surface is one class.
+Test files keep the kebab-case naming of the suites they mirror.
+
+A helper class that only the primary symbol uses stays in the primary symbol's
+file, unexported: `ScrollbarThumb` in `Scrollbar.ts`, `ShelfPacker` in
+`GlyphAtlas.ts`. Exporting it would make an implementation detail part of the
+package surface for no caller's benefit.
+
+### Where a type belongs
+
+- A **public contract** with documentation weight gets its own file, named after
+  it: `System.ts`, `RenderBackend.ts`, `PlatformAdapter.ts`. These are types a
+  guide links to.
+- A **satellite type** - options, a callback signature, a result shape used by
+  one owner - lives in the owner's file.
+- Types shared across a directory live in that directory's `types.ts`.
+
+Do not give a one-line type its own file merely because it is exported.
+
+### Where an error class belongs
+
+One error per file, named after the failure - the asset layer is the template
+(`AssetCacheError.ts`, `AssetNetworkError.ts`). When a subsystem has a _family_
+of errors, they share one `<subsystem>Errors.ts` file: `core/sceneErrors.ts`
+holds the nine scene navigation and registration errors.
+
+An error class never hides inside the file of the class that throws it. A caller
+that catches it has to import it, and it should be findable without knowing
+which class raises it.
+
 ## Per-package commands
 
 After one root `pnpm install`, every package builds, tests and packs on its own:

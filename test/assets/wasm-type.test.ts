@@ -1,4 +1,4 @@
-import { wasmType } from '#assets/types/dataTypes';
+import { wasmType } from '#assets/types/data';
 
 import { factoryContext } from './factory-context';
 

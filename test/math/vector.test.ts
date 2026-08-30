@@ -1,5 +1,5 @@
 import { Circle } from '#math/Circle';
-import { CollisionType } from '#math/Collision';
+import { CollisionType } from '#math/collisionTypes';
 import { Ellipse } from '#math/Ellipse';
 import { Interval } from '#math/Interval';
 import { Line } from '#math/Line';

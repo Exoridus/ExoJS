@@ -8,7 +8,7 @@ import { mutable } from '../support/mutable';
  *
  * `test/utils/audio-context.test.ts` already covers the "no eager creation on
  * import" and "lazy creation on subscribe" contracts using a fresh module per
- * test (`vi.resetModules()` + dynamic `import('#audio/audio-context')`); this
+ * test (`vi.resetModules()` + dynamic `import('#audio/audioContext')`); this
  * file follows the same pattern to reach the remaining branches: unsupported
  * environments, the statechange listener, the interaction-gesture unlock
  * round-trip, and the public `getOfflineAudioContext()` wrapper.
@@ -32,21 +32,21 @@ describe('audio/audio-context — unsupported environments', () => {
   it('getAudioContext() throws when AudioContext is unsupported', async () => {
     Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: undefined });
 
-    const { getAudioContext } = await import('#audio/audio-context');
+    const { getAudioContext } = await import('#audio/audioContext');
     expect(() => getAudioContext()).toThrow(new AudioUnsupportedError('AudioContext'));
   });
 
   it('getOfflineAudioContext() throws when OfflineAudioContext is unsupported', async () => {
     Object.defineProperty(globalThis, 'OfflineAudioContext', { configurable: true, value: undefined });
 
-    const { getOfflineAudioContext } = await import('#audio/audio-context');
+    const { getOfflineAudioContext } = await import('#audio/audioContext');
     expect(() => getOfflineAudioContext()).toThrow(new AudioUnsupportedError('OfflineAudioContext'));
   });
 
   it('decodeAudioData() rejects when OfflineAudioContext is unsupported', async () => {
     Object.defineProperty(globalThis, 'OfflineAudioContext', { configurable: true, value: undefined });
 
-    const { decodeAudioData } = await import('#audio/audio-context');
+    const { decodeAudioData } = await import('#audio/audioContext');
     await expect(decodeAudioData(new ArrayBuffer(0))).rejects.toThrow(new AudioUnsupportedError('OfflineAudioContext'));
   });
 });
@@ -95,7 +95,7 @@ describe('audio/audio-context — getOfflineAudioContext()', () => {
     Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: TestAudioContext });
     Object.defineProperty(globalThis, 'OfflineAudioContext', { configurable: true, value: TestOfflineAudioContext });
 
-    const { getOfflineAudioContext } = await import('#audio/audio-context');
+    const { getOfflineAudioContext } = await import('#audio/audioContext');
 
     const first = getOfflineAudioContext();
     const second = getOfflineAudioContext();
@@ -166,7 +166,7 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
     const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
     const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener');
 
-    const { getAudioContext, onAudioContextReady, isAudioContextReady } = await import('#audio/audio-context');
+    const { getAudioContext, onAudioContextReady, isAudioContextReady } = await import('#audio/audioContext');
 
     const readyHandler = vi.fn();
     onAudioContextReady.once(readyHandler);
@@ -223,7 +223,7 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
     Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: PlainSuspendedAudioContext });
     Object.defineProperty(globalThis, 'OfflineAudioContext', { configurable: true, value: class {} });
 
-    const { getAudioContext, onAudioContextReady } = await import('#audio/audio-context');
+    const { getAudioContext, onAudioContextReady } = await import('#audio/audioContext');
 
     const readyHandler = vi.fn();
     onAudioContextReady.once(readyHandler);
@@ -249,7 +249,7 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
     Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: UnlockableAudioContext });
     Object.defineProperty(globalThis, 'OfflineAudioContext', { configurable: true, value: class {} });
 
-    const { getAudioContext, onAudioContextReady } = await import('#audio/audio-context');
+    const { getAudioContext, onAudioContextReady } = await import('#audio/audioContext');
 
     // First ensure monitoring starts with `document` available (adds the
     // interaction listeners for real), then remove `document` before the
@@ -324,7 +324,7 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
 
     const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
 
-    const { getAudioContext, onAudioContextReady } = await import('#audio/audio-context');
+    const { getAudioContext, onAudioContextReady } = await import('#audio/audioContext');
 
     const readyHandler = vi.fn();
 
@@ -373,7 +373,7 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
     Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: UnlockableAudioContext });
     Object.defineProperty(globalThis, 'OfflineAudioContext', { configurable: true, value: class {} });
 
-    const { getAudioContext, onAudioContextReady } = await import('#audio/audio-context');
+    const { getAudioContext, onAudioContextReady } = await import('#audio/audioContext');
 
     vi.stubGlobal('document', undefined);
 

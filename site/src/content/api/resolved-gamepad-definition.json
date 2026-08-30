@@ -103,11 +103,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/input/GamepadDefinitions.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadDefinitions.ts"
+        "label": "src/input/gamepadDefinitions.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/gamepadDefinitions.ts"
       }
     }
   ],
-  "sourcePath": "src/input/GamepadDefinitions.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadDefinitions.ts"
+  "sourcePath": "src/input/gamepadDefinitions.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/gamepadDefinitions.ts"
 }

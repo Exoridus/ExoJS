@@ -11,8 +11,8 @@ import { describe, expect, it } from 'vitest';
 
 import type { Drawable } from '#rendering/Drawable';
 import { DerivedSelectionState } from '#rendering/plan/DerivedSelectionState';
-import { RenderEntryKind } from '#rendering/plan/RenderCommand';
-import { createSourceScope, finalizeSourceScopes, type SourceGroup, type SourceScope } from '#rendering/plan/RenderSourceItem';
+import { RenderEntryKind } from '#rendering/plan/renderCommand';
+import { createSourceScope, finalizeSourceScopes, type SourceGroup, type SourceScope } from '#rendering/plan/renderSourceItem';
 import { MembershipBits } from '#rendering/plan/SourceVisibilityIndex';
 
 const drawable = (): Drawable => ({}) as Drawable;

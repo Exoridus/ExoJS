@@ -1,6 +1,6 @@
-import { RenderEntryKind } from './RenderCommand';
+import { RenderEntryKind } from './renderCommand';
 import type { RenderRootSource } from './RenderRootSource';
-import type { SourceScope } from './RenderSourceItem';
+import type { SourceScope } from './renderSourceItem';
 
 /**
  * Backend-owned GPU state for one render root's persistent slot space: the

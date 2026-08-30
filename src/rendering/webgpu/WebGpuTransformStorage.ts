@@ -3,10 +3,10 @@ import type { Matrix } from '#math/Matrix';
 import type { Drawable } from '#rendering/Drawable';
 import type { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import { PixelSnapMode } from '#rendering/pixelSnap';
-import type { DrawCommand } from '#rendering/plan/RenderCommand';
+import type { DrawCommand } from '#rendering/plan/renderCommand';
 import { TRANSFORM_FLOATS_PER_ROW, TRANSFORM_TINT_BYTES_PER_ROW, TransformBuffer } from '#rendering/TransformBuffer';
 
-import { requireRepresentableStorageGrowth } from './webgpuStorageLimits';
+import { requireRepresentableStorageGrowth } from './storageLimits';
 
 const slotFloatCount = TRANSFORM_FLOATS_PER_ROW;
 const tintSlotBytes = TRANSFORM_TINT_BYTES_PER_ROW;

@@ -1,4 +1,4 @@
-import { intersectionRectRect } from '#math/collision-primitives';
+import { intersectionRectRect } from '#math/collisionPrimitives';
 import type { ReadonlyRectangle } from '#math/Rectangle';
 import type { RectangleLike } from '#math/RectangleLike';
 

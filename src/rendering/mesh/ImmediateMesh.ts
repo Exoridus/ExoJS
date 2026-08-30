@@ -3,8 +3,8 @@ import type { Matrix } from '#math/Matrix';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { MeshMaterial } from '#rendering/material/MeshMaterial';
 
+import { meshIndexFormatFor } from './indices';
 import { Mesh, readGeometry } from './Mesh';
-import { meshIndexFormatFor } from './meshIndices';
 
 // A degenerate triangle that satisfies the Mesh constructor's validation; it is
 // overwritten on the first configure() before the mesh is ever drawn.

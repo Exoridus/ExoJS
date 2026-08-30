@@ -1,6 +1,6 @@
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 
-import { Ease } from './Easing';
+import { Ease } from './Ease';
 import type { TweenSystem } from './TweenSystem';
 import type { EasingFunction, TweenLifecycleCallback, TweenUpdateCallback } from './types';
 import { TweenState } from './types';

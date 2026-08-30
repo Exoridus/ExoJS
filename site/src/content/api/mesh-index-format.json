@@ -63,11 +63,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/rendering/mesh/meshIndices.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/mesh/meshIndices.ts"
+        "label": "src/rendering/mesh/indices.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/mesh/indices.ts"
       }
     }
   ],
-  "sourcePath": "src/rendering/mesh/meshIndices.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/mesh/meshIndices.ts"
+  "sourcePath": "src/rendering/mesh/indices.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/mesh/indices.ts"
 }

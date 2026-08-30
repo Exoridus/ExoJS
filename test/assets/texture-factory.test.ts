@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import { TextureFactory } from '#assets/factories/TextureFactory';
-import { textureType } from '#assets/types/textureType';
+import { textureType } from '#assets/types/image';
 import { Texture } from '#rendering/texture/Texture';
 
 import { factoryContext } from './factory-context';

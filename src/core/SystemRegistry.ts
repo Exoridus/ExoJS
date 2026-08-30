@@ -1,6 +1,6 @@
 import type { RenderingContext } from '#rendering/RenderingContext';
 
-import { logger } from './logging';
+import { logger } from './Logger';
 import { Signal } from './Signal';
 import { hookOwnerName, requireSynchronousHook } from './syncHooks';
 import type { System } from './System';

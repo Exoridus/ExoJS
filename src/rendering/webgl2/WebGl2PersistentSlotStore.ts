@@ -1,5 +1,5 @@
 import type { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
-import type { PersistentSlotBundle } from '#rendering/plan/PersistentSlotDraw';
+import type { PersistentSlotBundle } from '#rendering/plan/persistentSlotDraw';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import {
   createTransformTextureLayout,

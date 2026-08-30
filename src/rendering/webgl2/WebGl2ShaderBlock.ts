@@ -1,6 +1,6 @@
 import { ShaderUniform } from '#rendering/shader/ShaderUniform';
 
-import { webGl2PrimitiveArrayConstructors, webGl2PrimitiveByteSizeMapping } from './WebGl2ShaderMappings';
+import { webGl2PrimitiveArrayConstructors, webGl2PrimitiveByteSizeMapping } from './shaderMappings';
 
 export class WebGl2ShaderBlock {
   public readonly index: number;

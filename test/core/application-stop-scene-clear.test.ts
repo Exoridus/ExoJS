@@ -7,8 +7,8 @@
  */
 import { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
+import { ConcurrentSceneNavigationError } from '#core/sceneErrors';
 import { SceneTransition, type SceneTransitionEnvironment, type SceneTransitionRequirements, type SceneTransitionSession } from '#core/SceneTransition';
-import { ConcurrentSceneNavigationError } from '#core/SceneTypes';
 import { Time } from '#core/units';
 
 vi.mock('#rendering/webgl2/WebGl2Backend', () => ({

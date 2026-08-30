@@ -2,8 +2,8 @@ import type { SceneNode } from '#core/SceneNode';
 import { Vector } from '#math/Vector';
 import type { View } from '#rendering/View';
 
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
-import { createSpatialSmoothingSettings, createVelocitySample, deriveVelocity, type SpatialSmoothingSettings, type VelocitySample } from './spatial-smoothing';
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audioContext';
+import { createSpatialSmoothingSettings, createVelocitySample, deriveVelocity, type SpatialSmoothingSettings, type VelocitySample } from './spatialSmoothing';
 
 /**
  * Anything {@link AudioListener.target} can be set to. The listener reads

@@ -1,7 +1,7 @@
 import { assert } from '#core/dev';
 
 import { CanvasSizing, type CanvasSizingContext } from './CanvasSizing';
-import { HostTracker, resolveHost } from './hostTracking';
+import { HostTracker, resolveHost } from './HostTracker';
 
 export interface ResponsiveCanvasSizingOptions {
   /**

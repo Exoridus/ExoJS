@@ -6,9 +6,9 @@ import { BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types'
 
 import fragmentSource from './glsl/stencil-clip.frag';
 import vertexSource from './glsl/stencil-clip.vert';
+import { createWebGl2ShaderProgram } from './shaderProgram';
 import type { WebGl2Backend } from './WebGl2Backend';
 import { uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
-import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 
 const positionNames = new Set<string>(['a_position', 'position']);

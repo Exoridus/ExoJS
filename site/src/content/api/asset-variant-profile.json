@@ -95,11 +95,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/AssetVariants.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetVariants.ts"
+        "label": "src/assets/AssetVariantSet.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetVariantSet.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/AssetVariants.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetVariants.ts"
+  "sourcePath": "src/assets/AssetVariantSet.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetVariantSet.ts"
 }

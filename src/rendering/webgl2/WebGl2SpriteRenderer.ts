@@ -11,9 +11,9 @@ import {
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import { Shader } from '#rendering/shader/Shader';
-import { fillPersistentSpriteSlotTable, writePersistentSpriteSlots } from '#rendering/sprite/persistentSpriteSlots';
+import { composeSpriteMaterialFragmentGlsl, spriteMaterialTextureSlots, spriteVertexGlsl } from '#rendering/sprite/materialSources';
+import { fillPersistentSpriteSlotTable, writePersistentSpriteSlots } from '#rendering/sprite/persistentSlots';
 import type { Sprite } from '#rendering/sprite/Sprite';
-import { composeSpriteMaterialFragmentGlsl, spriteMaterialTextureSlots, spriteVertexGlsl } from '#rendering/sprite/spriteMaterialSources';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
@@ -23,11 +23,11 @@ import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import fragmentSource from './glsl/sprite.frag';
 import vertexSource from './glsl/sprite.vert';
 import indexedVertexSource from './glsl/sprite-indexed.vert';
+import { createWebGl2ShaderProgram } from './shaderProgram';
 import type { WebGl2Backend } from './WebGl2Backend';
 import { WebGl2PersistentSlotStore } from './WebGl2PersistentSlotStore';
 import { uploadBufferRange, uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import type { WebGl2RetainedBatchPayload, WebGl2RetainedBatchReplayer, WebGl2RetainedNodeIndexRange } from './WebGl2RetainedGroupResources';
-import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 
 /**

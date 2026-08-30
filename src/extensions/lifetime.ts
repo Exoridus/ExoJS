@@ -1,5 +1,5 @@
 import type { Application } from '#core/Application';
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 
 import type { Extension, ExtensionDisposer } from './Extension';
 

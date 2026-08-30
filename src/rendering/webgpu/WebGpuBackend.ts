@@ -2,7 +2,7 @@
 
 import type { Application, CanvasAlphaMode } from '#core/Application';
 import { Color } from '#core/Color';
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 import { Signal } from '#core/Signal';
 import type { TextureSource } from '#core/types';
 import { type Matrix } from '#math/Matrix';
@@ -17,8 +17,8 @@ import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant }
 import type { Mesh } from '#rendering/mesh/Mesh';
 import { assertDrawsAllAttachments, assertSingleAttachmentCompose } from '#rendering/multiAttachmentGuard';
 import { isMultiAttachmentTarget, MultiRenderTarget } from '#rendering/MultiRenderTarget';
-import type { PersistentSlotBundle } from '#rendering/plan/PersistentSlotDraw';
-import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import type { PersistentSlotBundle } from '#rendering/plan/persistentSlotDraw';
+import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/renderCommand';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import type { ScopeEntry } from '#rendering/plan/RenderScope';
 import {
@@ -50,24 +50,24 @@ import { ScaleModes, TextureFormat, WrapModes } from '#rendering/types';
 import { createCanvas } from '#rendering/utils';
 import type { View } from '#rendering/View';
 
-import { WebGpuBackdropBlendCompositor } from './WebGpuBackdropBlendCompositor';
-import { readWebgpuCompressedFormats, type WebgpuCompressedFormatSupport, webgpuCompressedTextureFeatures } from './webgpuCompressedFormat';
-import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
-import { WebGpuMeshRenderer } from './WebGpuMeshRenderer';
-import { WebGpuPassCoordinator } from './WebGpuPassCoordinator';
-import type { WebGpuPersistentSlotCapableRenderer, WebGpuPersistentSlotStore } from './WebGpuPersistentSlotStore';
+import { readWebgpuCompressedFormats, type WebgpuCompressedFormatSupport, webgpuCompressedTextureFeatures } from './compressedFormat';
 import {
   retainedTintSlotBytes,
   retainedTransformSlotBytes,
   type WebGpuRetainedBatchPayload,
   type WebGpuRetainedBatchReplayer,
-  WebGpuRetainedCaptureFrame,
   type WebGpuRetainedGeometryRef,
-  WebGpuRetainedGroupBundle,
   type WebGpuRetainedNodeIndexRange,
-} from './WebGpuRetainedGroupResources';
+} from './retainedGroupResources';
+import { WEBGPU_DEFAULT_MAX_TEXTURE_DIMENSION_2D } from './storageLimits';
+import { WebGpuBackdropBlendCompositor } from './WebGpuBackdropBlendCompositor';
+import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
+import { WebGpuMeshRenderer } from './WebGpuMeshRenderer';
+import { WebGpuPassCoordinator } from './WebGpuPassCoordinator';
+import type { WebGpuPersistentSlotCapableRenderer, WebGpuPersistentSlotStore } from './WebGpuPersistentSlotStore';
+import { WebGpuRetainedCaptureFrame } from './WebGpuRetainedCaptureFrame';
+import { WebGpuRetainedGroupBundle } from './WebGpuRetainedGroupBundle';
 import { baseSpriteBatchTextureSlots, maxSpriteBatchTextureSlots } from './WebGpuSpriteRenderer';
-import { WEBGPU_DEFAULT_MAX_TEXTURE_DIMENSION_2D } from './webgpuStorageLimits';
 import { WebGpuTransformStorage } from './WebGpuTransformStorage';
 import mipmapWgslModule from './wgsl/mipmap.wgsl';
 

@@ -627,11 +627,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/types/textureType.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/textureType.ts"
+        "label": "src/assets/types/image.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/image.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/types/textureType.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/textureType.ts"
+  "sourcePath": "src/assets/types/image.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/image.ts"
 }

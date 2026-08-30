@@ -6,7 +6,7 @@ import type { GlyphAtlas } from './GlyphAtlas';
 import { SDF_RADIUS } from './GlyphAtlas';
 import { getDefaultGlyphAtlasPool } from './GlyphAtlasPool';
 import type { LayoutOptions } from './LayoutOptions';
-import { emptyTextLayout, layoutText } from './TextLayout';
+import { emptyTextLayout, layoutText } from './textLayout';
 import type { StyleChangeHint, TextStyleOptions } from './TextStyle';
 import { TextStyle } from './TextStyle';
 import type { TextLayoutResult, TextPageQuads, TextSize } from './types';

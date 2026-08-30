@@ -5,7 +5,7 @@ import { _readMeta } from '#assets/assetMeta';
 import { AssetRef } from '#assets/AssetRef';
 import { Assets } from '#assets/Assets';
 import { Sound } from '#audio/Sound';
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes } from '#rendering/types';
 

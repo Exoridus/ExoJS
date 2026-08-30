@@ -624,11 +624,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/types/mediaTypes.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/mediaTypes.ts"
+        "label": "src/assets/types/media.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/media.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/types/mediaTypes.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/mediaTypes.ts"
+  "sourcePath": "src/assets/types/media.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/media.ts"
 }

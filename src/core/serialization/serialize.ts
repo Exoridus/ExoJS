@@ -1,6 +1,6 @@
 import type { AssetConstructor } from '#assets/AssetConstructor';
 import type { Loader } from '#assets/Loader';
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 import type { SceneNode } from '#core/SceneNode';
 import type { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';

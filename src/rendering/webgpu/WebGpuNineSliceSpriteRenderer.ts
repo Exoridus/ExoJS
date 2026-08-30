@@ -11,18 +11,18 @@ import { BlendModes } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
-import type { WebGpuBackend } from './WebGpuBackend';
-import { getWebGpuBlendState } from './WebGpuBlendState';
-import { WebGpuPassArena } from './WebGpuPassArena';
-import type { WebGpuActiveRenderPass, WebGpuPassCoordinator } from './WebGpuPassCoordinator';
+import { getWebGpuBlendState } from './blendState';
 import {
   retainedGroupUniformBytes,
   type WebGpuRetainedBatchPayload,
   type WebGpuRetainedBatchReplayer,
   type WebGpuRetainedNodeIndexRange,
-} from './WebGpuRetainedGroupResources';
-import { packSnapViewport } from './webgpuSnapViewport';
-import { stencilContentDepthStencilState } from './WebGpuStencilState';
+} from './retainedGroupResources';
+import { packSnapViewport } from './snapViewport';
+import { stencilContentDepthStencilState } from './stencilState';
+import type { WebGpuBackend } from './WebGpuBackend';
+import { WebGpuPassArena } from './WebGpuPassArena';
+import type { WebGpuActiveRenderPass, WebGpuPassCoordinator } from './WebGpuPassCoordinator';
 import nineSliceShaderSourceModule from './wgsl/nine-slice.wgsl';
 
 /** WGSL source for the nine-slice sprite pipeline. @internal */

@@ -29,7 +29,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import process from 'node:process';
 
-import { type ContainerInput, encodeContainer } from '../src/assets/AssetContainer';
+import { type ContainerInput, encodeContainer } from '../src/assets/assetContainer';
 
 interface ManifestAsset {
   source: string;

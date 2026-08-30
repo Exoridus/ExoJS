@@ -1,6 +1,6 @@
 import { Sound } from '#audio/Sound';
 import type { LoadStateValue } from '#core/LoadState';
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 import { Texture } from '#rendering/texture/Texture';
 import type { TextureOptions } from '#rendering/texture/TextureOptions';
 

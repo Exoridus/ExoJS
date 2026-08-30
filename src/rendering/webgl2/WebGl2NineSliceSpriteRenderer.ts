@@ -10,10 +10,10 @@ import type { View } from '#rendering/View';
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import nineSliceFragmentSource from './glsl/nine-slice.frag';
 import nineSliceVertexSource from './glsl/nine-slice.vert';
+import { createWebGl2ShaderProgram } from './shaderProgram';
 import type { WebGl2Backend } from './WebGl2Backend';
 import { uploadBufferRange, uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import type { WebGl2RetainedBatchPayload, WebGl2RetainedBatchReplayer, WebGl2RetainedNodeIndexRange } from './WebGl2RetainedGroupResources';
-import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 
 const instanceStrideBytes = 32;

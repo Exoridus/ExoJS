@@ -1,7 +1,7 @@
 /// <reference types="@webgpu/types" />
 
 import type { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
-import type { PersistentSlotBundle } from '#rendering/plan/PersistentSlotDraw';
+import type { PersistentSlotBundle } from '#rendering/plan/persistentSlotDraw';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import { SOURCE_QUAD_FLOATS } from '#rendering/sourceQuadRecord';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -9,9 +9,9 @@ import type { Texture } from '#rendering/texture/Texture';
 import { TRANSFORM_FLOATS_PER_ROW, TRANSFORM_TINT_BYTES_PER_ROW } from '#rendering/TransformBuffer';
 import { BlendModes } from '#rendering/types';
 
+import { storageBufferLimit } from './storageLimits';
 import type { WebGpuBackend } from './WebGpuBackend';
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
-import { storageBufferLimit } from './webgpuStorageLimits';
 
 const floatsPerTransformRow = TRANSFORM_FLOATS_PER_ROW;
 const floatsPerQuadRecord = SOURCE_QUAD_FLOATS;

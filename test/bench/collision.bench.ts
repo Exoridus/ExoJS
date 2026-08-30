@@ -1,11 +1,11 @@
 import { bench, describe } from 'vitest';
 
 import { Circle } from '../../src/math/Circle';
-import { getCollisionSat, intersectionCircleCircle } from '../../src/math/collision-detection';
+import { getCollisionSat, intersectionCircleCircle } from '../../src/math/Collision';
 import { Polygon } from '../../src/math/Polygon';
 import { Quadtree } from '../../src/math/Quadtree';
 import { Rectangle } from '../../src/math/Rectangle';
-import { sweepRectangle } from '../../src/math/swept-collision';
+import { sweepRectangle } from '../../src/math/sweptCollision';
 import { Vector } from '../../src/math/Vector';
 
 const rng = (seed: number) => {

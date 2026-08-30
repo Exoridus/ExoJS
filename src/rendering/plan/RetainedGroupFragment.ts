@@ -1,10 +1,11 @@
-import { DirtyChannel, nodeDirtyIndex } from '#core/NodeDirtyIndex';
+import { DirtyChannel, nodeDirtyIndex } from '#core/nodeDirtyIndex';
 import type { Drawable } from '#rendering/Drawable';
+import { createEmptyMaterialKey } from '#rendering/material/MaterialKey';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
 
 import { CaptureThrashSuppressor, CaptureVerdict } from './CaptureThrashSuppressor';
-import { createEmptyMaterialKey, RenderEntryKind } from './RenderCommand';
+import { RenderEntryKind } from './renderCommand';
 import type { ScopeEntry } from './RenderScope';
 import { isRetainedFragmentRecordable, RetainedInstructionSet } from './RetainedInstructionSet';
 import { copyRetainedDrawData, type MutableRetainedDrawData, releasePooledDrawables, RetainedRecordPool } from './RetainedRecordPool';

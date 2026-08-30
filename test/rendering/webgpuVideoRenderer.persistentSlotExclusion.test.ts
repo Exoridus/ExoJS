@@ -26,7 +26,7 @@ import { materializeRendererBindings } from '#extensions/materialize';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderRootSource } from '#rendering/plan/RenderRootSource';
-import { createSourceScope } from '#rendering/plan/RenderSourceItem';
+import { createSourceScope } from '#rendering/plan/renderSourceItem';
 import type { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
 import { isRetainedFragmentRecordable } from '#rendering/plan/RetainedInstructionSet';
 import { RetainedContainer } from '#rendering/RetainedContainer';

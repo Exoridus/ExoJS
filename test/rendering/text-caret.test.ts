@@ -1,5 +1,5 @@
-import { caretRectAt, indexAtPoint } from '#rendering/text/textCaret';
-import { layoutText } from '#rendering/text/TextLayout';
+import { caretRectAt, indexAtPoint } from '#rendering/text/caret';
+import { layoutText } from '#rendering/text/textLayout';
 import type { GlyphInfo, GlyphProvider, TextLayoutResult } from '#rendering/text/types';
 
 /**

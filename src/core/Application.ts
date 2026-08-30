@@ -7,7 +7,7 @@ import type { Extension, ExtensionDisposer } from '#extensions/Extension';
 import { disposeExtensions, installExtensions } from '#extensions/lifetime';
 import { materializeAssetTypes, materializeRendererBindings, materializeSerializerBindings } from '#extensions/materialize';
 import { buildSnapshot, type ExtensionSnapshot } from '#extensions/snapshot';
-import type { GamepadDefinition } from '#input/GamepadDefinitions';
+import type { GamepadDefinition } from '#input/gamepadDefinitions';
 import type { GamepadSlotStrategy } from '#input/InputSystem';
 import { InputSystem } from '#input/InputSystem';
 import { InteractionSystem } from '#input/InteractionSystem';
@@ -27,7 +27,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { Capabilities } from './capabilities';
+import { Capabilities } from './Capabilities';
 import { Clock } from './Clock';
 import { Color } from './Color';
 import { Connectivity } from './Connectivity';
@@ -35,18 +35,18 @@ import { DestroyScope } from './DestroyScope';
 import { assert, invariant } from './dev';
 import { showDevErrorOverlay } from './devErrorOverlay';
 import { FixedTimestep } from './FixedTimestep';
-import { hello, logger } from './logging';
+import { hello, logger } from './Logger';
 import { Perf } from './Perf';
 import { SceneDirector } from './SceneDirector';
+import { SceneNavigationAbortedError } from './sceneErrors';
 import {
   type AnySceneConstructor,
   type ChangeSceneArgs,
   type InferSceneData,
   type NavigableSceneConstructor,
   type RegistryKeyOf,
-  SceneNavigationAbortedError,
   type SceneRegistryShape,
-} from './SceneTypes';
+} from './sceneTypes';
 import { defaultSerializationRegistry, SerializationRegistry } from './serialization/SerializationRegistry';
 import { Signal } from './Signal';
 import type { CanvasSizing, CanvasSizingContext, CanvasSizingHostMetrics, CanvasSizingMetrics } from './sizing/CanvasSizing';

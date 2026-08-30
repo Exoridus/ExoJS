@@ -5,8 +5,8 @@ export type * from './CircleLike';
 // CollisionResponse) - it does NOT export a `Collision` value despite the
 // filename. The `Collision` VALUE below is the query-namespace facade
 // (intersects.*/resolve.*) from `./collision-detection`. Keep these distinct.
-export * from './Collision';
-export { Collision } from './collision-detection';
+export { Collision } from './Collision';
+export * from './collisionTypes';
 export * from './DynamicAabbTree';
 export * from './Ellipse';
 export type * from './EllipseLike';
@@ -28,8 +28,8 @@ export * from './Random';
 export * from './Rectangle';
 export type * from './RectangleLike';
 export * from './Size';
-export type { SweptHit } from './swept-collision';
-export { Sweep } from './swept-collision';
+export type { SweptHit } from './sweptCollision';
+export { Sweep } from './sweptCollision';
 export { triangulate } from './triangulate';
 export {
   bezierCurveTo,

@@ -628,11 +628,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/types/soundType.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/soundType.ts"
+        "label": "src/assets/types/media.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/media.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/types/soundType.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/soundType.ts"
+  "sourcePath": "src/assets/types/media.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/media.ts"
 }

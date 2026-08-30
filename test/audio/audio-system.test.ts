@@ -1,13 +1,13 @@
 ﻿import type { MockInstance } from 'vitest';
 
-import { getAudioContext } from '#audio/audio-context';
 import { AudioBus } from '#audio/AudioBus';
+import { getAudioContext } from '#audio/audioContext';
 import type { AudioInput } from '#audio/AudioInput';
 import { AudioStream } from '#audio/AudioStream';
 import { AudioSystem } from '#audio/AudioSystem';
 import type { Voice } from '#audio/Playable';
 import { Sound } from '#audio/Sound';
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 import { Signal } from '#core/Signal';
 
 // ---------------------------------------------------------------------------
@@ -18,7 +18,7 @@ import { Signal } from '#core/Signal';
 // the first time anything subscribes - leaving no window to observe an
 // AudioSystem registering its own forwarding handler *before* the event
 // fires. To exercise AudioSystem's onUnlock wiring deterministically we
-// replace '#audio/audio-context' wholesale with a minimal fake that starts
+// replace '#audio/audioContext' wholesale with a minimal fake that starts
 // "locked" and only becomes ready when the test explicitly dispatches it.
 // ---------------------------------------------------------------------------
 
@@ -247,7 +247,7 @@ describe('AudioSystem', () => {
     // `AudioSystem` reads the live state rather than trusting the dispatch.
     let ready = false;
 
-    vi.doMock('#audio/audio-context', () => ({
+    vi.doMock('#audio/audioContext', () => ({
       getAudioContext: () => fakeCtx,
       isAudioContextReady: () => ready,
       onAudioContextReady: fakeSignal,
@@ -267,7 +267,7 @@ describe('AudioSystem', () => {
 
     expect(onUnlock).toHaveBeenCalledTimes(1);
 
-    vi.doUnmock('#audio/audio-context');
+    vi.doUnmock('#audio/audioContext');
     vi.resetModules();
   });
 

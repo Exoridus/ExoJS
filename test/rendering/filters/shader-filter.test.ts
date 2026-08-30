@@ -6,7 +6,8 @@
  * choice - which source runs, when the choice is made, and what happens when the
  * source the active backend needs is missing.
  */
-import { ShaderFilter, ShaderFilterBackendError } from '#rendering/filters/ShaderFilter';
+import { ShaderFilter } from '#rendering/filters/ShaderFilter';
+import { ShaderFilterBackendError } from '#rendering/filters/ShaderFilterBackendError';
 import { ShaderSource } from '#rendering/material/ShaderSource';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';

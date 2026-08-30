@@ -252,11 +252,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/rendering/filters/ShaderFilter.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/ShaderFilter.ts"
+        "label": "src/rendering/filters/ShaderFilterBackendError.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/ShaderFilterBackendError.ts"
       }
     }
   ],
-  "sourcePath": "src/rendering/filters/ShaderFilter.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/ShaderFilter.ts"
+  "sourcePath": "src/rendering/filters/ShaderFilterBackendError.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/ShaderFilterBackendError.ts"
 }

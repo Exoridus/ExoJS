@@ -2,7 +2,7 @@
 
 import { Asset } from '#assets/Asset';
 import { AssetCache } from '#assets/AssetCache';
-import { encodeContainer } from '#assets/AssetContainer';
+import { encodeContainer } from '#assets/assetContainer';
 import type { AssetInput } from '#assets/AssetDefinitions';
 import { AssetRef } from '#assets/AssetRef';
 import { Assets } from '#assets/Assets';

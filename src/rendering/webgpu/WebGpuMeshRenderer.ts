@@ -5,10 +5,10 @@ import { packAffineMat3Std140 } from '#rendering/affinePacking';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { Material } from '#rendering/material/Material';
+import type { MeshIndexArray, MeshIndexFormat } from '#rendering/mesh/indices';
+import { createIndexArray, meshIndexBytes } from '#rendering/mesh/indices';
 import type { Mesh } from '#rendering/mesh/Mesh';
-import type { MeshIndexArray, MeshIndexFormat } from '#rendering/mesh/meshIndices';
-import { createIndexArray, meshIndexBytes } from '#rendering/mesh/meshIndices';
-import type { DrawCommand } from '#rendering/plan/RenderCommand';
+import type { DrawCommand } from '#rendering/plan/renderCommand';
 import type { InstanceDataView } from '#rendering/RenderBatch';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
@@ -17,19 +17,15 @@ import { BlendModes } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
-import type { WebGpuBackend } from './WebGpuBackend';
-import { getWebGpuBlendState } from './WebGpuBlendState';
-import { WebGpuPassArena } from './WebGpuPassArena';
-import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
+import { getWebGpuBlendState } from './blendState';
 import type {
   WebGpuRetainedBatchPayload,
   WebGpuRetainedBatchReplayer,
-  WebGpuRetainedGroupBundle,
   WebGpuRetainedNodeIndexRange,
   WebGpuRetainedRendererReplayState,
-} from './WebGpuRetainedGroupResources';
-import { packSnapViewport } from './webgpuSnapViewport';
-import { stencilContentDepthStencilState } from './WebGpuStencilState';
+} from './retainedGroupResources';
+import { packSnapViewport } from './snapViewport';
+import { stencilContentDepthStencilState } from './stencilState';
 import {
   applyUserUniformUpload,
   collectScalarUniforms,
@@ -42,7 +38,11 @@ import {
   userUniformBufferBytes,
   type UserUniformState,
   type UserUniformUpload,
-} from './webgpuUserUniforms';
+} from './userUniforms';
+import type { WebGpuBackend } from './WebGpuBackend';
+import { WebGpuPassArena } from './WebGpuPassArena';
+import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
+import type { WebGpuRetainedGroupBundle } from './WebGpuRetainedGroupBundle';
 import meshShaderSourceModule from './wgsl/mesh.wgsl';
 import instancedMeshShaderSourceModule from './wgsl/mesh-instanced.wgsl';
 

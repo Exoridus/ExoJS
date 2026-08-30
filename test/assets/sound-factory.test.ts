@@ -7,7 +7,7 @@ import { Sound } from '#audio/Sound';
 import { factoryContext } from './factory-context';
 
 // SoundFactory.create() decodes bytes via the shared OfflineAudioContext
-// (`decodeAudioData` from '#audio/audio-context'). jsdom has no real audio
+// (`decodeAudioData` from '#audio/audioContext'). jsdom has no real audio
 // decoder, so the module is mocked wholesale - mirroring the `{ duration }`
 // AudioBuffer stub used by test/audio/sound.test.ts, which is all `Sound`'s
 // constructor actually reads. `vi.mock` factories are hoisted above imports,
@@ -17,7 +17,7 @@ const { decodeAudioDataMock } = vi.hoisted(() => ({
   decodeAudioDataMock: vi.fn(async (): Promise<AudioBuffer> => ({ duration: 2 }) as AudioBuffer),
 }));
 
-vi.mock('#audio/audio-context', () => ({
+vi.mock('#audio/audioContext', () => ({
   decodeAudioData: decodeAudioDataMock,
 }));
 

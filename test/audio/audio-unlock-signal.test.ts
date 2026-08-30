@@ -1,4 +1,4 @@
-import { getAudioContext, onAudioContextReady } from '#audio/audio-context';
+import { getAudioContext, onAudioContextReady } from '#audio/audioContext';
 import { AudioSystem } from '#audio/AudioSystem';
 import { Time } from '#core/units';
 

@@ -1,6 +1,6 @@
 ﻿import type { MockInstance } from 'vitest';
 
-import { getAudioContext } from '#audio/audio-context';
+import { getAudioContext } from '#audio/audioContext';
 import { AudioListener } from '#audio/AudioListener';
 import { Signal } from '#core/Signal';
 import { Drawable } from '#rendering/Drawable';
@@ -310,7 +310,7 @@ describe('AudioListener', () => {
       },
     } as unknown as AudioContext;
 
-    vi.doMock('#audio/audio-context', () => ({
+    vi.doMock('#audio/audioContext', () => ({
       getAudioContext: () => fakeCtx,
       isAudioContextReady: () => false,
       onAudioContextReady: fakeSignal,
@@ -332,7 +332,7 @@ describe('AudioListener', () => {
     expect(fakeSignal.count).toBe(0);
 
     listener.destroy();
-    vi.doUnmock('#audio/audio-context');
+    vi.doUnmock('#audio/audioContext');
     vi.resetModules();
   });
 
@@ -347,7 +347,7 @@ describe('AudioListener', () => {
       listener: { setOrientation, setPosition },
     } as unknown as AudioContext;
 
-    vi.doMock('#audio/audio-context', () => ({
+    vi.doMock('#audio/audioContext', () => ({
       getAudioContext: () => legacyCtx,
       isAudioContextReady: () => true,
       onAudioContextReady: new Signal<[AudioContext]>(),
@@ -368,7 +368,7 @@ describe('AudioListener', () => {
     expect(listener.position.x).toBe(7);
 
     listener.destroy();
-    vi.doUnmock('#audio/audio-context');
+    vi.doUnmock('#audio/audioContext');
     vi.resetModules();
   });
 
@@ -379,7 +379,7 @@ describe('AudioListener', () => {
       listener: {},
     } as unknown as AudioContext;
 
-    vi.doMock('#audio/audio-context', () => ({
+    vi.doMock('#audio/audioContext', () => ({
       getAudioContext: () => bareCtx,
       isAudioContextReady: () => true,
       onAudioContextReady: new Signal<[AudioContext]>(),
@@ -392,7 +392,7 @@ describe('AudioListener', () => {
     expect(() => listener._tick()).not.toThrow();
 
     listener.destroy();
-    vi.doUnmock('#audio/audio-context');
+    vi.doUnmock('#audio/audioContext');
     vi.resetModules();
   });
 

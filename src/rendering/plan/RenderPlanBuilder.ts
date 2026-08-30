@@ -3,16 +3,17 @@ import { type ReadonlyRectangle, Rectangle } from '#math/Rectangle';
 import type { Drawable } from '#rendering/Drawable';
 import type { Filter } from '#rendering/filters/Filter';
 import type { Geometry } from '#rendering/geometry/Geometry';
+import { materialKeyForcesFlush } from '#rendering/material/MaterialKey';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
 import { BlendModes, isAdvancedBlendMode } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import type { DerivedRootProduct } from './DerivedRootProduct';
-import { EffectBoundsResolver } from './effectBounds';
-import { type EntryPlacementState, reserveEntryPlacement } from './EntryPlacement';
-import type { PersistentSlotBackend } from './PersistentSlotDraw';
-import { type DrawCommand, materialKeyForcesFlush, RenderEntryKind } from './RenderCommand';
+import { EffectBoundsResolver } from './EffectBoundsResolver';
+import { type EntryPlacementState, reserveEntryPlacement } from './entryPlacement';
+import type { PersistentSlotBackend } from './persistentSlotDraw';
+import { type DrawCommand, RenderEntryKind } from './renderCommand';
 import { MutableRenderPlan, type RenderPlan } from './RenderPlan';
 import type { RenderRootSource } from './RenderRootSource';
 import {
@@ -25,7 +26,7 @@ import {
   type GroupScopeEntry,
   type ScopeEntry,
 } from './RenderScope';
-import { createSourceScope, LiveEntryReason, type SourceGroup, type SourceOther, type SourceScope } from './RenderSourceItem';
+import { createSourceScope, LiveEntryReason, type SourceGroup, type SourceOther, type SourceScope } from './renderSourceItem';
 import type { RetainedFragmentEntry, RetainedFragmentGroup, RetainedGroupFragment } from './RetainedGroupFragment';
 import type { RetainedInstructionSet } from './RetainedInstructionSet';
 import type { RetainedDrawData } from './RetainedRecordPool';

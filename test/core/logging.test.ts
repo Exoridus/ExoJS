@@ -1,4 +1,4 @@
-import { _resetHello, createConsoleSink, hello, type LogEntry, Logger, logger, LogSeverity } from '#core/logging';
+import { _resetHello, createConsoleSink, hello, type LogEntry, Logger, logger, LogSeverity } from '#core/Logger';
 
 // ---------------------------------------------------------------------------
 // Logger - dispatch, options bag, once dedup, addSink

@@ -2,7 +2,7 @@ import { Color } from '#core/Color';
 import type { Matrix } from '#math/Matrix';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
-import type { DrawCommand } from '#rendering/plan/RenderCommand';
+import type { DrawCommand } from '#rendering/plan/renderCommand';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';

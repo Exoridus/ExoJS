@@ -1,6 +1,6 @@
 import { PhasedSceneTransition } from '#core/PhasedSceneTransition';
 import { SceneTransition, type SceneTransitionSession } from '#core/SceneTransition';
-import { resolveSceneTransitionSelection } from '#core/SceneTransitionResolution';
+import { resolveSceneTransitionSelection } from '#core/sceneTransitionResolution';
 
 class FakeTransition extends SceneTransition {
   public getRequirements() {

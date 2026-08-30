@@ -186,10 +186,10 @@ if (typeof (globalThis as Record<string, unknown>)['AudioWorkletNode'] === 'unde
 // Domain imports (after audio mock)
 // ---------------------------------------------------------------------------
 
-import { getAudioContext } from '../../src/audio/audio-context';
+import { getAudioContext } from '../../src/audio/audioContext';
 import { AudioSystem } from '../../src/audio/AudioSystem';
 import { Sound } from '../../src/audio/Sound';
-import { getCollisionSat } from '../../src/math/collision-detection';
+import { getCollisionSat } from '../../src/math/Collision';
 import { Polygon } from '../../src/math/Polygon';
 import type { QuadtreeItem } from '../../src/math/Quadtree';
 import { Quadtree } from '../../src/math/Quadtree';

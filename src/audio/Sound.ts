@@ -1,14 +1,14 @@
 import { LoadState, type LoadStateValue } from '#core/LoadState';
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 import { clamp } from '#math/utils';
 
-import { getAudioContext, isAudioContextReady } from './audio-context';
 import type { AudioBus } from './AudioBus';
+import { getAudioContext, isAudioContextReady } from './audioContext';
 import type { AudioSystem } from './AudioSystem';
 import { NoopVoice } from './NoopVoice';
 import type { Playable, PlayOptions, Voice } from './Playable';
 import { SoundVoice, type SoundVoiceWindow } from './SoundVoice';
-import { seedVoiceFromPlayOptions, seedVoiceSends } from './spatial-options';
+import { seedVoiceFromPlayOptions, seedVoiceSends } from './spatialOptions';
 
 /**
  * Eviction strategy used when the pool is full and a new play is requested.

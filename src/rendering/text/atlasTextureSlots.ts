@@ -3,7 +3,7 @@ import {
   buildSpriteTextureSlotWgsl,
   composeSpriteMaterialFragmentGlsl,
   spriteMaterialTextureSlots,
-} from '#rendering/sprite/spriteMaterialSources';
+} from '#rendering/sprite/materialSources';
 
 /** Atlas textures rotated through one Text renderer batch. @internal */
 export const textAtlasTextureSlots = spriteMaterialTextureSlots;

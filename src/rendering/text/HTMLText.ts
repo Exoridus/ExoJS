@@ -1,4 +1,4 @@
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 import { Container } from '#rendering/Container';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { Texture } from '#rendering/texture/Texture';

@@ -1,6 +1,6 @@
 import { soundSeamlessAdapter, textureSeamlessAdapter } from '#assets/seamless';
 import { Sound } from '#audio/Sound';
-import { logger, LogSeverity } from '#core/logging';
+import { logger, LogSeverity } from '#core/Logger';
 import { Texture } from '#rendering/texture/Texture';
 
 const bufferStub = (duration = 2): AudioBuffer => {

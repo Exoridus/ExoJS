@@ -1,13 +1,15 @@
-import type { AssetConstructor } from '#assets/AssetConstructor';
-import type { AssetFactory } from '#assets/AssetFactory';
-import type { AssetSourceCodec } from '#assets/AssetSourceCodec';
-import type { AssetRequest } from '#assets/AssetType';
-import { AssetType } from '#assets/AssetType';
-import type { MediaAssetOptions, MediaAssetSource } from '#assets/factories/mediaSource';
+import { type AssetConstructor } from '#assets/AssetConstructor';
+import { type AssetFactory } from '#assets/AssetFactory';
+import { type AssetSourceCodec, binarySourceCodec } from '#assets/AssetSourceCodec';
+import { type AssetRequest, AssetType } from '#assets/AssetType';
+import { type MediaAssetOptions, type MediaAssetSource } from '#assets/factories/mediaSource';
 import { type MusicAssetOptions, MusicFactory } from '#assets/factories/MusicFactory';
+import { type SoundAssetOptions, SoundFactory } from '#assets/factories/SoundFactory';
 import { type VideoAssetOptions, VideoFactory } from '#assets/factories/VideoFactory';
+import { soundSeamlessAdapter } from '#assets/seamless';
 import { AudioStream } from '#audio/AudioStream';
-import type { NetworkSnapshot } from '#core/Connectivity';
+import { Sound } from '#audio/Sound';
+import { type NetworkSnapshot } from '#core/Connectivity';
 import { Video } from '#rendering/video/Video';
 
 /**
@@ -118,3 +120,19 @@ export class VideoAssetType extends AssetType<MediaAssetSource, Video, VideoAsse
 export const musicType = new MusicAssetType();
 /** The built-in `video` asset type. */
 export const videoType = new VideoAssetType();
+
+/** Short audio clips, fully decoded for low-latency playback. */
+export class SoundAssetType extends AssetType<ArrayBuffer, Sound, SoundAssetOptions> {
+  public readonly id = 'sound';
+  public override readonly extensions = ['ogg', 'mp3', 'wav', 'm4a', 'aac'];
+  public override readonly leaf = soundSeamlessAdapter;
+  public override readonly _token: AssetConstructor = Sound;
+  public override readonly codec: AssetSourceCodec<ArrayBuffer> = binarySourceCodec;
+
+  public createFactory(): AssetFactory<ArrayBuffer, Sound, SoundAssetOptions> {
+    return new SoundFactory();
+  }
+}
+
+/** The built-in `sound` asset type. */
+export const soundType = new SoundAssetType();

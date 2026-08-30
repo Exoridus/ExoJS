@@ -1,4 +1,4 @@
-import { Ease } from '#animation/Easing';
+import { Ease } from '#animation/Ease';
 import type { SceneTransitionContext, SceneTransitionEnvironment, SceneTransitionFrame } from '#core/SceneTransition';
 import { CrossFadeSceneTransition } from '#core/transitions/CrossFadeSceneTransition';
 import { Time } from '#core/units';

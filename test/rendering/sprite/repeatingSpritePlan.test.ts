@@ -1,11 +1,4 @@
-import {
-  buildRepeatingSpriteQuads,
-  computeShaderTiling,
-  validateFit,
-  validateMode,
-  validateOffset,
-  validateSizeInput,
-} from '#rendering/sprite/repeatingSpritePlan';
+import { buildRepeatingSpriteQuads, computeShaderTiling, validateFit, validateMode, validateOffset, validateSizeInput } from '#rendering/sprite/repeatingPlan';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
 
 // ---------------------------------------------------------------------------

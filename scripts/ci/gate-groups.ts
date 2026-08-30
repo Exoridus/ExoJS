@@ -19,7 +19,7 @@ export const GATE_GROUPS = {
     'typecheck:test',
     'typecheck:scripts',
   ],
-  lint: ['lint:all', 'lint:source-hygiene', 'lint:inline-source', 'lint:js-files', 'lint:shaders', 'format:check'],
+  lint: ['lint:all', 'lint:source-hygiene', 'lint:inline-source', 'lint:file-symbols', 'lint:js-files', 'lint:shaders', 'format:check'],
   // `perf:smoke` runs the benchmarks for their EXIT CODE, not their numbers -
   // a shared runner measures nothing meaningful. Every one of these executes
   // engine source in-process, so they rot silently against an API change or a

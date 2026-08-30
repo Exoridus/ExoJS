@@ -19,7 +19,7 @@ import {
   polygonContainsPoint,
   polygonsIntersect,
   segmentsIntersect,
-} from '#math/collision-primitives';
+} from '#math/collisionPrimitives';
 import { VoronoiRegion } from '#math/utils';
 
 // ---------------------------------------------------------------------------

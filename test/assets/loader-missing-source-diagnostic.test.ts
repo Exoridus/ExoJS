@@ -1,7 +1,7 @@
 import { Assets } from '#assets/Assets';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
-import { logger, LogSeverity } from '#core/logging';
+import { logger, LogSeverity } from '#core/Logger';
 import { materializeAssetTypes } from '#extensions/materialize';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in loader-seamless.test.ts). */

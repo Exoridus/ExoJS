@@ -1,5 +1,8 @@
-import type { DrawCommand, MaterialKey } from './RenderCommand';
-import { forcesBatchFlush, RenderEntryKind } from './RenderCommand';
+import type { MaterialKey } from '#rendering/material/MaterialKey';
+import { forcesBatchFlush } from '#rendering/material/MaterialKey';
+
+import type { DrawCommand } from './renderCommand';
+import { RenderEntryKind } from './renderCommand';
 import type { RenderPlan } from './RenderPlan';
 import type { DrawScopeEntry, GroupScope, ScopeEntry } from './RenderScope';
 

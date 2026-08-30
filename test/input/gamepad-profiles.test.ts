@@ -1,4 +1,4 @@
-import { builtInGamepadDefinitions, parseGamepadDescriptor, resolveGamepadDefinition } from '#input/GamepadDefinitions';
+import { builtInGamepadDefinitions, parseGamepadDescriptor, resolveGamepadDefinition } from '#input/gamepadDefinitions';
 import { GamepadMappingFamily } from '#input/GamepadMapping';
 import { createStandardGamepadMapping } from '#input/gamepadMappings';
 

@@ -2,8 +2,8 @@ import type { SceneNode } from '#core/SceneNode';
 import { Signal } from '#core/Signal';
 import type { Vector } from '#math/Vector';
 
-import { getAudioContext } from './audio-context';
 import type { AudioBus } from './AudioBus';
+import { getAudioContext } from './audioContext';
 import type { AudioEffect } from './AudioEffect';
 import type { AudioSend } from './AudioSend';
 import type { DistanceModel, SpatialPoint, Voice } from './Playable';

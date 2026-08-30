@@ -1,7 +1,8 @@
-import { DirtyChannel, nodeDirtyIndex } from '#core/NodeDirtyIndex';
+import { DirtyChannel, nodeDirtyIndex } from '#core/nodeDirtyIndex';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
-import { type DrawCommand, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { type MaterialKey } from '#rendering/material/MaterialKey';
+import { type DrawCommand, RenderEntryKind } from '#rendering/plan/renderCommand';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import type { DrawScopeEntry, GroupScope } from '#rendering/plan/RenderScope';

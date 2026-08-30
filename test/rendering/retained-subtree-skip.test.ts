@@ -1,7 +1,7 @@
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { Mesh } from '#rendering/mesh/Mesh';
-import { type DrawCommand, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { type DrawCommand, RenderEntryKind } from '#rendering/plan/renderCommand';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import type { GroupScope } from '#rendering/plan/RenderScope';

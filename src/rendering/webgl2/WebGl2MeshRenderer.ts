@@ -2,10 +2,10 @@ import { Matrix } from '#math/Matrix';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { Material, UniformValue } from '#rendering/material/Material';
+import type { MeshIndexArray, MeshIndexFormat } from '#rendering/mesh/indices';
+import { createIndexArray } from '#rendering/mesh/indices';
 import type { Mesh } from '#rendering/mesh/Mesh';
-import type { MeshIndexArray, MeshIndexFormat } from '#rendering/mesh/meshIndices';
-import { createIndexArray } from '#rendering/mesh/meshIndices';
-import { type DrawCommand, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { type DrawCommand, RenderEntryKind } from '#rendering/plan/renderCommand';
 import type { InstanceDataView } from '#rendering/RenderBatch';
 import { Shader } from '#rendering/shader/Shader';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -15,10 +15,10 @@ import { BlendModes, BufferTypes, BufferUsage, IndexElementTypes, RenderingPrimi
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import fragmentSource from './glsl/mesh.frag';
 import vertexSource from './glsl/mesh.vert';
+import { createWebGl2ShaderProgram } from './shaderProgram';
 import type { WebGl2Backend } from './WebGl2Backend';
 import { uploadBufferRange, uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import type { WebGl2RetainedBatchPayload, WebGl2RetainedBatchReplayer, WebGl2RetainedNodeIndexRange } from './WebGl2RetainedGroupResources';
-import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 
 // Per-vertex layout (20 bytes):

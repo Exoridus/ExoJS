@@ -116,37 +116,3 @@ export abstract class SceneTransition {
   /** Construct this navigation's session. Override in a subclass. */
   protected abstract createSession(environment: SceneTransitionEnvironment): SceneTransitionSession;
 }
-
-/**
- * Thrown when a {@link SceneTransitionSession} or {@link SceneTransitionEnvironment}
- * violates the transition lifecycle contract:
- * - `'commit-reentrant'` - {@link SceneTransitionEnvironment.commit} was called
- *   a second time on the same session. Dev-mode only; a production build
- *   no-ops the second call instead of throwing.
- * - `'done-before-commit'` - the session reported {@link SceneTransitionSession.done}
- *   `true` while {@link SceneTransitionEnvironment.committed} was still
- *   `false`. Always thrown, dev and production - the navigation aborts and
- *   the session is destroyed.
- * - `'aborted'` - the owning `SceneDirector` was destroyed while this
- *   session was still active. Always thrown.
- */
-export class SceneTransitionLifecycleError extends Error {
-  public readonly reason: 'commit-reentrant' | 'done-before-commit' | 'aborted';
-
-  public constructor(reason: 'commit-reentrant' | 'done-before-commit' | 'aborted') {
-    super(SceneTransitionLifecycleError._messageFor(reason));
-    this.name = 'SceneTransitionLifecycleError';
-    this.reason = reason;
-  }
-
-  private static _messageFor(reason: 'commit-reentrant' | 'done-before-commit' | 'aborted'): string {
-    switch (reason) {
-      case 'commit-reentrant':
-        return 'environment.commit() was called a second time on the same SceneTransitionSession. commit() may only be called once per session.';
-      case 'done-before-commit':
-        return 'SceneTransitionSession.done became true while SceneTransitionEnvironment.committed was still false. A session must not report done before the navigation has actually committed.';
-      case 'aborted':
-        return 'SceneDirector was destroyed while a SceneTransitionSession was still active.';
-    }
-  }
-}

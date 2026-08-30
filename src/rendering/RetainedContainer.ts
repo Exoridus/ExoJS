@@ -1,5 +1,5 @@
 import { Bounds } from '#core/Bounds';
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 import { nextNodeRevision } from '#core/NodeRevision';
 import { registerTransformGroupBoundary, unregisterTransformGroupBoundary } from '#core/SceneNode';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';

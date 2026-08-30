@@ -2,11 +2,11 @@ import type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet
 import type { OwnTransformRowPatcher } from '#rendering/plan/retainedTransformRowPatch';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Shader } from '#rendering/shader/Shader';
+import { composeTextAtlasFragmentGlsl, packTextNodeAtlasSlot, textAtlasTextureSlots, textNodeIndexMask } from '#rendering/text/atlasTextureSlots';
 import { type BitmapText } from '#rendering/text/BitmapText';
+import { packTextNodeData, packTextNodeTransform, textNodeDataFloats, textNodeDataTexels } from '#rendering/text/nodeDataPacker';
 import type { TextPageQuads } from '#rendering/text/Text';
 import { Text } from '#rendering/text/Text';
-import { composeTextAtlasFragmentGlsl, packTextNodeAtlasSlot, textAtlasTextureSlots, textNodeIndexMask } from '#rendering/text/textAtlasTextureSlots';
-import { packTextNodeData, packTextNodeTransform, textNodeDataFloats, textNodeDataTexels } from '#rendering/text/textNodeDataPacker';
 import { DataTexture } from '#rendering/texture/DataTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage, IndexElementTypes, RenderingPrimitives, TextureFormat } from '#rendering/types';
@@ -16,6 +16,7 @@ import textVertSource from './glsl/text.vert';
 import textColorFragSource from './glsl/text-color.frag';
 import textMsdfFragSource from './glsl/text-msdf.frag';
 import textSdfFragSource from './glsl/text-sdf.frag';
+import { createWebGl2ShaderProgram } from './shaderProgram';
 import type { WebGl2Backend } from './WebGl2Backend';
 import { uploadBufferRange, uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import {
@@ -25,7 +26,6 @@ import {
   type WebGl2RetainedNodeIndexRange,
   type WebGl2RetainedRendererReplayState,
 } from './WebGl2RetainedGroupResources';
-import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 
 // ── Node data texture layout ─────────────────────────────────────────────────

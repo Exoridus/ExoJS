@@ -1,4 +1,4 @@
-import { getAudioContext, onAudioContextReady } from '#audio/audio-context';
+import { getAudioContext, onAudioContextReady } from '#audio/audioContext';
 import { AudioStream } from '#audio/AudioStream';
 import type { AudioStreamVoice } from '#audio/AudioStreamVoice';
 import { AudioSystem } from '#audio/AudioSystem';

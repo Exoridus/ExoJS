@@ -43,7 +43,7 @@ import { SceneNode } from '../../src/core/SceneNode';
 import { Container } from '../../src/rendering/Container';
 import type { Drawable as DrawableType } from '../../src/rendering/Drawable';
 import { Drawable } from '../../src/rendering/Drawable';
-import { RenderEntryKind } from '../../src/rendering/plan/RenderCommand';
+import { RenderEntryKind } from '../../src/rendering/plan/renderCommand';
 import { RenderPlanBuilder } from '../../src/rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '../../src/rendering/plan/RenderPlanOptimizer';
 import { RenderPlanPlayer } from '../../src/rendering/plan/RenderPlanPlayer';

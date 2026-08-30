@@ -29,8 +29,8 @@ import type { GlyphInfo } from '#rendering/text/types';
 
 const layoutCounter = vi.hoisted(() => ({ passes: 0 }));
 
-vi.mock('#rendering/text/TextLayout', async importOriginal => {
-  const actual = await importOriginal<typeof import('#rendering/text/TextLayout')>();
+vi.mock('#rendering/text/textLayout', async importOriginal => {
+  const actual = await importOriginal<typeof import('#rendering/text/textLayout')>();
 
   return {
     ...actual,

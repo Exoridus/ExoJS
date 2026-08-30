@@ -1,4 +1,4 @@
-import { DirtyChannel, nodeDirtyIndex } from '#core/NodeDirtyIndex';
+import { DirtyChannel, nodeDirtyIndex } from '#core/nodeDirtyIndex';
 import type { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';

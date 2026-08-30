@@ -1,4 +1,4 @@
-import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audio-context';
+import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audioContext';
 import { AudioEffect } from '#audio/AudioEffect';
 
 /** Construction options for {@link LowpassFilter}. */

@@ -8,7 +8,7 @@ import type { MockInstance } from 'vitest';
  * `AudioSystem`'s per-frame spatial tick set - not merely stop writing to a
  * panner that is still silently wired into the graph.
  */
-import { getAudioContext } from '#audio/audio-context';
+import { getAudioContext } from '#audio/audioContext';
 import { AudioGenerator } from '#audio/AudioGenerator';
 import type { AudioGeneratorVoice } from '#audio/AudioGeneratorVoice';
 import { AudioInput } from '#audio/AudioInput';

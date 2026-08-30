@@ -2,7 +2,7 @@ import type { ReadonlyRectangle } from '#math/Rectangle';
 
 import { DerivedSelectionState } from './DerivedSelectionState';
 import type { RenderItemVisibility } from './RenderItemVisibility';
-import type { SourceScope } from './RenderSourceItem';
+import type { SourceScope } from './renderSourceItem';
 import { MembershipBits, type VisibilityQueryStats } from './SourceVisibilityIndex';
 
 /**

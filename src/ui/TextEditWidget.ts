@@ -9,8 +9,8 @@ import { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
 import type { PlatformTextInput, PlatformTextInputHints, TextEditIntent } from '#platform/PlatformTextInput';
 import { Graphics } from '#rendering/primitives/Graphics';
+import { caretRectOnLine, glyphAtPointOnLine, lineAtPoint } from '#rendering/text/caret';
 import { Text } from '#rendering/text/Text';
-import { caretRectOnLine, glyphAtPointOnLine, lineAtPoint } from '#rendering/text/textCaret';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 import type { TextLayoutResult } from '#rendering/text/types';
 

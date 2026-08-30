@@ -551,7 +551,7 @@ describe('Application lifecycle / getters / sizing', () => {
       // `loadHarness()` calls `vi.resetModules()`, so `Application` resolved its
       // `#core/logging` singleton fresh - grab THAT instance, not the one bound
       // by this file's static top-level import.
-      const { logger: freshLogger, LogSeverity: freshLogSeverity } = await import('#core/logging');
+      const { logger: freshLogger, LogSeverity: freshLogSeverity } = await import('#core/Logger');
       const messages: string[] = [];
       const removeSink = freshLogger.addSink(entry => {
         if (entry.severity >= freshLogSeverity.Warning) messages.push(entry.message);

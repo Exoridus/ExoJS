@@ -1,4 +1,4 @@
-﻿import { getAudioContext, onAudioContextReady } from '#audio/audio-context';
+﻿import { getAudioContext, onAudioContextReady } from '#audio/audioContext';
 import { HighpassFilter } from '#audio/filters/HighpassFilter';
 
 import { mutable } from '../../support/mutable';

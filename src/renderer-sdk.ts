@@ -42,6 +42,7 @@ export { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rend
 export { View } from '#rendering/View';
 export { AbstractWebGl2BatchedRenderer } from '#rendering/webgl2/AbstractWebGl2BatchedRenderer';
 export { AbstractWebGl2Renderer } from '#rendering/webgl2/AbstractWebGl2Renderer';
+export { createWebGl2ShaderProgram } from '#rendering/webgl2/shaderProgram';
 export { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 export type { WebGl2RenderBufferRuntime } from '#rendering/webgl2/WebGl2RenderBuffer';
 export { uploadBufferRange, uploadBufferStore, WebGl2RenderBuffer } from '#rendering/webgl2/WebGl2RenderBuffer';
@@ -52,22 +53,21 @@ export type {
   WebGl2RetainedNodeIndexRange,
 } from '#rendering/webgl2/WebGl2RetainedGroupResources';
 export { WebGl2ShaderBlock } from '#rendering/webgl2/WebGl2ShaderBlock';
-export { createWebGl2ShaderProgram } from '#rendering/webgl2/WebGl2ShaderProgram';
 export type { WebGl2VertexArrayObjectRuntime } from '#rendering/webgl2/WebGl2VertexArrayObject';
 export { WebGl2VertexArrayObject } from '#rendering/webgl2/WebGl2VertexArrayObject';
 export { AbstractWebGpuRenderer } from '#rendering/webgpu/AbstractWebGpuRenderer';
+export { getWebGpuBlendState } from '#rendering/webgpu/blendState';
 export type { ComputeBindGroupEntry, ComputeBinding } from '#rendering/webgpu/compute/index';
 export { reflectComputeBindings, WebGpuComputePipeline, WebGpuStorageBuffer, WebGpuUniformBuffer } from '#rendering/webgpu/compute/index';
-export { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
-export { getWebGpuBlendState } from '#rendering/webgpu/WebGpuBlendState';
-export { WebGpuPassArena } from '#rendering/webgpu/WebGpuPassArena';
-export type { WebGpuActiveRenderPass } from '#rendering/webgpu/WebGpuPassCoordinator';
 export {
   retainedGroupUniformBytes,
   type WebGpuRetainedBatchPayload,
   type WebGpuRetainedBatchReplayer,
   type WebGpuRetainedGeometryRef,
   type WebGpuRetainedNodeIndexRange,
-} from '#rendering/webgpu/WebGpuRetainedGroupResources';
-export { packSnapViewport } from '#rendering/webgpu/webgpuSnapViewport';
-export { stencilContentDepthStencilState } from '#rendering/webgpu/WebGpuStencilState';
+} from '#rendering/webgpu/retainedGroupResources';
+export { packSnapViewport } from '#rendering/webgpu/snapViewport';
+export { stencilContentDepthStencilState } from '#rendering/webgpu/stencilState';
+export { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
+export { WebGpuPassArena } from '#rendering/webgpu/WebGpuPassArena';
+export type { WebGpuActiveRenderPass } from '#rendering/webgpu/WebGpuPassCoordinator';

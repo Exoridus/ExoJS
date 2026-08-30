@@ -1,6 +1,6 @@
 import type { MockInstance } from 'vitest';
 
-import { getAudioContext } from '#audio/audio-context';
+import { getAudioContext } from '#audio/audioContext';
 import { AudioSystem } from '#audio/AudioSystem';
 import type { Pausable } from '#audio/Playable';
 import { Sound } from '#audio/Sound';

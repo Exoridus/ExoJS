@@ -1,14 +1,14 @@
 {
   "title": "Ease",
-  "description": "Standard Robert Penner easing functions as static methods. Each function accepts a normalized time `t` in [0, 1] and returns a value that equals 0 at t=0 and 1 at t=1 (overshoot functions like back/elastic may exceed that range between the endpoints). Usage: `Ease.cubicOut`, `Ease.bounceIn`, etc. Note: only scalar numeric properties are supported in v1. Vector, Color, and Matrix interpolation are out of scope.",
+  "description": "Standard Robert Penner easing functions. Each function accepts a normalized time `t` in [0, 1] and returns a value that equals 0 at t=0 and 1 at t=1 (overshoot functions like back/elastic may exceed that range between the endpoints). Usage: `Ease.cubicOut`, `Ease.bounceIn`, etc. Note: only scalar numeric properties are supported in v1. Vector, Color, and Matrix interpolation are out of scope.",
   "symbol": "Ease",
-  "kind": "class",
+  "kind": "namespace",
   "subsystem": "animation",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 32,
+  "memberCount": 31,
   "counts": {
-    "constructors": 1,
+    "constructors": 0,
     "methods": 0,
     "properties": 31,
     "events": 0
@@ -19,49 +19,11 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Standard Robert Penner easing functions as static methods. Each function accepts a normalized time `t` in [0, 1] and returns a value that equals 0 at t=0 and 1 at t=1 (overshoot functions like back/elastic may exceed that range between the endpoints).",
+        "Standard Robert Penner easing functions. Each function accepts a normalized time `t` in [0, 1] and returns a value that equals 0 at t=0 and 1 at t=1 (overshoot functions like back/elastic may exceed that range between the endpoints).",
         "Usage: `Ease.cubicOut`, `Ease.bounceIn`, etc.",
         "Note: only scalar numeric properties are supported in v1. Vector, Color, and Matrix interpolation are out of scope."
       ],
       "importLine": "import { Ease } from '@codexo/exojs'",
-      "sourceLink": null
-    },
-    {
-      "id": "constructors",
-      "title": "Constructors",
-      "members": [
-        {
-          "name": "new",
-          "signature": "new(): Ease",
-          "signatureTokens": [
-            {
-              "text": "new",
-              "kind": "keyword"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Ease",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": "Ease",
-          "description": ""
-        }
-      ],
-      "paragraphs": [],
-      "importLine": null,
       "sourceLink": null
     },
     {
@@ -70,7 +32,7 @@
       "members": [
         {
           "name": "backIn",
-          "signature": "backIn: EasingFunction",
+          "signature": "backIn: (t: number) => number",
           "signatureTokens": [
             {
               "text": "backIn",
@@ -81,8 +43,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -91,7 +73,7 @@
         },
         {
           "name": "backInOut",
-          "signature": "backInOut: EasingFunction",
+          "signature": "backInOut: (t: number) => number",
           "signatureTokens": [
             {
               "text": "backInOut",
@@ -102,8 +84,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -112,7 +114,7 @@
         },
         {
           "name": "backOut",
-          "signature": "backOut: EasingFunction",
+          "signature": "backOut: (t: number) => number",
           "signatureTokens": [
             {
               "text": "backOut",
@@ -123,8 +125,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -133,7 +155,7 @@
         },
         {
           "name": "bounceIn",
-          "signature": "bounceIn: EasingFunction",
+          "signature": "bounceIn: (t: number) => number",
           "signatureTokens": [
             {
               "text": "bounceIn",
@@ -144,8 +166,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -154,7 +196,7 @@
         },
         {
           "name": "bounceInOut",
-          "signature": "bounceInOut: EasingFunction",
+          "signature": "bounceInOut: (t: number) => number",
           "signatureTokens": [
             {
               "text": "bounceInOut",
@@ -165,8 +207,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -175,7 +237,7 @@
         },
         {
           "name": "bounceOut",
-          "signature": "bounceOut: EasingFunction",
+          "signature": "bounceOut: (t: number) => number",
           "signatureTokens": [
             {
               "text": "bounceOut",
@@ -186,8 +248,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -196,7 +278,7 @@
         },
         {
           "name": "circIn",
-          "signature": "circIn: EasingFunction",
+          "signature": "circIn: (t: number) => number",
           "signatureTokens": [
             {
               "text": "circIn",
@@ -207,8 +289,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -217,7 +319,7 @@
         },
         {
           "name": "circInOut",
-          "signature": "circInOut: EasingFunction",
+          "signature": "circInOut: (t: number) => number",
           "signatureTokens": [
             {
               "text": "circInOut",
@@ -228,8 +330,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -238,7 +360,7 @@
         },
         {
           "name": "circOut",
-          "signature": "circOut: EasingFunction",
+          "signature": "circOut: (t: number) => number",
           "signatureTokens": [
             {
               "text": "circOut",
@@ -249,8 +371,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -259,7 +401,7 @@
         },
         {
           "name": "cubicIn",
-          "signature": "cubicIn: EasingFunction",
+          "signature": "cubicIn: (t: number) => number",
           "signatureTokens": [
             {
               "text": "cubicIn",
@@ -270,8 +412,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -280,7 +442,7 @@
         },
         {
           "name": "cubicInOut",
-          "signature": "cubicInOut: EasingFunction",
+          "signature": "cubicInOut: (t: number) => number",
           "signatureTokens": [
             {
               "text": "cubicInOut",
@@ -291,8 +453,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -301,7 +483,7 @@
         },
         {
           "name": "cubicOut",
-          "signature": "cubicOut: EasingFunction",
+          "signature": "cubicOut: (t: number) => number",
           "signatureTokens": [
             {
               "text": "cubicOut",
@@ -312,8 +494,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -322,7 +524,7 @@
         },
         {
           "name": "elasticIn",
-          "signature": "elasticIn: EasingFunction",
+          "signature": "elasticIn: (t: number) => number",
           "signatureTokens": [
             {
               "text": "elasticIn",
@@ -333,8 +535,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -343,7 +565,7 @@
         },
         {
           "name": "elasticInOut",
-          "signature": "elasticInOut: EasingFunction",
+          "signature": "elasticInOut: (t: number) => number",
           "signatureTokens": [
             {
               "text": "elasticInOut",
@@ -354,8 +576,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -364,7 +606,7 @@
         },
         {
           "name": "elasticOut",
-          "signature": "elasticOut: EasingFunction",
+          "signature": "elasticOut: (t: number) => number",
           "signatureTokens": [
             {
               "text": "elasticOut",
@@ -375,8 +617,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -385,7 +647,7 @@
         },
         {
           "name": "expoIn",
-          "signature": "expoIn: EasingFunction",
+          "signature": "expoIn: (t: number) => number",
           "signatureTokens": [
             {
               "text": "expoIn",
@@ -396,8 +658,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -406,7 +688,7 @@
         },
         {
           "name": "expoInOut",
-          "signature": "expoInOut: EasingFunction",
+          "signature": "expoInOut: (t: number) => number",
           "signatureTokens": [
             {
               "text": "expoInOut",
@@ -417,8 +699,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -427,7 +729,7 @@
         },
         {
           "name": "expoOut",
-          "signature": "expoOut: EasingFunction",
+          "signature": "expoOut: (t: number) => number",
           "signatureTokens": [
             {
               "text": "expoOut",
@@ -438,8 +740,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -448,7 +770,7 @@
         },
         {
           "name": "linear",
-          "signature": "linear: EasingFunction",
+          "signature": "linear: (t: number) => number",
           "signatureTokens": [
             {
               "text": "linear",
@@ -459,8 +781,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -469,7 +811,7 @@
         },
         {
           "name": "quadIn",
-          "signature": "quadIn: EasingFunction",
+          "signature": "quadIn: (t: number) => number",
           "signatureTokens": [
             {
               "text": "quadIn",
@@ -480,8 +822,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -490,7 +852,7 @@
         },
         {
           "name": "quadInOut",
-          "signature": "quadInOut: EasingFunction",
+          "signature": "quadInOut: (t: number) => number",
           "signatureTokens": [
             {
               "text": "quadInOut",
@@ -501,8 +863,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -511,7 +893,7 @@
         },
         {
           "name": "quadOut",
-          "signature": "quadOut: EasingFunction",
+          "signature": "quadOut: (t: number) => number",
           "signatureTokens": [
             {
               "text": "quadOut",
@@ -522,8 +904,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -532,7 +934,7 @@
         },
         {
           "name": "quartIn",
-          "signature": "quartIn: EasingFunction",
+          "signature": "quartIn: (t: number) => number",
           "signatureTokens": [
             {
               "text": "quartIn",
@@ -543,8 +945,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -553,7 +975,7 @@
         },
         {
           "name": "quartInOut",
-          "signature": "quartInOut: EasingFunction",
+          "signature": "quartInOut: (t: number) => number",
           "signatureTokens": [
             {
               "text": "quartInOut",
@@ -564,8 +986,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -574,7 +1016,7 @@
         },
         {
           "name": "quartOut",
-          "signature": "quartOut: EasingFunction",
+          "signature": "quartOut: (t: number) => number",
           "signatureTokens": [
             {
               "text": "quartOut",
@@ -585,8 +1027,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -595,7 +1057,7 @@
         },
         {
           "name": "quintIn",
-          "signature": "quintIn: EasingFunction",
+          "signature": "quintIn: (t: number) => number",
           "signatureTokens": [
             {
               "text": "quintIn",
@@ -606,8 +1068,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -616,7 +1098,7 @@
         },
         {
           "name": "quintInOut",
-          "signature": "quintInOut: EasingFunction",
+          "signature": "quintInOut: (t: number) => number",
           "signatureTokens": [
             {
               "text": "quintInOut",
@@ -627,8 +1109,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -637,7 +1139,7 @@
         },
         {
           "name": "quintOut",
-          "signature": "quintOut: EasingFunction",
+          "signature": "quintOut: (t: number) => number",
           "signatureTokens": [
             {
               "text": "quintOut",
@@ -648,8 +1150,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -658,7 +1180,7 @@
         },
         {
           "name": "sineIn",
-          "signature": "sineIn: EasingFunction",
+          "signature": "sineIn: (t: number) => number",
           "signatureTokens": [
             {
               "text": "sineIn",
@@ -669,8 +1191,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -679,7 +1221,7 @@
         },
         {
           "name": "sineInOut",
-          "signature": "sineInOut: EasingFunction",
+          "signature": "sineInOut: (t: number) => number",
           "signatureTokens": [
             {
               "text": "sineInOut",
@@ -690,8 +1232,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -700,7 +1262,7 @@
         },
         {
           "name": "sineOut",
-          "signature": "sineOut: EasingFunction",
+          "signature": "sineOut: (t: number) => number",
           "signatureTokens": [
             {
               "text": "sineOut",
@@ -711,8 +1273,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "EasingFunction",
-              "kind": "type"
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -731,11 +1313,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/animation/Easing.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/Easing.ts"
+        "label": "src/animation/Ease.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/Ease.ts"
       }
     }
   ],
-  "sourcePath": "src/animation/Easing.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/Easing.ts"
+  "sourcePath": "src/animation/Ease.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/Ease.ts"
 }

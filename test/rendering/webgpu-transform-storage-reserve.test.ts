@@ -1,7 +1,8 @@
 import type { MockInstance } from 'vitest';
 
 import { Drawable } from '#rendering/Drawable';
-import { type DrawCommand, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { type MaterialKey } from '#rendering/material/MaterialKey';
+import { type DrawCommand, RenderEntryKind } from '#rendering/plan/renderCommand';
 import { TRANSFORM_FLOATS_PER_ROW } from '#rendering/TransformBuffer';
 import { WebGpuTransformStorage } from '#rendering/webgpu/WebGpuTransformStorage';
 

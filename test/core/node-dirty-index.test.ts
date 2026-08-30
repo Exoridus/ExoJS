@@ -1,4 +1,4 @@
-import { DirtyChannel, nodeDirtyIndex } from '#core/NodeDirtyIndex';
+import { DirtyChannel, nodeDirtyIndex } from '#core/nodeDirtyIndex';
 import type { SceneNode } from '#core/SceneNode';
 import { Container } from '#rendering/Container';
 

@@ -1,9 +1,9 @@
-import { getAudioContext } from '#audio/audio-context';
+import { getAudioContext } from '#audio/audioContext';
 import { AudioSystem } from '#audio/AudioSystem';
 import { NoopVoice } from '#audio/NoopVoice';
 import { Sound } from '#audio/Sound';
 import { LoadState } from '#core/LoadState';
-import { logger, LogSeverity } from '#core/logging';
+import { logger, LogSeverity } from '#core/Logger';
 
 const bufferStub = (duration = 2): AudioBuffer => {
   return { duration } as AudioBuffer;

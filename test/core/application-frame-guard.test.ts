@@ -10,7 +10,7 @@ import type { MockInstance } from 'vitest';
  *  5. A successful frame resets the consecutive counter.
  */
 import { Application, ApplicationState } from '#core/Application';
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 import { Time } from '#core/units';
 
 const overlaySpies = vi.hoisted(() => ({

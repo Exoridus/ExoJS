@@ -12,7 +12,7 @@
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { formatShaderError, RenderError } from '#rendering/RenderError';
 import { Shader } from '#rendering/shader/Shader';
-import { createWebGl2ShaderProgram } from '#rendering/webgl2/WebGl2ShaderProgram';
+import { createWebGl2ShaderProgram } from '#rendering/webgl2/shaderProgram';
 
 interface MockGlOptions {
   /** Force COMPILE_STATUS false for this shader type (VERTEX_SHADER / FRAGMENT_SHADER). */

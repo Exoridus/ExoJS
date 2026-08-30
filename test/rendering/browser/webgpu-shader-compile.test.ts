@@ -38,7 +38,7 @@
 
 import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 
-import { spriteMaterialPrologueWgsl } from '#rendering/sprite/spriteMaterialSources';
+import { spriteMaterialPrologueWgsl } from '#rendering/sprite/materialSources';
 import { compositorShaderSource as backdropBlendCompositorWgsl } from '#rendering/webgpu/WebGpuBackdropBlendCompositor';
 import { mipmapWgsl } from '#rendering/webgpu/WebGpuBackend';
 import { compositorShaderSource as maskCompositorWgsl } from '#rendering/webgpu/WebGpuMaskCompositor';

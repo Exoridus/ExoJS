@@ -612,11 +612,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/types/fontTypes.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/fontTypes.ts"
+        "label": "src/assets/types/font.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/font.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/types/fontTypes.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/fontTypes.ts"
+  "sourcePath": "src/assets/types/font.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/font.ts"
 }

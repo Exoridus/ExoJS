@@ -20,7 +20,7 @@
 import { Color } from '#core/Color';
 import { Matrix } from '#math/Matrix';
 import { affineMat3Std140FloatCount, affineMat4FloatCount, packAffineMat3Std140, packAffineMat4 } from '#rendering/affinePacking';
-import { spriteVertexCoreWgsl } from '#rendering/sprite/spriteMaterialSources';
+import { spriteVertexCoreWgsl } from '#rendering/sprite/materialSources';
 import { TransformBuffer } from '#rendering/TransformBuffer';
 import { instancedMeshShaderSource, WebGpuMeshRenderer } from '#rendering/webgpu/WebGpuMeshRenderer';
 import { nineSliceShaderSource } from '#rendering/webgpu/WebGpuNineSliceSpriteRenderer';

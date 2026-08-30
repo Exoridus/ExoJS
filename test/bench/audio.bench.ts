@@ -153,7 +153,7 @@ describe('audio', () => {
   });
 
   bench('50 Sound instances play() (1 iteration = 50 play() calls)', async () => {
-    const { getAudioContext } = await import('../../src/audio/audio-context');
+    const { getAudioContext } = await import('../../src/audio/audioContext');
     const { AudioSystem } = await import('../../src/audio/AudioSystem');
     // Nothing bootstraps the shared context eagerly, and a Sound whose context
     // does not exist yet hands out a `NoopVoice` - the bench would then measure

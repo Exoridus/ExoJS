@@ -11,7 +11,7 @@
 import { describe, expect, test } from 'vitest';
 
 import { Asset } from '#assets/Asset';
-import { AssetVariantSet } from '#assets/AssetVariants';
+import { AssetVariantSet } from '#assets/AssetVariantSet';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { materializeAssetTypes } from '#extensions/materialize';

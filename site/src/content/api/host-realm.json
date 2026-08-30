@@ -70,11 +70,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/capabilities.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/capabilities.ts"
+        "label": "src/core/Capabilities.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Capabilities.ts"
       }
     }
   ],
-  "sourcePath": "src/core/capabilities.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/capabilities.ts"
+  "sourcePath": "src/core/Capabilities.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Capabilities.ts"
 }

@@ -1,6 +1,6 @@
 import { Gamepad } from '#input/Gamepad';
 import { GamepadButton } from '#input/GamepadButton';
-import { parseGamepadDescriptor, resolveGamepadDefinition } from '#input/GamepadDefinitions';
+import { parseGamepadDescriptor, resolveGamepadDefinition } from '#input/gamepadDefinitions';
 import { GamepadMappingFamily, GamepadMappingLayout } from '#input/GamepadMapping';
 import {
   createArcadeStickGamepadMapping,

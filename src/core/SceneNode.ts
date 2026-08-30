@@ -1,7 +1,5 @@
 import type { AbstractVector } from '#math/AbstractVector';
 import type { Circle } from '#math/Circle';
-import type { Collidable, CollisionResponse } from '#math/Collision';
-import { CollisionType } from '#math/Collision';
 import {
   getCollisionSat,
   intersectionLineRect,
@@ -9,8 +7,10 @@ import {
   intersectionRectCircle,
   intersectionRectEllipse,
   intersectionSat,
-} from '#math/collision-detection';
-import { intersectionRectRect } from '#math/collision-primitives';
+} from '#math/Collision';
+import { intersectionRectRect } from '#math/collisionPrimitives';
+import type { Collidable, CollisionResponse } from '#math/collisionTypes';
+import { CollisionType } from '#math/collisionTypes';
 import type { Ellipse } from '#math/Ellipse';
 import { Flags } from '#math/Flags';
 import { Interval } from '#math/Interval';
@@ -28,7 +28,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import type { View } from '#rendering/View';
 
 import { Bounds } from './Bounds';
-import { DirtyChannel, nodeDirtyIndex } from './NodeDirtyIndex';
+import { DirtyChannel, nodeDirtyIndex } from './nodeDirtyIndex';
 import { nextNodeRevision, NodeRevision } from './NodeRevision';
 import type { Stage } from './Stage';
 

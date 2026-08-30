@@ -240,11 +240,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/rendering/sprite/repeatingSpritePlan.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/sprite/repeatingSpritePlan.ts"
+        "label": "src/rendering/sprite/repeatingPlan.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/sprite/repeatingPlan.ts"
       }
     }
   ],
-  "sourcePath": "src/rendering/sprite/repeatingSpritePlan.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/sprite/repeatingSpritePlan.ts"
+  "sourcePath": "src/rendering/sprite/repeatingPlan.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/sprite/repeatingPlan.ts"
 }

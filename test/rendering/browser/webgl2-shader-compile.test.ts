@@ -17,7 +17,7 @@ import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 
 import { fillShaderSource } from '#rendering/shader/fillShaderSource';
 import { resolveTransformTextureGlsl } from '#rendering/shader/transformTextureLayout';
-import { composeTextAtlasFragmentGlsl } from '#rendering/text/textAtlasTextureSlots';
+import { composeTextAtlasFragmentGlsl } from '#rendering/text/atlasTextureSlots';
 
 import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../../../packages/exojs-tilemap/src/tileWord';
 

@@ -1,12 +1,12 @@
 import { assert } from '#core/dev';
-import { logger } from '#core/logging';
+import { logger } from '#core/Logger';
 import type { Texture } from '#rendering/texture/Texture';
 
 import { AbstractText } from './AbstractText';
 import type { BmFontData } from './BmFont';
 import { type BmFont } from './BmFont';
 import type { LayoutOptions } from './LayoutOptions';
-import { emptyTextLayout, layoutText } from './TextLayout';
+import { emptyTextLayout, layoutText } from './textLayout';
 import type { TextStyleOptions } from './TextStyle';
 import { TextStyle } from './TextStyle';
 import type { GlyphInfo, GlyphProvider, TextLayoutResult, TextLayoutStyle, TextSize } from './types';

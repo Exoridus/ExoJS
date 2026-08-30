@@ -1,4 +1,4 @@
-import { Ease } from '#animation/Easing';
+import { Ease } from '#animation/Ease';
 import {
   composePhasedSceneTransition,
   mergeSceneTransitionRequirements,

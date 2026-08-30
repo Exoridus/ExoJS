@@ -1,4 +1,4 @@
-import { RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { RenderEntryKind } from '#rendering/plan/renderCommand';
 import type { GroupScope, ScopeEntry } from '#rendering/plan/RenderScope';
 
 /**

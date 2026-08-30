@@ -2,9 +2,7 @@ import type { SceneNode } from '#core/SceneNode';
 
 import type { AbstractVector } from './AbstractVector';
 import type { Circle } from './Circle';
-import type { Collidable, CollisionResponse } from './Collision';
-import { CollisionType } from './Collision';
-import { getCollisionCircleRectangle, getCollisionEllipseRectangle, getCollisionRectangleRectangle, getCollisionSat } from './collision-detection';
+import { getCollisionCircleRectangle, getCollisionEllipseRectangle, getCollisionRectangleRectangle, getCollisionSat } from './Collision';
 import {
   intersectionLineRect,
   intersectionPointRect,
@@ -13,7 +11,9 @@ import {
   intersectionRectPoly,
   intersectionRectRect,
   intersectionSat,
-} from './collision-detection';
+} from './Collision';
+import type { Collidable, CollisionResponse } from './collisionTypes';
+import { CollisionType } from './collisionTypes';
 import type { Ellipse } from './Ellipse';
 import { Interval } from './Interval';
 import type { Line } from './Line';

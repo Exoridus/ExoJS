@@ -1,8 +1,9 @@
 import type { Drawable } from '#rendering/Drawable';
+import { drawableHasOwnMaterial } from '#rendering/material/MaterialKey';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
 
-import { drawableHasOwnMaterial, RenderEntryKind } from './RenderCommand';
+import { RenderEntryKind } from './renderCommand';
 import type { RetainedFragmentEntry } from './RetainedGroupFragment';
 
 /**

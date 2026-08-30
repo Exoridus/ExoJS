@@ -23,7 +23,8 @@ import { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { RenderError } from '#rendering/RenderError';
 import { createRenderStats } from '#rendering/RenderStats';
-import { retainedTintSlotBytes, retainedTransformSlotBytes, WebGpuRetainedGroupBundle } from '#rendering/webgpu/WebGpuRetainedGroupResources';
+import { retainedTintSlotBytes, retainedTransformSlotBytes } from '#rendering/webgpu/retainedGroupResources';
+import { WebGpuRetainedGroupBundle } from '#rendering/webgpu/WebGpuRetainedGroupBundle';
 import { WebGpuTransformStorage } from '#rendering/webgpu/WebGpuTransformStorage';
 
 /** WebGPU's spec defaults - what a device gets when nothing higher is requested. */
