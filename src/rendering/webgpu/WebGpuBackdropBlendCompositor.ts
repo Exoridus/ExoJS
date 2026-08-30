@@ -6,9 +6,9 @@ import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
 
 import { getWebGpuBlendState } from './blendState';
+import compositorShaderSourceModule from './shaders/backdrop-blend-compositor.wgsl';
 import { stencilContentDepthStencilState } from './stencilState';
 import type { WebGpuBackend } from './WebGpuBackend';
-import compositorShaderSourceModule from './wgsl/backdrop-blend-compositor.wgsl';
 
 /** WGSL source for the backdrop-blend compositor pipeline. @internal */
 export const compositorShaderSource: string = compositorShaderSourceModule;

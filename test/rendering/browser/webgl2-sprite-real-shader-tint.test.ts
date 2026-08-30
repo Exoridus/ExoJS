@@ -92,7 +92,7 @@ const createSolidTexture = (color: string, width = 16, height = 16): Texture => 
 
 describe('WebGL2 Sprite — real sprite.vert tint', () => {
   test('the real shader source made it past the stub (not an empty string)', async () => {
-    const real = await import('../../../src/rendering/webgl2/glsl/sprite.vert?raw');
+    const real = await import('../../../src/rendering/webgl2/shaders/sprite.vert?raw');
 
     expect(real.default.length).toBeGreaterThan(0);
     expect(real.default).toContain('texelFetch(u_tintTexture, exoTintTexel(row), 0)');

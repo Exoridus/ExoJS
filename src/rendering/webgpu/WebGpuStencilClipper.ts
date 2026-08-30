@@ -5,7 +5,7 @@ import type { Geometry } from '#rendering/geometry/Geometry';
 import type { GeometryAttribute } from '#rendering/geometry/GeometryAttribute';
 import type { View } from '#rendering/View';
 
-import stencilWriteShaderSourceModule from './wgsl/stencil-write.wgsl';
+import stencilWriteShaderSourceModule from './shaders/stencil-write.wgsl';
 
 /** depth24plus-stencil8 is the portable depth/stencil format with an 8-bit stencil aspect. */
 export const stencilAttachmentFormat: GPUTextureFormat = 'depth24plus-stencil8';

@@ -4,9 +4,9 @@ import type { GeometryAttribute } from '#rendering/geometry/GeometryAttribute';
 import { Shader } from '#rendering/shader/Shader';
 import { BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
 
-import fragmentSource from './glsl/stencil-clip.frag';
-import vertexSource from './glsl/stencil-clip.vert';
 import { createWebGl2ShaderProgram } from './shaderProgram';
+import fragmentSource from './shaders/stencil-clip.frag';
+import vertexSource from './shaders/stencil-clip.vert';
 import type { WebGl2Backend } from './WebGl2Backend';
 import { uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';

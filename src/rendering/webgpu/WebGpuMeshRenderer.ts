@@ -24,6 +24,8 @@ import type {
   WebGpuRetainedNodeIndexRange,
   WebGpuRetainedRendererReplayState,
 } from './retainedGroupResources';
+import meshShaderSourceModule from './shaders/mesh.wgsl';
+import instancedMeshShaderSourceModule from './shaders/mesh-instanced.wgsl';
 import { packSnapViewport } from './snapViewport';
 import { stencilContentDepthStencilState } from './stencilState';
 import {
@@ -43,8 +45,6 @@ import type { WebGpuBackend } from './WebGpuBackend';
 import { WebGpuPassArena } from './WebGpuPassArena';
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
 import type { WebGpuRetainedGroupBundle } from './WebGpuRetainedGroupBundle';
-import meshShaderSourceModule from './wgsl/mesh.wgsl';
-import instancedMeshShaderSourceModule from './wgsl/mesh-instanced.wgsl';
 
 /** WGSL source for the default (non-instanced) mesh pipeline. @internal */
 export const meshShaderSource: string = meshShaderSourceModule;

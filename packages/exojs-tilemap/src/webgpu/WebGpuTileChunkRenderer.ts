@@ -26,7 +26,7 @@ import {
 import type { TileQuad } from '../chunkGeometry';
 import type { TileChunkNode } from '../TileChunkNode';
 import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../tileWord';
-import tileShaderTemplate from './wgsl/tile-chunk.wgsl';
+import tileShaderTemplate from './shaders/tile-chunk.wgsl';
 
 const instanceStrideBytes = 32;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT; // = 8

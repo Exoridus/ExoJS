@@ -4,9 +4,9 @@ import type { Texture } from '#rendering/texture/Texture';
 import type { BlendModes } from '#rendering/types';
 import { BufferTypes, BufferUsage } from '#rendering/types';
 
-import fragmentSource from './glsl/mask-compose.frag';
-import vertexSource from './glsl/mask-compose.vert';
 import { createWebGl2ShaderProgram } from './shaderProgram';
+import fragmentSource from './shaders/mask-compose.frag';
+import vertexSource from './shaders/mask-compose.vert';
 import type { WebGl2Backend } from './WebGl2Backend';
 import { uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';

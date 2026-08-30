@@ -15,7 +15,7 @@ import { describe, expect, test } from 'vitest';
 
 // Same glob as the browser compile suite: core WebGL2 GLSL plus every
 // extension package's own (currently only `@codexo/exojs-particles`).
-const shaderModules = import.meta.glob(['/src/rendering/webgl2/glsl/*.{vert,frag}', '/packages/exojs-*/src/**/glsl/*.{vert,frag}'], {
+const shaderModules = import.meta.glob(['/src/rendering/webgl2/shaders/*.{vert,frag}', '/packages/exojs-*/src/**/shaders/*.{vert,frag}'], {
   query: '?raw',
   import: 'default',
   eager: true,

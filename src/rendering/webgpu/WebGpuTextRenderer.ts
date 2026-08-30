@@ -29,13 +29,13 @@ import {
   type WebGpuRetainedNodeIndexRange,
   type WebGpuRetainedRendererReplayState,
 } from './retainedGroupResources';
+import textShaderTemplate from './shaders/text.wgsl';
 import { packSnapViewport } from './snapViewport';
 import { stencilContentDepthStencilState } from './stencilState';
 import type { WebGpuBackend } from './WebGpuBackend';
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
 import { type WebGpuRetainedCaptureFrame } from './WebGpuRetainedCaptureFrame';
 import { WebGpuRetainedGroupBundle } from './WebGpuRetainedGroupBundle';
-import textShaderTemplate from './wgsl/text.wgsl';
 
 // ── Node data layout (identical to WebGl2TextRenderer) ───────────────────────
 //

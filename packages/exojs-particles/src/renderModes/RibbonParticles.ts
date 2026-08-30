@@ -4,12 +4,12 @@ import { ShaderSource } from '@codexo/exojs';
 import type { ParticleBatch } from '#ParticleStorage';
 import type { ParticleSystem } from '#ParticleSystem';
 
-import fragmentSource from './glsl/ribbon.frag';
-import vertexSource from './glsl/ribbon.vert';
 import { ParticleBufferLayout } from './ParticleBufferLayout';
 import { ParticleMaterial } from './ParticleMaterial';
 import { ParticleRenderMode } from './ParticleRenderMode';
-import ribbonParticleWgslModule from './wgsl/ribbon-particles.wgsl';
+import fragmentSource from './shaders/ribbon.frag';
+import vertexSource from './shaders/ribbon.vert';
+import ribbonParticleWgslModule from './shaders/ribbon-particles.wgsl';
 
 const vertexStrideBytes = 20;
 const wordsPerVertex = vertexStrideBytes / Float32Array.BYTES_PER_ELEMENT;
@@ -27,7 +27,7 @@ export interface RibbonParticlesOptions {
 }
 
 /**
- * WGSL counterpart of `glsl/ribbon.vert` + `glsl/ribbon.frag`. Vertex and
+ * WGSL counterpart of `shaders/ribbon.vert` + `shaders/ribbon.frag`. Vertex and
  * fragment entry points share one source per WGSL convention, and the
  * per-vertex attributes bind by `@location`, matching the declaration order and
  * byte offsets of {@link RibbonParticles.dataLayout}.

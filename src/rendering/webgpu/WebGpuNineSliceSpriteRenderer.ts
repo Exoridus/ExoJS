@@ -18,12 +18,12 @@ import {
   type WebGpuRetainedBatchReplayer,
   type WebGpuRetainedNodeIndexRange,
 } from './retainedGroupResources';
+import nineSliceShaderSourceModule from './shaders/nine-slice.wgsl';
 import { packSnapViewport } from './snapViewport';
 import { stencilContentDepthStencilState } from './stencilState';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { WebGpuPassArena } from './WebGpuPassArena';
 import type { WebGpuActiveRenderPass, WebGpuPassCoordinator } from './WebGpuPassCoordinator';
-import nineSliceShaderSourceModule from './wgsl/nine-slice.wgsl';
 
 /** WGSL source for the nine-slice sprite pipeline. @internal */
 export const nineSliceShaderSource: string = nineSliceShaderSourceModule;

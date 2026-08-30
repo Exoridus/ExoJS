@@ -6,9 +6,9 @@ import type { Texture } from '#rendering/texture/Texture';
 import type { BlendModes } from '#rendering/types';
 
 import { getWebGpuBlendState } from './blendState';
+import compositorShaderSourceModule from './shaders/mask-compositor.wgsl';
 import { stencilContentDepthStencilState } from './stencilState';
 import type { WebGpuBackend } from './WebGpuBackend';
-import compositorShaderSourceModule from './wgsl/mask-compositor.wgsl';
 
 /** WGSL source for the mask compositor pipeline. @internal */
 export const compositorShaderSource: string = compositorShaderSourceModule;

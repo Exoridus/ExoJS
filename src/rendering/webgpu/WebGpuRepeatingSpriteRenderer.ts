@@ -20,14 +20,14 @@ import {
   type WebGpuRetainedBatchReplayer,
   type WebGpuRetainedNodeIndexRange,
 } from './retainedGroupResources';
+import commonWgslModule from './shaders/repeating-sprite-common.wgsl';
+import geoPathEntriesModule from './shaders/repeating-sprite-geo-path.wgsl';
+import shaderPathEntriesModule from './shaders/repeating-sprite-shader-path.wgsl';
 import { packSnapViewport } from './snapViewport';
 import { stencilContentDepthStencilState } from './stencilState';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { WebGpuPassArena } from './WebGpuPassArena';
 import type { WebGpuActiveRenderPass, WebGpuPassCoordinator } from './WebGpuPassCoordinator';
-import commonWgslModule from './wgsl/repeating-sprite-common.wgsl';
-import geoPathEntriesModule from './wgsl/repeating-sprite-geo-path.wgsl';
-import shaderPathEntriesModule from './wgsl/repeating-sprite-shader-path.wgsl';
 
 // ---------------------------------------------------------------------------
 // Shared WGSL declarations - structs, bindings, and output struct used by

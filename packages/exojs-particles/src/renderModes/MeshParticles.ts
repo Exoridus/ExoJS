@@ -4,13 +4,13 @@ import { Geometry, ShaderSource } from '@codexo/exojs';
 import type { ParticleBatch } from '#ParticleStorage';
 import type { ParticleSystem } from '#ParticleSystem';
 
-import fragmentSource from '../renderers/glsl/particle.frag';
-import vertexSource from './glsl/mesh.vert';
+import fragmentSource from '../renderers/shaders/particle.frag';
 import { assertVertexGeometryCompatible, ParticleBufferLayout } from './ParticleBufferLayout';
 import { instanceAttributes, instanceStrideBytes, ParticleInstanceWriter } from './ParticleInstanceWriter';
 import { ParticleMaterial } from './ParticleMaterial';
 import { ParticleRenderMode } from './ParticleRenderMode';
-import meshParticleWgslModule from './wgsl/mesh-particles.wgsl';
+import vertexSource from './shaders/mesh.vert';
+import meshParticleWgslModule from './shaders/mesh-particles.wgsl';
 
 /** Floats one entry of the normalised mesh vertex table occupies: x, y, u, v. */
 const floatsPerMeshVertex = 4;
@@ -125,7 +125,7 @@ const readMeshTable = (mesh: Geometry, out: Float32Array | null = null): Float32
 };
 
 /**
- * WGSL counterpart of `glsl/mesh.vert` plus the quad's fragment stage. Vertex
+ * WGSL counterpart of `shaders/mesh.vert` plus the quad's fragment stage. Vertex
  * and fragment entry points share one source per WGSL convention. The
  * per-instance attributes bind at `@location(0..5)`, matching the declaration
  * order and byte offsets of {@link instanceAttributes}, and the mesh's own

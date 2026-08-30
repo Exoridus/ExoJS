@@ -11,6 +11,8 @@ import type { View } from '#rendering/View';
 
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import { getWebGpuBlendState } from './blendState';
+import spriteDefaultVertexInputWgsl from './shaders/sprite-default-vertex-input.wgsl';
+import spriteDefaultVertexMainWgsl from './shaders/sprite-default-vertex-main.wgsl';
 import { packSnapViewport } from './snapViewport';
 import { stencilContentDepthStencilState } from './stencilState';
 import type { WebGpuBackend } from './WebGpuBackend';
@@ -18,8 +20,6 @@ import { WebGpuPassArena } from './WebGpuPassArena';
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
 import { pipelineVariantKey, WebGpuPipelineVariantCache } from './WebGpuPipelineVariantCache';
 import { buildSpriteShaderSource } from './WebGpuSpriteRenderer';
-import spriteDefaultVertexInputWgsl from './wgsl/sprite-default-vertex-input.wgsl';
-import spriteDefaultVertexMainWgsl from './wgsl/sprite-default-vertex-main.wgsl';
 
 // Byte-for-byte the sprite instance layout: localBounds vec4 f32 (16) +
 // uvBounds u16x4 packed as 2×u32 (8) + packedSlotFlags u32 (4) + nodeIndex u32

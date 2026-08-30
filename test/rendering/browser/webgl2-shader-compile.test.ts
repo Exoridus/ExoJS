@@ -25,16 +25,16 @@ import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../../../packages/exojs-tilema
 // from `@codexo/exojs-particles`, so a glob over `src/` alone would leave the
 // only GLSL outside core uncompiled here.
 //
-// The filter and custom-material shaders live outside `webgl2/glsl/` and are
+// The filter and custom-material shaders live outside `webgl2/shaders/` and are
 // pulled in explicitly. Their browser specs render them, so the authored form
 // does reach a driver there; what only this suite compiles is the
 // comment-stripped text the production build ships.
 const shaderModules = import.meta.glob(
   [
-    '/src/rendering/webgl2/glsl/*.{vert,frag}',
+    '/src/rendering/webgl2/shaders/*.{vert,frag}',
     '/src/rendering/filters/shaders/*.{vert,frag}',
-    '/src/rendering/sprite/glsl/*.{vert,frag}',
-    '/packages/exojs-*/src/**/glsl/*.{vert,frag}',
+    '/src/rendering/sprite/shaders/*.{vert,frag}',
+    '/packages/exojs-*/src/**/shaders/*.{vert,frag}',
   ],
   {
     query: '?raw',

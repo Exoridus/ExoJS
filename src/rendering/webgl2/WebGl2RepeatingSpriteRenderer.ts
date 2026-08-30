@@ -9,10 +9,10 @@ import { Texture } from '#rendering/texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives, ScaleModes, WrapModes } from '#rendering/types';
 
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
-import sharedFragSource from './glsl/repeating-sprite.frag';
-import geoPathVertSource from './glsl/repeating-sprite-geo-path.vert';
-import shaderPathVertSource from './glsl/repeating-sprite-shader-path.vert';
 import { createWebGl2ShaderProgram } from './shaderProgram';
+import sharedFragSource from './shaders/repeating-sprite.frag';
+import geoPathVertSource from './shaders/repeating-sprite-geo-path.vert';
+import shaderPathVertSource from './shaders/repeating-sprite-shader-path.vert';
 import type { WebGl2Backend } from './WebGl2Backend';
 import { uploadBufferRange, uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import type { WebGl2RetainedBatchPayload, WebGl2RetainedBatchReplayer, WebGl2RetainedNodeIndexRange } from './WebGl2RetainedGroupResources';

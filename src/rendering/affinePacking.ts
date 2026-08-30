@@ -45,7 +45,7 @@ import type { Matrix } from '#math/Matrix';
  * let worldY = slot.m0.z * localX + slot.m0.w * localY + slot.m1.y; // c·x + d·y + ty
  * ```
  *
- * (identical to `webgl2/glsl/sprite.vert` / `mesh.vert`). Any other
+ * (identical to `webgl2/shaders/sprite.vert` / `mesh.vert`). Any other
  * orientation applies the transpose and diverges for rotated / skewed nodes.
  *
  * @internal

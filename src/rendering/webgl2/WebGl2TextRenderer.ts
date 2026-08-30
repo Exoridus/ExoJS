@@ -12,11 +12,11 @@ import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage, IndexElementTypes, RenderingPrimitives, TextureFormat } from '#rendering/types';
 
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
-import textVertSource from './glsl/text.vert';
-import textColorFragSource from './glsl/text-color.frag';
-import textMsdfFragSource from './glsl/text-msdf.frag';
-import textSdfFragSource from './glsl/text-sdf.frag';
 import { createWebGl2ShaderProgram } from './shaderProgram';
+import textVertSource from './shaders/text.vert';
+import textColorFragSource from './shaders/text-color.frag';
+import textMsdfFragSource from './shaders/text-msdf.frag';
+import textSdfFragSource from './shaders/text-sdf.frag';
 import type { WebGl2Backend } from './WebGl2Backend';
 import { uploadBufferRange, uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import {
