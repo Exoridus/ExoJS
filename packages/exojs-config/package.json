@@ -37,7 +37,7 @@
     "eslint-plugin-unicorn": "^64.0.0",
     "eslint-plugin-unused-imports": "^4.4.1",
     "globals": "^17.5.0",
-    "rolldown": "1.2.5",
+    "rolldown": "1.2.6",
     "typescript-eslint": "~8.60.0"
   },
   "license": "MIT"
