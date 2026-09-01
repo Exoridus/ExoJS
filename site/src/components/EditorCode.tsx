@@ -79,7 +79,7 @@ interface MonacoTypeScriptApi {
   typescriptDefaults: MonacoLanguageDefaults;
   ModuleKind: { ESNext: number };
   ModuleResolutionKind: { NodeJs: number };
-  ScriptTarget: { ES2020: number };
+  ScriptTarget: { ES2020: number; ESNext: number };
 }
 
 type AssetManifest = Record<string, string[]>;
@@ -96,6 +96,16 @@ const SHARED_LIB_FILES = [
   { path: 'examples/shared/runtime.d.ts', virtualPath: 'file:///node_modules/@examples/runtime/index.d.ts' },
   { path: 'examples/shared/editor-support.d.ts', virtualPath: 'file:///node_modules/@examples/editor-support/index.d.ts' },
   { path: 'examples/shared/assets-global.d.ts', virtualPath: 'file:///node_modules/@examples/assets-global/index.d.ts' },
+  // Shared example module, imported by name from examples rather than declared:
+  // without it every importer reports ts2307 for `@examples/terrain-noise`.
+  { path: 'examples/shared/terrain-noise.ts', virtualPath: 'file:///node_modules/@examples/terrain-noise/index.ts' },
+  // Ambient WebGPU names (`GPUDevice`, `GPUBuffer`, ...) used by the custom
+  // renderer examples. Global declarations, so the virtual path only has to be
+  // unique - nothing imports it by name.
+  { path: 'vendor/webgpu/index.d.ts', virtualPath: 'file:///node_modules/@webgpu/types/index.d.ts' },
+  // Bundler specifiers (`*.vert`, `*?worker`, ...) an example may import. Same
+  // declarations `typecheck:examples` uses, so the editor and the gate agree.
+  { path: 'vendor/exojs-build/client.d.ts', virtualPath: 'file:///node_modules/@codexo/exojs-build/client.d.ts' },
 ] as const;
 
 const typingsCache = new Map<string, Promise<ReadonlyArray<ExtraLib>>>();
@@ -762,9 +772,12 @@ const configureLanguageDefaults = (): void => {
     module: tsApi.ModuleKind.ESNext,
     moduleResolution: tsApi.ModuleResolutionKind.NodeJs,
     noEmit: true,
-    target: tsApi.ScriptTarget.ES2020,
+    // ES2020 is below what the examples use (`String.replaceAll` is ES2021),
+    // which surfaces as a ts2550 on an example that runs perfectly well.
+    // Monaco's ScriptTarget stops at ES2020 and then jumps to ESNext, so this
+    // is the only value above it the enum offers.
+    target: tsApi.ScriptTarget.ESNext,
     baseUrl: 'file:///',
-    paths: { '@/*': ['node_modules/@codexo/exojs/dist/esm/*'] },
   };
   // TS examples are strict-clean at the source of truth (tsconfig.examples.json,
   // enforced by `pnpm typecheck:examples`) - mirror that here so editing one in

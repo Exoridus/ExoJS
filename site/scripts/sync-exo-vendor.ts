@@ -349,8 +349,47 @@ const syncTypings = (): void => {
   console.log(`[vendor:sync] esm runtime: copied ${allFiles.length} files (${dtsFiles.length} declarations) from ${sourceEsmDir}.`);
 };
 
+/**
+ * Ships the ambient WebGPU declarations to the playground. Examples with a
+ * custom WebGPU renderer annotate `GPUDevice`/`GPUBuffer`, which the engine's
+ * own declarations reference but never define - Monaco has no `types`
+ * resolution, so without this copy those examples show ts2304 for names that
+ * compile fine everywhere else.
+ */
+const syncWebGpuTypes = (): void => {
+  const source = requireFromSite.resolve('@webgpu/types/dist/index.d.ts');
+  const targetDir = path.resolve(projectRoot, 'public', 'vendor', 'webgpu');
+
+  fs.rmSync(targetDir, { recursive: true, force: true });
+  fs.mkdirSync(targetDir, { recursive: true });
+  fs.copyFileSync(source, path.resolve(targetDir, 'index.d.ts'));
+
+  console.log('[vendor:sync] Copied @webgpu/types ambient declarations -> vendor/webgpu/index.d.ts');
+};
+
+/**
+ * Ships the bundler-specifier declarations (`*.vert`, `*.frag`, `*.wgsl`,
+ * `*?worker`, `*?worklet`) the examples import. These resolve through the
+ * build plugin at compile time; the editor has no bundler, so an example
+ * importing a shader or a worker reports ts2307 without them. Copying the
+ * package's own `client.d.ts` keeps one source of truth with the typecheck.
+ */
+const syncBundlerClientTypes = (): void => {
+  const packageJsonPath = requireFromSite.resolve('@codexo/exojs-build/package.json');
+  const source = path.resolve(path.dirname(packageJsonPath), 'client.d.ts');
+  const targetDir = path.resolve(projectRoot, 'public', 'vendor', 'exojs-build');
+
+  fs.rmSync(targetDir, { recursive: true, force: true });
+  fs.mkdirSync(targetDir, { recursive: true });
+  fs.copyFileSync(source, path.resolve(targetDir, 'client.d.ts'));
+
+  console.log('[vendor:sync] Copied @codexo/exojs-build client declarations -> vendor/exojs-build/client.d.ts');
+};
+
 const syncVendor = (): void => {
   ensureSourcePackage();
+  syncWebGpuTypes();
+  syncBundlerClientTypes();
 
   const versionId = readRootPackageVersion();
 

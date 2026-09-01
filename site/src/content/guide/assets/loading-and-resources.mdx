@@ -359,7 +359,7 @@ Ask for the complete bytes when you want ExoJS to own them — that is a separat
   title="examples/guides/loading-and-resources/scenes.ts"
 />
 
-`cacheSource` fetches the whole file through the loader's cache pipeline and persists it, without building an element or making anything resident. It is on the application's loader rather than a scene's: nothing it does belongs to a scope, because nothing it does is owned. That is what makes media available offline, and it is the same thing a container (`.exoa`) entry does — container bytes are already owned by the application. See [Working offline](/guide/assets/offline/).
+`cacheSource` fetches the whole file through the loader's cache pipeline and persists it, without building an element or making anything resident. It is on the application's loader rather than a scene's: nothing it does belongs to a scope, because nothing it does is owned. That is what makes media available offline, and it is the same thing a container (`.exoa`) entry does — container bytes are already owned by the application. See [Working offline](/ExoJS/en/guide/assets/offline/).
 
 The descriptor is the same one you load. Whichever transport an asset arrives through, it is the same canonical asset: a source streamed from the network, one unpacked from a container and one read back from a cache resolve to one identity and one resident resource, never two.
 
