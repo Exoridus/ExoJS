@@ -64,15 +64,7 @@ export interface TilePropertyTileRef {
  * @advanced
  */
 export type TilePropertyValue =
-  | null
-  | boolean
-  | number
-  | string
-  | TilePropertyPoint
-  | TilePropertyObjectRef
-  | TilePropertyTileRef
-  | readonly TilePropertyValue[]
-  | TileProperties;
+  null | boolean | number | string | TilePropertyPoint | TilePropertyObjectRef | TilePropertyTileRef | readonly TilePropertyValue[] | TileProperties;
 
 /**
  * An immutable, flat key-value bag of generic tile properties.

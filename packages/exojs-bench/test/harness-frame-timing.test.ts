@@ -307,8 +307,7 @@ const createFakeWebGpuDevice = (options: {
       ({
         beginRenderPass: (descriptor: GPURenderPassDescriptor): GPURenderPassEncoder => {
           const writes = (descriptor as unknown as Record<string, unknown>)['timestampWrites'] as
-            | { beginningOfPassWriteIndex: number; endOfPassWriteIndex: number }
-            | undefined;
+            { beginningOfPassWriteIndex: number; endOfPassWriteIndex: number } | undefined;
 
           if (writes === undefined) {
             timestampWritesSeen.push(null);

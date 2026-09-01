@@ -13,17 +13,7 @@
  * the WebGPU backend (custom shaders, compute, GPU stress).
  */
 export type Capability =
-  | 'webgl2'
-  | 'webgpu'
-  | 'pointer'
-  | 'keyboard'
-  | 'gamepad'
-  | 'touch'
-  | 'audio'
-  | 'fullscreen'
-  | 'vibration'
-  | 'offscreenCanvas'
-  | 'webWorkers';
+  'webgl2' | 'webgpu' | 'pointer' | 'keyboard' | 'gamepad' | 'touch' | 'audio' | 'fullscreen' | 'vibration' | 'offscreenCanvas' | 'webWorkers';
 
 export interface ExampleRuntimeMeta {
   slug?: string;

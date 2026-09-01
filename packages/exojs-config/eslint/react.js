@@ -9,8 +9,6 @@
 
 import eslintReact from '@eslint-react/eslint-plugin';
 import reactHooks from 'eslint-plugin-react-hooks';
-import simpleImportSort from 'eslint-plugin-simple-import-sort';
-import unusedImports from 'eslint-plugin-unused-imports';
 import globals from 'globals';
 
 /**
@@ -39,11 +37,11 @@ export function reactConfig({ files, tsconfigRootDir }) {
           ...globals.es2024,
         },
       },
+      // React-only plugins; the shared ones come from `languageBaselineConfig`,
+      // which every consumer of this profile also applies.
       plugins: {
         '@eslint-react': eslintReact,
         'react-hooks': reactHooks,
-        'simple-import-sort': simpleImportSort,
-        'unused-imports': unusedImports,
       },
       rules: {
         ...eslintReact.configs['recommended-typescript'].rules,

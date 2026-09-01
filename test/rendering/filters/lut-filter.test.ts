@@ -49,13 +49,11 @@ const makeFullContext2d = (): CanvasRenderingContext2D => {
     fillRect: vi.fn(),
     drawImage: vi.fn(),
     clearRect: vi.fn(),
-    createImageData: vi.fn(
-      (width: number, height: number): FakeImageData => ({
-        width,
-        height,
-        data: new Uint8ClampedArray(width * height * 4),
-      }),
-    ),
+    createImageData: vi.fn((width: number, height: number): FakeImageData => ({
+      width,
+      height,
+      data: new Uint8ClampedArray(width * height * 4),
+    })),
     putImageData: vi.fn(),
   } as unknown as CanvasRenderingContext2D;
 };

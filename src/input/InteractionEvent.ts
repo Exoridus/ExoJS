@@ -8,16 +8,7 @@ import type { Pointer } from './Pointer';
  * Handlers attach via the node's `interactive*` API.
  */
 export type InteractionEventType =
-  | 'pointerdown'
-  | 'pointerup'
-  | 'pointermove'
-  | 'pointerover'
-  | 'pointerout'
-  | 'pointertap'
-  | 'contextmenu'
-  | 'dragstart'
-  | 'drag'
-  | 'dragend';
+  'pointerdown' | 'pointerup' | 'pointermove' | 'pointerover' | 'pointerout' | 'pointertap' | 'contextmenu' | 'dragstart' | 'drag' | 'dragend';
 
 /**
  * DOM-Event-shaped envelope dispatched by {@link InteractionSystem} to

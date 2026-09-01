@@ -7,9 +7,6 @@ import { vitestConfig } from '@codexo/exojs-config/eslint/vitest';
 import { defineConfig } from 'eslint/config';
 import prettier from 'eslint-config-prettier';
 import security from 'eslint-plugin-security';
-import simpleImportSort from 'eslint-plugin-simple-import-sort';
-import unicorn from 'eslint-plugin-unicorn';
-import unusedImports from 'eslint-plugin-unused-imports';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -70,12 +67,6 @@ export default defineConfig([
         ...globals.es2024,
         ...globals.worker,
       },
-    },
-    plugins: {
-      'simple-import-sort': simpleImportSort,
-      'unused-imports': unusedImports,
-      security,
-      unicorn,
     },
     rules: {
       // Import management
@@ -417,10 +408,6 @@ export default defineConfig([
         ...globals.node,
         ...globals.es2024,
       },
-    },
-    plugins: {
-      'simple-import-sort': simpleImportSort,
-      'unused-imports': unusedImports,
     },
     rules: {
       'simple-import-sort/imports': 'error',
@@ -834,10 +821,6 @@ export default defineConfig([
         ...globals.es2024,
       },
     },
-    plugins: {
-      'simple-import-sort': simpleImportSort,
-      'unused-imports': unusedImports,
-    },
     rules: {
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',
@@ -955,10 +938,6 @@ export default defineConfig([
         ...globals.es2024,
       },
     },
-    plugins: {
-      'simple-import-sort': simpleImportSort,
-      'unused-imports': unusedImports,
-    },
     rules: {
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',
@@ -1001,11 +980,6 @@ export default defineConfig([
         // Injected typed asset catalog (see examples/shared/assets-global.d.ts).
         assets: 'readonly',
       },
-    },
-    plugins: {
-      'simple-import-sort': simpleImportSort,
-      'unused-imports': unusedImports,
-      unicorn,
     },
     rules: {
       'simple-import-sort/imports': 'error',
@@ -1077,11 +1051,6 @@ export default defineConfig([
         // Injected typed asset catalog (see examples/shared/assets-global.d.ts).
         assets: 'readonly',
       },
-    },
-    plugins: {
-      'simple-import-sort': simpleImportSort,
-      'unused-imports': unusedImports,
-      unicorn,
     },
     rules: {
       'simple-import-sort/imports': 'error',

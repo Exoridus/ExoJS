@@ -8,9 +8,6 @@
 // whichever config file happens to be nearest to it on disk.
 
 import security from 'eslint-plugin-security';
-import simpleImportSort from 'eslint-plugin-simple-import-sort';
-import unicorn from 'eslint-plugin-unicorn';
-import unusedImports from 'eslint-plugin-unused-imports';
 import globals from 'globals';
 
 import { typeAwareCorrectnessRules } from './correctness.js';
@@ -40,12 +37,6 @@ export function extensionSourceConfig({ files, tsconfigRootDir }) {
           ...globals.browser,
           ...globals.es2024,
         },
-      },
-      plugins: {
-        'simple-import-sort': simpleImportSort,
-        'unused-imports': unusedImports,
-        security,
-        unicorn,
       },
       rules: {
         // Import management

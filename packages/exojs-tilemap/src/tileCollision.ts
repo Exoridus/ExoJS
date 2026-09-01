@@ -11,11 +11,7 @@ import type { TileTransform } from './types';
  * @advanced
  */
 export type TileCollisionShapeKind =
-  | typeof ObjectKind.Rectangle
-  | typeof ObjectKind.Ellipse
-  | typeof ObjectKind.Polygon
-  | typeof ObjectKind.Polyline
-  | typeof ObjectKind.Point;
+  typeof ObjectKind.Rectangle | typeof ObjectKind.Ellipse | typeof ObjectKind.Polygon | typeof ObjectKind.Polyline | typeof ObjectKind.Point;
 
 /**
  * A half-open tile-coordinate rectangle covering

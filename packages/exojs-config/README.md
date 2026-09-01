@@ -26,9 +26,7 @@ plain JSON, resolved through the pnpm workspace symlink.
 // a package tsconfig.json
 {
   "extends": "@codexo/exojs-config/typescript/extension.json",
-  "compilerOptions": {
-    /* rootDir, customConditions, paths */
-  },
+  "compilerOptions": {/* rootDir, customConditions, paths */},
 }
 ```
 
