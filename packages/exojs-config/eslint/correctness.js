@@ -94,7 +94,7 @@ export const typeAwareCorrectnessRules = {
   'unicorn/prefer-blob-reading-methods': 'error',
   'unicorn/prefer-date-now': 'error',
   'unicorn/prefer-dom-node-append': 'error',
-  'unicorn/prefer-dom-node-dataset': 'error',
+  'unicorn/dom-node-dataset': 'error',
   'unicorn/prefer-event-target': 'error',
   'unicorn/prefer-includes': 'error',
   'unicorn/prefer-logical-operator-over-ternary': 'error',
@@ -111,7 +111,7 @@ export const typeAwareCorrectnessRules = {
   'unicorn/require-number-to-fixed-digits-argument': 'error',
   'unicorn/text-encoding-identifier-case': 'error',
   'unicorn/escape-case': 'error',
-  'unicorn/no-hex-escape': 'error',
+  'unicorn/prefer-unicode-code-point-escapes': 'error',
   'unicorn/catch-error-name': 'error',
   // Covers `.size` as well as `.length`, so an emptiness check reads the same
   // whichever collection it is asking about.
@@ -122,7 +122,7 @@ export const typeAwareCorrectnessRules = {
 
   // Promoted from warning: all three are satisfied everywhere, so the warning
   // was a migration state with nothing left to migrate.
-  'unicorn/no-array-for-each': 'error',
+  'unicorn/no-for-each': 'error',
   'unicorn/prefer-spread': 'error',
   'unicorn/prefer-ternary': 'error',
 };

@@ -290,7 +290,7 @@ export function extensionSourceConfig({ files, tsconfigRootDir }) {
 
         // Unicorn
         'unicorn/error-message': 'error',
-        'unicorn/no-instanceof-array': 'error',
+        'unicorn/no-instanceof-builtins': 'error',
         'unicorn/no-typeof-undefined': 'error',
         'unicorn/no-useless-undefined': 'error',
         'unicorn/no-zero-fractions': 'error',

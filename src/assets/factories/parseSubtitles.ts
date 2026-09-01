@@ -195,11 +195,7 @@ const parseSrt = (source: string): VTTCue[] => {
 
     if (lines.length < 2) continue;
 
-    let timingIndex = 0;
-
-    if (/^\d+$/.test((lines[0] ?? '').trim())) {
-      timingIndex = 1;
-    }
+    const timingIndex = /^\d+$/.test((lines[0] ?? '').trim()) ? 1 : 0;
 
     const timingLine = lines[timingIndex];
 

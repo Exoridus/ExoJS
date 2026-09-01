@@ -349,7 +349,7 @@ export default defineConfig([
           ignore: [/\.d\.ts$/u, /^renderer-sdk\.ts$/u, /^(?:HTMLText|UIClipBox|UIRoot)\.ts$/u],
         },
       ],
-      'unicorn/no-instanceof-array': 'error',
+      'unicorn/no-instanceof-builtins': 'error',
       'unicorn/no-typeof-undefined': 'error',
       'unicorn/no-useless-undefined': 'error',
       'unicorn/no-zero-fractions': 'error',
@@ -758,7 +758,7 @@ export default defineConfig([
   {
     files: ['packages/exojs-physics/src/ContactGraph.ts', 'packages/exojs-physics/src/broadphase/AabbTreeBroadPhase.ts'],
     rules: {
-      'unicorn/no-array-for-each': 'off',
+      'unicorn/no-for-each': 'off',
     },
   },
 
