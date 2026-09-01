@@ -31,6 +31,11 @@ describe('format agnosticism', () => {
   });
 
   it('names no format adapter anywhere in its sources', () => {
+    // An empty file list would satisfy the assertion below just as well, so the
+    // enumeration itself has to be checked - a moved `src` or a changed
+    // extension would otherwise turn this into a test that proves nothing.
+    expect(sourceFiles(SOURCE_ROOT).length).toBeGreaterThanOrEqual(5);
+
     const offenders = sourceFiles(SOURCE_ROOT).filter(path => {
       const source = readFileSync(path, 'utf8');
 

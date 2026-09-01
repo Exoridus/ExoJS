@@ -34,6 +34,14 @@ const guideFiles = walk(GUIDE_DIR, '.mdx');
 const exampleFiles = walk(EXAMPLES_DIR, '.ts').filter(file => !file.endsWith('.d.ts'));
 
 describe('guide and example runtime contracts', () => {
+  // Every check below asserts an empty violation list, which an empty file list
+  // also satisfies. Without this the whole suite passes silently once `walk`
+  // stops finding anything - a moved content root or a changed extension.
+  it('enumerates the guide and example sources it checks', () => {
+    expect(guideFiles.length).toBeGreaterThanOrEqual(50);
+    expect(exampleFiles.length).toBeGreaterThanOrEqual(200);
+  });
+
   it('does not null-check the throwing, non-null Scene.app getter', () => {
     expect(violations(exampleFiles, /const app = this\.app;\s*if \(app === null/g)).toEqual([]);
   });
