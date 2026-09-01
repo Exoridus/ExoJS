@@ -1233,7 +1233,7 @@ export class AssetResidency {
     // set. A resource that already came from a deferred handle is a member
     // already; a plain `load()` donor (no prior get()) is added here. Held
     // weakly, so a fully-released source does not pin its evicted payload.
-    if (typeof resource === 'object' && resource !== null && this._typeRegistry.hasSeamlessAdapter(asset.type) && this._deferred.get(key) === undefined) {
+    if (typeof resource === 'object' && resource !== null && this._typeRegistry.hasSeamlessAdapter(asset.type) && !this._deferred.has(key)) {
       this._createDeferredEntry(asset, resource);
     }
 

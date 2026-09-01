@@ -166,7 +166,7 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
     timedFramesOverride = frames;
   }
 
-  if (args.get('profile') !== undefined) {
+  if (args.has('profile')) {
     await runProfileMode(
       args,
       {

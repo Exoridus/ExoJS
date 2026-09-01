@@ -165,7 +165,7 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
    * bit pattern as a float.
    */
   public readonly uniformData = new Float32Array(persistentUniformBytes / Float32Array.BYTES_PER_ELEMENT);
-  public readonly uniformWords = new Uint32Array(this.uniformData.buffer);
+  public readonly uniformWords = new Uint32Array(this.uniformData.buffer, this.uniformData.byteOffset, this.uniformData.length);
   public uniformWritten = false;
 
   private _device: GPUDevice | null = null;

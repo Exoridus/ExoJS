@@ -762,6 +762,18 @@ export default defineConfig([
     },
   },
 
+  // Deleting the entry the loop is currently on is well-defined for a Map and
+  // is how the recognizer expires long-press candidates in the same pass that
+  // ages them. The rule cannot tell that from the array case it exists for, and
+  // the alternatives (a snapshot spread, or a second pass over a pending list)
+  // both allocate on a per-frame path.
+  {
+    files: ['src/input/GestureRecognizer.ts'],
+    rules: {
+      'unicorn/no-loop-iterable-mutation': 'off',
+    },
+  },
+
   // LDtk marks its runtime-computed fields with a `__` prefix (`__identifier`,
   // `__type`, ...). These types mirror an external file format verbatim, so the
   // prefix is data, not a naming choice we get to make.

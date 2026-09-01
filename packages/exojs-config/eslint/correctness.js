@@ -146,6 +146,7 @@ export const typeAwareCorrectnessRules = {
   'unicorn/no-invalid-argument-count': 'error',
   'unicorn/no-invalid-character-comparison': 'error',
   'unicorn/no-invalid-well-known-symbol-methods': 'error',
+  'unicorn/no-loop-iterable-mutation': 'error',
   'unicorn/no-mismatched-map-key': 'error',
   'unicorn/no-misrefactored-assignment': 'error',
   'unicorn/no-multiple-promise-resolver-calls': 'error',
@@ -161,6 +162,7 @@ export const typeAwareCorrectnessRules = {
   'unicorn/no-unnecessary-nested-ternary': 'error',
   'unicorn/no-unnecessary-string-trim': 'error',
   'unicorn/no-unreadable-object-destructuring': 'error',
+  'unicorn/no-unsafe-buffer-conversion': 'error',
   'unicorn/no-unsafe-promise-all-settled-values': 'error',
   'unicorn/no-unused-array-method-return': 'error',
   'unicorn/no-useless-boolean-cast': 'error',
@@ -199,9 +201,12 @@ export const typeAwareCorrectnessRules = {
   'unicorn/prefer-array-from-range': 'error',
   'unicorn/prefer-array-iterable-methods': 'error',
   'unicorn/prefer-block-statement-over-iife': 'error',
+  'unicorn/prefer-boolean-return': 'error',
   'unicorn/prefer-flat-math-min-max': 'error',
+  'unicorn/prefer-has-check': 'error',
   'unicorn/prefer-identifier-import-export-specifiers': 'error',
   'unicorn/prefer-map-from-entries': 'error',
+  'unicorn/prefer-math-abs': 'error',
   'unicorn/prefer-object-destructuring-defaults': 'error',
   'unicorn/prefer-queue-microtask': 'error',
   'unicorn/prefer-simplified-conditions': 'error',
@@ -291,3 +296,51 @@ export const typeAwareCorrectnessRules = {
 //     39. Changes which error class is thrown, which is public behavior.
 //   unicorn/prefer-string-raw
 //     5. Cosmetic.
+//
+// The unicorn 74 additions were measured the same way. These carry a reason
+// beyond their count:
+//
+//   unicorn/no-subtraction-comparison
+//     5, in triangulation and polygon winding, where the subtraction is the
+//     determinant being tested and not a roundabout comparison.
+//   unicorn/prefer-simple-sort-comparator
+//     1, on the diagnostic snapshot comparator whose codepoint ordering is
+//     part of its contract and is spelled out for that reason.
+//   unicorn/consistent-function-style
+//     Overlaps `func-style` above, which already decides this repository-wide.
+//   unicorn/prefer-set-methods, unicorn/prefer-group-by,
+//   unicorn/prefer-get-or-insert-computed, unicorn/prefer-regexp-escape,
+//   unicorn/prefer-array-from-async, unicorn/prefer-array-last-methods,
+//   unicorn/prefer-iterator-to-array-at-end
+//     Each proposes an API newer than the ES2022 compile target.
+//
+// The rest are recorded by count alone. None was reviewed hit by hit, and that
+// is the point: at these volumes the rule is a repository-wide rewrite rather
+// than a defect it found, so re-open one by reviewing its hits, not by liking
+// the rule.
+//
+//   no-unreadable-new-expression 1074, consistent-boolean-name 997,
+//   consistent-arrow-return-style 970, no-this-outside-of-class 463,
+//   consistent-class-member-order 370, no-return-array-push 218,
+//   no-global-object-property-assignment 168, no-break-in-nested-loop 161,
+//   no-top-level-assignment-in-function 150, prefer-short-arrow-method 117,
+//   prefer-await 97, no-top-level-side-effects 87, prefer-global-number-constants 71,
+//   no-unnecessary-global-this 71, prefer-early-return 70, prefer-error-is-error 63,
+//   no-unreadable-for-of-expression 61, prefer-iterator-to-array 59,
+//   require-array-sort-compare 57, better-dom-traversing 48,
+//   consistent-conditional-object-spread 47, no-declarations-before-early-exit 44,
+//   prefer-object-define-properties 40, prefer-number-is-safe-integer 38,
+//   no-non-function-verb-prefix 32, prefer-continue 31, prefer-split-limit 22,
+//   no-useless-concat 21, no-useless-template-literals 20, prefer-number-coercion 20,
+//   no-constant-zero-expression 19, no-array-front-mutation 18,
+//   prefer-includes-over-repeated-comparisons 16, no-computed-property-existence-check 15,
+//   prefer-iterator-concat 12, prefer-hoisting-branch-code 12,
+//   prefer-direct-iteration 11, prefer-minimal-ternary 10,
+//   prefer-object-iterable-methods 9, prefer-math-constants 9,
+//   no-negated-array-predicate 9, prefer-else-if 9, prefer-then-catch 8,
+//   prefer-dispose 7, prefer-array-from-map 7, operator-assignment 6,
+//   prefer-uint8array-base64 5, prefer-string-repeat 5, no-useless-else 3,
+//   prefer-add-event-listener-options 3, prefer-type-literal-last 3,
+//   iteration-fallback-style 25, class-reference-in-static-methods 26,
+//   prefer-promise-with-resolvers 27, no-useless-coercion 23,
+//   logical-assignment-operators 2, prefer-smaller-scope 2, prefer-private-class-fields 2

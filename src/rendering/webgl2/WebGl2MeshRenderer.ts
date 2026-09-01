@@ -824,11 +824,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
 
     const geometry = draw.mesh.geometry;
 
-    if (geometry?.usage !== 'static') {
-      return false;
-    }
-
-    return true;
+    return geometry?.usage === 'static';
   }
 
   private _isSameBatch(left: PendingMeshDraw, right: PendingMeshDraw): boolean {

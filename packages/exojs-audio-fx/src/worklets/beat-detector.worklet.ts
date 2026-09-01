@@ -750,7 +750,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     const d = this._onsetDev;
     for (let j = 0; j < count; j++) {
       const dv = this._onsetWin[j]! - median;
-      d[j] = dv < 0 ? -dv : dv;
+      d[j] = Math.abs(dv);
     }
     partialSort(d, count);
     const mad = d[count >> 1]!;
