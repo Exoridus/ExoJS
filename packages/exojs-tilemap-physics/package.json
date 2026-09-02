@@ -1,6 +1,6 @@
 {
   "name": "@codexo/exojs-tilemap-physics",
-  "version": "0.16.0",
+  "version": "0.16.1",
   "description": "Static physics colliders from ExoJS tilemap collision geometry.",
   "repository": {
     "type": "git",
