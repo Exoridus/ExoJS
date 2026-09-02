@@ -25,9 +25,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   Both derive their geometry from the texture's dimensions but announced
   nothing when those dimensions arrived, so a subtree recorded while the handle
   still reported 0x0 replayed that empty geometry indefinitely.
+- **A `Mesh` no longer draws while its texture is still loading.** It was the
+  one WebGPU renderer without the guard every other one carried, which stayed
+  invisible for as long as the backend raised and took the application down
+  with it. The draw is skipped rather than sampling white, which would flash
+  the geometry as a solid block against the vertex colour, and the mesh
+  invalidates when the image lands.
 
 ### Added
 
+- **`isSampleableTexture`** in the renderer SDK answers whether a texture can
+  be sampled right now, across every texture kind. Renderers previously had to
+  reconstruct that rule from `Texture.source` and `DataTexture`, and each one
+  spelled it differently.
 - **`AudioSystem.onPlaybackBlocked`** and the process-wide
   **`onAudioPlaybackBlocked`** fire when a play call is dropped because the
   autoplay policy still blocks audio - the moment worth asking for a gesture,
