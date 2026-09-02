@@ -2762,14 +2762,19 @@ export class WebGpuBackend implements RenderBackend {
   private _syncTexture(texture: Texture | RenderTexture): ManagedWebGpuTextureState {
     assertLiveTexture(texture);
 
-    if (
+    // A texture whose image has not arrived yet is a lifecycle state, not a
+    // caller error: the upload is skipped and the version left unstamped, so
+    // the next frame that finds a source performs it. Raising here instead
+    // ended the application rather than the frame - the frame guard halts the
+    // loop after three consecutive throws, and a drawable that keeps its own
+    // geometry (a `Mesh`, unlike a `Sprite` that measures 0x0 and is never
+    // submitted) reaches this on every one of them. WebGl2Backend skips the
+    // upload the same way.
+    const awaitingSource =
       !(texture instanceof RenderTexture) &&
       !(texture instanceof DataTexture) &&
       texture.compressed === null &&
-      (texture.source === null || texture.width === 0 || texture.height === 0)
-    ) {
-      throw new Error('WebGPU sprite rendering requires a texture with a valid source and non-zero dimensions.');
-    }
+      (texture.source === null || texture.width === 0 || texture.height === 0);
 
     const state = this._getTextureState(texture);
     const compressedPayload = compressedPayloadOf(texture);
@@ -2783,7 +2788,7 @@ export class WebGpuBackend implements RenderBackend {
       state.sampler = this._getSampler(texture.scaleMode, texture.wrapMode, nonFilterable);
     }
 
-    if (state.version !== textureVersion) {
+    if (!awaitingSource && state.version !== textureVersion) {
       const gpuFormat = this._getGpuTextureFormat(texture);
 
       if (state.width !== texture.width || state.height !== texture.height || state.mipLevelCount !== mipLevelCount || state.format !== gpuFormat) {
