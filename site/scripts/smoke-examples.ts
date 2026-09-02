@@ -268,9 +268,11 @@ const startServer = (root: string): Promise<{ port: number; server: Server }> =>
           return;
         }
 
-        // A browser context that is reused across examples only benefits from
-        // its HTTP and code caches if the response is cacheable at all.
-        res.writeHead(200, { 'Content-Type': file.type, 'Cache-Control': 'public, max-age=3600' });
+        // Deliberately uncacheable: the pooled context shares one HTTP cache
+        // between the examples that run in it, and a page closed mid-download
+        // leaves an entry the next example would then fail to read. The warm V8
+        // code cache is what the pool is for, and that survives `no-store`.
+        res.writeHead(200, { 'Content-Type': file.type, 'Cache-Control': 'no-store' });
         res.end(file.body);
       })
       .catch((error: unknown) => {
@@ -888,23 +890,30 @@ const main = async (): Promise<void> => {
   };
 
   // One shell defect throws for every example, so the distinct messages are
-  // what carries information - not how many entries tripped over them.
-  const shellErrors = [...new Set(results.flatMap(result => result.shellErrors ?? []))];
+  // what carries information - not how many entries tripped over them. The
+  // example each message was first seen in is kept: a message that only some
+  // entries produce is a different problem from one the shell raises always.
+  const shellErrors = new Map<string, string>();
+  for (const result of results) {
+    for (const message of result.shellErrors ?? []) {
+      if (!shellErrors.has(message)) shellErrors.set(message, result.path);
+    }
+  }
 
   await writeReport(results, counts, webgpuAvailable, browserName, colorScheme, headless, shellErrors);
 
   console.log(`[smoke] passed ${counts.passed} · warned ${counts.warned} · skipped ${counts.skipped} · failed ${counts.failed}`);
 
-  if (shellErrors.length > 0) {
-    console.error(`[smoke] playground shell raised ${shellErrors.length} distinct error(s) - a site defect, not an example defect:`);
-    for (const message of shellErrors) {
-      console.error(`[smoke]   ${message}`);
+  if (shellErrors.size > 0) {
+    console.error(`[smoke] playground shell raised ${shellErrors.size} distinct error(s) - a site defect, not an example defect:`);
+    for (const [message, path] of shellErrors) {
+      console.error(`[smoke]   ${message} (first seen in ${path})`);
     }
   }
 
   console.log(`[smoke] report: ${reportPath}`);
 
-  if (counts.failed > 0 || shellErrors.length > 0) {
+  if (counts.failed > 0 || shellErrors.size > 0) {
     process.exitCode = 1;
   }
 };
@@ -916,7 +925,7 @@ const writeReport = async (
   browserName = 'chromium',
   colorScheme = 'light',
   headless = true,
-  shellErrors: readonly string[] = [],
+  shellErrors: ReadonlyMap<string, string> = new Map(),
 ): Promise<void> => {
   const icon: Record<Status, string> = { passed: '✅', failed: '❌', skipped: '⏭️', warned: '⚠️' };
   const lines: string[] = [];
@@ -937,11 +946,11 @@ const writeReport = async (
   lines.push(`| --- | --- | --- | --- | --- |`);
   lines.push(`| ${results.length} | ${counts.passed} | ${counts.warned} | ${counts.skipped} | ${counts.failed} |`, '');
 
-  if (shellErrors.length > 0) {
+  if (shellErrors.size > 0) {
     lines.push('## ❌ Playground shell', '');
-    lines.push('Raised by the playground page itself, not by any example - it reproduces on every entry and is one site defect:', '');
-    for (const message of shellErrors) {
-      lines.push(`- ${message}`);
+    lines.push('Raised by the playground page itself rather than by the example it ran - the entry named is where the message was first seen:', '');
+    for (const [message, path] of shellErrors) {
+      lines.push(`- ${message} — first seen in \`${path}\``);
     }
     lines.push('');
   }
