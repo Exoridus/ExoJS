@@ -59,7 +59,7 @@ export default defineConfig({
       },
     },
     build: {
-      target: 'es2020',
+      target: 'es2022',
       // Monaco core is irreducibly large (~4.5 MB) and is now lazy-loaded via a
       // dynamic import in Editor.ts - it is not on the initial render path. The
       // default 500 kB limit would always fire for this lazy vendor chunk, which

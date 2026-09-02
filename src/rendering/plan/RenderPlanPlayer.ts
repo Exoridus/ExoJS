@@ -290,7 +290,7 @@ export class RenderPlanPlayer {
       let preInstructionIndex = context.passInstructionIndex;
       let groupOrdinal = 0;
 
-      for (let i = 0; i < entries.length; ) {
+      for (let i = 0; i < entries.length;) {
         if (entries[i]!.kind !== RenderEntryKind.Draw) {
           i++;
 

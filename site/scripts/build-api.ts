@@ -472,16 +472,14 @@ const renderReflectionBody = (reflection: DeclarationReflection): ReflectionBody
   if (isEnum(reflection.kind)) {
     // Enum members render as a bare name with no description, matching the
     // prior output - the signature is the member name itself.
-    const members = (reflection.children ?? []).map(
-      (member: DeclarationReflection): ApiMember => ({
-        name: member.name,
-        signature: member.name,
-        signatureTokens: [{ text: member.name, kind: 'name' }],
-        params: [],
-        returnType: null,
-        description: '',
-      }),
-    );
+    const members = (reflection.children ?? []).map((member: DeclarationReflection): ApiMember => ({
+      name: member.name,
+      signature: member.name,
+      signatureTokens: [{ text: member.name, kind: 'name' }],
+      params: [],
+      returnType: null,
+      description: '',
+    }));
     return {
       sections: members.length > 0 ? [toMemberSection('Members', members)] : [],
       counts: EMPTY_COUNTS,

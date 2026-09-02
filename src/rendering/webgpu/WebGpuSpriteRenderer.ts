@@ -1231,7 +1231,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
   /** @internal See {@link WebGpuRetainedBatchReplayer._scanRetainedNodeIndexRange}. */
   public _scanRetainedNodeIndexRange(bytes: Uint8Array, range: WebGpuRetainedNodeIndexRange): void {
-    const words = new Uint32Array(bytes.buffer);
+    const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
 
     for (let i = 7; i < words.length; i += 8) {
       // In-bounds: i < words.length via the loop guard. nodeIndex is the last

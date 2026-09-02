@@ -36,7 +36,7 @@ const hashPrime = 0x01000193;
 const hashOffset = 0x811c9dc5;
 
 const hashFloatScratch = new Float32Array(1);
-const hashUintScratch = new Uint32Array(hashFloatScratch.buffer);
+const hashUintScratch = new Uint32Array(hashFloatScratch.buffer, hashFloatScratch.byteOffset, hashFloatScratch.length);
 
 /**
  * Write one transform row into `target` at `offset` in the canonical layout

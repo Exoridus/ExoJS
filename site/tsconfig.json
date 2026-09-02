@@ -2,7 +2,7 @@
   "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "target": "es2020",
+    "target": "es2022",
     "module": "esnext",
     "moduleResolution": "bundler",
     "esModuleInterop": true,

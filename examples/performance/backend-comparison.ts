@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, type Seconds, Sprite } from '@codexo/exojs';
+import { Application, Capabilities, Color, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, type Seconds, Sprite } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 
 const options = {
@@ -16,7 +16,8 @@ const options = {
 
 let app: Application | null = null;
 let overlay: DebugOverlay | null = null;
-let backendType: 'webgl2' | 'webgpu' = 'webgpu';
+let backendType: 'webgl2' | 'webgpu' = 'webgl2';
+let webGpuAvailable = false;
 
 class DemoScene extends Scene {
   private sprites!: { sprite: Sprite; vx: number; vy: number }[];
@@ -37,6 +38,10 @@ class DemoScene extends Scene {
       };
     });
     this.inputs.onTrigger(Keyboard.B, () => {
+      // Without an adapter the WebGPU backend produces no context and the
+      // canvas stays blank, so the comparison only toggles where both
+      // backends can actually run.
+      if (!webGpuAvailable) return;
       backendType = backendType === 'webgpu' ? 'webgl2' : 'webgpu';
       boot(backendType);
     });
@@ -73,4 +78,12 @@ const boot = (type: 'webgl2' | 'webgpu'): void => {
   void app.start(DemoScene);
 };
 
-boot(backendType);
+// The adapter query is async, so the first boot waits for it: starting on
+// WebGPU where no adapter exists leaves the canvas blank with no error.
+// `webgpu` only reports the API surface - a browser can expose `navigator.gpu`
+// and still hand out no adapter, so the adapter itself is the deciding fact.
+void Capabilities.ready.then(capabilities => {
+  webGpuAvailable = capabilities.webgpuAdapter !== null;
+  backendType = webGpuAvailable ? 'webgpu' : 'webgl2';
+  boot(backendType);
+});

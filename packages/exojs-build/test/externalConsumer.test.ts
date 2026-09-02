@@ -84,7 +84,7 @@ const extractTarball = (tarball: string, destination: string): void => {
       .toString('utf8')
       .replace(/\0.*$/s, '');
 
-  for (let offset = 0; offset + 512 <= archive.length; ) {
+  for (let offset = 0; offset + 512 <= archive.length;) {
     const header = archive.subarray(offset, offset + 512);
     const name = field(header, 0, 100);
 

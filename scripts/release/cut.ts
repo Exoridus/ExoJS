@@ -13,8 +13,8 @@
  *
  * What it does:
  *   1. Bumps `version` in all six lockstep package.json files.
- *   2. Updates `peerDependencies["@codexo/exojs"]` to `"MAJOR.MINOR.x"` in the
- *      five extension packages.
+ *   2. Updates every official peer range - the core and any sibling extension -
+ *      to `"MAJOR.MINOR.x"` in the extension packages.
  *   3. Runs `pnpm verify:lockstep` and `pnpm verify:release-matrix` as a gate.
  *   4. Stages the six package.json files and commits.
  *   5. Creates an annotated git tag `vVERSION`.
@@ -50,6 +50,7 @@ const LOCKSTEP_DIRS: { name: string; dir: string }[] = LOCKSTEP_PACKAGES.map(p =
 // union and `Set.has` would accept only those literals - but the caller tests
 // names read back from a package manifest, which are plain strings.
 const EXTENSION_NAMES: ReadonlySet<string> = new Set(LOCKSTEP_PACKAGES.filter(p => p.isExtension).map(p => p.name));
+const LOCKSTEP_NAMES: ReadonlySet<string> = new Set(LOCKSTEP_PACKAGES.map(p => p.name));
 
 const log = (msg: string): void => {
   process.stdout.write(`${msg}\n`);
@@ -160,10 +161,17 @@ const bumpPackages = (version: string): boolean => {
     }
 
     if (EXTENSION_NAMES.has(name)) {
+      // Every official peer, not only the core one: an extension that depends
+      // on a sibling (tiled and ldtk on tilemap, tilemap-physics on both)
+      // would otherwise ship a range a minor behind, which no install of the
+      // published package can satisfy.
       const peer = pkg['peerDependencies'] as Record<string, string> | undefined;
-      if (peer && peer['@codexo/exojs'] !== peerRange) {
-        peer['@codexo/exojs'] = peerRange;
-        changed = true;
+
+      for (const dep of Object.keys(peer ?? {})) {
+        if (peer && LOCKSTEP_NAMES.has(dep) && peer[dep] !== peerRange) {
+          peer[dep] = peerRange;
+          changed = true;
+        }
       }
     }
 

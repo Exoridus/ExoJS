@@ -7,9 +7,6 @@ import { vitestConfig } from '@codexo/exojs-config/eslint/vitest';
 import { defineConfig } from 'eslint/config';
 import prettier from 'eslint-config-prettier';
 import security from 'eslint-plugin-security';
-import simpleImportSort from 'eslint-plugin-simple-import-sort';
-import unicorn from 'eslint-plugin-unicorn';
-import unusedImports from 'eslint-plugin-unused-imports';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -70,12 +67,6 @@ export default defineConfig([
         ...globals.es2024,
         ...globals.worker,
       },
-    },
-    plugins: {
-      'simple-import-sort': simpleImportSort,
-      'unused-imports': unusedImports,
-      security,
-      unicorn,
     },
     rules: {
       // Import management
@@ -358,7 +349,7 @@ export default defineConfig([
           ignore: [/\.d\.ts$/u, /^renderer-sdk\.ts$/u, /^(?:HTMLText|UIClipBox|UIRoot)\.ts$/u],
         },
       ],
-      'unicorn/no-instanceof-array': 'error',
+      'unicorn/no-instanceof-builtins': 'error',
       'unicorn/no-typeof-undefined': 'error',
       'unicorn/no-useless-undefined': 'error',
       'unicorn/no-zero-fractions': 'error',
@@ -417,10 +408,6 @@ export default defineConfig([
         ...globals.node,
         ...globals.es2024,
       },
-    },
-    plugins: {
-      'simple-import-sort': simpleImportSort,
-      'unused-imports': unusedImports,
     },
     rules: {
       'simple-import-sort/imports': 'error',
@@ -771,7 +758,19 @@ export default defineConfig([
   {
     files: ['packages/exojs-physics/src/ContactGraph.ts', 'packages/exojs-physics/src/broadphase/AabbTreeBroadPhase.ts'],
     rules: {
-      'unicorn/no-array-for-each': 'off',
+      'unicorn/no-for-each': 'off',
+    },
+  },
+
+  // Deleting the entry the loop is currently on is well-defined for a Map and
+  // is how the recognizer expires long-press candidates in the same pass that
+  // ages them. The rule cannot tell that from the array case it exists for, and
+  // the alternatives (a snapshot spread, or a second pass over a pending list)
+  // both allocate on a per-frame path.
+  {
+    files: ['src/input/GestureRecognizer.ts'],
+    rules: {
+      'unicorn/no-loop-iterable-mutation': 'off',
     },
   },
 
@@ -833,10 +832,6 @@ export default defineConfig([
         ...globals.jest,
         ...globals.es2024,
       },
-    },
-    plugins: {
-      'simple-import-sort': simpleImportSort,
-      'unused-imports': unusedImports,
     },
     rules: {
       'simple-import-sort/imports': 'error',
@@ -955,10 +950,6 @@ export default defineConfig([
         ...globals.es2024,
       },
     },
-    plugins: {
-      'simple-import-sort': simpleImportSort,
-      'unused-imports': unusedImports,
-    },
     rules: {
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',
@@ -1001,11 +992,6 @@ export default defineConfig([
         // Injected typed asset catalog (see examples/shared/assets-global.d.ts).
         assets: 'readonly',
       },
-    },
-    plugins: {
-      'simple-import-sort': simpleImportSort,
-      'unused-imports': unusedImports,
-      unicorn,
     },
     rules: {
       'simple-import-sort/imports': 'error',
@@ -1077,11 +1063,6 @@ export default defineConfig([
         // Injected typed asset catalog (see examples/shared/assets-global.d.ts).
         assets: 'readonly',
       },
-    },
-    plugins: {
-      'simple-import-sort': simpleImportSort,
-      'unused-imports': unusedImports,
-      unicorn,
     },
     rules: {
       'simple-import-sort/imports': 'error',

@@ -344,7 +344,7 @@ export class DynamicAabbTree<T> {
 
     const balanceFactor = child2.height - child1.height;
 
-    if (balanceFactor > 1 || balanceFactor < -1) {
+    if (Math.abs(balanceFactor) > 1) {
       throw new Error(`DynamicAabbTree._validate: node ${index} is unbalanced (factor ${balanceFactor}).`);
     }
 

@@ -311,8 +311,7 @@ export class AssetDecoder {
 
     try {
       const unacquired = type.unacquiredSource?.(toRequest(asset.source, options), this._resolveUrl(asset.source), this._network()) as
-        | { source: unknown }
-        | undefined;
+        { source: unknown } | undefined;
       const source = unacquired === undefined ? await this._acquireSource(asset, type, signal) : unacquired.source;
 
       return this._storeResource(asset, await factory.create(source, this._factoryContext(asset, scope, options, signal)));

@@ -176,13 +176,7 @@ export interface TextObject<P extends TileProperties = TileProperties> extends T
  * @advanced
  */
 export type TileMapObject<P extends TileProperties = TileProperties> =
-  | RectangleObject<P>
-  | EllipseObject<P>
-  | PointObject<P>
-  | PolygonObject<P>
-  | PolylineObject<P>
-  | TileObject<P>
-  | TextObject<P>;
+  RectangleObject<P> | EllipseObject<P> | PointObject<P> | PolygonObject<P> | PolylineObject<P> | TileObject<P> | TextObject<P>;
 
 /**
  * A developer-declared mapping from object `type`/class strings to the property

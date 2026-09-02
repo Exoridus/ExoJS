@@ -24,7 +24,7 @@ const schemaVersion = 2;
  * prefix followed by printable text, so the largest code unit terminates the
  * range without excluding any real key.
  */
-const keyRangeTerminator = '\uFFFF';
+const keyRangeTerminator = '\u{FFFF}';
 
 /** Construction options for {@link IndexedDbStore}. */
 export interface IndexedDbStoreOptions {

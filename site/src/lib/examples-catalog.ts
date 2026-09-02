@@ -1,17 +1,7 @@
 import examplesCatalog from '../../../examples/examples.json';
 
 export type Capability =
-  | 'webgl2'
-  | 'webgpu'
-  | 'pointer'
-  | 'keyboard'
-  | 'gamepad'
-  | 'touch'
-  | 'audio'
-  | 'fullscreen'
-  | 'vibration'
-  | 'offscreenCanvas'
-  | 'webWorkers';
+  'webgl2' | 'webgpu' | 'pointer' | 'keyboard' | 'gamepad' | 'touch' | 'audio' | 'fullscreen' | 'vibration' | 'offscreenCanvas' | 'webWorkers';
 
 export type ExampleLevel = 'intro' | 'intermediate' | 'advanced';
 

@@ -8,6 +8,9 @@
 // whichever config file happens to be nearest to it on disk.
 
 import js from '@eslint/js';
+import security from 'eslint-plugin-security';
+import simpleImportSort from 'eslint-plugin-simple-import-sort';
+import unusedImports from 'eslint-plugin-unused-imports';
 import unicorn from 'eslint-plugin-unicorn';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
@@ -27,6 +30,17 @@ import tseslint from 'typescript-eslint';
  */
 export function languageBaselineConfig({ tsconfigRootDir }) {
   return [
+    // Every plugin the profiles below reference, registered once. ESLint 10.9
+    // rejects a second registration of the same name across overlapping
+    // blocks, so the individual profiles carry rules only.
+    {
+      plugins: {
+        'simple-import-sort': simpleImportSort,
+        'unused-imports': unusedImports,
+        security,
+        unicorn,
+      },
+    },
     {
       // A disable comment that no longer suppresses anything is a claim about the
       // code that has stopped being true, and the same goes for an inline rule
@@ -129,9 +143,6 @@ export function nodeToolingConfig({ files }) {
         parserOptions: {
           project: null,
         },
-      },
-      plugins: {
-        unicorn,
       },
       rules: {
         'no-console': 'error',

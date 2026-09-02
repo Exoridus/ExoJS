@@ -58,11 +58,10 @@ const mockFetchJson = (payload: unknown): void => {
  */
 const togglableImageFetch = (): { readonly fetchMock: ReturnType<typeof vi.fn>; succeed(): void } => {
   let ok = false;
-  const fetchMock = vi.fn(
-    async (): Promise<Response> =>
-      ok
-        ? ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => new ArrayBuffer(8) } as unknown as Response)
-        : ({ ok: false, status: 404, statusText: 'Not Found' } as Response),
+  const fetchMock = vi.fn(async (): Promise<Response> =>
+    ok
+      ? ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => new ArrayBuffer(8) } as unknown as Response)
+      : ({ ok: false, status: 404, statusText: 'Not Found' } as Response),
   );
 
   global.fetch = fetchMock as unknown as typeof fetch;
@@ -78,18 +77,17 @@ const togglableImageFetch = (): { readonly fetchMock: ReturnType<typeof vi.fn>; 
 /** Value-asset (json) twin of {@link togglableImageFetch}. */
 const togglableJsonFetch = (payload: unknown): { readonly fetchMock: ReturnType<typeof vi.fn>; succeed(): void } => {
   let ok = false;
-  const fetchMock = vi.fn(
-    async (): Promise<Response> =>
-      ok
-        ? ({
-            ok: true,
-            status: 200,
-            statusText: 'OK',
-            json: async () => payload,
-            text: async () => JSON.stringify(payload),
-            arrayBuffer: async () => new ArrayBuffer(0),
-          } as unknown as Response)
-        : ({ ok: false, status: 404, statusText: 'Not Found' } as Response),
+  const fetchMock = vi.fn(async (): Promise<Response> =>
+    ok
+      ? ({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          json: async () => payload,
+          text: async () => JSON.stringify(payload),
+          arrayBuffer: async () => new ArrayBuffer(0),
+        } as unknown as Response)
+      : ({ ok: false, status: 404, statusText: 'Not Found' } as Response),
   );
 
   global.fetch = fetchMock as unknown as typeof fetch;

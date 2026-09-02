@@ -7,8 +7,6 @@
 // repository layout: an extension package's source is held to the same standard
 // whichever config file happens to be nearest to it on disk.
 
-import simpleImportSort from 'eslint-plugin-simple-import-sort';
-import unusedImports from 'eslint-plugin-unused-imports';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -41,10 +39,6 @@ export function packageTestConfig({ files }) {
           ...globals.jest,
           ...globals.es2024,
         },
-      },
-      plugins: {
-        'simple-import-sort': simpleImportSort,
-        'unused-imports': unusedImports,
       },
       rules: {
         'simple-import-sort/imports': 'error',

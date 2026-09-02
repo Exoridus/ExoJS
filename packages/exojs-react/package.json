@@ -1,6 +1,6 @@
 {
   "name": "@codexo/exojs-react",
-  "version": "0.15.2",
+  "version": "0.16.0",
   "description": "React integration for ExoJS.",
   "repository": {
     "type": "git",
@@ -32,7 +32,7 @@
     "lint": "eslint --max-warnings=0 ."
   },
   "peerDependencies": {
-    "@codexo/exojs": "0.15.x",
+    "@codexo/exojs": "0.16.x",
     "react": ">=18.0.0",
     "react-dom": ">=18.0.0"
   },
@@ -47,7 +47,7 @@
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "^19.2.17",
-    "eslint": "~10.4.1",
+    "eslint": "~10.9.1",
     "eslint-config-prettier": "^10.1.8"
   },
   "license": "MIT",

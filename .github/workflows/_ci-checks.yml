@@ -271,7 +271,7 @@ jobs:
       # every run — the key pins the exact version, so a hit is a hit.
       - name: Cache the Naga validator
         id: naga-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cargo/bin/naga
           key: naga-cli-${{ env.NAGA_VERSION }}-${{ runner.os }}
