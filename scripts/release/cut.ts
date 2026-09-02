@@ -117,18 +117,54 @@ const assertTagAbsent = (version: string): void => {
 };
 
 /**
+ * The commit `staleEvidenceReasons` checks the evidence against.
+ *
+ * The measurement stamps the HEAD it ran against, then the result is
+ * committed - which moves HEAD one commit past whatever it recorded. Literal
+ * HEAD would therefore reject every evidence commit ever made, including a
+ * correct one: walk back over commits that touch only `EVIDENCE_PATH`, since
+ * those carry no source change and cannot invalidate a measurement of their
+ * own parent.
+ */
+const resolveEvidenceHead = (): string => {
+  let head = execSync('git rev-parse --short HEAD', { encoding: 'utf8', cwd: repoRoot }).trim();
+
+  for (;;) {
+    let parent: string;
+
+    try {
+      // `~1` rather than `^`: on Windows, execSync's default shell is cmd.exe,
+      // which treats a trailing `^` as its own escape character and strips it
+      // before git ever sees the argument.
+      parent = execSync(`git rev-parse --short ${head}~1`, { encoding: 'utf8', cwd: repoRoot }).trim();
+    } catch {
+      return head;
+    }
+
+    const changed = execSync(`git diff --name-only ${parent} ${head}`, { encoding: 'utf8', cwd: repoRoot }).trim().split('\n').filter(Boolean);
+
+    if (changed.length !== 1 || changed[0] !== EVIDENCE_PATH) {
+      return head;
+    }
+
+    head = parent;
+  }
+};
+
+/**
  * The published parity matrix must describe the commit being released - it is
  * linked from the deployment and troubleshooting guides, and the release states
  * it holds as of this version.
  *
- * Compared against HEAD as it stands right now, before this script creates its
- * own bump commit, because that is the tree the measurement ran against.
+ * Compared against the resolved evidence head as it stands right now, before
+ * this script creates its own bump commit, because that is the tree the
+ * measurement ran against.
  *
  * Deliberately not a CI browser lane: the run is bound to the moment the claim
  * gets published, not to every push.
  */
 const assertEvidenceFresh = (doc: EvidenceDocument): void => {
-  const head = execSync('git rev-parse --short HEAD', { encoding: 'utf8', cwd: repoRoot }).trim();
+  const head = resolveEvidenceHead();
   const stale = staleEvidenceReasons(doc, head);
 
   if (stale.length > 0) {
