@@ -132,6 +132,92 @@ describe('WebGPU Sprite — solid color', () => {
     }
   });
 
+  test('single-pixel ImageBitmap texture fills scaled sprite bounds', async ctx => {
+    const backend = await setupBackend();
+    const sourceCanvas = document.createElement('canvas');
+
+    sourceCanvas.width = 1;
+    sourceCanvas.height = 1;
+
+    const sourceContext = sourceCanvas.getContext('2d')!;
+
+    sourceContext.fillStyle = '#ff0000';
+    sourceContext.fillRect(0, 0, 1, 1);
+
+    const source = await createImageBitmap(sourceCanvas);
+    const texture = new Texture(source);
+    const root = new Container();
+    const sprite = new Sprite(texture);
+
+    try {
+      sprite.setPosition(8, 8);
+      sprite.width = 16;
+      sprite.height = 16;
+      root.addChild(sprite);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(readPixel(16, 16), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(40, 40), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      source.close();
+      backend.destroy();
+    }
+  });
+
+  test('container redraws a sprite after its deferred texture loads', async ctx => {
+    const backend = await setupBackend();
+    const texture = new Texture();
+
+    texture._loadState.begin();
+
+    const root = new Container();
+    const sprite = new Sprite(texture);
+
+    try {
+      sprite.setAnchor(0.5).setScale(2).setPosition(32, 32);
+      root.addChild(sprite);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const source = document.createElement('canvas');
+
+      source.width = 16;
+      source.height = 16;
+
+      const sourceContext = source.getContext('2d')!;
+
+      sourceContext.fillStyle = '#ff0000';
+      sourceContext.fillRect(0, 0, 16, 16);
+      texture.setSource(source);
+      texture._loadState.settle(texture);
+      await texture.loaded;
+      await Promise.resolve();
+      sprite.setRotation(30);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(readPixel(32, 32), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(40, 40), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
   test('tint is applied to rendered output', async ctx => {
     const backend = await setupBackend();
 

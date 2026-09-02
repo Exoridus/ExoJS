@@ -55,6 +55,7 @@ const repoRoot = resolve(projectRoot, '..'); // repo root
 const distDir = resolve(projectRoot, 'dist');
 const catalogPath = resolve(repoRoot, 'examples', 'examples.json');
 const reportPath = resolve(repoRoot, '.workspace', 'reports', 'example-smoke.md');
+const artifactDir = resolve(repoRoot, '.workspace', 'reports', 'example-smoke-artifacts');
 
 /**
  * The site's configured base path. Every URL in the built HTML carries it, so
@@ -69,6 +70,7 @@ const SITE_BASE = '/ExoJS';
  * reported. Anything not listed fails the run when its canvas stays uniform.
  */
 const BLANK_ALLOWLIST: Readonly<Record<string, string>> = {};
+const BLANK_FAILURE = 'canvas rendered but appears blank - one uniform color, no error thrown';
 
 const MIME: Record<string, string> = {
   '.js': 'text/javascript',
@@ -255,6 +257,27 @@ const staysBlank = async (page: Page, previewFrame: Frame, timeoutMs: number): P
   } while (Date.now() < deadline);
 
   return true;
+};
+
+/**
+ * Observe the canvas throughout the settle window so a short-lived animation
+ * still proves that the example rendered, while preserving the full delay in
+ * which deferred errors are allowed to surface.
+ */
+const rendersDuringSettle = async (page: Page, previewFrame: Frame, durationMs: number): Promise<boolean> => {
+  const deadline = Date.now() + durationMs;
+  let rendered = false;
+
+  do {
+    rendered ||= !(await isCanvasBlank(page, previewFrame));
+
+    const remaining = deadline - Date.now();
+    if (remaining > 0) {
+      await page.waitForTimeout(Math.min(400, remaining));
+    }
+  } while (Date.now() < deadline);
+
+  return rendered;
 };
 
 const isCanvasBlank = async (page: Page, previewFrame: Frame): Promise<boolean> => {
@@ -465,8 +488,10 @@ const runExample = async (
 
     const previewFrame = await waitForPreviewCanvas(page, timeoutMs);
 
-    // Let async load()/init() settle so deferred rejections surface too.
-    await page.waitForTimeout(1500);
+    // Let async load()/init() settle so deferred rejections surface too. Keep
+    // observing during that window: transient examples may intentionally draw
+    // their only automatic effect before the settling delay has elapsed.
+    const renderedDuringSettle = previewFrame ? await rendersDuringSettle(page, previewFrame, 1500) : false;
 
     const { shell, preview } = await collectErrors(page, pageErrors);
     result.shellErrors = shell.map(oneLine);
@@ -492,14 +517,22 @@ const runExample = async (
         result.status = 'failed';
         result.note = 'the preview iframe never mounted a canvas (no error thrown)';
       }
-    } else if (await staysBlank(page, previewFrame, timeoutMs)) {
+    } else if (!renderedDuringSettle && (await staysBlank(page, previewFrame, timeoutMs))) {
       const reason = BLANK_ALLOWLIST[entry.path];
       if (reason) {
         result.status = 'passed';
         result.note = `blank by design: ${reason}`;
       } else {
         result.status = 'failed';
-        result.note = 'canvas rendered but appears blank - one uniform color, no error thrown';
+        result.note = BLANK_FAILURE;
+
+        const injectedSource = await previewFrame
+          .evaluate(() => document.querySelector<HTMLScriptElement>('script[type="module"]')?.textContent ?? '')
+          .catch(() => '');
+        if (injectedSource) {
+          await mkdir(artifactDir, { recursive: true });
+          await writeFile(join(artifactDir, entry.path.replaceAll('/', '__')), injectedSource, 'utf8');
+        }
       }
     }
   } catch (error) {
@@ -605,6 +638,30 @@ const main = async (): Promise<void> => {
 
   await Promise.all(Array.from({ length: Math.min(concurrency, entries.length) }, () => worker()));
 
+  // Chromium's compositor can occasionally return only the clear colour when
+  // several independent WebGPU pages are being captured concurrently. Retry
+  // only that silent visual signature, serially and in a fresh context. A real
+  // blank remains a failure; thrown errors and missing canvases are never
+  // softened by this retry.
+  const blankFailureIndexes = results.flatMap((result, index) => (result.status === 'failed' && result.note === BLANK_FAILURE ? [index] : []));
+
+  for (const index of blankFailureIndexes) {
+    const entry = entries[index]!;
+    const firstResult = results[index]!;
+
+    console.log(`[smoke] RETRY  ${entry.path} - serial blank verification`);
+
+    const retryResult = await runExample(browser, baseUrl, entry, index + entries.length, webgpuAvailable, timeoutMs, colorScheme);
+
+    retryResult.shellErrors = [...new Set([...(firstResult.shellErrors ?? []), ...(retryResult.shellErrors ?? [])])];
+    results[index] = retryResult;
+
+    const tag = retryResult.status.toUpperCase().padEnd(7);
+    const line = `[smoke] ${tag} ${entry.path}${retryResult.note ? ` - ${retryResult.note}` : ''}`;
+    if (retryResult.status === 'failed') console.error(line);
+    else console.log(line);
+  }
+
   await browser.close();
   await new Promise<void>(resolveClose => server.close(() => resolveClose()));
 
@@ -657,7 +714,7 @@ const writeReport = async (
     '',
   );
   lines.push(
-    'Each catalog example is loaded through `preview.html` (real import map) with its source injected as a module script; the run checks for uncaught errors and a mounted `<canvas>`.',
+    'Each catalog example is opened through the real Playground route, compiled by Monaco, injected into the `preview.html` iframe, and checked for shell/preview errors plus visible canvas output.',
     '',
   );
   lines.push('## Totals', '');

@@ -41,6 +41,9 @@ class CustomTriangleRenderer {
     this.vertexBuffer = this.createVertexBuffer();
   }
   draw() {
+    // Submit ExoJS's pending clear before the raw command buffer, or the
+    // application's end-of-frame flush clears over this triangle afterwards.
+    this.renderManager.flush();
     const encoder = this.device.createCommandEncoder();
     const pass = encoder.beginRenderPass({
       colorAttachments: [

@@ -3173,7 +3173,9 @@ export class WebGpuBackend implements RenderBackend {
       return GPUTextureUsage.COPY_SRC | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT | mipmapUsage;
     }
 
-    return GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING | mipmapUsage;
+    const externalImageUsage = texture instanceof DataTexture ? 0 : GPUTextureUsage.RENDER_ATTACHMENT;
+
+    return GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING | mipmapUsage | externalImageUsage;
   }
 
   private _getAddressMode(wrapMode: WrapModes): GPUAddressMode {

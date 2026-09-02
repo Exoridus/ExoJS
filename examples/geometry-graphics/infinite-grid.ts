@@ -37,7 +37,7 @@ void main() {
 const wgsl = `
 @group(0) @binding(1) var uTexture: texture_2d<f32>;
 @group(0) @binding(2) var uSampler: sampler;
-struct Uniforms { uCenter: vec2<f32>, uViewSize: vec2<f32> };
+struct Uniforms { uCenter: vec2<f32>, _pad0: vec2<f32>, uViewSize: vec2<f32> };
 @group(1) @binding(0) var<uniform> uniforms: Uniforms;
 fn gridLine(p: vec2<f32>, s: f32, w: f32) -> f32 {
     let c = abs(fract(p / s - vec2<f32>(0.5)) - vec2<f32>(0.5));
