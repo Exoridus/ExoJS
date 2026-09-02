@@ -22,7 +22,7 @@
  *   ... --only camera-basic        # smoke a single example (path substring)
  *   ... --sample                   # one example per category (the PR-stage subset)
  *   ... --renderer webgl2          # withhold the WebGPU adapter (see `forceWebGl2`)
- *   ... --concurrency 4            # parallel pages (default 4)
+ *   ... --concurrency 4            # parallel pages (default: half the cores, at most 4)
  *   ... --browser firefox          # run under Firefox headed (cross-browser)
  *   ... --headed                   # force headed mode for any browser
  *   ... --color-scheme dark        # emulate dark-mode OS preference
@@ -45,6 +45,7 @@
 import { createServer, type Server } from 'node:http';
 import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { availableParallelism } from 'node:os';
 import { dirname, extname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
@@ -784,7 +785,11 @@ const main = async (): Promise<void> => {
     entries = sampleByCategory(entries);
   }
 
-  const concurrency = Math.max(1, Number.parseInt(values.concurrency ?? '4', 10) || 4);
+  // Half the cores, at most four: every page runs a main thread and, without a
+  // GPU, a software rasteriser beside it. Four pages on a four-core runner
+  // starved the heavy examples until the capture itself timed out.
+  const defaultConcurrency = Math.min(4, Math.max(1, Math.floor(availableParallelism() / 2)));
+  const concurrency = Math.max(1, Number.parseInt(values.concurrency ?? '', 10) || defaultConcurrency);
   const timeoutMs = Math.max(4000, Number.parseInt(values['timeout-ms'] ?? '15000', 10) || 15000);
 
   const { port, server } = await startServer(distDir);
