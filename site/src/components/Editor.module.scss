@@ -36,7 +36,11 @@
   position: relative;
   display: flex;
   justify-content: center;
-  align-items: flex-start;
+  // Centred on both axes: the stage is a fixed-aspect box that rarely matches
+  // the surface exactly - and in the expanded layout the surface is
+  // deliberately much taller - so top alignment would strand the preview
+  // against the upper edge with all the slack below it.
+  align-items: center;
   // Reserve the 16:9 stage height BEFORE the example reports its canvas
   // size, so the layout doesn't jump when the preview appears. Purely a
   // container measure — the iframe's own zoom mechanics stay untouched.

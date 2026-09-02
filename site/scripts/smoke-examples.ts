@@ -1,14 +1,16 @@
 /**
  * Runtime smoke test for the playground example catalog.
  *
- * For every entry in `examples/examples.json` this loads the example the same
- * way the playground does - through `preview.html` (which registers the
- * `@codexo/exojs` / `@examples/runtime` import map) with the example source
- * injected as a module script - and checks that it boots without an uncaught
- * runtime error, renders a `<canvas>`, and actually paints something to it.
- * `preview.html` is loaded directly (not nested in an iframe the way the live
- * playground embeds it), so this is the same document the playground's iframe
- * would contain - one canvas check covers both.
+ * For every entry in `examples/examples.json` this drives the real playground
+ * route (`/en/playground/?example=...`) and checks that the example boots
+ * without an uncaught error in EITHER realm - the playground shell or the
+ * preview iframe - and actually paints something to its canvas.
+ *
+ * Driving the route rather than loading `preview.html` directly is the point:
+ * the shell transpiles the TypeScript source through Monaco's worker and feeds
+ * the result into the iframe, so the direct path executes prebuilt `.js` that
+ * no visitor ever runs, and exercises none of the embedding, the capability
+ * gate or the editor's error handling.
  *
  * It serves the built site (`site/dist`) over a throwaway static server, so it
  * needs `pnpm site:build` to have run first. It is intentionally a standalone
@@ -31,8 +33,12 @@
  *   headed session, matching the browser-webgpu-firefox vitest project).
  *   dom.webgpu.enabled is set via firefoxUserPrefs.
  *
- * Exit code is 1 when any example fails (errors). Capability/unsupported skips
- * and "no canvas" warnings do not fail the run.
+ * Exit code is 1 when any example fails. An uncaught error, a preview that
+ * never mounts a canvas, and a canvas that stays one uniform color all count
+ * as failures - the blank case included, because that is exactly the shape a
+ * silently broken example takes. Examples that legitimately paint nothing
+ * belong in `BLANK_ALLOWLIST` with a reason. Capability/unsupported skips do
+ * not fail the run.
  */
 import { createServer, type Server } from 'node:http';
 import { existsSync, readFileSync, statSync } from 'node:fs';
@@ -41,7 +47,7 @@ import { dirname, extname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
-import { chromium, firefox, type Browser, type Page } from 'playwright';
+import { chromium, firefox, type Browser, type Frame, type Page } from 'playwright';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(here, '..'); // site/
@@ -49,6 +55,20 @@ const repoRoot = resolve(projectRoot, '..'); // repo root
 const distDir = resolve(projectRoot, 'dist');
 const catalogPath = resolve(repoRoot, 'examples', 'examples.json');
 const reportPath = resolve(repoRoot, '.workspace', 'reports', 'example-smoke.md');
+
+/**
+ * The site's configured base path. Every URL in the built HTML carries it, so
+ * the throwaway server strips it and the playground URLs re-add it.
+ */
+const SITE_BASE = '/ExoJS';
+
+/**
+ * Examples that legitimately paint nothing, so a uniform canvas is their
+ * correct output rather than a silent failure. Every entry needs a reason:
+ * without one, a genuinely broken example can be parked here and stop being
+ * reported. Anything not listed fails the run when its canvas stays uniform.
+ */
+const BLANK_ALLOWLIST: Readonly<Record<string, string>> = {};
 
 const MIME: Record<string, string> = {
   '.js': 'text/javascript',
@@ -124,12 +144,23 @@ interface Result {
   capabilities: string[];
   status: Status;
   note: string;
+  /**
+   * Errors raised by the playground shell rather than the example. Kept off the
+   * example's own verdict and aggregated across the run, because one broken
+   * shell would otherwise fail every entry in the catalog identically.
+   */
+  shellErrors?: string[];
 }
 
 const startServer = (root: string): Promise<{ port: number; server: Server }> => {
   const server = createServer((req, res) => {
     try {
-      const urlPath = decodeURIComponent((req.url ?? '/').split('?')[0]);
+      let urlPath = decodeURIComponent((req.url ?? '/').split('?')[0]);
+      // The site is built with a configured `base`, so every URL the emitted
+      // HTML references carries that prefix while `dist` itself is flat.
+      if (urlPath.startsWith(SITE_BASE)) {
+        urlPath = urlPath.slice(SITE_BASE.length) || '/';
+      }
       let filePath = resolve(join(root, urlPath));
       if (!filePath.startsWith(root)) {
         res.writeHead(403);
@@ -203,16 +234,32 @@ const captureErrors = (): void => {
 // stage), while downscaling blends every source pixel into one of the grid's
 // cells, so even a few non-background pixels shift at least one cell's
 // average.
-const isCanvasBlank = async (page: Page): Promise<boolean> => {
-  const box = await page.evaluate(() => {
-    const c = document.querySelector('canvas');
-    if (!c) return null;
-    const r = c.getBoundingClientRect();
-    return { x: r.x, y: r.y, width: r.width, height: r.height };
-  });
+const isCanvasBlank = async (page: Page, previewFrame: Frame): Promise<boolean> => {
+  // Measured on the preview IFRAME in the host document, never on the canvas
+  // inside it: the playground scales the preview with a CSS transform, under
+  // which the inner canvas reports a rect in its own untransformed space -
+  // coordinates that can sit outside the viewport entirely and clip to nothing.
+  // The iframe element is laid out normally, so its rect is what the viewer
+  // actually sees.
+  const box = await page.locator('iframe').first().boundingBox();
   if (!box || box.width === 0 || box.height === 0) return true;
 
+  // Examples draw their HUD as fixed-position `<aside>` overlays on top of the
+  // canvas. Those are DOM, not rendered output, and would make a blank canvas
+  // read as painted, so they are hidden for the duration of the capture.
+  const hideOverlays = (visibility: string): Promise<void> =>
+    previewFrame
+      .evaluate((value: string) => {
+        for (const overlay of document.querySelectorAll('aside')) {
+          (overlay as HTMLElement).style.visibility = value;
+        }
+      }, visibility)
+      .catch(() => undefined);
+
+  await hideOverlays('hidden');
   const png = await page.screenshot({ clip: box });
+  await hideOverlays('');
+
   const dataUrl = `data:image/png;base64,${png.toString('base64')}`;
 
   return page.evaluate(async (imageDataUrl: string) => {
@@ -236,6 +283,89 @@ const isCanvasBlank = async (page: Page): Promise<boolean> => {
     }
     return true;
   }, dataUrl);
+};
+
+/**
+ * Waits for the playground's preview iframe to attach and mount a canvas, and
+ * returns that frame. `null` means it never got there within `timeoutMs`.
+ *
+ * The frame is re-resolved on every attempt rather than captured once: the
+ * playground reloads the iframe whenever the source it feeds in changes, which
+ * detaches the previous frame and would leave a stale handle behind.
+ */
+const waitForPreviewCanvas = async (page: Page, timeoutMs: number): Promise<Frame | null> => {
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    const frame = page.frames().find(candidate => candidate !== page.mainFrame() && candidate.url().includes('preview.html'));
+
+    if (frame) {
+      const hasCanvas = await frame.evaluate(() => !!document.querySelector('canvas')).catch(() => false);
+      if (hasCanvas) return frame;
+    }
+
+    await page.waitForTimeout(250);
+  }
+
+  return null;
+};
+
+/**
+ * The playground's capability overlay text, or `null` when no frame is showing
+ * one. The overlay marks itself with `data-preview-blanked="capabilities"`;
+ * the error path sets the same attribute with an empty value, so the value is
+ * what distinguishes "this browser cannot run it" from "it broke".
+ */
+const readCapabilityOverlay = async (page: Page): Promise<string | null> => {
+  for (const frame of page.frames()) {
+    const text = await frame
+      .evaluate(() => (document.body.getAttribute('data-preview-blanked') === 'capabilities' ? document.body.innerText : null))
+      .catch(() => null);
+
+    if (text !== null) return text;
+  }
+
+  return null;
+};
+
+/**
+ * Uncaught errors from every realm of the page, split by which one raised them.
+ * Each frame keeps its own `__SMOKE_ERRORS__` (installed by the context init
+ * script, which runs per frame), so a failure that only ever surfaces inside
+ * the iframe is reported rather than silently dropped.
+ *
+ * The split matters for attribution: a broken playground shell throws
+ * identically for every example in the catalog and is one site defect, not N
+ * broken examples. Only `preview` errors judge the example itself; `shell`
+ * errors are collected across the run and reported once.
+ */
+const collectErrors = async (page: Page, pageErrors: readonly string[]): Promise<{ shell: string[]; preview: string[] }> => {
+  const readFrame = (frame: Frame): Promise<string[]> =>
+    frame
+      .evaluate(() => {
+        const w = window as unknown as { __SMOKE_ERRORS__?: { message: string }[] };
+        return (w.__SMOKE_ERRORS__ ?? []).map(error => error.message);
+      })
+      .catch(() => [] as string[]);
+
+  const shell = await readFrame(page.mainFrame());
+  const nested = await Promise.all(
+    page
+      .frames()
+      .filter(frame => frame !== page.mainFrame())
+      .map(readFrame),
+  );
+  const preview = nested.flat();
+
+  // `pageerror` carries no frame attribution, so anything it saw that the
+  // preview realm did not record is attributed to the shell.
+  for (const message of pageErrors) {
+    if (!preview.includes(message) && !shell.includes(message)) {
+      shell.push(message);
+    }
+  }
+
+  return { shell, preview };
 };
 
 const detectWebGpu = async (browser: Browser, baseUrl: string): Promise<boolean> => {
@@ -286,81 +416,68 @@ const runExample = async (
     return result;
   }
 
-  const sourcePath = join(distDir, 'examples', entry.path);
-  if (!existsSync(sourcePath)) {
+  if (!existsSync(join(distDir, 'examples', entry.path))) {
     result.status = 'failed';
     result.note = `source missing in build output: ${entry.path}`;
     return result;
   }
-  const source = readFileSync(sourcePath, 'utf8');
 
-  const context = await browser.newContext({ viewport: { width: 800, height: 600 }, colorScheme });
+  // Wide enough that the playground lays out sidebar, editor and preview panel
+  // side by side. A narrower viewport collapses the layout and can leave the
+  // preview outside the rasterised area, where the compositor never paints it
+  // and every example would read as blank.
+  const context = await browser.newContext({ viewport: { width: 1600, height: 900 }, colorScheme });
   await context.addInitScript(captureErrors);
   const page = await context.newPage();
   const pageErrors: string[] = [];
   page.on('pageerror', error => pageErrors.push(error.message));
 
   try {
-    await page.goto(`${baseUrl}/preview.html?no-cache=${index}`, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
+    // The real playground route, not preview.html on its own: this exercises
+    // the editor shell, the TypeScript transpile that feeds the iframe, the
+    // capability gate and the iframe embedding - everything a visitor hits.
+    const slug = entry.path.replace(/\.js$/, '');
+    const url = `${baseUrl}${SITE_BASE}/en/playground/?example=${encodeURIComponent(slug)}&no-cache=${index}`;
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
 
-    await page.evaluate(
-      async ({ exampleSource, meta }) => {
-        const w = window as unknown as { __EXAMPLE_META__?: unknown; assets?: unknown };
-        w.__EXAMPLE_META__ = meta;
-        // Install the global typed asset catalog (resolved paths) before the
-        // example evaluates - examples use the `assets` global, not an import.
-        try {
-          // Resolved by the page against the served example tree, which has no
-          // counterpart on this machine's disk - the specifier is widened so it
-          // is a runtime import rather than one this program tries to resolve.
-          const catalogSpecifier = './assets/catalog.js';
-          const catalog = (await import(catalogSpecifier)) as { assets?: unknown };
-          w.assets = catalog.assets ?? {};
-        } catch {
-          w.assets = {};
-        }
-        const script = document.createElement('script');
-        script.type = 'module';
-        script.textContent = `${exampleSource}\n`;
-        document.body.appendChild(script);
-      },
-      { exampleSource: source, meta: entry },
-    );
+    const previewFrame = await waitForPreviewCanvas(page, timeoutMs);
 
-    // Wait until a canvas mounts or an error surfaces, then let async
-    // load()/init() settle so deferred rejections are captured too.
-    await page
-      .waitForFunction(
-        () => {
-          const w = window as unknown as { __SMOKE_ERRORS__?: unknown[] };
-          return !!document.querySelector('canvas') || (w.__SMOKE_ERRORS__?.length ?? 0) > 0;
-        },
-        undefined,
-        { timeout: timeoutMs },
-      )
-      .catch(() => undefined);
-    await page.waitForTimeout(1100);
+    // Let async load()/init() settle so deferred rejections surface too.
+    await page.waitForTimeout(1500);
 
-    const errors = await page.evaluate(() => {
-      const w = window as unknown as { __SMOKE_ERRORS__?: { message: string }[] };
-      return (w.__SMOKE_ERRORS__ ?? []).map(error => error.message);
-    });
-    const hasCanvas = await page.evaluate(() => !!document.querySelector('canvas'));
-    const allErrors = [...errors, ...pageErrors];
+    const { shell, preview } = await collectErrors(page, pageErrors);
+    result.shellErrors = shell.map(oneLine);
 
-    const recoverable = allErrors.find(isRecoverable);
+    const recoverable = preview.find(isRecoverable);
     if (recoverable) {
       result.status = 'skipped';
       result.note = oneLine(`backend unsupported: ${recoverable}`);
-    } else if (allErrors.length > 0) {
+    } else if (preview.length > 0) {
       result.status = 'failed';
-      result.note = oneLine(allErrors[0]);
-    } else if (!hasCanvas) {
-      result.status = 'warned';
-      result.note = 'no <canvas> rendered (no error thrown)';
-    } else if (await isCanvasBlank(page)) {
-      result.status = 'warned';
-      result.note = 'canvas rendered but appears blank - one uniform color, no error thrown';
+      result.note = oneLine(preview[0]);
+    } else if (!previewFrame) {
+      // The playground refuses to run an example whose declared capabilities
+      // the browser lacks, and replaces the stage with an explanatory overlay
+      // instead of throwing. That is an environment limit, not a defect - the
+      // same category as the WebGPU-adapter skip above.
+      const missing = await readCapabilityOverlay(page);
+
+      if (missing) {
+        result.status = 'skipped';
+        result.note = oneLine(`capabilities unavailable in this environment: ${missing}`);
+      } else {
+        result.status = 'failed';
+        result.note = 'the preview iframe never mounted a canvas (no error thrown)';
+      }
+    } else if (await isCanvasBlank(page, previewFrame)) {
+      const reason = BLANK_ALLOWLIST[entry.path];
+      if (reason) {
+        result.status = 'passed';
+        result.note = `blank by design: ${reason}`;
+      } else {
+        result.status = 'failed';
+        result.note = 'canvas rendered but appears blank - one uniform color, no error thrown';
+      }
     }
   } catch (error) {
     result.status = 'failed';
@@ -475,12 +592,24 @@ const main = async (): Promise<void> => {
     warned: results.filter(result => result.status === 'warned').length,
   };
 
-  await writeReport(results, counts, webgpuAvailable, browserName, colorScheme, headless);
+  // One shell defect throws for every example, so the distinct messages are
+  // what carries information - not how many entries tripped over them.
+  const shellErrors = [...new Set(results.flatMap(result => result.shellErrors ?? []))];
+
+  await writeReport(results, counts, webgpuAvailable, browserName, colorScheme, headless, shellErrors);
 
   console.log(`[smoke] passed ${counts.passed} · warned ${counts.warned} · skipped ${counts.skipped} · failed ${counts.failed}`);
+
+  if (shellErrors.length > 0) {
+    console.error(`[smoke] playground shell raised ${shellErrors.length} distinct error(s) - a site defect, not an example defect:`);
+    for (const message of shellErrors) {
+      console.error(`[smoke]   ${message}`);
+    }
+  }
+
   console.log(`[smoke] report: ${reportPath}`);
 
-  if (counts.failed > 0) {
+  if (counts.failed > 0 || shellErrors.length > 0) {
     process.exitCode = 1;
   }
 };
@@ -492,6 +621,7 @@ const writeReport = async (
   browserName = 'chromium',
   colorScheme = 'light',
   headless = true,
+  shellErrors: readonly string[] = [],
 ): Promise<void> => {
   const icon: Record<Status, string> = { passed: '✅', failed: '❌', skipped: '⏭️', warned: '⚠️' };
   const lines: string[] = [];
@@ -511,6 +641,15 @@ const writeReport = async (
   lines.push(`| Total | ✅ Passed | ⚠️ Warned | ⏭️ Skipped | ❌ Failed |`);
   lines.push(`| --- | --- | --- | --- | --- |`);
   lines.push(`| ${results.length} | ${counts.passed} | ${counts.warned} | ${counts.skipped} | ${counts.failed} |`, '');
+
+  if (shellErrors.length > 0) {
+    lines.push('## ❌ Playground shell', '');
+    lines.push('Raised by the playground page itself, not by any example - it reproduces on every entry and is one site defect:', '');
+    for (const message of shellErrors) {
+      lines.push(`- ${message}`);
+    }
+    lines.push('');
+  }
 
   const failed = results.filter(result => result.status === 'failed');
   if (failed.length > 0) {

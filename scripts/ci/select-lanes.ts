@@ -162,11 +162,15 @@ const isTilemapWorkerPath = (file: string): boolean => {
  * example whose scene throws on start passes all three and still ships a black
  * canvas.
  *
- * Narrow on purpose, and narrower than `site`: the lane drives a real browser
- * over the whole catalog, so an unrelated site page or a package README must
- * not pull it in. Engine paths are deliberately NOT in this set either - they
- * run the browser rendering lanes, which cover the same runtime on a suite
- * built for it.
+ * Narrower than `site`: the lane drives a real browser over the whole catalog,
+ * so an unrelated site page or a package README must not pull it in.
+ *
+ * Engine and extension sources ARE in this set. They were once excluded on the
+ * assumption that the browser rendering lanes cover the same runtime, but those
+ * lanes exercise the engine through purpose-built suites, not through the
+ * catalog: an engine change that leaves every unit and rendering test green can
+ * still stop every example in a chapter from drawing, and nothing would have
+ * run an example to notice.
  */
 const isExampleCatalogPath = (file: string): boolean => {
   if (file.startsWith('.github/workflows/')) return true;
@@ -174,11 +178,16 @@ const isExampleCatalogPath = (file: string): boolean => {
   // The catalog sources, their generated `.js` twins, the example assets, and
   // `examples.json` - the manifest the harness iterates.
   if (file.startsWith('examples/')) return true;
-  // The harness, the page it loads every example through, and the generator
-  // that copies the catalog into the site the harness serves.
+  // Engine and extension runtime code: what the examples actually execute.
+  if (file.startsWith('src/')) return true;
+  if (file.startsWith('packages/') && !isPackageDocPath(file)) return true;
+  // The harness, the playground route it drives, the page the preview iframe
+  // loads, and the generator that copies the catalog into the served site.
   if (file === 'site/scripts/smoke-examples.ts') return true;
   if (file === 'site/scripts/sync-examples-static.ts') return true;
   if (file === 'site/public/preview.html') return true;
+  if (file.startsWith('site/src/components/')) return true;
+  if (file.startsWith('site/src/pages/')) return true;
   return false;
 };
 

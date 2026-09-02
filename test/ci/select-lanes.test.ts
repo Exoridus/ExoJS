@@ -309,17 +309,31 @@ describe('CI lane selection - example-smoke lane', () => {
     expect(decide('site/scripts/sync-examples-static.ts').lanes.exampleSmoke).toBe(true);
   });
 
-  it('an unrelated site change does NOT run the lane, but still builds the site', () => {
-    const { areas, lanes } = decide('site/src/pages/index.astro');
+  it('a site change outside the playground does NOT run the lane, but still builds the site', () => {
+    const { areas, lanes } = decide('site/src/layouts/Layout.astro');
     expect(areas.exampleCatalog).toBe(false);
     expect(lanes.exampleSmoke).toBe(false);
     expect(lanes.siteBuild).toBe(true);
   });
 
-  it('engine and package changes do NOT run the lane (the browser lanes cover that runtime)', () => {
-    expect(decide('src/rendering/Drawable.ts').lanes.exampleSmoke).toBe(false);
-    expect(decide('packages/exojs-tilemap/src/TileMap.ts').lanes.exampleSmoke).toBe(false);
+  // The lane is the only thing in CI that runs an example. Engine and extension
+  // code is what an example executes, so a change there has to run it: a green
+  // unit and rendering suite does not prove the catalog still draws.
+  it('engine and package source changes run the lane', () => {
+    expect(decide('src/rendering/Drawable.ts').lanes.exampleSmoke).toBe(true);
+    expect(decide('packages/exojs-particles/src/ParticleSystem.ts').lanes.exampleSmoke).toBe(true);
+    expect(decide('packages/exojs-tilemap/src/TileMap.ts').lanes.exampleSmoke).toBe(true);
+  });
+
+  it('package documentation alone does NOT run the lane', () => {
     expect(decide('packages/exojs-tiled/README.md').lanes.exampleSmoke).toBe(false);
+  });
+
+  // The harness drives the real playground route, so the components and pages
+  // that render it are part of what it covers.
+  it('playground component and page changes run the lane', () => {
+    expect(decide('site/src/components/EditorPreview.tsx').lanes.exampleSmoke).toBe(true);
+    expect(decide('site/src/pages/en/playground/index.astro').lanes.exampleSmoke).toBe(true);
   });
 
   it('workflow / lockfile / workspace changes run the lane', () => {
