@@ -1,5 +1,7 @@
 import type { RenderNode } from '#rendering/RenderNode';
 
+import { DataTexture } from './DataTexture';
+import { RenderTexture } from './RenderTexture';
 import type { Texture } from './Texture';
 
 /**
@@ -43,4 +45,21 @@ export const invalidateOnTextureLoad = (node: RenderNode, texture: Texture): voi
       // draws - there is nothing to rebuild for.
     },
   );
+};
+
+/**
+ * Whether `texture` can be sampled right now.
+ *
+ * A loader handle reports no source and no dimensions until its payload
+ * arrives. Binding one is not merely pointless - there is nothing for a backend
+ * to upload, and what it puts in the descriptor instead becomes a difference
+ * between backends and between drivers. Callers pick a stand-in
+ * ({@link Texture.white}) or skip the draw.
+ */
+export const isSampleableTexture = (texture: Texture | RenderTexture): boolean => {
+  if (texture instanceof RenderTexture || texture instanceof DataTexture) {
+    return true;
+  }
+
+  return texture.compressed !== null || (texture.source !== null && texture.width > 0 && texture.height > 0);
 };

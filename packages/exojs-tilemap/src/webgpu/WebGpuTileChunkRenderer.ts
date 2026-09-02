@@ -9,6 +9,7 @@ import type {
   WebGpuRetainedNodeIndexRange,
 } from '@codexo/exojs/renderer-sdk';
 import type { View, WebGpuBackend } from '@codexo/exojs/renderer-sdk';
+import { isSampleableTexture } from '@codexo/exojs/renderer-sdk';
 import {
   AbstractWebGpuRenderer,
   type BlendModes,
@@ -248,7 +249,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       return;
     }
 
-    if (texture.width === 0 || texture.height === 0) {
+    if (!isSampleableTexture(texture)) {
       return;
     }
 

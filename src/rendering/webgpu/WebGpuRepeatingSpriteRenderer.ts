@@ -5,7 +5,7 @@ import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rende
 import type { Drawable } from '#rendering/Drawable';
 import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingPlan';
 import type { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
-import { DataTexture } from '#rendering/texture/DataTexture';
+import { isSampleableTexture } from '#rendering/texture/deferredTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { RepeatMode } from '#rendering/texture/repeat';
 import { Texture } from '#rendering/texture/Texture';
@@ -279,8 +279,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     if (!backend) return;
 
     const texture = sprite.texture;
-    if (texture instanceof Texture && !(texture instanceof DataTexture) && texture.source === null) return;
-    if (texture.width === 0 || texture.height === 0) return;
+    if (!isSampleableTexture(texture)) return;
 
     const strategy = sprite.resolvedStrategy;
     const blendMode = sprite.blendMode;

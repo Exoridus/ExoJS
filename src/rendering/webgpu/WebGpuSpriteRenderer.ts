@@ -22,7 +22,7 @@ import {
 } from '#rendering/sprite/materialSources';
 import { fillPersistentSpriteSlotTable, writePersistentSpriteSlots } from '#rendering/sprite/persistentSlots';
 import type { Sprite } from '#rendering/sprite/Sprite';
-import { DataTexture } from '#rendering/texture/DataTexture';
+import { isSampleableTexture } from '#rendering/texture/deferredTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
@@ -511,13 +511,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     const texture = sprite.texture;
 
     // Same early-out conditions as the deferred renderer used to apply.
-    if (
-      backend === null ||
-      (!(texture instanceof Texture) && !(texture instanceof RenderTexture)) ||
-      texture.width === 0 ||
-      texture.height === 0 ||
-      (texture instanceof Texture && !(texture instanceof DataTexture) && texture.source === null)
-    ) {
+    if (backend === null || (!(texture instanceof Texture) && !(texture instanceof RenderTexture)) || !isSampleableTexture(texture)) {
       return;
     }
 

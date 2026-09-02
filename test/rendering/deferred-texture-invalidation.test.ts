@@ -84,7 +84,11 @@ describe('a drawable whose geometry follows its texture invalidates when a defer
     ).resolves.toBe(true);
   });
 
-  test('a Mesh does not, and needs not: its vertices and UVs are the caller own', async () => {
+  test('Mesh', async () => {
+    // A mesh brings its own vertices and UVs, so nothing about its geometry
+    // follows the texture - but a mesh whose texture has not loaded is skipped
+    // by the renderers rather than drawn white, and a skipped draw recorded
+    // into a retained product would never be revisited.
     await expect(
       announcesLoad(
         texture =>
@@ -95,6 +99,6 @@ describe('a drawable whose geometry follows its texture invalidates when a defer
             texture,
           }) as unknown as { _contentRevision: number },
       ),
-    ).resolves.toBe(false);
+    ).resolves.toBe(true);
   });
 });

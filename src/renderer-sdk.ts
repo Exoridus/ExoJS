@@ -32,10 +32,13 @@ export { Shader } from '#rendering/shader/Shader';
 export { fillShaderSource } from '#rendering/shader/fillShaderSource';
 export { TRANSFORM_TEXTURE_GLSL_INCLUDE } from '#rendering/shader/transformTextureLayout';
 export { Spritesheet } from '#rendering/sprite/Spritesheet';
-// Renderers that guard on `Texture.source === null` need this to tell "still
-// waiting on an image" from "holds its pixels in a CPU buffer" - without it an
-// extension renderer silently drops every procedurally-generated texture.
+// `isSampleableTexture` is that guard, written once: it answers "can this be
+// sampled right now" across every texture kind, so a renderer neither binds a
+// loader handle that has not delivered nor silently drops a procedurally
+// generated one. `DataTexture` stays exported for renderers that additionally
+// need to tell a CPU-buffer texture apart for their own reasons.
 export { DataTexture } from '#rendering/texture/DataTexture';
+export { isSampleableTexture } from '#rendering/texture/deferredTexture';
 export { RenderTexture } from '#rendering/texture/RenderTexture';
 export { Texture } from '#rendering/texture/Texture';
 export { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';

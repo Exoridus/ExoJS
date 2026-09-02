@@ -10,6 +10,7 @@ import { createIndexArray, meshIndexBytes } from '#rendering/mesh/indices';
 import type { Mesh } from '#rendering/mesh/Mesh';
 import type { DrawCommand } from '#rendering/plan/renderCommand';
 import type { InstanceDataView } from '#rendering/RenderBatch';
+import { isSampleableTexture } from '#rendering/texture/deferredTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { Texture as TextureClass } from '#rendering/texture/Texture';
@@ -396,7 +397,18 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const blendMode = customShader !== null && mesh.blendMode === BlendModes.Normal ? customShader.blendMode : mesh.blendMode;
     backend.setBlendMode(blendMode);
 
-    const meshTexture = mesh.texture ?? TextureClass.white;
+    // A mesh WITHOUT a texture samples white, which is neutral against the
+    // vertex colour. A mesh whose texture has not loaded yet is a different
+    // case and draws nothing at all: white would flash the geometry as a solid
+    // block for a frame or two, and a `Sprite` in the same position is simply
+    // not submitted. The mesh invalidates when the payload lands.
+    const requestedTexture = mesh.texture;
+
+    if (requestedTexture !== null && !isSampleableTexture(requestedTexture)) {
+      return;
+    }
+
+    const meshTexture = requestedTexture ?? TextureClass.white;
     const command = backend.activeDrawCommand;
     // backend.shouldPremultiplyTextureSample expects RenderTexture-or-Texture.
     // Both branches are valid here. Premultiply flag is ignored by custom

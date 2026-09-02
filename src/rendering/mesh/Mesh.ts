@@ -2,6 +2,7 @@ import { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { GeometryAttribute } from '#rendering/geometry/GeometryAttribute';
 import type { MeshMaterial } from '#rendering/material/MeshMaterial';
+import { invalidateOnTextureLoad } from '#rendering/texture/deferredTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 
@@ -212,6 +213,10 @@ export class Mesh extends Drawable {
     this._material = material;
     this._geometry = geometry;
     this._texture = texture;
+
+    if (texture !== null) {
+      invalidateOnTextureLoad(this, texture as Texture);
+    }
 
     this.recomputeLocalBounds();
   }

@@ -4,7 +4,7 @@ import { Matrix } from '#math/Matrix';
 import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
 import type { NineSliceQuad } from '#rendering/sprite/nineSlice';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
-import { DataTexture } from '#rendering/texture/DataTexture';
+import { isSampleableTexture } from '#rendering/texture/deferredTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
@@ -196,11 +196,9 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
 
     const texture = sprite.texture;
 
-    if (texture.width === 0 || texture.height === 0) {
-      return;
-    }
-
-    if (texture instanceof Texture && !(texture instanceof DataTexture) && texture.source === null) {
+    // A loader handle that has not delivered yet is not bound: there is
+    // nothing to upload, and the draw resumes when the payload lands.
+    if (!isSampleableTexture(texture)) {
       return;
     }
 

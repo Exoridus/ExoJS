@@ -3,7 +3,7 @@
 import type { GeometryAttribute, Material } from '@codexo/exojs';
 import type { BlendModes } from '@codexo/exojs/renderer-sdk';
 import type { WebGpuActiveRenderPass, WebGpuBackend } from '@codexo/exojs/renderer-sdk';
-import { DataTexture } from '@codexo/exojs/renderer-sdk';
+import { isSampleableTexture } from '@codexo/exojs/renderer-sdk';
 import { Texture } from '@codexo/exojs/renderer-sdk';
 import { AbstractWebGpuRenderer } from '@codexo/exojs/renderer-sdk';
 import { getWebGpuBlendState } from '@codexo/exojs/renderer-sdk';
@@ -188,9 +188,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     // has none by design. Without the exemption every procedurally-generated
     // particle texture renders as nothing here while WebGL2, which has no such
     // guard, draws it.
-    const awaitingImage = texture instanceof Texture && !(texture instanceof DataTexture) && texture.source === null;
-
-    if (backend === null || !(texture instanceof Texture) || awaitingImage || texture.width === 0 || texture.height === 0 || system.liveCount === 0) {
+    if (backend === null || !(texture instanceof Texture) || !isSampleableTexture(texture) || system.liveCount === 0) {
       return;
     }
 
