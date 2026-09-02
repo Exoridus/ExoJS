@@ -1,111 +1,30 @@
-/**
- * Run only the validation lanes a working copy's changes actually require.
- *
- * The path-to-lane decision is not made here: it comes from
- * `scripts/ci/select-lanes.ts`, the same module the CI detector job uses, so a
- * local run and a pull request agree by construction. What this script adds is
- * the two things CI gets for free - the changed-file list (from git rather than
- * from `dorny/paths-filter`) and a concrete command per lane.
- *
- * Usage:
- *   pnpm lanes                 list the lanes this working copy needs
- *   pnpm lanes --run           run them, stopping at the first failure
- *   pnpm lanes --run --quick   the same, minus the lanes that need a browser
- *   pnpm lanes --run --tests-only   only the suites, leaving the static gates out
- *   pnpm lanes --base <ref>    compare against <ref> instead of origin/HEAD
- *   pnpm lanes --all           every lane, as a push to the default branch gets
- *
- * The changed-file set spans the merge base with `--base` through the working
- * tree: committed, staged and unstaged changes plus untracked files all count,
- * because all of them are about to be pushed or are already being tested.
- */
-
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
-import { effectiveLanes, selectAreas } from './ci/select-lanes.ts';
+import { selectLanes, type Lane } from './ci/lanes.ts';
+import { effectiveLanes, selectAreas, type LaneAreas } from './ci/select-lanes.ts';
 
 /**
- * Which lane an entry belongs to. `'always'` covers the checks CI runs on every
- * pull request without gating them on a path - they have no key in the
- * selector's vocabulary precisely because there is nothing to decide.
- */
-export type LaneKey = keyof ReturnType<typeof effectiveLanes> | 'always';
-
-/** One runnable step of a validation lane. */
-export interface Lane {
-  /** Lane this entry runs for. */
-  readonly key: LaneKey;
-  /** Label used in the plan output. */
-  readonly name: string;
-  /** Command to run, argv-style. */
-  readonly command: readonly string[];
-  /** Whether the lane drives a real browser, and so is skipped by `--quick`. */
-  readonly browser?: boolean;
-  /**
-   * Whether this lane is one of the static gates `verify:quick` already runs.
-   * `--tests-only` drops these, which is how the pre-push hook combines the two
-   * without running any gate twice.
-   */
-  readonly gate?: boolean;
-}
-
-/**
- * The local counterpart of each CI job. Deliberately not a copy of the workflow
- * commands: the CI variants add JUnit reporters, coverage flags and artifact
- * paths that only matter to the runner. What has to match is which lane runs
- * for which change, and that comes from the shared selector.
+ * Local lane runner - the pre-push hook's half of the lane table.
  *
- * `coverage` has no entry - it is the same suite as `unit`, measured. Running it
- * locally would double the wall time for no extra signal, and the allocation
- * gate it shares a job with reads wrong under instrumentation anyway.
+ * Prints the lanes the changed files require and runs them with `--run`. The
+ * selection is `scripts/ci/lanes.ts`, the same table CI plans from, so the
+ * two never disagree about what a change must pass.
  *
+ * Usage:
+ *   pnpm lanes                      # list what this change requires
+ *   pnpm lanes --run                # run it
+ *   pnpm lanes --run --quick        # skip browser lanes
+ *   pnpm lanes --run --tests-only   # skip the gate lanes verify:quick already ran
+ *   pnpm lanes --run --all          # every lane, whatever changed
+ *   pnpm lanes --base <ref>         # diff against another base (default origin/HEAD)
  */
-export const LOCAL_LANES: readonly Lane[] = [
-  { key: 'typecheck', name: 'typecheck gates', command: ['pnpm', 'gates', 'typecheck'], gate: true },
-  { key: 'lint', name: 'lint gates', command: ['pnpm', 'gates', 'lint'], gate: true },
-  { key: 'always', name: 'sync gates', command: ['pnpm', 'gates', 'sync'], gate: true },
-  { key: 'unit', name: 'unit tests', command: ['pnpm', 'test'] },
-  { key: 'unit', name: 'allocation gate', command: ['pnpm', 'test:alloc'] },
-  { key: 'browserWebgl2', name: 'browser: Chromium WebGL2', command: ['pnpm', 'test:browser:webgl'], browser: true },
-  { key: 'browserWebgl2', name: 'browser: inline worklet/worker sources', command: ['pnpm', 'test:browser:build'], browser: true },
-  { key: 'browserWebgl2', name: 'browser: IndexedDB cache store', command: ['pnpm', 'test:browser:assets'], browser: true },
-  { key: 'browserWebgpu', name: 'browser: Chromium WebGPU', command: ['pnpm', 'test:browser:webgpu'], browser: true },
-  { key: 'browserAudio', name: 'browser: audio worklets', command: ['pnpm', 'test:browser:audio'], browser: true },
-  { key: 'browserTilemapWorker', name: 'browser: tilemap worker', command: ['pnpm', 'test:browser:tilemap'], browser: true },
-  { key: 'siteBuild', name: 'site gates', command: ['pnpm', 'gates', 'site'], gate: true },
-  // Drives headless Chromium on the software rasterizer, so `--quick` skips it
-  // like any other browser lane. It is cheap enough to keep in the local plan
-  // (~1 minute measured) only because the gate excludes the archetypes whose
-  // software FILL cost dominates everything else - see `structuralGate.ts`.
-  { key: 'benchStructural', name: 'bench: structural counter gate', command: ['pnpm', 'gate:bench:structural'], browser: true },
-  // The harness serves `site/dist`, so locally the build is part of the lane -
-  // smoking a stale dist is the false green this lane exists to prevent. CI
-  // gets the build for free by reusing the site-build job's artifact.
-  //
-  // `--sample` matches what a pull request runs: one example per catalog
-  // category, a sixth of the wall time. A push to a feature branch triggers no
-  // CI at all, so this is the stage that mirrors, and the full catalog runs on
-  // the push to `next` and in the merge queue.
-  //
-  // The renderer is left on auto rather than pinned to WebGL2 the way CI pins
-  // it: a developer machine has a real GPU, so this is the stage that actually
-  // exercises the examples on WebGPU.
-  {
-    key: 'exampleSmoke',
-    name: 'example catalog smoke (one per category)',
-    command: ['pnpm', 'site:build', '&&', 'pnpm', 'test:examples:smoke', '--sample'],
-    browser: true,
-  },
-];
 
 const git = (...args: string[]): string => {
   const result = spawnSync('git', args, { encoding: 'utf8' });
-
   if (result.status !== 0) {
     throw new Error(`git ${args.join(' ')} failed: ${result.stderr.trim()}`);
   }
-
   return result.stdout;
 };
 
@@ -115,11 +34,6 @@ const lines = (output: string): string[] =>
     .map(line => line.trim())
     .filter(Boolean);
 
-/**
- * Every file this working copy has touched relative to `base`. Falls back to the
- * base ref itself when there is no merge base, which is what a branch that has
- * never been pushed and shares no history looks like.
- */
 const changedFiles = (base: string): string[] => {
   const mergeBase = spawnSync('git', ['merge-base', base, 'HEAD'], { encoding: 'utf8' });
   const from = mergeBase.status === 0 ? mergeBase.stdout.trim() : base;
@@ -134,8 +48,18 @@ const changedFiles = (base: string): string[] => {
 
 const readFlag = (argv: readonly string[], flag: string): string | undefined => {
   const index = argv.indexOf(flag);
-
   return index === -1 ? undefined : argv[index + 1];
+};
+
+const ALL_AREAS: LaneAreas = { engine: true, site: true, audioFx: true, tilemapWorker: true, exampleCatalog: true, benchStructural: true, release: true };
+
+/** The catalog smoke has no CI lane entry: CI smokes the site job's artifact instead. */
+const SMOKE_LANE: Lane = {
+  id: 'smoke',
+  stage: 'verify',
+  when: 'exampleSmoke',
+  run: 'pnpm site:build && pnpm test:examples:smoke --sample',
+  local: 'browser',
 };
 
 const main = (): void => {
@@ -147,46 +71,44 @@ const main = (): void => {
   const base = readFlag(argv, '--base') ?? 'origin/HEAD';
 
   const files = all ? [] : changedFiles(base);
-  const areas = all ? { engine: true, site: true, audioFx: true, tilemapWorker: true, exampleCatalog: true, benchStructural: true } : selectAreas(files);
+  const areas = all ? ALL_AREAS : selectAreas(files);
   const effective = effectiveLanes(areas);
 
-  const selected = LOCAL_LANES.filter(lane => lane.key === 'always' || effective[lane.key])
-    .filter(lane => !(quick && lane.browser))
-    .filter(lane => !(testsOnly && lane.gate));
+  // The site gates run locally where CI runs them inside the site job.
+  const siteGates: Lane = { id: 'site', stage: 'gates', when: 'siteBuild', run: 'pnpm gates site', local: 'gate' };
+
+  // The verify stage packs and publints against a built dist; that stays CI's.
+  const selected = [
+    ...selectLanes(effective, false).filter(lane => lane.stage !== 'verify' && !lane.ciOnly),
+    ...(effective.siteBuild ? [siteGates] : []),
+    ...(effective.exampleSmoke ? [SMOKE_LANE] : []),
+  ]
+    .filter(lane => !(quick && lane.local === 'browser'))
+    .filter(lane => !(testsOnly && lane.local === 'gate'));
 
   const scope = all ? 'every lane' : `${files.length} changed file(s) since ${base}`;
-
   process.stdout.write(`lanes: ${scope}\n`);
   process.stdout.write(
     `lanes: engine=${areas.engine} site=${areas.site} audioFx=${areas.audioFx} tilemapWorker=${areas.tilemapWorker} exampleCatalog=${areas.exampleCatalog} benchStructural=${areas.benchStructural}\n\n`,
   );
 
   for (const lane of selected) {
-    process.stdout.write(`  ${lane.command.join(' ')}${lane.browser ? '   (browser)' : ''}\n`);
+    process.stdout.write(`  ${lane.run}${lane.local === 'browser' ? '   (browser)' : ''}\n`);
   }
-
   if (selected.length === 0) {
     process.stdout.write('  (nothing to run)\n');
   }
 
   if (!run) {
     process.stdout.write('\nlanes: pass --run to execute these.\n');
-
     return;
   }
 
   for (const lane of selected) {
-    process.stdout.write(`\n=== ${lane.name} ===\n\n`);
-
-    // One command string through a shell, rather than an argv array: on Windows
-    // `pnpm` is a `.cmd` shim that node refuses to exec directly, and passing an
-    // argv array alongside `shell: true` is what node warns about as an
-    // injection risk. Every string here comes from the table above, never from
-    // user input, so there is nothing to inject.
-    const result = spawnSync(lane.command.join(' '), { stdio: 'inherit', shell: true });
-
+    process.stdout.write(`\n=== ${lane.id} ===\n\n`);
+    const result = spawnSync(lane.run, { stdio: 'inherit', shell: true });
     if (result.status !== 0) {
-      process.stderr.write(`\nlanes: ${lane.name} failed (exit ${result.status ?? 'signal'}).\n`);
+      process.stderr.write(`\nlanes: ${lane.id} failed (exit ${result.status ?? 'signal'}).\n`);
       process.exit(result.status ?? 1);
     }
   }
@@ -194,9 +116,7 @@ const main = (): void => {
   process.stdout.write('\nlanes: all selected lanes passed.\n');
 };
 
-// Only run the CLI when executed directly, never when imported by the parity test.
 const invokedPath = process.argv[1];
-
 if (invokedPath && import.meta.url === pathToFileURL(invokedPath).href) {
   main();
 }

@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
  * Locks the build-once/deploy-once contract for GitHub Pages.
  *
  * The site is built and validated exactly once, by the `site-build` job in
- * `_ci-checks.yml`, which publishes `site/dist/**` as an artifact named after
+ * `ci.yml`, which publishes `site/dist/**` as an artifact named after
  * the commit it was built from. `deploy-pages.yml` then downloads exactly that
  * artifact - from exactly the workflow run that triggered it - and deploys it.
  *
@@ -20,7 +20,8 @@ import { describe, expect, it } from 'vitest';
 const repoRoot = resolve(import.meta.dirname!, '../..');
 const readWorkflow = (name: string) => readFileSync(resolve(repoRoot, '.github/workflows', name), 'utf8');
 
-const ciChecks = readWorkflow('_ci-checks.yml');
+const ci = readWorkflow('ci.yml');
+const release = readWorkflow('release.yml');
 const deployPages = readWorkflow('deploy-pages.yml');
 
 /** The artifact name is derived from the commit on both sides of the handover. */
@@ -36,8 +37,8 @@ const jobBlock = (workflow: string, job: string) => {
   return next === -1 ? rest : rest.slice(0, next);
 };
 
-describe('site artifact production (_ci-checks.yml)', () => {
-  const siteBuild = jobBlock(ciChecks, 'site-build');
+describe('site artifact production (ci.yml)', () => {
+  const siteBuild = jobBlock(ci, 'site');
 
   it('uploads the built site as a commit-identified artifact', () => {
     expect(siteBuild).toContain('actions/upload-artifact@v4');
@@ -56,6 +57,14 @@ describe('site artifact production (_ci-checks.yml)', () => {
     expect(gateIndex).toBeGreaterThan(-1);
     expect(buildIndex).toBeGreaterThan(gateIndex);
     expect(uploadIndex).toBeGreaterThan(buildIndex);
+  });
+});
+
+describe('site artifact production at a release (release.yml)', () => {
+  it('uploads the site under the tagged commit so Deploy Pages finds it', () => {
+    const prepare = jobBlock(release, 'prepare');
+    expect(prepare).toContain('name: site-dist-${{ needs.trust.outputs.sha }}');
+    expect(prepare).toContain('path: site/dist/');
   });
 });
 

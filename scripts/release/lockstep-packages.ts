@@ -9,7 +9,7 @@
  *
  * NOT derivable from here (different runtimes - kept in sync manually, guarded
  * by `verify:release-matrix` where possible):
- *   - `.github/workflows/release.yml` / `_ci-checks.yml` build/typecheck/pack
+ *   - `.github/workflows/release.yml` / `ci.yml` build/typecheck/pack
  *     steps (YAML, enumerated `--filter`s; release.yml build lines are asserted
  *     by `verify:release-matrix`).
  *   - `scripts/ci/select-lanes.ts` RUNTIME_PACKAGES (dependency-free ESM that

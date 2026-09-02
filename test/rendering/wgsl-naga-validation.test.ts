@@ -6,7 +6,7 @@
  * a second, independently written WGSL front end whose accepted language is
  * measurably narrower. `browser-webgpu-firefox` exists for exactly that reason,
  * but it needs a headed session with a real display, so CI runs it
- * non-blocking and without an adapter (see `_ci-checks.yml`). Nothing that
+ * non-blocking and without an adapter (see the `unit` lane in `scripts/ci/lanes.ts`). Nothing that
  * blocks a merge currently sees WGSL through anything but Tint.
  *
  * A concrete instance of the gap: a function taking a

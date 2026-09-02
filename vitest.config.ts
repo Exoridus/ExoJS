@@ -69,7 +69,7 @@ const browserBase = {
 //    CI opts into headed mode via EXOJS_WEBGPU_CI_HEADED=1 - Mesa lavapipe needs a
 //    real display to report a real Vulkan adapter instead of falling back to
 //    SwiftShader, and CI supplies one via xvfb (see `browser-tests-webgpu-chromium`
-//    in `_ci-checks.yml`). Without this gate, `headless: false` would pop a real,
+//    in `scripts/ci/lanes.ts`). Without this gate, `headless: false` would pop a real,
 //    visible Chromium window on every local `pnpm test:browser:webgpu` run.
 //  - WebGPU Firefox:  headed - Firefox only exposes a WebGPU adapter in a headed session.
 const headed = process.env['EXOJS_BROWSER_HEADED'] === '1';
@@ -113,7 +113,7 @@ export default defineConfig({
       ],
       exclude: ['src/**/*.d.ts', 'packages/*/src/**/*.d.ts'],
       // Hard regression gate for the `unit-tests` job (already required in
-      // `_ci-checks.yml`) - `.codecov.yml` posts project/patch coverage statuses
+      // `scripts/ci/lanes.ts`) - `.codecov.yml` posts project/patch coverage statuses
       // but they are NOT wired up as required checks, so a coverage drop
       // currently merges silently. These thresholds fail `pnpm test:coverage`
       // itself (the exact command the CI job runs) below the floor.
@@ -379,7 +379,7 @@ export default defineConfig({
       // (verified against a real Windows/NVIDIA adapter). `headless` stays true
       // by default so local dev never pops a visible browser window; CI opts
       // into `headless: false` via `EXOJS_WEBGPU_CI_HEADED=1` (see
-      // `browser-tests-webgpu-chromium` in `_ci-checks.yml`).
+      // the `webgpu` lane in `scripts/ci/lanes.ts`).
       {
         ...browserBase,
         test: {

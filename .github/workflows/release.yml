@@ -1,5 +1,12 @@
 name: Release
 
+# Tag -> trust -> prepare -> publish.
+#
+# The tagged commit is not re-verified here: `trust` requires it to sit on
+# `main` with a green `verdict` from the CI workflow, which ran every lane on
+# the push that brought it there. Tagging a commit CI never validated is a
+# hard failure, not a slower path.
+
 on:
   push:
     tags:
@@ -7,96 +14,90 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to publish (must already exist, e.g. v0.6.3)'
+        description: 'Tag to publish (must already exist, e.g. v0.16.2)'
         required: true
 
 permissions:
   contents: write
-  # Required so npm-cli can mint an OIDC token from GitHub at publish time.
+  # npm mints its provenance token from GitHub OIDC at publish time.
   id-token: write
+  # `trust` reads the tagged commit's check runs.
+  checks: read
+  actions: read
 
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
 env:
-  # `github.ref_name` is the tag name (e.g. `v0.9.0`) for tag-push triggers
-  # and `main` for workflow_dispatch. The dispatch input takes priority so
-  # an explicitly-passed tag always wins.
+  # The dispatch input wins over the pushed ref so an explicit tag is always
+  # the one released.
   TARGET_TAG: ${{ github.event.inputs.tag || github.ref_name }}
-  NODE_VERSION: '24.x'
-  PNPM_VERSION: '11.4.0'
 
 jobs:
-  # Run the full CI gate (typecheck -> lint -> test -> build -> site-build) at
-  # the exact tagged commit before anything is built for release.
-  checks:
-    name: Verify at tag
-    permissions:
-      contents: read
-      pull-requests: write
-    uses: ./.github/workflows/_ci-checks.yml
-    with:
-      node-version: '24.x'
-      pnpm-version: '11.4.0'
-      ref: ${{ github.event.inputs.tag || github.ref_name }}
-    # Pass caller secrets through (CODECOV_TOKEN) — see ci.yml.
-    secrets: inherit
-
-  # ── Stage 1: PREPARE/VERIFY ────────────────────────────────────────────────
-  # Build every lockstep package exactly once, then pack/hash/attw/
-  # external-consumer/full-zip WITHOUT rebuilding them, and upload the resulting
-  # artifacts. Any failure here means no publish, no latest, no tag, no release.
-  prepare:
-    name: Prepare release artifacts (build-once)
-    needs: checks
+  trust:
+    name: Trust the green CI run at the tag
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ env.TARGET_TAG }}
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: ${{ env.PNPM_VERSION }}
-          run_install: false
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          check-latest: true
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm bootstrap
-
-      # Refuse to release unless the resolved tag matches package.json.
-      - name: Verify tag matches package.json version
+      - id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          PKG_VERSION="v$(node -p "require('./package.json').version")"
-          if [ "$TARGET_TAG" != "$PKG_VERSION" ]; then
-            echo "::error::Tag '$TARGET_TAG' does not match package.json version '$PKG_VERSION'."
+          sha="$(git rev-parse "${TARGET_TAG}^{commit}")"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+          pkg="v$(node -p "require('./package.json').version")"
+          if [ "$TARGET_TAG" != "$pkg" ]; then
+            echo "::error::Tag '$TARGET_TAG' does not match package.json version '$pkg'."
             exit 1
           fi
-          echo "Tag and package.json agree on $PKG_VERSION."
 
-      # Lockstep + peer-range coherence + deterministic publish-order matrix.
+          if ! git merge-base --is-ancestor "$sha" origin/main; then
+            echo "::error::$TARGET_TAG ($sha) is not on main. Releases are cut from main only."
+            exit 1
+          fi
+
+          verdict="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}/check-runs?check_name=verdict&per_page=100" \
+            --jq '[.check_runs[] | select(.conclusion == "success")] | length')"
+          if [ "$verdict" = "0" ]; then
+            echo "::error::No successful 'verdict' check run on $sha. Let CI finish on main before tagging."
+            exit 1
+          fi
+          echo "$TARGET_TAG = $sha, on main, verdict green."
+
+  # Build every lockstep package exactly once, then pack/hash/attw/consumers/
+  # full-zip without rebuilding, and upload the result. Any failure here means
+  # nothing is published.
+  prepare:
+    name: Prepare release artifacts
+    needs: trust
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ env.TARGET_TAG }}
+      - uses: ./.github/actions/setup
+
       - name: Verify release package matrix
         run: |
           pnpm verify:lockstep
           pnpm verify:release-matrix
 
-      # Build core + extensions exactly once. `release:prepare --build` invokes
-      # `pnpm build` + the extension builds, then packs WITHOUT rebuilding.
-      - name: Build site (vendored ESM for the Full ZIP)
+      - name: Build core, extensions and the site
         env:
           EXOJS_PACKAGE_PATH: ..
+        # One line per package: verify:release-matrix checks each against the
+        # lockstep list, so a package added without a build line fails there.
         run: |
           pnpm build
           pnpm --filter @codexo/exojs-particles build
@@ -110,24 +111,27 @@ jobs:
           pnpm --filter @codexo/exojs-react build
           pnpm site:build
 
-      # The site build can regenerate tracked content with platform-dependent
-      # output (this killed the v0.12.0 and first v0.13.0 release runs with
-      # "Working tree is dirty" in freezeRevision). The tag is the source of
-      # truth and everything packed comes from untracked dist/ output, so log
-      # the drift for diagnosis and reset tracked files to the tag state.
-      - name: Reset tracked build side-effects (keep tag tree pristine)
+      # Deploy Pages ships the site of a successful release from this artifact.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site-dist-${{ needs.trust.outputs.sha }}
+          path: site/dist/
+          retention-days: 1
+          if-no-files-found: error
+
+      # The site build regenerates tracked content with platform-dependent
+      # output, and the release freeze refuses a dirty tree. The tag is the
+      # source of truth and everything packed comes from untracked dist/, so
+      # the drift is logged and reset.
+      - name: Reset tracked build side-effects
         run: |
-          echo "Tracked drift after builds (empty = clean):"
           git status --porcelain
           git checkout -- .
 
-      # Build-once prepare: pack 4 tarballs (no rebuild) -> hash -> manifest +
-      # checksums -> attw (bundler) -> external consumers -> Full GitHub ZIP.
       - name: Prepare release (pack, hash, attw, consumers, full-zip)
         run: pnpm release:prepare
 
-      - name: Upload release artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: release-artifacts
           path: |
@@ -137,53 +141,27 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # ── Stage 2: PUBLISH ───────────────────────────────────────────────────────
-  # Consumes ONLY the artifacts built by `prepare`. Never builds or repacks: the
-  # release:publish step re-hashes the downloaded tarballs against the manifest
-  # (build-once guard) and aborts on any drift. Publishes each package straight to
-  # `latest` in lockstep order (Core first, then the extensions); a partial failure
-  # stops the chain and is safe to re-run (already-published versions are skipped).
   publish:
-    name: Publish to npm (build-once artifacts)
+    name: Publish to npm and GitHub
     needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ env.TARGET_TAG }}
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+      - uses: ./.github/actions/setup
+      - uses: actions/setup-node@v6
         with:
-          version: ${{ env.PNPM_VERSION }}
-          run_install: false
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          check-latest: true
+          node-version: '24.x'
           registry-url: 'https://registry.npmjs.org'
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
 
-      # Tooling only (tsx + release scripts). Does NOT build the runtime packages
-      # — the tarballs are consumed as-is from the prepare stage.
-      - name: Install tooling
-        run: pnpm bootstrap
-
-      - name: Download release artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: release-artifacts
           path: .release
 
-      # Re-hash guard + ordered publish straight to `latest` (Core first, then the
-      # extensions). Idempotent: a re-run skips versions already on npm; a partial
-      # failure stops the chain and publishes nothing further.
       - name: Publish coordinated release (build-once, dist-tag -> latest)
         run: pnpm release:publish --execute
 

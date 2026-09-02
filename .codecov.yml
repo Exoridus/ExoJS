@@ -1,7 +1,8 @@
-# Coverage arrives in exactly two uploads: `unit` (jsdom lane) and `browser`
-# (Chromium-WebGL2 lane). Both jobs in `_ci-checks.yml` are gated on the same
-# `changes.outputs.engine == 'true'`, so they either both run or neither does —
-# there is no case where one upload arrives alone and the second never comes.
+# Coverage arrives in exactly two uploads: `unit` (jsdom lane) and `webgl`
+# (Chromium-WebGL2 lane), both from a push to a long-lived branch. Both lanes
+# are enabled by the same `engine` area, so they either both upload or neither
+# does — there is no case where one upload arrives alone and the second never
+# comes.
 #
 # Without this, Codecov judges the first upload it receives and posts a verdict
 # on jsdom-only coverage: every line the browser lane covers counts as a miss,
@@ -57,7 +58,7 @@ bundle_analysis:
   status: informational
   warning_threshold: '5%'
 
-# Upload flags — one per CI lane that uploads (see _ci-checks.yml).
+# Upload flags — one per test lane that uploads coverage (see scripts/ci/lanes.ts).
 flags:
   unit:
     paths:
@@ -69,7 +70,7 @@ flags:
   # webgpu bootstrap, browser-only branches). Merged with `unit` into the
   # overall number; carryforward keeps it for commits whose CI run skips the
   # browser lane.
-  browser:
+  webgl:
     paths:
       - src/
       - packages/
@@ -77,7 +78,7 @@ flags:
 
 # Per-package coverage breakdown in the PR comment and dashboard.
 # Components are pure reporting slices over the merged uploads (`unit` +
-# `browser`) — no extra uploads needed.
+# `webgl`) — no extra uploads needed.
 component_management:
   default_rules:
     statuses: [] # informational only — no per-component commit statuses

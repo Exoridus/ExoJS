@@ -14,7 +14,7 @@
  *
  * NOT auto-wired (enumerated YAML / a different runtime / a manual bootstrap) -
  * printed as a concrete, copy-pasteable checklist at the end:
- *   - .github/workflows/_ci-checks.yml + release.yml `--filter` lines
+ *   - .github/workflows/ci.yml + release.yml `--filter` lines
  *   - vitest.config.ts createJsdomTestProject entry (+ aliasConfig if imported)
  *   - root package.json typecheck:packages / test / test:coverage lists
  *   - the npm placeholder publish + Trusted-Publisher (OIDC) bootstrap from
@@ -482,10 +482,8 @@ MANUAL CHECKLIST — not auto-edited (enumerated YAML / different runtime / npm 
      - "test", "test:coverage" → add --project=exojs-${name}  (to run its tests by default)
      - "verify:publint"      → add ${filterFlag}  (only if you want publint to gate it)
 
-3) .github/workflows/_ci-checks.yml — add ${filterFlag} to these three steps:
-     - "Typecheck extension packages"
-     - "Build extension packages"
-     - "Extension package dry runs"
+3) .github/workflows/ci.yml — add ${filterFlag} to the "Build extension packages"
+   step; scripts/ci/lanes.ts — add it to the package lane's pack --dry-run
 
 4) .github/workflows/release.yml — add this build line to the PREPARE job
    (verify:release-matrix ENFORCES it, so a forgotten line fails CI):

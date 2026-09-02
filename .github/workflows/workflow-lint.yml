@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - '.github/workflows/*.yml'
+      - '.github/actions/**'
       - '.github/dependabot.yml'
   push:
-    branches: [main, docs]
+    branches: [main, next]
     paths:
       - '.github/workflows/*.yml'
+      - '.github/actions/**'
       - '.github/dependabot.yml'
   workflow_dispatch:
 
