@@ -20,6 +20,7 @@
  * Usage:
  *   pnpm --filter @codexo/exojs-examples examples:smoke      # from repo: pnpm test:examples:smoke
  *   ... --only camera-basic        # smoke a single example (path substring)
+ *   ... --sample                   # one example per category (the PR-stage subset)
  *   ... --concurrency 4            # parallel pages (default 4)
  *   ... --browser firefox          # run under Firefox headed (cross-browser)
  *   ... --headed                   # force headed mode for any browser
@@ -620,11 +621,35 @@ const runExample = async (
   return result;
 };
 
+/**
+ * One example per catalog category, in catalog order.
+ *
+ * The trade for a fraction of the wall time: a defect confined to a single
+ * example goes unseen until the full run, while anything that stops a whole
+ * category - a renderer path, a shared recipe, an engine regression - still
+ * shows up here. That is the shape the failures this harness exists for
+ * actually take.
+ */
+const sampleByCategory = <T extends { readonly category: string }>(entries: readonly T[]): T[] => {
+  const seen = new Set<string>();
+
+  return entries.filter(entry => {
+    if (seen.has(entry.category)) {
+      return false;
+    }
+
+    seen.add(entry.category);
+
+    return true;
+  });
+};
+
 const main = async (): Promise<void> => {
   const { values } = parseArgs({
     args: process.argv.slice(2),
     options: {
       only: { type: 'string' },
+      sample: { type: 'boolean' }, // one example per category (see `sampleByCategory`)
       concurrency: { type: 'string' },
       'timeout-ms': { type: 'string' },
       browser: { type: 'string' }, // 'chromium' (default) | 'firefox'
@@ -649,6 +674,10 @@ const main = async (): Promise<void> => {
   let entries = Object.entries(catalog).flatMap(([category, list]) => list.map(entry => ({ ...entry, category })));
   if (values.only) {
     entries = entries.filter(entry => entry.path.includes(values.only!));
+  }
+
+  if (values.sample) {
+    entries = sampleByCategory(entries);
   }
 
   const concurrency = Math.max(1, Number.parseInt(values.concurrency ?? '4', 10) || 4);

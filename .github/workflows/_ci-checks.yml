@@ -1214,8 +1214,15 @@ jobs:
           name: site-dist-${{ github.sha }}
           path: site/dist
 
+      # A pull request smokes one example per catalog category; a push to a
+      # long-lived branch and a merge-queue entry smoke the whole catalog.
+      # The subset is a sixth of the wall time and still catches what this lane
+      # exists for - a renderer path or engine change that stops a whole
+      # category from drawing while every other lane stays green. A defect
+      # confined to one example is caught before it can reach `next`, which is
+      # the point the full run is placed at.
       - name: Smoke the example catalog
-        run: pnpm test:examples:smoke
+        run: pnpm test:examples:smoke ${{ github.event_name == 'pull_request' && '--sample' || '' }}
 
       # The harness writes a per-example table; keep it when the lane is red so
       # the failing entry is readable without re-running anything.

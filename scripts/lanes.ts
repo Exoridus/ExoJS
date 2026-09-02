@@ -82,10 +82,15 @@ export const LOCAL_LANES: readonly Lane[] = [
   // The harness serves `site/dist`, so locally the build is part of the lane -
   // smoking a stale dist is the false green this lane exists to prevent. CI
   // gets the build for free by reusing the site-build job's artifact.
+  //
+  // `--sample` matches what a pull request runs: one example per catalog
+  // category, a sixth of the wall time. A push to a feature branch triggers no
+  // CI at all, so this is the stage that mirrors, and the full catalog runs on
+  // the push to `next` and in the merge queue.
   {
     key: 'exampleSmoke',
-    name: 'example catalog smoke',
-    command: ['pnpm', 'site:build', '&&', 'pnpm', 'test:examples:smoke'],
+    name: 'example catalog smoke (one per category)',
+    command: ['pnpm', 'site:build', '&&', 'pnpm', 'test:examples:smoke', '--sample'],
     browser: true,
   },
 ];
