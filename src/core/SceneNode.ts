@@ -1152,15 +1152,23 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   /**
    * @internal - {@link NodeDirtyIndex} bookkeeping: the generation this node was
    * last marked in and the slot it took in that generation's bucket (a second
-   * mark in the same generation folds into that slot), plus the mark sequence
-   * of the most recent mark - this node's own change revision, and what a
-   * consumer's cursor is compared against. Only the index reads or writes these.
+   * mark in the same generation folds into that slot), plus one mark sequence
+   * PER channel - this node's own change revision on that channel, and what a
+   * consumer's cursor is compared against. The sequences are per-channel and
+   * not one shared number because a node's entry can carry marks made at
+   * different times on different channels, and a single number could not say
+   * which of them a given cursor is looking at. Only the index reads or writes
+   * these.
    */
   public _dirtyMarkGeneration = -1;
   /** @internal - see {@link _dirtyMarkGeneration}. */
   public _dirtyMarkSlot = -1;
   /** @internal - see {@link _dirtyMarkGeneration}. */
-  public _dirtyMarkSequence = 0;
+  public _transformMarkSequence = 0;
+  /** @internal - see {@link _dirtyMarkGeneration}. */
+  public _contentMarkSequence = 0;
+  /** @internal - see {@link _dirtyMarkGeneration}. */
+  public _tintMarkSequence = 0;
 
   /**
    * @internal - mark this node's content dirty and propagate the stamp up to

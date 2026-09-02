@@ -72,12 +72,12 @@ const createBucket = (): DirtyBucket => ({ generation: -1, firstSequence: 0, las
  * entries it cares about through the row map it already keeps.
  *
  * **An index, not a journal.** A node marked repeatedly holds ONE entry per
- * generation, and what carries the ordering is the node's own mark sequence -
- * its per-record revision. A thousand writes to one node in a frame therefore
- * cost one entry and one number, and the retained marks are bounded by the
- * number of distinct nodes that changed in the window, never by the number of
- * changes. Falling out of the window is reported rather than papered over:
- * {@link covers} answers `false` and the consumer rebuilds.
+ * generation, and what carries the ordering is the node's own per-channel mark
+ * sequence - its per-record revision on that channel. A thousand writes to one
+ * node in a frame therefore cost one entry, and the retained marks are bounded
+ * by the number of distinct nodes that changed in the window, never by the
+ * number of changes. Falling out of the window is reported rather than papered
+ * over: {@link covers} answers `false` and the consumer rebuilds.
  *
  * Marking is gated by the caller (see `SceneNode`'s consumer counts), so a
  * scene with no retained consumer writes nothing here.
@@ -127,31 +127,48 @@ class NodeDirtyIndex {
   }
 
   /**
-   * Record that `node` changed on `channels`, and stamp it with a fresh mark
-   * sequence. A node already marked in this generation keeps its entry and has
-   * the channels folded into it; the new sequence is what makes the repeat
-   * visible to a consumer that read in between.
+   * Record that `node` changed on `channels`, and stamp each of those channels
+   * with a fresh mark sequence. A node already marked in this generation keeps
+   * its entry and has the channels folded into it; the new sequences are what
+   * make the repeat visible to a consumer that read in between.
    */
   public mark(node: SceneNode, channels: number): void {
     const bucket = this._buckets[this._slot]!;
     const live = node._dirtyMarkGeneration >= 0 ? this._buckets[node._dirtyMarkGeneration % RETAINED_GENERATIONS]! : null;
     const held = live !== null && live.generation === node._dirtyMarkGeneration && live.nodes[node._dirtyMarkSlot] === node;
+    const sequence = ++this._sequence;
 
-    node._dirtyMarkSequence = ++this._sequence;
-    bucket.lastSequence = this._sequence;
+    if ((channels & DirtyChannel.Transform) !== 0) {
+      node._transformMarkSequence = sequence;
+    }
 
-    // Repeating the SAME channels keeps the entry and only moves the sequence
-    // on: a node written a thousand times in a frame stays one entry, which is
-    // what makes this an index rather than a journal.
-    if (held && node._dirtyMarkGeneration === this._generation && live.channels[node._dirtyMarkSlot] === channels) {
+    if ((channels & DirtyChannel.Content) !== 0) {
+      node._contentMarkSequence = sequence;
+    }
+
+    if ((channels & DirtyChannel.Tint) !== 0) {
+      node._tintMarkSequence = sequence;
+    }
+
+    bucket.lastSequence = sequence;
+
+    // Already standing in this generation: fold the channels in. A node written
+    // a thousand times in a frame stays one entry, which is what makes this an
+    // index rather than a journal.
+    if (held && node._dirtyMarkGeneration === this._generation) {
+      live.channels[node._dirtyMarkSlot]! |= channels;
+
       return;
     }
 
-    // Different channels, or an older generation: retire the entry that is
-    // still standing and open a new one. Retiring matters twice over - a node
-    // left in two buckets would be visited twice by one read, and an entry
-    // whose mask had accumulated both a content change and a later tint could
-    // no longer say which of them a given cursor is looking at.
+    // An older generation's entry: carry its channels into the new one before
+    // retiring it. Dropping them would lose a mark no consumer had read yet -
+    // a content change followed one frame later by a move would leave only the
+    // move behind, and the content reader would be told nothing changed. The
+    // carried bits cost nothing in precision because each channel is dated by
+    // its own sequence, so a cursor past a carried mark still filters it out.
+    const carried = held ? live.channels[node._dirtyMarkSlot]! : 0;
+
     if (held) {
       live.channels[node._dirtyMarkSlot] = 0;
     }
@@ -163,11 +180,33 @@ class NodeDirtyIndex {
 
     if (slot < bucket.nodes.length) {
       bucket.nodes[slot] = node;
-      bucket.channels[slot] = channels;
+      bucket.channels[slot] = channels | carried;
     } else {
       bucket.nodes.push(node);
-      bucket.channels.push(channels);
+      bucket.channels.push(channels | carried);
     }
+  }
+
+  /**
+   * The subset of `marked` whose own mark sequence is newer than `sequence` -
+   * what this reader has not accounted for yet.
+   */
+  private _markedSince(node: SceneNode, marked: number, sequence: number): number {
+    let changed = 0;
+
+    if ((marked & DirtyChannel.Transform) !== 0 && node._transformMarkSequence > sequence) {
+      changed |= DirtyChannel.Transform;
+    }
+
+    if ((marked & DirtyChannel.Content) !== 0 && node._contentMarkSequence > sequence) {
+      changed |= DirtyChannel.Content;
+    }
+
+    if ((marked & DirtyChannel.Tint) !== 0 && node._tintMarkSequence > sequence) {
+      changed |= DirtyChannel.Tint;
+    }
+
+    return changed;
   }
 
   /**
@@ -208,10 +247,9 @@ class NodeDirtyIndex {
 
       for (let index = 0; index < bucket.count; index++) {
         const node = bucket.nodes[index]!;
+        const marked = this._markedSince(node, bucket.channels[index]! & channels, sequence);
 
-        const marked = bucket.channels[index]!;
-
-        if ((marked & channels) !== 0 && node._dirtyMarkSequence > sequence && !visit(node, marked)) {
+        if (marked !== 0 && !visit(node, marked)) {
           return false;
         }
       }

@@ -108,6 +108,50 @@ describe('NodeDirtyIndex', () => {
     node.destroy();
   });
 
+  test('a mark on one channel does not erase an unread mark on another', () => {
+    // A node that changes its content and then moves - a sprite whose deferred
+    // texture arrives in a frame it is also being animated in. Losing the
+    // content mark tells the reader nothing but a move happened, and a retained
+    // product replays a stale recording for as long as the node keeps moving.
+    const node = new Container();
+    const before = nodeDirtyIndex.sequence;
+    const seen: number[] = [];
+
+    nodeDirtyIndex.mark(node, DirtyChannel.Content);
+    nodeDirtyIndex.advance();
+    nodeDirtyIndex.mark(node, DirtyChannel.Transform);
+
+    nodeDirtyIndex.readSince(before, DirtyChannel.Content | DirtyChannel.Tint, (_node, marked) => {
+      seen.push(marked);
+
+      return true;
+    });
+
+    expect(seen).toEqual([DirtyChannel.Content]);
+    expect(readSince(before, DirtyChannel.Transform)).toEqual([node]);
+
+    node.destroy();
+  });
+
+  test('a mark on one channel does not erase an unread mark made on another in the same generation', () => {
+    const node = new Container();
+    const before = nodeDirtyIndex.sequence;
+    const seen: number[] = [];
+
+    nodeDirtyIndex.mark(node, DirtyChannel.Content);
+    nodeDirtyIndex.mark(node, DirtyChannel.Transform);
+
+    nodeDirtyIndex.readSince(before, DirtyChannel.Content | DirtyChannel.Tint, (_node, marked) => {
+      seen.push(marked);
+
+      return true;
+    });
+
+    expect(seen).toEqual([DirtyChannel.Content]);
+
+    node.destroy();
+  });
+
   test('marks are filtered by channel', () => {
     const moved = new Container();
     const before = nodeDirtyIndex.sequence;

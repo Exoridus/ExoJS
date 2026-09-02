@@ -1,4 +1,5 @@
 import { Color } from '#core/Color';
+import { nodeDirtyIndex } from '#core/nodeDirtyIndex';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
@@ -446,6 +447,29 @@ describe('automatic render-root representation: incremental transform rows', () 
     playFrame(root, harness.backend);
 
     expect(harness.patches).toEqual([]);
+    expect(harness.events).toContain('flush:a');
+
+    root.destroy();
+    harness.backend.destroy();
+  });
+
+  test('a content change followed by a move still invalidates — the move must not swallow it', () => {
+    // A sprite whose deferred texture arrives while it is being animated: the
+    // content change and the move land between the same two frames, and the
+    // node keeps moving afterwards. If the move hides the content change, the
+    // product is patched forever and the new content never reaches the screen.
+    const harness = createPatchingBackend();
+    const root = new Container();
+    const leaf = new RecordableLeaf('a');
+
+    root.addChild(leaf);
+    reachSpliceTier(root, harness);
+
+    leaf.invalidateContent();
+    nodeDirtyIndex.advance();
+    leaf.setPosition(40, 40);
+    playFrame(root, harness.backend);
+
     expect(harness.events).toContain('flush:a');
 
     root.destroy();
