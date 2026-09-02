@@ -43,13 +43,13 @@
  * not fail the run.
  */
 import { createServer, type Server } from 'node:http';
-import { existsSync, readFileSync, statSync } from 'node:fs';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { existsSync, readFileSync } from 'node:fs';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, extname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
-import { chromium, firefox, type Browser, type Frame, type Page } from 'playwright';
+import { chromium, firefox, type Browser, type BrowserContext, type Frame, type Page } from 'playwright';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(here, '..'); // site/
@@ -213,39 +213,70 @@ interface Result {
   shellErrors?: string[];
 }
 
+interface ServedFile {
+  body: Buffer;
+  type: string;
+}
+
 const startServer = (root: string): Promise<{ port: number; server: Server }> => {
-  const server = createServer((req, res) => {
-    try {
-      let urlPath = decodeURIComponent((req.url ?? '/').split('?')[0]);
-      // The site is built with a configured `base`, so every URL the emitted
-      // HTML references carries that prefix while `dist` itself is flat.
-      if (urlPath.startsWith(SITE_BASE)) {
-        urlPath = urlPath.slice(SITE_BASE.length) || '/';
-      }
-      let filePath = resolve(join(root, urlPath));
-      if (!filePath.startsWith(root)) {
-        res.writeHead(403);
-        res.end('Forbidden');
-        return;
-      }
-      if (existsSync(filePath) && statSync(filePath).isDirectory()) {
-        filePath = join(filePath, 'index.html');
-      }
-      if (!existsSync(filePath)) {
-        res.writeHead(404);
-        res.end('Not found');
-        return;
-      }
-      const body = readFileSync(filePath);
-      res.writeHead(200, {
-        'Content-Type': MIME[extname(filePath).toLowerCase()] ?? 'application/octet-stream',
-        'Cache-Control': 'no-store',
-      });
-      res.end(body);
-    } catch (error) {
-      res.writeHead(500);
-      res.end(error instanceof Error ? error.message : String(error));
+  // Every playground page pulls the editor shell, Monaco and the vendored
+  // engine typings - upwards of a thousand files - and the run asks for the same
+  // ones again for each example. `dist` cannot change while the run is in
+  // flight, so each file is read once and answered from memory afterwards, and
+  // never with a blocking read: one thread serves every concurrent page, and a
+  // synchronous read stalls all of them for the duration of the slowest one.
+  const files = new Map<string, Promise<ServedFile | null>>();
+
+  const load = async (urlPath: string): Promise<ServedFile | null> => {
+    let filePath = resolve(join(root, urlPath));
+    const stats = await stat(filePath).catch(() => null);
+
+    if (stats?.isDirectory()) {
+      filePath = join(filePath, 'index.html');
     }
+
+    const body = await readFile(filePath).catch(() => null);
+
+    return body && { body, type: MIME[extname(filePath).toLowerCase()] ?? 'application/octet-stream' };
+  };
+
+  const server = createServer((req, res) => {
+    let urlPath = decodeURIComponent((req.url ?? '/').split('?')[0]);
+    // The site is built with a configured `base`, so every URL the emitted
+    // HTML references carries that prefix while `dist` itself is flat.
+    if (urlPath.startsWith(SITE_BASE)) {
+      urlPath = urlPath.slice(SITE_BASE.length) || '/';
+    }
+
+    if (!resolve(join(root, urlPath)).startsWith(root)) {
+      res.writeHead(403);
+      res.end('Forbidden');
+      return;
+    }
+
+    let pending = files.get(urlPath);
+    if (!pending) {
+      pending = load(urlPath);
+      files.set(urlPath, pending);
+    }
+
+    pending
+      .then(file => {
+        if (!file) {
+          res.writeHead(404);
+          res.end('Not found');
+          return;
+        }
+
+        // A browser context that is reused across examples only benefits from
+        // its HTTP and code caches if the response is cacheable at all.
+        res.writeHead(200, { 'Content-Type': file.type, 'Cache-Control': 'public, max-age=3600' });
+        res.end(file.body);
+      })
+      .catch((error: unknown) => {
+        res.writeHead(500);
+        res.end(error instanceof Error ? error.message : String(error));
+      });
   });
 
   return new Promise(resolvePromise => {
@@ -495,14 +526,73 @@ const detectWebGpu = async (browser: Browser, baseUrl: string): Promise<boolean>
   }
 };
 
+interface ContextPool {
+  acquire: (hasTouch: boolean) => Promise<BrowserContext>;
+  close: () => Promise<void>;
+}
+
+/**
+ * Hands out one long-lived browser context per touch mode instead of a fresh
+ * one per example.
+ *
+ * A playground page pulls the editor shell, Monaco and the vendored engine
+ * typings - on the order of a thousand requests and tens of megabytes - and a
+ * new context starts with an empty HTTP cache and an empty V8 code cache, so
+ * every example paid for all of it again: the preview took about three times as
+ * long to mount as it does in a warm context, which is what pushed the catalog
+ * past its budget on a runner with no GPU. Each example still gets its own page,
+ * and the playground's only persistent state is the layout toggle and the
+ * version picker, neither of which an example can write.
+ *
+ * One pool per worker rather than one for the whole run: same-origin pages in a
+ * single context share a renderer process, so a shared pool would put every
+ * concurrent example on one main thread.
+ */
+const createContextPool = (browser: Browser, colorScheme: 'light' | 'dark'): ContextPool => {
+  const contexts = new Map<boolean, Promise<BrowserContext>>();
+
+  return {
+    acquire: (hasTouch: boolean): Promise<BrowserContext> => {
+      let pending = contexts.get(hasTouch);
+
+      if (!pending) {
+        // Wide enough that the playground lays out sidebar, editor and preview
+        // panel side by side. A narrower viewport collapses the layout and can
+        // leave the preview outside the rasterised area, where the compositor
+        // never paints it and every example would read as blank.
+        // `hasTouch` is what makes a touch-only example testable at all: without
+        // it the browser reports no touch points, the playground's capability
+        // gate replaces the stage with an overlay, and the example is never run.
+        //
+        // Declared per example rather than for the whole run, and not as a
+        // refinement: enabling touch emulation everywhere turned the entire
+        // catalog blank on CI's software rasteriser while a local GPU run stayed
+        // green, so every example that does not ask for touch keeps exactly the
+        // context it had.
+        pending = browser.newContext({ viewport: { width: 1600, height: 900 }, colorScheme, hasTouch }).then(async context => {
+          await context.addInitScript(captureErrors);
+          return context;
+        });
+        contexts.set(hasTouch, pending);
+      }
+
+      return pending;
+    },
+    close: async (): Promise<void> => {
+      const pending = [...contexts.values()];
+      contexts.clear();
+      await Promise.all(pending.map(async context => (await context).close()));
+    },
+  };
+};
+
 const runExample = async (
-  browser: Browser,
+  pool: ContextPool,
   baseUrl: string,
   entry: CatalogEntry & { category: string },
   index: number,
   webgpuAvailable: boolean,
   timeoutMs: number,
-  colorScheme: 'light' | 'dark' = 'light',
 ): Promise<Result> => {
   const capabilities = entry.capabilities ?? [];
   const result: Result = {
@@ -527,21 +617,7 @@ const runExample = async (
     return result;
   }
 
-  // Wide enough that the playground lays out sidebar, editor and preview panel
-  // side by side. A narrower viewport collapses the layout and can leave the
-  // preview outside the rasterised area, where the compositor never paints it
-  // and every example would read as blank.
-  // `hasTouch` is what makes a touch-only example testable at all: without it
-  // the browser reports no touch points, the playground's capability gate
-  // replaces the stage with an overlay, and the example is never run.
-  //
-  // Declared per example rather than for the whole run, and not as a
-  // refinement: enabling touch emulation everywhere turned the entire catalog
-  // blank on CI's software rasteriser while a local GPU run stayed green, so
-  // every example that does not ask for touch keeps exactly the context it had.
-  const hasTouch = entry.capabilities?.includes('touch') ?? false;
-  const context = await browser.newContext({ viewport: { width: 1600, height: 900 }, colorScheme, hasTouch });
-  await context.addInitScript(captureErrors);
+  const context = await pool.acquire(entry.capabilities?.includes('touch') ?? false);
   const page = await context.newPage();
   const pageErrors: string[] = [];
   page.on('pageerror', error => pageErrors.push(error.message));
@@ -632,7 +708,9 @@ const runExample = async (
     result.status = 'failed';
     result.note = oneLine(`harness error: ${error instanceof Error ? error.message : String(error)}`);
   } finally {
-    await context.close();
+    // The page, never the context: the context is pooled and its warm caches are
+    // what the next example in this worker starts from.
+    await page.close();
   }
 
   return result;
@@ -749,19 +827,25 @@ const main = async (): Promise<void> => {
   let cursor = 0;
 
   const worker = async (): Promise<void> => {
-    while (true) {
-      const index = cursor;
-      cursor += 1;
-      if (index >= entries.length) return;
+    const pool = createContextPool(browser, colorScheme);
 
-      const entry = entries[index];
-      const result = await runExample(browser, baseUrl, entry, index, webgpuAvailable, timeoutMs, colorScheme);
-      results[index] = result;
+    try {
+      while (true) {
+        const index = cursor;
+        cursor += 1;
+        if (index >= entries.length) return;
 
-      const tag = result.status.toUpperCase().padEnd(7);
-      const line = `[smoke] ${tag} ${entry.path}${result.note ? ` — ${result.note}` : ''}`;
-      if (result.status === 'failed') console.error(line);
-      else console.log(line);
+        const entry = entries[index];
+        const result = await runExample(pool, baseUrl, entry, index, webgpuAvailable, timeoutMs);
+        results[index] = result;
+
+        const tag = result.status.toUpperCase().padEnd(7);
+        const line = `[smoke] ${tag} ${entry.path}${result.note ? ` — ${result.note}` : ''}`;
+        if (result.status === 'failed') console.error(line);
+        else console.log(line);
+      }
+    } finally {
+      await pool.close();
     }
   };
 
@@ -773,6 +857,7 @@ const main = async (): Promise<void> => {
   // blank remains a failure; thrown errors and missing canvases are never
   // softened by this retry.
   const blankFailureIndexes = results.flatMap((result, index) => (result.status === 'failed' && result.note === BLANK_FAILURE ? [index] : []));
+  const retryPool = createContextPool(browser, colorScheme);
 
   for (const index of blankFailureIndexes) {
     const entry = entries[index]!;
@@ -780,7 +865,7 @@ const main = async (): Promise<void> => {
 
     console.log(`[smoke] RETRY  ${entry.path} - serial blank verification`);
 
-    const retryResult = await runExample(browser, baseUrl, entry, index + entries.length, webgpuAvailable, timeoutMs, colorScheme);
+    const retryResult = await runExample(retryPool, baseUrl, entry, index + entries.length, webgpuAvailable, timeoutMs);
 
     retryResult.shellErrors = [...new Set([...(firstResult.shellErrors ?? []), ...(retryResult.shellErrors ?? [])])];
     results[index] = retryResult;
@@ -791,6 +876,7 @@ const main = async (): Promise<void> => {
     else console.log(line);
   }
 
+  await retryPool.close();
   await browser.close();
   await new Promise<void>(resolveClose => server.close(() => resolveClose()));
 
