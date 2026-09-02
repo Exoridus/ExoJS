@@ -6,13 +6,16 @@
  *
  * Pre-conditions (verified before any mutation):
  *   - Working tree is clean.
- *   - CHANGELOG.md has a `## [VERSION] - YYYY-MM-DD` section for the target version.
+ *   - CHANGELOG.md has an `## [Unreleased]` section (or one already dated for
+ *     the target version, for a re-cut).
  *   - No git tag vVERSION already exists.
  *   - Parity evidence for Chromium and Firefox was measured on the current HEAD
  *     (the published matrix claims the release, so it must describe it).
  *
  * What it does:
- *   1. Bumps `version` in all six lockstep package.json files.
+ *   1. Dates `## [Unreleased]` as `## [VERSION] - <today>`, leaving an empty
+ *      `Unreleased` above it.
+ *   2. Bumps `version` in all six lockstep package.json files.
  *   2. Updates every official peer range - the core and any sibling extension -
  *      to `"MAJOR.MINOR.x"` in the extension packages.
  *   3. Runs `pnpm verify:lockstep` and `pnpm verify:release-matrix` as a gate.
@@ -31,6 +34,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { CHANGELOG_PATH, dateChangelogFile, hasCuttableChangelog, UNRELEASED_HEADING } from './changelog.ts';
 import { LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
 import {
   EVIDENCE_PATH,
@@ -102,12 +106,16 @@ const assertCleanTree = (): void => {
 };
 
 const assertChangelogSection = (version: string): void => {
-  const changelog = readFileSync(resolve(repoRoot, 'CHANGELOG.md'), 'utf8');
-  const escapedVersion = version.replace(/\./g, '\\.');
-  const pattern = new RegExp(`^## \\[${escapedVersion}\\] - \\d{4}-\\d{2}-\\d{2}`, 'm');
-  if (!pattern.test(changelog)) {
-    die(`CHANGELOG.md does not have a dated section for [${version}].\n` + `Add "## [${version}] - YYYY-MM-DD" with release notes before cutting.`);
+  const changelog = readFileSync(resolve(repoRoot, CHANGELOG_PATH), 'utf8');
+
+  if (hasCuttableChangelog(changelog, version)) {
+    return;
   }
+
+  die(
+    `CHANGELOG.md has neither an "${UNRELEASED_HEADING}" section nor a dated one for [${version}].
+` + `Collect the release notes under "${UNRELEASED_HEADING}"; this script dates them.`,
+  );
 };
 
 const assertTagAbsent = (version: string): void => {
@@ -245,6 +253,12 @@ const evidence = readEvidence(repoRoot);
 assertEvidenceFresh(evidence);
 log(`  ✓ tree clean, changelog section present, tag absent, parity evidence current (${GUARANTEED_BROWSERS.join(' + ')})`);
 
+log('\n→ dating the changelog section…');
+
+const datedChangelog = dateChangelogFile(resolve(repoRoot, CHANGELOG_PATH), version);
+
+log(datedChangelog ? `  ✓ [Unreleased] is now [${version}]` : `  ✓ already dated for ${version}`);
+
 log('\n→ stamping the release onto the parity evidence…');
 writeEvidence(repoRoot, stampRelease(evidence, version));
 log(`  ✓ ${EVIDENCE_PATH} now claims ${version}`);
@@ -263,7 +277,7 @@ if (bumped) {
 
   log('\n→ committing version bump…');
   const packageJsonPaths = LOCKSTEP_DIRS.map(({ dir }) => resolve(dir, 'package.json')).join(' ');
-  run(`git add ${packageJsonPaths} ${EVIDENCE_PATH}`);
+  run(`git add ${packageJsonPaths} ${EVIDENCE_PATH} ${CHANGELOG_PATH}`);
   run(`git commit -m "chore(release): bump to ${version}"`);
   log(`  ✓ committed`);
 } else {
@@ -271,7 +285,7 @@ if (bumped) {
   // commit of its own - otherwise the tag would point at a tree whose matrix
   // does not name the release it is published under.
   log('  all packages already at target version — committing the evidence stamp only');
-  run(`git add ${EVIDENCE_PATH}`);
+  run(`git add ${EVIDENCE_PATH} ${CHANGELOG_PATH}`);
   run(`git commit -m "chore(release): claim parity for ${version}"`);
 }
 

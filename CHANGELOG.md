@@ -4,6 +4,41 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **A still-loading texture no longer halts the application under WebGPU.**
+  `WebGpuBackend` raised when a texture had no source or zero dimensions. That
+  is a lifecycle state, not a caller error, and the frame guard halts the loop
+  after three consecutive throws - so a drawable carrying its own geometry (a
+  `Mesh`, unlike a `Sprite`, which measures 0x0 without a frame and is never
+  submitted) ended the whole application while its image was still decoding.
+  The upload is now skipped and performed by the next frame that finds a
+  source, which is what the WebGL2 backend has always done.
+- **A dirty mark on one channel no longer erases an unread mark on another.**
+  A content change followed by a move left only the move behind, so a reader
+  asking about content was told nothing had changed and went on replaying a
+  stale recording for as long as the node kept moving. Each channel now carries
+  its own mark sequence.
+- **Nine-slice and repeating sprites rebuild when a deferred texture lands.**
+  Both derive their geometry from the texture's dimensions but announced
+  nothing when those dimensions arrived, so a subtree recorded while the handle
+  still reported 0x0 replayed that empty geometry indefinitely.
+
+### Added
+
+- **`AudioSystem.onPlaybackBlocked`** and the process-wide
+  **`onAudioPlaybackBlocked`** fire when a play call is dropped because the
+  autoplay policy still blocks audio - the moment worth asking for a gesture,
+  as opposed to `locked`, which is true for most of a page's life and says
+  nothing about whether anything wanted to be heard. The process-wide variant
+  carries the blocked system, for hosts that cannot reach the instance.
+- **The playground asks for that gesture.** A visitor who types a `play()` call
+  into a sample that declares no audio previously got silence and no
+  explanation, because the gate was driven by the sample's declared
+  capabilities rather than by what the visitor wrote.
+
 ## [0.16.0] - 2026-09-01
 
 The scene-model release. `Application`'s frame loop, scene lifecycle, and

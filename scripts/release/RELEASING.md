@@ -19,9 +19,13 @@ version in the tree indefinitely).
 1. **Land everything on `next`.** Feature PRs merge without version bumps — the
    packages stay at the previous version throughout development.
 
-2. **Write the CHANGELOG section on `next`.** Add `## [x.y.z] - YYYY-MM-DD` at
-   the top of `CHANGELOG.md` with the curated release notes. Merge this as a
-   regular PR. The date must be concrete — `release:notes` rejects placeholders.
+2. **Keep the CHANGELOG's `## [Unreleased]` section current.** Entries land
+   with the change that causes them, under `## [Unreleased]` at the top of
+   `CHANGELOG.md` - the Keep a Changelog shape this file declares in its own
+   second line. `release:cut` dates that section as the release and opens a
+   fresh empty one, so nothing has to be written twice and no pull request ever
+   carries a heading naming a version nobody has bumped to yet (which is what
+   `release-coherence` refuses).
 
 3. **Merge `next` into `main`.** Fast-forward if `main` has taken no patch
    commits since the last release; otherwise a regular merge commit:
