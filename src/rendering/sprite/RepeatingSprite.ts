@@ -40,12 +40,17 @@ export class RepeatingSprite extends Drawable {
 
   private _quads: RepeatingSpriteQuad[] = [];
   private _geometryDirty = true;
+  /** Texture version the cached quads were built against; -1 before the first build. */
+  private _builtTextureVersion = -1;
 
   public constructor(source: Texture | TextureRegion, options?: RepeatingSpriteOptions) {
     super();
 
     this._source = source;
-    this._region = source instanceof TextureRegion ? source : new TextureRegion(source, { x: 0, y: 0, width: source.width, height: source.height });
+    // Whole-texture region rather than an explicit full-size rectangle: a bare
+    // texture may still be a loader handle reporting 0x0, which an explicit
+    // rectangle cannot describe and would reject.
+    this._region = source instanceof TextureRegion ? source : new TextureRegion(source);
 
     const region = this._region;
     const opts = options ?? {};
@@ -271,7 +276,10 @@ export class RepeatingSprite extends Drawable {
    * @internal
    */
   public get quads(): readonly RepeatingSpriteQuad[] {
-    if (this.resolvedStrategy === 'geometry' && this._geometryDirty) {
+    // The texture's version moves whenever its size does, which is how a region
+    // built over a still-loading handle announces that the geometry cached here
+    // was computed against dimensions that no longer hold.
+    if (this.resolvedStrategy === 'geometry' && (this._geometryDirty || this._region.texture.version !== this._builtTextureVersion)) {
       this._rebuildGeometry();
     }
     return this._quads;
@@ -294,5 +302,6 @@ export class RepeatingSprite extends Drawable {
       this._offsetY,
     );
     this._geometryDirty = false;
+    this._builtTextureVersion = this._region.texture.version;
   }
 }

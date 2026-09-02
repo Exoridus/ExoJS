@@ -63,11 +63,15 @@ export const validateSlices = (slices: NineSliceInsets, regionWidth: number, reg
     throw new Error(`NineSliceSprite: slice values must be non-negative (got left=${left}, top=${top}, right=${right}, bottom=${bottom}).`);
   }
 
-  if (left + right > regionWidth) {
+  // A region over a texture that has not loaded yet reports no dimensions.
+  // There is nothing to check the slices against until it does, so the bounds
+  // checks are deferred to the first geometry build that sees real dimensions
+  // rather than rejecting a legal construction.
+  if (regionWidth > 0 && left + right > regionWidth) {
     throw new Error(`NineSliceSprite: slices.left (${left}) + slices.right (${right}) exceeds region width (${regionWidth}).`);
   }
 
-  if (top + bottom > regionHeight) {
+  if (regionHeight > 0 && top + bottom > regionHeight) {
     throw new Error(`NineSliceSprite: slices.top (${top}) + slices.bottom (${bottom}) exceeds region height (${regionHeight}).`);
   }
 };

@@ -143,21 +143,33 @@ const validateOptions = (options: TextureRegionOptions, textureWidth: number, te
  * Constructed once and reused across sprites, tile-sets, atlas lookups, and
  * the scalable-sprite repeat planners.
  *
- * All region descriptor fields are stable after construction. Extrusion
- * metadata is copied and frozen during construction - the caller retains no
- * mutable reference to the stored object. The underlying {@link Texture}
- * reference is stable, but the Texture's own lifecycle and sampler state
- * remain owned by {@link Texture}.
+ * Extrusion metadata is copied and frozen during construction - the caller
+ * retains no mutable reference to the stored object. The underlying
+ * {@link Texture} reference is stable, but the Texture's own lifecycle and
+ * sampler state remain owned by {@link Texture}.
  *
- * Texture dimensions **must** be known at construction time; a texture with
- * zero dimensions will cause the constructor to throw.
+ * **Sub-regions** name an explicit rectangle. Their descriptor is fixed at
+ * construction and validated against the texture, which must therefore already
+ * know its dimensions - a still-loading texture makes the rectangle
+ * unverifiable, so the constructor throws.
+ *
+ * **Whole-texture regions** omit the rectangle and cover the entire texture.
+ * They derive their geometry from the texture instead of capturing it, so one
+ * built from a loader handle that has not resolved yet reports zero dimensions
+ * for the moment and the real ones as soon as the payload lands. Nothing has to
+ * be rebuilt or invalidated for the region itself to become correct; consumers
+ * that cache geometry off it watch {@link Texture.version}.
  *
  * @example
  * ```ts
+ * // Sub-region: an explicit rectangle inside an atlas.
  * const region = new TextureRegion(texture, {
  *   x: 32,  y: 16,
  *   width: 64, height: 32,
  * });
+ *
+ * // Whole texture, safe to build from a handle that is still loading.
+ * const full = new TextureRegion(loader.get('background.png'));
  * ```
  * @stable
  */
@@ -165,37 +177,61 @@ export class TextureRegion {
   /** The underlying {@link Texture} this region belongs to. */
   public readonly texture: Texture;
 
-  /** Left edge of the region in texture pixels. */
-  public readonly x: number;
-  /** Top edge of the region in texture pixels. */
-  public readonly y: number;
-  /** Width of the region in texture pixels. */
-  public readonly width: number;
-  /** Height of the region in texture pixels. */
-  public readonly height: number;
-
-  /** Normalised left texture coordinate (U-min). */
-  public readonly u0: number;
-  /** Normalised top texture coordinate (V-min). */
-  public readonly v0: number;
-  /** Normalised right texture coordinate (U-max). */
-  public readonly u1: number;
-  /** Normalised bottom texture coordinate (V-max). */
-  public readonly v1: number;
-
   /** Per-edge extrusion/padding metadata (engine-owned, frozen). */
   public readonly extrusion: Readonly<TextureRegionInsets>;
 
   /**
-   * Create a new immutable region.
-   *
-   * @throws When coordinates or dimensions are non-finite, zero, negative, or
-   *         extend beyond the texture bounds, or when extrusion values are
-   *         invalid.
+   * Whether this region covers the whole texture, in which case its geometry is
+   * read from the texture on access rather than captured at construction.
    */
-  public constructor(texture: Texture, options: TextureRegionOptions) {
+  private readonly _wholeTexture: boolean;
+
+  private readonly _x: number;
+  private readonly _y: number;
+  private readonly _width: number;
+  private readonly _height: number;
+  private readonly _u0: number;
+  private readonly _v0: number;
+  private readonly _u1: number;
+  private readonly _v1: number;
+
+  /**
+   * With `options`, a sub-region over that rectangle: validated against the
+   * texture, which must already know its dimensions.
+   *
+   * Without, a region covering the whole texture: valid for a texture that has
+   * not loaded yet, whose dimensions it then follows.
+   *
+   * @throws When the texture is null, when an explicit rectangle is non-finite,
+   *         zero, negative, or reaches outside the texture, or when extrusion
+   *         values are invalid.
+   */
+  public constructor(texture: Texture, options?: TextureRegionOptions) {
     if (!texture) {
       throw new Error('TextureRegion requires a non-null Texture.');
+    }
+
+    this.texture = texture;
+    this._wholeTexture = options === undefined;
+
+    if (options === undefined) {
+      // Derived on access, so the geometry is whatever the texture currently
+      // reports - including nothing, while a deferred handle is still loading.
+      this._x = 0;
+      this._y = 0;
+      this._width = 0;
+      this._height = 0;
+      this._u0 = 0;
+      this._v0 = 0;
+      this._u1 = 1;
+      this._v1 = 1;
+      this.extrusion = normalizeExtrusion(undefined);
+
+      if (__DEV__) {
+        Object.freeze(this);
+      }
+
+      return;
     }
 
     const textureWidth = texture.width;
@@ -207,21 +243,60 @@ export class TextureRegion {
 
     validateExtrusion(extrusion, options.x, options.y, options.width, options.height, textureWidth, textureHeight);
 
-    this.texture = texture;
-    this.x = options.x;
-    this.y = options.y;
-    this.width = options.width;
-    this.height = options.height;
+    this._x = options.x;
+    this._y = options.y;
+    this._width = options.width;
+    this._height = options.height;
 
-    this.u0 = options.x / textureWidth;
-    this.v0 = options.y / textureHeight;
-    this.u1 = (options.x + options.width) / textureWidth;
-    this.v1 = (options.y + options.height) / textureHeight;
+    this._u0 = options.x / textureWidth;
+    this._v0 = options.y / textureHeight;
+    this._u1 = (options.x + options.width) / textureWidth;
+    this._v1 = (options.y + options.height) / textureHeight;
 
     this.extrusion = extrusion;
 
     if (__DEV__) {
       Object.freeze(this);
     }
+  }
+
+  /** Left edge of the region in texture pixels. */
+  public get x(): number {
+    return this._x;
+  }
+
+  /** Top edge of the region in texture pixels. */
+  public get y(): number {
+    return this._y;
+  }
+
+  /** Width of the region in texture pixels. */
+  public get width(): number {
+    return this._wholeTexture ? this.texture.width : this._width;
+  }
+
+  /** Height of the region in texture pixels. */
+  public get height(): number {
+    return this._wholeTexture ? this.texture.height : this._height;
+  }
+
+  /** Normalised left texture coordinate (U-min). */
+  public get u0(): number {
+    return this._u0;
+  }
+
+  /** Normalised top texture coordinate (V-min). */
+  public get v0(): number {
+    return this._v0;
+  }
+
+  /** Normalised right texture coordinate (U-max). */
+  public get u1(): number {
+    return this._u1;
+  }
+
+  /** Normalised bottom texture coordinate (V-max). */
+  public get v1(): number {
+    return this._v1;
   }
 }

@@ -33,23 +33,22 @@ export class NineSliceSprite extends Drawable {
 
   private _quads: NineSliceQuad[] = [];
   private _geometryDirty = true;
+  /** Texture version the cached quads were built against; -1 before the first build. */
+  private _builtTextureVersion = -1;
 
   public constructor(texture: Texture | TextureRegion, options: NineSliceOptions) {
     super();
 
-    this._region =
-      texture instanceof TextureRegion
-        ? texture
-        : new TextureRegion(texture, {
-            x: 0,
-            y: 0,
-            width: texture.width,
-            height: texture.height,
-          });
+    // Whole-texture region rather than an explicit full-size rectangle: a bare
+    // texture may still be a loader handle reporting 0x0, which an explicit
+    // rectangle cannot describe and would reject.
+    this._region = texture instanceof TextureRegion ? texture : new TextureRegion(texture);
 
     const region = this._region;
 
-    // Validate and own slices
+    // Validate and own slices. A region over a texture that has not loaded yet
+    // reports no dimensions, so the slices cannot be checked against it here -
+    // the first geometry build that sees real dimensions does it instead.
     const rawSlices = normalizeInsets(options.slices);
     validateSlices(rawSlices, region.width, region.height);
     this._slices = rawSlices;
@@ -208,7 +207,10 @@ export class NineSliceSprite extends Drawable {
    * @internal
    */
   public get quads(): readonly NineSliceQuad[] {
-    if (this._geometryDirty) {
+    // The texture's version moves whenever its size does, which is how a region
+    // built over a still-loading handle announces that the geometry cached here
+    // was computed against dimensions that no longer hold.
+    if (this._geometryDirty || this._region.texture.version !== this._builtTextureVersion) {
       this._rebuildGeometry();
     }
 
@@ -220,7 +222,15 @@ export class NineSliceSprite extends Drawable {
   // -----------------------------------------------------------------------
 
   private _rebuildGeometry(): void {
-    this._quads = buildNineSliceQuads(this._region, this._slices, this._border, this._width, this._height, this._modes);
+    const region = this._region;
+
+    // The construction-time check could not run against a texture that had not
+    // loaded yet; this is the first point where the slices can be held against
+    // real dimensions.
+    validateSlices(this._slices, region.width, region.height);
+
+    this._quads = buildNineSliceQuads(region, this._slices, this._border, this._width, this._height, this._modes);
     this._geometryDirty = false;
+    this._builtTextureVersion = region.texture.version;
   }
 }
