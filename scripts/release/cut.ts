@@ -84,7 +84,11 @@ const writePackageJson = (absDir: string, pkg: Record<string, unknown>): void =>
 };
 
 const run = (cmd: string, opts: { cwd?: string } = {}): void => {
-  execSync(cmd, { stdio: 'inherit', cwd: opts.cwd ?? repoRoot });
+  // `.husky/pre-commit` refuses a commit made directly on `main` or `next` -
+  // correct for a human typing `git commit`, but this script's own commits
+  // (the version bump, the parity claim) are the documented exception: they
+  // run on `main` by design (RELEASING.md), not by mistake.
+  execSync(cmd, { stdio: 'inherit', cwd: opts.cwd ?? repoRoot, env: { ...process.env, ALLOW_MAIN_COMMIT: '1' } });
 };
 
 // ── Pre-flight checks ──────────────────────────────────────────────────────

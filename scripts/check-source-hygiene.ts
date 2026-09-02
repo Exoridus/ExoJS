@@ -524,7 +524,10 @@ const defaultBaseRef = (): string => {
 
   if (symbolic) return symbolic.replace('refs/remotes/', '');
 
-  for (const candidate of ['origin/main', 'main', 'origin/master', 'master']) {
+  // `next` first: it is the dev-line default going forward, so a checkout
+  // without a resolvable `origin/HEAD` (e.g. a shallow CI clone) should still
+  // prefer it over the release branch `main`.
+  for (const candidate of ['origin/next', 'next', 'origin/main', 'main', 'origin/master', 'master']) {
     if (gitLines(['rev-parse', '--verify', '--quiet', candidate]).length > 0) return candidate;
   }
 

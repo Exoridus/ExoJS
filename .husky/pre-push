@@ -77,12 +77,13 @@ elif [ "$is_branch_push" = "1" ]; then
     npm run verify:quick || exit 1
 
     # Range for lane selection. A branch with no remote tracking ref yet has no
-    # base to diff against, so fall back to the merge base with origin/main —
-    # and to running every lane if even that is unavailable, because a push
-    # whose scope cannot be determined must not be validated partially.
+    # base to diff against, so fall back to the merge base with origin/HEAD
+    # (the remote's default branch, whichever one that is) — and to running
+    # every lane if even that is unavailable, because a push whose scope cannot
+    # be determined must not be validated partially.
     lane_base="$push_base_sha"
     if [ -z "$lane_base" ] && [ -n "$push_head_sha" ]; then
-        lane_base=$(git merge-base "$push_head_sha" origin/main 2>/dev/null || true)
+        lane_base=$(git merge-base "$push_head_sha" origin/HEAD 2>/dev/null || true)
     fi
 
     if [ -n "$lane_base" ]; then
@@ -113,8 +114,8 @@ fi
 if [ "$is_branch_push" = "1" ] && [ -n "$push_head_sha" ]; then
     if [ -z "$push_base_sha" ]; then
         # New branch / no remote tracking ref yet — fall back to the
-        # merge-base with origin/main so the check still has a diff range.
-        push_base_sha=$(git merge-base "$push_head_sha" origin/main 2>/dev/null || true)
+        # merge-base with origin/HEAD so the check still has a diff range.
+        push_base_sha=$(git merge-base "$push_head_sha" origin/HEAD 2>/dev/null || true)
     fi
 
     bench_changed=""
