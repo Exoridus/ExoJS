@@ -735,6 +735,7 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "meshIndexFormatFor: variable",
   "musicType: variable",
   "onAudioContextReady: variable",
+  "onAudioPlaybackBlocked: variable",
   "orderCompressedFormats: variable",
   "pointerSlotSize: variable",
   "quadraticCurveTo: variable",
