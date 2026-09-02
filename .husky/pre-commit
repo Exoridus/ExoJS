@@ -1,19 +1,20 @@
 #!/usr/bin/env sh
-# Refuse commits made directly on the default branch.
+# Refuse commits made directly on main or next.
 #
-# `main` is protected by a server-side ruleset and only ever advances through a
-# reviewed PR, so a local commit sitting on `main` cannot reach the remote — it
-# just makes the local branch diverge from `origin/main`. That divergence is the
-# problem: the next `git pull` on a diverged branch silently builds a merge
-# commit, and the resulting history has to be untangled by hand later.
+# Both are protected by a server-side ruleset and only ever advance through a
+# reviewed PR, so a local commit sitting on either cannot reach the remote — it
+# just makes the local branch diverge from its remote counterpart. That
+# divergence is the problem: the next `git pull` on a diverged branch silently
+# builds a merge commit, and the resulting history has to be untangled by hand
+# later.
 #
 # The companion safeguard for that second half is `git config pull.ff only`,
 # which turns a diverged pull into a loud failure instead of a quiet merge. It
 # lives in `.git/config` and therefore cannot be committed — see CONTRIBUTING.md
 # for the one-time setup.
 #
-# Escape hatch for the rare legitimate case (a release version bump prepared on
-# the default branch):
+# Escape hatch for the rare legitimate case (a release version bump prepared
+# directly on `main`, or a docs/config fix that must land on both):
 #
 #   ALLOW_MAIN_COMMIT=1 git commit ...
 
@@ -24,7 +25,7 @@ branch=$(git branch --show-current)
 [ -z "$branch" ] && exit 0
 
 case "$branch" in
-    main | master)
+    main | master | next)
         [ "$ALLOW_MAIN_COMMIT" = "1" ] && exit 0
 
         echo "refusing to commit directly on '$branch'." >&2

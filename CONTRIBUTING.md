@@ -3,6 +3,15 @@
 ExoJS is a TypeScript-first, pnpm-workspace monorepo. Core (`@codexo/exojs`) lives
 at the repository root; official extensions and tooling live under `packages/`.
 
+## Branching model
+
+`main` always reflects the last released version; `next` is the development
+line for the release after that. Feature and fix PRs target `next`. A PR
+targets `main` directly only for a patch on the current release (branch from
+`main`, not `next` — that keeps the patch free of unreleased `next` changes).
+A release cuts by merging `next` into `main` and tagging; see
+`scripts/release/RELEASING.md`.
+
 ## One-time clone setup
 
 Run this once per clone:
@@ -11,15 +20,15 @@ Run this once per clone:
 git config pull.ff only
 ```
 
-`main` only ever advances through a reviewed PR, so a local commit on `main`
-cannot reach the remote — it just makes the branch diverge from `origin/main`.
-On a diverged branch, Git's default `pull` silently builds a merge commit, and
-that history has to be untangled by hand afterwards. `pull.ff only` turns the
-diverged pull into a loud failure instead.
+`main` and `next` only ever advance through a reviewed PR, so a local commit on
+either cannot reach the remote — it just makes the branch diverge from its
+remote counterpart. On a diverged branch, Git's default `pull` silently builds
+a merge commit, and that history has to be untangled by hand afterwards.
+`pull.ff only` turns the diverged pull into a loud failure instead.
 
-The other half of that guard — refusing commits on `main` in the first place —
-ships with the repo as `.husky/pre-commit`, so it needs no setup. For a
-deliberate exception such as a release version bump:
+The other half of that guard — refusing commits on `main` or `next` in the
+first place — ships with the repo as `.husky/pre-commit`, so it needs no
+setup. For a deliberate exception such as a release version bump:
 
 ```sh
 ALLOW_MAIN_COMMIT=1 git commit ...

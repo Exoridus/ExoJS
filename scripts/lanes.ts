@@ -12,7 +12,7 @@
  *   pnpm lanes --run           run them, stopping at the first failure
  *   pnpm lanes --run --quick   the same, minus the lanes that need a browser
  *   pnpm lanes --run --tests-only   only the suites, leaving the static gates out
- *   pnpm lanes --base <ref>    compare against <ref> instead of origin/main
+ *   pnpm lanes --base <ref>    compare against <ref> instead of origin/HEAD
  *   pnpm lanes --all           every lane, as a push to the default branch gets
  *
  * The changed-file set spans the merge base with `--base` through the working
@@ -135,7 +135,7 @@ const main = (): void => {
   const quick = argv.includes('--quick');
   const testsOnly = argv.includes('--tests-only');
   const all = argv.includes('--all');
-  const base = readFlag(argv, '--base') ?? 'origin/main';
+  const base = readFlag(argv, '--base') ?? 'origin/HEAD';
 
   const files = all ? [] : changedFiles(base);
   const areas = all ? { engine: true, site: true, audioFx: true, tilemapWorker: true, exampleCatalog: true, benchStructural: true } : selectAreas(files);

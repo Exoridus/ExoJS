@@ -10,20 +10,30 @@ release script derives from).
 
 ## Normal release
 
-The version bump and git tag are created atomically by `release:cut`. This
-prevents the failure mode where a bump PR lands on `main` but the tag is never
-pushed (leaving an untagged version in the tree indefinitely).
+`main` always reflects the last released version; `next` is where feature and
+fix PRs land between releases (see `CONTRIBUTING.md`). The version bump and
+git tag are created atomically by `release:cut`. This prevents the failure
+mode where a bump PR lands but the tag is never pushed (leaving an untagged
+version in the tree indefinitely).
 
-1. **Land everything on `main`.** Feature PRs merge without version bumps — the
+1. **Land everything on `next`.** Feature PRs merge without version bumps — the
    packages stay at the previous version throughout development.
 
-2. **Write the CHANGELOG section.** Add `## [x.y.z] - YYYY-MM-DD` at the top of
-   `CHANGELOG.md` with the curated release notes. Merge this as a regular PR (or
-   commit directly). The date must be concrete — `release:notes` rejects placeholders.
+2. **Write the CHANGELOG section on `next`.** Add `## [x.y.z] - YYYY-MM-DD` at
+   the top of `CHANGELOG.md` with the curated release notes. Merge this as a
+   regular PR. The date must be concrete — `release:notes` rejects placeholders.
 
-3. **Run `release:cut` locally.** This bumps every lockstep `package.json` file and
-   peer ranges, runs the lockstep and release-matrix gates, commits, and creates the
-   annotated tag — all in one step:
+3. **Merge `next` into `main`.** Fast-forward if `main` has taken no patch
+   commits since the last release; otherwise a regular merge commit:
+
+   ```sh
+   git switch main && git pull
+   git merge --ff-only next || git merge next   # ff-only first, merge commit if that fails
+   ```
+
+4. **Run `release:cut` locally, on `main`.** This bumps every lockstep
+   `package.json` file and peer ranges, runs the lockstep and release-matrix
+   gates, commits, and creates the annotated tag — all in one step:
 
    ```bash
    pnpm release:cut --version x.y.z
@@ -32,20 +42,20 @@ pushed (leaving an untagged version in the tree indefinitely).
    The script verifies the CHANGELOG section exists, the tree is clean, and the
    tag does not yet exist before touching anything.
 
-4. **Run the local dry-run** to catch pack/attw/consumer regressions before
+5. **Run the local dry-run** to catch pack/attw/consumer regressions before
    pushing:
 
    ```bash
    pnpm release:prepare --build --skip-zip
    ```
 
-5. **Push both the commit and the tag:**
+6. **Push both the commit and the tag:**
 
    ```bash
    git push && git push origin refs/tags/vx.y.z
    ```
 
-6. **Watch the CI.** The `Release` workflow checks out the **tag commit**, runs the
+7. **Watch the CI.** The `Release` workflow checks out the **tag commit**, runs the
    full CI gate, builds once, packs/hashes/attw/consumer-tests the tarballs, and
    publishes them directly to the `latest` dist-tag via OIDC in lockstep order
    (Core first, then the extensions). Every tarball is `attw`-checked; the offline
@@ -54,12 +64,22 @@ pushed (leaving an untagged version in the tree indefinitely).
    it is still bumped and published). A GitHub release with the Full ZIP is created
    automatically.
 
-7. **Confirm the release.** After CI completes, verify:
+8. **Confirm the release.** After CI completes, verify:
 
    ```bash
    npm view @codexo/exojs version           # should show x.y.z
    npm view @codexo/exojs-physics version   # should show x.y.z
    # repeat for every lockstep package
+   ```
+
+9. **Fast-forward `next` past the release commit**, so the version bump and
+   parity-claim commits are on both lines and `next`'s next feature PR diffs
+   against the released state, not against it plus an unmerged bump:
+
+   ```sh
+   git switch next && git pull
+   git merge --ff-only main
+   git push
    ```
 
 The workflow checks out the **tag commit**, so fixes to release _scripts_ must be
