@@ -21,6 +21,7 @@
  *   pnpm --filter @codexo/exojs-examples examples:smoke      # from repo: pnpm test:examples:smoke
  *   ... --only camera-basic        # smoke a single example (path substring)
  *   ... --sample                   # one example per category (the PR-stage subset)
+ *   ... --renderer webgl2          # withhold the WebGPU adapter (see `forceWebGl2`)
  *   ... --concurrency 4            # parallel pages (default 4)
  *   ... --browser firefox          # run under Firefox headed (cross-browser)
  *   ... --headed                   # force headed mode for any browser
@@ -609,6 +610,22 @@ const runExample = async (
           await mkdir(artifactDir, { recursive: true });
           await writeFile(join(artifactDir, entry.path.replaceAll('/', '__')), injectedSource, 'utf8');
         }
+
+        // The capture the verdict was read from, not a fresh view of the page:
+        // a blank report is unfalsifiable without it, since the same uniform
+        // image is produced by an example that drew nothing and by a capture
+        // that never received the compositor's output.
+        const box = await page
+          .locator('iframe')
+          .first()
+          .boundingBox()
+          .catch(() => null);
+        const capture = box ? await page.screenshot({ clip: box }).catch(() => null) : null;
+
+        if (capture) {
+          await mkdir(artifactDir, { recursive: true });
+          await writeFile(join(artifactDir, `${entry.path.replaceAll('/', '__')}.png`), capture);
+        }
       }
     }
   } catch (error) {
@@ -650,6 +667,7 @@ const main = async (): Promise<void> => {
     options: {
       only: { type: 'string' },
       sample: { type: 'boolean' }, // one example per category (see `sampleByCategory`)
+      renderer: { type: 'string' }, // 'auto' (default) | 'webgl2' (see `forceWebGl2`)
       concurrency: { type: 'string' },
       'timeout-ms': { type: 'string' },
       browser: { type: 'string' }, // 'chromium' (default) | 'firefox'
@@ -666,6 +684,12 @@ const main = async (): Promise<void> => {
   }
 
   const browserName = values.browser === 'firefox' ? 'firefox' : 'chromium';
+  // Withholding the WebGPU flag rather than passing a backend preference: the
+  // playground picks its renderer from what the browser actually reports, so
+  // an adapter that is never offered is the only way to make that choice from
+  // outside the page. Examples that declare `webgpu` as a required capability
+  // are then skipped by the playground's own gate rather than failing.
+  const forceWebGl2 = values.renderer === 'webgl2';
   const colorScheme = values['color-scheme'] === 'dark' ? 'dark' : 'light';
   // Firefox needs headed for WebGPU adapter (same constraint as browser-webgpu-firefox vitest project).
   const headless = values.headed ? false : browserName !== 'firefox';
@@ -710,14 +734,15 @@ const main = async (): Promise<void> => {
     browser = await chromium.launch({
       channel: 'chromium',
       headless,
-      args: ['--enable-webgl', '--enable-unsafe-webgpu', '--ignore-gpu-blocklist'],
+      args: forceWebGl2 ? ['--enable-webgl', '--ignore-gpu-blocklist'] : ['--enable-webgl', '--enable-unsafe-webgpu', '--ignore-gpu-blocklist'],
     });
   }
 
   const webgpuAvailable = await detectWebGpu(browser, baseUrl);
   console.log(
     `[smoke] ${entries.length} example(s) · ${browserName} · ${headless ? 'headless' : 'headed'} · ` +
-      `color-scheme: ${colorScheme} · WebGPU adapter: ${webgpuAvailable ? 'yes' : 'no'} · concurrency ${concurrency}`,
+      `color-scheme: ${colorScheme} · WebGPU adapter: ${webgpuAvailable ? 'yes' : 'no'}` +
+      `${forceWebGl2 ? ' (withheld: --renderer webgl2)' : ''} · concurrency ${concurrency}`,
   );
 
   const results: Result[] = new Array(entries.length);

@@ -1221,17 +1221,26 @@ jobs:
       # category from drawing while every other lane stays green. A defect
       # confined to one example is caught before it can reach `next`, which is
       # the point the full run is placed at.
+      # `--renderer webgl2` withholds the WebGPU adapter so the playground picks
+      # WebGL2. The runner has no GPU, and a WebGPU canvas backed by the
+      # software rasteriser reaches the harness's capture as the clear colour
+      # alone - a signature indistinguishable from an example that drew
+      # nothing, which made every entry in the catalog read as blank. WebGPU
+      # itself is covered by the browser-webgpu test projects.
       - name: Smoke the example catalog
-        run: pnpm test:examples:smoke ${{ github.event_name == 'pull_request' && '--sample' || '' }}
+        run: pnpm test:examples:smoke --renderer webgl2 ${{ github.event_name == 'pull_request' && '--sample' || '' }}
 
-      # The harness writes a per-example table; keep it when the lane is red so
+      # The harness writes a per-example table, and for a blank verdict the
+      # capture that verdict was read from; keep both when the lane is red so
       # the failing entry is readable without re-running anything.
       - name: Upload the smoke report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: example-smoke-report
-          path: .workspace/reports/example-smoke.md
+          path: |
+            .workspace/reports/example-smoke.md
+            .workspace/reports/example-smoke-artifacts
           retention-days: 7
           if-no-files-found: ignore
 

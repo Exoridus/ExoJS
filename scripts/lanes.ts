@@ -87,6 +87,10 @@ export const LOCAL_LANES: readonly Lane[] = [
   // category, a sixth of the wall time. A push to a feature branch triggers no
   // CI at all, so this is the stage that mirrors, and the full catalog runs on
   // the push to `next` and in the merge queue.
+  //
+  // The renderer is left on auto rather than pinned to WebGL2 the way CI pins
+  // it: a developer machine has a real GPU, so this is the stage that actually
+  // exercises the examples on WebGPU.
   {
     key: 'exampleSmoke',
     name: 'example catalog smoke (one per category)',
