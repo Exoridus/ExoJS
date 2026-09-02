@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 /**
- * Serves the bundled ExoJS site from this directory.
+ * Source of the `serve.mjs` shipped inside the site archive: `full-zip`
+ * substitutes the base path below and transpiles this file to JavaScript, so
+ * the artifact runs on any Node without a type-stripping flag.
+ *
+ * Serves the bundled ExoJS site from the directory it sits in.
  *
  *   node serve.mjs [port]
  *
@@ -18,10 +22,12 @@ import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
+// Rewritten by `full-zip` before the file ships; the empty base is a real case,
+// so the guard below is not dead code despite the literal that stands here.
 const BASE = '__SITE_BASE__';
 const PORT = Number.parseInt(process.argv[2] ?? '', 10) || 4321;
 
-const MIME = {
+const MIME: Readonly<Record<string, string>> = {
   '.js': 'text/javascript',
   '.mjs': 'text/javascript',
   '.html': 'text/html; charset=utf-8',
@@ -54,7 +60,7 @@ const MIME = {
 
 const server = createServer((request, response) => {
   try {
-    let urlPath = decodeURIComponent((request.url ?? '/').split('?')[0]);
+    let urlPath = decodeURIComponent((request.url ?? '/').split('?')[0] ?? '/');
 
     if (BASE && urlPath.startsWith(BASE)) {
       urlPath = urlPath.slice(BASE.length) || '/';

@@ -1,10 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { scanForbiddenContent } from '../../scripts/release/full-zip';
+import { scanForbiddenContent, writeSiteServer } from '../../scripts/release/full-zip';
 
 let tree: string;
 
@@ -64,5 +64,33 @@ describe('scanForbiddenContent', () => {
   it('allows .ts under examples/src (lesson sources are not runtime entrypoints)', () => {
     write('examples/src/a/b.ts', 'const p = assets.demo.audio.musicLoop;\nexport {};\n');
     expect(scanForbiddenContent(tree)).toEqual([]);
+  });
+});
+
+describe('writeSiteServer', () => {
+  const buildSite = (base: string): void => {
+    write('index.html', `<script>const baseUrl = "${base}";</script>`);
+  };
+
+  it('ships JavaScript, not the TypeScript template it is written in', () => {
+    buildSite('/ExoJS/');
+    writeSiteServer(tree);
+
+    const server = readFileSync(join(tree, 'serve.mjs'), 'utf8');
+
+    // The artifact runs on the Node of whoever unpacks the archive, with no
+    // type-stripping flag - a copied template would fail there and nowhere in
+    // this repository.
+    expect(server).not.toMatch(/:\s*Readonly<Record</);
+    expect(server).toContain('createServer');
+    expect(server).toContain("'/ExoJS'");
+    expect(server).not.toContain('__SITE_BASE__');
+  });
+
+  it('strips the trailing slash off the base path it substitutes', () => {
+    buildSite('/nested/base/');
+    writeSiteServer(tree);
+
+    expect(readFileSync(join(tree, 'serve.mjs'), 'utf8')).toContain("'/nested/base'");
   });
 });

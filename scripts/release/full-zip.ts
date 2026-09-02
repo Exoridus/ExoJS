@@ -15,6 +15,8 @@
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 
+import { ModuleKind, ScriptTarget, transpileModule } from 'typescript';
+
 import type { CommandRunner } from './command-runner.ts';
 import { type ReleaseManifest, renderChecksums, serializeManifest, sha256File } from './manifest.ts';
 
@@ -111,7 +113,7 @@ export const scanForbiddenContent = (treeDir: string): ForbiddenHit[] => {
  * from that scheme. The base path is read back out of the built entry page so
  * the server always matches the artifact it ships with.
  */
-const writeSiteServer = (siteDir: string): void => {
+export const writeSiteServer = (siteDir: string): void => {
   const indexHtml = readFileSync(join(siteDir, 'index.html'), 'utf8');
   const baseMatch = /const baseUrl = "([^"]*)"/.exec(indexHtml);
 
@@ -121,9 +123,17 @@ const writeSiteServer = (siteDir: string): void => {
 
   // Stored without the trailing slash so the server can join paths uniformly.
   const base = baseMatch[1]!.replace(/\/$/, '');
-  const template = readFileSync(resolve(import.meta.dirname, 'site-server-template.mjs'), 'utf8');
+  const template = readFileSync(resolve(import.meta.dirname, 'site-server-template.ts'), 'utf8');
 
-  writeFileSync(join(siteDir, 'serve.mjs'), template.replace('__SITE_BASE__', base), 'utf8');
+  // Transpiled rather than copied: the template is TypeScript so it is linted
+  // and type-checked with the rest of the tooling, while the file that ships
+  // has to run on whatever Node the person unpacking the archive has, without a
+  // type-stripping flag.
+  const server = transpileModule(template.replace('__SITE_BASE__', base), {
+    compilerOptions: { target: ScriptTarget.ES2023, module: ModuleKind.ESNext },
+  }).outputText;
+
+  writeFileSync(join(siteDir, 'serve.mjs'), server, 'utf8');
   writeFileSync(
     join(siteDir, 'README.md'),
     [
