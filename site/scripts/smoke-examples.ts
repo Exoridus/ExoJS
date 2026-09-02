@@ -5,7 +5,10 @@
  * way the playground does - through `preview.html` (which registers the
  * `@codexo/exojs` / `@examples/runtime` import map) with the example source
  * injected as a module script - and checks that it boots without an uncaught
- * runtime error and renders a `<canvas>`.
+ * runtime error, renders a `<canvas>`, and actually paints something to it.
+ * `preview.html` is loaded directly (not nested in an iframe the way the live
+ * playground embeds it), so this is the same document the playground's iframe
+ * would contain - one canvas check covers both.
  *
  * It serves the built site (`site/dist`) over a throwaway static server, so it
  * needs `pnpm site:build` to have run first. It is intentionally a standalone
@@ -38,7 +41,7 @@ import { dirname, extname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
-import { chromium, firefox, type Browser } from 'playwright';
+import { chromium, firefox, type Browser, type Page } from 'playwright';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(here, '..'); // site/
@@ -178,6 +181,63 @@ const captureErrors = (): void => {
   });
 };
 
+// Whether the example's canvas is a single uniform color - one uniform-color
+// read is the same signature a hard crash produces (a backend that claims a
+// context but never actually submits a frame, e.g. a WebGPU adapter that
+// fails after context creation), so a hard crash is not the only way an
+// example can be broken silently.
+//
+// Screenshots the canvas from OUTSIDE the page rather than sampling it with
+// `drawImage`/`getImageData` from inside: a canvas bound to a `webgpu`
+// context does not reliably surface its drawn content to same-page
+// `drawImage` reads in this Chromium+Dawn(SwiftShader) combination - a bare
+// clear-to-red-and-submit, no example code involved, still read back as
+// (0,0,0,0). `page.screenshot()` goes through the compositor instead, which
+// does see the real pixels; the PNG is then fed back into the page as a
+// plain `<img>` so the actual uniform-color check can stay ordinary 2D canvas
+// code (`drawImage` from an `<img>` has none of the webgpu-source problem).
+//
+// Downscaling to a fixed small grid rather than sampling a stride of the
+// full-resolution pixels: a stride can land entirely within background and
+// miss a small foreground object (a character sprite against a large empty
+// stage), while downscaling blends every source pixel into one of the grid's
+// cells, so even a few non-background pixels shift at least one cell's
+// average.
+const isCanvasBlank = async (page: Page): Promise<boolean> => {
+  const box = await page.evaluate(() => {
+    const c = document.querySelector('canvas');
+    if (!c) return null;
+    const r = c.getBoundingClientRect();
+    return { x: r.x, y: r.y, width: r.width, height: r.height };
+  });
+  if (!box || box.width === 0 || box.height === 0) return true;
+
+  const png = await page.screenshot({ clip: box });
+  const dataUrl = `data:image/png;base64,${png.toString('base64')}`;
+
+  return page.evaluate(async (imageDataUrl: string) => {
+    const image = new Image();
+    image.src = imageDataUrl;
+    await image.decode();
+
+    const gridSize = 48;
+    const probe = document.createElement('canvas');
+    probe.width = gridSize;
+    probe.height = gridSize;
+    const ctx = probe.getContext('2d');
+    if (!ctx) return false; // cannot judge - do not report a false failure
+
+    ctx.drawImage(image, 0, 0, gridSize, gridSize);
+    const { data } = ctx.getImageData(0, 0, gridSize, gridSize);
+
+    const [r0, g0, b0, a0] = data;
+    for (let i = 4; i < data.length; i += 4) {
+      if (data[i] !== r0 || data[i + 1] !== g0 || data[i + 2] !== b0 || data[i + 3] !== a0) return false;
+    }
+    return true;
+  }, dataUrl);
+};
+
 const detectWebGpu = async (browser: Browser, baseUrl: string): Promise<boolean> => {
   // Navigate to a real origin rather than about:blank - some Chromium builds
   // refuse to expose navigator.gpu on opaque origins.
@@ -298,6 +358,9 @@ const runExample = async (
     } else if (!hasCanvas) {
       result.status = 'warned';
       result.note = 'no <canvas> rendered (no error thrown)';
+    } else if (await isCanvasBlank(page)) {
+      result.status = 'warned';
+      result.note = 'canvas rendered but appears blank - one uniform color, no error thrown';
     }
   } catch (error) {
     result.status = 'failed';
