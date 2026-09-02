@@ -532,7 +532,13 @@ const runExample = async (
   // `hasTouch` is what makes a touch-only example testable at all: without it
   // the browser reports no touch points, the playground's capability gate
   // replaces the stage with an overlay, and the example is never run.
-  const context = await browser.newContext({ viewport: { width: 1600, height: 900 }, colorScheme, hasTouch: true });
+  //
+  // Declared per example rather than for the whole run, and not as a
+  // refinement: enabling touch emulation everywhere turned the entire catalog
+  // blank on CI's software rasteriser while a local GPU run stayed green, so
+  // every example that does not ask for touch keeps exactly the context it had.
+  const hasTouch = entry.capabilities?.includes('touch') ?? false;
+  const context = await browser.newContext({ viewport: { width: 1600, height: 900 }, colorScheme, hasTouch });
   await context.addInitScript(captureErrors);
   const page = await context.newPage();
   const pageErrors: string[] = [];
