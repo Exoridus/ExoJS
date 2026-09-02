@@ -479,8 +479,20 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
       return; // a failed load shows the missing-texture placeholder; nothing to heal
     }
 
-    if (this._texture === texture && !this.destroyed && this._textureFrame.width === 0 && this._textureFrame.height === 0) {
+    if (this._texture !== texture || this.destroyed) {
+      return;
+    }
+
+    if (this._textureFrame.width === 0 && this._textureFrame.height === 0) {
       this.resetTextureFrame();
+    }
+
+    // Atlas UVs are divided by the texture size and uploaded to the device once,
+    // when the GPU state is built. A system that reached the GPU path while the
+    // texture was still 0x0 therefore holds non-finite coordinates that no
+    // frame-level invalidation reaches.
+    if (this._gpuState !== null && this._frames.length > 0) {
+      this._gpuState.refreshFrames(this._frames, texture);
     }
   }
 

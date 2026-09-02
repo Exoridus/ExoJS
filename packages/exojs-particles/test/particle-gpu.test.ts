@@ -1368,3 +1368,101 @@ describe('SpawnOnDeath into a GPU-mode target system', () => {
     expect(target._storage.posY[0]).toBe(7);
   });
 });
+
+describe('ParticleGpuState atlas UVs against a deferred texture', () => {
+  let restoreGlobals: () => void;
+
+  beforeEach(() => {
+    restoreGlobals = installGlobals();
+  });
+
+  afterEach(() => {
+    restoreGlobals();
+  });
+
+  // A loader handle is 0x0 until its payload lands. Atlas UVs divide by the
+  // texture size and are uploaded once when the GPU state is built, so a system
+  // that reached the GPU path first holds non-finite coordinates.
+  const makeDeferredTexture = () => {
+    let resolve!: () => void;
+    const loaded = new Promise<Texture>(res => {
+      resolve = () => res(texture);
+    });
+    const own = (value: unknown) => ({ value, writable: true, enumerable: true, configurable: true });
+    const texture = Object.create(Texture.prototype, {
+      width: own(0),
+      height: own(0),
+      flipY: own(false),
+      ready: own(false),
+      loaded: own(loaded),
+      destroyed: own(false),
+      updateSource: own(() => undefined),
+    }) as Texture;
+
+    return {
+      texture,
+      finishLoad: (width: number, height: number) => {
+        const stub = texture as unknown as { width: number; height: number; ready: boolean };
+
+        stub.width = width;
+        stub.height = height;
+        stub.ready = true;
+        resolve();
+      },
+    };
+  };
+
+  const framesWrites = (env: ReturnType<typeof makeMockDevice>): Float32Array[] => {
+    const buffer = findBufferByLabel(env, 'particle-frames-uniforms');
+
+    // `WebGpuUniformBuffer.write` forwards the raw ArrayBuffer plus offset and
+    // size, so the payload is reconstructed from those rather than from a view.
+    return (env.queue.writeBuffer as unknown as MockInstance).mock.calls
+      .filter(([target]) => target === buffer)
+      .map(([, , data, dataOffset, size]) => new Float32Array((data as ArrayBuffer).slice(dataOffset as number, (dataOffset as number) + (size as number))));
+  };
+
+  test('re-uploads finite atlas UVs once the texture finishes loading', async () => {
+    const env = makeMockDevice();
+    const { texture, finishLoad } = makeDeferredTexture();
+    const system = new ParticleSystem(texture, [new Rectangle(0, 0, 32, 32)], { capacity: 4, device: env.device });
+
+    system.addUpdateModule(new ApplyForce(0, 0));
+    system.update(tick(0.016));
+
+    expect(system.gpuMode).toBe(true);
+
+    const beforeLoad = framesWrites(env);
+
+    expect(beforeLoad).not.toHaveLength(0);
+    expect(beforeLoad.at(-1)!.every(Number.isFinite)).toBe(false);
+
+    finishLoad(64, 64);
+    await texture.loaded;
+    await Promise.resolve();
+
+    const afterLoad = framesWrites(env);
+
+    expect(afterLoad.length).toBeGreaterThan(beforeLoad.length);
+    expect([...afterLoad.at(-1)!]).toEqual([0, 0, 0.5, 0.5]);
+  });
+
+  test('a system without declared frames needs no re-upload - its fallback carries no dimensions', async () => {
+    const env = makeMockDevice();
+    const { texture, finishLoad } = makeDeferredTexture();
+    const system = new ParticleSystem(texture, { capacity: 4, device: env.device });
+
+    system.addUpdateModule(new ApplyForce(0, 0));
+    system.update(tick(0.016));
+
+    const beforeLoad = framesWrites(env);
+
+    expect(beforeLoad.at(-1)!.every(Number.isFinite)).toBe(true);
+
+    finishLoad(64, 64);
+    await texture.loaded;
+    await Promise.resolve();
+
+    expect(framesWrites(env)).toHaveLength(beforeLoad.length);
+  });
+});

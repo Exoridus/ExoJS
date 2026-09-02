@@ -586,6 +586,24 @@ export class ParticleGpuState {
     this._releaseDeathStaging();
   }
 
+  /**
+   * Recomputes the atlas UVs against the texture's current dimensions.
+   *
+   * Only meaningful for a system whose texture was still a deferred handle when
+   * this state was built: the UVs are divided by the texture size and uploaded
+   * once at construction, so a handle that reported 0x0 back then baked
+   * non-finite coordinates into the uniform buffer that nothing else rewrites.
+   * A system without declared frames is unaffected - it uploads the whole-
+   * texture fallback, which carries no dimensions.
+   */
+  public refreshFrames(frames: readonly Rectangle[], texture: Texture): void {
+    if (this._destroyed) {
+      return;
+    }
+
+    this._writeFrames(frames, texture);
+  }
+
   private _writeFrames(frames: readonly Rectangle[], texture: Texture): void {
     const view = this._framesUniformView;
     const w = texture.width;
