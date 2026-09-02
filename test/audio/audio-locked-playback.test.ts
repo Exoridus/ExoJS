@@ -94,6 +94,45 @@ describe('playback while the AudioContext is locked', () => {
     sound.destroy();
   });
 
+  test('the blocked-playback signal fires on the same edge as the warning, once', () => {
+    const factory = setupSourceSpy();
+    const system = new AudioSystem();
+    const sound = new Sound(makeBuffer(2));
+    let blocked = 0;
+
+    system.onPlaybackBlocked.add(() => {
+      blocked++;
+    });
+
+    setContextState('suspended');
+
+    for (let i = 0; i < 5; i++) {
+      system.play(sound);
+    }
+
+    // The edge worth interrupting a visitor for is "something wanted to be
+    // heard and was dropped", not the standing lock - and once per lock, not
+    // once per frame.
+    expect(blocked).toBe(1);
+
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('a system that plays nothing while locked never fires it', () => {
+    const system = new AudioSystem();
+    let blocked = 0;
+
+    system.onPlaybackBlocked.add(() => {
+      blocked++;
+    });
+
+    setContextState('suspended');
+
+    expect(system.locked).toBe(true);
+    expect(blocked).toBe(0);
+  });
+
   test('each system warns independently', () => {
     const factory = setupSourceSpy();
     const sink = collectWarnings();

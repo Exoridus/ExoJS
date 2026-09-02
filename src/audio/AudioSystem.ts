@@ -187,6 +187,28 @@ export class AudioSystem {
   private _muteOnHidden = false;
   private _destroyed = false;
   /**
+   * Fires when a play call was dropped because the autoplay policy still blocks
+   * audio - the moment a listener can act on, as opposed to
+   * {@link AudioSystem.locked}, which is merely true for most of a page's life
+   * and says nothing about whether anything wanted to be heard.
+   *
+   * Throttled with the accompanying warning: a game that plays a click every
+   * frame while locked reports once, not sixty times a second, and the next
+   * unlock re-arms it.
+   *
+   * The intended use is an interface that asks for the gesture the browser is
+   * waiting for - a play overlay - and then resumes through
+   * {@link AudioSystem.onUnlock}, which replays the handlers registered during
+   * the lock.
+   * @example
+   * ```ts
+   * app.audio.onPlaybackBlocked.add(() => showPlayOverlay());
+   * app.audio.onUnlock.add(() => hidePlayOverlay());
+   * ```
+   */
+  public readonly onPlaybackBlocked = new Signal();
+
+  /**
    * Whether the "played while locked" warning has already been issued for this
    * system. Throttled per system rather than per call: a menu can fire dozens
    * of click sounds a second while audio is still locked, and every one of them
@@ -292,6 +314,7 @@ export class AudioSystem {
     }
 
     this._lockedWarningIssued = true;
+    this.onPlaybackBlocked.dispatch();
     logger.warn(
       `AudioSystem.play() was called while audio is still locked by the browser's autoplay policy; the ${asset} was skipped. ` +
         'Start playback from the unlock gesture instead — `app.audio.onUnlock.add(() => app.audio.play(music, { loop: true }))` — ' +
@@ -533,6 +556,7 @@ export class AudioSystem {
     // `AudioBus.destroy` and `AudioListener.destroy`.
     onAudioContextReady.remove(this._onAudioContextReady);
     this._unlockSignal.destroy();
+    this.onPlaybackBlocked.destroy();
 
     const failures: unknown[] = [];
 
