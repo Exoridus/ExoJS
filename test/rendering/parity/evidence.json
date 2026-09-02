@@ -2,15 +2,13 @@
   "stamps": {
     "chromium": {
       "measuredAt": "2026-09-02",
-      "commit": "58775dba9",
-      "platform": "win32",
-      "release": "0.16.0"
+      "commit": "d6c244ed3",
+      "platform": "win32"
     },
     "firefox": {
       "measuredAt": "2026-09-02",
-      "commit": "58775dba9",
-      "platform": "win32",
-      "release": "0.16.0"
+      "commit": "d6c244ed3",
+      "platform": "win32"
     },
     "webkit": {
       "measuredAt": "2026-08-05",
