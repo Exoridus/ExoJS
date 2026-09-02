@@ -6,12 +6,12 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 24,
+  "memberCount": 25,
   "counts": {
     "constructors": 1,
     "methods": 14,
     "properties": 9,
-    "events": 0
+    "events": 1
   },
   "sections": [
     {
@@ -954,6 +954,52 @@
           "params": [],
           "returnType": null,
           "description": "When true, the master bus is muted while document.hidden is true. Wired to Application.onVisibilityChange via AudioSystem._applyVisibility; the application calls that hook automatically - set this flag to opt in to the behavior."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "members": [
+        {
+          "name": "onPlaybackBlocked",
+          "signature": "onPlaybackBlocked: Signal<[]>",
+          "signatureTokens": [
+            {
+              "text": "onPlaybackBlocked",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires when a play call was dropped because the autoplay policy still blocks audio - the moment a listener can act on, as opposed to AudioSystem.locked, which is merely true for most of a page's life and says nothing about whether anything wanted to be heard. Throttled with the accompanying warning: a game that plays a click every frame while locked reports once, not sixty times a second, and the next unlock re-arms it. The intended use is an interface that asks for the gesture the browser is waiting for - a play overlay - and then resumes through AudioSystem.onUnlock, which replays the handlers registered during the lock."
         }
       ],
       "paragraphs": [],

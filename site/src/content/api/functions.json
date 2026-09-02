@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 83,
+  "memberCount": 84,
   "counts": {
     "constructors": 0,
     "methods": 51,
-    "properties": 32,
+    "properties": 33,
     "events": 0
   },
   "sections": [
@@ -3751,6 +3751,47 @@
           "params": [],
           "returnType": null,
           "description": "Signal that dispatches once the global AudioContext enters the running state. Handles browser autoplay-policy by listening for user-interaction events (mousedown, touchstart, touchend) and resuming a suspended context automatically. This is a one-shot \"became ready at least once\" contract: it never dispatches a second time, even if the context later drops back to 'suspended' (an iOS audio-session interruption, a bfcache restore, ...) and is subsequently resumed again. Use isAudioContextReady to check the *current* running state at any point; the interaction-gesture monitoring itself re-arms internally on every such suspension so audio keeps working across it, independent of whether this signal fires again."
+        },
+        {
+          "name": "onAudioPlaybackBlocked",
+          "signature": "onAudioPlaybackBlocked: Signal<[system]>",
+          "signatureTokens": [
+            {
+              "text": "onAudioPlaybackBlocked",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "system",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dispatches when any AudioSystem drops a play call because the browser's autoplay policy still blocks audio, carrying the system that was blocked. The process-wide counterpart to AudioSystem.onPlaybackBlocked, and process-wide for the same reason onAudioContextReady is: the AudioContext is a singleton, so the lock belongs to the page rather than to any one application, and a single gesture releases it for all of them. Use this where the blocked system is not reachable - a wrapper hosting someone else's code, a preview shell - and the instance signal everywhere else. The payload is what keeps two applications on one page distinguishable. Throttled per system exactly as the instance signal is."
         },
         {
           "name": "pointerSlotSize",
