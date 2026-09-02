@@ -9,7 +9,7 @@ export { AudioInput } from './AudioInput';
 export { AudioListener, type AudioListenerTarget } from './AudioListener';
 export { AudioSend } from './AudioSend';
 export { AudioStream } from './AudioStream';
-export { AudioSystem } from './AudioSystem';
+export { AudioSystem, onAudioPlaybackBlocked } from './AudioSystem';
 export { AudioUnsupportedError } from './AudioUnsupportedError';
 export type { AudioZoneCircle, AudioZoneOptions, AudioZoneShape } from './AudioZone';
 export { AudioZone } from './AudioZone';

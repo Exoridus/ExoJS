@@ -112,6 +112,30 @@ class UnlockSignal extends Signal {
 }
 
 /**
+ * Dispatches when any {@link AudioSystem} drops a play call because the
+ * browser's autoplay policy still blocks audio, carrying the system that was
+ * blocked.
+ *
+ * The process-wide counterpart to {@link AudioSystem.onPlaybackBlocked}, and
+ * process-wide for the same reason `onAudioContextReady` is: the `AudioContext`
+ * is a singleton, so the lock belongs to the page rather than to any one
+ * application, and a single gesture releases it for all of them. Use this where
+ * the blocked system is not reachable - a wrapper hosting someone else's code,
+ * a preview shell - and the instance signal everywhere else. The payload is
+ * what keeps two applications on one page distinguishable.
+ *
+ * Throttled per system exactly as the instance signal is.
+ * @example
+ * ```ts
+ * onAudioPlaybackBlocked.add(system => {
+ *   showPlayOverlay();
+ *   system.onUnlock.add(hidePlayOverlay);
+ * });
+ * ```
+ */
+export const onAudioPlaybackBlocked = new Signal<[system: AudioSystem]>();
+
+/**
  * Per-{@link Application} owner of the audio mix: three pre-configured
  * {@link AudioBus} instances (`master` ← `music` + `sound`), a single
  * {@link AudioListener} for spatial audio, and a registry of any extra busses
@@ -315,6 +339,7 @@ export class AudioSystem {
 
     this._lockedWarningIssued = true;
     this.onPlaybackBlocked.dispatch();
+    onAudioPlaybackBlocked.dispatch(this);
     logger.warn(
       `AudioSystem.play() was called while audio is still locked by the browser's autoplay policy; the ${asset} was skipped. ` +
         'Start playback from the unlock gesture instead — `app.audio.onUnlock.add(() => app.audio.play(music, { loop: true }))` — ' +

@@ -1,6 +1,6 @@
 import { getAudioContext } from '#audio/audioContext';
 import { AudioGenerator } from '#audio/AudioGenerator';
-import { AudioSystem } from '#audio/AudioSystem';
+import { AudioSystem, onAudioPlaybackBlocked } from '#audio/AudioSystem';
 import { NoopVoice } from '#audio/NoopVoice';
 import { Sound } from '#audio/Sound';
 import { logger, LogSeverity } from '#core/Logger';
@@ -131,6 +131,32 @@ describe('playback while the AudioContext is locked', () => {
 
     expect(system.locked).toBe(true);
     expect(blocked).toBe(0);
+  });
+
+  test('the process-wide signal carries the blocked system, so two applications stay distinguishable', () => {
+    const factory = setupSourceSpy();
+    const first = new AudioSystem();
+    const second = new AudioSystem();
+    const sound = new Sound(makeBuffer(2));
+    const blocked: AudioSystem[] = [];
+    const collect = (system: AudioSystem): void => {
+      blocked.push(system);
+    };
+
+    onAudioPlaybackBlocked.add(collect);
+
+    setContextState('suspended');
+    first.play(sound);
+    first.play(sound);
+    second.play(sound);
+
+    // Throttled per system, not globally: the page-wide lock is shared, but
+    // "this application was blocked" is not.
+    expect(blocked).toEqual([first, second]);
+
+    onAudioPlaybackBlocked.remove(collect);
+    factory.restore();
+    sound.destroy();
   });
 
   test('each system warns independently', () => {

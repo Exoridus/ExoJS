@@ -14,6 +14,7 @@ import type { Capability } from '../lib/examples-catalog';
 import { detectRuntimeSupport, getMissingCapabilities } from '../lib/runtime-support';
 import type { Example, PreviewErrorEntry, UrlParams } from '../lib/types';
 import { buildIframeUrl } from '../lib/url-builder';
+import { AUTOPLAY_GATE_SOURCE } from './autoplayGateSource';
 import styles from './EditorPreview.module.scss';
 import { LoadingSpinner } from './LoadingSpinner';
 import { css } from './react-utils';
@@ -313,10 +314,39 @@ const executePreviewSource = async (
     }
   }
 
+  injectAutoplayGate(iframeBody);
+
   const script = iframeBody.ownerDocument.createElement('script');
   script.type = 'module';
   script.textContent = `${sourceCode}\n`;
   iframeBody.appendChild(script);
+};
+
+/**
+ * The autoplay gate, injected ahead of the sample as a module of its own.
+ *
+ * It has to run inside the preview realm rather than in this document: the
+ * sample resolves `@codexo/exojs` through the preview's import map, and a
+ * module graph is per realm, so a signal imported here would be a different
+ * object from the one the sample's engine dispatches on.
+ *
+ * Kept out of the sample's own module for the reason the gate exists at all:
+ * the editor shows the visitor's code, and what runs must be exactly that.
+ * Which also rules out reading the sample's variables - a visitor names their
+ * application whatever they like, or builds none.
+ *
+ * The gesture needs no handling of its own. The engine resumes a suspended
+ * context on a pointer or key event anywhere in the realm, so clicking the
+ * overlay IS the unlock, and `onUnlock` replays the playback the sample
+ * registered while it was locked - no reload, and the editor keeps its state.
+ */
+const injectAutoplayGate = (iframeBody: HTMLBodyElement): void => {
+  const gate = iframeBody.ownerDocument.createElement('script');
+
+  gate.type = 'module';
+  gate.dataset.playgroundGate = 'autoplay';
+  gate.textContent = AUTOPLAY_GATE_SOURCE;
+  iframeBody.appendChild(gate);
 };
 
 const disconnectCanvasObservers = (
