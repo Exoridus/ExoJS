@@ -1,5 +1,6 @@
 import type { ReadonlyRectangle } from '#math/Rectangle';
 import { Drawable } from '#rendering/Drawable';
+import { invalidateOnTextureLoad } from '#rendering/texture/deferredTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
 
@@ -67,6 +68,8 @@ export class NineSliceSprite extends Drawable {
 
     // Copy and freeze modes
     this._modes = normalizeModes(options.modes);
+
+    invalidateOnTextureLoad(this, region.texture);
   }
 
   // -----------------------------------------------------------------------

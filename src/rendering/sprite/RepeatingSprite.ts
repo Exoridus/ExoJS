@@ -1,5 +1,6 @@
 import type { ReadonlyRectangle } from '#math/Rectangle';
 import { Drawable } from '#rendering/Drawable';
+import { invalidateOnTextureLoad } from '#rendering/texture/deferredTexture';
 import type { RepeatFit, RepeatMode } from '#rendering/texture/repeat';
 import type { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
@@ -81,6 +82,8 @@ export class RepeatingSprite extends Drawable {
     validateSizeInput(width, height);
     this._width = width;
     this._height = height;
+
+    invalidateOnTextureLoad(this, this._region.texture);
   }
 
   // -----------------------------------------------------------------------
