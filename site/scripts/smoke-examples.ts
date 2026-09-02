@@ -72,6 +72,63 @@ const SITE_BASE = '/ExoJS';
 const BLANK_ALLOWLIST: Readonly<Record<string, string>> = {};
 const BLANK_FAILURE = 'canvas rendered but appears blank - one uniform color, no error thrown';
 
+/**
+ * Press pointers onto the preview canvas and leave them down. The engine binds
+ * its pointer listeners to the canvas element, so dispatching there is what a
+ * held finger looks like from the example's side; nothing releases them, so the
+ * settled frame the blank check screenshots is the one a user touching the
+ * glass would see.
+ */
+const holdPointers = async (frame: Frame, points: readonly (readonly [number, number])[]): Promise<number> =>
+  frame.evaluate(
+    fractions => {
+      const canvas = document.querySelector('canvas');
+
+      if (!canvas) {
+        return 0;
+      }
+
+      const rect = canvas.getBoundingClientRect();
+
+      fractions.forEach(([fractionX, fractionY], index) => {
+        const init: PointerEventInit = {
+          bubbles: true,
+          cancelable: true,
+          buttons: 1,
+          pointerId: index + 1,
+          pointerType: 'touch',
+          isPrimary: index === 0,
+          clientX: rect.left + rect.width * fractionX,
+          clientY: rect.top + rect.height * fractionY,
+        };
+
+        // `pointerover` first: the engine creates a pointer record on entry and
+        // ignores a press whose id it has never seen, so a bare `pointerdown`
+        // reaches nothing.
+        canvas.dispatchEvent(new PointerEvent('pointerover', init));
+        canvas.dispatchEvent(new PointerEvent('pointerdown', init));
+      });
+
+      return fractions.length;
+    },
+    points.map(point => [...point]),
+  );
+
+/**
+ * Examples whose output exists only while an input is held - a touch example
+ * paints one circle per finger and nothing at all with no finger down, so an
+ * untouched run is indistinguishable from a broken one. The driver runs once
+ * the preview canvas is mounted and before the blank check.
+ */
+const HELD_INPUT: Readonly<Record<string, (frame: Frame) => Promise<number>>> = {
+  'input/multitouch.js': frame =>
+    holdPointers(frame, [
+      [0.35, 0.4],
+      [0.5, 0.55],
+      [0.65, 0.42],
+    ]),
+};
+
 const MIME: Record<string, string> = {
   '.js': 'text/javascript',
   '.mjs': 'text/javascript',
@@ -472,7 +529,10 @@ const runExample = async (
   // side by side. A narrower viewport collapses the layout and can leave the
   // preview outside the rasterised area, where the compositor never paints it
   // and every example would read as blank.
-  const context = await browser.newContext({ viewport: { width: 1600, height: 900 }, colorScheme });
+  // `hasTouch` is what makes a touch-only example testable at all: without it
+  // the browser reports no touch points, the playground's capability gate
+  // replaces the stage with an overlay, and the example is never run.
+  const context = await browser.newContext({ viewport: { width: 1600, height: 900 }, colorScheme, hasTouch: true });
   await context.addInitScript(captureErrors);
   const page = await context.newPage();
   const pageErrors: string[] = [];
@@ -492,6 +552,15 @@ const runExample = async (
     // observing during that window: transient examples may intentionally draw
     // their only automatic effect before the settling delay has elapsed.
     const renderedDuringSettle = previewFrame ? await rendersDuringSettle(page, previewFrame, 1500) : false;
+
+    // After the settle, never before it: the example subscribes to its pointer
+    // events in `init()`, and an input pressed while that is still pending is
+    // dispatched into a canvas nobody is listening on yet.
+    const holdInput = previewFrame ? HELD_INPUT[entry.path] : undefined;
+
+    if (previewFrame && holdInput) {
+      await holdInput(previewFrame);
+    }
 
     const { shell, preview } = await collectErrors(page, pageErrors);
     result.shellErrors = shell.map(oneLine);
