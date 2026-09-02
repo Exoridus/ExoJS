@@ -269,11 +269,11 @@ const startServer = (root: string): Promise<{ port: number; server: Server }> =>
           return;
         }
 
-        // Deliberately uncacheable: the pooled context shares one HTTP cache
-        // between the examples that run in it, and a page closed mid-download
-        // leaves an entry the next example would then fail to read. The warm V8
-        // code cache is what the pool is for, and that survives `no-store`.
-        res.writeHead(200, { 'Content-Type': file.type, 'Cache-Control': 'no-store' });
+        // Cacheable, because Chromium keys its V8 code cache to the HTTP cache
+        // entry: under `no-store` every page compiles the editor, Monaco and
+        // its 7 MB TypeScript worker again, which on a GPU-less runner starved
+        // the heaviest examples until their capture timed out.
+        res.writeHead(200, { 'Content-Type': file.type, 'Cache-Control': 'public, max-age=3600' });
         res.end(file.body);
       })
       .catch((error: unknown) => {
