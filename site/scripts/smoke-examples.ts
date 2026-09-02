@@ -76,6 +76,19 @@ const BLANK_ALLOWLIST: Readonly<Record<string, string>> = {};
 const BLANK_FAILURE = 'canvas rendered but appears blank - one uniform color, no error thrown';
 
 /**
+ * Examples a software rasteriser cannot run, each with the reason. Applied only
+ * when the browser reports SwiftShader or llvmpipe behind WebGL2 - on a GPU
+ * these run and are judged like every other entry. Same category as the
+ * WebGPU-adapter skip: the environment's limit, not the example's.
+ */
+const SOFTWARE_RASTERISER_LIMITED: Readonly<Record<string, string>> = {
+  'particles/gpu-particles.js': 'the CPU particle fallback paints nothing through SwiftShader (reproduced locally with --use-angle=swiftshader)',
+  'particles/custom-wgsl-module.js': 'the CPU particle fallback paints nothing through SwiftShader (reproduced locally with --use-angle=swiftshader)',
+  'performance/backend-comparison.js':
+    '2200 moving sprites plus the debug overlay saturate a software-rasterised main thread; the harness cannot reach the page',
+};
+
+/**
  * Press pointers onto the preview canvas and leave them down. The engine binds
  * its pointer listeners to the canvas element, so dispatching there is what a
  * held finger looks like from the example's side; nothing releases them, so the
@@ -269,11 +282,11 @@ const startServer = (root: string): Promise<{ port: number; server: Server }> =>
           return;
         }
 
-        // Cacheable, because Chromium keys its V8 code cache to the HTTP cache
-        // entry: under `no-store` every page compiles the editor, Monaco and
-        // its 7 MB TypeScript worker again, which on a GPU-less runner starved
-        // the heaviest examples until their capture timed out.
-        res.writeHead(200, { 'Content-Type': file.type, 'Cache-Control': 'public, max-age=3600' });
+        // Uncacheable on purpose: with cacheable responses the playground shell
+        // raised a bare `Event` on its very first load - Monaco fetches its
+        // TypeScript worker twice in quick succession, and the second load
+        // fails against the entry the first is still writing.
+        res.writeHead(200, { 'Content-Type': file.type, 'Cache-Control': 'no-store' });
         res.end(file.body);
       })
       .catch((error: unknown) => {
@@ -507,23 +520,43 @@ const collectErrors = async (page: Page, pageErrors: readonly string[]): Promise
   return { shell, preview };
 };
 
-const detectWebGpu = async (browser: Browser, baseUrl: string): Promise<boolean> => {
+interface Graphics {
+  /** A WebGPU adapter can be acquired. */
+  webgpu: boolean;
+  /** WebGL2 is rasterised in software (SwiftShader, llvmpipe). */
+  softwareRasteriser: boolean;
+}
+
+const probeGraphics = async (browser: Browser, baseUrl: string): Promise<Graphics> => {
   // Navigate to a real origin rather than about:blank - some Chromium builds
   // refuse to expose navigator.gpu on opaque origins.
   const page = await browser.newPage();
   try {
     await page.goto(`${baseUrl}/preview.html`, { waitUntil: 'domcontentloaded', timeout: 10_000 });
     return await page.evaluate(async () => {
-      try {
-        const gpu = (navigator as unknown as { gpu?: { requestAdapter(): Promise<unknown> } }).gpu;
-        if (!gpu) return false;
-        return (await gpu.requestAdapter()) !== null;
-      } catch {
-        return false;
-      }
+      const webgpu = await (async () => {
+        try {
+          const gpu = (navigator as unknown as { gpu?: { requestAdapter(): Promise<unknown> } }).gpu;
+          return gpu !== undefined && (await gpu.requestAdapter()) !== null;
+        } catch {
+          return false;
+        }
+      })();
+
+      const renderer = (() => {
+        try {
+          const gl = document.createElement('canvas').getContext('webgl2');
+          const info = gl?.getExtension('WEBGL_debug_renderer_info');
+          return gl && info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : '';
+        } catch {
+          return '';
+        }
+      })();
+
+      return { webgpu, softwareRasteriser: /swiftshader|llvmpipe|softpipe/i.test(renderer) };
     });
   } catch {
-    return false;
+    return { webgpu: false, softwareRasteriser: false };
   } finally {
     await page.close();
   }
@@ -594,7 +627,7 @@ const runExample = async (
   baseUrl: string,
   entry: CatalogEntry & { category: string },
   index: number,
-  webgpuAvailable: boolean,
+  graphics: Graphics,
   timeoutMs: number,
 ): Promise<Result> => {
   const capabilities = entry.capabilities ?? [];
@@ -608,9 +641,16 @@ const runExample = async (
   };
 
   const needsWebGpu = entry.backend === 'advanced' || capabilities.includes('webgpu');
-  if (needsWebGpu && !webgpuAvailable) {
+  if (needsWebGpu && !graphics.webgpu) {
     result.status = 'skipped';
     result.note = 'WebGPU adapter unavailable in this environment';
+    return result;
+  }
+
+  const rasteriserLimit = graphics.softwareRasteriser ? SOFTWARE_RASTERISER_LIMITED[entry.path] : undefined;
+  if (rasteriserLimit) {
+    result.status = 'skipped';
+    result.note = `software rasteriser: ${rasteriserLimit}`;
     return result;
   }
 
@@ -823,10 +863,12 @@ const main = async (): Promise<void> => {
     });
   }
 
-  const webgpuAvailable = await detectWebGpu(browser, baseUrl);
+  const graphics = await probeGraphics(browser, baseUrl);
+  const webgpuAvailable = graphics.webgpu;
   console.log(
     `[smoke] ${entries.length} example(s) · ${browserName} · ${headless ? 'headless' : 'headed'} · ` +
       `color-scheme: ${colorScheme} · WebGPU adapter: ${webgpuAvailable ? 'yes' : 'no'}` +
+      `${graphics.softwareRasteriser ? ' · WebGL2: software rasteriser' : ''}` +
       `${forceWebGl2 ? ' (withheld: --renderer webgl2)' : ''} · concurrency ${concurrency}`,
   );
 
@@ -843,7 +885,7 @@ const main = async (): Promise<void> => {
         if (index >= entries.length) return;
 
         const entry = entries[index];
-        const result = await runExample(pool, baseUrl, entry, index, webgpuAvailable, timeoutMs);
+        const result = await runExample(pool, baseUrl, entry, index, graphics, timeoutMs);
         results[index] = result;
 
         const tag = result.status.toUpperCase().padEnd(7);
@@ -872,7 +914,7 @@ const main = async (): Promise<void> => {
 
     console.log(`[smoke] RETRY  ${entry.path} - serial blank verification`);
 
-    const retryResult = await runExample(retryPool, baseUrl, entry, index + entries.length, webgpuAvailable, timeoutMs);
+    const retryResult = await runExample(retryPool, baseUrl, entry, index + entries.length, graphics, timeoutMs);
 
     retryResult.shellErrors = [...new Set([...(firstResult.shellErrors ?? []), ...(retryResult.shellErrors ?? [])])];
     results[index] = retryResult;
