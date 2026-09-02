@@ -344,6 +344,10 @@ const injectAutoplayGate = (iframeBody: HTMLBodyElement): void => {
   const gate = iframeBody.ownerDocument.createElement('script');
 
   gate.type = 'module';
+  // `async` so the shell never sits in front of the sample: module scripts
+  // otherwise execute in document order, which would make the sample wait for
+  // this one to load and run. The gate has nothing the sample depends on.
+  gate.async = true;
   gate.dataset.playgroundGate = 'autoplay';
   gate.textContent = AUTOPLAY_GATE_SOURCE;
   iframeBody.appendChild(gate);

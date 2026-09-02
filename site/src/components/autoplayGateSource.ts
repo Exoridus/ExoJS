@@ -7,11 +7,15 @@
  * of this document could not reach.
  */
 export const AUTOPLAY_GATE_SOURCE = `
-import { onAudioPlaybackBlocked } from '@codexo/exojs';
-
 const OVERLAY_ID = 'exo-autoplay-gate';
 
-onAudioPlaybackBlocked.add(system => {
+// Imported dynamically inside a guard: this shell must never be able to keep a
+// sample from running. A static import would make the sample's own module wait
+// on this one resolving, and a rejected one would surface as a preview error
+// the visitor did not cause.
+const engine = await import('@codexo/exojs').catch(() => null);
+
+engine?.onAudioPlaybackBlocked.add(system => {
   if (document.getElementById(OVERLAY_ID) !== null) {
     return;
   }
