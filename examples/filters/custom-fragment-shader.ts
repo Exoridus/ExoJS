@@ -13,7 +13,7 @@ void main(){ vec2 uv=vUv; uv.y += sin((uv.x*12.0)+uTime*3.0)*0.03; fragColor=tex
 const wgsl = `
 @group(0) @binding(1) var uTexture:texture_2d<f32>;
 @group(0) @binding(2) var uSampler:sampler;
-struct Uniforms { uTime:f32, _pad0:vec3<f32> };
+struct Uniforms { uTime:f32 };
 @group(1) @binding(0) var<uniform> uniforms:Uniforms;
 @fragment fn fragmentMain(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{
     var uv=vUv;

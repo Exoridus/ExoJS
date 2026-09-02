@@ -5,7 +5,7 @@ precision mediump float; uniform float uProgress; in vec2 vUv; out vec4 fragColo
 void main(){ vec2 p=vUv-0.5; float r=length(p); float a=atan(p.y,p.x); float t=(a+3.1415926)/(6.2831852);
 float ring=smoothstep(0.18,0.19,r)-smoothstep(0.24,0.25,r); float fill=step(t,uProgress); vec3 col=mix(vec3(0.2),vec3(0.3,0.8,1.0),fill); fragColor=vec4(col*ring,ring); }`;
 const wgsl = `
-struct Uniforms { uProgress:f32, _pad0:vec3<f32> };
+struct Uniforms { uProgress:f32 };
 @group(1) @binding(0) var<uniform> uniforms:Uniforms;
 @group(0) @binding(1) var uTexture:texture_2d<f32>;
 @group(0) @binding(2) var uSampler:sampler;
