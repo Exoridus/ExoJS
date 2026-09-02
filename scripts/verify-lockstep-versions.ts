@@ -3,8 +3,10 @@
  *
  * The lockstep version contract: every package in `LOCKSTEP_PACKAGES`
  * (`scripts/release/lockstep-packages.ts`) - Core plus each opt-in extension -
- * must be on the same X.Y.Z version per release, and each extension's
- * `peerDependencies["@codexo/exojs"]` must be `<major>.<minor>.x`.
+ * must be on the same X.Y.Z version per release, and every peer range one of
+ * them declares on another - the core or a sibling extension - must be
+ * `<major>.<minor>.x`. A sibling peer left a minor behind resolves to nothing
+ * once the line moves, which no install of the shipped package can satisfy.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -17,7 +19,8 @@ const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 interface PackageInfo {
   name: string;
   version: string;
-  peer?: string;
+  /** Every `@codexo/*` peer range the package declares, by package name. */
+  peers: Record<string, string>;
 }
 
 const readPackage = (relPath: string): PackageInfo => {
@@ -26,7 +29,9 @@ const readPackage = (relPath: string): PackageInfo => {
     version: string;
     peerDependencies?: Record<string, string>;
   };
-  return { name: pkg.name, version: pkg.version, peer: pkg.peerDependencies?.['@codexo/exojs'] };
+  const peers = Object.entries(pkg.peerDependencies ?? {}).filter(([dep]) => dep.startsWith('@codexo/'));
+
+  return { name: pkg.name, version: pkg.version, peers: Object.fromEntries(peers) };
 };
 
 const corePkg = readPackage('package.json');
@@ -46,25 +51,30 @@ if (versions.length !== 1) {
   process.exit(1);
 }
 
-// Each extension's peer range on the core must cover the lockstep version.
-// The contract is `<major>.<minor>.x` so a coordinated minor/patch ships coherently.
+// Every peer range an official package declares on another must cover the
+// lockstep version. The contract is `<major>.<minor>.x` so a coordinated
+// minor/patch ships coherently.
 const [major, minor] = versions[0].split('.');
 const expectedPeer = `${major}.${minor}.x`;
 const peerProblems: string[] = [];
 
 for (const pkg of extensionPkgs) {
-  if (pkg.peer === undefined) {
+  if (pkg.peers['@codexo/exojs'] === undefined) {
     peerProblems.push(`  ${pkg.name}: missing peerDependencies["@codexo/exojs"]`);
-  } else if (pkg.peer !== expectedPeer) {
-    peerProblems.push(`  ${pkg.name}: peer "@codexo/exojs" is "${pkg.peer}", expected "${expectedPeer}"`);
+  }
+
+  for (const [dep, range] of Object.entries(pkg.peers)) {
+    if (range !== expectedPeer) {
+      peerProblems.push(`  ${pkg.name}: peer "${dep}" is "${range}", expected "${expectedPeer}"`);
+    }
   }
 }
 
 if (peerProblems.length > 0) {
   process.stderr.write('verify-lockstep: PEER RANGE MISMATCH:\n');
   process.stderr.write(`${peerProblems.join('\n')}\n`);
-  process.stderr.write(`\nEach extension's peerDependencies["@codexo/exojs"] must be "${expectedPeer}" for v${versions[0]}.\n`);
+  process.stderr.write(`\nEvery peer range an official package declares on another must be "${expectedPeer}" for v${versions[0]}.\n`);
   process.exit(1);
 }
 
-process.stdout.write(`verify-lockstep: all ${packages.length} packages at v${versions[0]}; extension peer ranges = "${expectedPeer}" ✓\n`);
+process.stdout.write(`verify-lockstep: all ${packages.length} packages at v${versions[0]}; every official peer range = "${expectedPeer}" ✓\n`);

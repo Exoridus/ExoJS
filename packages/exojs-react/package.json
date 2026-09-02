@@ -1,6 +1,6 @@
 {
   "name": "@codexo/exojs-react",
-  "version": "0.15.2",
+  "version": "0.16.0",
   "description": "React integration for ExoJS.",
   "repository": {
     "type": "git",
@@ -32,7 +32,7 @@
     "lint": "eslint --max-warnings=0 ."
   },
   "peerDependencies": {
-    "@codexo/exojs": "0.15.x",
+    "@codexo/exojs": "0.16.x",
     "react": ">=18.0.0",
     "react-dom": ">=18.0.0"
   },
