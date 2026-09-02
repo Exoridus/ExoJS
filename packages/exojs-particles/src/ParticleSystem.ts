@@ -312,6 +312,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     }
 
     this.resetTextureFrame();
+    this._healTextureFrameOnLoad(this._texture);
   }
 
   /**
@@ -450,9 +451,37 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     if (this._texture !== texture) {
       this._texture = texture;
       this.resetTextureFrame();
+      this._healTextureFrameOnLoad(texture);
     }
 
     return this;
+  }
+
+  /**
+   * A deferred texture handle is 0x0 until its payload arrives, so the frame
+   * reset that precedes this call sized every particle quad to nothing. Pick up
+   * the real dimensions once the load resolves, unless the texture was swapped
+   * or a frame was chosen deliberately in the meantime - an empty frame is the
+   * only state this may overwrite.
+   */
+  private _healTextureFrameOnLoad(texture: Texture): void {
+    if (texture.ready) {
+      return;
+    }
+
+    void this._resetTextureFrameOnLoad(texture);
+  }
+
+  private async _resetTextureFrameOnLoad(texture: Texture): Promise<void> {
+    try {
+      await texture.loaded;
+    } catch {
+      return; // a failed load shows the missing-texture placeholder; nothing to heal
+    }
+
+    if (this._texture === texture && !this.destroyed && this._textureFrame.width === 0 && this._textureFrame.height === 0) {
+      this.resetTextureFrame();
+    }
   }
 
   public setTextureFrame(frame: Rectangle): this {
