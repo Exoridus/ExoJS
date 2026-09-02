@@ -1,6 +1,6 @@
 {
   "title": "TextureRegion",
-  "description": "An immutable descriptor for a rectangular sub-region of a Texture. Stores the pixel-space source rectangle, pre-computed normalised UV bounds, and optional extrusion/padding metadata for atlas-safe linear filtering. Constructed once and reused across sprites, tile-sets, atlas lookups, and the scalable-sprite repeat planners. All region descriptor fields are stable after construction. Extrusion metadata is copied and frozen during construction - the caller retains no mutable reference to the stored object. The underlying Texture reference is stable, but the Texture's own lifecycle and sampler state remain owned by Texture. Texture dimensions **must** be known at construction time; a texture with zero dimensions will cause the constructor to throw.",
+  "description": "An immutable descriptor for a rectangular sub-region of a Texture. Stores the pixel-space source rectangle, pre-computed normalised UV bounds, and optional extrusion/padding metadata for atlas-safe linear filtering. Constructed once and reused across sprites, tile-sets, atlas lookups, and the scalable-sprite repeat planners. Extrusion metadata is copied and frozen during construction - the caller retains no mutable reference to the stored object. The underlying Texture reference is stable, but the Texture's own lifecycle and sampler state remain owned by Texture. **Sub-regions** name an explicit rectangle. Their descriptor is fixed at construction and validated against the texture, which must therefore already know its dimensions - a still-loading texture makes the rectangle unverifiable, so the constructor throws. **Whole-texture regions** omit the rectangle and cover the entire texture. They derive their geometry from the texture instead of capturing it, so one built from a loader handle that has not resolved yet reports zero dimensions for the moment and the real ones as soon as the payload lands. Nothing has to be rebuilt or invalidated for the region itself to become correct; consumers that cache geometry off it watch Texture.version.",
   "symbol": "TextureRegion",
   "kind": "class",
   "subsystem": "rendering",
@@ -21,8 +21,9 @@
       "paragraphs": [
         "An immutable descriptor for a rectangular sub-region of a Texture.",
         "Stores the pixel-space source rectangle, pre-computed normalised UV bounds, and optional extrusion/padding metadata for atlas-safe linear filtering. Constructed once and reused across sprites, tile-sets, atlas lookups, and the scalable-sprite repeat planners.",
-        "All region descriptor fields are stable after construction. Extrusion metadata is copied and frozen during construction - the caller retains no mutable reference to the stored object. The underlying Texture reference is stable, but the Texture's own lifecycle and sampler state remain owned by Texture.",
-        "Texture dimensions **must** be known at construction time; a texture with zero dimensions will cause the constructor to throw."
+        "Extrusion metadata is copied and frozen during construction - the caller retains no mutable reference to the stored object. The underlying Texture reference is stable, but the Texture's own lifecycle and sampler state remain owned by Texture.",
+        "**Sub-regions** name an explicit rectangle. Their descriptor is fixed at construction and validated against the texture, which must therefore already know its dimensions - a still-loading texture makes the rectangle unverifiable, so the constructor throws.",
+        "**Whole-texture regions** omit the rectangle and cover the entire texture. They derive their geometry from the texture instead of capturing it, so one built from a loader handle that has not resolved yet reports zero dimensions for the moment and the real ones as soon as the payload lands. Nothing has to be rebuilt or invalidated for the region itself to become correct; consumers that cache geometry off it watch Texture.version."
       ],
       "importLine": "import { TextureRegion } from '@codexo/exojs'",
       "sourceLink": null
@@ -33,7 +34,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(texture: Texture, options: TextureRegionOptions): TextureRegion",
+          "signature": "new(texture: Texture, options?: TextureRegionOptions): TextureRegion",
           "signatureTokens": [
             {
               "text": "new",
@@ -62,6 +63,10 @@
             {
               "text": "options",
               "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -93,11 +98,11 @@
             {
               "name": "options",
               "type": "TextureRegionOptions",
-              "optional": false
+              "optional": true
             }
           ],
           "returnType": "TextureRegion",
-          "description": "Create a new immutable region."
+          "description": "With options, a sub-region over that rectangle: validated against the texture, which must already know its dimensions. Without, a region covering the whole texture: valid for a texture that has not loaded yet, whose dimensions it then follows."
         }
       ],
       "paragraphs": [],
@@ -142,27 +147,6 @@
           "description": "Per-edge extrusion/padding metadata (engine-owned, frozen)."
         },
         {
-          "name": "height",
-          "signature": "height: number",
-          "signatureTokens": [
-            {
-              "text": "height",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Height of the region in texture pixels."
-        },
-        {
           "name": "texture",
           "signature": "texture: Texture",
           "signatureTokens": [
@@ -182,6 +166,27 @@
           "params": [],
           "returnType": null,
           "description": "The underlying Texture this region belongs to."
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Height of the region in texture pixels."
         },
         {
           "name": "u0",

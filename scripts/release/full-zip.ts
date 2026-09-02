@@ -100,6 +100,55 @@ export const scanForbiddenContent = (treeDir: string): ForbiddenHit[] => {
   return hits;
 };
 
+/**
+ * Drops a static server next to the bundled site, plus a short note on why one
+ * is needed at all.
+ *
+ * The site is built for a hosted base path, so every URL it references carries
+ * that prefix while the directory itself is flat - opening the files directly
+ * yields a page whose every asset 404s. `file://` is no alternative either: the
+ * playground loads ES modules and an import map, which browsers refuse to fetch
+ * from that scheme. The base path is read back out of the built entry page so
+ * the server always matches the artifact it ships with.
+ */
+const writeSiteServer = (siteDir: string): void => {
+  const indexHtml = readFileSync(join(siteDir, 'index.html'), 'utf8');
+  const baseMatch = /const baseUrl = "([^"]*)"/.exec(indexHtml);
+
+  if (!baseMatch) {
+    throw new Error('[full-zip] Could not read the site base path from the built index.html.');
+  }
+
+  // Stored without the trailing slash so the server can join paths uniformly.
+  const base = baseMatch[1]!.replace(/\/$/, '');
+  const template = readFileSync(resolve(import.meta.dirname, 'site-server-template.mjs'), 'utf8');
+
+  writeFileSync(join(siteDir, 'serve.mjs'), template.replace('__SITE_BASE__', base), 'utf8');
+  writeFileSync(
+    join(siteDir, 'README.md'),
+    [
+      '# ExoJS site',
+      '',
+      'Start it with Node:',
+      '',
+      '```sh',
+      'node serve.mjs        # or: node serve.mjs 8080',
+      '```',
+      '',
+      `Then open <http://127.0.0.1:4321${base}/>.`,
+      '',
+      'A server is required. These pages are built for the base path',
+      `\`${base}/\`, so every URL inside them carries that prefix while this`,
+      'directory holds the files flat - `serve.mjs` maps one onto the other.',
+      'Opening the HTML files directly does not work either: the playground',
+      'loads ES modules and an import map, which browsers refuse to fetch over',
+      '`file://`.',
+      '',
+    ].join('\n'),
+    'utf8',
+  );
+};
+
 const assembleExamples = (rootDir: string, examplesOut: string): void => {
   const examplesSrc = resolve(rootDir, 'examples');
   const srcOut = join(examplesOut, 'src');
@@ -157,8 +206,9 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
   // examples/ - src/** (TS), js/** (transpiled), assets/**, examples.json.
   assembleExamples(options.rootDir, join(treeDir, 'examples'));
 
-  // site/ - the full built static site (servable standalone).
+  // site/ - the full built static site, plus the server that makes it usable.
   cpSync(options.siteDistDir, join(treeDir, 'site'), { recursive: true });
+  writeSiteServer(join(treeDir, 'site'));
 
   // Top-level metadata.
   for (const meta of ['README.md', 'CHANGELOG.md', 'LICENSE']) {

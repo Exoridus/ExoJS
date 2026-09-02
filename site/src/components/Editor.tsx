@@ -12,6 +12,10 @@ import { LoadingSpinner } from './LoadingSpinner';
 import { PreviewToolbar } from './PreviewToolbar';
 import { css, cx } from './react-utils';
 
+/**
+ * Rendered in place of the editor while there is no DOM to attach Monaco to,
+ * which keeps the server from pulling the editor bundle into a Node context.
+ */
 const ServerEditorCodeFallback: FunctionComponent<EditorCodeProps> = () => null;
 
 const EditorCode = lazy<FunctionComponent<EditorCodeProps>>(async () => {
@@ -50,6 +54,7 @@ export const Editor = ({
   sidebarToggleRef,
   onToggleSidebar,
 }: EditorProps): JSX.Element => {
+  const [hydrated, setHydrated] = useState(false);
   const [sourceCode, setSourceCode] = useState<string | null>(null);
   const [originalSourceCode, setOriginalSourceCode] = useState<string | null>(null);
   const [executionCode, setExecutionCode] = useState<string | null>(null);
@@ -148,6 +153,13 @@ export const Editor = ({
       cancelled = true;
     };
   }, [activeExample, selectedVersionId]);
+
+  // Runs once the first client render has matched the server's output, which is
+  // the point from which the editor can differ from it safely.
+  useEffect(() => {
+    // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect -- releasing the post-hydration render is exactly this effect's job
+    setHydrated(true);
+  }, []);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(LAYOUT_STORAGE_KEY);
@@ -302,22 +314,31 @@ export const Editor = ({
       </div>
       <div className={css(styles, 'errors-slot')}>{renderErrors(combinedErrors)}</div>
       <section className={css(styles, 'editor-frame')} aria-label="Source editor">
+        {/*
+          Held back until after hydration. The lazy loader resolves to an empty
+          component on the server and to Monaco in the browser, so rendering it
+          on the first client pass would put a populated subtree where the
+          server left an empty one - the mismatch React reports as #418, after
+          which it discards and rebuilds this tree on every page load.
+        */}
         <Suspense fallback={<LoadingSpinner centered />}>
-          <EditorCode
-            ref={codeEditorRef}
-            sourceCode={displayedSourceCode}
-            sourcePath={displayedSourcePath}
-            language={displayedLanguage}
-            readOnly={isCompiledView}
-            canReset={Boolean(originalSourceCode && sourceCode !== originalSourceCode)}
-            exampleTitle={activeExample?.title ?? 'Loading...'}
-            selectedVersionId={selectedVersionId}
-            onUpdateCode={onUpdateCode}
-            onResetCode={onResetCode}
-            onCursorChange={onCursorChange}
-            onDiagnostic={setDiagnostics}
-            onDirty={setDirty}
-          />
+          {!hydrated ? null : (
+            <EditorCode
+              ref={codeEditorRef}
+              sourceCode={displayedSourceCode}
+              sourcePath={displayedSourcePath}
+              language={displayedLanguage}
+              readOnly={isCompiledView}
+              canReset={Boolean(originalSourceCode && sourceCode !== originalSourceCode)}
+              exampleTitle={activeExample?.title ?? 'Loading...'}
+              selectedVersionId={selectedVersionId}
+              onUpdateCode={onUpdateCode}
+              onResetCode={onResetCode}
+              onCursorChange={onCursorChange}
+              onDiagnostic={setDiagnostics}
+              onDirty={setDirty}
+            />
+          )}
         </Suspense>
         <EditorStatusBar
           line={cursorLine}

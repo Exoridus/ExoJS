@@ -328,3 +328,59 @@ describe('Sprite', () => {
     });
   });
 });
+
+describe('Sprite sized before its deferred texture loads', () => {
+  const makeDeferredTexture = () => {
+    let resolve!: () => void;
+    const loaded = new Promise<Texture>(res => {
+      resolve = () => res(texture);
+    });
+    const texture = {
+      width: 0,
+      height: 0,
+      flipY: false,
+      ready: false,
+      loaded,
+      updateSource: () => undefined,
+    } as unknown as Texture;
+
+    return {
+      texture,
+      finishLoad: (w: number, h: number) => {
+        Object.assign(texture as unknown as { width: number; height: number; ready: boolean }, { width: w, height: h, ready: true });
+        resolve();
+      },
+    };
+  };
+
+  test('keeps a size the caller set while the payload was in flight', async () => {
+    const { texture, finishLoad } = makeDeferredTexture();
+    const sprite = new Sprite(texture);
+
+    sprite.width = 80;
+    sprite.height = 80;
+
+    // A 1x1 source: snapping the size to it would shrink the sprite to nothing.
+    finishLoad(1, 1);
+    await texture.loaded;
+    await Promise.resolve();
+
+    expect(sprite.width).toBe(80);
+    expect(sprite.height).toBe(80);
+    // The frame still heals - only the display size is the caller's.
+    expect(sprite.textureFrame.width).toBe(1);
+    expect(sprite.textureFrame.height).toBe(1);
+  });
+
+  test('still adopts the texture size when the caller never set one', async () => {
+    const { texture, finishLoad } = makeDeferredTexture();
+    const sprite = new Sprite(texture);
+
+    finishLoad(24, 12);
+    await texture.loaded;
+    await Promise.resolve();
+
+    expect(sprite.width).toBe(24);
+    expect(sprite.height).toBe(12);
+  });
+});

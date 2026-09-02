@@ -160,17 +160,30 @@ export class Sprite extends Drawable {
     this.invalidateCache();
   }
 
+  /**
+   * Sizes assigned while the texture frame was still empty, replayed once it
+   * has real dimensions. `null` when the caller never set one.
+   */
+  private _pendingWidth: number | null = null;
+  private _pendingHeight: number | null = null;
+
   public get width(): number {
     return Math.abs(this.scale.x) * this._textureFrame.width;
   }
 
   public set width(value: number) {
-    // A not-yet-loaded texture has a 0-wide frame; dividing by it would poison
-    // scale with NaN (and, being NaN, never recover). Keep the current scale
-    // until real dimensions arrive - the load self-heal resets the frame.
-    if (this._textureFrame.width !== 0) {
-      this.scale.x = value / this._textureFrame.width;
+    // A not-yet-loaded texture has a 0-wide frame, and the scale this size
+    // implies cannot be computed against it without poisoning scale with NaN.
+    // The value is held instead of dropped: a caller who sizes a sprite built
+    // from a loader handle would otherwise have the assignment silently do
+    // nothing, and the sprite would surface at the texture's own size.
+    if (this._textureFrame.width === 0) {
+      this._pendingWidth = value;
+      return;
     }
+
+    this._pendingWidth = null;
+    this.scale.x = value / this._textureFrame.width;
   }
 
   public get height(): number {
@@ -178,9 +191,13 @@ export class Sprite extends Drawable {
   }
 
   public set height(value: number) {
-    if (this._textureFrame.height !== 0) {
-      this.scale.y = value / this._textureFrame.height;
+    if (this._textureFrame.height === 0) {
+      this._pendingHeight = value;
+      return;
     }
+
+    this._pendingHeight = null;
+    this.scale.y = value / this._textureFrame.height;
   }
 
   /**
@@ -316,7 +333,15 @@ export class Sprite extends Drawable {
     // 0×0 frame, so a non-empty frame here means someone chose one deliberately;
     // only heal the untouched case.
     if (this._texture === texture && !this.destroyed && this._textureFrame.width === 0 && this._textureFrame.height === 0) {
+      // Read before the reset: it sizes the sprite to the new frame, and that
+      // assignment goes through the same setter, which clears what is pending.
+      const width = this._pendingWidth;
+      const height = this._pendingHeight;
+
       this.resetTextureFrame();
+
+      if (width !== null) this.width = width;
+      if (height !== null) this.height = height;
     }
   }
 
@@ -346,12 +371,15 @@ export class Sprite extends Drawable {
     this.flags.addMask(SpriteFlags.TextureCoords);
     this._setLocalBounds(0, 0, frame.width, frame.height);
 
+    // Sizing against an empty frame is skipped rather than assigned: the size
+    // setters hold what they cannot express yet, and a zero from this internal
+    // path is the absence of a size, not a caller asking for one.
     if (resetSize) {
-      this.width = frame.width;
-      this.height = frame.height;
+      if (frame.width !== 0) this.width = frame.width;
+      if (frame.height !== 0) this.height = frame.height;
     } else {
-      this.width = width;
-      this.height = height;
+      if (width !== 0) this.width = width;
+      if (height !== 0) this.height = height;
     }
 
     // The local bounds changed size - re-derive the origin from the

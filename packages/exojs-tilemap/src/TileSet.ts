@@ -106,6 +106,17 @@ export class TileSet {
     validateNonNegativeInteger(spacing, 'spacing');
     validateNonNegativeInteger(margin, 'margin');
 
+    // A tile grid is derived from the atlas dimensions and then fixed, so it
+    // cannot be built against a texture that has not loaded yet - and the
+    // dimension checks below would otherwise report the resulting zeros as a
+    // bad tile size rather than as the real cause.
+    if (options.texture.width <= 0 || options.texture.height <= 0) {
+      throw new Error(
+        `TileSet needs a loaded texture to derive its grid, but "${options.name}" was given one measuring ` +
+          `${options.texture.width}x${options.texture.height}. Await it (loader.load(...) or texture.loaded) before constructing the tile set.`,
+      );
+    }
+
     const atlasWidth = options.texture.width - margin * 2;
     const atlasHeight = options.texture.height - margin * 2;
 

@@ -234,6 +234,29 @@ const captureErrors = (): void => {
 // stage), while downscaling blends every source pixel into one of the grid's
 // cells, so even a few non-background pixels shift at least one cell's
 // average.
+/**
+ * Whether the canvas is still one uniform colour after giving it room to draw.
+ *
+ * Polls rather than sampling once at a fixed delay: an example that paints
+ * immediately is judged as soon as it has, while one that compiles shaders or
+ * builds a filter chain first gets the time it needs. A single fixed wait has
+ * to be either too short for the slowest example or wasted on every other one,
+ * and picking it wrong turns a working example into a failure.
+ */
+const staysBlank = async (page: Page, previewFrame: Frame, timeoutMs: number): Promise<boolean> => {
+  const deadline = Date.now() + timeoutMs;
+
+  do {
+    if (!(await isCanvasBlank(page, previewFrame))) {
+      return false;
+    }
+
+    await page.waitForTimeout(400);
+  } while (Date.now() < deadline);
+
+  return true;
+};
+
 const isCanvasBlank = async (page: Page, previewFrame: Frame): Promise<boolean> => {
   // Measured on the preview IFRAME in the host document, never on the canvas
   // inside it: the playground scales the preview with a CSS transform, under
@@ -469,7 +492,7 @@ const runExample = async (
         result.status = 'failed';
         result.note = 'the preview iframe never mounted a canvas (no error thrown)';
       }
-    } else if (await isCanvasBlank(page, previewFrame)) {
+    } else if (await staysBlank(page, previewFrame, timeoutMs)) {
       const reason = BLANK_ALLOWLIST[entry.path];
       if (reason) {
         result.status = 'passed';
