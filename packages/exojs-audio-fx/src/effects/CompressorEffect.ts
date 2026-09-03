@@ -5,7 +5,9 @@ export interface CompressorEffectOptions {
   threshold?: number;
   knee?: number;
   ratio?: number;
+  /** Time in seconds for the compressor to engage after the signal exceeds the threshold. Range 0..1, default 0.003. */
   attack?: number;
+  /** Time in seconds for the compressor to disengage after the signal drops below the threshold. Range 0..1, default 0.25. */
   release?: number;
 }
 

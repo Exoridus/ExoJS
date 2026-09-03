@@ -186,7 +186,8 @@ export class AudioBus {
 
   /**
    * Linearly ramp the output gain from 0 to the current volume over
-   * `durationMs`. Cancels any in-flight ramps on the same gain node.
+   * `durationMs`, in milliseconds. Cancels any in-flight ramps on the same
+   * gain node.
    */
   public fadeIn(durationMs: number): this {
     this._clearScheduledStop();
@@ -203,9 +204,9 @@ export class AudioBus {
   }
 
   /**
-   * Linearly ramp the output gain to 0 over `durationMs`. By default
-   * mutes the bus once the ramp completes (`stopAfter: true`); pass
-   * `stopAfter: false` to let the ramp finish silently while leaving
+   * Linearly ramp the output gain to 0 over `durationMs`, in milliseconds.
+   * By default mutes the bus once the ramp completes (`stopAfter: true`);
+   * pass `stopAfter: false` to let the ramp finish silently while leaving
    * `muted` unchanged.
    */
   public fadeOut(durationMs: number, options: { stopAfter?: boolean } = {}): this {
