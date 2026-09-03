@@ -103,14 +103,28 @@ export class Scrollbar extends Widget {
   private _dragOrigin = 0;
   private _dragOffset = 0;
   private _dragging = false;
+  /**
+   * The contact that started the current drag. The drag follows the
+   * application's pointer signals, which carry every contact, so a second
+   * finger elsewhere must not move this thumb or end its drag.
+   */
+  private _dragPointerId = -1;
   /** Scratch vector reused while dragging - a pointer move must not allocate. */
   private readonly _localPoint = new Vector();
 
-  private readonly _onGlobalPointerMove = (_pointer: Pointer, x: number, y: number): void => {
+  private readonly _onGlobalPointerMove = (pointer: Pointer, x: number, y: number): void => {
+    if (pointer.id !== this._dragPointerId) {
+      return;
+    }
+
     this._trackDrag(x, y);
   };
 
-  private readonly _onGlobalPointerUp = (): void => {
+  private readonly _onGlobalPointerUp = (pointer: Pointer): void => {
+    if (pointer.id !== this._dragPointerId) {
+      return;
+    }
+
     this._endDrag();
   };
 
@@ -263,6 +277,7 @@ export class Scrollbar extends Widget {
     event.stopPropagation();
 
     this._dragging = true;
+    this._dragPointerId = event.pointer.id;
     this._dragOffset = this._offset;
     this._dragOrigin = this._axisOf(event.x, event.y);
     this._thumb.setPressed(true);
@@ -298,6 +313,7 @@ export class Scrollbar extends Widget {
     }
 
     this._dragging = false;
+    this._dragPointerId = -1;
     this._thumb.setPressed(false);
     this._subscribeDrag(false);
   }

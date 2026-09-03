@@ -112,6 +112,12 @@ export abstract class TextEditWidget extends Widget {
   private _blinkApp: Application | null = null;
   private _pointerInside = false;
   private _dragging = false;
+  /**
+   * The contact that started the current selection drag. The drag follows the
+   * application's pointer signals, which carry every contact, so a second
+   * finger elsewhere must not move this selection or end its drag.
+   */
+  private _dragPointerId = -1;
   private _dragAnchor = 0;
   private _lastPressTime = 0;
   private _lastPressX = 0;
@@ -179,14 +185,14 @@ export abstract class TextEditWidget extends Widget {
     } else {
       this.model.setSelection(offset, offset);
       this._dragAnchor = offset;
-      this._startPointerDrag();
+      this._startPointerDrag(event.pointer.id);
     }
 
     this._afterModelChange();
   };
 
-  private readonly _onPointerDragMove = (_pointer: Pointer, x: number, y: number): void => {
-    if (!this._dragging) {
+  private readonly _onPointerDragMove = (pointer: Pointer, x: number, y: number): void => {
+    if (!this._dragging || pointer.id !== this._dragPointerId) {
       return;
     }
 
@@ -196,7 +202,11 @@ export abstract class TextEditWidget extends Widget {
     this._afterModelChange();
   };
 
-  private readonly _onPointerDragEnd = (): void => {
+  private readonly _onPointerDragEnd = (pointer: Pointer): void => {
+    if (pointer.id !== this._dragPointerId) {
+      return;
+    }
+
     this._stopPointerDrag();
   };
 
@@ -687,7 +697,7 @@ export abstract class TextEditWidget extends Widget {
     return false;
   }
 
-  private _startPointerDrag(): void {
+  private _startPointerDrag(pointerId: number): void {
     if (this._dragging) {
       return;
     }
@@ -699,6 +709,7 @@ export abstract class TextEditWidget extends Widget {
     }
 
     this._dragging = true;
+    this._dragPointerId = pointerId;
     app.input.onPointerMove.add(this._onPointerDragMove);
     app.input.onPointerUp.add(this._onPointerDragEnd);
     app.input.onPointerCancel.add(this._onPointerDragEnd);
@@ -710,6 +721,7 @@ export abstract class TextEditWidget extends Widget {
     }
 
     this._dragging = false;
+    this._dragPointerId = -1;
 
     const app = this._stage?.app;
 

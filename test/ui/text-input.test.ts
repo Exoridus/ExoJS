@@ -47,6 +47,31 @@ describe('TextInput', () => {
     expect(field.selectionEnd).toBe(5);
   });
 
+  test('a second contact neither extends the selection nor ends the drag', () => {
+    const harness = createUIApp();
+    const field = new TextInput({ width: 200, height: 36 });
+
+    harness.scene.ui.addChild(field);
+    press(harness, 5, 18);
+    type('hello');
+
+    // A second press at the caret's own end, so the drag starts collapsed.
+    press(harness, 103, 18);
+
+    expect(field.selectionStart).toBe(5);
+
+    harness.signals.onPointerMove.dispatch(makePointer(5, 18, 2), 5, 18);
+
+    expect(field.selectionStart).toBe(5);
+    expect(field.selectionEnd).toBe(5);
+
+    harness.signals.onPointerUp.dispatch(makePointer(5, 18, 2), 5, 18);
+    harness.signals.onPointerMove.dispatch(makePointer(5, 18), 5, 18);
+
+    expect(field.selectionStart).toBe(0);
+    expect(field.selectionEnd).toBe(5);
+  });
+
   test('a double press selects the word under the pointer', () => {
     const harness = createUIApp();
     const field = new TextInput({ width: 200, height: 36 });

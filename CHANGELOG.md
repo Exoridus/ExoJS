@@ -342,6 +342,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - **Text-field shortcuts answer to `Meta`.** Select-all, undo and redo were
   bound to `Control` alone, so `Cmd+A`, `Cmd+Z` and `Cmd+Y` did nothing on
   macOS.
+- **A second finger no longer drags every slider, scrollbar and text
+  selection.** Widget drags follow the application's pointer signals so they
+  continue outside the widget, but they ignored which contact those signals
+  carried: any second touch moved every widget already being dragged, and
+  lifting either finger ended all of them. Each drag now records the contact
+  that started it and ignores the rest.
 
 ## [0.16.1] - 2026-09-02
 
