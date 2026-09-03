@@ -421,6 +421,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   could be silently lost, or a sensor `enter` could arrive with no matching
   `exit`. Events are now dispatched once per fixed step, as `fixedUpdate()`
   already did.
+- **`PhysicsWorld.add()` could leave a body permanently half-attached.** A
+  dynamic body with no mass-carrying collider was rejected after its id,
+  owner and `attached` flag were already set, so the error's own documented
+  recovery ("add a solid collider, then add it") failed with "already been
+  added to a world" instead, and `addCollider()` then registered further
+  colliders into a world the body was never actually tracked by. The mass
+  check now runs before any attachment state changes.
 
 ## [0.16.1] - 2026-09-02
 

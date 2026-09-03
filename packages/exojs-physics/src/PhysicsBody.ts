@@ -542,6 +542,14 @@ export class PhysicsBody {
       throw new Error('PhysicsBody: cannot add a destroyed body to a world.');
     }
 
+    // Validate before touching `_owner`/`_id`/`_attached`: the mass check only
+    // reads the held colliders, so it can run before the body claims a world at
+    // all. Throwing after that point would leave the body half-attached -
+    // `attached === true` with nothing else done - and unrecoverable, since a
+    // second `add()` then rejects it as already-added.
+    this._recomputeMass();
+    this._assertDynamicCarriesMass();
+
     this._owner = owner;
     this._id = id;
     this._attached = true;
@@ -549,9 +557,6 @@ export class PhysicsBody {
     for (const collider of this._colliders) {
       attachWithChainEdges(collider, this, owner);
     }
-
-    this._recomputeMass();
-    this._assertDynamicCarriesMass();
 
     for (const collider of this._colliders) {
       collider.synchronize(this._transform);

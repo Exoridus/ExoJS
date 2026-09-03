@@ -2,7 +2,7 @@ import { Container, Drawable, type SceneNode } from '@codexo/exojs';
 import { describe, expect, it } from 'vitest';
 
 import { createAabb, expandAabb } from '../src/Aabb';
-import { BoxShape, CircleShape, Collider, DistanceJoint, PhysicsBody, PhysicsWorld } from '../src/index';
+import { BoxShape, CircleShape, Collider, DistanceJoint, PhysicsBody, PhysicsWorld, SegmentShape } from '../src/index';
 import { colliderAt } from './support';
 
 interface FakeNode {
@@ -75,6 +75,25 @@ describe('PhysicsWorld lifecycle and mass model', () => {
     const body = world.add(new PhysicsBody({ type: 'dynamic', colliders: [{ shape: new BoxShape(10, 10) }] }));
 
     expect(() => world.add(body)).toThrow();
+  });
+
+  it('add() does not half-attach a body when the mass guard rejects it, and the documented recovery works', () => {
+    const world = new PhysicsWorld();
+    const bad = new PhysicsBody({ type: 'dynamic', colliders: [{ shape: new SegmentShape(0, 0, 10, 0) }] });
+
+    expect(() => world.add(bad)).toThrow();
+    expect(bad.attached).toBe(false);
+    expect(bad.id).toBe(-1);
+    expect(world.bodies).toHaveLength(0);
+    expect(world.colliders).toHaveLength(0);
+
+    // The error message's recovery advice ("add a solid collider") must actually
+    // be actionable: a still-unattached body accepts a new collider and a second
+    // add() then succeeds instead of hitting the already-attached guard.
+    bad.addCollider({ shape: new BoxShape(10, 10) });
+    expect(() => world.add(bad)).not.toThrow();
+    expect(bad.attached).toBe(true);
+    expect(world.bodies).toContain(bad);
   });
 
   it('derives mass and inertia for a dynamic body from collider density', () => {
