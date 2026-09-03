@@ -429,6 +429,44 @@ describe('AnimatedSprite', () => {
       expect(completeSpy).toHaveBeenCalledWith('walk');
     });
 
+    test('a per-call repeat belongs to that playback run and does not leak into the next clip', () => {
+      const frames = createFrames();
+      const sprite = new AnimatedSprite(null, {
+        // Both clips default to infinite.
+        attack: { frames, fps: 10 },
+        idle: { frames, fps: 10 },
+      });
+
+      sprite.play('attack', { repeat: 2 });
+      expect(sprite.repeat).toBe(2);
+
+      sprite.play('idle');
+
+      expect(sprite.repeat).toBe(-1);
+
+      // Three full 300ms cycles: an override that leaked would have stopped
+      // the indefinitely-looping idle clip after the second one.
+      sprite.update(seconds(300));
+      sprite.update(seconds(300));
+      sprite.update(seconds(300));
+
+      expect(sprite.playing).toBe(true);
+    });
+
+    test('the repeat setter survives a play() that resumes the same clip', () => {
+      const frames = createFrames();
+      const sprite = new AnimatedSprite(null, { walk: { frames, fps: 10 } });
+
+      sprite.play('walk');
+      sprite.repeat = 2;
+
+      // `restart: false` on the active clip resumes the run in progress rather
+      // than starting a new one, so the override it is running under stands.
+      sprite.play('walk', { restart: false });
+
+      expect(sprite.repeat).toBe(2);
+    });
+
     test('repeat must be -1 or a positive integer', () => {
       const frames = createFrames();
       const sprite = new AnimatedSprite(null);

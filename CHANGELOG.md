@@ -237,6 +237,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - **`AudioZone.height` is documented as the half-band it is.** The option and
   the field described it two different ways; `height: 100` covers `z` from
   `-100` to `100`, which both now say.
+- **A per-call `repeat` on `AnimatedSprite.play()` no longer leaks into the next
+  clip.** The override was written on every `play()` and never cleared, so
+  `play('attack', { repeat: 2 })` followed by `play('idle')` stopped the
+  indefinitely-looping idle clip after two cycles. An override now belongs to
+  the playback run that set it.
 
 ## [0.16.1] - 2026-09-02
 

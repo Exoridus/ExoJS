@@ -41,7 +41,11 @@ export interface AnimatedSpriteClipDefinition {
 
 /** Per-call options passed to {@link AnimatedSprite.play}. */
 export interface AnimatedSpritePlayOptions {
-  /** Per-call override of the clip's {@link AnimatedSpriteClipDefinition.repeat}, for the duration of this `play()` call. */
+  /**
+   * Override of the clip's {@link AnimatedSpriteClipDefinition.repeat} for the
+   * playback run this call starts. Omitting it plays the clip with its own
+   * `repeat` again - an override never carries from one run into the next.
+   */
   repeat?: number;
   restart?: boolean;
 }
@@ -141,8 +145,10 @@ export class AnimatedSprite extends Sprite {
 
   /**
    * How many cycles the current clip plays before stopping. Returns the
-   * per-call override if set via {@link play} or this setter, otherwise the
-   * clip's own `repeat` value (or `-1` if no clip is active).
+   * override set via {@link play}'s `options.repeat` or this setter, otherwise
+   * the clip's own `repeat` value (or `-1` if no clip is active). The override
+   * belongs to the current playback run: the next {@link play} that starts a
+   * run drops it unless that call supplies one of its own.
    */
   public get repeat(): number {
     if (this._repeatOverride !== null) {
@@ -323,12 +329,18 @@ export class AnimatedSprite extends Sprite {
       this._currentFrameIndex = 0;
       this._elapsedFrameTimeMs = 0;
       this._completedCycles = 0;
+      // A new run starts from the clip's own repeat: an override left over from
+      // the previous one would otherwise stop an indefinitely-looping clip after
+      // the cycle count some earlier call asked for.
+      this._repeatOverride = null;
       // Normalized clips always hold at least one frame.
       this._applyFrame(clip, 0);
       this.onFrame.dispatch(name, 0);
     }
 
-    this._repeatOverride = options.repeat ?? this._repeatOverride;
+    if (options.repeat !== undefined) {
+      this._repeatOverride = options.repeat;
+    }
     this._playing = true;
     this._syncSystemRegistration();
 

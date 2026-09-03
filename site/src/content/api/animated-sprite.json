@@ -3113,7 +3113,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "How many cycles the current clip plays before stopping. Returns the per-call override if set via play or this setter, otherwise the clip's own repeat value (or -1 if no clip is active)."
+          "description": "How many cycles the current clip plays before stopping. Returns the override set via play's options.repeat or this setter, otherwise the clip's own repeat value (or -1 if no clip is active). The override belongs to the current playback run: the next play that starts a run drops it unless that call supplies one of its own."
         },
         {
           "name": "rotation",
