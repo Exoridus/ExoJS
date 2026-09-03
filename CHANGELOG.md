@@ -66,6 +66,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   escaped the returned promise and never reached the `.catch()` that is the
   only handler a write has - unlike the serialization failure two lines above
   it, which did reject.
+- **A blocked IndexedDB open no longer leaks the connection it later gets.**
+  The `blocked` event rejected the open, but the request still completed once
+  the blocking connection went away, handing over an `IDBDatabase` nobody was
+  waiting for and nothing closed - which then blocked every future upgrade in
+  its turn. A connection arriving after a rejected open is closed.
 
 ## [0.16.1] - 2026-09-02
 

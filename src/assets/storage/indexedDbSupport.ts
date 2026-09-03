@@ -40,13 +40,23 @@ export const openIndexedDb = (
   }
 
   return new Promise((resolve, reject) => {
+    // A rejected open can still succeed afterwards: `blocked` fires while
+    // another connection holds an older version, and the request completes as
+    // soon as that connection goes away. Nobody is waiting for the connection
+    // by then, and an unclosed one blocks every future upgrade in its turn.
+    let rejected = false;
+    const failOpen = (error: AssetCacheError): void => {
+      rejected = true;
+      reject(error);
+    };
+
     request.addEventListener('upgradeneeded', event => {
       const { transaction } = request;
 
       // The spec guarantees a versionchange transaction here; a connection that
       // has none cannot be upgraded and would leave a half-built schema.
       if (transaction === null) {
-        reject(new AssetCacheError({ ...failure, message: `The database "${name}" reported no upgrade transaction.` }));
+        failOpen(new AssetCacheError({ ...failure, message: `The database "${name}" reported no upgrade transaction.` }));
 
         return;
       }
@@ -57,14 +67,14 @@ export const openIndexedDb = (
         // Aborting is what turns a failed migration into a failed open rather
         // than leaving a half-built schema behind for the next session.
         transaction.abort();
-        reject(asCacheError(failure, error));
+        failOpen(asCacheError(failure, error));
       }
     });
 
-    request.addEventListener('success', () => resolve(request.result));
-    request.addEventListener('error', () => reject(asCacheError(failure, request.error ?? undefined)));
+    request.addEventListener('success', () => (rejected ? request.result.close() : resolve(request.result)));
+    request.addEventListener('error', () => failOpen(asCacheError(failure, request.error ?? undefined)));
     request.addEventListener('blocked', () =>
-      reject(new AssetCacheError({ ...failure, message: `Opening the database "${name}" is blocked by another connection holding an older version.` })),
+      failOpen(new AssetCacheError({ ...failure, message: `Opening the database "${name}" is blocked by another connection holding an older version.` })),
     );
   });
 };
