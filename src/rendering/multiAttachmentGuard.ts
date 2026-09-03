@@ -1,9 +1,41 @@
+import { logger } from '#core/Logger';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { Sprite } from '#rendering/sprite/Sprite';
 
 import type { Drawable } from './Drawable';
-import type { RenderBackendType } from './RenderBackendType';
+import { RenderBackendType } from './RenderBackendType';
 import { RenderError } from './RenderError';
+
+/**
+ * Warn once per shader/attachment-count pairing when a material's fragment
+ * shader declares fewer outputs than the active target has attachments.
+ *
+ * Parsed via {@link ShaderSource.countFragmentOutputs}, which is regex-based
+ * and best-effort - `null` (language not supplied, or the declared struct
+ * could not be resolved) is treated as "cannot tell" and never warns. This
+ * is diagnostic only: it does not change what the backend accepts, and a
+ * shader with the reflection-defeating shape below simply misses the warning.
+ */
+const warnIfUnderDeclared = (drawable: Drawable, attachmentCount: number, backendType: RenderBackendType): void => {
+  const material = drawable instanceof Mesh || drawable instanceof Sprite ? drawable.material : null;
+
+  if (material === null) {
+    return;
+  }
+
+  const counts = material.shader.countFragmentOutputs();
+  const declared = backendType === RenderBackendType.WebGpu ? counts.wgsl : counts.glsl;
+
+  if (declared === null || declared >= attachmentCount) {
+    return;
+  }
+
+  logger.warn(
+    `A material's fragment shader declares ${declared} output(s) but the active render target has ${attachmentCount} colour attachments. ` +
+      `Attachments beyond the declared outputs keep their previous contents (WebGL2) or are rejected at pipeline creation (WebGPU).`,
+    { source: 'multiAttachmentGuard', once: `multi-attachment-under-declared:${material.shader.id}:${attachmentCount}` },
+  );
+};
 
 /**
  * Refuse a drawable that cannot write every colour attachment of the active
@@ -23,6 +55,8 @@ import { RenderError } from './RenderError';
  */
 export const assertDrawsAllAttachments = (drawable: Drawable, attachmentCount: number, backendType: RenderBackendType): void => {
   if ((drawable instanceof Mesh || drawable instanceof Sprite) && drawable.material !== null) {
+    warnIfUnderDeclared(drawable, attachmentCount, backendType);
+
     return;
   }
 

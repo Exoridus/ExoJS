@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 6,
+  "memberCount": 7,
   "counts": {
     "constructors": 1,
-    "methods": 2,
+    "methods": 3,
     "properties": 3,
     "events": 0
   },
@@ -104,6 +104,83 @@
       "id": "methods",
       "title": "Methods",
       "members": [
+        {
+          "name": "countFragmentOutputs",
+          "signature": "countFragmentOutputs(): { glsl: null | number; wgsl: null | number }",
+          "signatureTokens": [
+            {
+              "text": "countFragmentOutputs",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "glsl",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "wgsl",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "{ glsl: null | number; wgsl: null | number }",
+          "description": "Best-effort count of the color attachments each language's fragment stage writes, from its declared outputs - null for a language not supplied. Parsed via the same lightweight regex approach as getDeclaredUniforms, not a full grammar: intended for an early dev-build warning when a material is drawn into a multi-attachment target it cannot fully satisfy, not for driving pipeline creation."
+        },
         {
           "name": "detectUniformDrift",
           "signature": "detectUniformDrift(): { onlyInGlsl: readonly string[]; onlyInWgsl: readonly string[] }",

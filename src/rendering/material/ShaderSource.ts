@@ -197,6 +197,21 @@ export class ShaderSource {
 
     return { onlyInGlsl, onlyInWgsl };
   }
+
+  /**
+   * Best-effort count of the color attachments each language's fragment stage
+   * writes, from its declared outputs - `null` for a language not supplied.
+   * Parsed via the same lightweight regex approach as {@link getDeclaredUniforms},
+   * not a full grammar: intended for an early dev-build warning when a
+   * material is drawn into a multi-attachment target it cannot fully satisfy,
+   * not for driving pipeline creation.
+   */
+  public countFragmentOutputs(): { glsl: number | null; wgsl: number | null } {
+    return {
+      glsl: this.glsl !== null ? countGlslFragmentOutputs(this.glsl.fragment) : null,
+      wgsl: this.wgsl !== null ? countWgslFragmentOutputs(this.wgsl) : null,
+    };
+  }
 }
 
 const autoBoundUniformNames = new Set<string>(['u_projection', 'u_translation', 'u_tint', 'u_texture', 'u_mesh']);
@@ -248,4 +263,60 @@ const parseWgslUniforms = (source: string): Record<string, string> => {
   }
 
   return result;
+};
+
+// Matches a GLSL ES 3.00 fragment output declaration, with or without a
+// preceding `layout(location = n)` qualifier - a single unqualified `out`
+// (implicit location 0) is exactly as valid as an explicit one, and a
+// multi-output shader needs the qualifier on every entry but this one, so
+// counting the `out` declarations themselves (not just the qualified ones)
+// is what generalizes to both shapes.
+// The `\s+`/`[A-Za-z_]\w*` groups match disjoint character classes in a fixed
+// sequence, so there is no ambiguous backtracking; the linter's static
+// heuristic flags any regex with two quantified word/space groups in a row
+// regardless, with no way to see that.
+// eslint-disable-next-line security/detect-unsafe-regex
+const glslFragmentOutputPattern = /\bout\s+(?:(?:mediump|highp|lowp)\s+)?[A-Za-z_]\w*\s+[A-Za-z_]\w*\s*;/g;
+
+const countGlslFragmentOutputs = (fragmentSource: string): number => {
+  const stripped = stripComments(fragmentSource);
+  const matches = stripped.match(glslFragmentOutputPattern);
+
+  return matches !== null ? matches.length : 0;
+};
+
+// Captures the fragment entry point's return-type clause, up to its body.
+const wgslFragmentEntryPattern = /@fragment\s+fn\s+\w+\s*\([^)]*\)\s*->\s*([^{]+)\{/;
+const wgslLocationPattern = /@location\(\s*\d+\s*\)/g;
+
+/**
+ * `null` when the source declares no `@fragment` entry point at all (a
+ * vertex-only or compute-only module) - distinct from `0`, which would
+ * incorrectly read as "declares zero outputs".
+ */
+const countWgslFragmentOutputs = (source: string): number | null => {
+  const stripped = stripComments(source);
+  const entryMatch = wgslFragmentEntryPattern.exec(stripped);
+
+  if (entryMatch === null) {
+    return null;
+  }
+
+  const returnType = entryMatch[1]!.trim();
+
+  // A single output writes its `@location` directly on the return type
+  // instead of through a struct: `-> @location(0) vec4<f32>`.
+  if (returnType.startsWith('@location(')) {
+    return 1;
+  }
+
+  const structMatch = new RegExp(`struct\\s+${returnType}\\s*\\{([^}]*)\\}`).exec(stripped);
+
+  if (structMatch === null) {
+    return null;
+  }
+
+  const locations = structMatch[1]!.match(wgslLocationPattern);
+
+  return locations !== null ? locations.length : 0;
 };

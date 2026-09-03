@@ -14,6 +14,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Fixed
 
+- **A material drawn into a multi-attachment target now gets a dev-build
+  warning when its fragment shader under-declares outputs.** The guard that
+  refuses a drawable without a material never checked whether a material's
+  own shader actually writes every attachment; a shader with fewer declared
+  outputs than the target's attachment count silently left the extra
+  attachments at their previous contents on WebGL2 (WebGPU already refuses
+  pipeline creation for this). `ShaderSource.countFragmentOutputs` reflects
+  the declared `@location`/`layout(location = n) out` count from the active
+  backend's language and warns once per shader/attachment-count pairing when
+  it falls short.
 - **`RenderTexturePool` keys pooled textures by format as well as size.**
   `acquire()` matched on `width x height` alone, so a pool holding an
   `Rgba8` entry could hand it back for a request in a different format.

@@ -111,6 +111,73 @@ describe('ShaderSource', () => {
     expect(drift.onlyInGlsl).toContain('u_time');
     expect(drift.onlyInWgsl).toContain('u_user');
   });
+
+  describe('countFragmentOutputs', () => {
+    test('counts a single unqualified GLSL output as one', () => {
+      const source = new ShaderSource({ glsl: { vertex: GLSL_VERTEX, fragment: GLSL_FRAGMENT } });
+
+      expect(source.countFragmentOutputs().glsl).toBe(1);
+    });
+
+    test('counts explicit layout(location = n) GLSL outputs', () => {
+      const fragment = /* glsl */ `#version 300 es
+precision highp float;
+layout(location = 0) out vec4 fragColor;
+layout(location = 1) out vec4 fragNormal;
+void main() {}
+`;
+      const source = new ShaderSource({ glsl: { vertex: GLSL_VERTEX, fragment } });
+
+      expect(source.countFragmentOutputs().glsl).toBe(2);
+    });
+
+    test('counts a WGSL fragment entry that returns @location directly as one', () => {
+      const wgsl = /* wgsl */ `
+@fragment
+fn fs_main() -> @location(0) vec4<f32> {
+  return vec4<f32>(1.0);
+}
+`;
+      const source = new ShaderSource({ wgsl });
+
+      expect(source.countFragmentOutputs().wgsl).toBe(1);
+    });
+
+    test('counts @location fields on a WGSL fragment entry that returns a struct', () => {
+      const wgsl = /* wgsl */ `
+struct FragmentOutput {
+  @location(0) color: vec4<f32>,
+  @location(1) normal: vec4<f32>,
+};
+
+@fragment
+fn fs_main() -> FragmentOutput {
+  return FragmentOutput(vec4<f32>(1.0), vec4<f32>(0.0));
+}
+`;
+      const source = new ShaderSource({ wgsl });
+
+      expect(source.countFragmentOutputs().wgsl).toBe(2);
+    });
+
+    test('is null for a WGSL module with no @fragment entry', () => {
+      const wgsl = /* wgsl */ `
+@vertex
+fn vs_main() -> @builtin(position) vec4<f32> {
+  return vec4<f32>(1.0);
+}
+`;
+      const source = new ShaderSource({ wgsl });
+
+      expect(source.countFragmentOutputs().wgsl).toBeNull();
+    });
+
+    test('is null for a language the source does not supply', () => {
+      const source = new ShaderSource({ glsl: { vertex: GLSL_VERTEX, fragment: GLSL_FRAGMENT } });
+
+      expect(source.countFragmentOutputs().wgsl).toBeNull();
+    });
+  });
 });
 
 describe('Material base', () => {
