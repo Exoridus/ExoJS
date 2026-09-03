@@ -930,7 +930,10 @@ export abstract class RenderNode extends SceneNode {
   private _getCacheSprite(): RenderNodeSpriteLike {
     if (this._cacheSprite === null) {
       if (RenderNode._spriteFactory === null) {
-        throw new Error('RenderNode sprite factory is not initialized.');
+        throw new Error(
+          'cacheAsTexture has no sprite factory: the module that registers it (Sprite.ts) was dropped by the bundler. ' +
+            "Import Sprite (or anything else) from the package's root entry point so it is not tree-shaken away.",
+        );
       }
 
       this._cacheSprite = RenderNode._spriteFactory();

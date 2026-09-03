@@ -480,6 +480,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   left CI green without exercising it. A bench test change now gates the
   existing structural-gate lane; a create-exo-app change now gates a new
   verify lane that runs `verify:create-exo-app`.
+- **`cacheAsTexture` no longer risks a bundler tree-shaking away the module
+  that makes it work.** The package declared `"sideEffects": false` while
+  `Sprite.ts`, `Logger.ts` and `theme.ts` register load-bearing state at
+  import time (the sprite factory `cacheAsTexture` depends on, the dev
+  console sink, and the frozen default UI theme), so a bundler that never
+  saw a used export from one of them was free to drop it. Those three
+  modules are now listed in `sideEffects`, and the error a dropped `Sprite.ts`
+  produces now names the cause and the remedy instead of just failing.
 
 ## [0.16.1] - 2026-09-02
 
