@@ -222,8 +222,11 @@ export interface PlatformAdapter extends TimeSource, FrameScheduler {
    * page, is not this. The input pipeline reads it to tell "focus moved inside
    * the application" from "focus left it", so an adapter that reports it too
    * liberally makes the application swallow keys meant for the page.
+   *
+   * Optional: an adapter without a text transport never lends focus away and
+   * can leave it undefined.
    */
-  readonly textInputFocused: boolean;
+  readonly textInputFocused?: boolean;
 
   /** Give the drawing surface host focus, so it starts receiving keyboard input. */
   focusSurface(): void;

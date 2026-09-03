@@ -1297,7 +1297,7 @@ export class InputSystem {
    * as much, since focus never left the application.
    */
   private _keyboardFocused(): boolean {
-    if (this.platform.textInputFocused) {
+    if (this.platform.textInputFocused === true) {
       return true;
     }
 
@@ -1332,7 +1332,7 @@ export class InputSystem {
   }
 
   private handleCanvasBlur(): void {
-    if (this.platform.textInputFocused) {
+    if (this.platform.textInputFocused === true) {
       // Focusing a text field moves host focus to the transport, which blurs
       // the surface. Keyboard focus stays inside the application, so held keys
       // stay held and no focus change is reported.
