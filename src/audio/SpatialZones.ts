@@ -18,9 +18,12 @@ const inaudibleSend = 0.0005;
  *
  * 1. every zone's weight is sampled at the LISTENER's position, because that is
  *    where an environment is heard from;
- * 2. every audible voice gets one send per zone whose weight is above zero, at
- *    `weight * zone.send`;
- * 3. a send whose zone has faded out, or whose voice has ended, is dropped.
+ * 2. every audible spatial voice gets one send per zone whose weight is above
+ *    zero, at `weight * zone.send`. A voice with no position in the world - a
+ *    UI blip, a music bed - is never given a zone send: it is not being heard
+ *    from anywhere in particular;
+ * 3. a send whose zone has faded out, or whose voice has ended or stopped being
+ *    positional, is dropped.
  *
  * Sends are opened lazily and reused across frames, so walking into a zone costs
  * one `GainNode` per voice and then nothing per frame but a level write - and the
@@ -129,6 +132,25 @@ export class SpatialZones {
 
   /** Drop the bookkeeping for a voice; the voice itself owns the send objects. @internal */
   public _forget(voice: Voice): void {
+    this._sends.delete(voice);
+  }
+
+  /**
+   * Close every zone send open on `voice` and drop its bookkeeping. Used when a
+   * voice stops being spatial while still playing - it leaves the ticked set,
+   * so nothing would ever close its sends again. @internal
+   */
+  public _release(voice: Voice): void {
+    const byZone = this._sends.get(voice);
+
+    if (byZone === undefined) {
+      return;
+    }
+
+    for (const send of byZone.values()) {
+      voice.removeSend(send);
+    }
+
     this._sends.delete(voice);
   }
 

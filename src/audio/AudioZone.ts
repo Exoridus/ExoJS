@@ -47,7 +47,7 @@ const isCircle = (shape: AudioZoneShape): shape is AudioZoneCircle => (shape as 
  *
  * Reverb belongs to the environment the LISTENER is in, not to each source, which
  * is why the weight is sampled at the listener and applied to every audible
- * voice.
+ * spatial voice.
  *
  * @example
  * ```ts

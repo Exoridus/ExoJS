@@ -490,7 +490,7 @@ describe('SpatialZones', () => {
     sound.destroy();
   });
 
-  test('a listener inside a zone opens a send on every voice, and leaving closes it', () => {
+  test('a listener inside a zone opens a send on every spatial voice, and leaving closes it', () => {
     const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
     const reverb = new AudioBus('reverb');
@@ -591,6 +591,51 @@ describe('SpatialZones', () => {
     expect(system.zones.active).toBe(false);
     expect(send.destroyed).toBe(true);
     expect(voice.sends).toHaveLength(0);
+
+    reverb.destroy();
+    sound.destroy();
+  });
+
+  test('a voice with no position in the world never gets a zone send', () => {
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub());
+    const reverb = new AudioBus('reverb');
+
+    system.zones.add(new AudioZone({ shape: new Rectangle(0, 0, 100, 100), bus: reverb, send: 0.6 }));
+
+    // No `position` and no `follow`: a UI blip or a music bed, heard from
+    // nowhere in particular and therefore not coloured by the environment.
+    const voice = system.play(sound);
+
+    system.listener.position.set(50, 50);
+    system.preUpdate(0.016 as never);
+
+    expect(voice.sends).toHaveLength(0);
+
+    reverb.destroy();
+    sound.destroy();
+  });
+
+  test('a voice that stops being spatial has its zone sends closed', () => {
+    const system = new AudioSystem();
+    const sound = new Sound(createAudioBufferStub());
+    const reverb = new AudioBus('reverb');
+
+    system.zones.add(new AudioZone({ shape: new Rectangle(0, 0, 100, 100), bus: reverb, send: 0.6 }));
+
+    const voice = system.play(sound, { position: { x: 10, y: 10 } });
+
+    system.listener.position.set(50, 50);
+    system.preUpdate(0.016 as never);
+    expect(voice.sends).toHaveLength(1);
+
+    const send = voice.sends[0]!;
+
+    voice.position = null;
+    system.preUpdate(0.016 as never);
+
+    expect(voice.sends).toHaveLength(0);
+    expect(send.destroyed).toBe(true);
 
     reverb.destroy();
     sound.destroy();

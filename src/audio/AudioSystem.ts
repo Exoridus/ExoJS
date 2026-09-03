@@ -432,7 +432,7 @@ export class AudioSystem {
     // After the listener moved and the voices followed it, so a zone crossing is
     // reconciled against this frame's positions rather than last frame's.
     if (this.zones.active) {
-      this.zones._tick(this.listener, this._voices);
+      this.zones._tick(this.listener, this._spatial);
     }
   }
 
@@ -447,6 +447,9 @@ export class AudioSystem {
   /** Internal: stop ticking a voice that returned to a direct graph. */
   public _unregisterSpatial(voice: SpatialVoice): void {
     this._spatial.delete(voice);
+    // The zone layer only reconciles spatial voices, so a voice leaving that
+    // set would otherwise keep whatever sends it held open for good.
+    this.zones._release(voice);
   }
 
   /**

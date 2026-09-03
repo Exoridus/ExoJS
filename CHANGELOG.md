@@ -229,6 +229,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   unhandled rejection.** The autoplay-unlock gesture handler attached no
   rejection handler, so a context the browser refused to resume produced a bare
   rejection with no hint of where it came from.
+- **Audio zones only colour spatial voices.** `SpatialZones` documented that it
+  reconciles the live set of spatial voices, but `AudioSystem` handed it every
+  voice - so a reverb zone opened a send on UI blips and music beds that have no
+  position in the world at all. A voice that stops being positional now has its
+  zone sends closed instead of keeping them open untouched.
 
 ## [0.16.1] - 2026-09-02
 

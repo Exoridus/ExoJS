@@ -1,6 +1,6 @@
 {
   "title": "AudioZone",
-  "description": "A region of the world that contributes a parallel send while the listener is inside it - a reverb zone, a muffled corridor, an underwater section. The zone owns geometry and a level, and nothing else: it does not route audio, hold effects or touch a voice. SpatialZones reads AudioZone.weightAt once per frame and maintains the sends. That split is deliberate - it means a zone is a plain value a level file can describe, and the effect chain behind it is an ordinary AudioBus the caller already knows how to build. Reverb belongs to the environment the LISTENER is in, not to each source, which is why the weight is sampled at the listener and applied to every audible voice.",
+  "description": "A region of the world that contributes a parallel send while the listener is inside it - a reverb zone, a muffled corridor, an underwater section. The zone owns geometry and a level, and nothing else: it does not route audio, hold effects or touch a voice. SpatialZones reads AudioZone.weightAt once per frame and maintains the sends. That split is deliberate - it means a zone is a plain value a level file can describe, and the effect chain behind it is an ordinary AudioBus the caller already knows how to build. Reverb belongs to the environment the LISTENER is in, not to each source, which is why the weight is sampled at the listener and applied to every audible spatial voice.",
   "symbol": "AudioZone",
   "kind": "class",
   "subsystem": "audio",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A region of the world that contributes a parallel send while the listener is inside it - a reverb zone, a muffled corridor, an underwater section.",
         "The zone owns geometry and a level, and nothing else: it does not route audio, hold effects or touch a voice. SpatialZones reads AudioZone.weightAt once per frame and maintains the sends. That split is deliberate - it means a zone is a plain value a level file can describe, and the effect chain behind it is an ordinary AudioBus the caller already knows how to build.",
-        "Reverb belongs to the environment the LISTENER is in, not to each source, which is why the weight is sampled at the listener and applied to every audible voice."
+        "Reverb belongs to the environment the LISTENER is in, not to each source, which is why the weight is sampled at the listener and applied to every audible spatial voice."
       ],
       "importLine": "import { AudioZone } from '@codexo/exojs'",
       "sourceLink": null
