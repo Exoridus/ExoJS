@@ -282,11 +282,11 @@ const startServer = (root: string): Promise<{ port: number; server: Server }> =>
           return;
         }
 
-        // Uncacheable on purpose: with cacheable responses the playground shell
-        // raised a bare `Event` on its very first load - Monaco fetches its
-        // TypeScript worker twice in quick succession, and the second load
-        // fails against the entry the first is still writing.
-        res.writeHead(200, { 'Content-Type': file.type, 'Cache-Control': 'no-store' });
+        // Cacheable on purpose, matching what a static host serves: a browser
+        // cache is part of what the shell has to survive, and serving
+        // `no-store` here would hide any regression that only shows up once
+        // responses can be cached.
+        res.writeHead(200, { 'Content-Type': file.type, 'Cache-Control': 'public, max-age=0, must-revalidate' });
         res.end(file.body);
       })
       .catch((error: unknown) => {
