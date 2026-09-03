@@ -487,3 +487,45 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
     im.destroy();
   });
 });
+
+describe('gated frames', () => {
+  it('a scene-transition-gated frame ends an in-progress drag instead of leaving the node captured', () => {
+    const { app, scene, signals, im } = createApp();
+    const sprite = draggable();
+
+    scene.addChild(sprite);
+
+    dispatchPointer(signals.onPointerDown, 50, 50);
+    im.preUpdate(frameDelta);
+    dispatchPointer(signals.onPointerMove, 90, 50, 40);
+    im.preUpdate(frameDelta);
+
+    expect(im.getCapturedNodes()).toEqual([sprite]);
+
+    const appMutable = app as unknown as { scenes: { _transitionGateOpen: boolean } };
+
+    appMutable.scenes._transitionGateOpen = true;
+
+    // The Up entry is queued, but this frame is gated - it must be discarded
+    // WITHOUT leaving the drag/capture behind for the gate to lift onto.
+    dispatchPointer(signals.onPointerUp, 90, 50, 40);
+    im.preUpdate(frameDelta);
+
+    expect(im.getCapturedNodes()).toEqual([]);
+
+    appMutable.scenes._transitionGateOpen = false;
+
+    const positionAfterGate = { x: sprite.position.x, y: sprite.position.y };
+
+    // Once the gate lifts, a plain move with no button held must not
+    // reposition the node - a drag the gated frame failed to end would keep
+    // following the pointer here.
+    dispatchPointer(signals.onPointerMove, 300, 300, 300);
+    im.preUpdate(frameDelta);
+
+    expect(sprite.position.x).toBe(positionAfterGate.x);
+    expect(sprite.position.y).toBe(positionAfterGate.y);
+
+    im.destroy();
+  });
+});

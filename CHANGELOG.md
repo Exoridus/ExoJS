@@ -358,6 +358,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   the node's surface ratio resolved to at that moment, which could be the
   wrong one; it now clears every pixel-ratio and mode variant of the font
   variant.
+- **A drag or pointer capture no longer survives a scene transition with no
+  button held.** A pointer frame gated by the active scene's state or the
+  director's transition gate discarded the queued events without ending any
+  in-progress drag, releasing capture, or forgetting the pointer - so a node
+  grabbed right before a transition kept following the pointer once the gate
+  lifted. A gated frame now runs the same cleanup a failed dispatch already
+  did.
 
 ## [0.16.1] - 2026-09-02
 
