@@ -100,15 +100,6 @@ export class GlyphAtlasPool {
       if (key.startsWith(prefix)) atlas.clear();
     }
   }
-
-  public clearAll(): void {
-    for (const atlas of this._atlases.values()) {
-      atlas.clear();
-    }
-    for (const metrics of this._metrics.values()) {
-      metrics.clear();
-    }
-  }
 }
 
 // ── Module-level default pool ────────────────────────────────────────────────

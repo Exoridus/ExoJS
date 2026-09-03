@@ -98,26 +98,3 @@ export const createCheckerCanvas = (options: CreateCheckerCanvasOptions = {}): H
 
   return canvas;
 };
-
-const heightCache: Map<string, number> = new Map<string, number>();
-
-/**
- * Measure the line height of a CSS font string in pixels.
- * Results are cached by font string so repeated calls for the same font are cheap.
- * Uses a temporary DOM element to derive the true rendered height including leading.
- */
-export const determineFontHeight = (font: string): number => {
-  if (!heightCache.has(font)) {
-    const body = document.body;
-    const dummy = document.createElement('div');
-
-    dummy.append(document.createTextNode('M'));
-    dummy.setAttribute('style', `font: ${font};position:absolute;top:0;left:0`);
-
-    body.append(dummy);
-    heightCache.set(font, dummy.offsetHeight);
-    body.removeChild(dummy);
-  }
-
-  return heightCache.get(font)!;
-};
