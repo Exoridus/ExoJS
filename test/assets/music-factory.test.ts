@@ -187,6 +187,32 @@ describe('MusicFactory', () => {
     expect(revokeObjectUrlSpy).toHaveBeenCalledTimes(1);
   });
 
+  test('a failed create() revokes its object URL and forgets the element', async () => {
+    const factory = new MusicFactory();
+
+    const promise = factory.create({ blob: new Blob([AUDIO_HEADER]) }, factoryContext());
+    const failed = lastAudio();
+
+    failed.dispatchEvent(new Event('error'));
+
+    await expect(promise).rejects.toThrow('Error loading audio source.');
+
+    // No AudioStream was built, so dispose() will never run for this element:
+    // a retried load would otherwise pile up one blob URL per attempt.
+    expect(revokeObjectUrlSpy).toHaveBeenCalledTimes(1);
+
+    const second = factory.create({ blob: new Blob([AUDIO_HEADER]) }, factoryContext());
+
+    lastAudio().dispatchEvent(new Event('canplay'));
+    await second;
+
+    const pauseSpy = vi.spyOn(failed, 'pause');
+
+    factory.destroy();
+
+    expect(pauseSpy).not.toHaveBeenCalled();
+  });
+
   test('a streamed element creates no object URL at all', async () => {
     const factory = new MusicFactory();
 

@@ -120,6 +120,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   built.** The store was skipped, as it must be, but the finished resource -
   which for a video or a music stream owns a media element - was handed back
   undisposed and stayed alive until the loader was torn down.
+- **A failed or cancelled `music`/`video` load cleans up after itself.** The
+  element was registered with the factory before the source was attached, and a
+  failure left it there with its object URL unrevoked - and since no resource
+  was built, nothing would ever release it. A repeatedly retried blob-backed
+  load accumulated one element and one live blob per attempt.
 
 ## [0.16.1] - 2026-09-02
 

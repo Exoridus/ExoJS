@@ -233,6 +233,28 @@ describe('VideoFactory', () => {
     expect(revokeObjectUrlSpy).toHaveBeenCalledTimes(1);
   });
 
+  test('a cancelled create() revokes its object URL and forgets the element', async () => {
+    const factory = new VideoFactory();
+    const controller = new AbortController();
+
+    const promise = factory.create({ blob: new Blob([VIDEO_HEADER]) }, factoryContext({}, { signal: controller.signal }));
+    const cancelled = lastVideo();
+
+    controller.abort();
+
+    await expect(promise).rejects.toThrow(/cancelled/i);
+
+    // No Video was built, so dispose() will never run for this element: a
+    // retried load would otherwise pile up one blob URL per attempt.
+    expect(revokeObjectUrlSpy).toHaveBeenCalledTimes(1);
+
+    const pauseSpy = vi.spyOn(cancelled, 'pause');
+
+    factory.destroy();
+
+    expect(pauseSpy).not.toHaveBeenCalled();
+  });
+
   test('a streamed element creates no object URL at all', async () => {
     const factory = new VideoFactory();
 

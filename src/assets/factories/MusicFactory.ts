@@ -55,17 +55,30 @@ export class MusicFactory implements AssetFactory<MediaAssetSource, AudioStream,
 
     this._elements.set(audio, objectUrl);
 
-    await attachMediaSource({
-      element: audio,
-      src,
-      messages: MESSAGES,
-      loadEvent: options.loadEvent,
-      stallTimeout: options.stallTimeout,
-      // A blob URL is same-origin by construction, and setting the attribute for
-      // it would only restrict what the element may then be used for.
-      ...(objectUrl === undefined && { crossOrigin: options.crossOrigin === undefined ? 'anonymous' : options.crossOrigin }),
-      signal: context.signal,
-    });
+    try {
+      await attachMediaSource({
+        element: audio,
+        src,
+        messages: MESSAGES,
+        loadEvent: options.loadEvent,
+        stallTimeout: options.stallTimeout,
+        // A blob URL is same-origin by construction, and setting the attribute for
+        // it would only restrict what the element may then be used for.
+        ...(objectUrl === undefined && { crossOrigin: options.crossOrigin === undefined ? 'anonymous' : options.crossOrigin }),
+        signal: context.signal,
+      });
+    } catch (error: unknown) {
+      // No resource is built on this path, so nothing will ever be released for
+      // it: a retried load would otherwise accumulate one element and one live
+      // blob URL per attempt for the loader's lifetime.
+      this._elements.delete(audio);
+
+      if (objectUrl !== undefined) {
+        this._objectUrls.revoke(objectUrl);
+      }
+
+      throw error;
+    }
 
     return new AudioStream(audio, options.playbackOptions);
   }
