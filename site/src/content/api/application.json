@@ -478,7 +478,7 @@
           ],
           "params": [],
           "returnType": "Promise<Application<Registry>>",
-          "description": "Initialize the render backend, await capability detection, and start the per-frame loop without activating a scene. Use start(target, data?) to start directly into a registered scene. Idempotent - if the application is already running the call is a no-op. On error the state returns to Stopped and the error propagates."
+          "description": "Initialize the render backend, await capability detection, and start the per-frame loop without activating a scene. Use start(target, data?) to start directly into a registered scene. Idempotent - if the application is already running the call is a no-op. On error the state returns to Stopped and the error propagates. A stop() or destroy() made while startup is still loading wins over it: the run still settles, but the state that call wrote is the one that stands, so a resolved start() does not by itself mean the state is Running."
         },
         {
           "name": "start",
@@ -606,7 +606,7 @@
             }
           ],
           "returnType": "Promise<Application<Registry>>",
-          "description": "Initialize the render backend, await capability detection, activate target - a registered string key, or a constructor registered in ApplicationOptions.scenes - and start the per-frame loop. Idempotent - if the application is already running the call is a no-op. On error the state returns to Stopped and the error propagates."
+          "description": "Initialize the render backend, await capability detection, activate target - a registered string key, or a constructor registered in ApplicationOptions.scenes - and start the per-frame loop. Idempotent - if the application is already running the call is a no-op. On error the state returns to Stopped and the error propagates. A stop() or destroy() made while startup is still loading wins over it: the run still settles, but the state that call wrote is the one that stands, so a resolved start() does not by itself mean the state is Running."
         },
         {
           "name": "start",
@@ -722,7 +722,7 @@
             }
           ],
           "returnType": "Promise<Application<Registry>>",
-          "description": "Initialize the render backend, await capability detection, and start the per-frame loop without activating a scene. Use start(target, data?) to start directly into a registered scene. Idempotent - if the application is already running the call is a no-op. On error the state returns to Stopped and the error propagates."
+          "description": "Initialize the render backend, await capability detection, and start the per-frame loop without activating a scene. Use start(target, data?) to start directly into a registered scene. Idempotent - if the application is already running the call is a no-op. On error the state returns to Stopped and the error propagates. A stop() or destroy() made while startup is still loading wins over it: the run still settles, but the state that call wrote is the one that stands, so a resolved start() does not by itself mean the state is Running."
         },
         {
           "name": "stop",

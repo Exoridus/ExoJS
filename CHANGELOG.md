@@ -137,6 +137,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   sampler request with nothing to diagnose it. The warning now exists (once per
   source, stripped in production). Options that take part in asset identity are
   unaffected: they resolve to their own instance and lose nothing.
+- **A `stop()` made while `start()` is still loading is no longer overwritten
+  when the startup run settles.** The startup continuation promoted the state
+  to `Running` unconditionally, so a `stop()` that landed inside the loading
+  window - where the frame loop is live but the state is still `Loading` - was
+  undone the moment `start()` resolved. The application then advertised
+  `Running` for a halted loop, and because both `start()` and `stop()`
+  early-return on that state, the instance was permanently unusable. The
+  promotion now happens only if the loop the run started is still the live one.
 
 ## [0.16.1] - 2026-09-02
 

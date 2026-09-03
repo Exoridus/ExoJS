@@ -1223,7 +1223,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * per-frame loop without activating a scene. Use `start(target, data?)` to
    * start directly into a registered scene. Idempotent - if the application
    * is already running the call is a no-op. On error the state returns to
-   * `Stopped` and the error propagates.
+   * `Stopped` and the error propagates. A `stop()` or
+   * `destroy()` made while startup is still loading wins over it: the run
+   * still settles, but the state that call wrote is the one that stands, so a
+   * resolved `start()` does not by itself mean the state is `Running`.
    */
   public async start(): Promise<this>;
   /**
@@ -1231,7 +1234,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * `target` - a registered string key, or a constructor registered in
    * `ApplicationOptions.scenes` - and start the per-frame loop. Idempotent -
    * if the application is already running the call is a no-op. On error the
-   * state returns to `Stopped` and the error propagates.
+   * state returns to `Stopped` and the error propagates. A `stop()` or
+   * `destroy()` made while startup is still loading wins over it: the run
+   * still settles, but the state that call wrote is the one that stands, so a
+   * resolved `start()` does not by itself mean the state is `Running`.
    */
   public async start<K extends RegistryKeyOf<Registry>>(target: K, ...args: ChangeSceneArgs<InferSceneData<Registry[K]>>): Promise<this>;
   public async start<C extends NavigableSceneConstructor<Registry>>(target: C, ...args: ChangeSceneArgs<InferSceneData<C>>): Promise<this>;
@@ -1323,7 +1329,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         );
       }
 
-      this._state = ApplicationState.Running;
+      // Only if the loop this run started is still the live one. A `stop()`
+      // or `destroy()` that landed inside the `Loading` window already halted
+      // it and wrote its own state; promoting over that would advertise
+      // `Running` for a loop that no longer schedules frames, and every later
+      // `start()`/`stop()` would early-return on the lie.
+      if (this._frameLoopActive) this._state = ApplicationState.Running;
     } catch (error) {
       this._stopFrameLoop();
       this._state = ApplicationState.Stopped;
