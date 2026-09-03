@@ -69,12 +69,22 @@ const blockExtent = (chunkExtent: number, layerExtent: number | undefined, start
  * {@link import('@codexo/exojs-tilemap').ChunkStreamer}, a hand-rolled loader,
  * or a fully resident bounded layer.
  *
- * Tick it from your update loop:
+ * Tick it from `preUpdate`, before the frame's fixed steps run - not from
+ * `update`, which runs after them:
  *
  * ```ts
  * const colliders = new TileColliderStreamer(world, layer);
- * scene.systems.add({ update: () => colliders.sync() });
+ * scene.systems.add({ preUpdate: () => colliders.sync() });
  * ```
+ *
+ * `SceneScope` runs `preUpdate` once per frame, before any of that frame's
+ * fixed steps, and `update` after all of them. A chunk that becomes resident
+ * this frame needs its collider body built before the world steps over the
+ * hole, and a chunk evicted this frame must not keep its body for a whole
+ * extra frame of stepping - `update` gets both of those one step too late.
+ * Wiring `sync()` into `fixedUpdate` instead (ordered before
+ * {@link SystemOrder.Physics}) also works, and additionally re-syncs on
+ * every fixed step within a frame rather than once per frame.
  *
  * Two consequences worth knowing before shipping a level:
  *
