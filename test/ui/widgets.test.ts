@@ -100,6 +100,18 @@ describe('Panel', () => {
 
     expect(() => panel.setSize(0, 0)).not.toThrow();
   });
+
+  test('destroy detaches its background node and tolerates a second call', () => {
+    const panel = new Panel({ width: 100, height: 50, color: new Color(10, 20, 30, 1) });
+
+    expect(panel.backgroundNode).not.toBeNull();
+
+    panel.destroy();
+
+    expect(panel.destroyed).toBe(true);
+    expect(panel.backgroundNode).toBeNull();
+    expect(() => panel.destroy()).not.toThrow();
+  });
 });
 
 describe('Button', () => {
@@ -291,6 +303,20 @@ describe('ProgressBar', () => {
     const bar = new ProgressBar({ width: 200, height: 12 });
 
     expect(() => bar.setSize(0, 0)).not.toThrow();
+  });
+
+  test('destroy detaches its track and bar nodes and tolerates a second call', () => {
+    const bar = new ProgressBar({ width: 200, height: 12, value: 0.5 });
+
+    expect(bar.trackNode).not.toBeNull();
+    expect(bar.barNode).not.toBeNull();
+
+    bar.destroy();
+
+    expect(bar.destroyed).toBe(true);
+    expect(bar.trackNode).toBeNull();
+    expect(bar.barNode).toBeNull();
+    expect(() => bar.destroy()).not.toThrow();
   });
 });
 
@@ -711,6 +737,28 @@ describe('Checkbox', () => {
     expect(checkbox.focused).toBe(false);
     expect(checkbox.state).toBe('normal');
   });
+
+  test('destroy disposes onChange, detaches its nodes, and tolerates a second call', () => {
+    const checkbox = new Checkbox({ size: 20 });
+
+    new UIRoot().addChild(checkbox);
+    checkbox.checked = true;
+
+    expect(checkbox.boxNode).not.toBeNull();
+    expect(checkbox.markNode).not.toBeNull();
+
+    checkbox.destroy();
+
+    expect(checkbox.destroyed).toBe(true);
+    expect(checkbox.boxNode).toBeNull();
+    expect(checkbox.markNode).toBeNull();
+    expect(checkbox.onChange.count).toBe(0);
+
+    checkbox.onChange.add(() => {});
+    expect(checkbox.onChange.count).toBe(0);
+
+    expect(() => checkbox.destroy()).not.toThrow();
+  });
 });
 
 describe('Toggle', () => {
@@ -737,6 +785,27 @@ describe('Toggle', () => {
 
     expect(toggle.checked).toBe(true);
     expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  test('destroy disposes onChange, detaches its nodes, and tolerates a second call', () => {
+    const toggle = new Toggle({ width: 44, height: 24 });
+
+    new UIRoot().addChild(toggle);
+
+    expect(toggle.trackNode).not.toBeNull();
+    expect(toggle.knobNode).not.toBeNull();
+
+    toggle.destroy();
+
+    expect(toggle.destroyed).toBe(true);
+    expect(toggle.trackNode).toBeNull();
+    expect(toggle.knobNode).toBeNull();
+    expect(toggle.onChange.count).toBe(0);
+
+    toggle.onChange.add(() => {});
+    expect(toggle.onChange.count).toBe(0);
+
+    expect(() => toggle.destroy()).not.toThrow();
   });
 });
 
@@ -827,6 +896,29 @@ describe('Slider', () => {
     expect(slider.fillNode).toBeInstanceOf(Graphics);
     expect(slider.thumbNode).toBeInstanceOf(Graphics);
     expect(slider.thumbNode?.x).toBeCloseTo((200 - 20) / 2);
+  });
+
+  test('destroy disposes onChange, detaches its nodes, and tolerates a second call', () => {
+    const slider = new Slider({ width: 200, height: 20, value: 0.5, min: 0, max: 1 });
+
+    new UIRoot().addChild(slider);
+
+    expect(slider.trackNode).not.toBeNull();
+    expect(slider.fillNode).not.toBeNull();
+    expect(slider.thumbNode).not.toBeNull();
+
+    slider.destroy();
+
+    expect(slider.destroyed).toBe(true);
+    expect(slider.trackNode).toBeNull();
+    expect(slider.fillNode).toBeNull();
+    expect(slider.thumbNode).toBeNull();
+    expect(slider.onChange.count).toBe(0);
+
+    slider.onChange.add(() => {});
+    expect(slider.onChange.count).toBe(0);
+
+    expect(() => slider.destroy()).not.toThrow();
   });
 });
 
@@ -968,5 +1060,24 @@ describe('Dropdown', () => {
 
     expect(dropdown.listNode.children.length).toBeGreaterThanOrEqual(items.length);
     expect(dropdown.backgroundNode).toBeInstanceOf(Graphics);
+  });
+
+  test('destroy disposes onChange, detaches its background node, and tolerates a second call', () => {
+    const dropdown = new Dropdown({ items, width: 180, height: 36 });
+
+    new UIRoot().addChild(dropdown);
+
+    expect(dropdown.backgroundNode).not.toBeNull();
+
+    dropdown.destroy();
+
+    expect(dropdown.destroyed).toBe(true);
+    expect(dropdown.backgroundNode).toBeNull();
+    expect(dropdown.onChange.count).toBe(0);
+
+    dropdown.onChange.add(() => {});
+    expect(dropdown.onChange.count).toBe(0);
+
+    expect(() => dropdown.destroy()).not.toThrow();
   });
 });

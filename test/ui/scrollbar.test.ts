@@ -222,6 +222,30 @@ describe('Scrollbar drag', () => {
   });
 });
 
+describe('Scrollbar destroy', () => {
+  test('disposes onScroll, clears an in-flight drag, and tolerates a second destroy', () => {
+    const { stage } = makeStage();
+    const bar = new Scrollbar().setLength(200);
+
+    bar._setStage(stage);
+    bar.setRange(100, 400);
+    bar.thumbNode.onPointerDown.dispatch(pointerDownAt(0, 10));
+
+    expect(bar.dragging).toBe(true);
+
+    bar.destroy();
+
+    expect(bar.destroyed).toBe(true);
+    expect(bar.dragging).toBe(false);
+    expect(bar.onScroll.count).toBe(0);
+
+    bar.onScroll.add(() => {});
+    expect(bar.onScroll.count).toBe(0);
+
+    expect(() => bar.destroy()).not.toThrow();
+  });
+});
+
 describe('ScrollContainer scrollbars', () => {
   test("'auto' shows a bar only while its axis overflows", () => {
     const scroll = new ScrollContainer({ width: 100, height: 100 });

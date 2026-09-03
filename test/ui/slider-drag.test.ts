@@ -83,3 +83,26 @@ describe('Slider drag', () => {
     expect(slider.dragging).toBe(true);
   });
 });
+
+describe('Slider destroy', () => {
+  test('disposes onChange and clears an in-flight drag', () => {
+    const { stage } = makeStage();
+    const slider = new Slider({ width: 200, height: 20, min: 0, max: 1, value: 0 });
+
+    slider._setStage(stage);
+    slider.onPointerDown.dispatch(pointerDownAt(100, 10));
+
+    expect(slider.dragging).toBe(true);
+
+    slider.destroy();
+
+    expect(slider.destroyed).toBe(true);
+    expect(slider.dragging).toBe(false);
+    expect(slider.onChange.count).toBe(0);
+
+    slider.onChange.add(() => {});
+    expect(slider.onChange.count).toBe(0);
+
+    expect(() => slider.destroy()).not.toThrow();
+  });
+});
