@@ -563,9 +563,13 @@ export class InteractionSystem implements InteractionHooks {
    * Gated by the active scope's {@link SceneState} (only `Active` dispatches
    * - pause does not gate interaction; `Preparing`/`Suspended`/`Destroying`/
    * `Destroyed`/no-scene do not dispatch) and by the director's transition
-   * gate - gated frames discard the pending queue rather
-   * than deferring it, so a pointer-down queued before a transition never
-   * replays once it clears.
+   * gate - gated frames discard the pending queue rather than deferring it,
+   * so a pointer-down queued before a transition never replays once it
+   * clears. A gated frame still fails closed the same way a throwing handler
+   * does (see {@link _drainJournal}): every pointer that queued an entry this
+   * flush has its drag ended, capture released, and press/hover state
+   * forgotten, so a press that started right before the gate opened cannot
+   * keep dragging a node with no button held once the gate lifts.
    */
   private _dispatchFrame(): void {
     if (!this._dirty && !this._hoverDirty) return;
@@ -578,7 +582,19 @@ export class InteractionSystem implements InteractionHooks {
     this._hoverDirty = false;
 
     if (gated) {
+      const touchedIds = new Set<number>();
+
+      for (const entry of this._journal) {
+        touchedIds.add(entry.pointer.id);
+      }
+
       this._journal.length = 0;
+
+      for (const id of touchedIds) {
+        this._teardownPointerState(id);
+      }
+
+      this._updateCursor();
 
       return;
     }
@@ -1000,9 +1016,7 @@ export class InteractionSystem implements InteractionHooks {
       this._journal.length = 0;
 
       for (const id of touchedIds) {
-        this._endDrag(id);
-        this._pressTargets.delete(id);
-        this._lastHit.delete(id);
+        this._teardownPointerState(id);
       }
 
       // Keep the host cursor consistent with the now-cleared capture/hover
@@ -1062,6 +1076,12 @@ export class InteractionSystem implements InteractionHooks {
                 this._registerDragCandidate(id, hit, x, y, phaseX, phaseY);
               }
             }
+          } else {
+            // A press that lands on nothing interactive is the canvas
+            // equivalent of clicking outside a focused control - without
+            // this, a Dropdown stays open and a TextInput keeps its caret
+            // and DOM transport after a click on empty space.
+            this._focus.blur();
           }
 
           break;
@@ -1460,6 +1480,22 @@ export class InteractionSystem implements InteractionHooks {
     this._drags.delete(pointerId);
     this._capturedPointers.delete(pointerId);
     this._platform.releasePointer(pointerId);
+  }
+
+  /**
+   * Tear down everything a normal Cancel/Leave entry would have settled for
+   * `id`, for a path that discards the journal instead of processing it -
+   * the failed-batch cleanup in {@link _drainJournal} and a scene-transition
+   * gated frame in {@link _dispatchFrame} both skip the entry that would
+   * otherwise end the drag, release capture, and drop the pointer from
+   * `_livePointers`; without this, `_hoverDirty` handling later hit-tests at
+   * a pointer `InputSystem` has already destroyed.
+   */
+  private _teardownPointerState(id: number): void {
+    this._endDrag(id);
+    this._pressTargets.delete(id);
+    this._lastHit.delete(id);
+    this._livePointers.delete(id);
   }
 
   /**

@@ -9,7 +9,7 @@ export interface FontAssetOptions {
   /**
    * Whether the loaded face is added to `document.fonts`, making it available
    * to CSS and Canvas immediately. Defaults to `true`; a face added this way is
-   * removed again when the loader is destroyed.
+   * removed again when the asset is released, and when the loader is destroyed.
    */
   addToDocument?: boolean;
 }
@@ -20,7 +20,7 @@ export interface FontAssetOptions {
  * @internal
  */
 export class FontFactory implements AssetFactory<ArrayBuffer, FontFace, FontAssetOptions> {
-  private readonly _addedFontFaces: FontFace[] = [];
+  private readonly _addedFontFaces = new Set<FontFace>();
 
   public async create(source: ArrayBuffer, context: AssetFactoryContext<FontAssetOptions>): Promise<FontFace> {
     const options = context.options;
@@ -42,10 +42,17 @@ export class FontFactory implements AssetFactory<ArrayBuffer, FontFace, FontAsse
 
     if (options.addToDocument !== false) {
       document.fonts.add(fontFace);
-      this._addedFontFaces.push(fontFace);
+      this._addedFontFaces.add(fontFace);
     }
 
     return fontFace;
+  }
+
+  /** Unregisters a released face, so CSS and Canvas stop resolving its family. */
+  public dispose(resource: FontFace): void {
+    if (this._addedFontFaces.delete(resource)) {
+      document.fonts.delete(resource);
+    }
   }
 
   public destroy(): void {
@@ -53,6 +60,6 @@ export class FontFactory implements AssetFactory<ArrayBuffer, FontFace, FontAsse
       document.fonts.delete(fontFace);
     }
 
-    this._addedFontFaces.length = 0;
+    this._addedFontFaces.clear();
   }
 }

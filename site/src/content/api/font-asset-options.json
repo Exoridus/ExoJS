@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Whether the loaded face is added to document.fonts, making it available to CSS and Canvas immediately. Defaults to true; a face added this way is removed again when the loader is destroyed."
+          "description": "Whether the loaded face is added to document.fonts, making it available to CSS and Canvas immediately. Defaults to true; a face added this way is removed again when the asset is released, and when the loader is destroyed."
         },
         {
           "name": "descriptors",

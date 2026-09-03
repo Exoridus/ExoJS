@@ -81,11 +81,15 @@ interface PendingQuad {
   readonly nodeIndex: number;
   readonly shaderType: ShaderType;
   readonly atlasTexture: Texture;
+  readonly blendMode: BlendModes;
   readonly node: Text | BitmapText;
 }
 
 const sharesAtlasBatchClass = (a: PendingQuad, b: PendingQuad): boolean =>
-  a.shaderType === b.shaderType && a.atlasTexture.width === b.atlasTexture.width && a.atlasTexture.height === b.atlasTexture.height;
+  a.shaderType === b.shaderType &&
+  a.blendMode === b.blendMode &&
+  a.atlasTexture.width === b.atlasTexture.width &&
+  a.atlasTexture.height === b.atlasTexture.height;
 
 /**
  * Record-time payload carried from `flush()` to `_configureRetainedVao`/replay.
@@ -311,11 +315,12 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     const nodeIndex = this._assignNodeIndex(node);
     const shaderType: ShaderType = node.colorGlyphs ? 'color' : 'sdf';
     const pages = atlas.pages;
+    const blendMode = node.blendMode;
 
     for (const batch of pageQuads) {
       const page = pages[batch.pageIndex];
       if (page === undefined) continue;
-      this._pendingQuads.push({ quads: batch, nodeIndex, shaderType, atlasTexture: page.texture, node });
+      this._pendingQuads.push({ quads: batch, nodeIndex, shaderType, atlasTexture: page.texture, blendMode, node });
     }
   }
 
@@ -325,11 +330,12 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
     const nodeIndex = this._assignNodeIndex(node);
     const shaderType: ShaderType = msdf ? 'msdf' : 'color';
+    const blendMode = node.blendMode;
 
     for (const batch of pageQuads) {
       const tex = textures[batch.pageIndex];
       if (tex === undefined) continue;
-      this._pendingQuads.push({ quads: batch, nodeIndex, shaderType, atlasTexture: tex, node });
+      this._pendingQuads.push({ quads: batch, nodeIndex, shaderType, atlasTexture: tex, blendMode, node });
     }
   }
 
@@ -409,9 +415,13 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       }
     }
 
-    // Sort by compatible atlas class, then texture identity. Up to eight
-    // textures of one class share a draw through the shader slot table.
+    // Sort by blend mode, then compatible atlas class, then texture identity.
+    // Up to eight textures of one class share a draw through the shader slot
+    // table; a differing blend mode breaks the batch because one draw call
+    // carries one blend state.
     this._pendingQuads.sort((a, b) => {
+      const bc = a.blendMode - b.blendMode;
+      if (bc !== 0) return bc;
       const sc = a.shaderType.localeCompare(b.shaderType);
       if (sc !== 0) return sc;
       const wc = a.atlasTexture.width - b.atlasTexture.width;
@@ -434,6 +444,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     let recQuadCount = 0;
     let recAtlases: readonly Texture[] = [];
     let recShaderType: ShaderType = 'sdf';
+    let recBlendMode: BlendModes = BlendModes.Normal;
 
     while (i < quads.length) {
       // In-bounds: `i` < `quads.length` per the loop guard.
@@ -509,6 +520,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
         recQuadCount = totalIndices / 6;
         recAtlases = atlasTextures;
         recShaderType = first.shaderType;
+        recBlendMode = first.blendMode;
       }
 
       batchCount++;
@@ -546,6 +558,9 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       // first and calls sync() last.
       shader.sync();
 
+      // The GL blend state is global and shared with every other renderer, so
+      // this batch establishes its own at the draw.
+      backend.setBlendMode(first.blendMode);
       c.vao.draw(totalIndices, 0, RenderingPrimitives.Triangles);
       backend.stats.batches++;
       backend.stats.drawCalls++;
@@ -554,7 +569,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     }
 
     if (capturing) {
-      this._tryRecordRetainedBatch(backend, batchCount, recWordCount, recQuadCount, recShaderType, recAtlases);
+      this._tryRecordRetainedBatch(backend, batchCount, recWordCount, recQuadCount, recShaderType, recBlendMode, recAtlases);
     }
   }
 
@@ -572,6 +587,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     wordCount: number,
     quadCount: number,
     shaderType: ShaderType,
+    blendMode: BlendModes,
     atlases: readonly Texture[],
   ): void {
     const bundle = backend._currentRetainedCaptureBundle;
@@ -601,7 +617,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       this,
       this._uint32View.subarray(0, wordCount),
       quadCount,
-      BlendModes.Normal,
+      blendMode,
       atlases,
       atlases.length,
       null,

@@ -11,6 +11,7 @@ import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, LoadPriority } from '#assets/Loader';
 import type { LoadingQueue } from '#assets/LoadingQueue';
 import { FontAsset, TextAsset } from '#assets/tokens';
+import { textType } from '#assets/types/data';
 import { materializeAssetTypes } from '#extensions/materialize';
 import { BmFont } from '#rendering/text/BmFont';
 import { Texture } from '#rendering/texture/Texture';
@@ -128,7 +129,7 @@ const createDeferred = <T>(): Deferred<T> => {
 const contextTextKey = (namespace: string, source: string): CacheRecordKey => ({
   namespace,
   source: `url:${source}`,
-  version: 1,
+  version: textType.layout.version,
   record: 'value',
 });
 

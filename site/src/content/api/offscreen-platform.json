@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 28,
+  "memberCount": 29,
   "counts": {
     "constructors": 1,
     "methods": 18,
-    "properties": 9,
+    "properties": 10,
     "events": 0
   },
   "sections": [
@@ -1300,6 +1300,27 @@
           "params": [],
           "returnType": null,
           "description": "No document to set a touch-action policy on."
+        },
+        {
+          "name": "textInputFocused",
+          "signature": "textInputFocused: false",
+          "signatureTokens": [
+            {
+              "text": "textInputFocused",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "false",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Always false: this adapter has no text transport that could hold host focus."
         },
         {
           "name": "documentVisible",

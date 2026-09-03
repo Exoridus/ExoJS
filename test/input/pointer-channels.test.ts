@@ -296,7 +296,7 @@ describe('Pointer channel buffer — extended properties', () => {
       pressure: 0.75,
       width: 80, // 80 / 800 = 0.1
       height: 60, // 60 / 600 = 0.1
-      twist: 180, // 180 / 359 ≈ 0.5014
+      twist: 180, // 180 / 360 = 0.5
       tiltX: 45, // (45 + 90) / 180 = 0.75
       tiltY: -45, // (-45 + 90) / 180 = 0.25
       isPrimary: true,
@@ -305,7 +305,7 @@ describe('Pointer channel buffer — extended properties', () => {
     expect(ch(im, Pointer.Pressure)).toBeCloseTo(0.75, 5);
     expect(ch(im, Pointer.Width)).toBeCloseTo(80 / 800, 5);
     expect(ch(im, Pointer.Height)).toBeCloseTo(60 / 600, 5);
-    expect(ch(im, Pointer.Twist)).toBeCloseTo(180 / 359, 5);
+    expect(ch(im, Pointer.Twist)).toBeCloseTo(180 / 360, 5);
     expect(ch(im, Pointer.TiltX)).toBeCloseTo((45 + 90) / 180, 5);
     expect(ch(im, Pointer.TiltY)).toBeCloseTo((-45 + 90) / 180, 5);
     expect(ch(im, Pointer.IsPen)).toBe(1);

@@ -22,6 +22,8 @@ const fill = <T>(cursor: T[], source: readonly T[]): T[] => {
 /** Any object that can be driven each frame by a delta in seconds. @internal */
 interface Ticker {
   update(deltaSeconds: number): void;
+  /** Cancel whatever this ticker is driving. Called by {@link TweenSystem.clear}. */
+  stop?(): void;
 }
 
 /**
@@ -228,10 +230,11 @@ export class TweenSystem {
 
   /**
    * Remove all tweens and tickers immediately. No callbacks fire.
-   * Each tracked tween is {@link Tween.stop}ped first, so `tween.state`
-   * reflects the eviction instead of staying `Active`/`Paused` on a tween the
-   * system no longer drives - a `Stopped` tween's own system binding
-   * survives, so a later {@link Tween.start} re-enters it as usual.
+   * Each tracked tween is {@link Tween.stop}ped first, and so is every ticker
+   * that can be stopped, so their state reflects the eviction instead of
+   * staying `Active`/`Paused` on something the system no longer drives - a
+   * `Stopped` tween's own system binding survives, so a later
+   * {@link Tween.start} re-enters it as usual.
    */
   public clear(): this {
     // Detach the list before stopping anything. `stop()` calls back into
@@ -240,12 +243,17 @@ export class TweenSystem {
     // fresh array first makes every re-entrant `remove()` a miss on an empty
     // list instead, which is both allocation-free and cheaper than the scan.
     const tweens = this._tweens;
+    const tickers = this._tickers;
 
     this._tweens = [];
     this._tickers = [];
 
     for (const tween of tweens) {
       tween.stop();
+    }
+
+    for (const ticker of tickers) {
+      ticker.stop?.();
     }
 
     return this;

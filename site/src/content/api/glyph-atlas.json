@@ -6,12 +6,12 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 10,
+  "memberCount": 11,
   "counts": {
     "constructors": 1,
     "methods": 3,
     "properties": 5,
-    "events": 1
+    "events": 2
   },
   "sections": [
     {
@@ -567,6 +567,43 @@
       "id": "events",
       "title": "Events",
       "members": [
+        {
+          "name": "onCleared",
+          "signature": "onCleared: Signal<[]>",
+          "signatureTokens": [
+            {
+              "text": "onCleared",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dispatched after clear discards every rasterized glyph and kerning entry. A node holding GlyphInfo from this atlas has to re-layout - its UVs still address the (now-repacked) pages, but the glyph that used to sit there is gone. Text listens on the atlas it currently draws from and re-lays out in response; a caller driving GlyphAtlas directly should do the same for anything it cached from getGlyph."
+        },
         {
           "name": "onPageAdded",
           "signature": "onPageAdded: Signal<[pageIndex]>",

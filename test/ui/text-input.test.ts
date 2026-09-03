@@ -30,6 +30,21 @@ describe('TextInput', () => {
     expect(field.selectionStart).toBe(5);
   });
 
+  test('a press on empty canvas blurs the field and tears down its transport', () => {
+    const harness = createUIApp();
+    const field = new TextInput({ width: 200, height: 36 });
+
+    harness.scene.ui.addChild(field);
+    press(harness, 5, 18);
+    expect(harness.im.focused).toBe(field);
+    expect(document.body.querySelector('textarea')).not.toBeNull();
+
+    press(harness, 500, 500);
+
+    expect(harness.im.focused).toBeNull();
+    expect(document.body.querySelector('textarea')).toBeNull();
+  });
+
   test('a press-drag extends a selection from the anchor', () => {
     const harness = createUIApp();
     const field = new TextInput({ width: 200, height: 36 });
@@ -43,6 +58,31 @@ describe('TextInput', () => {
     expect(field.selectionEnd).toBe(5);
 
     harness.signals.onPointerUp.dispatch(makePointer(53, 18), 53, 18);
+    expect(field.selectionStart).toBe(0);
+    expect(field.selectionEnd).toBe(5);
+  });
+
+  test('a second contact neither extends the selection nor ends the drag', () => {
+    const harness = createUIApp();
+    const field = new TextInput({ width: 200, height: 36 });
+
+    harness.scene.ui.addChild(field);
+    press(harness, 5, 18);
+    type('hello');
+
+    // A second press at the caret's own end, so the drag starts collapsed.
+    press(harness, 103, 18);
+
+    expect(field.selectionStart).toBe(5);
+
+    harness.signals.onPointerMove.dispatch(makePointer(5, 18, 2), 5, 18);
+
+    expect(field.selectionStart).toBe(5);
+    expect(field.selectionEnd).toBe(5);
+
+    harness.signals.onPointerUp.dispatch(makePointer(5, 18, 2), 5, 18);
+    harness.signals.onPointerMove.dispatch(makePointer(5, 18), 5, 18);
+
     expect(field.selectionStart).toBe(0);
     expect(field.selectionEnd).toBe(5);
   });
@@ -202,6 +242,103 @@ describe('TextInput', () => {
 
     transportTextarea().dispatchEvent(copy);
     expect(copy.defaultPrevented).toBe(false);
+  });
+
+  test('a Backspace the transport already applied is not applied a second time', () => {
+    const harness = createUIApp();
+    const field = new TextInput({ width: 200, height: 36 });
+
+    harness.scene.ui.addChild(field);
+    press(harness, 5, 18);
+    type('abc');
+
+    // What one physical Backspace produces in a browser: the host's semantic
+    // edit first, the engine's key event at the next frame boundary.
+    fireBeforeInput('deleteContentBackward');
+    harness.signals.onKeyDown.dispatch(Keyboard.Backspace);
+
+    expect(field.value).toBe('ab');
+
+    // A keystroke the transport did not report still edits - a host that
+    // reports no edit of its own leaves the key handler in charge.
+    harness.signals.onKeyDown.dispatch(Keyboard.Backspace);
+
+    expect(field.value).toBe('a');
+  });
+
+  test('a modifier held when the field loses focus does not stay held', () => {
+    const harness = createUIApp();
+    const field = new TextInput({ width: 200, height: 36 });
+
+    harness.scene.ui.addChild(field);
+    press(harness, 5, 18);
+    type('abc');
+
+    harness.signals.onKeyDown.dispatch(Keyboard.ShiftLeft);
+    field.blur();
+    field.focus();
+
+    // The Shift release happened while another node held focus, so the widget
+    // never saw it.
+    harness.signals.onKeyDown.dispatch(Keyboard.Left);
+
+    expect(field.selectionStart).toBe(2);
+    expect(field.selectionEnd).toBe(2);
+  });
+
+  test('releasing one Shift while the other is held keeps the selection extending', () => {
+    const harness = createUIApp();
+    const field = new TextInput({ width: 200, height: 36 });
+
+    harness.scene.ui.addChild(field);
+    press(harness, 5, 18);
+    type('abc');
+
+    harness.signals.onKeyDown.dispatch(Keyboard.ShiftLeft);
+    harness.signals.onKeyDown.dispatch(Keyboard.ShiftRight);
+    harness.signals.onKeyUp.dispatch(Keyboard.ShiftLeft);
+    harness.signals.onKeyDown.dispatch(Keyboard.Left);
+
+    expect(field.selectionStart).toBe(2);
+    expect(field.selectionEnd).toBe(3);
+  });
+
+  test('the editing shortcuts answer to Meta as well as Control', () => {
+    const harness = createUIApp();
+    const field = new TextInput({ width: 200, height: 36 });
+
+    harness.scene.ui.addChild(field);
+    press(harness, 5, 18);
+    type('abc');
+
+    harness.signals.onKeyDown.dispatch(Keyboard.MetaLeft);
+    harness.signals.onKeyDown.dispatch(Keyboard.A);
+
+    expect(field.selectionStart).toBe(0);
+    expect(field.selectionEnd).toBe(3);
+
+    harness.signals.onKeyDown.dispatch(Keyboard.Z);
+
+    expect(field.value).toBe('');
+  });
+
+  test('a read-only field can still be selected whole', () => {
+    const harness = createUIApp();
+    const field = new TextInput({ width: 200, height: 36, value: 'abc', readOnly: true });
+
+    harness.scene.ui.addChild(field);
+    press(harness, 5, 18);
+
+    harness.signals.onKeyDown.dispatch(Keyboard.ControlLeft);
+    harness.signals.onKeyDown.dispatch(Keyboard.A);
+
+    expect(field.selectionStart).toBe(0);
+    expect(field.selectionEnd).toBe(3);
+
+    // Mutating shortcuts stay refused.
+    harness.signals.onKeyDown.dispatch(Keyboard.Z);
+
+    expect(field.value).toBe('abc');
   });
 
   test('a null seam leaves the field visible and focused but not editable', () => {

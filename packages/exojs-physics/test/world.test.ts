@@ -2,7 +2,7 @@ import { Container, Drawable, type SceneNode } from '@codexo/exojs';
 import { describe, expect, it } from 'vitest';
 
 import { createAabb, expandAabb } from '../src/Aabb';
-import { BoxShape, CircleShape, Collider, DistanceJoint, PhysicsBody, PhysicsWorld } from '../src/index';
+import { BoxShape, CircleShape, Collider, DistanceJoint, PhysicsBody, PhysicsWorld, SegmentShape } from '../src/index';
 import { colliderAt } from './support';
 
 interface FakeNode {
@@ -77,6 +77,25 @@ describe('PhysicsWorld lifecycle and mass model', () => {
     expect(() => world.add(body)).toThrow();
   });
 
+  it('add() does not half-attach a body when the mass guard rejects it, and the documented recovery works', () => {
+    const world = new PhysicsWorld();
+    const bad = new PhysicsBody({ type: 'dynamic', colliders: [{ shape: new SegmentShape(0, 0, 10, 0) }] });
+
+    expect(() => world.add(bad)).toThrow();
+    expect(bad.attached).toBe(false);
+    expect(bad.id).toBe(-1);
+    expect(world.bodies).toHaveLength(0);
+    expect(world.colliders).toHaveLength(0);
+
+    // The error message's recovery advice ("add a solid collider") must actually
+    // be actionable: a still-unattached body accepts a new collider and a second
+    // add() then succeeds instead of hitting the already-attached guard.
+    bad.addCollider({ shape: new BoxShape(10, 10) });
+    expect(() => world.add(bad)).not.toThrow();
+    expect(bad.attached).toBe(true);
+    expect(world.bodies).toContain(bad);
+  });
+
   it('derives mass and inertia for a dynamic body from collider density', () => {
     const world = new PhysicsWorld();
     const body = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 } }));
@@ -135,6 +154,42 @@ describe('PhysicsWorld lifecycle and mass model', () => {
     expect(() => world.destroyCollider(collider)).not.toThrow();
   });
 
+  it('rejects two destroyCollider calls in one dispatch that would together strand a boundary-only body', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const body = world.add(
+      new PhysicsBody({
+        type: 'dynamic',
+        position: { x: 0, y: 0 },
+        colliders: [{ shape: new BoxShape(10, 10) }, { shape: new BoxShape(10, 10), offset: { x: 12, y: 0 } }, { shape: new SegmentShape(0, 20, 20, 20) }],
+      }),
+    );
+    const box0 = body.colliders[0]!;
+    const box1 = body.colliders[1]!;
+    colliderAt(world, new BoxShape(4, 4), { x: 0, y: 0 }, 0, 'static', { isSensor: true });
+
+    let sawSensorEnter = false;
+    world.onSensorEnter.add(() => {
+      if (sawSensorEnter) {
+        return;
+      }
+
+      sawSensorEnter = true;
+      world.destroyCollider(box0);
+      // Each call validates against the *current* collider set at the time it
+      // runs; without accounting for box0's own already-queued removal, this
+      // second call would also pass, and both deferred removals would then
+      // apply together, leaving body with only the massless segment.
+      expect(() => world.destroyCollider(box1)).toThrow();
+    });
+
+    world.step(1 / 60);
+
+    expect(sawSensorEnter).toBe(true);
+    expect(body.colliders).toHaveLength(2);
+    expect(body.invMass).toBeGreaterThan(0);
+    expect(body.isMassReady).toBe(true);
+  });
+
   it('throws when used after destroy', () => {
     const world = new PhysicsWorld();
     world.destroy();
@@ -176,6 +231,31 @@ describe('PhysicsWorld lifecycle and mass model', () => {
     // Broad-phase teardown must have released their proxies as well.
     expect(collider._treeProxy).toBe(-1);
     expect(second._treeProxy).toBe(-1);
+  });
+
+  it('destroy() called from inside a dispatch still marks a body added during that same dispatch', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
+    colliderAt(world, new BoxShape(10, 10), { x: 5, y: 0 });
+
+    let strayBody: PhysicsBody | null = null;
+
+    world.onCollisionStart.add(() => {
+      if (strayBody) {
+        return;
+      }
+
+      // Queued (not yet pushed to `_bodies`) when destroy() runs on the next line.
+      strayBody = world.add(new PhysicsBody({ type: 'dynamic', colliders: [{ shape: new BoxShape(10, 10) }] }));
+      world.destroy();
+    });
+
+    world.step(1 / 60);
+
+    expect(strayBody).not.toBeNull();
+    const stray = strayBody as unknown as PhysicsBody;
+    expect(stray.attached).toBe(true);
+    expect(stray.destroyed).toBe(true);
   });
 
   it('rejects an invalid subStepCount (non-integer or below 1)', () => {

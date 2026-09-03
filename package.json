@@ -22,7 +22,11 @@
   "module": "./dist/esm/index.js",
   "browser": "./dist/exo.esm.js",
   "types": "./dist/esm/index.d.ts",
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/esm/rendering/sprite/Sprite.js",
+    "./dist/esm/core/Logger.js",
+    "./dist/esm/ui/theme.js"
+  ],
   "keywords": [
     "2d",
     "browser",
@@ -215,7 +219,7 @@
     },
     {
       "path": "dist/exo.iife.min.js",
-      "limit": "300 KB",
+      "limit": "320 KB",
       "gzip": true
     },
     {

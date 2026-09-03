@@ -65,14 +65,28 @@ export class Slider extends Widget {
   private _value: number;
   private _pointerInside = false;
   private _dragging = false;
+  /**
+   * The contact that started the current drag. The drag follows the
+   * application's pointer signals, which carry every contact, so a second
+   * finger elsewhere must not move this slider or end its drag.
+   */
+  private _dragPointerId = -1;
   /** Scratch vector reused while dragging - a pointer move must not allocate. */
   private readonly _localPoint = new Vector();
 
-  private readonly _onGlobalPointerMove = (_pointer: Pointer, x: number, y: number): void => {
+  private readonly _onGlobalPointerMove = (pointer: Pointer, x: number, y: number): void => {
+    if (pointer.id !== this._dragPointerId) {
+      return;
+    }
+
     this._seekTo(x, y);
   };
 
-  private readonly _onGlobalPointerUp = (): void => {
+  private readonly _onGlobalPointerUp = (pointer: Pointer): void => {
+    if (pointer.id !== this._dragPointerId) {
+      return;
+    }
+
     this._endDrag();
   };
 
@@ -258,6 +272,7 @@ export class Slider extends Widget {
     }
 
     this._dragging = true;
+    this._dragPointerId = event.pointer.id;
     this._setSkinState('pressed');
     this._subscribeDrag(true);
     this._seekTo(event.x, event.y);
@@ -298,6 +313,7 @@ export class Slider extends Widget {
     }
 
     this._dragging = false;
+    this._dragPointerId = -1;
     this._subscribeDrag(false);
     this._refreshState();
   }

@@ -35,7 +35,10 @@ export class RateSpawn extends SpawnModule {
 
   public override apply(emitter: ParticleEmitter, dt: number): void {
     const cfg = this.config;
-    const rate = cfg.rate.sample();
+    // Clamped rather than trusted: a distribution that can return a negative
+    // value would drive the accumulator down without bound, and the emitter
+    // would never spawn again once it went negative.
+    const rate = Math.max(cfg.rate.sample(), 0);
 
     this._accumulator += rate * dt;
 

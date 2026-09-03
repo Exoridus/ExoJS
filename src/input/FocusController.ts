@@ -1,4 +1,5 @@
 import type { Application } from '#core/Application';
+import { SceneState } from '#core/scene/SceneState';
 import type { FocusHooks, Stage } from '#core/Stage';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -91,7 +92,6 @@ interface FocusScopeEntry {
 export class FocusController implements FocusHooks {
   private readonly _app: Application;
   private _focused: RenderNode | null = null;
-  private _shiftDown = false;
 
   // Stack of scopes that bound Tab traversal AND act as a focus trap; a modal
   // dialog pushes one. Keyed by stable token, not by root - see ScopeToken's
@@ -219,7 +219,7 @@ export class FocusController implements FocusHooks {
    * strand focus on something that swallows every key it receives.
    */
   private _isFocusEligible(node: RenderNode): boolean {
-    return node.focusable && (!(node instanceof Widget) || node.effectiveEnabled);
+    return node.focusable && node.visible && (!(node instanceof Widget) || node.effectiveEnabled);
   }
 
   /**
@@ -398,8 +398,12 @@ export class FocusController implements FocusHooks {
   }
 
   private _handleKeyDown(channel: number): void {
-    if (channel === Keyboard.ShiftLeft || channel === Keyboard.ShiftRight) {
-      this._shiftDown = true;
+    // Mirrors InteractionSystem._dispatchFrame's gate: a scene that is not
+    // Active, or one mid-transition, must not receive keys either - without
+    // this, Tab/Enter/Escape reach the outgoing scene's widgets even though a
+    // click on the same scene is already swallowed.
+    if (this._isGated()) {
+      return;
     }
 
     const focused = this._liveFocused();
@@ -417,7 +421,7 @@ export class FocusController implements FocusHooks {
     }
 
     if (channel === Keyboard.Tab) {
-      if (this._shiftDown) {
+      if (this._isShiftDown()) {
         this.focusPrevious();
       } else {
         this.focusNext();
@@ -427,6 +431,26 @@ export class FocusController implements FocusHooks {
     }
 
     this._handleDirectionalChannel(channel);
+  }
+
+  /** Same Active-scene + not-mid-transition gate {@link InteractionSystem} applies before dispatching a pointer frame. */
+  private _isGated(): boolean {
+    const state = this._app.scenes.state;
+
+    return (state !== null && state !== SceneState.Active) || this._app.scenes._transitionGateOpen;
+  }
+
+  /**
+   * Whether the aggregate {@link Keyboard.Shift} channel is currently held -
+   * read straight off the live channel buffer rather than latched from
+   * ShiftLeft/ShiftRight key events, which `InputSystem` already reconciles
+   * correctly (see `handleKeyUp`'s doc comment) when one side releases while
+   * the other stays down. A locally latched flag would have to reimplement
+   * that reconciliation to avoid flipping Tab's direction on a two-handed
+   * Shift release.
+   */
+  private _isShiftDown(): boolean {
+    return this._app.input._actionSample().values[Keyboard.Shift] !== 0;
   }
 
   /** Navigate for an arrow key or a D-pad button; any other channel is left alone. */
@@ -523,10 +547,6 @@ export class FocusController implements FocusHooks {
   }
 
   private _handleKeyUp(channel: number): void {
-    if (channel === Keyboard.ShiftLeft || channel === Keyboard.ShiftRight) {
-      this._shiftDown = false;
-    }
-
     const focused = this._liveFocused();
 
     if (focused !== null) {
@@ -537,7 +557,8 @@ export class FocusController implements FocusHooks {
   /**
    * The currently focused node, or `null` - blurring first (silently, since
    * {@link blur} itself skips the event for an already-destroyed node) if
-   * the focused node died since it was last checked, so a stale target never
+   * the focused node died, or stopped being {@link _isFocusEligible eligible}
+   * (hidden, or disabled), since it was last checked, so a stale target never
    * receives a key event. See {@link blur}'s doc comment for why this can be
    * the first place that notices a bare `destroy()`.
    */
@@ -548,7 +569,7 @@ export class FocusController implements FocusHooks {
       return null;
     }
 
-    if (!this._isOwned(focused)) {
+    if (!this._isOwned(focused) || !this._isFocusEligible(focused)) {
       this.blur();
 
       return null;

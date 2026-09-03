@@ -483,7 +483,7 @@ export class Container extends RenderNode {
     return !this._isTransformGroupBoundary && !this._renderPlanHasBarrierEffects();
   }
 
-  /** @internal */
+  /** Part of the renderer SDK contract for extension renderers. */
   protected override _collectContent(builder: RenderPlanBuilder): void {
     if (this._childList.length === 0) {
       return;
@@ -670,10 +670,12 @@ export class Container extends RenderNode {
    * descendants' GPU-backed resources (cached textures, filters, render
    * textures) and signal listeners would outlive the tree that owned them and
    * leak on every scene change.
+   *
+   * Idempotent: a second call is a no-op.
    */
   public override destroy(): void {
-    // Idempotent by contract, matching Texture.destroy(): re-entry would take
-    // already-released pooled state through a second teardown.
+    // Guarded here as well as in the base: this override's own subtree walk
+    // runs before the super call, so the base guard cannot cover it.
     if (this.destroyed) {
       return;
     }

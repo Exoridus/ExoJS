@@ -163,7 +163,7 @@ describe('Application — _frameLoopActive', () => {
 
     test('stop() halts the loop even while _state is still Loading (mid-startup)', async () => {
       const app = new Application({ backend: { type: 'webgl2' } });
-      const startPromise = app.start().catch(() => undefined); // will reject — see next test
+      const startPromise = app.start().catch(() => undefined);
 
       await Promise.resolve();
       await Promise.resolve();
@@ -178,6 +178,12 @@ describe('Application — _frameLoopActive', () => {
       expect(app.state).toBe(ApplicationState.Stopped);
 
       await startPromise;
+
+      // A scene-less start() has nothing for the stop's abort to reject, so
+      // its continuation still resumes - and must not promote the halted loop
+      // back to Running.
+      expect(app.state).toBe(ApplicationState.Stopped);
+
       void app.destroy();
     });
 

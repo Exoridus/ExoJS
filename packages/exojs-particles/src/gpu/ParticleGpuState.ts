@@ -10,6 +10,7 @@ import type { WgslContribution, WgslUniformField } from '#modules/WgslContributi
 import { getWgslUniformByteSize } from '#modules/WgslContribution';
 import type { ParticleSystem } from '#ParticleSystem';
 
+import { ParticleModuleKeyCollisionError } from './ParticleModuleKeyCollisionError';
 import particleSimulateWgsl from './shaders/particle-simulate.wgsl';
 
 /**
@@ -170,6 +171,7 @@ export class ParticleGpuState {
     modules: readonly UpdateModule[],
     frames: readonly Rectangle[],
     texture: Texture,
+    textureFrame: Rectangle,
     reportsDeaths = false,
   ) {
     this.device = device;
@@ -179,7 +181,7 @@ export class ParticleGpuState {
     this._framesUniformData = new ArrayBuffer(this._frameCount * 16);
     this._framesUniformView = new Float32Array(this._framesUniformData);
     this._framesUniformBuffer = new WebGpuUniformBuffer(device, this._framesUniformData.byteLength, 'particle-frames-uniforms');
-    this._writeFrames(frames, texture);
+    this._writeFrames(frames, texture, textureFrame);
 
     const vec2Bytes = capacity * 8;
     const vec4Bytes = capacity * 16;
@@ -219,7 +221,16 @@ export class ParticleGpuState {
       addressModeU: 'clamp-to-edge',
     });
 
-    this.setProgram(modules, reportsDeaths);
+    try {
+      this.setProgram(modules, reportsDeaths);
+    } catch (error) {
+      // The simulation buffers above already exist on the device. A rejected
+      // program must not strand them there, since nothing holds a reference to
+      // this half-built state to destroy it later.
+      this.destroy();
+
+      throw error;
+    }
   }
 
   /**
@@ -231,10 +242,33 @@ export class ParticleGpuState {
    * every live particle keeps the position and velocity the GPU last integrated.
    */
   public setProgram(modules: readonly UpdateModule[], reportsDeaths: boolean): void {
+    const contributions: WgslContribution[] = [];
+
     for (const m of modules) {
       if (!m.wgsl) {
         throw new Error(`ParticleGpuState: module ${m.constructor.name} has no wgsl() - all registered UpdateModules must be GPU-eligible.`);
       }
+
+      contributions.push(m.wgsl());
+    }
+
+    // Rejected before anything is torn down, so a system that hits this keeps
+    // the program it was running. A key names one struct and one uniform-block
+    // member, so a second contribution under it has nowhere to put its own
+    // values - the device would either reject the duplicate declarations or,
+    // worse, run both bodies against one instance's uniforms while the CPU path
+    // ran the two modules independently.
+    const firstByKey = new Map<string, string>();
+
+    for (let i = 0; i < modules.length; i++) {
+      const key = contributions[i]!.key;
+      const first = firstByKey.get(key);
+
+      if (first !== undefined) {
+        throw new ParticleModuleKeyCollisionError(key, first, modules[i]!.constructor.name);
+      }
+
+      firstByKey.set(key, modules[i]!.constructor.name);
     }
 
     this._destroyProgram();
@@ -244,15 +278,15 @@ export class ParticleGpuState {
     const slots: ModuleSlot[] = [];
     let uniformOffset = 0;
 
-    for (const m of modules) {
-      const c = m.wgsl!();
+    for (let i = 0; i < modules.length; i++) {
+      const c = contributions[i]!;
       const fields = c.uniforms ?? [];
       const size = getWgslUniformByteSize(fields);
 
       uniformOffset = Math.ceil(uniformOffset / 16) * 16;
 
       slots.push({
-        module: m,
+        module: modules[i]!,
         contribution: c,
         uniformByteOffset: uniformOffset,
         uniformByteSize: size,
@@ -587,35 +621,41 @@ export class ParticleGpuState {
   }
 
   /**
-   * Recomputes the atlas UVs against the texture's current dimensions.
+   * Recomputes the frame UVs against the texture's current dimensions and
+   * `textureFrame`.
    *
-   * Only meaningful for a system whose texture was still a deferred handle when
-   * this state was built: the UVs are divided by the texture size and uploaded
-   * once at construction, so a handle that reported 0x0 back then baked
-   * non-finite coordinates into the uniform buffer that nothing else rewrites.
-   * A system without declared frames is unaffected - it uploads the whole-
-   * texture fallback, which carries no dimensions.
+   * The UVs are divided by the texture size and uploaded once at construction,
+   * so nothing else rewrites them: a texture swap, a frame chosen after the
+   * state was built, and a deferred handle that reported 0x0 back then all
+   * leave the device sampling the wrong rect until this runs.
    */
-  public refreshFrames(frames: readonly Rectangle[], texture: Texture): void {
+  public refreshFrames(frames: readonly Rectangle[], texture: Texture, textureFrame: Rectangle): void {
     if (this._destroyed) {
       return;
     }
 
-    this._writeFrames(frames, texture);
+    this._writeFrames(frames, texture, textureFrame);
   }
 
-  private _writeFrames(frames: readonly Rectangle[], texture: Texture): void {
+  private _writeFrames(frames: readonly Rectangle[], texture: Texture, textureFrame: Rectangle): void {
     const view = this._framesUniformView;
     const w = texture.width;
     const h = texture.height;
     const flipY = texture.flipY;
 
     if (frames.length === 0) {
-      // Single-frame fallback - full texture.
-      view[0] = 0;
-      view[1] = flipY ? 1 : 0;
-      view[2] = 1;
-      view[3] = flipY ? 0 : 1;
+      // No atlas: the whole quad samples the system's own texture frame, which
+      // is what the CPU path writes into `a_uvMin`/`a_uvMax` too. Assuming the
+      // full texture here made the two backends sample different rects.
+      const minU = textureFrame.left / w;
+      const maxU = textureFrame.right / w;
+      const topV = textureFrame.top / h;
+      const bottomV = textureFrame.bottom / h;
+
+      view[0] = minU;
+      view[1] = flipY ? bottomV : topV;
+      view[2] = maxU;
+      view[3] = flipY ? topV : bottomV;
     } else {
       for (let i = 0; i < frames.length; i++) {
         const f = frames[i]!;
@@ -805,15 +845,20 @@ struct FrameUniforms {
         `);
 
     const moduleStructFields: string[] = [];
+    // Emitted once per key, like the preludes below: a struct or a uniform-block
+    // member declared twice is invalid WGSL, and `setProgram` is the only place
+    // that can explain a repeat to the caller.
+    const seenStructKeys = new Set<string>();
 
     for (const slot of slots) {
       const c = slot.contribution;
       const fields = c.uniforms ?? [];
 
-      if (fields.length === 0) {
+      if (fields.length === 0 || seenStructKeys.has(c.key)) {
         continue;
       }
 
+      seenStructKeys.add(c.key);
       sections.push(this._renderModuleStruct(c.key, fields));
       moduleStructFields.push(`u_${c.key}: ${c.key}Uniforms,`);
     }
@@ -830,11 +875,20 @@ ${moduleStructFields.map(s => `    ${s}`).join('\n')}
 
     let textureBindingIndex = moduleStructFields.length > 0 ? 3 : 2;
 
+    const seenTextureNames = new Set<string>();
+
     for (const slot of slots) {
       for (const t of slot.contribution.textures ?? []) {
+        const name = `${slot.contribution.key}_${t.name}`;
+
+        if (seenTextureNames.has(name)) {
+          continue;
+        }
+
+        seenTextureNames.add(name);
         sections.push(`
-@group(0) @binding(${textureBindingIndex++}) var u_${slot.contribution.key}_${t.name}: texture_1d<f32>;
-@group(0) @binding(${textureBindingIndex++}) var u_${slot.contribution.key}_${t.name}_sampler: sampler;
+@group(0) @binding(${textureBindingIndex++}) var u_${name}: texture_1d<f32>;
+@group(0) @binding(${textureBindingIndex++}) var u_${name}_sampler: sampler;
                 `);
       }
     }

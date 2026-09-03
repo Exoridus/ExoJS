@@ -11,6 +11,7 @@
  * It stores geometry internally as TextPageQuads instead of Mesh children.
  */
 import { Color } from '#core/Color';
+import { Signal } from '#core/Signal';
 import { Drawable } from '#rendering/Drawable';
 import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
@@ -95,6 +96,7 @@ const mockAtlas: Partial<GlyphAtlas> = {
   pages: [mockPage] as unknown as GlyphAtlas['pages'],
   mode: 'sdf',
   clear: vi.fn(),
+  onCleared: new Signal(),
 };
 
 /**
@@ -113,6 +115,7 @@ const mockMetrics = {
 const mockPool = {
   getAtlas: vi.fn(() => mockAtlas),
   getMetrics: vi.fn(() => mockMetrics),
+  clearVariant: vi.fn(),
 };
 
 beforeEach(() => {
@@ -269,6 +272,36 @@ describe('Text', () => {
   test('destroy() on empty text does not throw', () => {
     const text = new Text('');
     expect(() => text.destroy()).not.toThrow();
+  });
+
+  test('atlas onCleared re-lays out every node drawing from it, not only the one that triggered the clear', () => {
+    const a = new Text('Hello', { fontSize: 16 });
+    const b = new Text('World', { fontSize: 16 });
+
+    a.syncDirty();
+    b.syncDirty();
+
+    const passesBefore = layoutPasses();
+
+    // Simulates what GlyphAtlas.clear() dispatches once its pages are reset -
+    // both nodes share `mockAtlas` (the pool always hands out the same
+    // instance), so both must notice, not only whichever node happens to
+    // call clear() itself.
+    mockAtlas.onCleared!.dispatch();
+
+    a.syncDirty();
+    b.syncDirty();
+
+    expect(layoutPasses()).toBe(passesBefore + 2);
+  });
+
+  test('destroyed node stops listening for atlas invalidation', () => {
+    const a = new Text('Hello', { fontSize: 16 });
+
+    a.syncDirty();
+    a.destroy();
+
+    expect(() => mockAtlas.onCleared!.dispatch()).not.toThrow();
   });
 
   test('update() with tint-only hint does not rebuild geometry', () => {
@@ -602,7 +635,7 @@ describe('Text — FontFace-first', () => {
     resolve();
     await flushMicrotasks();
 
-    expect(mockAtlas.clear).toHaveBeenCalled();
+    expect(mockPool.clearVariant).toHaveBeenCalled();
     expect(text.pageQuads[0]).not.toBe(quadsBefore);
   });
 

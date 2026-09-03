@@ -226,4 +226,17 @@ describe('AnimatedSprite scheduling', () => {
     expect(sprite.currentFrame).toBe(2);
     expect(app.animations.size).toBe(0);
   });
+
+  test('a completed single-frame clip releases its registration too', () => {
+    const sprite = new AnimatedSprite(null, { blink: { frames: [new Rectangle(0, 0, 16, 16)], fps: 10, repeat: 1 } });
+
+    root.addChild(sprite);
+    sprite.play('blink');
+    expect(app.animations.size).toBe(1);
+
+    advanceFrame(app, 100);
+
+    expect(sprite.playing).toBe(false);
+    expect(app.animations.size).toBe(0);
+  });
 });

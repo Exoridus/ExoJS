@@ -164,6 +164,17 @@ export interface ParticleSystemOptions {
  * Position the system itself via `system.setPosition(...)` and emit relative
  * to `(0, 0)`.
  *
+ * **View culling:** a system is created with `cullable = false`. Its local
+ * bounds cover one texture frame at the local origin, because the particles
+ * themselves are simulated on the GPU in half the configurations and no
+ * emitted extent is tracked in either - so culling against those bounds would
+ * remove the entire cloud as soon as the emitter's own origin left the view.
+ * For a system whose reach is known, set the node's `cullArea` to a rectangle
+ * in local space covering where its particles travel and set `cullable = true`
+ * again; the viewport check then uses that rectangle instead of the bounds.
+ * `getBounds()` still reports the one-frame box, not an extent of the live
+ * particles.
+ *
  * **Pixel snapping:** {@link Drawable.pixelSnapMode} is intentionally ignored
  * for particle systems. Particle instances bake their own per-particle
  * transforms in the emitter/compute path rather than reading the shared
@@ -310,6 +321,13 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
         this._frames.push(frame.clone());
       }
     }
+
+    // Particles live in the system's local space and travel arbitrarily far
+    // from its origin, but the node's own bounds only ever describe one
+    // texture frame there - so the viewport check would drop the whole cloud
+    // the moment the emitter's origin scrolled off screen. See the class docs
+    // for `cullArea`, which is how a system opts back in.
+    this.cullable = false;
 
     this.resetTextureFrame();
     this._healTextureFrameOnLoad(this._texture);
@@ -487,13 +505,11 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
       this.resetTextureFrame();
     }
 
-    // Atlas UVs are divided by the texture size and uploaded to the device once,
-    // when the GPU state is built. A system that reached the GPU path while the
-    // texture was still 0x0 therefore holds non-finite coordinates that no
-    // frame-level invalidation reaches.
-    if (this._gpuState !== null && this._frames.length > 0) {
-      this._gpuState.refreshFrames(this._frames, texture);
-    }
+    // Frame UVs are divided by the texture size and uploaded to the device
+    // once, when the GPU state is built. A system that reached the GPU path
+    // while the texture was still 0x0 therefore holds non-finite coordinates
+    // that no frame-level invalidation reaches.
+    this._refreshGpuFrames();
   }
 
   public setTextureFrame(frame: Rectangle): this {
@@ -502,8 +518,22 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     this._updateVertices = true;
 
     this._setLocalBounds(0, 0, frame.width, frame.height);
+    // Every public path that changes the texture or the frame - including
+    // `setTexture`, which resets the frame - funnels through here, and the
+    // device's copy of the UVs is only written when something asks for it.
+    this._refreshGpuFrames();
 
     return this;
+  }
+
+  /**
+   * Re-bakes the device-side frame UVs. The CPU path recomputes them every
+   * frame from the live texture and `textureFrame`; the GPU path holds them in
+   * a uniform buffer that is written only here and at construction, so the two
+   * backends sample different rects until this runs.
+   */
+  private _refreshGpuFrames(): void {
+    this._gpuState?.refreshFrames(this._frames, this._texture, this._textureFrame);
   }
 
   public resetTextureFrame(): this {
@@ -721,6 +751,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
       if (this._gpuState !== null) {
         this._gpuState.destroy();
         this._gpuState = null;
+        this._resetPendingDeaths();
       }
 
       this._gpuMode = false;
@@ -770,6 +801,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     if (this._gpuState !== null) {
       this._gpuState.destroy();
       this._gpuState = null;
+      this._resetPendingDeaths();
     }
 
     for (const frame of this._frames) {
@@ -811,6 +843,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
 
       this._gpuState.destroy();
       this._gpuState = null;
+      this._resetPendingDeaths();
       this._gpuMode = false;
       this._gpuDirtySlots.clear();
       this.clearParticles();
@@ -833,7 +866,15 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
       return;
     }
 
-    this._gpuState = new ParticleGpuState(device, this.capacity, this._updateModules, this._frames, this._texture, this._deathModules.length > 0);
+    this._gpuState = new ParticleGpuState(
+      device,
+      this.capacity,
+      this._updateModules,
+      this._frames,
+      this._texture,
+      this._textureFrame,
+      this._deathModules.length > 0,
+    );
     this._gpuMode = true;
 
     // Mark every currently-alive slot dirty so the initial upload
@@ -1036,6 +1077,20 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
 
       void this._drainDeaths(pending);
     }
+  }
+
+  /**
+   * Forgets deaths that were queued for a GPU state that no longer exists. The
+   * records they describe lived in that state's device buffer, so a rebuilt
+   * state would stage that many records out of a freshly zeroed buffer and hand
+   * every death module a zero-valued context.
+   */
+  private _resetPendingDeaths(): void {
+    this._pendingDeathLifetimes.clear();
+    this._pendingDeathCount = 0;
+    // Re-armed with the backlog itself: the warning reports a condition, not a
+    // process-lifetime event.
+    this._deathOverflowReported = false;
   }
 
   /**

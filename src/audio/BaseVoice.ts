@@ -58,8 +58,7 @@ export interface BaseVoiceInit {
 }
 
 /** A voice the {@link AudioSystem} ticks each frame for spatial updates. */
-export interface SpatialVoice {
-  readonly ended: boolean;
+export interface SpatialVoice extends Voice {
   _tickSpatial(): void;
 }
 

@@ -9,6 +9,7 @@
  */
 
 import { Color } from '#core/Color';
+import { Signal } from '#core/Signal';
 import { PixelSnapMode } from '#rendering/pixelSnap';
 import { BitmapText } from '#rendering/text/BitmapText';
 import type { BmFontData } from '#rendering/text/BmFont';
@@ -58,6 +59,7 @@ const mockAtlas: Partial<GlyphAtlas> = {
   pages: [mockPage] as unknown as GlyphAtlas['pages'],
   mode: 'sdf',
   clear: vi.fn(),
+  onCleared: new Signal(),
 };
 
 const mockMetrics = {

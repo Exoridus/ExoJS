@@ -90,10 +90,12 @@ interface PendingQuad {
   readonly nodeIndex: number;
   readonly shaderType: ShaderType;
   readonly atlasTexture: Texture;
+  readonly blendMode: BlendModes;
 }
 
 interface BatchDraw {
   readonly shaderType: ShaderType;
+  readonly blendMode: BlendModes;
   readonly atlasTextures: readonly Texture[];
   readonly firstVertex: number;
   readonly vertexCount: number;
@@ -111,7 +113,10 @@ interface TextTextureSetBindGroupEntry {
 const maxTextureSetsPerAnchor = 8;
 
 const sharesAtlasBatchClass = (a: PendingQuad, b: PendingQuad): boolean =>
-  a.shaderType === b.shaderType && a.atlasTexture.width === b.atlasTexture.width && a.atlasTexture.height === b.atlasTexture.height;
+  a.shaderType === b.shaderType &&
+  a.blendMode === b.blendMode &&
+  a.atlasTexture.width === b.atlasTexture.width &&
+  a.atlasTexture.height === b.atlasTexture.height;
 
 /**
  * Opaque, renderer-private snapshot carried on {@link WebGpuRetainedBatchPayload.rendererData}
@@ -326,9 +331,13 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       }
     }
 
-    // Sort by compatible atlas class, then texture identity. Up to eight
-    // textures of one class share a draw through the shader slot table.
+    // Sort by blend mode, then compatible atlas class, then texture identity.
+    // Up to eight textures of one class share a draw through the shader slot
+    // table; a differing blend mode breaks the batch because it selects a
+    // different pipeline variant.
     this._pendingQuads.sort((a, b) => {
+      const bc = a.blendMode - b.blendMode;
+      if (bc !== 0) return bc;
       const sc = a.shaderType.localeCompare(b.shaderType);
       if (sc !== 0) return sc;
       const wc = a.atlasTexture.width - b.atlasTexture.width;
@@ -424,6 +433,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
       batches.push({
         shaderType: first.shaderType,
+        blendMode: first.blendMode,
         atlasTextures,
         firstVertex: batchFirstVertex,
         vertexCount: packedV - batchFirstVertex,
@@ -552,11 +562,13 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     pass.setIndexBuffer(this._indexBuffer!, 'uint32', indexBase);
 
     let lastShaderType: ShaderType | null = null;
+    let lastBlendMode: BlendModes | null = null;
     for (const batch of batches) {
-      if (batch.shaderType !== lastShaderType) {
-        pass.setPipeline(this._getPipeline(batch.shaderType, format, stencil));
+      if (batch.shaderType !== lastShaderType || batch.blendMode !== lastBlendMode) {
+        pass.setPipeline(this._getPipeline(batch.shaderType, batch.blendMode, format, stencil));
         pass.setBindGroup(0, frameBindGroup);
         lastShaderType = batch.shaderType;
+        lastBlendMode = batch.blendMode;
       }
       pass.setBindGroup(1, this._getTexBindGroup(device, backend, batch.atlasTextures));
       pass.drawIndexed(batch.indexCount, 1, batch.firstIndex, 0, 0);
@@ -613,11 +625,14 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       for (const format of formats) {
         // Prewarm only the no-clip variant (matches the _getPipeline cache key
         // for stencil = false); stencil variants compile lazily under a clip.
-        const key = `${shaderType}:${format}:n`;
+        // Likewise only the default blend mode: text away from `Normal` is rare
+        // enough that three more compiles per format per mode would cost more
+        // than the first draw it saves.
+        const key = `${shaderType}:${BlendModes.Normal}:${format}:n`;
         if (this._pipelines.has(key)) continue;
 
         promises.push(
-          device.createRenderPipelineAsync(this._buildPipelineDescriptor(shaderType, format)).then(pipeline => {
+          device.createRenderPipelineAsync(this._buildPipelineDescriptor(shaderType, BlendModes.Normal, format)).then(pipeline => {
             this._pipelines.set(key, pipeline);
           }),
         );
@@ -758,11 +773,12 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     const nodeIndex = this._assignNodeIndex(node);
     const shaderType: ShaderType = node.colorGlyphs ? 'color' : 'sdf';
     const pages = atlas.pages;
+    const blendMode = node.blendMode;
 
     for (const batch of pageQuads) {
       const page = pages[batch.pageIndex];
       if (page === undefined) continue;
-      this._pendingQuads.push({ quads: batch, nodeIndex, shaderType, atlasTexture: page.texture });
+      this._pendingQuads.push({ quads: batch, nodeIndex, shaderType, atlasTexture: page.texture, blendMode });
     }
   }
 
@@ -772,11 +788,12 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
     const nodeIndex = this._assignNodeIndex(node);
     const shaderType: ShaderType = msdf ? 'msdf' : 'color';
+    const blendMode = node.blendMode;
 
     for (const batch of pageQuads) {
       const tex = textures[batch.pageIndex];
       if (tex === undefined) continue;
-      this._pendingQuads.push({ quads: batch, nodeIndex, shaderType, atlasTexture: tex });
+      this._pendingQuads.push({ quads: batch, nodeIndex, shaderType, atlasTexture: tex, blendMode });
     }
   }
 
@@ -967,17 +984,17 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
   // ── Pipeline helpers ─────────────────────────────────────────────────────
 
-  private _getPipeline(shaderType: ShaderType, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
-    const key = `${shaderType}:${format}:${stencil ? 's' : 'n'}`;
+  private _getPipeline(shaderType: ShaderType, blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
+    const key = `${shaderType}:${blendMode}:${format}:${stencil ? 's' : 'n'}`;
     const existing = this._pipelines.get(key);
     if (existing) return existing;
 
-    const pipeline = this._device!.createRenderPipeline(this._buildPipelineDescriptor(shaderType, format, stencil));
+    const pipeline = this._device!.createRenderPipeline(this._buildPipelineDescriptor(shaderType, blendMode, format, stencil));
     this._pipelines.set(key, pipeline);
     return pipeline;
   }
 
-  private _buildPipelineDescriptor(shaderType: ShaderType, format: GPUTextureFormat, stencil = false): GPURenderPipelineDescriptor {
+  private _buildPipelineDescriptor(shaderType: ShaderType, blendMode: BlendModes, format: GPUTextureFormat, stencil = false): GPURenderPipelineDescriptor {
     let fragEntry: string;
     if (shaderType === 'sdf') {
       fragEntry = 'fragmentSdf';
@@ -988,7 +1005,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     }
 
     const descriptor: GPURenderPipelineDescriptor = {
-      label: `WebGpuTextRenderer/${shaderType}`,
+      label: `WebGpuTextRenderer/${shaderType}/${blendMode}`,
       layout: this._pipelineLayout!,
       vertex: {
         module: this._shaderModule!,
@@ -1011,7 +1028,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
         targets: [
           {
             format,
-            blend: getWebGpuBlendState(BlendModes.Normal),
+            blend: getWebGpuBlendState(blendMode),
             writeMask: GPUColorWrite.ALL,
           },
         ],
@@ -1131,7 +1148,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       vertexBytes,
       vertexByteLength,
       rendererData.quadCount,
-      BlendModes.Normal,
+      batch.blendMode,
       batch.atlasTextures,
       batch.atlasTextures.length,
       null,
@@ -1246,7 +1263,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     const active = coordinator.acquirePass();
     const pass = active.pass;
 
-    pass.setPipeline(this._getPipeline(data.shaderType, backend.renderTargetFormat, coordinator.stencilActive));
+    pass.setPipeline(this._getPipeline(data.shaderType, payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive));
     pass.setBindGroup(0, frameBindGroup);
     pass.setBindGroup(1, textureBindGroup);
     pass.setVertexBuffer(0, bundle.instanceBuffer, payload.byteOffset);

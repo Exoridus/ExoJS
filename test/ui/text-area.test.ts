@@ -38,6 +38,20 @@ describe('TextArea', () => {
     expect(field.lineCount).toBe(2);
   });
 
+  test('an Enter the transport already applied is not applied a second time', () => {
+    const { harness, field } = createField();
+
+    type('ab');
+    // What one physical Enter produces in a browser: the host's line break
+    // first, the engine's key event at the next frame boundary.
+    fireBeforeInput('insertLineBreak');
+    keyDown(harness, Keyboard.Enter);
+    type('cd');
+
+    expect(field.value).toBe('ab\ncd');
+    expect(field.lineCount).toBe(2);
+  });
+
   test('Home and End go to the ends of the current line, not of the value', () => {
     const { harness, field } = createField();
 

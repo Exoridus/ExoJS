@@ -15,7 +15,8 @@ export interface CrossFadeOptions {
 }
 
 /**
- * Cross-fade from one playing {@link Voice} to another over `durationMs`.
+ * Cross-fade from one playing {@link Voice} to another over `durationMs`,
+ * in milliseconds.
  *
  * Ramps `to` up to `toVolume` and `from` down to silence. By default `from` is
  * stopped when the fade finishes; pass `stopAfter: false` to keep it alive.

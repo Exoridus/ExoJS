@@ -333,6 +333,28 @@ describe('SpawnModule', () => {
     expect(system.liveCount).toBeLessThanOrEqual(60);
   });
 
+  test('RateSpawn recovers from a negative rate sample instead of wedging', () => {
+    const system = new ParticleSystem(makeTexture(), { capacity: 64 });
+    let rate = -1000;
+
+    system.addSpawnModule(
+      new RateSpawn({
+        rate: { sample: () => rate },
+        lifetime: new Constant(10),
+      }),
+    );
+
+    // A distribution that dips below zero drives the accumulator down without
+    // bound, so a later positive rate would take minutes to climb back.
+    system.update(tick(1));
+    expect(system.liveCount).toBe(0);
+
+    rate = 10;
+    system.update(tick(1));
+
+    expect(system.liveCount).toBe(10);
+  });
+
   test('RateSpawn applies distributions to spawned particle fields', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 64 });
 
@@ -883,6 +905,17 @@ describe('DeathModule', () => {
   });
 });
 
+describe('view culling', () => {
+  test('a system opts out of viewport culling, because its bounds are one frame at the origin', () => {
+    const system = new ParticleSystem(makeTexture(), { capacity: 4 });
+
+    // Culling against those bounds would drop the whole cloud the moment the
+    // emitter's own origin scrolled out of view.
+    expect(system.cullable).toBe(false);
+    expect(system.cullArea).toBeNull();
+  });
+});
+
 describe('emit()', () => {
   test('fills a particle with the spawn defaults', () => {
     const system = new ParticleSystem({ capacity: 4 });
@@ -922,6 +955,25 @@ describe('emit()', () => {
     expect(second.position.y).toBe(0);
     expect(second.color).toBe(0xffffffff);
     expect(second.lifetime).toBe(1);
+  });
+
+  test('an out-of-range frame index is rejected rather than wrapped into a valid frame', () => {
+    const system = new ParticleSystem({ capacity: 4 });
+
+    // The frame channel is a Uint16Array: -1 would land on 65535 and 70000 on
+    // 4464, either of which may be a frame the system actually declares.
+    expect(() => {
+      system.emit()!.frame = -1;
+    }).toThrow(/frame index/);
+
+    expect(() => {
+      system.emit()!.frame = 70000;
+    }).toThrow(/frame index/);
+
+    const particle = system.emit()!;
+
+    particle.frame = 3;
+    expect(particle.frame).toBe(3);
   });
 
   test('a writer kept past the next emit refuses to write in development builds', () => {

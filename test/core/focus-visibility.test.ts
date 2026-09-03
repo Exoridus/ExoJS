@@ -244,7 +244,7 @@ describe('Application focus / visibility', () => {
     void app.destroy();
   });
 
-  test('pauseOnHidden=true skips frame body but keeps rAF scheduled when hidden', async () => {
+  test('pauseOnHidden=true skips the frame body when hidden', async () => {
     const { Application, ApplicationState, sceneDirectorMock, interactionMock, inputSystemMock } = await loadHarness();
     const app = new Application({ canvas: { element: document.createElement('canvas') } });
     const rawApp = app as unknown as Record<string, unknown>;
@@ -278,9 +278,9 @@ describe('Application focus / visibility', () => {
 
     app.update();
 
-    // rAF still scheduled
-    expect(rafSpy).toHaveBeenCalledTimes(1);
-    // But game-state subsystems NOT called
+    // Scheduling belongs to the loop's own callback, not to update().
+    expect(rafSpy).not.toHaveBeenCalled();
+    // Game-state subsystems NOT called
     expect(inputSystemMock.update).not.toHaveBeenCalled();
     expect(sceneDirectorMock.update).not.toHaveBeenCalled();
     expect(interactionMock.update).not.toHaveBeenCalled();

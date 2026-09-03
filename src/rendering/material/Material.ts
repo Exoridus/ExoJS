@@ -229,12 +229,12 @@ export abstract class Material {
   }
 
   /**
-   * Internal hook for renderers to register a per-material-instance cleanup
-   * callback (release compiled program, pipeline, or bind groups). The
-   * callback fires on {@link destroy}; renderers MUST also tolerate the
-   * material being garbage-collected without destroy ever being called.
+   * Hook for renderers to register a per-material-instance cleanup callback
+   * (release compiled program, pipeline, or bind groups). The callback fires
+   * on {@link destroy}; renderers MUST also tolerate the material being
+   * garbage-collected without destroy ever being called.
    *
-   * @internal
+   * Part of the renderer SDK contract for extension renderers.
    */
   public _onDispose(callback: () => void): void {
     this._disposeCallbacks.add(callback);

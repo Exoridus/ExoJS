@@ -2682,6 +2682,30 @@ describe('InteractionSystem — events with no hit', () => {
     im.destroy();
   });
 
+  test('pointerdown over empty space blurs whatever currently holds focus', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionSystem(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    sprite.focusable = true;
+    scene.addChild(sprite);
+
+    im.focus(sprite);
+    expect(im.focused).toBe(sprite);
+
+    dispatchPointer(signals.onPointerDown, { x: 500, y: 500 });
+    flushInteractions(im);
+
+    expect(im.focused).toBeNull();
+
+    im.destroy();
+    sprite.destroy();
+  });
+
   test('pointercancel/pointerleave with no prior hover and no active drag does not throw', () => {
     const { app, scene, signals } = createApp();
     const im = new InteractionSystem(app);

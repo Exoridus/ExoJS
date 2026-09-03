@@ -18,7 +18,17 @@ const repoRoot = resolve(import.meta.dirname!, '../..');
 const COVERED_OUTSIDE_THE_TABLE = new Set(['coverage', 'siteBuild', 'exampleSmoke']);
 
 const allLaneKeys = Object.keys(
-  effectiveLanes({ engine: true, site: true, audioFx: true, tilemapWorker: true, exampleCatalog: true, benchStructural: true, release: true }),
+  effectiveLanes({
+    engine: true,
+    site: true,
+    audioFx: true,
+    tilemapWorker: true,
+    exampleCatalog: true,
+    benchStructural: true,
+    release: true,
+    guides: true,
+    createExoApp: true,
+  }),
 );
 
 const scriptsIn = (command: string): string[] =>

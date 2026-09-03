@@ -39,8 +39,10 @@ export const enum DirtyChannel {
 const RETAINED_GENERATIONS = 8;
 
 /**
- * One generation's marks. `nodes` keeps its backing store across recycles;
- * `count` is the logical length.
+ * One generation's marks. `count` is the logical length; the arrays keep their
+ * backing store across recycles and hold `null`/`0` in the slots above it, so
+ * marking stays allocation-free once a generation's high-water mark is reached
+ * without the retired entries pinning the nodes they named.
  */
 interface DirtyBucket {
   generation: number;
@@ -53,7 +55,7 @@ interface DirtyBucket {
    */
   lastSequence: number;
   count: number;
-  readonly nodes: SceneNode[];
+  readonly nodes: Array<SceneNode | null>;
   readonly channels: number[];
 }
 
@@ -116,6 +118,14 @@ class NodeDirtyIndex {
     bucket.generation = this._generation;
     bucket.firstSequence = this._sequence;
     bucket.lastSequence = this._sequence;
+
+    // Drop what the retired generation named before reopening the bucket. A
+    // slot above `count` is invisible to every reader, but the reference in it
+    // is not: a SceneNode links to its parent and a Container to its children,
+    // so one retired entry keeps a whole destroyed graph alive for the life of
+    // the process. Nulled rather than truncated to keep the backing store.
+    bucket.nodes.fill(null, 0, bucket.count);
+    bucket.channels.fill(0, 0, bucket.count);
     bucket.count = 0;
 
     const oldestGeneration = this._generation - RETAINED_GENERATIONS + 1;
@@ -246,7 +256,14 @@ class NodeDirtyIndex {
       }
 
       for (let index = 0; index < bucket.count; index++) {
-        const node = bucket.nodes[index]!;
+        const node = bucket.nodes[index] ?? null;
+
+        // A slot released by a destroyed node stays in place until the bucket
+        // is recycled, so the walk has to step over it.
+        if (node === null) {
+          continue;
+        }
+
         const marked = this._markedSince(node, bucket.channels[index]! & channels, sequence);
 
         if (marked !== 0 && !visit(node, marked)) {
@@ -275,6 +292,24 @@ class NodeDirtyIndex {
     });
 
     return marked;
+  }
+
+  /**
+   * Forget whatever entry this node still holds, so a destroyed node is not
+   * kept alive by the window it happened to be marked in. Without it a
+   * destroyed application pins its last generations of nodes forever: nothing
+   * advances the index once its frame loop is gone.
+   */
+  public release(node: SceneNode): void {
+    const bucket = node._dirtyMarkGeneration >= 0 ? this._buckets[node._dirtyMarkGeneration % RETAINED_GENERATIONS]! : null;
+
+    if (bucket !== null && bucket.generation === node._dirtyMarkGeneration && bucket.nodes[node._dirtyMarkSlot] === node) {
+      bucket.nodes[node._dirtyMarkSlot] = null;
+      bucket.channels[node._dirtyMarkSlot] = 0;
+    }
+
+    node._dirtyMarkGeneration = -1;
+    node._dirtyMarkSlot = -1;
   }
 
   /** Drop every mark and start over - for tests and for a full teardown. */

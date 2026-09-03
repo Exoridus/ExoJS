@@ -17,6 +17,7 @@
  * `webgl2-text-pixel-ratio.test.ts`).
  */
 
+import { Signal } from '#core/Signal';
 import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
@@ -54,6 +55,7 @@ const mockAtlas: Partial<GlyphAtlas> = {
   pages: [mockPage] as unknown as GlyphAtlas['pages'],
   mode: 'sdf',
   clear: vi.fn(),
+  onCleared: new Signal(),
 };
 
 const getAtlas = vi.fn(() => mockAtlas);

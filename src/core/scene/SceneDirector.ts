@@ -187,6 +187,14 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   private _sessionResources: TransitionResources | null = null;
   private _inputGateDepth = 0;
   private _navigationInFlight = false;
+  /**
+   * The navigation currently in flight, or `null` while none is. Published so
+   * {@link SceneDirector._dispose} can wait for it the way it already waits
+   * for a preload's `ready`: aborting a navigation invalidates its generation
+   * but does not stop the incoming scene's `load()`/`init()` from running, nor
+   * the race-guard disposal that follows them.
+   */
+  private _pendingNavigation: Promise<void> | null = null;
   private _navigationGeneration = 0;
   private _destroyed = false;
 
@@ -873,11 +881,17 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * Pause the active scene. Its `fixedUpdate`/`update` stop running, but
-   * `draw` keeps rendering and input/interaction stay live - the canonical
-   * "pause menu drawn over a frozen world" shape. This does not change
-   * {@link SceneDirector.state} - see {@link SceneDirector.paused} instead.
-   * No-op (returns `false`) when no scene is active, it is not currently
-   * `Active`, or it is already paused.
+   * `draw` keeps rendering - the canonical "pause menu drawn over a frozen
+   * world" shape. Input and interaction are not both gated the same way:
+   * a {@link SceneInputs} binding whose {@link SceneAvailability} `when`
+   * option is left at its default (`'active'`) stops dispatching while
+   * paused, but {@link SceneInteraction.observe}/{@link SceneInteraction.scope}
+   * have no pause gate at all and keep firing pointer hit-testing and Tab
+   * traversal against the frozen world - a caller that needs interaction to
+   * stop too has to check {@link SceneDirector.paused} in its own handlers.
+   * This does not change {@link SceneDirector.state} - see
+   * {@link SceneDirector.paused} instead. No-op (returns `false`) when no
+   * scene is active, it is not currently `Active`, or it is already paused.
    */
   public pause(): boolean {
     const scope = this._activeScope;
@@ -1100,7 +1114,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * @internal Awaited teardown, in order: abort any in-flight transition
-   * session (destroy it, reject its navigation) → await every scene teardown
+   * session (destroy it, reject its navigation) → await the navigation in
+   * flight, if any, so an incoming scene still inside `load()` finishes its
+   * own disposal before anything it depends on is released → await every scene teardown
    * already in flight (drained via {@link SceneDirector._awaitPendingTeardowns}
    * from the `_pendingTeardowns` set - a committed switch's outgoing scope,
    * or the scene a fire-and-forget {@link Application.stop} just cleared,
@@ -1127,6 +1143,22 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     // this fires is now caught by that method's own race guard: it sees
     // the session gone and bails instead of mutating `_activeScope` behind us.
     this._abortInFlightNavigation(new SceneTransitionLifecycleError('aborted'));
+
+    // Aborting a navigation only invalidates its generation. Its incoming
+    // scene may still be inside `load()`, and the race guard that catches the
+    // stale generation afterwards goes on to run that scope's `init()`,
+    // `unload()` and `destroy()`. Waiting for the whole run to settle is what
+    // keeps that teardown from executing against a Loader, rendering context,
+    // audio system and backend this disposal has already released. The
+    // rejection is not this disposal's to observe - it belongs to whoever
+    // started the navigation.
+    const navigation = this._pendingNavigation;
+
+    this._pendingNavigation = null;
+
+    if (navigation !== null) {
+      await navigation.catch(() => {});
+    }
 
     // A prior committed switch's outgoing scope may still be tearing down in
     // the background, and so may the scene a fire-and-forget
@@ -1435,11 +1467,27 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
     this._navigationInFlight = true;
 
-    try {
-      await action();
-    } finally {
-      this._navigationInFlight = false;
-    }
+    const navigation = (async (): Promise<void> => {
+      try {
+        await action();
+      } finally {
+        this._navigationInFlight = false;
+      }
+    })();
+
+    // Marked handled on a DERIVED promise only: `_dispose` may end up the sole
+    // awaiter of an aborted navigation, and `navigation` itself still has to
+    // reject for the caller that asked for it.
+    this._pendingNavigation = navigation;
+    void navigation
+      .catch(() => {})
+      .finally(() => {
+        if (this._pendingNavigation === navigation) {
+          this._pendingNavigation = null;
+        }
+      });
+
+    await navigation;
   }
 
   /** Await and clear `_pendingOutgoingTeardown`, if a commitSwitch/commitDiscard set it this navigation. */

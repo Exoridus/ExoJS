@@ -1,6 +1,6 @@
 {
   "title": "ParticleSystem",
-  "description": "The central coordinator of the particle pipeline. `ParticleSystem` is a Drawable that owns: - **Particle storage** - one channel per attribute (position, velocity, scale, rotation, color, timing, ...), sized to a fixed capacity at construction. Modules and render modes address it by name through a ParticleBatch; user code brings particles into existence with emit. - **Spawn modules** - fill freshly emitted particles. - **Update modules** - mutate the live range each frame (forces, color blends, scale curves, drag, ...). Built-in modules ship both CPU and WGSL implementations; custom modules can opt into GPU acceleration by implementing `wgsl()`. - **Death modules** - fire once per dying particle, before its slot is recycled (sub-emitters, event hooks). **Auto-routing CPU vs GPU:** at first update, the system checks: if a `WebGpuBackend` was supplied AND every registered update module has `wgsl()` AND the render mode is GPU-eligible, the GPU path engages - a composite compute pipeline runs integration plus all module bodies in one dispatch and writes directly into the renderer's instance buffer (no CPU readback). Otherwise the CPU path runs the existing per-module `apply()` loops. **Per-frame order in update (CPU mode):** 1. Run every spawn module. 2. Integrate position from velocity, rotation from rotationSpeed, advance `elapsed`. 3. Run every update module on the live range. 4. Compact: scan `[0, liveCount)` forward, fire death modules on expired slots, copy survivors down. `liveCount` shrinks to the survivor count. **Per-frame order in update (GPU mode):** 1. Run every spawn module (CPU writes initial values into the spawn slot). 2. Detect expiries on CPU (via `elapsed >= lifetime`); fire death modules; set `lifetime[slot] = -1` sentinel + clear `alive[slot]` so the GPU shader skips them. **No compaction** - slots are recycled on next spawn. 3. Dispatch the composite compute pipeline. Integration + update modules + pack-instances run in one pass; the instance buffer is written directly. CPU SoA stays as-is for spawn writes. **Coordinate space:** particle positions are LOCAL to the system. The system's `getGlobalTransform()` is applied on top during rendering - both the WebGL2 and WebGPU shaders multiply `projection * translation * rotated`. Setting world-space positions on individual particles double-translates. Position the system itself via `system.setPosition(...)` and emit relative to `(0, 0)`. **Pixel snapping:** Drawable.pixelSnapMode is intentionally ignored for particle systems. Particle instances bake their own per-particle transforms in the emitter/compute path rather than reading the shared pixel-snap transform row, so a snap mode set on the system has no effect on rendered output - snapping thousands of independently-moving sub-pixel particles to the device grid is neither meaningful nor desirable.",
+  "description": "The central coordinator of the particle pipeline. `ParticleSystem` is a Drawable that owns: - **Particle storage** - one channel per attribute (position, velocity, scale, rotation, color, timing, ...), sized to a fixed capacity at construction. Modules and render modes address it by name through a ParticleBatch; user code brings particles into existence with emit. - **Spawn modules** - fill freshly emitted particles. - **Update modules** - mutate the live range each frame (forces, color blends, scale curves, drag, ...). Built-in modules ship both CPU and WGSL implementations; custom modules can opt into GPU acceleration by implementing `wgsl()`. - **Death modules** - fire once per dying particle, before its slot is recycled (sub-emitters, event hooks). **Auto-routing CPU vs GPU:** at first update, the system checks: if a `WebGpuBackend` was supplied AND every registered update module has `wgsl()` AND the render mode is GPU-eligible, the GPU path engages - a composite compute pipeline runs integration plus all module bodies in one dispatch and writes directly into the renderer's instance buffer (no CPU readback). Otherwise the CPU path runs the existing per-module `apply()` loops. **Per-frame order in update (CPU mode):** 1. Run every spawn module. 2. Integrate position from velocity, rotation from rotationSpeed, advance `elapsed`. 3. Run every update module on the live range. 4. Compact: scan `[0, liveCount)` forward, fire death modules on expired slots, copy survivors down. `liveCount` shrinks to the survivor count. **Per-frame order in update (GPU mode):** 1. Run every spawn module (CPU writes initial values into the spawn slot). 2. Detect expiries on CPU (via `elapsed >= lifetime`); fire death modules; set `lifetime[slot] = -1` sentinel + clear `alive[slot]` so the GPU shader skips them. **No compaction** - slots are recycled on next spawn. 3. Dispatch the composite compute pipeline. Integration + update modules + pack-instances run in one pass; the instance buffer is written directly. CPU SoA stays as-is for spawn writes. **Coordinate space:** particle positions are LOCAL to the system. The system's `getGlobalTransform()` is applied on top during rendering - both the WebGL2 and WebGPU shaders multiply `projection * translation * rotated`. Setting world-space positions on individual particles double-translates. Position the system itself via `system.setPosition(...)` and emit relative to `(0, 0)`. **View culling:** a system is created with `cullable = false`. Its local bounds cover one texture frame at the local origin, because the particles themselves are simulated on the GPU in half the configurations and no emitted extent is tracked in either - so culling against those bounds would remove the entire cloud as soon as the emitter's own origin left the view. For a system whose reach is known, set the node's `cullArea` to a rectangle in local space covering where its particles travel and set `cullable = true` again; the viewport check then uses that rectangle instead of the bounds. `getBounds()` still reports the one-frame box, not an extent of the live particles. **Pixel snapping:** Drawable.pixelSnapMode is intentionally ignored for particle systems. Particle instances bake their own per-particle transforms in the emitter/compute path rather than reading the shared pixel-snap transform row, so a snap mode set on the system has no effect on rendered output - snapping thousands of independently-moving sub-pixel particles to the device grid is neither meaningful nor desirable.",
   "symbol": "ParticleSystem",
   "kind": "class",
   "subsystem": "particles",
@@ -25,6 +25,7 @@
         "**Per-frame order in update (CPU mode):** 1. Run every spawn module. 2. Integrate position from velocity, rotation from rotationSpeed, advance `elapsed`. 3. Run every update module on the live range. 4. Compact: scan `[0, liveCount)` forward, fire death modules on expired slots, copy survivors down. `liveCount` shrinks to the survivor count.",
         "**Per-frame order in update (GPU mode):** 1. Run every spawn module (CPU writes initial values into the spawn slot). 2. Detect expiries on CPU (via `elapsed >= lifetime`); fire death modules; set `lifetime[slot] = -1` sentinel + clear `alive[slot]` so the GPU shader skips them. **No compaction** - slots are recycled on next spawn. 3. Dispatch the composite compute pipeline. Integration + update modules + pack-instances run in one pass; the instance buffer is written directly. CPU SoA stays as-is for spawn writes.",
         "**Coordinate space:** particle positions are LOCAL to the system. The system's `getGlobalTransform()` is applied on top during rendering - both the WebGL2 and WebGPU shaders multiply `projection * translation * rotated`. Setting world-space positions on individual particles double-translates. Position the system itself via `system.setPosition(...)` and emit relative to `(0, 0)`.",
+        "**View culling:** a system is created with `cullable = false`. Its local bounds cover one texture frame at the local origin, because the particles themselves are simulated on the GPU in half the configurations and no emitted extent is tracked in either - so culling against those bounds would remove the entire cloud as soon as the emitter's own origin left the view. For a system whose reach is known, set the node's `cullArea` to a rectangle in local space covering where its particles travel and set `cullable = true` again; the viewport check then uses that rectangle instead of the bounds. `getBounds()` still reports the one-frame box, not an extent of the live particles.",
         "**Pixel snapping:** Drawable.pixelSnapMode is intentionally ignored for particle systems. Particle instances bake their own per-particle transforms in the emitter/compute path rather than reading the shared pixel-snap transform row, so a snap mode set on the system has no effect on rendered output - snapping thousands of independently-moving sub-pixel particles to the device grid is neither meaningful nor desirable."
       ],
       "importLine": "import { ParticleSystem } from '@codexo/exojs-particles'",
@@ -343,6 +344,116 @@
       "id": "methods",
       "title": "Methods",
       "members": [
+        {
+          "name": "_setLocalBounds",
+          "signature": "_setLocalBounds(x: number, y: number, width: number, height: number): this",
+          "signatureTokens": [
+            {
+              "text": "_setLocalBounds",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Write this node's local extent and run the bounds invalidation the change implies - the node's own bounds flag, the ancestor bounds cascade, and the content-dirty stamp that keeps retained fragments from replaying the old extent. This is the only supported way to resize a node from outside getLocalBounds; the rectangle itself is handed out read-only so the invalidation cannot be forgotten. Built-in drawables (Sprite, Text, BitmapText, Mesh, ...) and custom ones alike go through here. Part of the renderer SDK contract for extension renderers."
+        },
         {
           "name": "_updateOrigin",
           "signature": "_updateOrigin(): void",
@@ -2317,69 +2428,6 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": ""
-        },
-        {
-          "name": "setInternalSpriteFactory",
-          "signature": "setInternalSpriteFactory(factory: () => RenderNodeSpriteLike | null): void",
-          "signatureTokens": [
-            {
-              "text": "setInternalSpriteFactory",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "factory",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ") => ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "RenderNodeSpriteLike",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "factory",
-              "type": "() => RenderNodeSpriteLike | null",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
           "description": ""
         }
       ],

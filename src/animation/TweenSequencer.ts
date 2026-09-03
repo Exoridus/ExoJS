@@ -250,7 +250,11 @@ export class TweenSequencer {
     if (stage.type === 'delay') {
       this._delayElapsed += deltaSeconds;
       if (this._delayElapsed >= stage.seconds) {
-        this._advanceStage();
+        // The time past the stage's own duration belongs to the next stage.
+        // Dropping it costs up to one frame per stage, which a repeated
+        // sequence accumulates - `Tween.update` carries the same overshoot
+        // into its next repeat cycle for the same reason.
+        this._advanceStage(this._delayElapsed - stage.seconds);
       }
     } else {
       // In stand-alone mode (no system), the sequencer ticks tweens itself.
@@ -282,12 +286,18 @@ export class TweenSequencer {
     return this._stages.length - 1 - this._currentStageIndex;
   }
 
-  private _startCurrentStage(): void {
+  /**
+   * @param carrySeconds - Overshoot handed over from the stage that just
+   *   finished. Only a delay stage can absorb it, and never more than its own
+   *   duration, so one update advances at most one stage - the bound
+   *   `Tween.update` puts on a carried repeat cycle.
+   */
+  private _startCurrentStage(carrySeconds = 0): void {
     const stageIndex = this._getActualStageIndex();
     const stage = this._stages[stageIndex];
     if (stage === undefined) return;
 
-    this._delayElapsed = 0;
+    this._delayElapsed = stage.type === 'delay' ? Math.min(carrySeconds, stage.seconds) : 0;
 
     if (stage.type === 'tweens') {
       for (const tween of stage.tweens) {
@@ -303,7 +313,7 @@ export class TweenSequencer {
     // Delay stages need only the elapsed counter reset (done above).
   }
 
-  private _advanceStage(): void {
+  private _advanceStage(carrySeconds = 0): void {
     this._currentStageIndex++;
 
     if (this._currentStageIndex >= this._stages.length) {
@@ -320,12 +330,12 @@ export class TweenSequencer {
         }
 
         this._currentStageIndex = 0;
-        this._startCurrentStage();
+        this._startCurrentStage(carrySeconds);
       } else {
         this._finish();
       }
     } else {
-      this._startCurrentStage();
+      this._startCurrentStage(carrySeconds);
     }
   }
 

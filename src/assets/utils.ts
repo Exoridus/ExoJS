@@ -85,6 +85,12 @@ const fileTypes: FileType[] = [
 ];
 
 const matchesMp4Video = (arrayBuffer: ArrayBuffer): boolean => {
+  // The box size and the brand it precedes need 12 bytes; reading the size out
+  // of a shorter payload throws instead of reporting "not an MP4".
+  if (arrayBuffer.byteLength < 12) {
+    return false;
+  }
+
   const header = new Uint8Array(arrayBuffer);
   const view = new DataView(arrayBuffer);
   const boxSize = view.getUint32(0, false);

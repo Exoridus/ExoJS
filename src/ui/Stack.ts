@@ -139,6 +139,13 @@ export class Stack extends Widget {
     return this;
   }
 
+  /** Remove a child; the stack re-flows on its own. No-op if `child` is not one of its items. */
+  public removeItem(child: RenderNode): this {
+    this.removeChild(child);
+
+    return this;
+  }
+
   /**
    * Give the stack an explicit box instead of sizing it to its content. This is
    * what makes {@link Stack.setGrow} effective, since growing needs leftover

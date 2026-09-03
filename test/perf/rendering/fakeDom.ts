@@ -27,10 +27,10 @@
  * the same 10×10 size they do under jsdom. Pixel content is never read back
  * (the fake GL context records `texImage2D`, it does not sample), so a stubbed
  * `fillRect` cannot skew what the allocation sampler measures. Anything beyond
- * these two needs - text metrics (`determineFontHeight` wants `document.body`
- * and layout), image decoding, `OffscreenCanvas` - is intentionally absent so a
- * scene that silently depends on real DOM behaviour fails loudly instead of
- * being measured against a fiction.
+ * these two needs - DOM-layout-driven text metrics, image decoding,
+ * `OffscreenCanvas` - is intentionally absent so a scene that silently depends
+ * on real DOM behaviour fails loudly instead of being measured against a
+ * fiction.
  *
  * Idempotent, and a no-op wherever a real `document` already exists (jsdom,
  * browser lanes) - the harness calls it unconditionally.

@@ -1,4 +1,5 @@
 ﻿import { Tween } from '#animation/Tween';
+import { TweenSequencerState } from '#animation/TweenSequencer';
 import { TweenSystem } from '#animation/TweenSystem';
 import { TweenState } from '#animation/types';
 import { type Seconds, Time } from '#core/units';
@@ -222,6 +223,32 @@ describe('TweenSystem', () => {
 
     system.preUpdate(sec(1.0));
     expect(target.x).toBe(0); // never advanced — genuinely not running
+  });
+
+  test('clear() stops every registered ticker, so a sequencer no longer reports Active', () => {
+    const system = new TweenSystem();
+    const sequencer = system
+      .createSequencer()
+      .then(system.create(makeTarget()).to({ x: 100 }, 1.0))
+      .start();
+
+    expect(sequencer.state).toBe(TweenSequencerState.Active);
+
+    system.clear();
+
+    expect(sequencer.state).toBe(TweenSequencerState.Stopped);
+  });
+
+  test('destroy() stops every registered ticker too', () => {
+    const system = new TweenSystem();
+    const sequencer = system
+      .createSequencer()
+      .then(system.create(makeTarget()).to({ x: 100 }, 1.0))
+      .start();
+
+    system.destroy();
+
+    expect(sequencer.state).toBe(TweenSequencerState.Stopped);
   });
 
   test('destroy() makes subsequent update() calls no-ops', () => {

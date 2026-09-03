@@ -84,6 +84,42 @@ describe('RenderTexturePool', () => {
     expect(pool.bytes).toBe(256 * 256 * 16);
   });
 
+  test('acquiring two formats at one size yields two textures, each filed under its own format', () => {
+    const pool = new RenderTexturePool();
+    // Released in an order that would satisfy a naive size-only match with the
+    // WRONG format's texture, so the assertions below only pass once the pool
+    // actually keys on format too.
+    const rgba16f = new RenderTexture(64, 64, { format: TextureFormat.Rgba16F });
+    const rgba8 = new RenderTexture(64, 64, { format: TextureFormat.Rgba8 });
+
+    pool.release(rgba16f);
+    pool.release(rgba8);
+
+    expect(pool.size).toBe(2);
+
+    // Neither release satisfies a request for the other's format - a same-size
+    // acquire must not silently hand back a texture in the wrong format.
+    expect(pool.acquire(64, 64, TextureFormat.Rgba8)).toBe(rgba8);
+    expect(pool.acquire(64, 64, TextureFormat.Rgba16F)).toBe(rgba16f);
+    expect(pool.size).toBe(0);
+  });
+
+  test('acquire defaults to Rgba8, matching a released Rgba8 texture', () => {
+    const pool = new RenderTexturePool();
+    const rgba8 = new RenderTexture(64, 64);
+
+    pool.release(rgba8);
+
+    expect(pool.acquire(64, 64)).toBe(rgba8);
+  });
+
+  test('allocating fresh with a non-default format constructs a texture in that format', () => {
+    const pool = new RenderTexturePool();
+    const texture = pool.acquire(64, 64, TextureFormat.Rgba32F);
+
+    expect(texture.format).toBe(TextureFormat.Rgba32F);
+  });
+
   test('never pools an already destroyed texture', () => {
     const pool = new RenderTexturePool();
     const texture = new RenderTexture(64, 64);

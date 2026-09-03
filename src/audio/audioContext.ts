@@ -1,3 +1,4 @@
+import { logger } from '#core/Logger';
 import { Signal } from '#core/Signal';
 
 import { AudioUnsupportedError } from './AudioUnsupportedError';
@@ -21,7 +22,12 @@ let internalAudioContext: AudioContext | null = null;
 let internalOfflineAudioContext: OfflineAudioContext | null = null;
 let interactionListenersAdded = false;
 let stateChangeListenerAdded = false;
-let readyDispatched = false;
+/**
+ * Whether the ready signal has already been dispatched for the current run of
+ * the context. Cleared on the native `statechange` that leaves `'running'`, so
+ * the next locked-to-running edge dispatches again.
+ */
+let readyDispatchedForRun = false;
 
 const supportsAudioContext = (): boolean => typeof AudioContext !== 'undefined';
 const supportsOfflineAudioContext = (): boolean => typeof OfflineAudioContext !== 'undefined';
@@ -81,29 +87,25 @@ const dispatchReadyIfRunning = (): void => {
 
   // No gesture is needed while the context is running - drop the
   // interaction listeners unconditionally, including on a re-arm after a
-  // later suspension (not just the very first time). `readyDispatched`
-  // below only gates the public one-shot signal, not this cleanup.
+  // later suspension (not just the very first time).
   removeInteractionListeners();
 
-  if (readyDispatched) {
+  if (readyDispatchedForRun) {
     return;
   }
 
-  readyDispatched = true;
+  readyDispatchedForRun = true;
   onAudioContextReady.dispatch(audioContext);
 };
 
 /**
  * Reacts to every native `statechange` transition of the global
- * `AudioContext`. On `'running'`, dispatches the (one-shot) public ready
- * signal if it has not fired yet. On any other state - most importantly a
- * context that drops back to `'suspended'` after having been running before
+ * `AudioContext`. On `'running'`, dispatches the public ready signal to
+ * whoever is subscribed at that moment. On any other state - most importantly
+ * a context that drops back to `'suspended'` after having been running before
  * (an iOS audio-session interruption, a bfcache restore, ...) - re-installs
  * the interaction-gesture listeners so the next user gesture can resume it
- * again. Without this, every audio object constructed after such a
- * suspension would stay silent forever: `readyDispatched` was already
- * `true` and the original gesture listeners had already been torn down by
- * the first unlock.
+ * again, and re-arms the ready dispatch for that next run.
  */
 const onAudioContextStateChange = (): void => {
   const audioContext = getExistingAudioContext();
@@ -114,6 +116,10 @@ const onAudioContextStateChange = (): void => {
     return;
   }
 
+  // Re-arm the ready dispatch alongside the gesture listeners: the next resume
+  // is a fresh locked-to-running edge, and every object constructed during this
+  // suspension subscribes expecting to be told when audio is usable again.
+  readyDispatchedForRun = false;
   addInteractionListeners();
 };
 
@@ -150,7 +156,7 @@ const ensureAudioContextReadyMonitoring = (): void => {
     dispatchReadyIfRunning();
   }
 
-  if (!readyDispatched) {
+  if (!readyDispatchedForRun) {
     addInteractionListeners();
   }
 };
@@ -167,9 +173,21 @@ const onUserInteraction = (): void => {
     return;
   }
 
-  void audioContext.resume().then(() => {
-    dispatchReadyIfRunning();
-  });
+  audioContext
+    .resume()
+    .then(() => {
+      dispatchReadyIfRunning();
+    })
+    .catch((error: unknown) => {
+      // Without this the browser reports a bare unhandled rejection with no
+      // hint that it came from the autoplay unlock. The gesture listeners stay
+      // armed, so a later gesture can still unlock the context.
+      logger.warn('The AudioContext could not be resumed on the user gesture; audio stays locked until the next one.', {
+        source: 'audioContext',
+        once: 'audiocontext-resume-failed',
+        ...(error instanceof Error && { error }),
+      });
+    });
 };
 
 /**
@@ -204,13 +222,14 @@ class AudioContextReadySignal extends Signal<[AudioContext]> {
  * events (`mousedown`, `touchstart`, `touchend`) and resuming a suspended
  * context automatically.
  *
- * This is a one-shot "became ready at least once" contract: it never
- * dispatches a second time, even if the context later drops back to
- * `'suspended'` (an iOS audio-session interruption, a bfcache restore, ...)
- * and is subsequently resumed again. Use {@link isAudioContextReady} to
- * check the *current* running state at any point; the interaction-gesture
- * monitoring itself re-arms internally on every such suspension so audio
- * keeps working across it, independent of whether this signal fires again.
+ * Dispatches once per run of the context: on the first unlock, and again on
+ * every later locked-to-running edge, so an object constructed while the
+ * context sits suspended (an iOS audio-session interruption, a bfcache
+ * restore, ...) still gets its setup callback. Handlers subscribed while the
+ * context is already running do not receive a dispatch for that run - check
+ * {@link isAudioContextReady} first and set up directly when it returns
+ * `true`, then subscribe only for the locked case and unsubscribe on the
+ * first dispatch.
  *
  * @example
  * ```ts

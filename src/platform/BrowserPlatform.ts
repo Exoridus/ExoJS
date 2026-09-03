@@ -31,6 +31,7 @@ const noGamepads: ReadonlyArray<BrowserGamepad | null> = [];
  */
 export class BrowserPlatform implements PlatformAdapter {
   private readonly _canvas: HTMLCanvasElement;
+  private readonly _textInputs = new Set<BrowserTextInput | EditContextTextInput>();
   private readonly _subscriptions = new Set<PlatformSubscription>();
   private readonly _visibilityListeners = new Set<(visible: boolean) => void>();
   private readonly _visibilityHandler = (): void => {
@@ -68,6 +69,24 @@ export class BrowserPlatform implements PlatformAdapter {
 
   public get surfaceFocused(): boolean {
     return typeof document !== 'undefined' && document.activeElement === this._canvas;
+  }
+
+  public get textInputFocused(): boolean {
+    for (const input of this._textInputs) {
+      // A transport is destroyed by the widget that created it, not by this
+      // adapter, so the registry prunes itself on the next read.
+      if (input.destroyed) {
+        this._textInputs.delete(input);
+
+        continue;
+      }
+
+      if (input.hostFocused) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   public get documentVisible(): boolean {
@@ -135,7 +154,11 @@ export class BrowserPlatform implements PlatformAdapter {
       return null;
     }
 
-    return editContextSupported() ? new EditContextTextInput(this._canvas) : new BrowserTextInput(this._canvas);
+    const input = editContextSupported() ? new EditContextTextInput(this._canvas) : new BrowserTextInput(this._canvas);
+
+    this._textInputs.add(input);
+
+    return input;
   }
 
   public onVisibilityChange(listener: (visible: boolean) => void): PlatformSubscription {
@@ -197,6 +220,7 @@ export class BrowserPlatform implements PlatformAdapter {
     }
 
     this._subscriptions.clear();
+    this._textInputs.clear();
     this._visibilityListeners.clear();
     this._unbindVisibility();
     this._networkHints?.destroy();

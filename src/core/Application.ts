@@ -351,8 +351,6 @@ export interface RecentErrorEntry {
 const maxDeltaMs = 100;
 /** Default fixed-timestep size in milliseconds (60 Hz). */
 const defaultFixedStepMs = 1000 / 60;
-/** Max fixed steps run in one frame - the spiral-of-death guard. */
-const maxFixedSteps = 5;
 /** Consecutive failing frames tolerated before the frame guard halts the loop. */
 const maxConsecutiveFrameErrors = 3;
 /** Bounded size of the {@link Application.recentErrors} ring buffer. */
@@ -829,11 +827,16 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this.random = new Random(this.options.seed);
       this._updateHandler = (timestamp: number): void => {
         this.update(timestamp);
+
+        // Only the scheduled callback chains the next frame. `update()` is
+        // public, so a manual call made while the loop is live would otherwise
+        // fork a second RAF chain and silently double the frame rate.
+        if (this._frameLoopActive) this._frameRequest = this.platform.requestFrame(this._updateHandler);
       };
 
       const fixedStepMs = this.options.fixedTimeStep !== undefined ? this.options.fixedTimeStep * 1000 : defaultFixedStepMs;
 
-      this._fixed = new FixedTimestep(fixedStepMs, maxFixedSteps);
+      this._fixed = new FixedTimestep(fixedStepMs, FixedTimestep.deriveMaxSteps(maxDeltaMs, fixedStepMs));
       this._fixedSeconds = seconds(fixedStepMs / 1000);
 
       this._startupClock.start();
@@ -932,7 +935,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     // A binding that ran before the failing one holds a reference to this
     // half-built application. Marking it destroyed makes a later `start()` on
     // that reference fail loudly instead of running on torn-down subsystems.
-    this._state = ApplicationState.Destroyed;
+    this._setState(ApplicationState.Destroyed);
 
     const failures: unknown[] = [];
     const attempt = (step: () => void): void => {
@@ -1016,6 +1019,21 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   public get state(): ApplicationState {
     return this._state;
+  }
+
+  /**
+   * The single writer for {@link Application._state}. `Destroying` and
+   * `Destroyed` are terminal: the only transition out of them is
+   * `Destroying` -> `Destroyed`. Startup runs settle asynchronously and their
+   * failure path resets the state to `Stopped`, so without this a `start()`
+   * whose navigation was rejected by teardown's own abort would land after
+   * the teardown chain and resurrect a destroyed instance - `state` would
+   * report `Stopped` and `start()` would reinitialize a destroyed backend.
+   */
+  private _setState(next: ApplicationState): void {
+    const terminal = this._state === ApplicationState.Destroyed || (this._state === ApplicationState.Destroying && next !== ApplicationState.Destroyed);
+
+    if (!terminal) this._state = next;
   }
 
   public get startupSeconds(): Seconds {
@@ -1223,7 +1241,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * per-frame loop without activating a scene. Use `start(target, data?)` to
    * start directly into a registered scene. Idempotent - if the application
    * is already running the call is a no-op. On error the state returns to
-   * `Stopped` and the error propagates.
+   * `Stopped` and the error propagates. A `stop()` or
+   * `destroy()` made while startup is still loading wins over it: the run
+   * still settles, but the state that call wrote is the one that stands, so a
+   * resolved `start()` does not by itself mean the state is `Running`.
    */
   public async start(): Promise<this>;
   /**
@@ -1231,7 +1252,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * `target` - a registered string key, or a constructor registered in
    * `ApplicationOptions.scenes` - and start the per-frame loop. Idempotent -
    * if the application is already running the call is a no-op. On error the
-   * state returns to `Stopped` and the error propagates.
+   * state returns to `Stopped` and the error propagates. A `stop()` or
+   * `destroy()` made while startup is still loading wins over it: the run
+   * still settles, but the state that call wrote is the one that stands, so a
+   * resolved `start()` does not by itself mean the state is `Running`.
    */
   public async start<K extends RegistryKeyOf<Registry>>(target: K, ...args: ChangeSceneArgs<InferSceneData<Registry[K]>>): Promise<this>;
   public async start<C extends NavigableSceneConstructor<Registry>>(target: C, ...args: ChangeSceneArgs<InferSceneData<C>>): Promise<this>;
@@ -1258,7 +1282,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       return this;
     }
 
-    this._state = ApplicationState.Loading;
+    this._setState(ApplicationState.Loading);
 
     // Published before the first await so a `start()` call made from the same
     // synchronous tick - or any point in the `Loading` window - finds it. The
@@ -1323,10 +1347,15 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         );
       }
 
-      this._state = ApplicationState.Running;
+      // Only if the loop this run started is still the live one. A `stop()`
+      // or `destroy()` that landed inside the `Loading` window already halted
+      // it and wrote its own state; promoting over that would advertise
+      // `Running` for a loop that no longer schedules frames, and every later
+      // `start()`/`stop()` would early-return on the lie.
+      if (this._frameLoopActive) this._setState(ApplicationState.Running);
     } catch (error) {
       this._stopFrameLoop();
-      this._state = ApplicationState.Stopped;
+      this._setState(ApplicationState.Stopped);
       throw error;
     }
 
@@ -1411,7 +1440,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    *    `placement` (`'scene'`: below app overlays; `'screen'`: above them,
    *    matching the pre-transition-runtime default).
    * 5. **Frame dispatch / flush** - {@link Application.onFrame}, backend GPU
-   *    flush, frame-time stat write, RAF reschedule.
+   *    flush, frame-time stat write.
+   *
+   * Running one frame is all this does: scheduling belongs to the loop, so a
+   * manual call runs an extra frame alongside a live loop rather than forking
+   * a second one, and does not restart a loop that {@link Application.stop}
+   * has halted - the body is skipped entirely while the loop is not live.
    *
    * The simulation `delta` forwarded to all update recipients is clamped to
    * an internal maximum (100 ms) so that debugger pauses, device sleep/resume,
@@ -1425,7 +1459,6 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this._lastFrameTimestamp = timestamp;
         this._frameClock.restart();
         this._fixed.reset();
-        this._frameRequest = this.platform.requestFrame(this._updateHandler);
 
         return this;
       }
@@ -1518,12 +1551,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this.scenes._endFrame();
         this.systems._endFrame();
 
-        // RAF rescheduling always happens unless the guard halted the loop -
-        // this is what keeps the canvas alive through a throwing frame.
-        if (this._frameLoopActive) {
-          this._frameRequest = this.platform.requestFrame(this._updateHandler);
-          this._frameCount++;
-        }
+        if (this._frameLoopActive) this._frameCount++;
       }
     }
 
@@ -1547,7 +1575,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     if (fatal) {
       this._stopFrameLoop();
-      this._state = ApplicationState.Stopped;
+      this._setState(ApplicationState.Stopped);
       logger.error(`Frame loop halted after ${maxConsecutiveFrameErrors} consecutive frame errors.`, { source: 'core', error: normalized });
     }
   }
@@ -1638,9 +1666,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       return this;
     }
 
-    if (this._state === ApplicationState.Running) {
-      this._state = ApplicationState.Halting;
-    }
+    if (this._state === ApplicationState.Running) this._setState(ApplicationState.Halting);
 
     // One reason object for the one abort: `_stopFrameLoop()` performs it (it
     // has to - halting the loop strands a frame-driven session regardless of
@@ -1656,7 +1682,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
     });
 
-    this._state = ApplicationState.Stopped;
+    this._setState(ApplicationState.Stopped);
 
     return this;
   }
@@ -1974,14 +2000,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._releaseDom();
 
     if (this._frameLoopActive) {
-      if (this._state === ApplicationState.Running) {
-        this._state = ApplicationState.Halting;
-      }
+      if (this._state === ApplicationState.Running) this._setState(ApplicationState.Halting);
 
       this._stopFrameLoop();
     }
 
-    this._state = ApplicationState.Destroying;
+    this._setState(ApplicationState.Destroying);
 
     this._destroyPromise = this._disposeManagedResources()
       .catch((error: unknown) => {
@@ -1989,7 +2013,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
       })
       .then(() => {
-        this._state = ApplicationState.Destroyed;
+        this._setState(ApplicationState.Destroyed);
       });
 
     return this._destroyPromise;

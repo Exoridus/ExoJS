@@ -178,13 +178,16 @@ describe('GlyphAtlas rasterization at a pixel ratio', () => {
   });
 
   test('keeps the slot origin and UVs in atlas texels', () => {
-    // Padded slot at ratio 3: 9 + 4 wide, 18 + 4 tall - unscaled, because a UV
-    // addresses the raster grid rather than the logical one.
+    // Slot origin is unscaled - a UV addresses the raster grid rather than
+    // the logical one. UVs are inset by the 2px glyphPadding on every side,
+    // so they span the unpadded 9x18 ink at (0,0), not the padded 13x22 slot.
     const info = atlasAt(3).getGlyph('A', 16);
 
     expect(info.x).toBe(0);
     expect(info.y).toBe(0);
-    expect(info.uvRight).toBe((9 + 4) / 1024);
-    expect(info.uvBottom).toBe((18 + 4) / 1024);
+    expect(info.uvLeft).toBe(2 / 1024);
+    expect(info.uvTop).toBe(2 / 1024);
+    expect(info.uvRight).toBe((2 + 9) / 1024);
+    expect(info.uvBottom).toBe((2 + 18) / 1024);
   });
 });

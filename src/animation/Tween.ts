@@ -295,6 +295,15 @@ export class Tween<T extends object = object> {
   public update(deltaSeconds: number): void {
     if (this._state !== TweenState.Active) return;
 
+    // A destroyed target (SceneNode's `destroyed` flag) has nothing left to
+    // interpolate. Without this, an infinitely repeating tween outlives its
+    // target and keeps writing to it forever, pinning it in memory.
+    if ((this._target as { destroyed?: unknown }).destroyed === true) {
+      this.stop();
+
+      return;
+    }
+
     // Handle delay phase.
     if (this._delayElapsed < this._delay) {
       this._delayElapsed += deltaSeconds;

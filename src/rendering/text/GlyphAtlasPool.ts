@@ -85,12 +85,19 @@ export class GlyphAtlasPool {
     return metrics;
   }
 
-  public clearAll(): void {
-    for (const atlas of this._atlases.values()) {
-      atlas.clear();
-    }
-    for (const metrics of this._metrics.values()) {
-      metrics.clear();
+  /**
+   * Clear every atlas held for one font variant, across every mode, SDF radius
+   * and pixel ratio. Used when the variant's underlying face changes (e.g. a
+   * previously-fallback `FontFace` finishes loading): a caller that resolved
+   * one specific atlas by mode/radius/ratio would clear only the atlas it
+   * currently expects to draw from, leaving every other combination of the
+   * same variant holding glyph tiles rasterized from the stale face.
+   */
+  public clearVariant(family: string, fontStyle: 'normal' | 'italic', fontWeight: string): void {
+    const prefix = `${family}:${fontStyle}:${fontWeight}:`;
+
+    for (const [key, atlas] of this._atlases) {
+      if (key.startsWith(prefix)) atlas.clear();
     }
   }
 }

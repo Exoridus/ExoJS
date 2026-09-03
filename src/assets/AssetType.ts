@@ -132,7 +132,8 @@ export abstract class AssetType<Source, Resource, Options = undefined, Stored = 
    * Constructor-addressed loader APIs (`scope.release(Texture, 'hero.png')`,
    * `loader.keyFor`, `onLoaded`) answer with this. A type that supplies none is
    * given a loader-local token, which those APIs then report instead.
-   * @internal
+   *
+   * Part of the asset-type SDK contract for extension asset types.
    */
   public readonly _token?: AssetConstructor;
 
@@ -159,7 +160,7 @@ export abstract class AssetType<Source, Resource, Options = undefined, Stored = 
    * Whether anything is cached at all, and where, is the application's
    * decision. A type describes only how its representation would be laid out.
    */
-  public readonly layout: CacheLayout<Stored> = SingleEntryLayout.version<Stored>(1);
+  public readonly layout: CacheLayout<Stored> = SingleEntryLayout.version<Stored>(2);
 
   /**
    * Creates the factory for one application, at install time.

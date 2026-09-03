@@ -152,6 +152,12 @@ export class ChunkStreamer {
    * Evict every chunk this instance has loaded and stop responding to
    * {@link update}. Does not affect chunks predating attachment or
    * installed by another source. Idempotent.
+   *
+   * Does not destroy the {@link ChunkSource} passed to the constructor: this
+   * class only reads from it and never took ownership. A source with its own
+   * `destroy()` (e.g. {@link import('./WorkerSampledChunkSource').createWorkerSampledChunkSource}'s,
+   * which tears down a real `Worker`) must be destroyed separately by
+   * whoever created it.
    */
   public destroy(): void {
     if (this._destroyed) return;

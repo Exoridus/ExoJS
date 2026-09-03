@@ -43,6 +43,20 @@ const BLINK_PHASE_SECONDS = 0.5;
 /** Maximum milliseconds between two presses that still count as a double-click. */
 const DOUBLE_CLICK_MS = 350;
 
+/**
+ * Modifier keys a field tracks while it holds focus. Both sides of each pair
+ * are tracked separately, so releasing one while the other is still held does
+ * not report the modifier as released.
+ */
+const modifierChannels = new Set<number>([
+  Keyboard.ShiftLeft,
+  Keyboard.ShiftRight,
+  Keyboard.ControlLeft,
+  Keyboard.ControlRight,
+  Keyboard.MetaLeft,
+  Keyboard.MetaRight,
+]);
+
 /** The granularity a delete asks for; the word modifier wins over the line modifier. */
 const _deleteGranularity = (word: boolean, line: boolean): TextEditGranularity => {
   if (word) {
@@ -98,12 +112,27 @@ export abstract class TextEditWidget extends Widget {
   private _blinkApp: Application | null = null;
   private _pointerInside = false;
   private _dragging = false;
+  /**
+   * The contact that started the current selection drag. The drag follows the
+   * application's pointer signals, which carry every contact, so a second
+   * finger elsewhere must not move this selection or end its drag.
+   */
+  private _dragPointerId = -1;
   private _dragAnchor = 0;
   private _lastPressTime = 0;
   private _lastPressX = 0;
   private _lastPressY = 0;
-  private _shiftDown = false;
-  private _controlDown = false;
+  private readonly _modifiersDown = new Set<number>();
+  /**
+   * Mutations the transport already reported for a keystroke whose engine key
+   * event has not been dispatched yet. A host turns one physical key into a
+   * semantic edit synchronously, while the engine dispatches its key event at
+   * the next frame boundary, so the widget sees the same Backspace or Enter
+   * twice and must apply it once. Counters rather than flags: several
+   * keystrokes can land inside a single frame.
+   */
+  private _hostDeletes = 0;
+  private _hostLineBreaks = 0;
 
   private readonly _onFrame = (delta: Seconds): void => {
     if (this._blinkApp?.scenes.currentScene?.paused === true) {
@@ -156,14 +185,14 @@ export abstract class TextEditWidget extends Widget {
     } else {
       this.model.setSelection(offset, offset);
       this._dragAnchor = offset;
-      this._startPointerDrag();
+      this._startPointerDrag(event.pointer.id);
     }
 
     this._afterModelChange();
   };
 
-  private readonly _onPointerDragMove = (_pointer: Pointer, x: number, y: number): void => {
-    if (!this._dragging) {
+  private readonly _onPointerDragMove = (pointer: Pointer, x: number, y: number): void => {
+    if (!this._dragging || pointer.id !== this._dragPointerId) {
       return;
     }
 
@@ -173,7 +202,11 @@ export abstract class TextEditWidget extends Widget {
     this._afterModelChange();
   };
 
-  private readonly _onPointerDragEnd = (): void => {
+  private readonly _onPointerDragEnd = (pointer: Pointer): void => {
+    if (pointer.id !== this._dragPointerId) {
+      return;
+    }
+
     this._stopPointerDrag();
   };
 
@@ -182,29 +215,14 @@ export abstract class TextEditWidget extends Widget {
   };
 
   private readonly _keyUpHandler = (event: KeyEvent): void => {
-    const channel = event.channel;
-
-    // `channel` is a generic numeric input channel (KeyEvent.channel is
-    // `number`), intentionally compared against the Keyboard enum constants
-    // - see KeyEvent docs.
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- widening casts are redundant here, so the suppression is the only honest option
-    if (channel === Keyboard.ShiftLeft || channel === Keyboard.ShiftRight) {
-      this._shiftDown = false;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- widening casts are redundant here, so the suppression is the only honest option
-    } else if (channel === Keyboard.ControlLeft || channel === Keyboard.ControlRight) {
-      this._controlDown = false;
-    }
+    this._modifiersDown.delete(event.channel);
   };
 
   protected _handleKeyDown(event: KeyEvent): void {
     const channel = event.channel;
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- widening casts are redundant here, so the suppression is the only honest option
-    if (channel === Keyboard.ShiftLeft || channel === Keyboard.ShiftRight) {
-      this._shiftDown = true;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- widening casts are redundant here, so the suppression is the only honest option
-    } else if (channel === Keyboard.ControlLeft || channel === Keyboard.ControlRight) {
-      this._controlDown = true;
+    if (modifierChannels.has(channel)) {
+      this._modifiersDown.add(channel);
     }
 
     if (!this.effectiveEnabled) {
@@ -219,7 +237,9 @@ export abstract class TextEditWidget extends Widget {
       event.preventDefault();
 
       if (this.model.multiline) {
-        if (!this._readOnly && this.model.insert('\n')) {
+        if (this._hostLineBreaks > 0) {
+          this._hostLineBreaks--;
+        } else if (!this._readOnly && this.model.insert('\n')) {
           this._afterModelChange();
         }
 
@@ -285,14 +305,10 @@ export abstract class TextEditWidget extends Widget {
         this.model.moveCaret('forward', 'line', extend);
         return true;
       case Keyboard.Backspace:
-        if (!this._readOnly) {
-          this.model.deleteContent('backward', _deleteGranularity(word, line));
-        }
+        this._deleteContent('backward', word, line);
         return true;
       case Keyboard.Delete:
-        if (!this._readOnly) {
-          this.model.deleteContent('forward', _deleteGranularity(word, line));
-        }
+        this._deleteContent('forward', word, line);
         return true;
       default:
         return this._applyShortcut(channel);
@@ -498,6 +514,24 @@ export abstract class TextEditWidget extends Widget {
     this._seam?.setHints(this._hints);
   }
 
+  /** Whether either Shift key is held while this field has focus. */
+  private get _shiftDown(): boolean {
+    return this._modifiersDown.has(Keyboard.ShiftLeft) || this._modifiersDown.has(Keyboard.ShiftRight);
+  }
+
+  /** Whether either Control key is held while this field has focus. */
+  private get _controlDown(): boolean {
+    return this._modifiersDown.has(Keyboard.ControlLeft) || this._modifiersDown.has(Keyboard.ControlRight);
+  }
+
+  /**
+   * Whether the modifier the editing shortcuts answer to is held. Control and
+   * Meta both count: the same shortcuts are typed with Cmd on macOS.
+   */
+  private get _shortcutDown(): boolean {
+    return this._controlDown || this._modifiersDown.has(Keyboard.MetaLeft) || this._modifiersDown.has(Keyboard.MetaRight);
+  }
+
   private _refreshState(): void {
     let state: UIWidgetState = 'normal';
 
@@ -531,6 +565,11 @@ export abstract class TextEditWidget extends Widget {
 
   private _loseEditFocus(): void {
     this._stopBlink();
+    // A modifier released while another node holds focus is never seen here,
+    // so anything still held has to be forgotten rather than left latched.
+    this._modifiersDown.clear();
+    this._hostDeletes = 0;
+    this._hostLineBreaks = 0;
     this._seam?.blur();
     this.model.setComposition(null);
     this._invalidatePaint();
@@ -571,6 +610,24 @@ export abstract class TextEditWidget extends Widget {
     });
   }
 
+  /**
+   * Apply the delete a keystroke asks for, unless the transport already
+   * reported the same one - see {@link TextEditWidget._hostDeletes}.
+   */
+  private _deleteContent(direction: 'backward' | 'forward', word: boolean, line: boolean): void {
+    if (this._readOnly) {
+      return;
+    }
+
+    if (this._hostDeletes > 0) {
+      this._hostDeletes--;
+
+      return;
+    }
+
+    this.model.deleteContent(direction, _deleteGranularity(word, line));
+  }
+
   private _applyIntent(intent: TextEditIntent): void {
     this._goalX = null;
 
@@ -581,9 +638,14 @@ export abstract class TextEditWidget extends Widget {
     switch (intent.kind) {
       case 'insert':
         this.model.insert(intent.text, 'input');
+
+        if (intent.text === '\n') {
+          this._hostLineBreaks++;
+        }
         break;
       case 'deleteContent':
         this.model.deleteContent(intent.direction, intent.granularity);
+        this._hostDeletes++;
         break;
       case 'historyUndo':
         this.model.undo();
@@ -601,7 +663,7 @@ export abstract class TextEditWidget extends Widget {
     // `number`), intentionally compared against the Keyboard enum constants
     // - see KeyEvent docs.
     /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison -- widening casts are redundant here, so the suppression is the only honest option */
-    if (!this._controlDown || this._readOnly) {
+    if (!this._shortcutDown) {
       return false;
     }
 
@@ -609,9 +671,14 @@ export abstract class TextEditWidget extends Widget {
     // browser performs the clipboard work on the focused transport, and the
     // resulting edits arrive as intents.
     if (channel === Keyboard.A) {
+      // Selecting is not editing: a read-only field is still copied from.
       this.model.selectAll();
 
       return true;
+    }
+
+    if (this._readOnly) {
+      return false;
     }
 
     if (channel === Keyboard.Z) {
@@ -630,7 +697,7 @@ export abstract class TextEditWidget extends Widget {
     return false;
   }
 
-  private _startPointerDrag(): void {
+  private _startPointerDrag(pointerId: number): void {
     if (this._dragging) {
       return;
     }
@@ -642,6 +709,7 @@ export abstract class TextEditWidget extends Widget {
     }
 
     this._dragging = true;
+    this._dragPointerId = pointerId;
     app.input.onPointerMove.add(this._onPointerDragMove);
     app.input.onPointerUp.add(this._onPointerDragEnd);
     app.input.onPointerCancel.add(this._onPointerDragEnd);
@@ -653,6 +721,7 @@ export abstract class TextEditWidget extends Widget {
     }
 
     this._dragging = false;
+    this._dragPointerId = -1;
 
     const app = this._stage?.app;
 

@@ -189,7 +189,7 @@ export const parseContainer = (buffer: ArrayBuffer): ParsedContainer => {
     // Version 1 indexed entries by an opaque alias rather than by their logical
     // source, so its entries cannot be resolved to an asset identity at all.
     // There is nothing to read partially: rebuild the container.
-    fail(`unsupported version ${version} (this build reads version ${CONTAINER_VERSION}) — rebuild it with scripts/build-container`);
+    fail(`unsupported version ${version} (this build reads version ${CONTAINER_VERSION}) - rebuild it with scripts/build-container`);
   }
 
   const indexLength = view.getUint32(8, true);
@@ -211,6 +211,18 @@ export const parseContainer = (buffer: ArrayBuffer): ParsedContainer => {
 
   const dataLength = buffer.byteLength - dataStart;
   const entries = parsed.map((entry, i) => readEntry(entry, i, dataLength));
+  const sources = new Set<string>();
+
+  for (const entry of entries) {
+    // One source is one asset identity, so a repeated source would unpack a
+    // second payload for it - and for a texture or a media element the losing
+    // one owns a device resource nothing would ever release.
+    if (sources.has(entry.source)) {
+      fail(`index entry "${entry.source}" is packed twice; a container holds one payload per source`);
+    }
+
+    sources.add(entry.source);
+  }
 
   return { version, entries, dataStart };
 };

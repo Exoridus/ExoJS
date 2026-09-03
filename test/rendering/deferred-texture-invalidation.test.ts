@@ -1,3 +1,4 @@
+import { Rectangle } from '#math/Rectangle';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
@@ -100,5 +101,29 @@ describe('a drawable whose geometry follows its texture invalidates when a defer
           }) as unknown as { _contentRevision: number },
       ),
     ).resolves.toBe(true);
+  });
+
+  test('a Sprite whose frame was chosen before the payload landed', async () => {
+    // A Spritesheet slices frames out of an atlas that may still be loading, so
+    // the frame is set while the texture reports 0x0. UVs are the frame over
+    // those dimensions, so they have to be recomputed once the real ones
+    // arrive - and the load has to be announced, or a retained product goes on
+    // replaying the recording it made around the empty texture.
+    const { texture, finishLoad } = makePendingTexture();
+    const sprite = new Sprite(texture);
+
+    sprite.setTextureFrame(new Rectangle(16, 0, 16, 16));
+
+    const revisionBefore = (sprite as unknown as { _contentRevision: number })._contentRevision;
+
+    expect([...sprite.texCoords]).toEqual([0, 0, 0, 0]);
+
+    finishLoad();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    // The frame stands; against the 64x64 payload it spans u 0.25 to 0.5 and
+    // v 0 to 0.25, packed as two 16-bit fixed-point values per corner.
+    expect([...sprite.texCoords]).toEqual([0x3fff, 0x7fff, 0x3fff7fff, 0x3fff3fff]);
+    expect((sprite as unknown as { _contentRevision: number })._contentRevision).not.toBe(revisionBefore);
   });
 });

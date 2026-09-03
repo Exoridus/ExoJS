@@ -81,9 +81,17 @@ export interface ParticleWriter {
   color: number;
   /** Total seconds before this particle expires. */
   lifetime: number;
-  /** Atlas frame index. Ignored by a system that declares no frames. */
+  /**
+   * Atlas frame index. Ignored by a system that declares no frames, and an
+   * index past the declared ones shows frame 0. Development builds throw on a
+   * negative or out-of-range value rather than letting it wrap onto a
+   * different, valid frame.
+   */
   frame: number;
 }
+
+/** Largest storable frame index - the frame channel is a `Uint16Array`. */
+const maxFrameIndex = 65535;
 
 /**
  * The emitting face of a particle system: the only supported way to bring
@@ -104,6 +112,16 @@ export interface ParticleEmitter {
  * dies and stays valid for the whole callback, whichever backend ran the
  * simulation and whether or not the slot has already been reused. It carries no
  * slot index for that reason - there is nothing to read back afterwards.
+ *
+ * On the GPU backend, the death branch re-integrates `x`/`y`/`rotation`/
+ * `elapsed` to match the CPU path exactly, but returns before running that
+ * frame's update modules - so `velocityX`/`velocityY`/`scaleX`/`scaleY`/
+ * `color` are the PREVIOUS frame's values, one integration step stale
+ * relative to the CPU backend, which runs every module before snapshotting.
+ * A `ColorOverLifetime` particle therefore dies at its second-to-last colour
+ * on WebGPU and its final colour on WebGL2; an `ApplyForce`/`Drag` particle's
+ * reported velocity is one step behind. A `SpawnOnDeath` sub-emitter or a
+ * custom death module reading these fields sees this divergence.
  */
 export interface ParticleDeathContext {
   readonly x: number;
@@ -320,7 +338,24 @@ export class ParticleSlotWriter implements ParticleWriter {
   }
 
   public set frame(value: number) {
-    this._storage.frame[this._currentSlot()] = value | 0;
+    const index = value | 0;
+
+    if (index < 0 || index > maxFrameIndex) {
+      if (__DEV__) {
+        throw new Error(
+          `ParticleWriter: frame index ${value} is out of range - a frame index is an integer in 0..${maxFrameIndex}. ` +
+            'An index past the frames the system declares shows frame 0.',
+        );
+      }
+
+      // Storage is a Uint16Array, so an out-of-range index would wrap onto a
+      // valid frame instead of falling back to frame 0 as documented.
+      this._storage.frame[this._currentSlot()] = index < 0 ? 0 : maxFrameIndex;
+
+      return;
+    }
+
+    this._storage.frame[this._currentSlot()] = index;
   }
 }
 

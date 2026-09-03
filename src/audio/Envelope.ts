@@ -24,9 +24,13 @@ export interface EnvelopeOptions {
  * `gain.cancelScheduledValues` if needed).
  */
 export class Envelope {
+  /** Attack time in milliseconds - gain ramps from 0 to peak (1.0). */
   public attackMs: number;
+  /** Decay time in milliseconds - gain ramps from peak to sustain level. */
   public decayMs: number;
+  /** Sustain level, 0..1. */
   public sustainLevel: number;
+  /** Release time in milliseconds - gain ramps from current to 0 on {@link Envelope.release}. */
   public releaseMs: number;
 
   /**

@@ -46,7 +46,7 @@ export const mergeSceneTransitionRequirements = (a: SceneTransitionPhaseRequirem
 
 /** Construction options for {@link PhasedSceneTransition} and its subclasses. */
 export interface PhasedSceneTransitionOptions {
-  /** Seconds of *each* phase (enter and exit run this long independently), in milliseconds. Default `220`. */
+  /** Duration of *each* phase (enter and exit run this long independently), in milliseconds. Default `220`. */
   readonly duration?: number;
   /** Applied to both phases' `progress` to produce `easedProgress`. Default {@link Ease.linear}. */
   readonly easing?: EasingFunction;

@@ -179,7 +179,9 @@ export class TileSet {
   /**
    * Build definitions from an array, replacing the internal definitions map.
    * Each entry's properties are copied and frozen.
-   * @internal
+   *
+   * Part of the tilemap SDK contract for extension packages that build
+   * tilesets programmatically.
    */
   public _setDefinitions(definitions: readonly TileDefinition[]): void {
     const map = this._definitions as Map<number, TileDefinition>;

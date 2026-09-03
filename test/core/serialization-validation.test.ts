@@ -15,6 +15,7 @@ import {
 } from '#core/serialization/read';
 import { _resetDefaultSerializers, deserializeTree, migrate } from '#core/serialization/serialize';
 import { SERIALIZATION_VERSION, type SerializedNode } from '#core/serialization/types';
+import { Signal } from '#core/Signal';
 import { type Container } from '#rendering/Container';
 import { type RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { Sprite } from '#rendering/sprite/Sprite';
@@ -28,7 +29,13 @@ import { Texture } from '#rendering/texture/Texture';
 // Text construction needs a GlyphAtlasPool; inject a mock so the Text-based
 // cases run without a real canvas 2D context (mirrors serialization.test.ts).
 const fixedGlyphInfo: GlyphInfo = { x: 0, y: 0, width: 8, height: 16, advance: 10, ascent: 13, page: 0, uvLeft: 0, uvTop: 0, uvRight: 0.01, uvBottom: 0.02 };
-const mockAtlas: Partial<GlyphAtlas> = { getGlyph: vi.fn(() => fixedGlyphInfo), pages: [] as unknown as GlyphAtlas['pages'], mode: 'sdf', clear: vi.fn() };
+const mockAtlas: Partial<GlyphAtlas> = {
+  getGlyph: vi.fn(() => fixedGlyphInfo),
+  pages: [] as unknown as GlyphAtlas['pages'],
+  mode: 'sdf',
+  clear: vi.fn(),
+  onCleared: new Signal(),
+};
 const mockPool = { getAtlas: vi.fn(() => mockAtlas) };
 
 beforeEach(() => resetDefaultGlyphAtlasPool(mockPool as unknown as GlyphAtlasPool));

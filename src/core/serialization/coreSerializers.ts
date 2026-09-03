@@ -73,7 +73,10 @@ const spriteSerializer: NodeSerializer<Sprite> = {
     const frame = data.frame;
 
     if (texture !== null && Array.isArray(frame) && frame.length === 4) {
-      sprite.setTextureFrame(Rectangle.temp.set(Number(frame[0]), Number(frame[1]), Number(frame[2]), Number(frame[3])));
+      // A dedicated rectangle, not the shared Rectangle.temp: setTextureFrame
+      // reads its argument again after re-entering node code (bounds/origin
+      // invalidation), and this call has no instance to own a scratch on.
+      sprite.setTextureFrame(new Rectangle(Number(frame[0]), Number(frame[1]), Number(frame[2]), Number(frame[3])));
     }
 
     return sprite;

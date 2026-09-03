@@ -7,15 +7,19 @@ declare const gamepadButtonChannelBrand: unique symbol;
 /**
  * Branded literal-union type identifying a canonical button-style gamepad
  * input channel. Members are absolute offsets into the engine's shared
- * {@link Float32Array} input channel buffer (relative to slot 0): the 32
- * slots reserved for a gamepad slot's button section, computed as
- * `ChannelOffset.Gamepads + 0..31` (512..543 with the default layout -
- * `ChannelSize.Category = 256`, `Gamepads = 2 * Category = 512`).
+ * {@link Float32Array} input channel buffer (relative to slot 0): the 24
+ * named buttons (`South`-`Paddle4`), computed as `ChannelOffset.Gamepads +
+ * 0..23` (512..535 with the default layout - `ChannelSize.Category = 256`,
+ * `Gamepads = 2 * Category = 512`).
  *
- * The 24 named buttons (`South`-`Paddle4`) cover offsets 0..23; offsets
- * 24..31 are reserved for forward-compat / custom-mapping use and remain
- * part of this type so custom `GamepadMapping` subclasses can address them
- * without casting.
+ * Offsets 24..31 of the button section are reserved in the channel buffer
+ * layout but deliberately excluded from this type: they carry no
+ * {@link InputToken}, so a binding built from one would type-check and read
+ * back with `InputSystem`/`Gamepad`, then throw a plain `Error` the moment it
+ * was serialized (`ActionMap.serializeBindings`) or checked for a conflict
+ * (`ActionMap.conflicts`). A custom `GamepadMapping` that genuinely needs one
+ * of those offsets has to say so with an explicit cast, which is the point -
+ * it opts into a channel this type otherwise refuses to hand out.
  *
  * The brand keeps the type system from confusing button channels with
  * {@link GamepadAxisChannel} or raw `number`s during mapping authoring.
@@ -25,38 +29,7 @@ declare const gamepadButtonChannelBrand: unique symbol;
  * @internal
  */
 export type GamepadButtonChannel = (
-  | 512
-  | 513
-  | 514
-  | 515
-  | 516
-  | 517
-  | 518
-  | 519
-  | 520
-  | 521
-  | 522
-  | 523
-  | 524
-  | 525
-  | 526
-  | 527
-  | 528
-  | 529
-  | 530
-  | 531
-  | 532
-  | 533
-  | 534
-  | 535
-  | 536
-  | 537
-  | 538
-  | 539
-  | 540
-  | 541
-  | 542
-  | 543
+  512 | 513 | 514 | 515 | 516 | 517 | 518 | 519 | 520 | 521 | 522 | 523 | 524 | 525 | 526 | 527 | 528 | 529 | 530 | 531 | 532 | 533 | 534 | 535
 ) & { readonly [gamepadButtonChannelBrand]: void };
 
 /** Construction options for a {@link GamepadButton}. */
@@ -213,5 +186,7 @@ export namespace GamepadButton {
    * {@link Paddle1} for why Xbox Elite paddles are absent.
    */
   export const Paddle4 = button(23);
-  // Offsets 24..31 reserved for future named buttons / custom mapping use.
+  // Offsets 24..31 reserved for future named buttons; not part of
+  // GamepadButtonChannel until each one has an InputToken - see that type's
+  // own doc comment.
 }

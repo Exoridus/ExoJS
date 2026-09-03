@@ -43,7 +43,32 @@ export interface AssetDecoderOptions {
 const CONTAINER_NAMESPACE = 'exoa';
 
 /** A container is acquired whole, so one record holds it. */
-const containerLayout = SingleEntryLayout.version<ArrayBuffer>(1);
+const containerLayout = SingleEntryLayout.version<ArrayBuffer>(2);
+
+/** A signal that aborts as soon as either input does, with that input's reason. */
+const anySignal = (first: AbortSignal, second: AbortSignal): AbortSignal => {
+  if (typeof AbortSignal.any === 'function') {
+    return AbortSignal.any([first, second]);
+  }
+
+  const controller = new AbortController();
+  const follow = (source: AbortSignal): void => {
+    if (source.aborted) {
+      controller.abort(source.reason);
+
+      return;
+    }
+
+    // Removing the listeners is what keeps a long-lived application signal from
+    // accumulating one per asset load; aborting the composite fires them off.
+    source.addEventListener('abort', () => controller.abort(source.reason), { once: true, signal: controller.signal });
+  };
+
+  follow(first);
+  follow(second);
+
+  return controller.signal;
+};
 
 /** The shape an identity hook sees. Options are omitted entirely when the request carried none. */
 const toRequest = (source: string, options: unknown): AssetRequest<unknown> => (options === undefined || options === null ? { source } : { source, options });
@@ -162,9 +187,7 @@ export class AssetDecoder {
     signal?: AbortSignal,
   ): Promise<T> {
     const url = this._resolveUrl(source);
-    // Spread only when a signal is actually threaded through, so a plain fetch
-    // keeps handing `fetch` the very `fetchOptions` object it always did.
-    const requestOptions = signal === undefined ? this._fetchOptions : { ...this._fetchOptions, signal };
+    const requestOptions = this._requestOptions(signal);
     const fetchRepresentation = async (): Promise<T> => read(await fetchAsset(url, requestOptions));
 
     if (this._cache === null) {
@@ -180,6 +203,25 @@ export class AssetDecoder {
       fetch: fetchRepresentation,
       report: this._reportCacheError,
     });
+  }
+
+  /**
+   * The `RequestInit` one acquisition runs under.
+   *
+   * An application-wide `fetchOptions.signal` and this load's own cancellation
+   * are composed rather than one replacing the other: the application's signal
+   * is the only cancellation an application-level abort has, and the load's is
+   * what a release or a scope teardown fires. Without a load signal the very
+   * `fetchOptions` object is handed on, so a plain fetch stays allocation-free.
+   */
+  private _requestOptions(signal?: AbortSignal): RequestInit {
+    if (signal === undefined) {
+      return this._fetchOptions;
+    }
+
+    const configured = this._fetchOptions.signal;
+
+    return { ...this._fetchOptions, signal: configured === undefined || configured === null ? signal : anySignal(configured, signal) };
   }
 
   /**
@@ -367,7 +409,7 @@ export class AssetDecoder {
    * differently from the same entry fetched over the network.
    * @internal
    */
-  public async _injectSource(asset: CanonicalAsset, bytes: ArrayBuffer, scope: LoaderScope, options?: unknown): Promise<void> {
+  public async _injectSource(asset: CanonicalAsset, bytes: ArrayBuffer, scope: LoaderScope, options?: unknown): Promise<unknown> {
     const installed = this._typeRegistry.getInstalled(asset.type);
 
     if (installed === undefined) {
@@ -384,7 +426,10 @@ export class AssetDecoder {
     const context: SourceCodecContext = { locator: asset.locator, signal: undefined };
     const source = await codec.decode(await codec.fromBytes(bytes, context), context);
 
-    this._storeResource(asset, await factory.create(source, this._factoryContext(asset, scope, options)));
+    // Returns what the store hands back, exactly as the network path does: a
+    // concurrent get()/load() joins this work through the in-flight entry its
+    // caller registers, and must see the resource, not the injection's void.
+    return this._storeResource(asset, await factory.create(source, this._factoryContext(asset, scope, options)));
   }
 
   /**

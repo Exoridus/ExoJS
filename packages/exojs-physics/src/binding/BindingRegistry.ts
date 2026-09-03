@@ -96,7 +96,14 @@ export class BindingRegistry {
    * pool, so a `sync()` that kept writing would not merely update a dead node -
    * it would write through recycled state into whichever live node next takes
    * that slot. Pruning here (rather than only on an explicit `unbind`) is what
-   * makes destroying a bound node safe without a physics-side teardown call.
+   * makes destroying a bound node safe from THAT hazard without a
+   * physics-side call.
+   *
+   * It does not remove the body: pruning only drops this registry's link, so
+   * a destroyed node's body stays in {@link PhysicsWorld}, keeps being
+   * integrated, and keeps generating contacts and query results with nothing
+   * on screen. The body's owner is responsible for destroying it (or calling
+   * {@link unbind} first) when the node it was driving is destroyed.
    */
   public sync(): void {
     for (const [body, binding] of this._bindings) {

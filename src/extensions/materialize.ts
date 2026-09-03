@@ -11,6 +11,9 @@ import type { AssetEntry, RendererBinding, SerializerBinding } from './Extension
  * @internal
  */
 export const materializeRendererBindings = (backend: RenderBackend, bindings: readonly RendererBinding[]): void => {
+  // Validate every binding before creating any renderer: a duplicate target
+  // discovered mid-loop must not leave earlier bindings' GPU-backed
+  // renderers created and bound with no way to roll them back.
   const seenTargets = new Set<DrawableConstructor>();
 
   for (const binding of bindings) {
@@ -25,7 +28,9 @@ export const materializeRendererBindings = (backend: RenderBackend, bindings: re
 
       seenTargets.add(target);
     }
+  }
 
+  for (const binding of bindings) {
     const renderer = binding.create(backend);
 
     if (renderer === undefined) continue;

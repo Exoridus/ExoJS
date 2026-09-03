@@ -471,7 +471,7 @@ export abstract class RenderNode extends SceneNode {
     return this;
   }
 
-  /** @internal */
+  /** Part of the renderer SDK contract for extension renderers. */
   public _collect(builder: RenderPlanBuilder, seq?: number): void {
     if (this.destroyed) {
       // A destroyed node has released its pooled transform/bounds; collecting
@@ -556,7 +556,7 @@ export abstract class RenderNode extends SceneNode {
     return this._retainedRoot;
   }
 
-  /** @internal */
+  /** Part of the renderer SDK contract for extension renderers. */
   protected _collectContent(_builder: RenderPlanBuilder): void {
     // Overridden by Drawable/Container.
   }
@@ -648,6 +648,10 @@ export abstract class RenderNode extends SceneNode {
     }
   }
 
+  /**
+   * Installs the factory `cacheAsTexture` uses to create its backing sprite.
+   * @internal
+   */
   public static setInternalSpriteFactory(factory: (() => RenderNodeSpriteLike) | null): void {
     RenderNode._spriteFactory = factory;
   }
@@ -799,8 +803,16 @@ export abstract class RenderNode extends SceneNode {
    * node is destroyed or the backend itself is. Dropping the last reference
    * is not enough - GPU lifetime is deterministic here on purpose and is not
    * tied to garbage collection.
+   *
+   * Idempotent: a second call is a no-op.
    */
   public override destroy(): void {
+    // The base guard alone would not cover this override's own body, which
+    // runs after the super call has already raised the flag.
+    if (this.destroyed) {
+      return;
+    }
+
     super.destroy();
 
     this._destroyCacheTexture();
@@ -918,7 +930,10 @@ export abstract class RenderNode extends SceneNode {
   private _getCacheSprite(): RenderNodeSpriteLike {
     if (this._cacheSprite === null) {
       if (RenderNode._spriteFactory === null) {
-        throw new Error('RenderNode sprite factory is not initialized.');
+        throw new Error(
+          'cacheAsTexture has no sprite factory: the module that registers it (Sprite.ts) was dropped by the bundler. ' +
+            "Import Sprite (or anything else) from the package's root entry point so it is not tree-shaken away.",
+        );
       }
 
       this._cacheSprite = RenderNode._spriteFactory();

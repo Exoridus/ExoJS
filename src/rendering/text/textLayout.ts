@@ -187,7 +187,11 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
         });
       }
 
-      lines.push({ start: lineStart, count: result.length - lineStart, x: offsetX, y: li * computedLineHeight, width: line.width });
+      // Justify stretches the line to fill maxLineWidth exactly - each of the
+      // `gaps` inter-word gaps absorbs `extraPerGap`, so the line's actual
+      // width after layout is maxLineWidth, not the pre-justify `line.width`
+      // a selection rectangle or caret would otherwise fall short of.
+      lines.push({ start: lineStart, count: result.length - lineStart, x: offsetX, y: li * computedLineHeight, width: maxLineWidth });
       continue;
     }
 

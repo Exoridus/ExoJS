@@ -43,6 +43,7 @@ export class BrowserTextInput implements PlatformTextInput {
   private _bounds: Rectangle | null = null;
   private _hints: PlatformTextInputHints = {};
   private _destroyed = false;
+  private _claimingFocus = false;
 
   private readonly _beforeInput = (event: InputEvent): void => {
     const type = event.inputType;
@@ -185,16 +186,42 @@ export class BrowserTextInput implements PlatformTextInput {
     return this._onComposition;
   }
 
+  /** Whether host keyboard focus currently sits on this transport. */
+  public get hostFocused(): boolean {
+    return this._claimingFocus || (typeof document !== 'undefined' && document.activeElement === this._element);
+  }
+
+  /** Whether {@link BrowserTextInput.destroy} has already run. */
+  public get destroyed(): boolean {
+    return this._destroyed;
+  }
+
   public focus(): void {
     if (this._destroyed) {
       return;
     }
 
     this._applyBounds();
-    this._element.focus({ preventScroll: true });
+    // Taking host focus blurs the drawing surface synchronously, and the input
+    // pipeline reads `hostFocused` from inside that blur to decide whether
+    // keyboard focus left the application. The claim spans exactly that gap.
+    this._claimingFocus = true;
+
+    try {
+      this._element.focus({ preventScroll: true });
+    } finally {
+      this._claimingFocus = false;
+    }
   }
 
   public blur(): void {
+    if (typeof document !== 'undefined' && document.activeElement === this._element) {
+      // Hand host focus back to the surface it was borrowed from instead of
+      // dropping it on the document: keyboard input would otherwise stop
+      // reaching the application until the next press on the surface.
+      this._canvas.focus({ preventScroll: true });
+    }
+
     this._element.blur();
   }
 

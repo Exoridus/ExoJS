@@ -1,5 +1,6 @@
 import type { Application } from '#core/Application';
 import { Scene } from '#core/scene/Scene';
+import { SceneState } from '#core/scene/SceneState';
 import { Signal } from '#core/Signal';
 import type { InteractionHooks, Stage } from '#core/Stage';
 import { FocusController } from '#input/FocusController';
@@ -8,7 +9,7 @@ import { GamepadButton } from '#input/GamepadButton';
 import type { InputSystem } from '#input/InputSystem';
 import type { KeyEvent } from '#input/KeyEvent';
 import { createScopeToken } from '#input/ScopeToken';
-import { Keyboard } from '#input/types';
+import { ChannelSize, Keyboard } from '#input/types';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { Widget } from '#ui/Widget';
@@ -41,17 +42,27 @@ const createFocusApp = (): {
   onKeyDown: Signal<[number]>;
   onKeyUp: Signal<[number]>;
   onAnyGamepadButtonDown: Signal<[Gamepad, GamepadButton, number]>;
+  /** Backs `_actionSample().values` - tests set `channels[Keyboard.Shift]` to drive `_isShiftDown()`. */
+  channels: Float32Array;
 } => {
   const onKeyDown = new Signal<[number]>();
   const onKeyUp = new Signal<[number]>();
   const onAnyGamepadButtonDown = new Signal<[Gamepad, GamepadButton, number]>();
+  const channels = new Float32Array(ChannelSize.Container);
   const scene = new Scene();
   const app = {
-    input: { onKeyDown, onKeyUp, onAnyGamepadButtonDown } as unknown as InputSystem,
+    input: {
+      onKeyDown,
+      onKeyUp,
+      onAnyGamepadButtonDown,
+      _actionSample: () => ({ values: channels, batches: [], frameId: 0, timestamp: 0 }),
+    } as unknown as InputSystem,
     scenes: {
       get currentScene(): Scene | null {
         return scene;
       },
+      state: SceneState.Active as SceneState | null,
+      _transitionGateOpen: false,
     },
   } as unknown as Application;
   const focus = new FocusController(app);
@@ -59,7 +70,7 @@ const createFocusApp = (): {
 
   scene.root._setStage(stage);
 
-  return { app, scene, focus, onKeyDown, onKeyUp, onAnyGamepadButtonDown };
+  return { app, scene, focus, onKeyDown, onKeyUp, onAnyGamepadButtonDown, channels };
 };
 
 const focusable = (tabIndex = 0): Container => {
@@ -207,7 +218,7 @@ describe('FocusController', () => {
   });
 
   test('Tab moves focus forward, Shift+Tab moves it backward', () => {
-    const { scene, focus, onKeyDown, onKeyUp } = createFocusApp();
+    const { scene, focus, onKeyDown, onKeyUp, channels } = createFocusApp();
     const a = focusable();
     const b = focusable();
     const c = focusable();
@@ -221,27 +232,29 @@ describe('FocusController', () => {
     onKeyDown.dispatch(Keyboard.Tab);
     expect(focus.focused).toBe(c);
 
-    // The real InputSystem dispatches onKeyDown/onKeyUp with the
-    // side-specific channel only (see Keyboard's own doc comment) - never
-    // the aggregate Shift channel directly - so either physical Shift key
-    // must be recognized here.
+    // `_isShiftDown` reads the aggregate `Keyboard.Shift` channel - the real
+    // InputSystem sets it alongside ShiftLeft/ShiftRight (see
+    // keyboardModifierChannelInfo), so the test drives both to match.
+    channels[Keyboard.Shift] = 1;
     onKeyDown.dispatch(Keyboard.ShiftRight);
     onKeyDown.dispatch(Keyboard.Tab);
     expect(focus.focused).toBe(b);
 
+    channels[Keyboard.Shift] = 0;
     onKeyUp.dispatch(Keyboard.ShiftRight);
     onKeyDown.dispatch(Keyboard.Tab);
     expect(focus.focused).toBe(c);
   });
 
   test('either physical Shift key (left or right) triggers Shift+Tab reverse navigation', () => {
-    const { scene, focus, onKeyDown, onKeyUp } = createFocusApp();
+    const { scene, focus, onKeyDown, onKeyUp, channels } = createFocusApp();
     const a = focusable();
     const b = focusable();
 
     scene.root.addChild(a).addChild(b);
     focus.focus(b);
 
+    channels[Keyboard.Shift] = 1;
     onKeyDown.dispatch(Keyboard.ShiftLeft);
     onKeyDown.dispatch(Keyboard.Tab);
     expect(focus.focused).toBe(a);
@@ -344,6 +357,34 @@ describe('FocusController', () => {
     expect(focus.focused).toBeNull();
   });
 
+  test('focus() rejects an already-hidden node', () => {
+    const { scene, focus } = createFocusApp();
+    const node = focusable();
+
+    node.visible = false;
+    scene.root.addChild(node);
+
+    focus.focus(node);
+
+    expect(focus.focused).toBeNull();
+  });
+
+  test('hiding the focused node blurs it on the next key event', () => {
+    const { scene, focus, onKeyDown } = createFocusApp();
+    const node = focusable();
+    const blurred = vi.fn();
+
+    scene.root.addChild(node);
+    focus.focus(node);
+    node.onBlur.add(blurred);
+
+    node.visible = false;
+    onKeyDown.dispatch(Keyboard.Enter);
+
+    expect(focus.focused).toBeNull();
+    expect(blurred).toHaveBeenCalledTimes(1);
+  });
+
   test('node.focus()/blur() convenience routes through the stage', () => {
     const { scene, focus } = createFocusApp();
     const node = focusable();
@@ -410,6 +451,46 @@ describe('FocusController', () => {
 
     expect(() => onKeyDown.dispatch(Keyboard.Tab)).not.toThrow();
     expect(focus.focused).toBeNull();
+  });
+
+  test('Tab/Enter/Escape are ignored while the scene-director transition gate is open', () => {
+    const { app, scene, focus, onKeyDown } = createFocusApp();
+    const a = focusable();
+    const b = focusable();
+
+    scene.root.addChild(a).addChild(b);
+    focus.focus(a);
+
+    const appMutable = app as unknown as { scenes: { _transitionGateOpen: boolean } };
+    appMutable.scenes._transitionGateOpen = true;
+
+    onKeyDown.dispatch(Keyboard.Tab);
+
+    // Same gate InteractionSystem._dispatchFrame applies to pointer frames -
+    // Tab must not move focus onto the outgoing scene's widgets mid-transition.
+    expect(focus.focused).toBe(a);
+
+    appMutable.scenes._transitionGateOpen = false;
+    onKeyDown.dispatch(Keyboard.Tab);
+
+    expect(focus.focused).toBe(b);
+  });
+
+  test('key events are ignored while the scene state is not Active', () => {
+    const { app, scene, focus, onKeyDown } = createFocusApp();
+    const a = focusable();
+
+    scene.root.addChild(a);
+    focus.focus(a);
+
+    const appMutable = app as unknown as { scenes: { state: SceneState | null } };
+    appMutable.scenes.state = SceneState.Suspended;
+
+    const handler = vi.fn();
+    a.onKeyDown.add(handler);
+    onKeyDown.dispatch(Keyboard.Enter);
+
+    expect(handler).not.toHaveBeenCalled();
   });
 
   test('focusPrevious() with nothing focused wraps to the last focusable node', () => {

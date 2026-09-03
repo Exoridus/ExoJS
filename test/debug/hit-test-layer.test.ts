@@ -29,6 +29,7 @@ const fakeAtlas = {
   getGlyph: vi.fn(() => fakeGlyph),
   pages: [fakePage],
   clear: vi.fn(),
+  onCleared: new Signal(),
 };
 const fakePool = { getAtlas: vi.fn(() => fakeAtlas) };
 beforeEach(() => {

@@ -88,6 +88,43 @@ describe('asset load cancellation', () => {
     await expect(queue).rejects.toMatchObject({ name: 'AbortError' });
   });
 
+  test('an application-wide fetchOptions.signal aborts an asset load, alongside the loader own signal', async () => {
+    const calls = mockPendingFetch();
+    const application = new AbortController();
+    const loader = new Loader({ fetchOptions: { signal: application.signal } });
+
+    materializeAssetTypes(loader, coreAssetTypes);
+
+    const queue = loader.load('ship.png');
+    await flush();
+
+    expect(calls[0]?.signal?.aborted).toBe(false);
+
+    // The signal the application configured used to be replaced by the loader's
+    // own, so an application-level abort reached containers but no asset load.
+    application.abort();
+
+    expect(calls[0]?.signal?.aborted).toBe(true);
+    await expect(queue).rejects.toThrow();
+  });
+
+  test('a load cancel still aborts the fetch when fetchOptions carries a signal of its own', async () => {
+    const calls = mockPendingFetch();
+    const application = new AbortController();
+    const loader = new Loader({ fetchOptions: { signal: application.signal } });
+
+    materializeAssetTypes(loader, coreAssetTypes);
+
+    const queue = loader.load('ship.png');
+    await flush();
+
+    queue.cancel();
+
+    expect(calls[0]?.signal?.aborted).toBe(true);
+    expect(application.signal.aborted).toBe(false);
+    await expect(queue).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
   test('a cancelled load does not dispatch onError', async () => {
     mockPendingFetch();
     const loader = createCoreLoader();

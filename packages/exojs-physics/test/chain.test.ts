@@ -378,6 +378,34 @@ describe('chain lifecycle', () => {
     expect(world.queryAabb({ minX: -200, minY: -200, maxX: 200, maxY: 200 })).not.toContain(chain);
     expect(box.y).toBeGreaterThan(150);
   });
+
+  it('is not turned into its own broad-phase leaf by the CCD resync pass', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const chain = new Collider({ shape: flatFloor() });
+    const chainBody = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 100 }, colliders: [chain] }));
+
+    // A bullet body elsewhere, just so the world runs the CCD pass at all -
+    // `_advanceBullets` (and its broad-phase resync) is skipped entirely
+    // without one.
+    const bullet = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 5000, y: 5000 }, isBullet: true, colliders: [{ shape: new CircleShape(4) }] }));
+    bullet.linearVelocityX = 600;
+
+    expect(chain._treeProxy).toBe(-1);
+
+    world.step(DT);
+
+    // The CCD pass resyncs the broad phase from the authored collider list, not
+    // the detection list (which replaces a chain with its edge proxies). If it
+    // inserted the chain itself, this would flip to a real proxy id here - a
+    // leaf that then never gets removed (`_detachCollider` only drops the edge
+    // proxies), so it would keep answering queries even after the chain is
+    // destroyed.
+    expect(chain._treeProxy).toBe(-1);
+
+    world.destroyBody(chainBody);
+
+    expect(world.queryAabb({ minX: -200, minY: 90, maxX: 200, maxY: 110 })).toEqual([]);
+  });
 });
 
 describe('chain performance', () => {

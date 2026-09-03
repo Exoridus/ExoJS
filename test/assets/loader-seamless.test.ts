@@ -221,7 +221,7 @@ describe('Loader seamless get (Texture)', () => {
     }
   });
 
-  test('differing per-handle textureOptions across get() do NOT warn; the first sampler wins on the shared handle', async () => {
+  test('differing per-handle textureOptions across get() warn once; the first sampler wins on the shared handle', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
     const warnings: string[] = [];
@@ -231,16 +231,28 @@ describe('Loader seamless get (Texture)', () => {
 
     try {
       // get() returns the SAME handle per source; sampler options are per-handle
-      // now, so a later differing sampler is silently first-wins (no warn). Use a
-      // distinct handle (e.g. an Assets catalog leaf) for an independent sampler.
+      // and baked at creation, so a later differing sampler is first-wins. That
+      // is a silent loss of what the second call asked for, so it is diagnosed
+      // once - use a distinct handle (an Assets catalog leaf) for an
+      // independent sampler.
       const handle = loader.get('ship.png', { textureOptions: { scaleMode: ScaleModes.Nearest } });
 
       expect(handle).toBe(loader.get('ship.png', { textureOptions: { scaleMode: ScaleModes.Linear } }));
-      expect(warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toContain('the options this get() asked for were ignored');
+
+      // Once per source: a repeated conflict is the same mistake, not a new one.
+      loader.get('ship.png', { textureOptions: { scaleMode: ScaleModes.Linear } });
+      expect(warnings).toHaveLength(1);
+
+      // Repeating the FIRST call's options ignores nothing, so it stays quiet.
+      loader.get('ship.png', { textureOptions: { scaleMode: ScaleModes.Nearest } });
+      expect(warnings).toHaveLength(1);
+
       expect(handle.scaleMode).toBe(ScaleModes.Nearest); // first call's sampler, baked at createPlaceholder
 
       await handle.loaded;
-      expect(handle.scaleMode).toBe(ScaleModes.Nearest); // fill transplanted source only — sampler kept
+      expect(handle.scaleMode).toBe(ScaleModes.Nearest); // fill transplanted source only - sampler kept
     } finally {
       removeSink();
     }

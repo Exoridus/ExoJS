@@ -368,7 +368,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Attack time in milliseconds - gain ramps from 0 to peak (1.0)."
         },
         {
           "name": "decayMs",
@@ -389,7 +389,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Decay time in milliseconds - gain ramps from peak to sustain level."
         },
         {
           "name": "releaseMs",
@@ -410,7 +410,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Release time in milliseconds - gain ramps from current to 0 on Envelope.release."
         },
         {
           "name": "sustainLevel",
@@ -431,7 +431,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Sustain level, 0..1."
         },
         {
           "name": "totalDurationMs",

@@ -1104,16 +1104,38 @@ describe('SceneDirector — destroy() / _dispose()', () => {
     destroySpy.mockRestore();
   });
 
-  test('_dispose() succeeds even while a navigation is in flight', async () => {
+  test('_dispose() waits for a navigation in flight, then completes', async () => {
     const app = createApplicationStub();
-    const SlowScene = makeSceneClass({ load: () => new Promise<void>(() => {}) });
+    let resolveLoad!: () => void;
+    const SlowScene = makeSceneClass({
+      load: () =>
+        new Promise<void>(resolve => {
+          resolveLoad = resolve;
+        }),
+    });
     const director = new SceneDirector(app, { slow: SlowScene });
 
-    const pending = director.change(SlowScene); // never resolves — navigation lock stays held forever
-
-    await expect(director._dispose()).resolves.toBeUndefined();
+    const pending = director.change(SlowScene);
 
     void pending.catch(() => {});
+
+    let disposed = false;
+    const disposal = director._dispose().then(() => {
+      disposed = true;
+    });
+
+    for (let turn = 0; turn < 20; turn++) {
+      await Promise.resolve();
+    }
+
+    // The abort only invalidates the navigation's generation; the incoming
+    // scene is still inside load(), and its init()/unload()/destroy() would
+    // otherwise run against subsystems this disposal has already released.
+    expect(disposed).toBe(false);
+
+    resolveLoad();
+
+    await expect(disposal).resolves.toBeUndefined();
   });
 
   test('_dispose() destroys a Ready (never-consumed) preloaded scope', async () => {

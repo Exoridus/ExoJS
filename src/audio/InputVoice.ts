@@ -48,9 +48,9 @@ export class InputVoice extends BaseVoice {
   }
 
   /**
-   * Record `durationMs` of the live input and resolve with a playable
-   * {@link Sound}. Uses `MediaRecorder` under the hood, then decodes the
-   * captured blob into an `AudioBuffer`.
+   * Record `durationMs` (in milliseconds) of the live input and resolve
+   * with a playable {@link Sound}. Uses `MediaRecorder` under the hood, then
+   * decodes the captured blob into an `AudioBuffer`.
    */
   public async record(durationMs: number): Promise<Sound> {
     const recorder = new MediaRecorder(this._stream);

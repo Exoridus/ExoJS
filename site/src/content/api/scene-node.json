@@ -1,15 +1,15 @@
 {
   "title": "SceneNode",
-  "description": "Transform-bearing leaf in the scene-graph hierarchy. Carries position, rotation, scale, skew and origin. Implements Collidable so any node can participate directly in the SAT collision pipeline via its AABB or rotated/skewed quad. The normalized `anchor` convenience that derives `origin` from a layout box lives on Drawable: it needs a box to measure, which a node that carries no geometry of its own does not have. Transform state is dirty-flag-cached: position/rotation/scale/skew/origin mutations invalidate the local transform; either kind of mutation also invalidates the global transform (own + descendants) and the bounds rect for this node and every Container ancestor up the parent chain. The caches rebuild lazily on the next read. Collision and hit-testing take the cheaper AABB path when the node's *world* box is axis-aligned (its own and any inherited rotation compose to a multiple of 90° with no skew) and the oriented-quad SAT path otherwise. The public `isAlignedBox` getter reports that predicate for this node's own rotation only. `_invalidate*` methods are exported as `public` for friend-class access from Container and InteractionSystem; treat them as `@internal`. Subclasses: Container (carries children), RenderNode (carries draw payloads).",
+  "description": "Transform-bearing leaf in the scene-graph hierarchy. Carries position, rotation, scale, skew and origin. Implements Collidable so any node can participate directly in the SAT collision pipeline via its AABB or rotated/skewed quad. The normalized `anchor` convenience that derives `origin` from a layout box lives on Drawable: it needs a box to measure, which a node that carries no geometry of its own does not have. Transform state is dirty-flag-cached: position/rotation/scale/skew/origin mutations invalidate the local transform; either kind of mutation also invalidates the global transform (own + descendants) and the bounds rect for this node and every Container ancestor up the parent chain. The caches rebuild lazily on the next read. Collision and hit-testing take the cheaper AABB path when the node's *world* box is axis-aligned (its own and any inherited rotation compose to a multiple of 90° with no skew) and the oriented-quad SAT path otherwise. The public `isAlignedBox` getter reports that predicate for this node's own rotation only. `_invalidate*` methods are exported as `public` for friend-class access from Container and InteractionSystem; treat them as implementation detail, not public API. Subclasses: Container (carries children), RenderNode (carries draw payloads).",
   "symbol": "SceneNode",
   "kind": "class",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 41,
+  "memberCount": 42,
   "counts": {
     "constructors": 1,
-    "methods": 22,
+    "methods": 23,
     "properties": 18,
     "events": 0
   },
@@ -23,7 +23,7 @@
         "The normalized `anchor` convenience that derives `origin` from a layout box lives on Drawable: it needs a box to measure, which a node that carries no geometry of its own does not have.",
         "Transform state is dirty-flag-cached: position/rotation/scale/skew/origin mutations invalidate the local transform; either kind of mutation also invalidates the global transform (own + descendants) and the bounds rect for this node and every Container ancestor up the parent chain. The caches rebuild lazily on the next read.",
         "Collision and hit-testing take the cheaper AABB path when the node's *world* box is axis-aligned (its own and any inherited rotation compose to a multiple of 90° with no skew) and the oriented-quad SAT path otherwise. The public `isAlignedBox` getter reports that predicate for this node's own rotation only.",
-        "`_invalidate*` methods are exported as `public` for friend-class access from Container and InteractionSystem; treat them as `@internal`.",
+        "`_invalidate*` methods are exported as `public` for friend-class access from Container and InteractionSystem; treat them as implementation detail, not public API.",
         "Subclasses: Container (carries children), RenderNode (carries draw payloads)."
       ],
       "importLine": "import { SceneNode } from '@codexo/exojs'",
@@ -71,6 +71,116 @@
       "id": "methods",
       "title": "Methods",
       "members": [
+        {
+          "name": "_setLocalBounds",
+          "signature": "_setLocalBounds(x: number, y: number, width: number, height: number): this",
+          "signatureTokens": [
+            {
+              "text": "_setLocalBounds",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Write this node's local extent and run the bounds invalidation the change implies - the node's own bounds flag, the ancestor bounds cascade, and the content-dirty stamp that keeps retained fragments from replaying the old extent. This is the only supported way to resize a node from outside getLocalBounds; the rectangle itself is handed out read-only so the invalidation cannot be forgotten. Built-in drawables (Sprite, Text, BitmapText, Mesh, ...) and custom ones alike go through here. Part of the renderer SDK contract for extension renderers."
+        },
         {
           "name": "collidesWith",
           "signature": "collidesWith(target: Collidable): CollisionResponse | null",
@@ -221,7 +331,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Release this node's pooled state (transform, bounds, flags) and unlink it from its parent. The unlink comes first and is what makes a bare destroy() safe. A node left in its parent's child list bumps no revision, so every cache keyed on that revision - a Container's retained draw slots, a RetainedContainer's recorded GPU instruction set - would keep replaying the dead node's last captured frame. Removing it stamps the parent structure-dirty, which drops those captures, and runs the node's regular detach cleanup (bounds cascade, interaction/focus deregistration, stage clearing) while this node's own state is still intact. Container.removeChild is a no-op for a node it does not hold, so the already-correct removeChild()-then-destroy() order costs nothing more than the null check here. The destroyed flag is raised before the unlink so detach-time observers (e.g. focus, which suppresses onBlur on a destroyed node) see a node that is going away rather than one merely being reparented."
+          "description": "Release this node's pooled state (transform, bounds, flags) and unlink it from its parent. The unlink comes first and is what makes a bare destroy() safe. A node left in its parent's child list bumps no revision, so every cache keyed on that revision - a Container's retained draw slots, a RetainedContainer's recorded GPU instruction set - would keep replaying the dead node's last captured frame. Removing it stamps the parent structure-dirty, which drops those captures, and runs the node's regular detach cleanup (bounds cascade, interaction/focus deregistration, stage clearing) while this node's own state is still intact. Container.removeChild is a no-op for a node it does not hold, so the already-correct removeChild()-then-destroy() order costs nothing more than the null check here. The destroyed flag is raised before the unlink so detach-time observers (e.g. focus, which suppresses onBlur on a destroyed node) see a node that is going away rather than one merely being reparented. Idempotent: a second call is a no-op."
         },
         {
           "name": "getBounds",

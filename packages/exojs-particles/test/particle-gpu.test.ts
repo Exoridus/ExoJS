@@ -9,6 +9,7 @@ import { ColorGradient } from '../src/distributions/ColorGradient';
 import { Constant } from '../src/distributions/Constant';
 import { Curve } from '../src/distributions/Curve';
 import { ParticleGpuState } from '../src/gpu/ParticleGpuState';
+import { ParticleModuleKeyCollisionError } from '../src/gpu/ParticleModuleKeyCollisionError';
 import { ApplyForce } from '../src/modules/ApplyForce';
 import { BurstSpawn } from '../src/modules/BurstSpawn';
 import { ColorOverLifetime } from '../src/modules/ColorOverLifetime';
@@ -253,6 +254,9 @@ const flushDeathReadback = async (): Promise<void> => {
 };
 
 const makeBuilder = (device: GPUDevice | null): RenderPlanBuilder => ({ backend: { device } }) as unknown as RenderPlanBuilder;
+
+/** Deaths still queued on the CPU because no batch has been staged for them yet. */
+const pendingDeathCount = (system: ParticleSystem): number => (system as unknown as { _pendingDeathCount: number })._pendingDeathCount;
 
 describe('ParticleSystem GPU mode — auto-routing', () => {
   let restoreGlobals: () => void;
@@ -893,6 +897,57 @@ describe('ParticleSystem GPU mode — natural expiry death modules', () => {
     expect(env.copies.at(-1)!.size).toBe(2 * 40);
   });
 
+  test('dropping the GPU state forgets the deaths queued against its buffers', async () => {
+    const env = makeMockDevice();
+    const maps = holdDeathMaps(env);
+    const system = new ParticleSystem(makeTexture(), { capacity: 8, device: env.device });
+
+    system.visible = false;
+    system.addUpdateModule(new ApplyForce(0, 0));
+    system.addDeathModule(
+      new (class extends DeathModule {
+        public override onDeath(): void {
+          /* delivery is covered elsewhere; this test is about the bookkeeping */
+        }
+      })(),
+    );
+
+    // One particle expires per step; the staging ring fills up, so the last
+    // steps leave their deaths queued on the CPU.
+    for (let i = 0; i < 5; i++) {
+      const particle = system.emit()!;
+
+      particle.lifetime = 0.02 * (i + 1);
+    }
+
+    system.update(tick(0));
+
+    for (let i = 0; i < 5; i++) {
+      system.update(tick(0.02));
+      await flushDeathReadback();
+    }
+
+    expect(pendingDeathCount(system)).toBeGreaterThan(0);
+
+    // Device-loss recovery: a changed backend drops the GPU state, and with it
+    // the device buffer those queued records live in.
+    const env2 = makeMockDevice();
+
+    system._collect(makeBuilder(env2.device));
+
+    expect(system.gpuState).toBeNull();
+    expect(pendingDeathCount(system)).toBe(0);
+
+    // The rebuilt state must not stage records out of its freshly zeroed death
+    // buffer - every one of them would be a zero-valued death context.
+    system.emit()!.lifetime = 10;
+    system.update(tick(0.016));
+
+    expect(env2.copies).toHaveLength(0);
+
+    maps.release();
+  });
+
   test('batches are delivered in submission order even when their maps resolve out of order', async () => {
     const env = makeMockDevice();
     const maps = holdDeathMaps(env);
@@ -1032,7 +1087,7 @@ describe('ParticleGpuState direct construction', () => {
       }
     }
 
-    expect(() => new ParticleGpuState(env.device, 4, [new NoWgslModule()], [], makeTexture())).toThrow(/has no wgsl/);
+    expect(() => new ParticleGpuState(env.device, 4, [new NoWgslModule()], [], makeTexture(), new Rectangle(0, 0, 16, 16))).toThrow(/has no wgsl/);
   });
 
   test('uploadTextures loop tolerates a module that implements uploadTextures() without declaring any wgsl() textures', () => {
@@ -1055,7 +1110,7 @@ describe('ParticleGpuState direct construction', () => {
       }
     }
 
-    expect(() => new ParticleGpuState(env.device, 4, [new UploaderWithoutTextures()], [], makeTexture())).not.toThrow();
+    expect(() => new ParticleGpuState(env.device, 4, [new UploaderWithoutTextures()], [], makeTexture(), new Rectangle(0, 0, 16, 16))).not.toThrow();
     expect(uploadCalls).toBe(1);
   });
 
@@ -1230,7 +1285,7 @@ describe('Out-of-range textureIndex', () => {
   });
 });
 
-describe('ParticleGpuState prelude deduplication', () => {
+describe('ParticleGpuState module key collisions', () => {
   let restoreGlobals: () => void;
 
   beforeEach(() => {
@@ -1241,28 +1296,38 @@ describe('ParticleGpuState prelude deduplication', () => {
     restoreGlobals();
   });
 
-  test('two modules sharing a wgsl() key emit the prelude helper block only once', () => {
+  test('two modules of the same class are rejected by name instead of producing invalid WGSL', () => {
     const env = makeMockDevice();
     const system = new ParticleSystem(makeTexture(), { capacity: 4, device: env.device });
 
-    // Two Turbulence instances share the same wgsl() `key` ("Turbulence") -
-    // documented as unsupported ("Two ApplyForce instances on one system
-    // aren't supported - combine into one", WgslContribution.key) but not
-    // rejected at runtime. This is the only way to reach the prelude
-    // deduplication branch, so we use it purely to exercise that path.
+    // A key names one struct and one uniform-block member, so two ApplyForce
+    // instances used to emit `struct ApplyForceUniforms` and `u_ApplyForce`
+    // twice - a raw WGSL validation failure at the first update, on WebGPU
+    // only, while the CPU path ran the same scene fine.
+    system.addUpdateModule(new ApplyForce(0, 980));
+    system.addUpdateModule(new ApplyForce(90, 0));
+
+    const slot = system._spawnSlot();
+
+    system._storage.lifetime[slot] = 10;
+
+    expect(() => system.update(tick(0.016))).toThrow(ParticleModuleKeyCollisionError);
+    expect(env.device.createComputePipeline).not.toHaveBeenCalled();
+  });
+
+  test('the collision is reported before the device is asked to build anything, whatever the module class', () => {
+    const env = makeMockDevice();
+    const system = new ParticleSystem(makeTexture(), { capacity: 4, device: env.device });
+
     system.addUpdateModule(new Turbulence(50));
     system.addUpdateModule(new Turbulence(30));
 
     const slot = system._spawnSlot();
+
     system._storage.lifetime[slot] = 10;
-    system.update(tick(0.016));
 
-    expect(system.gpuMode).toBe(true);
-
-    const shaderSource = env.shaderSources[0]!;
-    const preludeOccurrences = shaderSource.match(/fn exojs_turbulence_hash21/g) ?? [];
-
-    expect(preludeOccurrences.length).toBe(1);
+    expect(() => system.update(tick(0.016))).toThrow(/Turbulence/);
+    expect(env.device.createShaderModule).not.toHaveBeenCalled();
   });
 });
 
@@ -1447,7 +1512,7 @@ describe('ParticleGpuState atlas UVs against a deferred texture', () => {
     expect([...afterLoad.at(-1)!]).toEqual([0, 0, 0.5, 0.5]);
   });
 
-  test('a system without declared frames needs no re-upload - its fallback carries no dimensions', async () => {
+  test('a system without declared frames re-uploads its fallback UVs once the texture finishes loading', async () => {
     const env = makeMockDevice();
     const { texture, finishLoad } = makeDeferredTexture();
     const system = new ParticleSystem(texture, { capacity: 4, device: env.device });
@@ -1455,14 +1520,68 @@ describe('ParticleGpuState atlas UVs against a deferred texture', () => {
     system.addUpdateModule(new ApplyForce(0, 0));
     system.update(tick(0.016));
 
+    // The fallback covers the system's own texture frame, which is 0x0 while
+    // the handle is empty - so it is divided by a 0x0 texture just like an
+    // atlas frame is.
     const beforeLoad = framesWrites(env);
 
-    expect(beforeLoad.at(-1)!.every(Number.isFinite)).toBe(true);
+    expect(beforeLoad.at(-1)!.every(Number.isFinite)).toBe(false);
 
     finishLoad(64, 64);
     await texture.loaded;
     await Promise.resolve();
 
-    expect(framesWrites(env)).toHaveLength(beforeLoad.length);
+    const afterLoad = framesWrites(env);
+
+    expect(afterLoad.length).toBeGreaterThan(beforeLoad.length);
+    expect([...afterLoad.at(-1)!]).toEqual([0, 0, 1, 1]);
+  });
+
+  test('setTextureFrame re-bakes the device UVs, so the GPU path samples the frame the CPU path does', () => {
+    const env = makeMockDevice();
+    const system = new ParticleSystem(makeTexture(), { capacity: 4, device: env.device });
+
+    system.addUpdateModule(new ApplyForce(0, 0));
+    system.update(tick(0.016));
+
+    expect(system.gpuMode).toBe(true);
+
+    const before = framesWrites(env);
+
+    expect([...before.at(-1)!]).toEqual([0, 0, 1, 1]);
+
+    // The top-left quarter of the 16x16 texture.
+    system.setTextureFrame(new Rectangle(0, 0, 8, 8));
+
+    const after = framesWrites(env);
+
+    expect(after.length).toBeGreaterThan(before.length);
+    expect([...after.at(-1)!]).toEqual([0, 0, 0.5, 0.5]);
+  });
+
+  test('setTexture re-bakes the device UVs against the new texture size', () => {
+    const env = makeMockDevice();
+    const system = new ParticleSystem(makeTexture(), { capacity: 4, device: env.device });
+
+    system.addUpdateModule(new ApplyForce(0, 0));
+    system.update(tick(0.016));
+    system.setTextureFrame(new Rectangle(0, 0, 8, 8));
+
+    const before = framesWrites(env);
+
+    expect([...before.at(-1)!]).toEqual([0, 0, 0.5, 0.5]);
+
+    // A swap resets the frame to the whole texture, so the UVs cover it again
+    // rather than staying divided by the previous texture's dimensions.
+    const replacement = document.createElement('canvas');
+
+    replacement.width = 32;
+    replacement.height = 32;
+    system.setTexture(new Texture(replacement));
+
+    const after = framesWrites(env);
+
+    expect(after.length).toBeGreaterThan(before.length);
+    expect([...after.at(-1)!]).toEqual([0, 0, 1, 1]);
   });
 });

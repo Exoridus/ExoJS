@@ -97,7 +97,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Height band the zone occupies, measured from the world plane. Default Infinity - the zone is a column."
+          "description": "How far the zone reaches above and below the world plane, so 100 covers z from -100 to 100. Default Infinity - the zone is a column."
         },
         {
           "name": "name",

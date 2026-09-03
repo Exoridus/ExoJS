@@ -64,6 +64,9 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
   // is booked once, against the batch its first chunk lands in.
   private _batchNodeCount = 0;
   private _nodeBooked = false;
+  // Blend mode and base texture of the batch currently accumulating, used to
+  // detect a batch break. Neither is a mirror of backend state: `flush()`
+  // establishes both at the draw (see {@link _resetBatchState}).
   private _currentBlendMode: BlendModes | null = null;
   private _currentTexture: Texture | RenderTexture | null = null;
   private _currentView: View | null = null;
@@ -109,23 +112,15 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(sprite);
 
     const textureChanged = this._currentTexture !== null && texture !== this._currentTexture;
-    const blendModeChanged = blendMode !== this._currentBlendMode;
+    const blendModeChanged = this._currentBlendMode !== null && blendMode !== this._currentBlendMode;
 
     // If the batch would overflow with current quads + new quads, flush first.
     if (this._quadIndex > 0 && (blendModeChanged || textureChanged || this._quadIndex + quads.length > this._batchSize)) {
       this.flush();
     }
 
-    // Establish blend and texture state (may have been cleared by flush).
-    if (this._currentBlendMode === null || this._currentBlendMode !== blendMode) {
-      this._currentBlendMode = blendMode;
-      backend.setBlendMode(blendMode);
-    }
-
-    if (this._currentTexture !== texture) {
-      this._currentTexture = texture;
-      backend.bindTexture(texture, 0);
-    }
+    this._currentBlendMode = blendMode;
+    this._currentTexture = texture;
 
     // A single sprite may produce more quads than the fixed batch buffer can hold.
     // Process in [start, end) chunks, flushing between each. Iterating by index
@@ -141,11 +136,8 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
 
       if (offset < quads.length) {
         this.flush();
-        // Re-establish state after flush
         this._currentBlendMode = blendMode;
-        backend.setBlendMode(blendMode);
         this._currentTexture = texture;
-        backend.bindTexture(texture, 0);
       }
     }
   }
@@ -206,15 +198,19 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     const vao = this._vao;
 
     if (this._quadIndex === 0 || backend === null || instanceBuffer === null || vao === null) {
-      this._quadIndex = 0;
-      this._maxNodeIndex = 0;
-      this._batchNodeCount = 0;
+      this._resetBatchState();
       return;
     }
 
     this._stageViewUniforms(backend);
 
+    // Blend state and texture unit 0 are global and shared with every other
+    // renderer, so this batch establishes both at its own draw instead of
+    // trusting what it left behind when it started accumulating. The backend
+    // deduplicates a redundant call, and only the bind carries the upload of a
+    // payload that changed under a stable texture identity.
     if (this._currentTexture !== null) {
+      backend.bindTexture(this._currentTexture, 0);
       this._shader.getUniform('u_texture').setValue(this._baseTextureUnitScratch);
     }
 
@@ -224,6 +220,7 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     this._shader.sync();
     backend.bindVertexArrayObject(vao);
     instanceBuffer.upload(this._instanceFloat32, 0, this._quadIndex * wordsPerInstance);
+    backend.setBlendMode(this._currentBlendMode ?? BlendModes.Normal);
     vao.drawInstanced(4, 0, this._quadIndex, RenderingPrimitives.TriangleStrip);
     backend.stats.batches++;
     backend.stats.drawCalls++;
@@ -248,9 +245,21 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
       );
     }
 
+    this._resetBatchState();
+  }
+
+  /**
+   * Scope the batch memos to one batch: they describe what is accumulating, not
+   * what GL holds, so a memo that outlived its flush would let the next batch
+   * skip establishing state another renderer has since changed - and would keep
+   * a destroyed texture reachable past its `destroy()`.
+   */
+  private _resetBatchState(): void {
     this._quadIndex = 0;
     this._maxNodeIndex = 0;
     this._batchNodeCount = 0;
+    this._currentBlendMode = null;
+    this._currentTexture = null;
   }
 
   /**
@@ -367,12 +376,6 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
       // Defensive: a bundle in this state never validates (generation), so a
       // spliced replay cannot reach here; skip rather than crash mid-frame.
       return;
-    }
-
-    // Keep this renderer's blend tracking in sync so the next live batch still
-    // detects its own blend changes correctly.
-    if (payload.blendMode !== this._currentBlendMode) {
-      this._currentBlendMode = payload.blendMode;
     }
 
     backend.setBlendMode(payload.blendMode);

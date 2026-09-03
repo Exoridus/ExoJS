@@ -429,6 +429,44 @@ describe('AnimatedSprite', () => {
       expect(completeSpy).toHaveBeenCalledWith('walk');
     });
 
+    test('a per-call repeat belongs to that playback run and does not leak into the next clip', () => {
+      const frames = createFrames();
+      const sprite = new AnimatedSprite(null, {
+        // Both clips default to infinite.
+        attack: { frames, fps: 10 },
+        idle: { frames, fps: 10 },
+      });
+
+      sprite.play('attack', { repeat: 2 });
+      expect(sprite.repeat).toBe(2);
+
+      sprite.play('idle');
+
+      expect(sprite.repeat).toBe(-1);
+
+      // Three full 300ms cycles: an override that leaked would have stopped
+      // the indefinitely-looping idle clip after the second one.
+      sprite.update(seconds(300));
+      sprite.update(seconds(300));
+      sprite.update(seconds(300));
+
+      expect(sprite.playing).toBe(true);
+    });
+
+    test('the repeat setter survives a play() that resumes the same clip', () => {
+      const frames = createFrames();
+      const sprite = new AnimatedSprite(null, { walk: { frames, fps: 10 } });
+
+      sprite.play('walk');
+      sprite.repeat = 2;
+
+      // `restart: false` on the active clip resumes the run in progress rather
+      // than starting a new one, so the override it is running under stands.
+      sprite.play('walk', { restart: false });
+
+      expect(sprite.repeat).toBe(2);
+    });
+
     test('repeat must be -1 or a positive integer', () => {
       const frames = createFrames();
       const sprite = new AnimatedSprite(null);
@@ -497,12 +535,11 @@ describe('AnimatedSprite', () => {
       expect(completeSpy).toHaveBeenCalledWith('combo');
     });
 
-    // Pre-existing behavior, not introduced by `repeat`: `update()` early-returns
-    // for single-frame clips (`frames.length <= 1`) before it ever reaches the
-    // frame-wrap logic that counts cycles and dispatches `onComplete`. A
-    // single-frame clip therefore never completes on its own, even with a
-    // finite `repeat` - `onComplete` only fires via the multi-frame wrap path.
-    test('a single-frame clip with a finite repeat never advances or completes (pre-existing early-return, not a repeat regression)', () => {
+    // A single-frame clip is a legal clip (`defineClip` accepts one frame), and
+    // an Aseprite frame tag covering one frame with `repeat: 1` is the common
+    // source of one. It holds for its frame duration and then completes like
+    // any other clip.
+    test('a single-frame clip with a finite repeat holds for its frame duration and then completes', () => {
       const sprite = new AnimatedSprite(null, {
         still: {
           frames: [new Rectangle(0, 0, 16, 16)],
@@ -514,11 +551,41 @@ describe('AnimatedSprite', () => {
 
       sprite.onComplete.add(completeSpy);
       sprite.play('still');
-      sprite.update(seconds(1000));
 
-      expect(sprite.currentFrame).toBe(0);
+      // Half of the 100ms hold: still on screen, still playing.
+      sprite.update(seconds(50));
+
       expect(sprite.playing).toBe(true);
       expect(completeSpy).not.toHaveBeenCalled();
+
+      sprite.update(seconds(60));
+
+      expect(sprite.currentFrame).toBe(0);
+      expect(sprite.playing).toBe(false);
+      expect(completeSpy).toHaveBeenCalledTimes(1);
+      expect(completeSpy).toHaveBeenCalledWith('still');
+    });
+
+    test('a single-frame clip that loops keeps playing and reports a frame per cycle', () => {
+      const sprite = new AnimatedSprite(null, {
+        idle: {
+          frames: [new Rectangle(0, 0, 16, 16)],
+          fps: 10,
+        },
+      });
+      const frameSpy = vi.fn();
+      const completeSpy = vi.fn();
+
+      sprite.onComplete.add(completeSpy);
+      sprite.play('idle');
+      frameSpy.mockClear();
+      sprite.onFrame.add(frameSpy);
+
+      sprite.update(seconds(250));
+
+      expect(sprite.playing).toBe(true);
+      expect(completeSpy).not.toHaveBeenCalled();
+      expect(frameSpy).toHaveBeenCalledTimes(2);
     });
   });
 });

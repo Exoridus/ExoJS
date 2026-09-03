@@ -172,7 +172,7 @@ const NO_PARENT_VERSION = 0;
  *
  * `_invalidate*` methods are exported as `public` for friend-class access
  * from {@link Container} and {@link InteractionSystem}; treat them as
- * `@internal`.
+ * implementation detail, not public API.
  *
  * Subclasses: {@link Container} (carries children), {@link RenderNode}
  * (carries draw payloads).
@@ -564,7 +564,8 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * {@link getLocalBounds}; the rectangle itself is handed out read-only so the
    * invalidation cannot be forgotten. Built-in drawables (Sprite, Text,
    * BitmapText, Mesh, ...) and custom ones alike go through here.
-   * @internal
+   *
+   * Part of the renderer SDK contract for extension renderers.
    */
   public _setLocalBounds(x: number, y: number, width: number, height: number): this {
     this._localBounds.set(x, y, width, height);
@@ -624,7 +625,9 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * A getter, not a field, read live on every seam evaluation below:
    * subclasses may flip it at runtime, and descendants pick a flip up lazily
    * through the parent-version compare.
-   * @internal
+   *
+   * Part of the scene-graph SDK contract for extension packages that walk
+   * node ancestry.
    */
   public get _isTransformGroupBoundary(): boolean {
     return false;
@@ -980,8 +983,16 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * The destroyed flag is raised before the unlink so detach-time observers
    * (e.g. focus, which suppresses `onBlur` on a destroyed node) see a node that
    * is going away rather than one merely being reparented.
+   *
+   * Idempotent: a second call is a no-op.
    */
   public destroy(): void {
+    // Matching Container.destroy() and Texture.destroy(): re-entry would take
+    // already-released state through a second teardown.
+    if (this._isDestroyed) {
+      return;
+    }
+
     this._isDestroyed = true;
     this._parentNode?.removeChild(this as unknown as RenderNode);
     this._transform.destroy();
@@ -996,6 +1007,12 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     this._localBounds.destroy();
     this._bounds.destroy();
     this._orientedBounds?.destroy();
+
+    // Last, after the unlink: detaching is itself a change and would re-enter
+    // an entry this node no longer needs. The index is process-wide and only
+    // ages entries out as frames advance, so a node destroyed with the frame
+    // loop already gone would otherwise stay reachable through it forever.
+    nodeDirtyIndex.release(this);
   }
 
   /**

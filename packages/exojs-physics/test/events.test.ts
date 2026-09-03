@@ -73,6 +73,60 @@ describe('contact events', () => {
     expect(exits).toHaveLength(1);
   });
 
+  it('dispatches every fixed step in a multi-step call, not just the last one', () => {
+    // Runs the same trajectory (constant velocity, so total simulated time is
+    // what matters) accumulated into different-sized `step()` calls. A frame
+    // hitch, a slow display, or simply a `fixedDelta` smaller than the frame
+    // time all make `step()` run more than one fixed step per call - the event
+    // sequence delivered must not depend on how the caller happened to batch
+    // fixed steps into calls.
+    const runTrial = (delta: number, count: number): string[] => {
+      const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+      const log: string[] = [];
+      world.onCollisionStart.add(() => log.push('start'));
+      world.onCollisionEnd.add(() => log.push('end'));
+
+      colliderAt(world, new BoxShape(20, 20), { x: 0, y: 0 });
+      const mover = world.add(new PhysicsBody({ type: 'dynamic', position: { x: -60, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
+      mover.linearVelocityX = 600;
+
+      for (let i = 0; i < count; i++) {
+        world.step(delta);
+      }
+
+      return log;
+    };
+
+    const reference = runTrial(DT, 24);
+    expect(reference).toEqual(['start']);
+    expect(runTrial(DT * 2, 12)).toEqual(reference);
+    expect(runTrial(DT * 4, 6)).toEqual(reference);
+  });
+
+  it('does not leave a sensor enter unmatched by its exit across a multi-step call', () => {
+    const runTrial = (delta: number, count: number): string[] => {
+      const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+      const log: string[] = [];
+      world.onSensorEnter.add(() => log.push('enter'));
+      world.onSensorExit.add(() => log.push('exit'));
+
+      colliderAt(world, new BoxShape(40, 40), { x: 0, y: 0 }, 0, 'static', { isSensor: true });
+      const mover = world.add(new PhysicsBody({ type: 'kinematic', position: { x: -120, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
+      mover.linearVelocityX = 240;
+
+      for (let i = 0; i < count; i++) {
+        world.step(delta);
+      }
+
+      return log;
+    };
+
+    const reference = runTrial(DT, 60);
+    expect(reference).toEqual(['enter', 'exit']);
+    expect(runTrial(DT * 3, 20)).toEqual(reference);
+    expect(runTrial(DT * 5, 12)).toEqual(reference);
+  });
+
   it('defers body destruction requested inside a callback', () => {
     const world = new PhysicsWorld();
     colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 });

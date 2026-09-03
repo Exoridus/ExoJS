@@ -57,9 +57,12 @@ const makeStage = (): { stage: Stage } & PointerSignals => {
   return { stage: { interaction, focus, app }, ...signals };
 };
 
-const pointerDownAt = (x: number, y: number): InteractionEvent => ({ x, y, stopPropagation: vi.fn() }) as unknown as InteractionEvent;
+const pointerDownAt = (x: number, y: number, id = 1): InteractionEvent => ({ x, y, pointer: { id }, stopPropagation: vi.fn() }) as unknown as InteractionEvent;
 
-const fakePointer = {} as Pointer;
+const fakePointer = { id: 1 } as Pointer;
+
+/** A second contact, for the multi-touch cases. */
+const otherPointer = { id: 2 } as Pointer;
 
 /** Stub `content`'s bounds so the scroll range is deterministic without a renderer. */
 const stubContentBounds = (scroll: ScrollContainer, width: number, height: number): void => {
@@ -158,6 +161,27 @@ describe('Scrollbar drag', () => {
     expect(bar.offset).toBe(150);
   });
 
+  test('a second contact neither drags the thumb nor ends the drag', () => {
+    const { stage, onPointerMove, onPointerUp } = makeStage();
+    const bar = new Scrollbar().setLength(200);
+
+    bar._setStage(stage);
+    bar.setRange(100, 400);
+    bar.thumbNode.onPointerDown.dispatch(pointerDownAt(0, 10));
+
+    onPointerMove.dispatch(otherPointer, 0, 85);
+
+    expect(bar.offset).toBe(0);
+
+    onPointerUp.dispatch(otherPointer, 0, 85);
+
+    expect(bar.dragging).toBe(true);
+
+    onPointerMove.dispatch(fakePointer, 0, 85);
+
+    expect(bar.offset).toBe(150);
+  });
+
   test('a drag past the end clamps instead of overshooting', () => {
     const { stage, onPointerMove } = makeStage();
     const bar = new Scrollbar().setLength(200);
@@ -195,6 +219,30 @@ describe('Scrollbar drag', () => {
     onPointerMove.dispatch(fakePointer, 0, 100);
 
     expect(bar.offset).toBe(0);
+  });
+});
+
+describe('Scrollbar destroy', () => {
+  test('disposes onScroll, clears an in-flight drag, and tolerates a second destroy', () => {
+    const { stage } = makeStage();
+    const bar = new Scrollbar().setLength(200);
+
+    bar._setStage(stage);
+    bar.setRange(100, 400);
+    bar.thumbNode.onPointerDown.dispatch(pointerDownAt(0, 10));
+
+    expect(bar.dragging).toBe(true);
+
+    bar.destroy();
+
+    expect(bar.destroyed).toBe(true);
+    expect(bar.dragging).toBe(false);
+    expect(bar.onScroll.count).toBe(0);
+
+    bar.onScroll.add(() => {});
+    expect(bar.onScroll.count).toBe(0);
+
+    expect(() => bar.destroy()).not.toThrow();
   });
 });
 

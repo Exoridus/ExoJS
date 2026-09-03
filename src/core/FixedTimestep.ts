@@ -28,6 +28,15 @@ export class FixedTimestep {
     return this._stepMs;
   }
 
+  /**
+   * Derives a `maxSteps` cap from a frame-delta clamp so the spiral-of-death
+   * guard scales with the configured step size instead of a fixed step count.
+   * Always at least 1, so even a delta clamp smaller than one step still runs.
+   */
+  public static deriveMaxSteps(maxDeltaMs: number, stepMs: number): number {
+    return Math.max(1, Math.ceil(maxDeltaMs / stepMs));
+  }
+
   /** Leftover fraction `[0, 1)` of a step - the render interpolation factor. */
   public get alpha(): number {
     return this._accumulatorMs / this._stepMs;

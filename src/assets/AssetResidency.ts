@@ -172,7 +172,9 @@ export class AssetResidency {
   private _backgroundActive = 0;
   private _backgroundTotal = 0;
   private _backgroundLoaded = 0;
-  private _backgroundResolve: (() => void) | null = null;
+  // Every outstanding awaitBackground() caller, not just the newest: a loading
+  // screen and a scene preloader may wait on one drain, and both have to settle.
+  private readonly _backgroundResolvers = new Set<() => void>();
 
   public constructor(typeRegistry: AssetTypeRegistry, decoder: AssetDecoder, signals: AssetResidencySignals, concurrency: number, hooks: AssetResidencyHooks) {
     this._typeRegistry = typeRegistry;
@@ -467,6 +469,12 @@ export class AssetResidency {
 
     if (queued !== -1) {
       this._backgroundQueue.splice(queued, 1);
+      // The entry counted towards the queue's total when it was enqueued, and
+      // dropping it is the only way it can leave the queue without completing.
+      // Without this, an awaitBackground() outstanding over the eviction of the
+      // last queued entry never settles, and onProgress stays below its total.
+      this._backgroundTotal--;
+      this._onBackgroundItemDone();
     }
   }
 
@@ -727,17 +735,20 @@ export class AssetResidency {
    */
   public _getSeamless(asset: CanonicalAsset, adapter: SeamlessAdapter<unknown>, options?: unknown): unknown {
     const stored = this._resources.get(asset.key)?.value;
+    const entry = this._deferred.get(asset.key);
 
     if (stored !== undefined) {
+      this._warnIgnoredOptions(asset, entry?.options, options);
+
       return stored;
     }
-
-    const entry = this._deferred.get(asset.key);
 
     if (entry !== undefined) {
       const representative = entry.handles.first();
 
       if (representative !== undefined) {
+        this._warnIgnoredOptions(asset, entry.options, options);
+
         if (adapter.stateOf(representative) === 'failed') {
           adapter.begin(representative);
           this._startFetch(asset, entry.options);
@@ -755,6 +766,27 @@ export class AssetResidency {
     this._startFetch(asset, options);
 
     return handle;
+  }
+
+  /**
+   * Dev-only diagnostic for the first-wins options contract: an existing
+   * instance keeps the options it was created with, so options a later `get()`
+   * asks for are dropped. Warns ONCE per source. Stripped in production.
+   *
+   * Options that take part in identity never reach this: they resolve to their
+   * own key, and therefore to their own instance, so nothing is ignored.
+   */
+  private _warnIgnoredOptions(asset: CanonicalAsset, existing: unknown, requested: unknown): void {
+    if (!__DEV__ || requested === undefined || requested === null || sameOptions(existing, requested)) {
+      return;
+    }
+
+    logger.warn(
+      `Asset "${asset.source}" is already loaded or loading, so the options this get() asked for were ignored - ` +
+        `the first call's options win, and an instance keeps the options it was created with. ` +
+        `Pass the options on the first acquisition, or use an Assets catalog leaf / Asset.type(...) for an independent instance.`,
+      { source: 'Loader', once: `loader:ignored-options:${asset.key}` },
+    );
   }
 
   /**
@@ -776,6 +808,8 @@ export class AssetResidency {
       const representative = this._representative(entry.refs);
 
       if (representative !== undefined) {
+        this._warnIgnoredOptions(asset, entry.options, options);
+
         if (representative.loadState === 'failed') {
           representative._begin();
           this._startFetch(asset, entry.options);
@@ -957,6 +991,21 @@ export class AssetResidency {
     }
 
     return this._trackInFlight(asset, fetch, abort);
+  }
+
+  /**
+   * Place work that materializes `asset` without a fetch - a container unpack -
+   * under the same in-flight identity a network load takes.
+   *
+   * Until the resource is stored, an untracked injection leaves the key looking
+   * completely unknown, so a `get()`/`load()` of the same source starts a
+   * competing acquisition whose payload overwrites the container's. Tracking it
+   * makes that caller join this work instead, which is what the container's
+   * "one identity, one payload" contract requires.
+   * @internal
+   */
+  public _trackInjection(asset: CanonicalAsset, injection: Promise<unknown>): Promise<unknown> {
+    return this._trackInFlight(asset, injection);
   }
 
   /**
@@ -1154,6 +1203,11 @@ export class AssetResidency {
         }
       }
 
+      // The factory already built the resource before the unload could stop it,
+      // and nothing becomes resident here - so this is the only chance to free
+      // whatever it owns (a media element, a GPU upload).
+      this._typeRegistry.getInstalled(asset.type)?.factory.dispose?.(resource);
+
       return resource;
     }
 
@@ -1315,10 +1369,24 @@ export class AssetResidency {
   private _onBackgroundItemDone(): void {
     this._signals.onProgress.dispatch(this._backgroundLoaded, this._backgroundTotal);
 
-    if (this._backgroundResolve && this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
-      const resolve = this._backgroundResolve;
+    if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
+      this._settleBackgroundWaiters();
+    }
+  }
 
-      this._backgroundResolve = null;
+  /** Settle every outstanding {@link awaitBackground} promise. A caller arriving afterwards starts a fresh wait. */
+  private _settleBackgroundWaiters(): void {
+    if (this._backgroundResolvers.size === 0) {
+      return;
+    }
+
+    // Snapshot and clear first: a resolver may enqueue new background work
+    // synchronously, and that work belongs to the next wait, not to this one.
+    const waiters = [...this._backgroundResolvers];
+
+    this._backgroundResolvers.clear();
+
+    for (const resolve of waiters) {
       resolve();
     }
   }
@@ -1353,7 +1421,7 @@ export class AssetResidency {
         return;
       }
 
-      this._backgroundResolve = resolve;
+      this._backgroundResolvers.add(resolve);
     });
   }
 
@@ -1600,11 +1668,28 @@ export class AssetResidency {
     this._backgroundTotal = 0;
 
     // A pending awaitBackground() caller must not hang forever past destroy().
-    if (this._backgroundResolve) {
-      const resolve = this._backgroundResolve;
-
-      this._backgroundResolve = null;
-      resolve();
-    }
+    this._settleBackgroundWaiters();
   }
 }
+
+/**
+ * Structural comparison of two option bags, for the dev-only ignored-options
+ * diagnostic. Depth-limited: an option value nested deeper than an asset type's
+ * own configuration ever goes is compared by identity rather than risking an
+ * unbounded walk of whatever a caller put there.
+ */
+const sameOptions = (a: unknown, b: unknown, depth = 0): boolean => {
+  if (Object.is(a, b)) {
+    return true;
+  }
+
+  if (depth >= 4 || typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) {
+    return false;
+  }
+
+  const keys = Object.keys(a);
+
+  return (
+    keys.length === Object.keys(b).length && keys.every(key => sameOptions((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key], depth + 1))
+  );
+};

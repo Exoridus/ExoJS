@@ -300,6 +300,24 @@ describe('AssetResidency', () => {
       expect(residency._peekResource(canonical(TypeA, 'a.png').key)).toBeNull();
     });
 
+    test('a resource built for a key unloaded mid-fetch is disposed, not just dropped', () => {
+      const dispose = vi.fn();
+      const { residency, typeRegistry, canonical } = createResidency();
+      const adapter = createFakeSeamlessAdapter();
+      installTypeA(typeRegistry, { leaf: adapter, dispose });
+
+      const resource = {};
+
+      residency._getSeamless(canonical(TypeA, 'a.png'), adapter);
+      residency._unloadOne(canonical(TypeA, 'a.png'));
+
+      residency._storeResource(canonical(TypeA, 'a.png'), resource);
+
+      // Nothing becomes resident on this path, so the factory's teardown is the
+      // only thing that can free a media element or a GPU upload it built.
+      expect(dispose).toHaveBeenCalledWith(resource);
+    });
+
     test('a rejected fetch dispatches onError with the failing type/alias/error (signals boundary)', async () => {
       const { cache, resolve } = createFakeCache();
       resolve.mockRejectedValueOnce(new Error('network down'));
@@ -343,6 +361,58 @@ describe('AssetResidency', () => {
       await residency._loadSingle(canonical(TypeA, 'boost.png'));
 
       expect(contexts).toHaveLength(1);
+    });
+
+    test('every concurrent awaitBackground() caller settles, not just the last one', async () => {
+      const { cache } = createFakeCache(() => 'bg-value');
+      const { residency, typeRegistry, canonical } = createResidency({ cache, concurrency: 0 });
+      installTypeA(typeRegistry);
+
+      residency._enqueueBackgroundFetch(canonical(TypeA, 'a.png'), undefined);
+      residency._enqueueBackgroundFetch(canonical(TypeA, 'b.png'), undefined);
+
+      residency.setConcurrency(2);
+
+      // A loading screen and a scene preloader wait on the same drain; a single
+      // resolver slot would strand whichever of them asked first.
+      const first = residency.awaitBackground();
+      const second = residency.awaitBackground();
+
+      await expect(Promise.all([first, second])).resolves.toEqual([undefined, undefined]);
+    });
+
+    test('destroy settles every outstanding awaitBackground() caller', async () => {
+      const { residency, typeRegistry, canonical } = createResidency({ concurrency: 0 });
+      installTypeA(typeRegistry);
+
+      residency._enqueueBackgroundFetch(canonical(TypeA, 'a.png'), undefined);
+
+      const first = residency.awaitBackground();
+      const second = residency.awaitBackground();
+
+      residency.destroy();
+
+      await expect(Promise.all([first, second])).resolves.toEqual([undefined, undefined]);
+    });
+
+    test('evicting the last queued entry settles awaitBackground() instead of stranding it', async () => {
+      const { residency, typeRegistry, onProgress, canonical } = createResidency({ concurrency: 0 });
+      installTypeA(typeRegistry);
+
+      const scope = new LoaderScope(fakeLoader, 'scope', 'scope');
+      const asset = canonical(TypeA, 'bg.png');
+
+      residency._claim(asset, scope);
+      residency._enqueueBackgroundFetch(asset, undefined);
+
+      const pending = residency.awaitBackground();
+
+      // The scene owning the prefetch tears down: the queue empties without the
+      // entry ever completing, which is the only way it can leave the queue.
+      residency._release(asset.key, scope);
+
+      await expect(pending).resolves.toBeUndefined();
+      expect(onProgress.dispatch).toHaveBeenLastCalledWith(0, 0);
     });
 
     test('setConcurrency changes how many entries drain concurrently', async () => {

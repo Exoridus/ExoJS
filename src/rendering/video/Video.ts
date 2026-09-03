@@ -54,6 +54,14 @@ export class Video extends Sprite {
   private _bus: AudioBus | null = null;
   private _audioSetup: VideoAudioSetup | null = null;
   private _textureDirty = true;
+  /**
+   * Scratch rectangle for {@link updateTexture}. `setTextureFrame` reads its
+   * `frame` argument again after re-entering node code (bounds/origin
+   * invalidation), so passing the shared `Rectangle.temp` here would risk a
+   * concurrent caller clobbering it mid-call; this one is private to the
+   * instance.
+   */
+  private readonly _frameScratch = new Rectangle();
   private _lastVideoTime = Number.NaN;
   private _videoFrameCallbackHandle: number | null = null;
   private readonly _onMetadataHandler: () => void;
@@ -391,7 +399,7 @@ export class Video extends Sprite {
     texture.updateSource();
 
     if (texture.width > 0 && texture.height > 0) {
-      this.setTextureFrame(Rectangle.temp.set(0, 0, texture.width, texture.height), !preserveSize);
+      this.setTextureFrame(this._frameScratch.set(0, 0, texture.width, texture.height), !preserveSize);
     }
 
     this._textureDirty = false;
@@ -419,6 +427,7 @@ export class Video extends Sprite {
     this.onStart.destroy();
     this.onStop.destroy();
     this.onError.destroy();
+    this._frameScratch.destroy();
   }
 
   private _onMediaError(): void {

@@ -122,6 +122,15 @@ export class Text extends AbstractText {
   private _faceLoadVersion = 0;
 
   /**
+   * Re-lays out when the atlas this node currently draws from is cleared -
+   * its cached `GlyphInfo` UVs would otherwise keep addressing glyphs that
+   * `GlyphAtlas.clear()` just discarded and repacked differently.
+   */
+  private readonly _onAtlasCleared = (): void => {
+    this._markDirty('layout');
+  };
+
+  /**
    * The explicit raster-density override, or `0` for "none".
    *
    * `0` is an internal sentinel and never leaves the class: the public property
@@ -283,6 +292,7 @@ export class Text extends AbstractText {
   public override destroy(): void {
     this._destroyed = true;
     this._faceLoadVersion++;
+    this._atlas?.onCleared.remove(this._onAtlasCleared);
     this._atlas = null;
     super.destroy();
   }
@@ -320,7 +330,13 @@ export class Text extends AbstractText {
 
     if (this._destroyed || version !== this._faceLoadVersion) return;
 
-    Text._acquireAtlas(this._style, this._colorGlyphs, this._sdfRadius, this.rasterPixelRatio).clear();
+    // Not `Text._acquireAtlas(...).clear()`: before this node's first collection
+    // `rasterPixelRatio` resolves through the surface-ratio default of 1
+    // (`_surfacePixelRatio`), which can disagree with the ratio the node will
+    // actually rasterize at once it is drawn. Clearing by ratio would clear
+    // the wrong atlas and leave the one this node uses holding fallback-font
+    // tiles indefinitely; clearing the whole variant reaches every ratio.
+    getDefaultGlyphAtlasPool().clearVariant(this._style.fontFamily, this._style.fontStyle, this._style.fontWeight);
     this._markDirty('font');
   }
 
@@ -333,6 +349,11 @@ export class Text extends AbstractText {
     // a re-flow reuses the one already resolved.
     const atlas =
       hint === 'font' || this._atlas === null ? Text._acquireAtlas(this._style, this._colorGlyphs, this._sdfRadius, this.rasterPixelRatio) : this._atlas;
+
+    if (atlas !== this._atlas) {
+      this._atlas?.onCleared.remove(this._onAtlasCleared);
+      atlas.onCleared.add(this._onAtlasCleared);
+    }
 
     this._atlas = atlas;
 

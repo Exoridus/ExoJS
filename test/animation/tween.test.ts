@@ -299,6 +299,56 @@ describe('Tween', () => {
     });
   });
 
+  describe('target lifetime', () => {
+    test('update() stops the tween once the target reports destroyed', () => {
+      const target = { ...makeSprite(), destroyed: false };
+      const tween = new Tween(target).to({ x: 100 }, 1.0).start();
+
+      tween.update(0.5);
+      expect(tween.state).toBe(TweenState.Active);
+
+      target.destroyed = true;
+      tween.update(0.5);
+
+      expect(tween.state).toBe(TweenState.Stopped);
+    });
+
+    test('an infinitely repeating tween releases from its system once the target is destroyed', () => {
+      const system = new TweenSystem();
+      const target = { ...makeSprite(), destroyed: false };
+      system.create(target).to({ x: 100 }, 1.0).repeat(-1).start();
+
+      system.preUpdate(sec(1.0));
+      expect(system['_tweens']).toHaveLength(1);
+
+      target.destroyed = true;
+      system.preUpdate(sec(1.0));
+
+      // Released, not pinned in the system forever.
+      expect(system['_tweens']).toHaveLength(0);
+    });
+
+    test('onComplete does not fire when a tween stops because its target was destroyed', () => {
+      const onComplete = vi.fn();
+      const target = { ...makeSprite(), destroyed: false };
+      const tween = new Tween(target).to({ x: 100 }, 1.0).onComplete(onComplete).start();
+
+      target.destroyed = true;
+      tween.update(1.0);
+
+      expect(onComplete).not.toHaveBeenCalled();
+    });
+
+    test('a target without a destroyed property is unaffected', () => {
+      const sprite = makeSprite();
+      const tween = new Tween(sprite).to({ x: 100 }, 1.0).start();
+
+      tween.update(0.5);
+      expect(tween.state).toBe(TweenState.Active);
+      expect(sprite.x).toBeCloseTo(50, 5);
+    });
+  });
+
   describe('chain', () => {
     test('chained tween starts when first completes', () => {
       const sprite = makeSprite();

@@ -18,7 +18,21 @@ export interface BurstSchedule {
 /** Spawn configuration for {@link BurstSpawn}: the burst schedule plus the shared per-property fields. */
 export interface BurstSpawnConfig extends ParticleSpawnFields {
   schedule: readonly BurstSchedule[];
-  /** Whether to repeat the schedule from t=0 once exhausted. Default `false`. */
+  /**
+   * Whether to repeat the schedule from t=0 once exhausted. Default `false`.
+   *
+   * The restart happens in the same `apply()` call that exhausts the
+   * schedule, zeroing the elapsed clock outright rather than wrapping it
+   * modulo a declared period - so a schedule whose last entry is `{ time: 0,
+   * count: N }` (or, more generally, any schedule with nothing after its
+   * final burst) re-fires that burst on every subsequent frame instead of
+   * waiting: emission becomes a function of frame rate, not of time.
+   * Overshoot past the last entry's `time` is discarded on each restart
+   * rather than carried into the next cycle. To loop a burst schedule with a
+   * genuine period, add a trailing no-op entry at the period's end (e.g.
+   * `{ time: period, count: 0 }`) so `_elapsed` has somewhere to catch up to
+   * before it restarts.
+   */
   loop?: boolean;
 }
 

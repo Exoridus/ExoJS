@@ -58,7 +58,7 @@ const clampAlpha = (alpha: number): number => {
  * Removing the body's *only* collider is fine: a body with no geometry at all is
  * a body still being assembled, not a silently broken one.
  */
-const assertBodyKeepsItsMass = (collider: Collider): void => {
+const assertBodyKeepsItsMass = (collider: Collider, pendingRemovals: ReadonlySet<Collider>): void => {
   const body = collider.body;
 
   if (body.type !== 'dynamic' || collider.shape.massProperties === null || collider.density <= 0) {
@@ -68,7 +68,11 @@ const assertBodyKeepsItsMass = (collider: Collider): void => {
   let remaining = 0;
 
   for (const other of body.colliders) {
-    if (other === collider) {
+    // A collider already queued for removal in this same dispatch is as good as
+    // gone: without this, two `destroyCollider` calls in one callback each pass
+    // the check against the pre-deferral set, and both deferred removals then
+    // apply, leaving the body massless.
+    if (other === collider || pendingRemovals.has(other)) {
       continue;
     }
 
@@ -88,22 +92,19 @@ const assertBodyKeepsItsMass = (collider: Collider): void => {
   );
 };
 
-/** Shape kinds already reported as unswept, so the warning fires once per kind. */
-const warnedUnsweptKinds = new Set<string>();
-
 /**
  * Dev-only: boundary geometry is never swept as the moving operand, so a bullet
  * body carrying it is not protected against tunnelling on that collider.
  * Reporting it beats a silent pass-through.
  */
-const warnUnsweptBulletShape = (collider: Collider): void => {
+const warnUnsweptBulletShape = (collider: Collider, warnedKinds: Set<string>): void => {
   const kind = collider.shape.type;
 
-  if (canSweep(kind, 'polygon') || warnedUnsweptKinds.has(kind)) {
+  if (canSweep(kind, 'polygon') || warnedKinds.has(kind)) {
     return;
   }
 
-  warnedUnsweptKinds.add(kind);
+  warnedKinds.add(kind);
   logger.warn(
     `PhysicsWorld: a bullet body carries a '${kind}' collider. Boundary geometry is level structure and is only ever a ` +
       'sweep target, never the moving operand, so this collider can still cross thin geometry within one step. ' +
@@ -400,6 +401,10 @@ export class PhysicsWorld implements BodyOwner {
   private readonly _bindings = new BindingRegistry();
   private readonly _query: QueryEngine;
   private readonly _commands: Array<() => void> = [];
+  /** Colliders with a deferred removal queued but not yet applied; see {@link assertBodyKeepsItsMass}. */
+  private readonly _pendingColliderRemovals = new Set<Collider>();
+  /** Shape kinds already reported as unswept by this world; see {@link warnUnsweptBulletShape}. */
+  private readonly _warnedUnsweptKinds = new Set<string>();
   /** Pooled union-find parent array for the per-step island pass (reused; sized to the body count). */
   private readonly _islandParent: number[] = [];
   /** Pooled per-island minimum sleep time, indexed by union-find root. */
@@ -571,9 +576,13 @@ export class PhysicsWorld implements BodyOwner {
   public destroyCollider(collider: Collider): void {
     // Checked here rather than in the deferred removal so the error surfaces at
     // the call site that caused it, not out of the middle of a `step()`.
-    assertBodyKeepsItsMass(collider);
+    assertBodyKeepsItsMass(collider, this._pendingColliderRemovals);
 
-    this._defer(() => this._removeCollider(collider));
+    this._pendingColliderRemovals.add(collider);
+    this._defer(() => {
+      this._pendingColliderRemovals.delete(collider);
+      this._removeCollider(collider);
+    });
   }
 
   /** Live joints (read-only view). */
@@ -658,9 +667,8 @@ export class PhysicsWorld implements BodyOwner {
 
       for (let step = 0; step < steps; step++) {
         this._stepOnce(h, subStepCount, gravityX, gravityY, contactHertz, dampingRatio, hasJoints, hasBullets);
+        this._dispatchEvents();
       }
-
-      this._dispatchEvents();
     }
 
     // `step` is called once per rendered frame, so presenting here is already
@@ -873,6 +881,12 @@ export class PhysicsWorld implements BodyOwner {
     }
 
     this._destroyed = true;
+
+    // Apply queued commands first: a body added (or a collider registered)
+    // from inside the event dispatch that triggered this destroy() is not in
+    // `_bodies` yet, and clearing `_commands` without running them first would
+    // leave it reporting `attached === true` / `destroyed === false` forever.
+    this._drainCommands();
 
     // Mark colliders before their bodies: a collider that still reported
     // `destroyed === false` while `collider.body.destroyed === true` would look
@@ -1168,7 +1182,7 @@ export class PhysicsWorld implements BodyOwner {
     // `_finalizePosition` moved collider geometry after this step's detection
     // pass, so the index's leaves are stale for the sweep queries below. A leaf
     // whose tight AABB is still inside its fat one costs nothing to re-sync.
-    this._backend.spatialIndex?.sync(this._colliders);
+    this._backend.spatialIndex?.sync(this._detectionColliders);
 
     for (const body of this._bodies) {
       if (!body.isBullet || body.type !== 'dynamic' || body.isSleeping) {
@@ -1248,7 +1262,7 @@ export class PhysicsWorld implements BodyOwner {
       }
 
       if (__DEV__) {
-        warnUnsweptBulletShape(collider);
+        warnUnsweptBulletShape(collider, this._warnedUnsweptKinds);
       }
 
       // The collider's end-pose AABB unioned with its start pose; anything

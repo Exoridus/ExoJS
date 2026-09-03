@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Per-call override of the clip's AnimatedSpriteClipDefinition.repeat, for the duration of this play() call."
+          "description": "Override of the clip's AnimatedSpriteClipDefinition.repeat for the playback run this call starts. Omitting it plays the clip with its own repeat again - an override never carries from one run into the next."
         },
         {
           "name": "restart",

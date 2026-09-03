@@ -70,7 +70,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Atlas frame index. Ignored by a system that declares no frames."
+          "description": "Atlas frame index. Ignored by a system that declares no frames, and an index past the declared ones shows frame 0. Development builds throw on a negative or out-of-range value rather than letting it wrap onto a different, valid frame."
         },
         {
           "name": "lifetime",

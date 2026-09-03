@@ -14,16 +14,11 @@ class FakeEditContext {
   public selectionEnd = 0;
   public inputMode = '';
   public enterKeyHint = '';
-  public attachedTo: HTMLElement | null = null;
   public controlBounds: DOMRect | null = null;
   public selectionBounds: DOMRect | null = null;
   public characterBounds: { rangeStart: number; bounds: DOMRect[] } | null = null;
 
   private readonly _listeners = new Map<string, Set<(event: never) => void>>();
-
-  public attachToElement(element: HTMLElement): void {
-    this.attachedTo = element;
-  }
 
   public updateText(rangeStart: number, rangeEnd: number, text: string): void {
     this.text = this.text.slice(0, rangeStart) + text + this.text.slice(rangeEnd);
@@ -84,14 +79,14 @@ const lastContext = (): FakeEditContext => {
   return context;
 };
 
-const transportElement = (): HTMLTextAreaElement => {
-  const element = document.body.querySelector('textarea');
+const transportElement = (): HTMLDivElement => {
+  const element = document.body.querySelector('div[aria-hidden="true"]');
 
   if (element === null) {
     throw new Error('the backend created no transport element');
   }
 
-  return element as HTMLTextAreaElement;
+  return element as HTMLDivElement;
 };
 
 /** A clipboard event jsdom can dispatch, with a data store the test can read back. */
@@ -123,7 +118,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete (globalThis as { EditContext?: unknown }).EditContext;
-  document.body.querySelectorAll('textarea').forEach(element => element.remove());
+  document.body.querySelectorAll('div[aria-hidden="true"]').forEach(element => element.remove());
 });
 
 const createBackend = (): { backend: EditContextTextInput; edits: TextEditIntent[]; compositions: CompositionState[] } => {
@@ -145,6 +140,17 @@ describe('EditContextTextInput', () => {
     expect(editContextSupported()).toBe(false);
   });
 
+  test('the context is attached through the element that holds host focus', () => {
+    const { backend } = createBackend();
+    const element = transportElement() as HTMLDivElement & { editContext?: unknown };
+
+    expect(element.editContext).toBe(lastContext());
+
+    backend.destroy();
+
+    expect(element.editContext).toBeNull();
+  });
+
   test('a textupdate that adds text is forwarded as an insert', () => {
     const { backend, edits } = createBackend();
 
@@ -157,14 +163,27 @@ describe('EditContextTextInput', () => {
   test('a textupdate that only removes text is forwarded as a character delete', () => {
     const { backend, edits } = createBackend();
 
-    backend.setValue('abc', 3, 3);
-    lastContext().emit('textupdate', { updateRangeStart: 2, updateRangeEnd: 3, text: '', selectionStart: 2, selectionEnd: 2 });
+    // A platform collapses the selection to the start of the range it removed,
+    // so a backspace and a forward delete emit the SAME event shape: only the
+    // caret the widget mirrored in before the update tells them apart.
+    backend.setValue('abc', 2, 2);
+    lastContext().emit('textupdate', { updateRangeStart: 1, updateRangeEnd: 2, text: '', selectionStart: 1, selectionEnd: 1 });
 
-    expect(edits).toEqual([{ kind: 'deleteContent', direction: 'forward', granularity: 'character' }]);
+    expect(edits).toEqual([{ kind: 'deleteContent', direction: 'backward', granularity: 'character' }]);
 
-    lastContext().emit('textupdate', { updateRangeStart: 1, updateRangeEnd: 2, text: '', selectionStart: 1, selectionEnd: 2 });
+    backend.setValue('abc', 1, 1);
+    lastContext().emit('textupdate', { updateRangeStart: 1, updateRangeEnd: 2, text: '', selectionStart: 1, selectionEnd: 1 });
 
-    expect(edits.at(-1)).toEqual({ kind: 'deleteContent', direction: 'backward', granularity: 'character' });
+    expect(edits.at(-1)).toEqual({ kind: 'deleteContent', direction: 'forward', granularity: 'character' });
+  });
+
+  test('deleting a non-empty selection removes what the selection covered', () => {
+    const { backend, edits } = createBackend();
+
+    backend.setValue('abcd', 1, 3);
+    lastContext().emit('textupdate', { updateRangeStart: 1, updateRangeEnd: 3, text: '', selectionStart: 1, selectionEnd: 1 });
+
+    expect(edits).toEqual([{ kind: 'deleteContent', direction: 'backward', granularity: 'character' }]);
   });
 
   test('a composition reports start, every candidate and the commit', () => {

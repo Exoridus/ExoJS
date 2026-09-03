@@ -34,7 +34,8 @@ const colorFormatBytesPerPixel = (format: ColorTextureFormat): number => {
 
 /**
  * Recycles the short-lived {@link RenderTexture}s that filters, masks and
- * backdrop blends allocate every frame, keyed by exact `width × height` match.
+ * backdrop blends allocate every frame, keyed by exact `width × height ×
+ * format` match.
  *
  * Bounded on purpose. Any workflow whose intermediates resize as they animate
  * retires one size class per frame and never asks for it again, so an unbounded
@@ -63,16 +64,16 @@ export class RenderTexturePool {
   }
 
   /**
-   * Take a pooled texture of exactly `width × height`, or allocate a fresh one.
-   * The result is borrowed: hand it back with {@link release} rather than
-   * destroying it.
+   * Take a pooled texture of exactly `width × height` in `format`, or allocate
+   * a fresh one. The result is borrowed: hand it back with {@link release}
+   * rather than destroying it.
    */
-  public acquire(width: number, height: number): RenderTexture {
+  public acquire(width: number, height: number, format: ColorTextureFormat = TextureFormat.Rgba8): RenderTexture {
     for (let index = 0; index < this._textures.length; index++) {
       // In-bounds: `index` ranges over `0..length-1`.
       const texture = this._textures[index]!;
 
-      if (texture.width === width && texture.height === height) {
+      if (texture.width === width && texture.height === height && texture.format === format) {
         // Shift down rather than `splice(index, 1)`: splice allocates the
         // removed-elements array it returns, and this runs once per filter,
         // mask and backdrop-blend intermediate - every frame, forever. The
@@ -89,7 +90,7 @@ export class RenderTexturePool {
       }
     }
 
-    return new RenderTexture(width, height);
+    return new RenderTexture(width, height, { format });
   }
 
   /**

@@ -917,7 +917,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Whether keyboard input is currently routed to this application. Keyboard and wheel events are gated on it. A focused text field keeps it true: its platform transport takes host focus away from the canvas element, but focus never leaves the application."
         },
         {
           "name": "connectedGamepadCount",

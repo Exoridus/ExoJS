@@ -383,6 +383,32 @@ describe('TextEditingModel', () => {
       expect(model.value).toBe('abX');
     });
 
+    test('the commit passes the same gates an insert does', () => {
+      const digits = new TextEditingModel({ filter: value => /^[0-9]*$/.test(value) });
+
+      digits.insert('12');
+      digits.setComposition({ phase: 'start' });
+      digits.setComposition({ phase: 'end', text: 'ab' });
+
+      expect(digits.value).toBe('12');
+      expect(digits.composing).toBe(false);
+
+      const singleLine = new TextEditingModel();
+
+      singleLine.insert('ab');
+      singleLine.setComposition({ phase: 'start' });
+      singleLine.setComposition({ phase: 'end', text: 'c\nd' });
+
+      expect(singleLine.value).toBe('ab');
+
+      const multiline = new TextEditingModel({ multiline: true });
+
+      multiline.setComposition({ phase: 'start' });
+      multiline.setComposition({ phase: 'end', text: 'c\nd' });
+
+      expect(multiline.value).toBe('c\nd');
+    });
+
     test('null discards an in-flight composition', () => {
       const model = new TextEditingModel();
 

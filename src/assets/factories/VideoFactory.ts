@@ -61,15 +61,28 @@ export class VideoFactory implements AssetFactory<MediaAssetSource, Video, Video
 
     this._elements.set(video, objectUrl);
 
-    await attachMediaSource({
-      element: video,
-      src,
-      messages: MESSAGES,
-      loadEvent: options.loadEvent,
-      stallTimeout: options.stallTimeout,
-      ...(objectUrl === undefined && { crossOrigin: options.crossOrigin === undefined ? 'anonymous' : options.crossOrigin }),
-      signal: context.signal,
-    });
+    try {
+      await attachMediaSource({
+        element: video,
+        src,
+        messages: MESSAGES,
+        loadEvent: options.loadEvent,
+        stallTimeout: options.stallTimeout,
+        ...(objectUrl === undefined && { crossOrigin: options.crossOrigin === undefined ? 'anonymous' : options.crossOrigin }),
+        signal: context.signal,
+      });
+    } catch (error: unknown) {
+      // No resource is built on this path, so nothing will ever be released for
+      // it: a retried load would otherwise accumulate one element and one live
+      // blob URL per attempt for the loader's lifetime.
+      this._elements.delete(video);
+
+      if (objectUrl !== undefined) {
+        this._objectUrls.revoke(objectUrl);
+      }
+
+      throw error;
+    }
 
     return new Video(video, options.playbackOptions, options.textureOptions);
   }

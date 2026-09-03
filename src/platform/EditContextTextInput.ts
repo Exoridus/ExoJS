@@ -24,7 +24,6 @@ interface EditContextLike {
   selectionEnd: number;
   inputMode: string;
   enterKeyHint: string;
-  attachToElement(element: HTMLElement): void;
   updateText(rangeStart: number, rangeEnd: number, text: string): void;
   updateSelection(start: number, end: number): void;
   updateControlBounds(bounds: DOMRect): void;
@@ -43,6 +42,12 @@ interface EditContextLike {
 }
 
 type EditContextConstructor = new (options?: Record<string, unknown>) => EditContextLike;
+
+/**
+ * The element side of the association. An `EditContext` is attached by
+ * assigning it to the element, never by a method on the context itself.
+ */
+type EditContextHost = HTMLElement & { editContext?: EditContextLike | null };
 
 interface EditContextGlobal {
   // eslint-disable-next-line @typescript-eslint/naming-convention -- the global's name is fixed by the web platform
@@ -68,7 +73,7 @@ export const editContextSupported = (): boolean => (globalThis as EditContextGlo
  */
 export class EditContextTextInput implements PlatformTextInput {
   private readonly _context: EditContextLike;
-  private readonly _element: HTMLTextAreaElement;
+  private readonly _element: HTMLDivElement;
   private readonly _canvas: HTMLCanvasElement;
   private readonly _onEdit = new Signal<[TextEditIntent]>();
   private readonly _onComposition = new Signal<[CompositionState]>();
@@ -78,6 +83,13 @@ export class EditContextTextInput implements PlatformTextInput {
   private _caretRect: Rectangle | null = null;
   private _hints: PlatformTextInputHints = {};
   private _destroyed = false;
+  private _claimingFocus = false;
+  /**
+   * Where the selection ended when the widget last mirrored it in - the caret
+   * a `textupdate` replaced. The event itself reports only the state after the
+   * update, which is the same for a backspace and a forward delete.
+   */
+  private _selectionEnd = 0;
 
   private readonly _textUpdate = (event: {
     updateRangeStart: number;
@@ -111,10 +123,12 @@ export class EditContextTextInput implements PlatformTextInput {
     }
 
     if (removed > 0) {
-      // Pure deletion. Direction follows which side of the caret the removed
-      // range sat on; granularity is always character - word/line deletes are
-      // intercepted by the widget key handler before they reach here.
-      const direction = event.updateRangeEnd === event.selectionEnd ? 'backward' : 'forward';
+      // Pure deletion. A platform collapses the selection to the START of the
+      // range it removed, so the post-update selection cannot say which side
+      // of the caret that range sat on - only the caret before the update can.
+      // Granularity is always character: word and line deletes are intercepted
+      // by the widget key handler before they reach here.
+      const direction = event.updateRangeEnd === this._selectionEnd ? 'backward' : 'forward';
 
       this._onEdit.dispatch({ kind: 'deleteContent', direction, granularity: 'character' });
 
@@ -210,11 +224,13 @@ export class EditContextTextInput implements PlatformTextInput {
       throw new Error('EditContextTextInput requires the EditContext API');
     }
 
-    const element = document.createElement('textarea');
+    // A plain element, never a `<textarea>` or `<input>`: a host refuses to
+    // attach an `EditContext` to a natively editable element, which is the
+    // whole point of the API - the context replaces the element's editing
+    // behaviour rather than riding on top of it. `tabindex` is what makes it
+    // focusable at all.
+    const element = document.createElement('div');
 
-    element.autocomplete = 'off';
-    element.setAttribute('autocorrect', 'off');
-    element.setAttribute('autocapitalize', 'off');
     element.spellcheck = false;
     element.tabIndex = -1;
     element.setAttribute('aria-hidden', 'true');
@@ -224,10 +240,6 @@ export class EditContextTextInput implements PlatformTextInput {
     style.position = 'absolute';
     style.opacity = '0';
     style.pointerEvents = 'none';
-    style.border = 'none';
-    style.padding = '0';
-    style.margin = '0';
-    style.resize = 'none';
     style.overflow = 'hidden';
     style.background = 'transparent';
     style.color = 'transparent';
@@ -243,7 +255,8 @@ export class EditContextTextInput implements PlatformTextInput {
     document.body.append(element);
 
     const context = new Ctor({});
-    context.attachToElement(element);
+
+    (element as EditContextHost).editContext = context;
     this._context = context;
 
     context.addEventListener('textupdate', this._textUpdate);
@@ -263,16 +276,42 @@ export class EditContextTextInput implements PlatformTextInput {
     return this._onComposition;
   }
 
+  /** Whether host keyboard focus currently sits on this transport. */
+  public get hostFocused(): boolean {
+    return this._claimingFocus || (typeof document !== 'undefined' && document.activeElement === this._element);
+  }
+
+  /** Whether {@link EditContextTextInput.destroy} has already run. */
+  public get destroyed(): boolean {
+    return this._destroyed;
+  }
+
   public focus(): void {
     if (this._destroyed) {
       return;
     }
 
     this._applyBounds();
-    this._element.focus({ preventScroll: true });
+    // Taking host focus blurs the drawing surface synchronously, and the input
+    // pipeline reads `hostFocused` from inside that blur to decide whether
+    // keyboard focus left the application. The claim spans exactly that gap.
+    this._claimingFocus = true;
+
+    try {
+      this._element.focus({ preventScroll: true });
+    } finally {
+      this._claimingFocus = false;
+    }
   }
 
   public blur(): void {
+    if (typeof document !== 'undefined' && document.activeElement === this._element) {
+      // Hand host focus back to the surface it was borrowed from instead of
+      // dropping it on the document: keyboard input would otherwise stop
+      // reaching the application until the next press on the surface.
+      this._canvas.focus({ preventScroll: true });
+    }
+
     this._element.blur();
   }
 
@@ -283,6 +322,7 @@ export class EditContextTextInput implements PlatformTextInput {
 
     this._context.updateText(0, this._context.text.length, text);
     this._context.updateSelection(selectionStart, selectionEnd);
+    this._selectionEnd = selectionEnd;
   }
 
   public setBounds(rect: Rectangle): void {
@@ -320,6 +360,7 @@ export class EditContextTextInput implements PlatformTextInput {
     this._element.removeEventListener('copy', this._clipboardWrite);
     this._element.removeEventListener('cut', this._clipboardWrite);
     this._element.removeEventListener('paste', this._clipboardPaste);
+    (this._element as EditContextHost).editContext = null;
     this._element.remove();
     this._onEdit.destroy();
     this._onComposition.destroy();

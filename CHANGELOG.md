@@ -6,8 +6,99 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+
+- **`Spritesheet.removeFrame(name)` and `Stack.removeItem(item)`.** Both
+  mirror their existing `add`-side methods, completing the add/remove pair
+  every other mutator on these classes already has.
+
 ### Fixed
 
+- **Two class doc comments no longer erase their class from the published
+  declarations under `stripInternal`.** `SceneNode` and `Loader` mentioned
+  `@internal` in prose, which TypeScript reads as a real tag on the class; the
+  wording changed. The 22 backend, scene-graph, material, audio, asset-type and
+  tile-set members that official extension packages reach through the SDK entry
+  points are now documented as that SDK contract instead of being tagged
+  `@internal`. The flag itself stays off: 41 internal types still appear in
+  public signatures and must be made public first.
+- **A material drawn into a multi-attachment target now gets a dev-build
+  warning when its fragment shader under-declares outputs.** The guard that
+  refuses a drawable without a material never checked whether a material's
+  own shader actually writes every attachment; a shader with fewer declared
+  outputs than the target's attachment count silently left the extra
+  attachments at their previous contents on WebGL2 (WebGPU already refuses
+  pipeline creation for this). `ShaderSource.countFragmentOutputs` reflects
+  the declared `@location`/`layout(location = n) out` count from the active
+  backend's language and warns once per shader/attachment-count pairing when
+  it falls short.
+- **`RenderTexturePool` keys pooled textures by format as well as size.**
+  `acquire()` matched on `width x height` alone, so a pool holding an
+  `Rgba8` entry could hand it back for a request in a different format.
+  Latent today (every caller acquires the default format), but silent
+  the moment an HDR intermediate requests `Rgba16F`/`Rgba32F`. `acquire()`
+  now takes an optional `format` parameter (defaulting to `Rgba8`) and
+  matches on it too.
+- **`SharedAbort` dropped its unused multi-holder API.** `retain()`, `holders`
+  and `aborted` had no caller anywhere in the tree - cancellation is actually
+  decided by the claim refcount elsewhere - and the class documented an
+  N-holder contract that was never wired up. Removed, along with the doc
+  paragraph describing it.
+- **A press that hits no interactive node now clears keyboard focus.**
+  Nothing blurred the focused node on a click or tap that resolved to empty
+  canvas, so an open `Dropdown` stayed open and a `TextInput` kept its caret
+  and DOM transport after the user clicked away from it.
+- **An infinitely repeating `Tween` releases its target once that target is
+  destroyed.** A tween had no link to its target's lifetime, so
+  `repeat(-1)` kept interpolating and writing to a destroyed `SceneNode`
+  forever, pinning it in memory. `Tween.update` now stops itself (and is
+  released from `TweenSystem`) the frame after its target reports
+  `destroyed === true`.
+- **The fixed-timestep spiral-of-death guard now scales with `fixedTimeStep`.**
+  The catch-up cap was a constant 5 steps regardless of the configured step
+  size, so a step smaller than the default silently ran the simulation slower
+  than wall time once the frame rate dropped enough to hit the clamp - with no
+  warning. The cap is now derived from the existing frame-delta clamp and the
+  configured step, so a smaller step gets proportionally more catch-up steps.
+- **A `Sprite` whose frame was set before its texture finished loading gets the
+  right UVs.** Texture coordinates are the frame divided by the texture's
+  dimensions, so a frame chosen against a still-loading handle - what
+  `Spritesheet` does on an atlas that has not arrived - was computed against
+  0x0 and never recomputed: the sprite sampled a single texel, and a retained
+  product recorded around it kept the non-finite coordinates for the life of
+  the root. The sprite now recomputes its coordinates and announces the change
+  when the payload lands.
+- **Tile layers on WebGL2 sample their own tileset again when a sprite is drawn
+  between them.** `@codexo/exojs-tilemap`'s WebGL2 chunk renderer skipped its
+  texture bind and blend call whenever its private memo matched, but the memo
+  outlived the batch it described - and a sprite drawn between two tile layers
+  binds its own texture to the very unit the tile shader samples. The layer
+  after it drew the sprite's pixels, with the sprite's blend mode. The WebGPU
+  chunk renderer was never affected, so the backends visibly disagreed.
+- **`Text` and `BitmapText` honour `blendMode` on both backends.** The setter
+  is public on every drawable and already broke the render batch, but neither
+  text renderer applied it: WebGPU baked `Normal` into its pipeline, and WebGL2
+  drew with whatever blend state the previously flushed renderer had left, so
+  the same run could composite differently from frame to frame. A text batch
+  now breaks on a blend change and draws with the mode it declares.
+- **Sprites and meshes on WebGL2 draw with the blend mode they declare, even
+  when another renderer type is interleaved.** The WebGL2 blend state is one
+  global the backend owns, but the sprite and mesh renderers kept a private
+  copy and skipped the backend call whenever a batch declared the mode that
+  copy already held. A `Graphics` or nine-slice drawn in between had changed
+  the real state in the meantime, so the next batch composited with a foreign
+  blend mode - visibly disagreeing with WebGPU, which resolves blend per
+  pipeline. Each batch now establishes its blend mode at its own draw call.
+- **Nine-slice sprites on WebGL2 pick up a texture whose payload changed under
+  a stable identity, and keep their own blend mode.** The renderer bound the
+  batch texture only when the identity differed from the last one it had seen,
+  and the bind is what carries the upload - so a skin repainted through
+  `Texture.setSource()` / `updateSource()`, a canvas or `ImageBitmap` texture
+  refreshed per frame, and a `RenderTexture` re-rendered into went on drawing
+  the pixels of their first upload forever. The same memo skipped the live
+  check that rejects a destroyed texture, and its blend counterpart let another
+  renderer's blend mode through. Texture and blend state are now established at
+  the batch's own draw call.
 - **Particle systems on WebGL2 pick up a texture whose payload arrives after
   the first draw.** `WebGl2ParticleRenderer` bound the system's texture only
   when its identity changed, which for a single-system scene meant exactly
@@ -17,6 +108,445 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   memo could hold a stale blend mode after another renderer changed it. Both
   are now offered to the backend on every system, which already collapses a
   redundant bind and is the only holder of the live GL state.
+- **A payload of one to three bytes is sniffed as `text/plain` instead of
+  throwing.** The MP4 magic-byte check read a 32-bit box size without checking
+  that the buffer holds one, so a truncated or near-empty response surfaced as
+  `Offset is outside the bounds of the DataView` wrapped in a load failure,
+  rather than as the documented fallback.
+- **`WebStorageStore.set()` rejects on a full quota instead of throwing
+  synchronously.** Web Storage is synchronous, so a `QuotaExceededError`
+  escaped the returned promise and never reached the `.catch()` that is the
+  only handler a write has - unlike the serialization failure two lines above
+  it, which did reject.
+- **A blocked IndexedDB open no longer leaks the connection it later gets.**
+  The `blocked` event rejected the open, but the request still completed once
+  the blocking connection went away, handing over an `IDBDatabase` nobody was
+  waiting for and nothing closed - which then blocked every future upgrade in
+  its turn. A connection arriving after a rejected open is closed.
+- **A container that packs one source twice is rejected instead of unpacked.**
+  Both entries resolved to a single asset identity, so the second payload
+  replaced the first - and for a texture, video or music entry the replaced one
+  owned a GPU upload or a media element that no owner could release.
+- **Two sources that differ only in a `|` are two assets again.** Resource and
+  source keys joined their fields with an unescaped separator, so a URL
+  carrying an unencoded `|` in its query could compose the very key another
+  request composes from a source plus a discriminator - and the two then shared
+  one residency entry, one fetch and one claim set. The fields are now escaped
+  the way persisted cache record keys already were. Because the source key is
+  part of a persisted record's identity, the default cache layout version is
+  raised: records written by an earlier version are no longer found and are
+  acquired again rather than read under the old spelling.
+- **`awaitBackground()` settles for every caller, and for a queue an eviction
+  emptied.** The residency kept a single resolver slot, so a second concurrent
+  call overwrote the first and that promise never settled - a loading screen
+  and a scene preloader awaiting one drain deadlocked one of them, with no
+  error. Dropping a queued entry because its last claim went away (a scene
+  teardown, a cancelled load) also left the queue counted as unfinished
+  forever, so a lone awaiting caller hung and `onProgress` stayed below its
+  total. Both now settle.
+- **A `get()` or `load()` reaching a source while its container is unpacking
+  joins the unpack.** An unpack registered no in-flight identity, so for the
+  whole window between parsing the index and storing a payload the key looked
+  unknown to the loader and a concurrent acquisition of the same source started
+  a second, competing fetch whose payload overwrote the container's. Which one
+  a consumer saw was timing-dependent, and the loser - a texture upload, a
+  media element - was never released.
+- **A container that fails while unpacking releases what it already claimed.**
+  `Loader.loadContainer` claims every entry up front and only then builds them,
+  but a failure rejected without ever handing the caller the scope holding
+  those claims, so every entry of a failed container stayed resident for the
+  loader's lifetime with no owner able to free it.
+- **A destroyed `LoaderScope` refuses to claim.** `get`, `load` and
+  `loadContainer` still registered claims after `destroy()`, and since destroy
+  is idempotent by contract there was no way to release them: an async
+  continuation that outlived a scene teardown pinned its assets for the
+  application's lifetime, and `Loader.inspect()` listed a destroyed scope as an
+  owner. They now throw instead.
+- **Releasing a font or an image frees what it owns.** Neither factory
+  implemented the per-resource teardown its resources need: a released font
+  stayed registered on `document.fonts` (so CSS and Canvas went on resolving
+  its family) and pinned for the loader's lifetime, and a released image never
+  closed the `ImageBitmap` it had decoded. Only a bitmap the engine decoded
+  itself is closed.
+- **An asset unloaded mid-fetch frees the resource its factory had already
+  built.** The store was skipped, as it must be, but the finished resource -
+  which for a video or a music stream owns a media element - was handed back
+  undisposed and stayed alive until the loader was torn down.
+- **A failed or cancelled `music`/`video` load cleans up after itself.** The
+  element was registered with the factory before the source was attached, and a
+  failure left it there with its object URL unrevoked - and since no resource
+  was built, nothing would ever release it. A repeatedly retried blob-backed
+  load accumulated one element and one live blob per attempt.
+- **A `fetchOptions.signal` set on the loader aborts asset loads too.** Every
+  asset load replaced it with the loader's own cancellation signal, so an
+  application-wide abort signal worked for `.exoa` containers and silently did
+  nothing for every other asset. The two are composed now: either one aborts
+  the request, and neither disables the other.
+- **Options a later `get()` loses are diagnosed in development.** `Loader.get`
+  documents that the same source yields the same instance and that conflicting
+  options on a later call are ignored with a one-time dev warning - but no such
+  warning existed, so a second `get('x.png', { textureOptions })` dropped its
+  sampler request with nothing to diagnose it. The warning now exists (once per
+  source, stripped in production). Options that take part in asset identity are
+  unaffected: they resolve to their own instance and lose nothing.
+- **A `stop()` made while `start()` is still loading is no longer overwritten
+  when the startup run settles.** The startup continuation promoted the state
+  to `Running` unconditionally, so a `stop()` that landed inside the loading
+  window - where the frame loop is live but the state is still `Loading` - was
+  undone the moment `start()` resolved. The application then advertised
+  `Running` for a halted loop, and because both `start()` and `stop()`
+  early-return on that state, the instance was permanently unusable. The
+  promotion now happens only if the loop the run started is still the live one.
+- **A destroyed `Application` stays destroyed.** A `start()` that failed while
+  `destroy()` was running reset the state to `Stopped` from its own catch, and
+  because that continuation resumes after the teardown chain has finished,
+  `Stopped` was the last value written. `state` then lied about a destroyed
+  instance and `start()` accepted it, reinitializing an already-destroyed
+  backend and restarting the frame loop over released subsystems. `Destroying`
+  and `Destroyed` are now terminal - the only transition out of them is
+  `Destroying` to `Destroyed` - so a late startup failure cannot resurrect the
+  application and `start()` rejects as documented.
+- **`Application.destroy()` waits for a scene navigation that is still in
+  flight.** `destroy()` documents that `scenes` is fully disposed before the
+  Loader, rendering context, audio system and backend are released, but a
+  `change()`/`restore()` (or the initial `start(Target)` navigation) still
+  inside `load()` was tracked by nothing the disposal awaited: aborting it only
+  invalidated its generation, so the incoming scene went on to run `init()`,
+  `unload()` and `destroy()` after teardown had finished, against subsystems
+  that no longer existed. The disposal now awaits the run it just aborted, the
+  same way it already awaits a preload. A scene whose `load()` never settles is
+  bounded by `destroy()`'s existing teardown grace period.
+- **A destroyed scene graph is no longer pinned by the changed-record index.**
+  The process-wide dirty index recycled a generation by resetting its logical
+  length only, leaving every entry above it in place - and a `SceneNode` links
+  to its parent while a `Container` links to its children, so one retired entry
+  kept a whole destroyed scene alive for the life of the process, long after
+  the index itself reported those marks as outside its window. A recycled
+  generation now drops its references, and a node releases its entry when it is
+  destroyed, which is what leaves nothing pinned once `Application.destroy()`
+  has stopped advancing the index.
+- **A system removed and added back inside the same frame stays registered.**
+  `remove()` marks a registration inactive and queues the structural delete for
+  the frame boundary, but left it in the registry - so the `add()` that
+  followed hit the duplicate-registration no-op, and the queued removal then
+  deleted the system at the end of the frame with no error anywhere. The
+  pattern is what a system re-registering itself to change its order or phase
+  does, and it silently lost the system. `add()` now cancels a pending removal
+  and re-registers with the options that call asks for.
+- **`SystemRegistry.remove()` reports the truth for a buffered add.** Removing
+  a system added earlier in the same frame - one that never became a
+  registration, and for which `has()` answers `false` - returned `true`,
+  contradicting the method's own "true if it was registered". The add is still
+  cancelled; the return value now agrees with `has()`.
+- **Loader claims are released last on both scene teardown paths.** A scope
+  torn down after a failed `load()`/`init()` released its loader claims before
+  calling `scene.destroy()`, while the ordinary teardown - whose documentation
+  names "release loader claims last" as the normative order - released them
+  after it. A `Scene.destroy()` override reaching for `this.loader` therefore
+  saw a live claim scope or a destroyed one depending on whether activation had
+  succeeded, and a claim taken on the failed path was never released. Both
+  paths now release last.
+- **A manual `Application.update()` no longer forks the frame loop.** The
+  public tick rescheduled the next animation frame unconditionally, so calling
+  it while the loop was live - from `onFrame`, from an external fixed-rate
+  host, from a test harness that also lets the loop run - started a second
+  chain alongside the first and silently doubled the frame rate. Scheduling now
+  belongs to the loop's own callback: `update()` runs exactly one frame.
+- **`SceneNode.destroy()` and `RenderNode.destroy()` are idempotent.** Only
+  `Container` guarded re-entry, while the two layers beneath it documented
+  releasing state a second pass must not touch again - so a double `destroy()`
+  on a leaf node took its transform, bounds and flags through a second
+  teardown, and on a `RenderNode` re-ran the filter and signal release as well.
+  A second call is now a no-op at every layer.
+- **Audio objects created while the context is locked again are set up on the
+  next unlock.** `onAudioContextReady` latched after its very first dispatch,
+  so a bus, listener, stream voice, worklet or effect constructed while the
+  context sat suspended - after an iOS audio-session interruption or a bfcache
+  restore - subscribed to a signal that could never fire and stayed silent for
+  the rest of the session. The signal now dispatches once per run of the
+  context, to whoever is subscribed at that moment.
+- **An effect that never finishes its setup no longer silences the bus it is
+  attached to.** `AudioBus` rebuilt its effect chain by disconnecting the bus
+  input first and only then reading each effect's nodes, so an effect still
+  unready on the retry pass threw with the graph half torn down - inside a
+  microtask, where no caller could see it - and the bus stayed cut from its pan
+  stage for good. The chain is now resolved before anything is disconnected,
+  and an unready effect is bypassed with one diagnostic naming it.
+- **A worklet effect whose module fails to load degrades to a passthrough.**
+  `WorkletEffect.ready` rejected with nobody attached, so a blocked
+  `addModule` - a Content-Security-Policy forbidding `blob:` worker sources is
+  the realistic case - surfaced as an unhandled rejection. The failure is
+  logged instead and `ready` resolves; the effect keeps passing dry signal.
+- **A rejected `AudioContext.resume()` is logged instead of surfacing as an
+  unhandled rejection.** The autoplay-unlock gesture handler attached no
+  rejection handler, so a context the browser refused to resume produced a bare
+  rejection with no hint of where it came from.
+- **Audio zones only colour spatial voices.** `SpatialZones` documented that it
+  reconciles the live set of spatial voices, but `AudioSystem` handed it every
+  voice - so a reverb zone opened a send on UI blips and music beds that have no
+  position in the world at all. A voice that stops being positional now has its
+  zone sends closed instead of keeping them open untouched.
+- **`AudioZone.height` is documented as the half-band it is.** The option and
+  the field described it two different ways; `height: 100` covers `z` from
+  `-100` to `100`, which both now say.
+- **A per-call `repeat` on `AnimatedSprite.play()` no longer leaks into the next
+  clip.** The override was written on every `play()` and never cleared, so
+  `play('attack', { repeat: 2 })` followed by `play('idle')` stopped the
+  indefinitely-looping idle clip after two cycles. An override now belongs to
+  the playback run that set it.
+- **A single-frame `AnimatedSprite` clip completes.** `update()` returned before
+  any timing ran for a clip with one frame - the shape an Aseprite frame tag
+  covering a single frame exports - so `onComplete` never fired, the sprite
+  stayed `playing`, and its `AnimationSystem` registration was never released.
+  The frame is now held for its own duration and then takes the normal
+  completion path.
+- **`TweenSystem.clear()` and `destroy()` stop the tickers they drop.** Tweens
+  were stopped but registered tickers were only dropped, so a `TweenSequencer`
+  kept reporting `Active` after an application teardown with nothing left to
+  advance it.
+- **A `TweenSequencer` delay stage carries its overshoot into the next stage.**
+  The time past a `wait()` stage's own duration was dropped, so a chain of
+  waits drifted by up to one frame per stage and a repeated sequence
+  accumulated the error - `Tween.update` already carries the same remainder
+  into its next repeat cycle.
+- **A rebuilt particle GPU state no longer delivers garbage death contexts.**
+  `@codexo/exojs-particles` kept the queue of deaths still awaiting a readback
+  when the GPU state was torn down - after a device loss, a backend change or a
+  transition back to CPU modules - so the next state staged that many records
+  out of a freshly zeroed device buffer and every death module saw a
+  zero-valued context, firing `SpawnOnDeath` sub-emitters at the origin.
+- **`RateSpawn` recovers from a negative rate sample.** A distribution that can
+  return a value below zero drove the accumulator down without bound, and the
+  emitter never spawned again. The sampled rate is clamped at zero.
+- **An out-of-range `ParticleWriter.frame` no longer wraps onto a valid frame.**
+  The frame channel is a `Uint16Array`, so `-1` became `65535` and `70000`
+  became `4464` - both of which can be a frame the system declares, instead of
+  the documented frame-0 fallback. Development builds throw with the offending
+  index; production clamps.
+- **A particle system is no longer culled by the size of one particle.** A
+  `ParticleSystem`'s local bounds cover one texture frame at its local origin -
+  a single pixel for the default white texture - while its particles travel
+  arbitrarily far from there, so the viewport check removed the whole cloud as
+  soon as the emitter's origin scrolled out of view. Systems opt out of culling
+  by default; `cullArea` is the documented way back in for a system whose reach
+  is known.
+- **The WebGPU compute path samples the texture frame the CPU path does.**
+  `@codexo/exojs-particles` baked a particle system's frame UVs into a uniform
+  block once, when the GPU state was built, and assumed the whole texture
+  whenever no atlas was declared - so `system.textureFrame` was ignored
+  outright, and a texture swapped in later left the UVs divided by the previous
+  texture's dimensions. The same scene drew a sub-rect on WebGL2 and the whole
+  atlas on WebGPU. Both setters now re-bake the block.
+- **Two update modules of the same class are reported by name instead of
+  breaking WebGPU only.** A module's WGSL `key` names one struct and one member
+  of the composite compute shader's uniform block, so a second module under the
+  same key made the codegen declare each twice - invalid WGSL that failed
+  pipeline creation at the first `update()`, while WebGL2 ran the same scene.
+  `@codexo/exojs-particles` now throws `ParticleModuleKeyCollisionError` naming
+  both modules and the key, before the device is asked to build anything.
+- **A focused text field no longer blanks the keyboard and wheel pipeline.**
+  Focusing a field hands host focus to the platform's own text transport, which
+  blurs the canvas - and keyboard and wheel input were gated on the canvas
+  element holding focus alone. Every editing key the widget owns (caret motion,
+  Home/End, selection extension, `Escape`, `Ctrl+A`, `Ctrl+Z`/`Y`, `Enter` in a
+  single-line field) and all wheel scrolling were dead for as long as any field
+  was focused, and the held keys of a running game were released. The gate now
+  treats an engine-owned transport holding host focus as the application
+  holding it, and closes again when focus really leaves - including to a
+  foreign element of the embedding page. Leaving a field hands host focus back
+  to the surface rather than dropping it on the document. A transport that
+  reports an edit for a keystroke the widget also handles (Backspace, Delete,
+  and `Enter` in a multi-line field) now applies it once instead of twice.
+  `app.input.canvasFocused` and `onCanvasFocusChange` mean "this application
+  holds keyboard focus"; a press on a surface the host refuses focus for
+  reports the change instead of flipping the flag silently.
+- **Text input works again in browsers that ship `EditContext`.** The backend
+  attached its context with `EditContext.attachToElement()`, a draft method no
+  browser implements, and hung it on a `<textarea>`, which a host refuses to
+  attach a context to at all. Constructing the transport therefore threw on
+  every Chromium-based browser, leaving text fields focusable but completely
+  dead - no typing, no IME, no clipboard. The context is now attached through
+  the element's own `editContext` property, on a plain focusable element, and
+  detached when the transport is destroyed.
+- **Backspace deletes backwards under the `EditContext` backend.** The
+  direction of a deletion was derived from the selection the platform reports
+  _after_ the update, which it collapses to the start of the removed range - so
+  the test could never come out backward and every backspace deleted the
+  character after the caret. The direction now follows the caret the widget
+  last mirrored in, which is the only thing that separates a backspace from a
+  forward delete.
+- **An IME commit passes the same gates a typed insert does.** Committing a
+  composition applied only `maxLength`, so a `filter` was never consulted and a
+  single-line field could end up holding a newline - breaking the single-line
+  assumptions every caret and hit-test calculation makes. A commit is now
+  admitted, truncated or refused exactly like an insertion, and still creates
+  no undo entry.
+- **A text field forgets modifier keys when it loses focus.** `Shift` and
+  `Control` were latched from key events only the focused field receives, so a
+  field blurred with one held kept it held forever: later arrow keys extended a
+  selection and later `A`/`Z`/`Y` fired shortcuts. Releasing one `Shift` while
+  the other was still down also reported the modifier as released. Both sides
+  of each modifier are now tracked separately and cleared when the field loses
+  focus.
+- **A read-only text field can be selected whole again.** `readOnly` refused
+  every shortcut, select-all included, so the text could not be selected for
+  copying. Only the mutating shortcuts are refused now.
+- **Text-field shortcuts answer to `Meta`.** Select-all, undo and redo were
+  bound to `Control` alone, so `Cmd+A`, `Cmd+Z` and `Cmd+Y` did nothing on
+  macOS.
+- **A second finger no longer drags every slider, scrollbar and text
+  selection.** Widget drags follow the application's pointer signals so they
+  continue outside the widget, but they ignored which contact those signals
+  carried: any second touch moved every widget already being dragged, and
+  lifting either finger ended all of them. Each drag now records the contact
+  that started it and ignores the rest.
+- **`GlyphAtlas.clear()` no longer leaks pages or leaves other nodes drawing
+  stale glyphs.** It discarded every `AtlasPage` (and the GPU texture behind
+  it) and rebuilt a single fresh one, and nothing told a node sharing the
+  atlas that its cached UVs now addressed a different, repacked layout - only
+  the node that happened to call `clear()` re-laid out. Pages are now reset in
+  place instead of discarded, and every node drawing from the atlas re-lays
+  out. A loaded `FontFace` also used to clear only the one raster-density atlas
+  the node's surface ratio resolved to at that moment, which could be the
+  wrong one; it now clears every pixel-ratio and mode variant of the font
+  variant.
+- **A drag or pointer capture no longer survives a scene transition with no
+  button held.** A pointer frame gated by the active scene's state or the
+  director's transition gate discarded the queued events without ending any
+  in-progress drag, releasing capture, or forgetting the pointer - so a node
+  grabbed right before a transition kept following the pointer once the gate
+  lifted. A gated frame now runs the same cleanup a failed dispatch already
+  did.
+- **Colour-glyph (emoji) quads sample the glyph, not a texel span that
+  includes its padding.** The UVs spanned the whole padded atlas slot while
+  the quad was sized to the unpadded glyph, so an emoji rendered compressed
+  and offset up-left. UVs are now offset by the same padding the rasterizer
+  insets the ink by.
+- **Tab, Enter and Escape no longer reach an outgoing scene during a
+  transition.** `FocusController` dispatched every key event regardless of
+  scene state, while a pointer press at the same moment was already
+  swallowed. Key dispatch now honours the same `SceneState` and
+  transition-gate check pointer dispatch does.
+- **A hidden focused node releases focus, and releasing one `Shift` key no
+  longer flips `Tab`'s direction.** Focus eligibility ignored `visible`, so a
+  dialog hidden while still focused kept swallowing keys; and `Shift` was
+  latched per physical key, so releasing one side while the other was still
+  held reported the modifier as up. Eligibility now includes visibility, and
+  `Tab`'s direction reads the aggregate `Shift` channel `InputSystem` already
+  reconciles between both sides.
+- **A `Gamepad`-owned binding on a non-gamepad channel is rejected instead of
+  silently behaving differently from `Application.input`.** `pad.onTrigger(Keyboard.Space)`
+  type-checked and appeared to work, but skipped the construction-baseline
+  watermark and keyboard-capture bookkeeping `InputSystem`'s own binding
+  methods apply. It now throws.
+- **`GamepadButtonChannel` no longer admits reserved, token-less channels.**
+  Offsets 24-31 of the button section type-checked but had no
+  `InputToken`, so a custom mapping using one made `serialize()` and
+  `conflicts()` throw a bare error at the worst possible moment. The type now
+  only admits the 24 named, serializable channels.
+- **`BitmapText` no longer accepts a `fontSize` option it silently ignores.**
+  A `BitmapText` draws from a pre-baked atlas at whatever size it was
+  generated at - `scale` is the option that actually resizes it. `fontSize` is
+  now omitted from its options type.
+- **A justified line's reported width matches what was actually drawn.**
+  `TextLineMetrics.width` kept the pre-justify natural width even on a line
+  justify stretched to fill the paragraph, so a selection rectangle built from
+  it stopped short of the justified extent. It now reports the post-justify
+  width.
+- **A stylus's twist angle no longer drifts as it approaches full rotation.**
+  The twist channel (0-359 degrees) was normalized by 359 instead of 360, so
+  180 degrees read back as roughly 0.5014 instead of 0.5 and the error grew
+  toward the top of the range.
+- **A destroyed chain collider could keep answering broad-phase queries
+  forever.** `PhysicsWorld`'s CCD pass re-synced the authored collider list
+  into the broad-phase tree instead of the detection list, so a chain was
+  inserted as its own tree leaf - a leaf the CCD pass never updates and
+  destruction never removes, since only the chain's edge proxies are torn
+  down. `queryAabb`, `rayCast` and `overlapShape` could report a destroyed
+  chain's body indefinitely. The CCD pass now resyncs the detection list,
+  matching what the broad and narrow phases actually read.
+- **`PhysicsWorld.step()` dropped every fixed step's contact and sensor events
+  except the last.** A frame spanning more than one fixed step - a hitch, a
+  slow display, or a `fixedDelta` smaller than the frame time - ran detection
+  several times but dispatched only once, after the last step had already
+  overwritten the earlier steps' event arrays. Collision and sensor events
+  could be silently lost, or a sensor `enter` could arrive with no matching
+  `exit`. Events are now dispatched once per fixed step, as `fixedUpdate()`
+  already did.
+- **`PhysicsWorld.add()` could leave a body permanently half-attached.** A
+  dynamic body with no mass-carrying collider was rejected after its id,
+  owner and `attached` flag were already set, so the error's own documented
+  recovery ("add a solid collider, then add it") failed with "already been
+  added to a world" instead, and `addCollider()` then registered further
+  colliders into a world the body was never actually tracked by. The mass
+  check now runs before any attachment state changes.
+- **Destroying two colliders of the same dynamic body from one event callback
+  could leave it massless.** `destroyCollider`'s mass guard validated against
+  the collider set as it stood before either deferred removal had run, so two
+  individually-legal calls made from the same dispatch both passed and then
+  combined into a dynamic body with `invMass === 0` and live boundary
+  colliders - the exact state the guard exists to reject. The guard now
+  treats a collider already queued for removal as already gone.
+- **A tile layer's rendering stopped following its offset once mutated at
+  runtime.** `@codexo/exojs-tilemap`'s `TileLayerNode` cached
+  `layer.offsetX`/`offsetY` at construction, while `TileColliderStreamer` and
+  `pixelToTile` already read the live, mutable fields - moving a layer at
+  runtime moved its collision but left its pixels in place, with no error.
+  The node now re-reads the offset every frame.
+- **A body added while `PhysicsWorld.destroy()` was running from inside that
+  same dispatch was never marked destroyed.** `destroy()` cleared the queued
+  command list without running it first, so a body added from a collision or
+  sensor callback that itself called `destroy()` stayed `attached === true`
+  and `destroyed === false` against a torn-down world. Queued commands are
+  now drained before the world tears down.
+- **A second `PhysicsWorld` no longer inherits the first world's "already
+  warned about this bullet shape" state.** The dev-only warning for boundary
+  geometry on a bullet body tracked reported shape kinds in a module-level
+  set, so a second world's misconfiguration went unreported once any world
+  had already warned about that shape kind - contradicting the class's own
+  "holds no module-level state" documentation. The set now lives on the
+  world instance.
+- **A renderer bound to more than one drawable type connects, disconnects and
+  pre-warms once, not once per bound type.** `RendererRegistry.connect`,
+  `disconnect` and `renderers()` iterated the underlying map's raw values,
+  which repeats a shared renderer for every target it is bound to, while
+  `destroy()` already deduplicated by instance. Core binds `Text` and
+  `BitmapText` to one renderer, so every WebGPU initialization compiled the
+  text pipelines twice. The three methods now iterate the same deduplicated
+  view `destroy()` uses.
+- **A duplicate renderer target across two bindings no longer leaves an
+  earlier, valid binding's renderer already created.** `materializeRendererBindings`
+  validated each binding's targets and created its renderer in the same pass,
+  so a conflict discovered on a later binding was reported only after an
+  earlier binding's GPU-backed renderer had already been created and bound.
+  The duplicate-target scan now runs over every binding before any renderer
+  is created.
+- **A guide-content-only change now runs the unit lane, which is what
+  validates it.** `test/site/guide-structure.test.ts` and its siblings live
+  under `test/` and check `site/src/content/**`, so they ran on every engine
+  change and never on the guide content they exist to validate. CI lane
+  selection now gates the unit lane on a `guides` area as well as `engine`.
+- **`packages/exojs-bench/test/**` and `packages/create-exo-app/**` changes
+  now run a validation lane.** Neither package is a runtime dependency of
+  the engine, so both sat outside `RUNTIME_PACKAGES` and a change to either
+  left CI green without exercising it. A bench test change now gates the
+  existing structural-gate lane; a create-exo-app change now gates a new
+  verify lane that runs `verify:create-exo-app`.
+- **`cacheAsTexture` no longer risks a bundler tree-shaking away the module
+  that makes it work.** The package declared `"sideEffects": false` while
+  `Sprite.ts`, `Logger.ts` and `theme.ts` register load-bearing state at
+  import time (the sprite factory `cacheAsTexture` depends on, the dev
+  console sink, and the frozen default UI theme), so a bundler that never
+  saw a used export from one of them was free to drop it. Those three
+  modules are now listed in `sideEffects`, and the error a dropped `Sprite.ts`
+  produces now names the cause and the remedy instead of just failing.
+- **`Sprite`, `Video` and the sprite serializer no longer hand the shared
+  `Rectangle.temp` scratch across a call into node code.** `setTextureFrame`
+  reads its `frame` argument again after bounds/origin invalidation
+  re-enters node code, so passing the process-wide `Rectangle.temp` risked a
+  concurrent caller overwriting it before that second read - a synchronous
+  bounds query away from a silently wrong frame. Each call site now passes
+  its own rectangle instead.
 
 ## [0.16.1] - 2026-09-02
 

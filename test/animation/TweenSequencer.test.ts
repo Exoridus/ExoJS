@@ -155,6 +155,22 @@ describe('TweenSequencer', () => {
       expect(seq.state).toBe(TweenSequencerState.Complete);
       expect(onComplete).toHaveBeenCalledTimes(1);
     });
+
+    test('carries the overshoot past a delay into the next delay stage', () => {
+      const onComplete = vi.fn();
+      const seq = new TweenSequencer().wait(0.5).wait(0.5).onComplete(onComplete).start();
+
+      // 0.25 s past the first 0.5 s stage. Dropping that remainder would make
+      // the second stage need a further 0.5 s of its own, so the pair would
+      // take 1.25 s instead of the 1.0 s the chain declares.
+      seq.update(0.75);
+      expect(seq.state).toBe(TweenSequencerState.Active);
+
+      seq.update(0.25);
+
+      expect(seq.state).toBe(TweenSequencerState.Complete);
+      expect(onComplete).toHaveBeenCalledTimes(1);
+    });
   });
 
   // ── onComplete ─────────────────────────────────────────────────────────────
