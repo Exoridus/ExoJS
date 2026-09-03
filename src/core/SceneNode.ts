@@ -980,8 +980,16 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * The destroyed flag is raised before the unlink so detach-time observers
    * (e.g. focus, which suppresses `onBlur` on a destroyed node) see a node that
    * is going away rather than one merely being reparented.
+   *
+   * Idempotent: a second call is a no-op.
    */
   public destroy(): void {
+    // Matching Container.destroy() and Texture.destroy(): re-entry would take
+    // already-released state through a second teardown.
+    if (this._isDestroyed) {
+      return;
+    }
+
     this._isDestroyed = true;
     this._parentNode?.removeChild(this as unknown as RenderNode);
     this._transform.destroy();

@@ -200,6 +200,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   host, from a test harness that also lets the loop run - started a second
   chain alongside the first and silently doubled the frame rate. Scheduling now
   belongs to the loop's own callback: `update()` runs exactly one frame.
+- **`SceneNode.destroy()` and `RenderNode.destroy()` are idempotent.** Only
+  `Container` guarded re-entry, while the two layers beneath it documented
+  releasing state a second pass must not touch again - so a double `destroy()`
+  on a leaf node took its transform, bounds and flags through a second
+  teardown, and on a `RenderNode` re-ran the filter and signal release as well.
+  A second call is now a no-op at every layer.
 
 ## [0.16.1] - 2026-09-02
 

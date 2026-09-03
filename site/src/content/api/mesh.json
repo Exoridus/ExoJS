@@ -373,7 +373,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Releases everything this node owns, including GPU-side resources. Calling it is mandatory for a node that has acted as a render root: from its first recorded frame such a node owns a group-scoped instance, transform and tint buffer, and the backend holds that bundle until the node is destroyed or the backend itself is. Dropping the last reference is not enough - GPU lifetime is deterministic here on purpose and is not tied to garbage collection."
+          "description": "Releases everything this node owns, including GPU-side resources. Calling it is mandatory for a node that has acted as a render root: from its first recorded frame such a node owns a group-scoped instance, transform and tint buffer, and the backend holds that bundle until the node is destroyed or the backend itself is. Dropping the last reference is not enough - GPU lifetime is deterministic here on purpose and is not tied to garbage collection. Idempotent: a second call is a no-op."
         },
         {
           "name": "focus",

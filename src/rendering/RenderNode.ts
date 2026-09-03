@@ -799,8 +799,16 @@ export abstract class RenderNode extends SceneNode {
    * node is destroyed or the backend itself is. Dropping the last reference
    * is not enough - GPU lifetime is deterministic here on purpose and is not
    * tied to garbage collection.
+   *
+   * Idempotent: a second call is a no-op.
    */
   public override destroy(): void {
+    // The base guard alone would not cover this override's own body, which
+    // runs after the super call has already raised the flag.
+    if (this.destroyed) {
+      return;
+    }
+
     super.destroy();
 
     this._destroyCacheTexture();
