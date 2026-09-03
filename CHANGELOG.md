@@ -8,6 +8,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Fixed
 
+- **An infinitely repeating `Tween` releases its target once that target is
+  destroyed.** A tween had no link to its target's lifetime, so
+  `repeat(-1)` kept interpolating and writing to a destroyed `SceneNode`
+  forever, pinning it in memory. `Tween.update` now stops itself (and is
+  released from `TweenSystem`) the frame after its target reports
+  `destroyed === true`.
 - **The fixed-timestep spiral-of-death guard now scales with `fixedTimeStep`.**
   The catch-up cap was a constant 5 steps regardless of the configured step
   size, so a step smaller than the default silently ran the simulation slower
