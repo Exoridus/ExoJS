@@ -1,4 +1,5 @@
 import { assert } from '#core/dev';
+import { logger } from '#core/Logger';
 import { clamp } from '#math/utils';
 
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audioContext';
@@ -363,12 +364,31 @@ export class AudioBus {
     // `inputNode`/`outputNode` here would throw ("not yet initialized").
     // Retrying once on a microtask is sufficient: by then every listener queued
     // for that same dispatch pass - including the effect's own setup - has
-    // already run. An effect still not ready after the retry is a genuine
-    // caller error (e.g. a custom effect that never wires itself up) and is
-    // left to throw naturally instead of retrying forever.
+    // already run.
     if (!retried && this._effects.some(effect => !isEffectReady(effect))) {
       queueMicrotask(() => this._rebuildEffectChain(true));
       return;
+    }
+
+    // Resolve the chain BEFORE touching the graph. An effect still not ready on
+    // the retry pass throws from `inputNode`/`outputNode`, and the retry runs
+    // inside a `queueMicrotask` where no caller can catch it - a throw part-way
+    // through the rewiring below would leave the bus input cut from the pan
+    // stage and silence the whole subtree with an unrelated stack. Such an
+    // effect is bypassed instead, so the bus keeps passing audio.
+    const chain: AudioEffect[] = [];
+
+    for (const effect of this._effects) {
+      if (isEffectReady(effect)) {
+        chain.push(effect);
+        continue;
+      }
+
+      logger.warn(
+        `AudioBus: effect ${effect.constructor.name} never finished its setup and is bypassed on bus "${this.name}". ` +
+          'Await its `ready` promise before attaching it, or check that a custom effect wires up its input and output nodes.',
+        { source: 'AudioBus', once: `audiobus-effect-unready:${effect.constructor.name}` },
+      );
     }
 
     // Disconnect current chain. Only the edges this bus created are cut: the
@@ -378,14 +398,14 @@ export class AudioBus {
     // are its own internal wiring, and disconnecting them silences the effect
     // permanently.
     inputNode.disconnect();
-    for (const effect of this._effects) {
+    for (const effect of chain) {
       effect.outputNode.disconnect();
     }
     panNode.disconnect();
 
     // Rebuild: input → effect[0].input → effect[0].output → effect[1].input → ... → pan → output
     let prev: AudioNode = inputNode;
-    for (const effect of this._effects) {
+    for (const effect of chain) {
       prev.connect(effect.inputNode);
       prev = effect.outputNode;
     }

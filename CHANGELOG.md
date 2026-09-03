@@ -213,6 +213,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   restore - subscribed to a signal that could never fire and stayed silent for
   the rest of the session. The signal now dispatches once per run of the
   context, to whoever is subscribed at that moment.
+- **An effect that never finishes its setup no longer silences the bus it is
+  attached to.** `AudioBus` rebuilt its effect chain by disconnecting the bus
+  input first and only then reading each effect's nodes, so an effect still
+  unready on the retry pass threw with the graph half torn down - inside a
+  microtask, where no caller could see it - and the bus stayed cut from its pan
+  stage for good. The chain is now resolved before anything is disconnected,
+  and an unready effect is bypassed with one diagnostic naming it.
 
 ## [0.16.1] - 2026-09-02
 

@@ -907,6 +907,34 @@ describe('AudioBus', () => {
     bus.destroy();
   });
 
+  test('an effect that never becomes ready is bypassed instead of silencing the bus', async () => {
+    const spy = spyOnBusCreation();
+    const bus = new AudioBus('unready-effect-bypass');
+    const unready = {
+      get inputNode(): AudioNode {
+        throw new Error('not yet initialized');
+      },
+      get outputNode(): AudioNode {
+        throw new Error('not yet initialized');
+      },
+      ready: Promise.resolve(),
+      destroy: (): void => undefined,
+    } as unknown as AudioEffect;
+
+    bus.addEffect(unready);
+    spy.inputNode.connect.mockClear();
+
+    // The first pass defers to a microtask; the retry pass is where the effect
+    // is still unready and used to throw after the graph had been torn down.
+    await Promise.resolve();
+
+    // The bus input reaches the pan stage again, so the subtree still passes audio.
+    expect(spy.inputNode.connect).toHaveBeenCalledWith(spy.panNode);
+
+    spy.restore();
+    bus.destroy();
+  });
+
   test('removeEffect() tolerates an effect whose nodes are not ready yet', () => {
     const bus = new AudioBus('remove-effect-unready');
     const unready = {
