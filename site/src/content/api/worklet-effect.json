@@ -6,10 +6,10 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 7,
+  "memberCount": 8,
   "counts": {
     "constructors": 1,
-    "methods": 2,
+    "methods": 3,
     "properties": 4,
     "events": 0
   },
@@ -117,6 +117,74 @@
           ],
           "returnType": "void",
           "description": "Subclass hook - called once the worklet is loaded and inserted into the wet path. Use for additional wiring (e.g. a sidechain input)."
+        },
+        {
+          "name": "_setAudioParam",
+          "signature": "_setAudioParam(name: string, value: number): void",
+          "signatureTokens": [
+            {
+              "text": "_setAudioParam",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "value",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Ramps an AudioParam on the underlying AudioWorkletNode to value using a short exponential ramp. No-ops if the worklet is not yet loaded. Part of the effect SDK contract for extension audio effects."
         },
         {
           "name": "destroy",

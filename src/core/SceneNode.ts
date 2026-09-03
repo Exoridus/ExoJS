@@ -564,7 +564,8 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * {@link getLocalBounds}; the rectangle itself is handed out read-only so the
    * invalidation cannot be forgotten. Built-in drawables (Sprite, Text,
    * BitmapText, Mesh, ...) and custom ones alike go through here.
-   * @internal
+   *
+   * Part of the renderer SDK contract for extension renderers.
    */
   public _setLocalBounds(x: number, y: number, width: number, height: number): this {
     this._localBounds.set(x, y, width, height);
@@ -624,7 +625,9 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * A getter, not a field, read live on every seam evaluation below:
    * subclasses may flip it at runtime, and descendants pick a flip up lazily
    * through the parent-version compare.
-   * @internal
+   *
+   * Part of the scene-graph SDK contract for extension packages that walk
+   * node ancestry.
    */
   public get _isTransformGroupBoundary(): boolean {
     return false;

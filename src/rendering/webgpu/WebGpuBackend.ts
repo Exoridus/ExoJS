@@ -516,7 +516,11 @@ export class WebGpuBackend implements RenderBackend {
     return this._accountant;
   }
 
-  /** @internal */
+  /**
+   * The draw command currently being submitted through the render-plan
+   * player, or `null` outside of one. Part of the renderer SDK contract for
+   * extension renderers.
+   */
   public get activeDrawCommand(): DrawCommand | null {
     return this._activeDrawCommand;
   }
@@ -525,7 +529,8 @@ export class WebGpuBackend implements RenderBackend {
    * Internal render-pass coordinator. Owns the clear-vs-load decision and the
    * active render pass; not part of the public
    * {@link RenderBackend} surface.
-   * @internal
+   *
+   * Part of the renderer SDK contract for extension renderers.
    */
   public get _passCoordinator(): WebGpuPassCoordinator {
     return (this._passCoordinatorInstance ??= new WebGpuPassCoordinator(this));
@@ -1438,7 +1443,7 @@ export class WebGpuBackend implements RenderBackend {
     return !(texture instanceof RenderTexture) && texture.premultiplyAlpha;
   }
 
-  /** @internal */
+  /** Part of the renderer SDK contract for extension renderers. */
   public getTransformStorageBuffer(minCount: number): { readonly buffer: GPUBuffer; readonly tintBuffer: GPUBuffer; readonly count: number } {
     return this._getTransformStorage().getBuffer(this.device, minCount, this._accountant);
   }
@@ -1450,7 +1455,8 @@ export class WebGpuBackend implements RenderBackend {
    * `backend.draw(drawable)` outside the plan player (`activeDrawCommand === null`),
    * where no stable `nodeIndex` was assigned. Each call allocates a fresh slot, so
    * a batch of synthetic draws does not collide on a single row.
-   * @internal
+   *
+   * Part of the renderer SDK contract for extension renderers.
    */
   public _pushTransform(drawable: Drawable): number {
     // Raw world transform + snap-mode flag; the vertex stage snaps the origin.
@@ -1526,7 +1532,8 @@ export class WebGpuBackend implements RenderBackend {
    * Active per-group transform for the draws submitted until the next call.
    * `null` means identity (no retained group).
    * Renderers fold it into their vertex stage as the projection UBO's `group`.
-   * @internal
+   *
+   * Part of the renderer SDK contract for extension renderers.
    */
   public get renderGroupTransform(): Matrix | null {
     return this._renderGroupTransform;
@@ -1564,7 +1571,7 @@ export class WebGpuBackend implements RenderBackend {
   // Retained instruction-set record/replay.
   // ───────────────────────────────────────────────────────────────────────────
 
-  /** Whether at least one retained capture window is active. @internal */
+  /** Whether at least one retained capture window is active. Part of the renderer SDK contract for extension renderers. */
   public get _retainedCaptureActive(): boolean {
     return this._retainedCaptureFrames.length > 0;
   }
@@ -1771,7 +1778,8 @@ export class WebGpuBackend implements RenderBackend {
    * {@link RetainedBatchInstruction.nodeCount}. It is the LAST parameter on
    * purpose: inserting it next to `instanceCount` would silently shift the
    * existing optional trailing arguments at every cross-package call site.
-   * @internal
+   *
+   * Part of the renderer SDK contract for extension renderers.
    */
   public _recordRetainedBatch(
     replayer: WebGpuRetainedBatchReplayer,
@@ -1992,7 +2000,8 @@ export class WebGpuBackend implements RenderBackend {
    * appending a batch into an open pass: growing the storage destroys the buffer
    * earlier batches in that pass still reference, so the renderer ends (submits)
    * the pass first when this is true and the pass already holds batches.
-   * @internal
+   *
+   * Part of the renderer SDK contract for extension renderers.
    */
   public _transformStorageWouldGrow(minCount: number): boolean {
     return this._getTransformStorage().wouldGrow(minCount);
@@ -2013,7 +2022,8 @@ export class WebGpuBackend implements RenderBackend {
    * pass. When true (and the pass already holds batches) the renderer ends
    * (submits) the pass first, capturing those draws against the pre-mutation
    * content, then reopens with a fresh slice - mirroring the `wouldGrow` guard.
-   * @internal
+   *
+   * Part of the renderer SDK contract for extension renderers.
    */
   public _textureUploadWouldMutate(texture: Texture | RenderTexture): boolean {
     const state = this._textureStates.get(texture);

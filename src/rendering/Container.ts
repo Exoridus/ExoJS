@@ -483,7 +483,7 @@ export class Container extends RenderNode {
     return !this._isTransformGroupBoundary && !this._renderPlanHasBarrierEffects();
   }
 
-  /** @internal */
+  /** Part of the renderer SDK contract for extension renderers. */
   protected override _collectContent(builder: RenderPlanBuilder): void {
     if (this._childList.length === 0) {
       return;

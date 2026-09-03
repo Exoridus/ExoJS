@@ -136,7 +136,8 @@ export abstract class WorkletEffect extends AudioEffect {
   /**
    * Ramps an `AudioParam` on the underlying `AudioWorkletNode` to `value` using
    * a short exponential ramp. No-ops if the worklet is not yet loaded.
-   * @internal
+   *
+   * Part of the effect SDK contract for extension audio effects.
    */
   protected _setAudioParam(name: string, value: number): void {
     if (!this._workletNode) return;

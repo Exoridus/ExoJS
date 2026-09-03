@@ -14,6 +14,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Fixed
 
+- **The published `.d.ts` no longer ships `@internal` implementation
+  details.** `stripInternal` was never enabled in the library declaration
+  profile, so every `@internal`-tagged member (899 tags across `src/`) still
+  reached consumer type-checking and editor autocomplete. It is now enabled;
+  22 members that official extension packages genuinely need at their
+  declaration-build boundary (renderer-backend hooks on `WebGl2Backend` /
+  `WebGpuBackend`, `SceneNode._setLocalBounds`, `RenderNode._collect` /
+  `_collectContent`, `Material._onDispose`, `WorkletEffect._setAudioParam`,
+  `AssetType._token`, `TileSet._setDefinitions`) were re-tagged as part of
+  the renderer/effect/asset-type SDK contract instead of `@internal`, so they
+  stay visible; everything else tagged `@internal` is now stripped from the
+  published declarations. A prose mention of `@internal` in two class doc
+  comments (`SceneNode`, `Loader`) that TypeScript's `stripInternal` reads as
+  a real tag - collapsing the whole class - was fixed separately first.
 - **A material drawn into a multi-attachment target now gets a dev-build
   warning when its fragment shader under-declares outputs.** The guard that
   refuses a drawable without a material never checked whether a material's

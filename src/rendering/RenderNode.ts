@@ -471,7 +471,7 @@ export abstract class RenderNode extends SceneNode {
     return this;
   }
 
-  /** @internal */
+  /** Part of the renderer SDK contract for extension renderers. */
   public _collect(builder: RenderPlanBuilder, seq?: number): void {
     if (this.destroyed) {
       // A destroyed node has released its pooled transform/bounds; collecting
@@ -556,7 +556,7 @@ export abstract class RenderNode extends SceneNode {
     return this._retainedRoot;
   }
 
-  /** @internal */
+  /** Part of the renderer SDK contract for extension renderers. */
   protected _collectContent(_builder: RenderPlanBuilder): void {
     // Overridden by Drawable/Container.
   }

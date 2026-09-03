@@ -6,10 +6,10 @@
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "advanced",
-  "memberCount": 17,
+  "memberCount": 18,
   "counts": {
     "constructors": 1,
-    "methods": 3,
+    "methods": 4,
     "properties": 13,
     "events": 0
   },
@@ -86,6 +86,65 @@
       "id": "methods",
       "title": "Methods",
       "members": [
+        {
+          "name": "_setDefinitions",
+          "signature": "_setDefinitions(definitions: readonly TileDefinition[]): void",
+          "signatureTokens": [
+            {
+              "text": "_setDefinitions",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "definitions",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileDefinition",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "definitions",
+              "type": "readonly TileDefinition[]",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Build definitions from an array, replacing the internal definitions map. Each entry's properties are copied and frozen. Part of the tilemap SDK contract for extension packages that build tilesets programmatically."
+        },
         {
           "name": "definedTiles",
           "signature": "definedTiles(): IterableIterator<TileDefinition>",

@@ -132,7 +132,8 @@ export abstract class AssetType<Source, Resource, Options = undefined, Stored = 
    * Constructor-addressed loader APIs (`scope.release(Texture, 'hero.png')`,
    * `loader.keyFor`, `onLoaded`) answer with this. A type that supplies none is
    * given a loader-local token, which those APIs then report instead.
-   * @internal
+   *
+   * Part of the asset-type SDK contract for extension asset types.
    */
   public readonly _token?: AssetConstructor;
 

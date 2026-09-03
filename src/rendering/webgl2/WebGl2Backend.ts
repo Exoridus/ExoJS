@@ -543,7 +543,11 @@ export class WebGl2Backend implements RenderBackend {
     return this._accountant;
   }
 
-  /** @internal */
+  /**
+   * The draw command currently being submitted through the render-plan
+   * player, or `null` outside of one. Part of the renderer SDK contract for
+   * extension renderers.
+   */
   public get activeDrawCommand(): DrawCommand | null {
     return this._activeDrawCommand;
   }
@@ -552,7 +556,8 @@ export class WebGl2Backend implements RenderBackend {
    * Internal render-pass coordinator. Owns target / view / clear orchestration
    * and the scissor / stencil-clip stacks for this backend; not part of the
    * public {@link RenderBackend} surface.
-   * @internal
+   *
+   * Part of the renderer SDK contract for extension renderers.
    */
   public get _passCoordinator(): WebGl2PassCoordinator {
     return (this._passCoordinatorInstance ??= new WebGl2PassCoordinator(this));
@@ -760,7 +765,8 @@ export class WebGl2Backend implements RenderBackend {
    * flush alongside `u_group` - a vec4 uniform set is cheap - so every core
    * vertex shader can snap a drawable's device origin whenever its transform-row
    * flag is set.
-   * @internal
+   *
+   * Part of the renderer SDK contract for extension renderers.
    */
   public _stageViewportUniform(shader: Shader): void {
     if (!shader.uniforms.has('u_viewport')) {
@@ -786,7 +792,8 @@ export class WebGl2Backend implements RenderBackend {
    * where no stable `nodeIndex` was assigned. Unlike {@link _writeTransformCommand}
    * (fixed slot) this allocates a fresh slot, so a batch of synthetic draws does
    * not collide on a single row.
-   * @internal
+   *
+   * Part of the renderer SDK contract for extension renderers.
    */
   public _pushTransform(drawable: Drawable): number {
     // Raw global transform - the vertex shaders snap the origin (see
@@ -1223,7 +1230,7 @@ export class WebGl2Backend implements RenderBackend {
     return this;
   }
 
-  /** Bind a material's base-texture sampler override to one texture unit. @internal */
+  /** Bind a material's base-texture sampler override to one texture unit. Part of the renderer SDK contract for extension renderers. */
   public bindMaterialSampler(options: SamplerOptions, unit: number): this {
     const key = samplerStateKey(options.scaleMode, options.wrapMode);
     let sampler = this._materialSamplers.get(key);
@@ -1249,7 +1256,7 @@ export class WebGl2Backend implements RenderBackend {
     return this;
   }
 
-  /** Restore a texture unit to its texture-owned sampler state. @internal */
+  /** Restore a texture unit to its texture-owned sampler state. Part of the renderer SDK contract for extension renderers. */
   public unbindMaterialSampler(unit: number): this {
     this._context.bindSampler(unit, null);
 
@@ -1296,7 +1303,7 @@ export class WebGl2Backend implements RenderBackend {
     return this;
   }
 
-  /** @internal */
+  /** Part of the renderer SDK contract for extension renderers. */
   public bindTransformBufferTexture(unit: number, minCount: number): this {
     const requiredCount = Math.max(1, minCount);
     const transformTexture = this._transformTexture;
@@ -1519,7 +1526,8 @@ export class WebGl2Backend implements RenderBackend {
    * Active per-group transform for the draws submitted until the next call.
    * `null` means identity (no retained group).
    * Renderers fold it into their vertex stage as `u_group`.
-   * @internal
+   *
+   * Part of the renderer SDK contract for extension renderers.
    */
   public get renderGroupTransform(): Matrix | null {
     return this._renderGroupTransform;
@@ -1554,7 +1562,8 @@ export class WebGl2Backend implements RenderBackend {
    * renderers at flush time to hand their packed batch to
    * {@link _recordRetainedBatch}, and at render time for the belt-and-braces
    * poison checks.
-   * @internal
+   *
+   * Part of the renderer SDK contract for extension renderers.
    */
   public get _isRetainedCapturing(): boolean {
     return this._retainedCaptures.length > 0;
@@ -1698,7 +1707,8 @@ export class WebGl2Backend implements RenderBackend {
    * {@link RetainedBatchInstruction.nodeCount}. It is the LAST parameter on
    * purpose: inserting it next to `instanceCount` would silently shift the
    * existing optional trailing arguments at every cross-package call site.
-   * @internal
+   *
+   * Part of the renderer SDK contract for extension renderers.
    */
   public _recordRetainedBatch(
     replayer: WebGl2RetainedBatchReplayer,
