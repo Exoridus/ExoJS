@@ -8,6 +8,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Fixed
 
+- **`RenderTexturePool` keys pooled textures by format as well as size.**
+  `acquire()` matched on `width x height` alone, so a pool holding an
+  `Rgba8` entry could hand it back for a request in a different format.
+  Latent today (every caller acquires the default format), but silent
+  the moment an HDR intermediate requests `Rgba16F`/`Rgba32F`. `acquire()`
+  now takes an optional `format` parameter (defaulting to `Rgba8`) and
+  matches on it too.
 - **`SharedAbort` dropped its unused multi-holder API.** `retain()`, `holders`
   and `aborted` had no caller anywhere in the tree - cancellation is actually
   decided by the claim refcount elsewhere - and the class documented an
