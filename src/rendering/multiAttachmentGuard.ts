@@ -55,7 +55,9 @@ const warnIfUnderDeclared = (drawable: Drawable, attachmentCount: number, backen
  */
 export const assertDrawsAllAttachments = (drawable: Drawable, attachmentCount: number, backendType: RenderBackendType): void => {
   if ((drawable instanceof Mesh || drawable instanceof Sprite) && drawable.material !== null) {
-    warnIfUnderDeclared(drawable, attachmentCount, backendType);
+    if (__DEV__) {
+      warnIfUnderDeclared(drawable, attachmentCount, backendType);
+    }
 
     return;
   }
