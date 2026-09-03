@@ -658,9 +658,8 @@ export class PhysicsWorld implements BodyOwner {
 
       for (let step = 0; step < steps; step++) {
         this._stepOnce(h, subStepCount, gravityX, gravityY, contactHertz, dampingRatio, hasJoints, hasBullets);
+        this._dispatchEvents();
       }
-
-      this._dispatchEvents();
     }
 
     // `step` is called once per rendered frame, so presenting here is already

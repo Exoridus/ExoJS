@@ -413,6 +413,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   down. `queryAabb`, `rayCast` and `overlapShape` could report a destroyed
   chain's body indefinitely. The CCD pass now resyncs the detection list,
   matching what the broad and narrow phases actually read.
+- **`PhysicsWorld.step()` dropped every fixed step's contact and sensor events
+  except the last.** A frame spanning more than one fixed step - a hitch, a
+  slow display, or a `fixedDelta` smaller than the frame time - ran detection
+  several times but dispatched only once, after the last step had already
+  overwritten the earlier steps' event arrays. Collision and sensor events
+  could be silently lost, or a sensor `enter` could arrive with no matching
+  `exit`. Events are now dispatched once per fixed step, as `fixedUpdate()`
+  already did.
 
 ## [0.16.1] - 2026-09-02
 
