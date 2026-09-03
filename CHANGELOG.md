@@ -248,6 +248,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   stayed `playing`, and its `AnimationSystem` registration was never released.
   The frame is now held for its own duration and then takes the normal
   completion path.
+- **`TweenSystem.clear()` and `destroy()` stop the tickers they drop.** Tweens
+  were stopped but registered tickers were only dropped, so a `TweenSequencer`
+  kept reporting `Active` after an application teardown with nothing left to
+  advance it.
 
 ## [0.16.1] - 2026-09-02
 

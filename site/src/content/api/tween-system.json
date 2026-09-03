@@ -189,7 +189,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": "Remove all tweens and tickers immediately. No callbacks fire. Each tracked tween is Tween.stopped first, so tween.state reflects the eviction instead of staying Active/Paused on a tween the system no longer drives - a Stopped tween's own system binding survives, so a later Tween.start re-enters it as usual."
+          "description": "Remove all tweens and tickers immediately. No callbacks fire. Each tracked tween is Tween.stopped first, and so is every ticker that can be stopped, so their state reflects the eviction instead of staying Active/Paused on something the system no longer drives - a Stopped tween's own system binding survives, so a later Tween.start re-enters it as usual."
         },
         {
           "name": "create",
