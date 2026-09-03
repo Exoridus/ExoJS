@@ -721,6 +721,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
       if (this._gpuState !== null) {
         this._gpuState.destroy();
         this._gpuState = null;
+        this._resetPendingDeaths();
       }
 
       this._gpuMode = false;
@@ -770,6 +771,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     if (this._gpuState !== null) {
       this._gpuState.destroy();
       this._gpuState = null;
+      this._resetPendingDeaths();
     }
 
     for (const frame of this._frames) {
@@ -811,6 +813,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
 
       this._gpuState.destroy();
       this._gpuState = null;
+      this._resetPendingDeaths();
       this._gpuMode = false;
       this._gpuDirtySlots.clear();
       this.clearParticles();
@@ -1036,6 +1039,20 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
 
       void this._drainDeaths(pending);
     }
+  }
+
+  /**
+   * Forgets deaths that were queued for a GPU state that no longer exists. The
+   * records they describe lived in that state's device buffer, so a rebuilt
+   * state would stage that many records out of a freshly zeroed buffer and hand
+   * every death module a zero-valued context.
+   */
+  private _resetPendingDeaths(): void {
+    this._pendingDeathLifetimes.clear();
+    this._pendingDeathCount = 0;
+    // Re-armed with the backlog itself: the warning reports a condition, not a
+    // process-lifetime event.
+    this._deathOverflowReported = false;
   }
 
   /**

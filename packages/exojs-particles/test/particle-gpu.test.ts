@@ -254,6 +254,9 @@ const flushDeathReadback = async (): Promise<void> => {
 
 const makeBuilder = (device: GPUDevice | null): RenderPlanBuilder => ({ backend: { device } }) as unknown as RenderPlanBuilder;
 
+/** Deaths still queued on the CPU because no batch has been staged for them yet. */
+const pendingDeathCount = (system: ParticleSystem): number => (system as unknown as { _pendingDeathCount: number })._pendingDeathCount;
+
 describe('ParticleSystem GPU mode — auto-routing', () => {
   let restoreGlobals: () => void;
 
@@ -891,6 +894,57 @@ describe('ParticleSystem GPU mode — natural expiry death modules', () => {
 
     expect(env.copies).toHaveLength(4);
     expect(env.copies.at(-1)!.size).toBe(2 * 40);
+  });
+
+  test('dropping the GPU state forgets the deaths queued against its buffers', async () => {
+    const env = makeMockDevice();
+    const maps = holdDeathMaps(env);
+    const system = new ParticleSystem(makeTexture(), { capacity: 8, device: env.device });
+
+    system.visible = false;
+    system.addUpdateModule(new ApplyForce(0, 0));
+    system.addDeathModule(
+      new (class extends DeathModule {
+        public override onDeath(): void {
+          /* delivery is covered elsewhere; this test is about the bookkeeping */
+        }
+      })(),
+    );
+
+    // One particle expires per step; the staging ring fills up, so the last
+    // steps leave their deaths queued on the CPU.
+    for (let i = 0; i < 5; i++) {
+      const particle = system.emit()!;
+
+      particle.lifetime = 0.02 * (i + 1);
+    }
+
+    system.update(tick(0));
+
+    for (let i = 0; i < 5; i++) {
+      system.update(tick(0.02));
+      await flushDeathReadback();
+    }
+
+    expect(pendingDeathCount(system)).toBeGreaterThan(0);
+
+    // Device-loss recovery: a changed backend drops the GPU state, and with it
+    // the device buffer those queued records live in.
+    const env2 = makeMockDevice();
+
+    system._collect(makeBuilder(env2.device));
+
+    expect(system.gpuState).toBeNull();
+    expect(pendingDeathCount(system)).toBe(0);
+
+    // The rebuilt state must not stage records out of its freshly zeroed death
+    // buffer - every one of them would be a zero-valued death context.
+    system.emit()!.lifetime = 10;
+    system.update(tick(0.016));
+
+    expect(env2.copies).toHaveLength(0);
+
+    maps.release();
   });
 
   test('batches are delivered in submission order even when their maps resolve out of order', async () => {

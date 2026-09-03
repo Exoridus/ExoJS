@@ -257,6 +257,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   waits drifted by up to one frame per stage and a repeated sequence
   accumulated the error - `Tween.update` already carries the same remainder
   into its next repeat cycle.
+- **A rebuilt particle GPU state no longer delivers garbage death contexts.**
+  `@codexo/exojs-particles` kept the queue of deaths still awaiting a readback
+  when the GPU state was torn down - after a device loss, a backend change or a
+  transition back to CPU modules - so the next state staged that many records
+  out of a freshly zeroed device buffer and every death module saw a
+  zero-valued context, firing `SpawnOnDeath` sub-emitters at the origin.
 
 ## [0.16.1] - 2026-09-02
 
