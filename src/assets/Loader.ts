@@ -1193,6 +1193,10 @@ export class Loader {
   /**
    * Default `RequestInit` options merged into every `fetch` call.
    * Assign a new value to change the defaults for subsequent loads.
+   *
+   * A `signal` here is composed with the cancellation a load carries of its
+   * own, so an application-wide abort and a per-load cancel both reach the
+   * request and neither disables the other.
    */
   public get fetchOptions(): RequestInit {
     return this._decoder.fetchOptions;

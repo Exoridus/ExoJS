@@ -125,6 +125,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   failure left it there with its object URL unrevoked - and since no resource
   was built, nothing would ever release it. A repeatedly retried blob-backed
   load accumulated one element and one live blob per attempt.
+- **A `fetchOptions.signal` set on the loader aborts asset loads too.** Every
+  asset load replaced it with the loader's own cancellation signal, so an
+  application-wide abort signal worked for `.exoa` containers and silently did
+  nothing for every other asset. The two are composed now: either one aborts
+  the request, and neither disables the other.
 
 ## [0.16.1] - 2026-09-02
 
