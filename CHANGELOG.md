@@ -370,6 +370,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   the quad was sized to the unpadded glyph, so an emoji rendered compressed
   and offset up-left. UVs are now offset by the same padding the rasterizer
   insets the ink by.
+- **Tab, Enter and Escape no longer reach an outgoing scene during a
+  transition.** `FocusController` dispatched every key event regardless of
+  scene state, while a pointer press at the same moment was already
+  swallowed. Key dispatch now honours the same `SceneState` and
+  transition-gate check pointer dispatch does.
 
 ## [0.16.1] - 2026-09-02
 

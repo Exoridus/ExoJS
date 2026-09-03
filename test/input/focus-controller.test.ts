@@ -1,5 +1,6 @@
 import type { Application } from '#core/Application';
 import { Scene } from '#core/scene/Scene';
+import { SceneState } from '#core/scene/SceneState';
 import { Signal } from '#core/Signal';
 import type { InteractionHooks, Stage } from '#core/Stage';
 import { FocusController } from '#input/FocusController';
@@ -52,6 +53,8 @@ const createFocusApp = (): {
       get currentScene(): Scene | null {
         return scene;
       },
+      state: SceneState.Active as SceneState | null,
+      _transitionGateOpen: false,
     },
   } as unknown as Application;
   const focus = new FocusController(app);
@@ -410,6 +413,46 @@ describe('FocusController', () => {
 
     expect(() => onKeyDown.dispatch(Keyboard.Tab)).not.toThrow();
     expect(focus.focused).toBeNull();
+  });
+
+  test('Tab/Enter/Escape are ignored while the scene-director transition gate is open', () => {
+    const { app, scene, focus, onKeyDown } = createFocusApp();
+    const a = focusable();
+    const b = focusable();
+
+    scene.root.addChild(a).addChild(b);
+    focus.focus(a);
+
+    const appMutable = app as unknown as { scenes: { _transitionGateOpen: boolean } };
+    appMutable.scenes._transitionGateOpen = true;
+
+    onKeyDown.dispatch(Keyboard.Tab);
+
+    // Same gate InteractionSystem._dispatchFrame applies to pointer frames -
+    // Tab must not move focus onto the outgoing scene's widgets mid-transition.
+    expect(focus.focused).toBe(a);
+
+    appMutable.scenes._transitionGateOpen = false;
+    onKeyDown.dispatch(Keyboard.Tab);
+
+    expect(focus.focused).toBe(b);
+  });
+
+  test('key events are ignored while the scene state is not Active', () => {
+    const { app, scene, focus, onKeyDown } = createFocusApp();
+    const a = focusable();
+
+    scene.root.addChild(a);
+    focus.focus(a);
+
+    const appMutable = app as unknown as { scenes: { state: SceneState | null } };
+    appMutable.scenes.state = SceneState.Suspended;
+
+    const handler = vi.fn();
+    a.onKeyDown.add(handler);
+    onKeyDown.dispatch(Keyboard.Enter);
+
+    expect(handler).not.toHaveBeenCalled();
   });
 
   test('focusPrevious() with nothing focused wraps to the last focusable node', () => {

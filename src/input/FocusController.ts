@@ -1,4 +1,5 @@
 import type { Application } from '#core/Application';
+import { SceneState } from '#core/scene/SceneState';
 import type { FocusHooks, Stage } from '#core/Stage';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -398,6 +399,14 @@ export class FocusController implements FocusHooks {
   }
 
   private _handleKeyDown(channel: number): void {
+    // Mirrors InteractionSystem._dispatchFrame's gate: a scene that is not
+    // Active, or one mid-transition, must not receive keys either - without
+    // this, Tab/Enter/Escape reach the outgoing scene's widgets even though a
+    // click on the same scene is already swallowed.
+    if (this._isGated()) {
+      return;
+    }
+
     if (channel === Keyboard.ShiftLeft || channel === Keyboard.ShiftRight) {
       this._shiftDown = true;
     }
@@ -427,6 +436,13 @@ export class FocusController implements FocusHooks {
     }
 
     this._handleDirectionalChannel(channel);
+  }
+
+  /** Same Active-scene + not-mid-transition gate {@link InteractionSystem} applies before dispatching a pointer frame. */
+  private _isGated(): boolean {
+    const state = this._app.scenes.state;
+
+    return (state !== null && state !== SceneState.Active) || this._app.scenes._transitionGateOpen;
   }
 
   /** Navigate for an arrow key or a D-pad button; any other channel is left alone. */
