@@ -145,6 +145,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   `Running` for a halted loop, and because both `start()` and `stop()`
   early-return on that state, the instance was permanently unusable. The
   promotion now happens only if the loop the run started is still the live one.
+- **A destroyed `Application` stays destroyed.** A `start()` that failed while
+  `destroy()` was running reset the state to `Stopped` from its own catch, and
+  because that continuation resumes after the teardown chain has finished,
+  `Stopped` was the last value written. `state` then lied about a destroyed
+  instance and `start()` accepted it, reinitializing an already-destroyed
+  backend and restarting the frame loop over released subsystems. `Destroying`
+  and `Destroyed` are now terminal - the only transition out of them is
+  `Destroying` to `Destroyed` - so a late startup failure cannot resurrect the
+  application and `start()` rejects as documented.
 
 ## [0.16.1] - 2026-09-02
 

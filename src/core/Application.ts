@@ -932,7 +932,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     // A binding that ran before the failing one holds a reference to this
     // half-built application. Marking it destroyed makes a later `start()` on
     // that reference fail loudly instead of running on torn-down subsystems.
-    this._state = ApplicationState.Destroyed;
+    this._setState(ApplicationState.Destroyed);
 
     const failures: unknown[] = [];
     const attempt = (step: () => void): void => {
@@ -1016,6 +1016,21 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   public get state(): ApplicationState {
     return this._state;
+  }
+
+  /**
+   * The single writer for {@link Application._state}. `Destroying` and
+   * `Destroyed` are terminal: the only transition out of them is
+   * `Destroying` -> `Destroyed`. Startup runs settle asynchronously and their
+   * failure path resets the state to `Stopped`, so without this a `start()`
+   * whose navigation was rejected by teardown's own abort would land after
+   * the teardown chain and resurrect a destroyed instance - `state` would
+   * report `Stopped` and `start()` would reinitialize a destroyed backend.
+   */
+  private _setState(next: ApplicationState): void {
+    const terminal = this._state === ApplicationState.Destroyed || (this._state === ApplicationState.Destroying && next !== ApplicationState.Destroyed);
+
+    if (!terminal) this._state = next;
   }
 
   public get startupSeconds(): Seconds {
@@ -1264,7 +1279,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       return this;
     }
 
-    this._state = ApplicationState.Loading;
+    this._setState(ApplicationState.Loading);
 
     // Published before the first await so a `start()` call made from the same
     // synchronous tick - or any point in the `Loading` window - finds it. The
@@ -1334,10 +1349,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // it and wrote its own state; promoting over that would advertise
       // `Running` for a loop that no longer schedules frames, and every later
       // `start()`/`stop()` would early-return on the lie.
-      if (this._frameLoopActive) this._state = ApplicationState.Running;
+      if (this._frameLoopActive) this._setState(ApplicationState.Running);
     } catch (error) {
       this._stopFrameLoop();
-      this._state = ApplicationState.Stopped;
+      this._setState(ApplicationState.Stopped);
       throw error;
     }
 
@@ -1558,7 +1573,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     if (fatal) {
       this._stopFrameLoop();
-      this._state = ApplicationState.Stopped;
+      this._setState(ApplicationState.Stopped);
       logger.error(`Frame loop halted after ${maxConsecutiveFrameErrors} consecutive frame errors.`, { source: 'core', error: normalized });
     }
   }
@@ -1649,9 +1664,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       return this;
     }
 
-    if (this._state === ApplicationState.Running) {
-      this._state = ApplicationState.Halting;
-    }
+    if (this._state === ApplicationState.Running) this._setState(ApplicationState.Halting);
 
     // One reason object for the one abort: `_stopFrameLoop()` performs it (it
     // has to - halting the loop strands a frame-driven session regardless of
@@ -1667,7 +1680,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
     });
 
-    this._state = ApplicationState.Stopped;
+    this._setState(ApplicationState.Stopped);
 
     return this;
   }
@@ -1985,14 +1998,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._releaseDom();
 
     if (this._frameLoopActive) {
-      if (this._state === ApplicationState.Running) {
-        this._state = ApplicationState.Halting;
-      }
+      if (this._state === ApplicationState.Running) this._setState(ApplicationState.Halting);
 
       this._stopFrameLoop();
     }
 
-    this._state = ApplicationState.Destroying;
+    this._setState(ApplicationState.Destroying);
 
     this._destroyPromise = this._disposeManagedResources()
       .catch((error: unknown) => {
@@ -2000,7 +2011,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
       })
       .then(() => {
-        this._state = ApplicationState.Destroyed;
+        this._setState(ApplicationState.Destroyed);
       });
 
     return this._destroyPromise;
