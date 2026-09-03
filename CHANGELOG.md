@@ -263,6 +263,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   transition back to CPU modules - so the next state staged that many records
   out of a freshly zeroed device buffer and every death module saw a
   zero-valued context, firing `SpawnOnDeath` sub-emitters at the origin.
+- **`RateSpawn` recovers from a negative rate sample.** A distribution that can
+  return a value below zero drove the accumulator down without bound, and the
+  emitter never spawned again. The sampled rate is clamped at zero.
 
 ## [0.16.1] - 2026-09-02
 

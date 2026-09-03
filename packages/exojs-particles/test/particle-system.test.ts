@@ -333,6 +333,28 @@ describe('SpawnModule', () => {
     expect(system.liveCount).toBeLessThanOrEqual(60);
   });
 
+  test('RateSpawn recovers from a negative rate sample instead of wedging', () => {
+    const system = new ParticleSystem(makeTexture(), { capacity: 64 });
+    let rate = -1000;
+
+    system.addSpawnModule(
+      new RateSpawn({
+        rate: { sample: () => rate },
+        lifetime: new Constant(10),
+      }),
+    );
+
+    // A distribution that dips below zero drives the accumulator down without
+    // bound, so a later positive rate would take minutes to climb back.
+    system.update(tick(1));
+    expect(system.liveCount).toBe(0);
+
+    rate = 10;
+    system.update(tick(1));
+
+    expect(system.liveCount).toBe(10);
+  });
+
   test('RateSpawn applies distributions to spawned particle fields', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 64 });
 
