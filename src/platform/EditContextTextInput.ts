@@ -84,6 +84,12 @@ export class EditContextTextInput implements PlatformTextInput {
   private _hints: PlatformTextInputHints = {};
   private _destroyed = false;
   private _claimingFocus = false;
+  /**
+   * Where the selection ended when the widget last mirrored it in - the caret
+   * a `textupdate` replaced. The event itself reports only the state after the
+   * update, which is the same for a backspace and a forward delete.
+   */
+  private _selectionEnd = 0;
 
   private readonly _textUpdate = (event: {
     updateRangeStart: number;
@@ -117,10 +123,12 @@ export class EditContextTextInput implements PlatformTextInput {
     }
 
     if (removed > 0) {
-      // Pure deletion. Direction follows which side of the caret the removed
-      // range sat on; granularity is always character - word/line deletes are
-      // intercepted by the widget key handler before they reach here.
-      const direction = event.updateRangeEnd === event.selectionEnd ? 'backward' : 'forward';
+      // Pure deletion. A platform collapses the selection to the START of the
+      // range it removed, so the post-update selection cannot say which side
+      // of the caret that range sat on - only the caret before the update can.
+      // Granularity is always character: word and line deletes are intercepted
+      // by the widget key handler before they reach here.
+      const direction = event.updateRangeEnd === this._selectionEnd ? 'backward' : 'forward';
 
       this._onEdit.dispatch({ kind: 'deleteContent', direction, granularity: 'character' });
 
@@ -314,6 +322,7 @@ export class EditContextTextInput implements PlatformTextInput {
 
     this._context.updateText(0, this._context.text.length, text);
     this._context.updateSelection(selectionStart, selectionEnd);
+    this._selectionEnd = selectionEnd;
   }
 
   public setBounds(rect: Rectangle): void {

@@ -316,6 +316,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   dead - no typing, no IME, no clipboard. The context is now attached through
   the element's own `editContext` property, on a plain focusable element, and
   detached when the transport is destroyed.
+- **Backspace deletes backwards under the `EditContext` backend.** The
+  direction of a deletion was derived from the selection the platform reports
+  _after_ the update, which it collapses to the start of the removed range - so
+  the test could never come out backward and every backspace deleted the
+  character after the caret. The direction now follows the caret the widget
+  last mirrored in, which is the only thing that separates a backspace from a
+  forward delete.
 
 ## [0.16.1] - 2026-09-02
 
