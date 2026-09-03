@@ -1177,6 +1177,11 @@ export class AssetResidency {
         }
       }
 
+      // The factory already built the resource before the unload could stop it,
+      // and nothing becomes resident here - so this is the only chance to free
+      // whatever it owns (a media element, a GPU upload).
+      this._typeRegistry.getInstalled(asset.type)?.factory.dispose?.(resource);
+
       return resource;
     }
 

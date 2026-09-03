@@ -116,6 +116,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   its family) and pinned for the loader's lifetime, and a released image never
   closed the `ImageBitmap` it had decoded. Only a bitmap the engine decoded
   itself is closed.
+- **An asset unloaded mid-fetch frees the resource its factory had already
+  built.** The store was skipped, as it must be, but the finished resource -
+  which for a video or a music stream owns a media element - was handed back
+  undisposed and stayed alive until the loader was torn down.
 
 ## [0.16.1] - 2026-09-02
 

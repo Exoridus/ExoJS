@@ -300,6 +300,24 @@ describe('AssetResidency', () => {
       expect(residency._peekResource(canonical(TypeA, 'a.png').key)).toBeNull();
     });
 
+    test('a resource built for a key unloaded mid-fetch is disposed, not just dropped', () => {
+      const dispose = vi.fn();
+      const { residency, typeRegistry, canonical } = createResidency();
+      const adapter = createFakeSeamlessAdapter();
+      installTypeA(typeRegistry, { leaf: adapter, dispose });
+
+      const resource = {};
+
+      residency._getSeamless(canonical(TypeA, 'a.png'), adapter);
+      residency._unloadOne(canonical(TypeA, 'a.png'));
+
+      residency._storeResource(canonical(TypeA, 'a.png'), resource);
+
+      // Nothing becomes resident on this path, so the factory's teardown is the
+      // only thing that can free a media element or a GPU upload it built.
+      expect(dispose).toHaveBeenCalledWith(resource);
+    });
+
     test('a rejected fetch dispatches onError with the failing type/alias/error (signals boundary)', async () => {
       const { cache, resolve } = createFakeCache();
       resolve.mockRejectedValueOnce(new Error('network down'));
