@@ -1,4 +1,5 @@
 import { Color } from '#core/Color';
+import { Signal } from '#core/Signal';
 import { KeyEvent } from '#input/KeyEvent';
 import { Keyboard } from '#input/types';
 import { Rectangle } from '#math/Rectangle';
@@ -50,6 +51,7 @@ const mockAtlas: Partial<GlyphAtlas> = {
   pages: [mockPage] as unknown as GlyphAtlas['pages'],
   mode: 'sdf',
   clear: vi.fn(),
+  onCleared: new Signal(),
 };
 const mockPool = { getAtlas: vi.fn(() => mockAtlas) };
 

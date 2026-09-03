@@ -7,6 +7,7 @@
  * directly with a populated scene graph.
  */
 
+import { Signal } from '#core/Signal';
 import type { Seconds } from '#core/units';
 import { Time } from '#core/units';
 import { PerformanceLayer } from '#debug/PerformanceLayer';
@@ -33,6 +34,7 @@ const fakeAtlas = {
   getGlyph: vi.fn(() => fakeGlyph),
   pages: [fakePage],
   clear: vi.fn(),
+  onCleared: new Signal(),
 };
 const fakePool = { getAtlas: vi.fn(() => fakeAtlas) };
 

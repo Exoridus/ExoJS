@@ -273,6 +273,16 @@ export class GlyphAtlas implements GlyphProvider {
    */
   public readonly onPageAdded = new Signal<[pageIndex: number]>();
 
+  /**
+   * Dispatched after {@link clear} discards every rasterized glyph and kerning
+   * entry. A node holding `GlyphInfo` from this atlas has to re-layout - its
+   * UVs still address the (now-repacked) pages, but the glyph that used to sit
+   * there is gone. {@link Text} listens on the atlas it currently draws from
+   * and re-lays out in response; a caller driving `GlyphAtlas` directly should
+   * do the same for anything it cached from {@link getGlyph}.
+   */
+  public readonly onCleared = new Signal();
+
   /** {@link GlyphSdf} instances keyed by RASTER font size - only used in SDF mode. */
   private readonly _sdfInstances = new Map<number, GlyphSdf>();
 
@@ -351,11 +361,14 @@ export class GlyphAtlas implements GlyphProvider {
     this._cache.clear();
     this._metrics.clear();
     this._sdfInstances.clear();
+    // Pages are reset in place, not discarded: a fresh page would own a new
+    // DataTexture/Texture (and GPU resource) while the old one leaks, and
+    // reuse needs nothing a fresh page would have had anyway - `reset()`
+    // already zeroes the raster content and rewinds the shelf packer.
     for (const page of this._pages) {
       page.reset();
     }
-    this._pages = [];
-    this._addPage();
+    this.onCleared.dispatch();
   }
 
   // ── Private ──────────────────────────────────────────────────────────────

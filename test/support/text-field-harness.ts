@@ -49,6 +49,7 @@ const mockAtlas: Partial<GlyphAtlas> = {
   pages: [mockPage] as unknown as GlyphAtlas['pages'],
   mode: 'sdf',
   clear: vi.fn(),
+  onCleared: new Signal(),
 };
 const mockPool = { getAtlas: vi.fn(() => mockAtlas) };
 

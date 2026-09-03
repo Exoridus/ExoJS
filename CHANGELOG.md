@@ -348,6 +348,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   carried: any second touch moved every widget already being dragged, and
   lifting either finger ended all of them. Each drag now records the contact
   that started it and ignores the rest.
+- **`GlyphAtlas.clear()` no longer leaks pages or leaves other nodes drawing
+  stale glyphs.** It discarded every `AtlasPage` (and the GPU texture behind
+  it) and rebuilt a single fresh one, and nothing told a node sharing the
+  atlas that its cached UVs now addressed a different, repacked layout - only
+  the node that happened to call `clear()` re-laid out. Pages are now reset in
+  place instead of discarded, and every node drawing from the atlas re-lays
+  out. A loaded `FontFace` also used to clear only the one raster-density atlas
+  the node's surface ratio resolved to at that moment, which could be the
+  wrong one; it now clears every pixel-ratio and mode variant of the font
+  variant.
 
 ## [0.16.1] - 2026-09-02
 

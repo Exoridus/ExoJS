@@ -145,6 +145,50 @@ describe('GlyphAtlas', () => {
     expect(info2).not.toBe(info1);
   });
 
+  test('clear() reuses the existing AtlasPage instances instead of discarding them', () => {
+    const wideCtx = makeMockCtx({
+      measureText: () =>
+        ({
+          width: 60,
+          actualBoundingBoxLeft: 0,
+          actualBoundingBoxRight: 59,
+          actualBoundingBoxAscent: 28,
+          actualBoundingBoxDescent: 8,
+          fontBoundingBoxAscent: 30,
+          fontBoundingBoxDescent: 10,
+        }) as TextMetrics,
+    });
+    installMockCtx(wideCtx);
+
+    const atlas = new GlyphAtlas('serif', 'normal', 'normal', 64, 'color');
+
+    for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+      atlas.getGlyph(ch, 28);
+    }
+
+    const pageCountBefore = atlas.pages.length;
+    expect(pageCountBefore).toBeGreaterThan(1);
+    const pagesBefore = [...atlas.pages];
+
+    atlas.clear();
+
+    // A discard-and-recreate implementation drops back to one fresh page
+    // (and leaks the GPU texture behind every discarded one); reuse keeps
+    // every page - same instances, same count, just emptied.
+    expect(atlas.pages).toHaveLength(pageCountBefore);
+    expect([...atlas.pages]).toEqual(pagesBefore);
+  });
+
+  test('clear() dispatches onCleared so nodes holding stale GlyphInfo can re-layout', () => {
+    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 1024, 'color');
+    const listener = vi.fn();
+
+    atlas.onCleared.add(listener);
+    atlas.clear();
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
   test('texture version increments on each new glyph insertion', () => {
     const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 1024, 'color');
     const v0 = atlas.pages[0].texture.version;

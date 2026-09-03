@@ -8,6 +8,7 @@ import { Prefab } from '#core/serialization/Prefab';
 import { defaultSerializationRegistry, registerSerializer, SerializationRegistry } from '#core/serialization/SerializationRegistry';
 import { _resetDefaultSerializers, deserializeTree, serializeTree } from '#core/serialization/serialize';
 import { SERIALIZATION_VERSION, type SerializedNode } from '#core/serialization/types';
+import { Signal } from '#core/Signal';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Mesh } from '#rendering/mesh/Mesh';
@@ -70,6 +71,7 @@ const mockAtlas: Partial<GlyphAtlas> = {
   pages: [mockPage] as unknown as GlyphAtlas['pages'],
   mode: 'sdf',
   clear: vi.fn(),
+  onCleared: new Signal(),
 };
 const mockPool = { getAtlas: vi.fn(() => mockAtlas) };
 
