@@ -193,3 +193,48 @@ describe('SystemRegistry.destroy() — a throwing system cannot strand the rest'
     expect(reported[0]).toMatch(/SystemRegistry\.destroy\(\)/);
   });
 });
+
+describe('SystemRegistry frame-scoped mutations', () => {
+  test('re-adding a system removed earlier in the same frame keeps it registered', () => {
+    const registry = new SystemRegistry();
+    const log: string[] = [];
+    const system = makeSystem(log, 'a');
+
+    registry.add(system);
+    tick(registry);
+
+    registry._beginFrame();
+    expect(registry.remove(system)).toBe(true);
+    registry.add(system);
+    registry._endFrame();
+
+    // The queued removal drains at the frame boundary, so a re-add that
+    // resolved to add()'s duplicate no-op left nothing behind at all.
+    expect(registry.has(system)).toBe(true);
+
+    tick(registry);
+
+    expect(log).toEqual(['a', 'a']);
+  });
+
+  test('a re-add inside the same frame takes the order the new call asks for', () => {
+    const registry = new SystemRegistry();
+    const log: string[] = [];
+    const first = makeSystem(log, 'first', 10);
+    const second = makeSystem(log, 'second', 20);
+
+    registry.add(first);
+    registry.add(second);
+    tick(registry);
+
+    registry._beginFrame();
+    registry.remove(first);
+    registry.add(first, { order: 30 });
+    registry._endFrame();
+
+    log.length = 0;
+    tick(registry);
+
+    expect(log).toEqual(['second', 'first']);
+  });
+});

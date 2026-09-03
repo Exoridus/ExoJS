@@ -193,7 +193,8 @@ const removeRegistration = (list: SystemRegistration[], registration: SystemRegi
  * any phase. Removing a system during a callback marks it inactive
  * immediately, so it is skipped by every later phase and every later fixed
  * step in the *same* frame; the structural delete and the single {@link
- * SystemRegistry.onRemove} dispatch are finalized at the frame boundary.
+ * SystemRegistry.onRemove} dispatch are finalized at the frame boundary,
+ * or at once if the same system is added again before that boundary.
  * Outside a frame - before the first {@link SystemRegistry._beginFrame} or
  * after its matching {@link SystemRegistry._endFrame} - `add()`/`remove()`
  * apply immediately.
@@ -226,10 +227,32 @@ export class SystemRegistry implements Destroyable {
    * Register `system`, returning it unchanged for fluent capture
    * (`const world = app.systems.add(new PhysicsWorld())`). Adding the same
    * object twice is a no-op. See the class docs for buffering timing.
+   *
+   * Re-adding a system removed earlier in the same frame is not that no-op: it
+   * cancels the pending removal and registers the system again with this
+   * call's options, which is how a system changes its own order or phase
+   * selection from inside a callback. The re-registration is buffered like any
+   * other, so the system runs again from the next frame on.
    */
   public add<T extends System>(system: T, options?: SystemRegistrationOptions): T {
-    if (this._registrations.has(system) || this._pendingAdds.has(system)) {
+    if (this._pendingAdds.has(system)) {
       return system;
+    }
+
+    const existing = this._registrations.get(system);
+
+    if (existing !== undefined) {
+      if (existing.active) {
+        return system;
+      }
+
+      // Removed earlier in this frame. Falling through to the duplicate no-op
+      // above would leave the queued removal to drain at the frame boundary
+      // and delete the registration this call just asked for. Finalizing it
+      // here instead is also what lets the new options take effect: a
+      // registration's order and phase membership are fixed at insertion.
+      this._dropPendingRemoval(existing);
+      this._finalizeRemoval(existing);
     }
 
     if (this._frameActive) {
@@ -503,6 +526,15 @@ export class SystemRegistry implements Destroyable {
     }
 
     this.onAdd.dispatch(system);
+  }
+
+  /** Drop a queued removal so the frame boundary does not finalize it a second time. */
+  private _dropPendingRemoval(registration: SystemRegistration): void {
+    const index = this._pending.findIndex(mutation => !isPendingAdd(mutation) && mutation.registration === registration);
+
+    if (index !== -1) {
+      this._pending.splice(index, 1);
+    }
   }
 
   private _finalizeRemoval(registration: SystemRegistration): void {

@@ -173,6 +173,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   generation now drops its references, and a node releases its entry when it is
   destroyed, which is what leaves nothing pinned once `Application.destroy()`
   has stopped advancing the index.
+- **A system removed and added back inside the same frame stays registered.**
+  `remove()` marks a registration inactive and queues the structural delete for
+  the frame boundary, but left it in the registry - so the `add()` that
+  followed hit the duplicate-registration no-op, and the queued removal then
+  deleted the system at the end of the frame with no error anywhere. The
+  pattern is what a system re-registering itself to change its order or phase
+  does, and it silently lost the system. `add()` now cancels a pending removal
+  and re-registers with the options that call asks for.
 
 ## [0.16.1] - 2026-09-02
 
