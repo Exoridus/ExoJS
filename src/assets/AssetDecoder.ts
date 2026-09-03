@@ -367,7 +367,7 @@ export class AssetDecoder {
    * differently from the same entry fetched over the network.
    * @internal
    */
-  public async _injectSource(asset: CanonicalAsset, bytes: ArrayBuffer, scope: LoaderScope, options?: unknown): Promise<void> {
+  public async _injectSource(asset: CanonicalAsset, bytes: ArrayBuffer, scope: LoaderScope, options?: unknown): Promise<unknown> {
     const installed = this._typeRegistry.getInstalled(asset.type);
 
     if (installed === undefined) {
@@ -384,7 +384,10 @@ export class AssetDecoder {
     const context: SourceCodecContext = { locator: asset.locator, signal: undefined };
     const source = await codec.decode(await codec.fromBytes(bytes, context), context);
 
-    this._storeResource(asset, await factory.create(source, this._factoryContext(asset, scope, options)));
+    // Returns what the store hands back, exactly as the network path does: a
+    // concurrent get()/load() joins this work through the in-flight entry its
+    // caller registers, and must see the resource, not the injection's void.
+    return this._storeResource(asset, await factory.create(source, this._factoryContext(asset, scope, options)));
   }
 
   /**

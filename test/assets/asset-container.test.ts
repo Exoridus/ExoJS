@@ -5,6 +5,8 @@ import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { materializeAssetTypes } from '#extensions/materialize';
 
+import { testAssetType } from './test-asset-type';
+
 const utf8 = (text: string): Uint8Array => new TextEncoder().encode(text);
 
 const createCoreLoader = (): Loader => {
@@ -292,6 +294,69 @@ describe('Loader.loadContainer', () => {
     const loader = createCoreLoader();
 
     await expect(loader.loadContainer('x.exoa')).rejects.toThrow(/unknown asset type "nonsense"/);
+  });
+
+  test('a load reaching an entry mid-unpack joins it instead of fetching it again', async () => {
+    class Gated {}
+
+    let entered!: () => void;
+    let release!: () => void;
+    const enteredCreate = new Promise<void>(resolve => (entered = resolve));
+    const gate = new Promise<void>(resolve => (release = resolve));
+
+    const container = encodeContainer([{ source: 'level.gated', type: 'gated', bytes: utf8('from-container') }]);
+    const fetchSpy = mockContainerFetch(container);
+    const loader = createCoreLoader();
+
+    loader._installAssetTypes([
+      testAssetType<string, { body: string }>({
+        id: 'gated',
+        token: Gated,
+        extensions: ['gated'],
+        create: async source => {
+          entered();
+          await gate;
+
+          return { body: source };
+        },
+      }),
+    ]);
+
+    const unpacking = loader.loadContainer('pack.exoa');
+
+    await enteredCreate;
+
+    // The container is parsed and the entry is being built, but nothing is
+    // stored yet - the window in which the key used to look completely unknown.
+    const joined = loader.load(Asset.type('gated' as never, 'level.gated'));
+
+    release();
+    await unpacking;
+
+    // One request, for the container itself: the load joined the unpack rather
+    // than starting a competing acquisition whose payload would overwrite it.
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    await expect(joined).resolves.toEqual({ body: 'from-container' });
+    expect(loader.peek(Asset.type('gated' as never, 'level.gated'))).toEqual({ body: 'from-container' });
+  });
+
+  test('a container that fails while unpacking leaves nothing claimed', async () => {
+    const container = encodeContainer([
+      { source: 'ok.json', type: 'json', bytes: utf8('{"ok":true}') },
+      { source: 'broken.json', type: 'json', bytes: utf8('{not json') },
+    ]);
+    mockContainerFetch(container);
+
+    const loader = createCoreLoader();
+
+    loader.onError.add(() => undefined);
+
+    await expect(loader.loadContainer('pack.exoa')).rejects.toThrow();
+
+    // The caller never receives the scope that claimed the entries, so a claim
+    // surviving the failure could never be released.
+    expect(loader.inspect()).toHaveLength(0);
+    expect(loader.peek('ok.json')).toBeUndefined();
   });
 
   test('throws on a malformed container', async () => {

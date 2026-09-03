@@ -502,7 +502,16 @@ export class Loader {
   public async loadContainer(url: string): Promise<LoaderScope> {
     const scope = new LoaderScope(this, 'container', `container:${url}`);
 
-    await this._loadContainerInto(scope, url);
+    try {
+      await this._loadContainerInto(scope, url);
+    } catch (error: unknown) {
+      // The scope never reaches the caller on this path, so every claim the
+      // unpack already registered would stay held for the loader's lifetime
+      // with nothing able to release it.
+      scope.destroy();
+
+      throw error;
+    }
 
     return scope;
   }
@@ -534,16 +543,33 @@ export class Loader {
     // network) is claimed above and nothing more: unpacking it again would build
     // a second payload for one identity, and for a resource that owns a device
     // or a media element the loser would never be released.
-    const pending = resolved
-      .filter(({ asset }) => !this._residency._isMaterializing(asset.key))
-      .map(({ entry, asset }) => {
-        const start = dataStart + entry.offset;
-        const slice = buffer.slice(start, start + entry.length);
+    //
+    // Each injection registers as in-flight before the next entry is examined,
+    // so a get()/load() reaching the same source mid-unpack joins the unpack
+    // rather than racing it with a fetch of its own.
+    const pending: Array<Promise<unknown>> = [];
 
-        return this._decoder._injectSource(asset, slice, this._residency._dependencyScopeFor(asset), entry.options);
-      });
+    for (const { entry, asset } of resolved) {
+      if (this._residency._isMaterializing(asset.key)) {
+        continue;
+      }
 
-    await Promise.all(pending);
+      const start = dataStart + entry.offset;
+      const slice = buffer.slice(start, start + entry.length);
+      const injection = this._decoder._injectSource(asset, slice, this._residency._dependencyScopeFor(asset), entry.options);
+
+      pending.push(this._residency._trackInjection(asset, injection));
+    }
+
+    // Every injection is awaited, not just the ones before the first failure: an
+    // entry that lands after the caller has already abandoned the container
+    // would be resident with no owner left to release it.
+    const settled = await Promise.allSettled(pending);
+    const failed = settled.find(result => result.status === 'rejected');
+
+    if (failed !== undefined) {
+      throw failed.reason;
+    }
   }
 
   // -----------------------------------------------------------------------

@@ -968,6 +968,21 @@ export class AssetResidency {
   }
 
   /**
+   * Place work that materializes `asset` without a fetch - a container unpack -
+   * under the same in-flight identity a network load takes.
+   *
+   * Until the resource is stored, an untracked injection leaves the key looking
+   * completely unknown, so a `get()`/`load()` of the same source starts a
+   * competing acquisition whose payload overwrites the container's. Tracking it
+   * makes that caller join this work instead, which is what the container's
+   * "one identity, one payload" contract requires.
+   * @internal
+   */
+  public _trackInjection(asset: CanonicalAsset, injection: Promise<unknown>): Promise<unknown> {
+    return this._trackInFlight(asset, injection);
+  }
+
+  /**
    * The scope a key's sub-asset loads claim under. One per key, reused across
    * retries so a second attempt does not strand the first attempt's claims, and
    * destroyed with the key itself.

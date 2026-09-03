@@ -92,6 +92,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   teardown, a cancelled load) also left the queue counted as unfinished
   forever, so a lone awaiting caller hung and `onProgress` stayed below its
   total. Both now settle.
+- **A `get()` or `load()` reaching a source while its container is unpacking
+  joins the unpack.** An unpack registered no in-flight identity, so for the
+  whole window between parsing the index and storing a payload the key looked
+  unknown to the loader and a concurrent acquisition of the same source started
+  a second, competing fetch whose payload overwrote the container's. Which one
+  a consumer saw was timing-dependent, and the loser - a texture upload, a
+  media element - was never released.
+- **A container that fails while unpacking releases what it already claimed.**
+  `Loader.loadContainer` claims every entry up front and only then builds them,
+  but a failure rejected without ever handing the caller the scope holding
+  those claims, so every entry of a failed container stayed resident for the
+  loader's lifetime with no owner able to free it.
 
 ## [0.16.1] - 2026-09-02
 
