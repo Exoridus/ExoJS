@@ -2,9 +2,12 @@ import type { MockInstance } from 'vitest';
 
 /**
  * Lifecycle guards around teardown: the terminal states must stay terminal
- * whatever a startup run that is still in flight goes on to write.
+ * whatever a startup run that is still in flight goes on to write, and
+ * teardown must not release a subsystem out from under a navigation that is
+ * still running.
  */
 import { Application, ApplicationState } from '#core/Application';
+import { Scene } from '#core/scene/Scene';
 
 const backendControl = vi.hoisted(() => ({
   initialize: (): Promise<void> => Promise.resolve(),
@@ -106,5 +109,63 @@ describe('Application lifecycle guards', () => {
     // that would resurrect it and let start() reinitialize a destroyed backend.
     expect(app.state).toBe(ApplicationState.Destroyed);
     await expect(app.start()).rejects.toThrow(/after destroy/);
+  });
+
+  test('destroy() waits for a navigation in flight before releasing the subsystems', async () => {
+    const events: string[] = [];
+    let releaseLoad: () => void = () => {};
+
+    class FirstScene extends Scene {}
+
+    class IncomingScene extends Scene {
+      public override load(): Promise<void> {
+        return new Promise<void>(resolve => {
+          releaseLoad = resolve;
+        });
+      }
+
+      public override init(): void {
+        events.push('incoming.init');
+      }
+
+      public override unload(): void {
+        events.push('incoming.unload');
+      }
+
+      public override destroy(): void {
+        events.push('incoming.destroy');
+      }
+    }
+
+    const app = new Application({ backend: { type: 'webgl2' }, scenes: { first: FirstScene, incoming: IncomingScene } });
+
+    await app.start(FirstScene);
+
+    const changePromise = app.scenes.change(IncomingScene).catch(() => undefined);
+
+    await flush(5);
+
+    let destroySettled = false;
+    const destroyPromise = app.destroy().then(() => {
+      events.push('destroy settled');
+      destroySettled = true;
+    });
+
+    await flush(50);
+
+    // The decisive line: teardown cannot be over while the incoming scene is
+    // still inside load(), because everything that scene is about to touch is
+    // released the moment it is.
+    expect(destroySettled).toBe(false);
+
+    releaseLoad();
+
+    await destroyPromise;
+    await changePromise;
+    await flush(20);
+
+    expect(events.indexOf('incoming.init')).toBeGreaterThanOrEqual(0);
+    expect(events.indexOf('incoming.init')).toBeLessThan(events.indexOf('destroy settled'));
+    expect(events.indexOf('incoming.destroy')).toBeLessThan(events.indexOf('destroy settled'));
   });
 });

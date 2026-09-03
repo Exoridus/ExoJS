@@ -154,6 +154,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   and `Destroyed` are now terminal - the only transition out of them is
   `Destroying` to `Destroyed` - so a late startup failure cannot resurrect the
   application and `start()` rejects as documented.
+- **`Application.destroy()` waits for a scene navigation that is still in
+  flight.** `destroy()` documents that `scenes` is fully disposed before the
+  Loader, rendering context, audio system and backend are released, but a
+  `change()`/`restore()` (or the initial `start(Target)` navigation) still
+  inside `load()` was tracked by nothing the disposal awaited: aborting it only
+  invalidated its generation, so the incoming scene went on to run `init()`,
+  `unload()` and `destroy()` after teardown had finished, against subsystems
+  that no longer existed. The disposal now awaits the run it just aborted, the
+  same way it already awaits a preload. A scene whose `load()` never settles is
+  bounded by `destroy()`'s existing teardown grace period.
 
 ## [0.16.1] - 2026-09-02
 
