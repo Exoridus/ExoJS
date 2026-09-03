@@ -233,6 +233,12 @@ export class InputSystem {
   private readonly gestureRecognizer: GestureRecognizer;
 
   private canvasFocusedValue: boolean;
+  /**
+   * Set while the surface's blur was suppressed because an engine-owned text
+   * transport took host focus. The transport can lose that focus to a foreign
+   * element without any event of ours firing, so the gate re-checks it.
+   */
+  private focusLentToTextInput = false;
   private pointerDistanceThreshold: number;
   private readonly allowNativeContextMenu: boolean;
   private readonly allowTextSelection: boolean;
@@ -425,6 +431,14 @@ export class InputSystem {
     return false;
   }
 
+  /**
+   * Whether keyboard input is currently routed to this application. Keyboard
+   * and wheel events are gated on it.
+   *
+   * A focused text field keeps it `true`: its platform transport takes host
+   * focus away from the canvas element, but focus never leaves the
+   * application.
+   */
   public get canvasFocused(): boolean {
     return this.canvasFocusedValue;
   }
@@ -1004,7 +1018,7 @@ export class InputSystem {
    * suppressed while it is held.
    */
   private handleKeyDown(event: PlatformKeyboardEvent): void {
-    if (!this.canvasFocusedValue) {
+    if (!this._keyboardFocused()) {
       return;
     }
 
@@ -1045,7 +1059,7 @@ export class InputSystem {
    * clear {@link Keyboard.Control} - see {@link keyboardModifierChannelInfo}.
    */
   private handleKeyUp(event: PlatformKeyboardEvent): void {
-    if (!this.canvasFocusedValue) {
+    if (!this._keyboardFocused()) {
       return;
     }
 
@@ -1128,7 +1142,9 @@ export class InputSystem {
 
   private handlePointerDown(event: PlatformPointerEvent): void {
     this.platform.focusSurface();
-    this.canvasFocusedValue = true;
+    // A host that refuses the surface focus raises no focus event of its own,
+    // so the press is the only place the change can be reported from.
+    this._setCanvasFocused(true);
 
     const pointer = this.pointers.get(event.pointerId);
 
@@ -1258,7 +1274,7 @@ export class InputSystem {
   }
 
   private handleMouseWheel(event: PlatformWheelEvent): void {
-    if (!this.canvasFocusedValue) {
+    if (!this._keyboardFocused()) {
       return;
     }
 
@@ -1274,27 +1290,62 @@ export class InputSystem {
     stopEvent(event);
   }
 
-  private handleCanvasFocus(): void {
-    if (!this.canvasFocusedValue) {
-      this.canvasFocusedValue = true;
-      this.onCanvasFocusChange.dispatch(true);
+  /**
+   * Whether host keyboard input belongs to this application right now. The
+   * surface holding focus is the usual case; an engine-owned text transport
+   * holding it instead - which is what a focused text field does - counts just
+   * as much, since focus never left the application.
+   */
+  private _keyboardFocused(): boolean {
+    if (this.platform.textInputFocused) {
+      return true;
     }
+
+    if (this.focusLentToTextInput) {
+      // The transport that borrowed focus no longer holds it, and the surface
+      // blur it caused was suppressed at the time: focus left the application
+      // without an event of its own to report it.
+      this._setCanvasFocused(false);
+    }
+
+    return this.canvasFocusedValue;
+  }
+
+  private _setCanvasFocused(focused: boolean): void {
+    this.focusLentToTextInput = false;
+
+    if (this.canvasFocusedValue === focused) {
+      return;
+    }
+
+    this.canvasFocusedValue = focused;
+
+    if (!focused) {
+      this.releaseAllKeyboardChannels();
+    }
+
+    this.onCanvasFocusChange.dispatch(focused);
+  }
+
+  private handleCanvasFocus(): void {
+    this._setCanvasFocused(true);
   }
 
   private handleCanvasBlur(): void {
-    if (this.canvasFocusedValue) {
-      this.canvasFocusedValue = false;
-      this.releaseAllKeyboardChannels();
-      this.onCanvasFocusChange.dispatch(false);
+    if (this.platform.textInputFocused) {
+      // Focusing a text field moves host focus to the transport, which blurs
+      // the surface. Keyboard focus stays inside the application, so held keys
+      // stay held and no focus change is reported.
+      this.focusLentToTextInput = true;
+
+      return;
     }
+
+    this._setCanvasFocused(false);
   }
 
   private handleWindowBlur(): void {
-    if (this.canvasFocusedValue) {
-      this.canvasFocusedValue = false;
-      this.releaseAllKeyboardChannels();
-      this.onCanvasFocusChange.dispatch(false);
-    }
+    this._setCanvasFocused(false);
   }
 
   private releaseAllKeyboardChannels(): void {
@@ -1318,12 +1369,17 @@ export class InputSystem {
   private addEventListeners(): void {
     const active = { capture: true, passive: false };
     const passive = { capture: true, passive: true };
+    // Window blur is the only listener that must NOT capture: a capturing
+    // window listener also sees every element's own blur on its way down, so
+    // the surface losing focus to a text transport would arrive here as if the
+    // host window itself had gone away.
+    const windowTargeted = { capture: false, passive: false };
     const { platform, listeners } = this;
 
     listeners.push(
       platform.onWindowEvent('keydown', event => this.handleKeyDown(event), active),
       platform.onWindowEvent('keyup', event => this.handleKeyUp(event), active),
-      platform.onWindowEvent('blur', () => this.handleWindowBlur(), active),
+      platform.onWindowEvent('blur', () => this.handleWindowBlur(), windowTargeted),
       platform.onSurfaceEvent('focus', () => this.handleCanvasFocus(), active),
       platform.onSurfaceEvent('blur', () => this.handleCanvasBlur(), active),
       platform.onSurfaceEvent('wheel', event => this.handleMouseWheel(event), active),

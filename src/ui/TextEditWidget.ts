@@ -104,6 +104,16 @@ export abstract class TextEditWidget extends Widget {
   private _lastPressY = 0;
   private _shiftDown = false;
   private _controlDown = false;
+  /**
+   * Mutations the transport already reported for a keystroke whose engine key
+   * event has not been dispatched yet. A host turns one physical key into a
+   * semantic edit synchronously, while the engine dispatches its key event at
+   * the next frame boundary, so the widget sees the same Backspace or Enter
+   * twice and must apply it once. Counters rather than flags: several
+   * keystrokes can land inside a single frame.
+   */
+  private _hostDeletes = 0;
+  private _hostLineBreaks = 0;
 
   private readonly _onFrame = (delta: Seconds): void => {
     if (this._blinkApp?.scenes.currentScene?.paused === true) {
@@ -219,7 +229,9 @@ export abstract class TextEditWidget extends Widget {
       event.preventDefault();
 
       if (this.model.multiline) {
-        if (!this._readOnly && this.model.insert('\n')) {
+        if (this._hostLineBreaks > 0) {
+          this._hostLineBreaks--;
+        } else if (!this._readOnly && this.model.insert('\n')) {
           this._afterModelChange();
         }
 
@@ -285,14 +297,10 @@ export abstract class TextEditWidget extends Widget {
         this.model.moveCaret('forward', 'line', extend);
         return true;
       case Keyboard.Backspace:
-        if (!this._readOnly) {
-          this.model.deleteContent('backward', _deleteGranularity(word, line));
-        }
+        this._deleteContent('backward', word, line);
         return true;
       case Keyboard.Delete:
-        if (!this._readOnly) {
-          this.model.deleteContent('forward', _deleteGranularity(word, line));
-        }
+        this._deleteContent('forward', word, line);
         return true;
       default:
         return this._applyShortcut(channel);
@@ -531,6 +539,8 @@ export abstract class TextEditWidget extends Widget {
 
   private _loseEditFocus(): void {
     this._stopBlink();
+    this._hostDeletes = 0;
+    this._hostLineBreaks = 0;
     this._seam?.blur();
     this.model.setComposition(null);
     this._invalidatePaint();
@@ -571,6 +581,24 @@ export abstract class TextEditWidget extends Widget {
     });
   }
 
+  /**
+   * Apply the delete a keystroke asks for, unless the transport already
+   * reported the same one - see {@link TextEditWidget._hostDeletes}.
+   */
+  private _deleteContent(direction: 'backward' | 'forward', word: boolean, line: boolean): void {
+    if (this._readOnly) {
+      return;
+    }
+
+    if (this._hostDeletes > 0) {
+      this._hostDeletes--;
+
+      return;
+    }
+
+    this.model.deleteContent(direction, _deleteGranularity(word, line));
+  }
+
   private _applyIntent(intent: TextEditIntent): void {
     this._goalX = null;
 
@@ -581,9 +609,14 @@ export abstract class TextEditWidget extends Widget {
     switch (intent.kind) {
       case 'insert':
         this.model.insert(intent.text, 'input');
+
+        if (intent.text === '\n') {
+          this._hostLineBreaks++;
+        }
         break;
       case 'deleteContent':
         this.model.deleteContent(intent.direction, intent.granularity);
+        this._hostDeletes++;
         break;
       case 'historyUndo':
         this.model.undo();

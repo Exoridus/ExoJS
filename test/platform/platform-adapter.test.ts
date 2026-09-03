@@ -62,6 +62,7 @@ const createRecordingPlatform = (): PlatformAdapter & {
     networkHint: 'online' as NetworkHint,
 
     surfaceFocused: false,
+    textInputFocused: false,
     get documentVisible(): boolean {
       return this.visible;
     },

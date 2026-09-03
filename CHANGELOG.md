@@ -292,6 +292,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   pipeline creation at the first `update()`, while WebGL2 ran the same scene.
   `@codexo/exojs-particles` now throws `ParticleModuleKeyCollisionError` naming
   both modules and the key, before the device is asked to build anything.
+- **A focused text field no longer blanks the keyboard and wheel pipeline.**
+  Focusing a field hands host focus to the platform's own text transport, which
+  blurs the canvas - and keyboard and wheel input were gated on the canvas
+  element holding focus alone. Every editing key the widget owns (caret motion,
+  Home/End, selection extension, `Escape`, `Ctrl+A`, `Ctrl+Z`/`Y`, `Enter` in a
+  single-line field) and all wheel scrolling were dead for as long as any field
+  was focused, and the held keys of a running game were released. The gate now
+  treats an engine-owned transport holding host focus as the application
+  holding it, and closes again when focus really leaves - including to a
+  foreign element of the embedding page. Leaving a field hands host focus back
+  to the surface rather than dropping it on the document. A transport that
+  reports an edit for a keystroke the widget also handles (Backspace, Delete,
+  and `Enter` in a multi-line field) now applies it once instead of twice.
+  `app.input.canvasFocused` and `onCanvasFocusChange` mean "this application
+  holds keyboard focus"; a press on a surface the host refuses focus for
+  reports the change instead of flipping the flag silently.
 
 ## [0.16.1] - 2026-09-02
 

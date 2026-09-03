@@ -70,6 +70,9 @@ export class OffscreenPlatform implements PlatformAdapter {
   private readonly _requestFrame: ((callback: (timestamp: number) => void) => number) | null;
   private readonly _cancelFrame: ((handle: number) => void) | null;
 
+  /** Always `false`: this adapter has no text transport that could hold host focus. */
+  public readonly textInputFocused = false;
+
   private _rect: OffscreenSurfaceRect;
   private _gamepads: ReadonlyArray<BrowserGamepad | null> = noGamepads;
   private _visible = true;

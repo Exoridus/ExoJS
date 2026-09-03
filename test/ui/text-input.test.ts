@@ -204,6 +204,28 @@ describe('TextInput', () => {
     expect(copy.defaultPrevented).toBe(false);
   });
 
+  test('a Backspace the transport already applied is not applied a second time', () => {
+    const harness = createUIApp();
+    const field = new TextInput({ width: 200, height: 36 });
+
+    harness.scene.ui.addChild(field);
+    press(harness, 5, 18);
+    type('abc');
+
+    // What one physical Backspace produces in a browser: the host's semantic
+    // edit first, the engine's key event at the next frame boundary.
+    fireBeforeInput('deleteContentBackward');
+    harness.signals.onKeyDown.dispatch(Keyboard.Backspace);
+
+    expect(field.value).toBe('ab');
+
+    // A keystroke the transport did not report still edits - a host that
+    // reports no edit of its own leaves the key handler in charge.
+    harness.signals.onKeyDown.dispatch(Keyboard.Backspace);
+
+    expect(field.value).toBe('a');
+  });
+
   test('a null seam leaves the field visible and focused but not editable', () => {
     const platform = new BrowserPlatform(document.createElement('canvas'));
 

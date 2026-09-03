@@ -87,6 +87,7 @@ const createRecordingPlatform = (): PlatformAdapter & {
       return networkListeners.size;
     },
     surfaceFocused: false,
+    textInputFocused: false,
     documentVisible: true,
     networkHint: 'online',
     focusSurface: () => undefined,

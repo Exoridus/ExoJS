@@ -48,6 +48,7 @@ type WindowListener = (event: never) => void;
  */
 class FakePlatformAdapter implements PlatformAdapter {
   public surfaceFocused = false;
+  public readonly textInputFocused = false;
   public readonly documentVisible = true;
   public readonly networkHint = 'online' as const;
   private readonly _metrics: PlatformSurfaceMetrics;

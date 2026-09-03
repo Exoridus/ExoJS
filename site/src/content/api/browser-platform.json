@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 21,
+  "memberCount": 22,
   "counts": {
     "constructors": 1,
     "methods": 16,
-    "properties": 4,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -1065,6 +1065,27 @@
           "params": [],
           "returnType": null,
           "description": "Whether the drawing surface currently holds host focus."
+        },
+        {
+          "name": "textInputFocused",
+          "signature": "textInputFocused: boolean",
+          "signatureTokens": [
+            {
+              "text": "textInputFocused",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether a text transport this adapter created currently holds host keyboard focus - a focused text field, whose transport necessarily takes focus away from the drawing surface. Host focus on anything else, including a foreign element of the embedding page, is not this. The input pipeline reads it to tell \"focus moved inside the application\" from \"focus left it\", so an adapter that reports it too liberally makes the application swallow keys meant for the page."
         }
       ],
       "paragraphs": [],
