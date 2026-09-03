@@ -15,7 +15,10 @@ export type { BmFontChar, BmFontData } from './BmFont';
 
 // ── BitmapTextOptions ─────────────────────────────────────────────────────────
 
-export interface BitmapTextOptions extends TextStyleOptions {
+// `fontSize` is omitted: a BitmapText draws from a pre-baked atlas at whatever
+// size it was generated at, so the option would type-check and silently do
+// nothing - `scale` is the control that actually resizes the glyphs.
+export interface BitmapTextOptions extends Omit<TextStyleOptions, 'fontSize'> {
   /** Scale applied uniformly to all glyph metrics. Defaults to 1. */
   scale?: number;
   /**

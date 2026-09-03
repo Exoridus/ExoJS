@@ -392,6 +392,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   `InputToken`, so a custom mapping using one made `serialize()` and
   `conflicts()` throw a bare error at the worst possible moment. The type now
   only admits the 24 named, serializable channels.
+- **`BitmapText` no longer accepts a `fontSize` option it silently ignores.**
+  A `BitmapText` draws from a pre-baked atlas at whatever size it was
+  generated at - `scale` is the option that actually resizes it. `fontSize` is
+  now omitted from its options type.
 
 ## [0.16.1] - 2026-09-02
 

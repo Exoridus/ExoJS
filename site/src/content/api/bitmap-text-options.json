@@ -1,16 +1,16 @@
 {
   "title": "BitmapTextOptions",
-  "description": "Construction-time options for a TextStyle. All properties are optional; defaults match the TextStyle constructor.",
+  "description": "",
   "symbol": "BitmapTextOptions",
   "kind": "interface",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 21,
+  "memberCount": 20,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 21,
+    "properties": 20,
     "events": 0
   },
   "sections": [
@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction-time options for a TextStyle. All properties are optional; defaults match the TextStyle constructor."
-      ],
+      "paragraphs": [],
       "importLine": "import { BitmapTextOptions } from '@codexo/exojs'",
       "sourceLink": null
     },
@@ -121,31 +119,6 @@
             },
             {
               "text": "string",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "fontSize",
-          "signature": "fontSize?: number",
-          "signatureTokens": [
-            {
-              "text": "fontSize",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
               "kind": "keyword"
             }
           ],
