@@ -226,6 +226,22 @@ describe('child scopes', () => {
     expect(handle.loadState).toBe('ready');
   });
 
+  test('acquiring through a destroyed scope throws instead of registering an unreleasable claim', async () => {
+    mockFetch();
+    const loader = createCoreLoader();
+    const level = loader.createScope({ name: 'level-1' });
+
+    level.destroy();
+
+    // The state an async continuation that outlived a scene teardown lands in.
+    // A second destroy() is a no-op by contract, so such a claim would pin its
+    // asset for the application's lifetime.
+    expect(() => level.get('level.json')).toThrow(/destroyed scope "level-1"/);
+    expect(() => level.load('level.json')).toThrow(/destroyed scope "level-1"/);
+    expect(() => level.loadContainer('pack.exoa')).toThrow(/destroyed scope "level-1"/);
+    expect(loader.inspect()).toHaveLength(0);
+  });
+
   test('a scene scope destroys the scopes created under it', async () => {
     mockFetch();
     const loader = createCoreLoader();

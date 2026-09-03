@@ -155,6 +155,8 @@ export class LoaderScope implements Destroyable {
   // Brand-matched: only a materialized catalog leaf, never a raw resource.
   public get<T extends object>(leaf: CatalogResourceLeaf<T>): CatalogResourceLeaf<T>;
   public get(input: string | object, options?: unknown): unknown {
+    this._assertLive('get');
+
     return this._loader._getClaimed(this, input, options);
   }
 
@@ -164,6 +166,8 @@ export class LoaderScope implements Destroyable {
   public load<T extends object>(leaf: CatalogResourceLeaf<T>, options?: LoadOptions): LoadingQueue<T>;
   public load<S extends string>(path: [KindByPath<S>] extends [never] ? never : S): LoadingQueue<ResourceForKind<KindByPath<S>>>;
   public load(arg0: unknown, arg1?: unknown): LoadingQueue<unknown> {
+    this._assertLive('load');
+
     return this._loader._loadClaimed(this, arg0, arg1);
   }
 
@@ -175,6 +179,8 @@ export class LoaderScope implements Destroyable {
    * See {@link Loader.loadContainer} for the format and identity contract.
    */
   public loadContainer(url: string): Promise<void> {
+    this._assertLive('loadContainer');
+
     return this._loader._loadContainerInto(this, url);
   }
 
@@ -200,9 +206,28 @@ export class LoaderScope implements Destroyable {
   }
 
   /**
+   * A claim registered after {@link destroy} could never be released: destroy is
+   * idempotent by contract, so the second call is a no-op, and nothing else
+   * owns the scope. Failing loudly at the acquisition is the only point where
+   * the mistake is still attributable to the code that made it.
+   */
+  private _assertLive(verb: string): void {
+    if (this._destroyed) {
+      throw new Error(
+        `LoaderScope: ${verb}() was called on a destroyed scope${this.name === undefined ? '' : ` "${this.name}"`}. ` +
+          'Assets acquired through it could never be released. Acquire them through a live scope, or through the loader itself.',
+      );
+    }
+  }
+
+  /**
    * Releases every claim this scope still holds and destroys any child scope it
    * still has. Assets another scope also holds stay resident, and destroying an
    * already-destroyed scope is a no-op.
+   *
+   * Acquiring through the scope afterwards - {@link get}, {@link load},
+   * {@link loadContainer} - throws, because the claim it would register has no
+   * owner left to release it.
    */
   public destroy(): void {
     if (this._destroyed) {

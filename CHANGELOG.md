@@ -104,6 +104,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   but a failure rejected without ever handing the caller the scope holding
   those claims, so every entry of a failed container stayed resident for the
   loader's lifetime with no owner able to free it.
+- **A destroyed `LoaderScope` refuses to claim.** `get`, `load` and
+  `loadContainer` still registered claims after `destroy()`, and since destroy
+  is idempotent by contract there was no way to release them: an async
+  continuation that outlived a scene teardown pinned its assets for the
+  application's lifetime, and `Loader.inspect()` listed a destroyed scope as an
+  owner. They now throw instead.
 
 ## [0.16.1] - 2026-09-02
 

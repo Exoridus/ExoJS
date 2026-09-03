@@ -110,7 +110,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Releases every claim this scope still holds and destroys any child scope it still has. Assets another scope also holds stay resident, and destroying an already-destroyed scope is a no-op."
+          "description": "Releases every claim this scope still holds and destroys any child scope it still has. Assets another scope also holds stay resident, and destroying an already-destroyed scope is a no-op. Acquiring through the scope afterwards - get, load, loadContainer - throws, because the claim it would register has no owner left to release it."
         },
         {
           "name": "get",
