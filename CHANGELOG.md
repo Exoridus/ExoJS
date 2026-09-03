@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Fixed
+
+- **Particle systems on WebGL2 pick up a texture whose payload arrives after
+  the first draw.** `WebGl2ParticleRenderer` bound the system's texture only
+  when its identity changed, which for a single-system scene meant exactly
+  once - while the handle from `loader.get(...)` was still empty. The image
+  landed a few frames later and never reached the GPU, so the system simulated
+  and drew its quads against blank pixels for the rest of its life. The same
+  memo could hold a stale blend mode after another renderer changed it. Both
+  are now offered to the backend on every system, which already collapses a
+  redundant bind and is the only holder of the live GL state.
+
 ## [0.16.1] - 2026-09-02
 
 ### Fixed
