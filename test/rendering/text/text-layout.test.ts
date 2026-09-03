@@ -318,6 +318,22 @@ describe('layoutText', () => {
     expect(bPlacement.x).toBe(40); // 15 natural + 25 stretch (extraPerGap = (50 - 25) / 1)
   });
 
+  test('align "justify" reports the post-justify line width, not the natural pre-justify width', () => {
+    const advance = 10;
+    const atlas = makeAtlas(advance);
+    const style = new TextStyle({ fontSize: 16, align: 'justify' });
+
+    // Same wrap as the test above: "A B" (natural 30px) is stretched to fill
+    // the widest realized line, "CCCCC" (50px). A selection rectangle or
+    // caret reading `lines[0].width` needs the STRETCHED extent (50), not
+    // the 30px the line measured before justify distributed the slack.
+    const { lines } = layoutText('A B CCCCC', style, { maxWidth: 30 }, atlas);
+
+    expect(lines).toHaveLength(2);
+    expect(lines[0]!.width).toBe(50);
+    expect(lines[1]!.width).toBe(50);
+  });
+
   test('align "justify" works with a uniform-advance (monospace) atlas', () => {
     // Word boundaries must be detected from the characters themselves, not by
     // comparing advances against the space glyph - with a monospace atlas every

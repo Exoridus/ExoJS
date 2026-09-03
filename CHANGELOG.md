@@ -396,6 +396,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   A `BitmapText` draws from a pre-baked atlas at whatever size it was
   generated at - `scale` is the option that actually resizes it. `fontSize` is
   now omitted from its options type.
+- **A justified line's reported width matches what was actually drawn.**
+  `TextLineMetrics.width` kept the pre-justify natural width even on a line
+  justify stretched to fill the paragraph, so a selection rectangle built from
+  it stopped short of the justified extent. It now reports the post-justify
+  width.
+- **A stylus's twist angle no longer drifts as it approaches full rotation.**
+  The twist channel (0-359 degrees) was normalized by 359 instead of 360, so
+  180 degrees read back as roughly 0.5014 instead of 0.5 and the error grew
+  toward the top of the range.
 
 ## [0.16.1] - 2026-09-02
 

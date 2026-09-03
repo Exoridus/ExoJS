@@ -89,7 +89,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Advance width of the line, with no trailing letter spacing."
+          "description": "Advance width of the line, with no trailing letter spacing. For a justified line this is the width AFTER justification (equal to the paragraph's widest line), not the line's natural pre-justify width."
         },
         {
           "name": "x",

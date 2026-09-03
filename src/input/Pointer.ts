@@ -557,7 +557,7 @@ export class Pointer {
     ch[base + 3] = this._pressure; // pressure
     ch[base + 4] = Math.min(1, this.size.width / w); // width (normalized)
     ch[base + 5] = Math.min(1, this.size.height / h); // height (normalized)
-    ch[base + 6] = this._rotation / 359; // twist (0..359 → 0..1)
+    ch[base + 6] = this._rotation / 360; // twist (0..359 degrees → 0..1)
     ch[base + 7] = (this.tilt.x + 90) / 180; // tiltX (-90..90 → 0..1)
     ch[base + 8] = (this.tilt.y + 90) / 180; // tiltY (-90..90 → 0..1)
     ch[base + 9] = this._buttons & 1 ? 1 : 0; // button.left

@@ -144,7 +144,11 @@ export interface TextLineMetrics {
   readonly x: number;
   /** Top of this line's box. */
   readonly y: number;
-  /** Advance width of the line, with no trailing letter spacing. */
+  /**
+   * Advance width of the line, with no trailing letter spacing. For a
+   * justified line this is the width AFTER justification (equal to the
+   * paragraph's widest line), not the line's natural pre-justify width.
+   */
   readonly width: number;
 }
 
