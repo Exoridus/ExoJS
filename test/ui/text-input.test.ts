@@ -263,6 +263,25 @@ describe('TextInput', () => {
     expect(field.selectionEnd).toBe(3);
   });
 
+  test('a read-only field can still be selected whole', () => {
+    const harness = createUIApp();
+    const field = new TextInput({ width: 200, height: 36, value: 'abc', readOnly: true });
+
+    harness.scene.ui.addChild(field);
+    press(harness, 5, 18);
+
+    harness.signals.onKeyDown.dispatch(Keyboard.ControlLeft);
+    harness.signals.onKeyDown.dispatch(Keyboard.A);
+
+    expect(field.selectionStart).toBe(0);
+    expect(field.selectionEnd).toBe(3);
+
+    // Mutating shortcuts stay refused.
+    harness.signals.onKeyDown.dispatch(Keyboard.Z);
+
+    expect(field.value).toBe('abc');
+  });
+
   test('a null seam leaves the field visible and focused but not editable', () => {
     const platform = new BrowserPlatform(document.createElement('canvas'));
 

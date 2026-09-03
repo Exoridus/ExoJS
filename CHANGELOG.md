@@ -336,6 +336,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   the other was still down also reported the modifier as released. Both sides
   of each modifier are now tracked separately and cleared when the field loses
   focus.
+- **A read-only text field can be selected whole again.** `readOnly` refused
+  every shortcut, select-all included, so the text could not be selected for
+  copying. Only the mutating shortcuts are refused now.
 
 ## [0.16.1] - 2026-09-02
 

@@ -638,7 +638,7 @@ export abstract class TextEditWidget extends Widget {
     // `number`), intentionally compared against the Keyboard enum constants
     // - see KeyEvent docs.
     /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison -- widening casts are redundant here, so the suppression is the only honest option */
-    if (!this._controlDown || this._readOnly) {
+    if (!this._controlDown) {
       return false;
     }
 
@@ -646,9 +646,14 @@ export abstract class TextEditWidget extends Widget {
     // browser performs the clipboard work on the focused transport, and the
     // resulting edits arrive as intents.
     if (channel === Keyboard.A) {
+      // Selecting is not editing: a read-only field is still copied from.
       this.model.selectAll();
 
       return true;
+    }
+
+    if (this._readOnly) {
+      return false;
     }
 
     if (channel === Keyboard.Z) {
