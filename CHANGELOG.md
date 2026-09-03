@@ -488,6 +488,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   saw a used export from one of them was free to drop it. Those three
   modules are now listed in `sideEffects`, and the error a dropped `Sprite.ts`
   produces now names the cause and the remedy instead of just failing.
+- **`Sprite`, `Video` and the sprite serializer no longer hand the shared
+  `Rectangle.temp` scratch across a call into node code.** `setTextureFrame`
+  reads its `frame` argument again after bounds/origin invalidation
+  re-enters node code, so passing the process-wide `Rectangle.temp` risked a
+  concurrent caller overwriting it before that second read - a synchronous
+  bounds query away from a silently wrong frame. Each call site now passes
+  its own rectangle instead.
 
 ## [0.16.1] - 2026-09-02
 

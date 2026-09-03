@@ -49,6 +49,14 @@ export enum SpriteFlags {
 export class Sprite extends Drawable {
   private _texture: Texture | RenderTexture | null = null;
   private _textureFrame: Rectangle = new Rectangle();
+  /**
+   * Scratch rectangle for {@link resetTextureFrame}. `setTextureFrame` reads
+   * its `frame` argument again after re-entering node code (bounds/origin
+   * invalidation), so passing the shared `Rectangle.temp` here would risk a
+   * concurrent caller clobbering it mid-call; this one is private to the
+   * instance.
+   */
+  private readonly _resetFrameScratch: Rectangle = new Rectangle();
   private _material: SpriteMaterial | null = null;
   /**
    * Quad corner cache, built on the first {@link vertices} read. Nothing on the
@@ -422,7 +430,7 @@ export class Sprite extends Drawable {
       throw new Error('Cannot reset texture frame when no texture was set');
     }
 
-    return this.setTextureFrame(Rectangle.temp.set(0, 0, this._texture.width, this._texture.height));
+    return this.setTextureFrame(this._resetFrameScratch.set(0, 0, this._texture.width, this._texture.height));
   }
 
   /**
@@ -551,6 +559,7 @@ export class Sprite extends Drawable {
     }
 
     this._textureFrame.destroy();
+    this._resetFrameScratch.destroy();
     this._texture = null;
     this._material = null;
   }
