@@ -43,6 +43,13 @@ const BLINK_PHASE_SECONDS = 0.5;
 /** Maximum milliseconds between two presses that still count as a double-click. */
 const DOUBLE_CLICK_MS = 350;
 
+/**
+ * Modifier keys a field tracks while it holds focus. Both sides of each pair
+ * are tracked separately, so releasing one while the other is still held does
+ * not report the modifier as released.
+ */
+const modifierChannels = new Set<number>([Keyboard.ShiftLeft, Keyboard.ShiftRight, Keyboard.ControlLeft, Keyboard.ControlRight]);
+
 /** The granularity a delete asks for; the word modifier wins over the line modifier. */
 const _deleteGranularity = (word: boolean, line: boolean): TextEditGranularity => {
   if (word) {
@@ -102,8 +109,7 @@ export abstract class TextEditWidget extends Widget {
   private _lastPressTime = 0;
   private _lastPressX = 0;
   private _lastPressY = 0;
-  private _shiftDown = false;
-  private _controlDown = false;
+  private readonly _modifiersDown = new Set<number>();
   /**
    * Mutations the transport already reported for a keystroke whose engine key
    * event has not been dispatched yet. A host turns one physical key into a
@@ -192,29 +198,14 @@ export abstract class TextEditWidget extends Widget {
   };
 
   private readonly _keyUpHandler = (event: KeyEvent): void => {
-    const channel = event.channel;
-
-    // `channel` is a generic numeric input channel (KeyEvent.channel is
-    // `number`), intentionally compared against the Keyboard enum constants
-    // - see KeyEvent docs.
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- widening casts are redundant here, so the suppression is the only honest option
-    if (channel === Keyboard.ShiftLeft || channel === Keyboard.ShiftRight) {
-      this._shiftDown = false;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- widening casts are redundant here, so the suppression is the only honest option
-    } else if (channel === Keyboard.ControlLeft || channel === Keyboard.ControlRight) {
-      this._controlDown = false;
-    }
+    this._modifiersDown.delete(event.channel);
   };
 
   protected _handleKeyDown(event: KeyEvent): void {
     const channel = event.channel;
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- widening casts are redundant here, so the suppression is the only honest option
-    if (channel === Keyboard.ShiftLeft || channel === Keyboard.ShiftRight) {
-      this._shiftDown = true;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison -- widening casts are redundant here, so the suppression is the only honest option
-    } else if (channel === Keyboard.ControlLeft || channel === Keyboard.ControlRight) {
-      this._controlDown = true;
+    if (modifierChannels.has(channel)) {
+      this._modifiersDown.add(channel);
     }
 
     if (!this.effectiveEnabled) {
@@ -506,6 +497,16 @@ export abstract class TextEditWidget extends Widget {
     this._seam?.setHints(this._hints);
   }
 
+  /** Whether either Shift key is held while this field has focus. */
+  private get _shiftDown(): boolean {
+    return this._modifiersDown.has(Keyboard.ShiftLeft) || this._modifiersDown.has(Keyboard.ShiftRight);
+  }
+
+  /** Whether either Control key is held while this field has focus. */
+  private get _controlDown(): boolean {
+    return this._modifiersDown.has(Keyboard.ControlLeft) || this._modifiersDown.has(Keyboard.ControlRight);
+  }
+
   private _refreshState(): void {
     let state: UIWidgetState = 'normal';
 
@@ -539,6 +540,9 @@ export abstract class TextEditWidget extends Widget {
 
   private _loseEditFocus(): void {
     this._stopBlink();
+    // A modifier released while another node holds focus is never seen here,
+    // so anything still held has to be forgotten rather than left latched.
+    this._modifiersDown.clear();
     this._hostDeletes = 0;
     this._hostLineBreaks = 0;
     this._seam?.blur();

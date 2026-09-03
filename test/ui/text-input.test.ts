@@ -226,6 +226,43 @@ describe('TextInput', () => {
     expect(field.value).toBe('a');
   });
 
+  test('a modifier held when the field loses focus does not stay held', () => {
+    const harness = createUIApp();
+    const field = new TextInput({ width: 200, height: 36 });
+
+    harness.scene.ui.addChild(field);
+    press(harness, 5, 18);
+    type('abc');
+
+    harness.signals.onKeyDown.dispatch(Keyboard.ShiftLeft);
+    field.blur();
+    field.focus();
+
+    // The Shift release happened while another node held focus, so the widget
+    // never saw it.
+    harness.signals.onKeyDown.dispatch(Keyboard.Left);
+
+    expect(field.selectionStart).toBe(2);
+    expect(field.selectionEnd).toBe(2);
+  });
+
+  test('releasing one Shift while the other is held keeps the selection extending', () => {
+    const harness = createUIApp();
+    const field = new TextInput({ width: 200, height: 36 });
+
+    harness.scene.ui.addChild(field);
+    press(harness, 5, 18);
+    type('abc');
+
+    harness.signals.onKeyDown.dispatch(Keyboard.ShiftLeft);
+    harness.signals.onKeyDown.dispatch(Keyboard.ShiftRight);
+    harness.signals.onKeyUp.dispatch(Keyboard.ShiftLeft);
+    harness.signals.onKeyDown.dispatch(Keyboard.Left);
+
+    expect(field.selectionStart).toBe(2);
+    expect(field.selectionEnd).toBe(3);
+  });
+
   test('a null seam leaves the field visible and focused but not editable', () => {
     const platform = new BrowserPlatform(document.createElement('canvas'));
 

@@ -329,6 +329,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   assumptions every caret and hit-test calculation makes. A commit is now
   admitted, truncated or refused exactly like an insertion, and still creates
   no undo entry.
+- **A text field forgets modifier keys when it loses focus.** `Shift` and
+  `Control` were latched from key events only the focused field receives, so a
+  field blurred with one held kept it held forever: later arrow keys extended a
+  selection and later `A`/`Z`/`Y` fired shortcuts. Releasing one `Shift` while
+  the other was still down also reported the modifier as released. Both sides
+  of each modifier are now tracked separately and cleared when the field loses
+  focus.
 
 ## [0.16.1] - 2026-09-02
 
