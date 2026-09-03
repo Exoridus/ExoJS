@@ -351,8 +351,6 @@ export interface RecentErrorEntry {
 const maxDeltaMs = 100;
 /** Default fixed-timestep size in milliseconds (60 Hz). */
 const defaultFixedStepMs = 1000 / 60;
-/** Max fixed steps run in one frame - the spiral-of-death guard. */
-const maxFixedSteps = 5;
 /** Consecutive failing frames tolerated before the frame guard halts the loop. */
 const maxConsecutiveFrameErrors = 3;
 /** Bounded size of the {@link Application.recentErrors} ring buffer. */
@@ -838,7 +836,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
       const fixedStepMs = this.options.fixedTimeStep !== undefined ? this.options.fixedTimeStep * 1000 : defaultFixedStepMs;
 
-      this._fixed = new FixedTimestep(fixedStepMs, maxFixedSteps);
+      this._fixed = new FixedTimestep(fixedStepMs, FixedTimestep.deriveMaxSteps(maxDeltaMs, fixedStepMs));
       this._fixedSeconds = seconds(fixedStepMs / 1000);
 
       this._startupClock.start();

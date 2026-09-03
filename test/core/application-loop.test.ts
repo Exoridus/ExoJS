@@ -599,14 +599,33 @@ describe('Application.update() — loop timing', () => {
       expect(app.frameAlpha).toBeCloseTo(0.5, 4);
     });
 
-    test('caps fixed steps per frame (spiral-of-death guard)', () => {
+    test('runs every step the clamped delta allows (spiral-of-death guard tracks the step size)', () => {
       const fixedSpy = vi.spyOn(app.scenes, 'fixedUpdate');
 
-      // The frame delta is clamped to 100 ms first → 6 steps wanted, capped at 5.
+      // The frame delta is clamped to 100 ms first -> exactly 6 steps at the default 1/60 step,
+      // which the derived cap now allows in full instead of hard-capping at a fixed count.
       mockFrameElapsed(app, 1000);
       app.update();
 
-      expect(fixedSpy).toHaveBeenCalledTimes(5);
+      expect(fixedSpy).toHaveBeenCalledTimes(6);
+    });
+
+    test('derives the step cap from a small configured step, not a hard-coded count', () => {
+      const smallStepApp = new Application({ backend: { type: 'webgl2' }, fixedTimeStep: 0.004 });
+      forceRunning(smallStepApp);
+      vi.spyOn(smallStepApp.input, 'preUpdate').mockImplementation(() => undefined);
+      vi.spyOn(smallStepApp.interaction, 'preUpdate').mockImplementation(() => undefined);
+      const fixedSpy = vi.spyOn(smallStepApp.scenes, 'fixedUpdate');
+
+      // A 4 ms step clamped to a 100 ms frame wants 25 steps; the old hard-coded
+      // cap of 5 would have silently run the simulation at a fifth of wall time.
+      mockFrameElapsed(smallStepApp, 1000);
+      smallStepApp.update();
+
+      expect(fixedSpy).toHaveBeenCalledTimes(25);
+
+      (smallStepApp as unknown as Record<string, unknown>)['_state'] = ApplicationState.Stopped;
+      void smallStepApp.destroy();
     });
 
     // Regression: the fixed step used to be one shared `Time` instance handed

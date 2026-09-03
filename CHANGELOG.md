@@ -8,6 +8,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Fixed
 
+- **The fixed-timestep spiral-of-death guard now scales with `fixedTimeStep`.**
+  The catch-up cap was a constant 5 steps regardless of the configured step
+  size, so a step smaller than the default silently ran the simulation slower
+  than wall time once the frame rate dropped enough to hit the clamp - with no
+  warning. The cap is now derived from the existing frame-delta clamp and the
+  configured step, so a smaller step gets proportionally more catch-up steps.
 - **A `Sprite` whose frame was set before its texture finished loading gets the
   right UVs.** Texture coordinates are the frame divided by the texture's
   dimensions, so a frame chosen against a still-loading handle - what
