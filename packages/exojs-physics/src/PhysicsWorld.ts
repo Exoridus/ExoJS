@@ -92,22 +92,19 @@ const assertBodyKeepsItsMass = (collider: Collider, pendingRemovals: ReadonlySet
   );
 };
 
-/** Shape kinds already reported as unswept, so the warning fires once per kind. */
-const warnedUnsweptKinds = new Set<string>();
-
 /**
  * Dev-only: boundary geometry is never swept as the moving operand, so a bullet
  * body carrying it is not protected against tunnelling on that collider.
  * Reporting it beats a silent pass-through.
  */
-const warnUnsweptBulletShape = (collider: Collider): void => {
+const warnUnsweptBulletShape = (collider: Collider, warnedKinds: Set<string>): void => {
   const kind = collider.shape.type;
 
-  if (canSweep(kind, 'polygon') || warnedUnsweptKinds.has(kind)) {
+  if (canSweep(kind, 'polygon') || warnedKinds.has(kind)) {
     return;
   }
 
-  warnedUnsweptKinds.add(kind);
+  warnedKinds.add(kind);
   logger.warn(
     `PhysicsWorld: a bullet body carries a '${kind}' collider. Boundary geometry is level structure and is only ever a ` +
       'sweep target, never the moving operand, so this collider can still cross thin geometry within one step. ' +
@@ -406,6 +403,8 @@ export class PhysicsWorld implements BodyOwner {
   private readonly _commands: Array<() => void> = [];
   /** Colliders with a deferred removal queued but not yet applied; see {@link assertBodyKeepsItsMass}. */
   private readonly _pendingColliderRemovals = new Set<Collider>();
+  /** Shape kinds already reported as unswept by this world; see {@link warnUnsweptBulletShape}. */
+  private readonly _warnedUnsweptKinds = new Set<string>();
   /** Pooled union-find parent array for the per-step island pass (reused; sized to the body count). */
   private readonly _islandParent: number[] = [];
   /** Pooled per-island minimum sleep time, indexed by union-find root. */
@@ -1263,7 +1262,7 @@ export class PhysicsWorld implements BodyOwner {
       }
 
       if (__DEV__) {
-        warnUnsweptBulletShape(collider);
+        warnUnsweptBulletShape(collider, this._warnedUnsweptKinds);
       }
 
       // The collider's end-pose AABB unioned with its start pose; anything

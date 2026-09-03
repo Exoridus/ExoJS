@@ -447,6 +447,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   sensor callback that itself called `destroy()` stayed `attached === true`
   and `destroyed === false` against a torn-down world. Queued commands are
   now drained before the world tears down.
+- **A second `PhysicsWorld` no longer inherits the first world's "already
+  warned about this bullet shape" state.** The dev-only warning for boundary
+  geometry on a bullet body tracked reported shape kinds in a module-level
+  set, so a second world's misconfiguration went unreported once any world
+  had already warned about that shape kind - contradicting the class's own
+  "holds no module-level state" documentation. The set now lives on the
+  world instance.
 
 ## [0.16.1] - 2026-09-02
 
