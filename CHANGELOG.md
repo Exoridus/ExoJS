@@ -339,6 +339,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - **A read-only text field can be selected whole again.** `readOnly` refused
   every shortcut, select-all included, so the text could not be selected for
   copying. Only the mutating shortcuts are refused now.
+- **Text-field shortcuts answer to `Meta`.** Select-all, undo and redo were
+  bound to `Control` alone, so `Cmd+A`, `Cmd+Z` and `Cmd+Y` did nothing on
+  macOS.
 
 ## [0.16.1] - 2026-09-02
 

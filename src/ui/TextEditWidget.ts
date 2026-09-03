@@ -48,7 +48,14 @@ const DOUBLE_CLICK_MS = 350;
  * are tracked separately, so releasing one while the other is still held does
  * not report the modifier as released.
  */
-const modifierChannels = new Set<number>([Keyboard.ShiftLeft, Keyboard.ShiftRight, Keyboard.ControlLeft, Keyboard.ControlRight]);
+const modifierChannels = new Set<number>([
+  Keyboard.ShiftLeft,
+  Keyboard.ShiftRight,
+  Keyboard.ControlLeft,
+  Keyboard.ControlRight,
+  Keyboard.MetaLeft,
+  Keyboard.MetaRight,
+]);
 
 /** The granularity a delete asks for; the word modifier wins over the line modifier. */
 const _deleteGranularity = (word: boolean, line: boolean): TextEditGranularity => {
@@ -507,6 +514,14 @@ export abstract class TextEditWidget extends Widget {
     return this._modifiersDown.has(Keyboard.ControlLeft) || this._modifiersDown.has(Keyboard.ControlRight);
   }
 
+  /**
+   * Whether the modifier the editing shortcuts answer to is held. Control and
+   * Meta both count: the same shortcuts are typed with Cmd on macOS.
+   */
+  private get _shortcutDown(): boolean {
+    return this._controlDown || this._modifiersDown.has(Keyboard.MetaLeft) || this._modifiersDown.has(Keyboard.MetaRight);
+  }
+
   private _refreshState(): void {
     let state: UIWidgetState = 'normal';
 
@@ -638,7 +653,7 @@ export abstract class TextEditWidget extends Widget {
     // `number`), intentionally compared against the Keyboard enum constants
     // - see KeyEvent docs.
     /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison -- widening casts are redundant here, so the suppression is the only honest option */
-    if (!this._controlDown) {
+    if (!this._shortcutDown) {
       return false;
     }
 

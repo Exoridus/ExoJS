@@ -263,6 +263,25 @@ describe('TextInput', () => {
     expect(field.selectionEnd).toBe(3);
   });
 
+  test('the editing shortcuts answer to Meta as well as Control', () => {
+    const harness = createUIApp();
+    const field = new TextInput({ width: 200, height: 36 });
+
+    harness.scene.ui.addChild(field);
+    press(harness, 5, 18);
+    type('abc');
+
+    harness.signals.onKeyDown.dispatch(Keyboard.MetaLeft);
+    harness.signals.onKeyDown.dispatch(Keyboard.A);
+
+    expect(field.selectionStart).toBe(0);
+    expect(field.selectionEnd).toBe(3);
+
+    harness.signals.onKeyDown.dispatch(Keyboard.Z);
+
+    expect(field.value).toBe('');
+  });
+
   test('a read-only field can still be selected whole', () => {
     const harness = createUIApp();
     const field = new TextInput({ width: 200, height: 36, value: 'abc', readOnly: true });
