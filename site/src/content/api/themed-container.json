@@ -6,10 +6,10 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 97,
+  "memberCount": 96,
   "counts": {
     "constructors": 1,
-    "methods": 44,
+    "methods": 43,
     "properties": 38,
     "events": 14
   },
@@ -2024,69 +2024,6 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": ""
-        },
-        {
-          "name": "setInternalSpriteFactory",
-          "signature": "setInternalSpriteFactory(factory: () => RenderNodeSpriteLike | null): void",
-          "signatureTokens": [
-            {
-              "text": "setInternalSpriteFactory",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "factory",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ") => ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "RenderNodeSpriteLike",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "factory",
-              "type": "() => RenderNodeSpriteLike | null",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
           "description": ""
         }
       ],

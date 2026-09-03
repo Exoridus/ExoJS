@@ -6,10 +6,10 @@
   "subsystem": "particles",
   "importPath": "@codexo/exojs-particles",
   "tier": "stable",
-  "memberCount": 114,
+  "memberCount": 113,
   "counts": {
     "constructors": 4,
-    "methods": 47,
+    "methods": 46,
     "properties": 49,
     "events": 14
   },
@@ -2318,69 +2318,6 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": ""
-        },
-        {
-          "name": "setInternalSpriteFactory",
-          "signature": "setInternalSpriteFactory(factory: () => RenderNodeSpriteLike | null): void",
-          "signatureTokens": [
-            {
-              "text": "setInternalSpriteFactory",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "factory",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ") => ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "RenderNodeSpriteLike",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "factory",
-              "type": "() => RenderNodeSpriteLike | null",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
           "description": ""
         }
       ],

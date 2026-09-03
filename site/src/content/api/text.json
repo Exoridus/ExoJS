@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 102,
+  "memberCount": 101,
   "counts": {
     "constructors": 1,
-    "methods": 42,
+    "methods": 41,
     "properties": 45,
     "events": 14
   },
@@ -1945,69 +1945,6 @@
           ],
           "returnType": "TextSize",
           "description": "Advance extent text would occupy under options, without constructing a node. Takes the same options as the constructor and gives the same answer as the resulting node's textBounds - it runs the identical layout pass over the identical shared metrics, so the two cannot drift. Costs one canvas measurement per glyph it has not seen before, and nothing else: no atlas is created, no glyph is rasterized, and no page is claimed. The answer is therefore independent of pixelRatio, of which Application exists, and of whether anything has been rendered yet - colorGlyphs, sdfRadius and pixelRatio are ignored here because none of them can move a line break. ts const { width } = Text.measure('Continue', { fontSize: 24 }); button.width = width + 32; "
-        },
-        {
-          "name": "setInternalSpriteFactory",
-          "signature": "setInternalSpriteFactory(factory: () => RenderNodeSpriteLike | null): void",
-          "signatureTokens": [
-            {
-              "text": "setInternalSpriteFactory",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "factory",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ") => ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "RenderNodeSpriteLike",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "factory",
-              "type": "() => RenderNodeSpriteLike | null",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
-          "description": ""
         }
       ],
       "paragraphs": [],

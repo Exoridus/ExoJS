@@ -648,6 +648,10 @@ export abstract class RenderNode extends SceneNode {
     }
   }
 
+  /**
+   * Installs the factory `cacheAsTexture` uses to create its backing sprite.
+   * @internal
+   */
   public static setInternalSpriteFactory(factory: (() => RenderNodeSpriteLike) | null): void {
     RenderNode._spriteFactory = factory;
   }
