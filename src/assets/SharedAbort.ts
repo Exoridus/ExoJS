@@ -1,18 +1,12 @@
 /**
- * One abortable operation shared by N named holders.
+ * An abortable operation cancelled through a string-keyed release, so a stale
+ * release under a different key can never abort an operation it did not
+ * start.
  *
- * The asset pipeline deduplicates loads: several consumers asking for the same
- * asset attach to a single in-flight fetch. Cancellation therefore cannot be a
- * plain "abort the controller" - the fetch must keep running for as long as ANY
- * holder still needs its result, and only be aborted once the last one leaves.
- *
- * Holders are identified by string (the residency key of whoever joined), so
- * joining twice under the same name is idempotent and a stale release can never
- * drop someone else's interest. {@link release} reports whether that particular
- * departure was the one that aborted the operation.
- *
- * Once the operation itself has settled, {@link settle} disarms the handle: a
- * later release can no longer abort a fetch whose result already arrived.
+ * {@link release} reports whether this particular release was the one that
+ * aborted the operation. Once the operation itself has settled, {@link settle}
+ * disarms the handle: a later release can no longer abort a fetch whose
+ * result already arrived.
  * @internal
  */
 export class SharedAbort {
@@ -27,25 +21,6 @@ export class SharedAbort {
   /** The signal to hand to `fetch(url, { signal })` (and to any decode step that honors one). */
   public get signal(): AbortSignal {
     return this._controller.signal;
-  }
-
-  /** Whether the shared operation has already been aborted. */
-  public get aborted(): boolean {
-    return this._controller.signal.aborted;
-  }
-
-  /** How many holders currently need this operation's result. */
-  public get holders(): number {
-    return this._holders.size;
-  }
-
-  /** Join as a holder - the operation cannot be aborted while this holder stays. Idempotent. */
-  public retain(holder: string): void {
-    if (this._settled) {
-      return;
-    }
-
-    this._holders.add(holder);
   }
 
   /**

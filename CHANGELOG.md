@@ -8,6 +8,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Fixed
 
+- **`SharedAbort` dropped its unused multi-holder API.** `retain()`, `holders`
+  and `aborted` had no caller anywhere in the tree - cancellation is actually
+  decided by the claim refcount elsewhere - and the class documented an
+  N-holder contract that was never wired up. Removed, along with the doc
+  paragraph describing it.
 - **A press that hits no interactive node now clears keyboard focus.**
   Nothing blurred the focused node on a click or tap that resolved to empty
   canvas, so an open `Dropdown` stayed open and a `TextInput` kept its caret
