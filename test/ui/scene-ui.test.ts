@@ -10,7 +10,7 @@ import type { GamepadButton } from '#input/GamepadButton';
 import type { InputSystem } from '#input/InputSystem';
 import { InteractionSystem } from '#input/InteractionSystem';
 import type { Pointer } from '#input/Pointer';
-import { Keyboard } from '#input/types';
+import { ChannelSize, Keyboard } from '#input/types';
 import { Rectangle } from '#math/Rectangle';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Container } from '#rendering/Container';
@@ -73,6 +73,7 @@ const createUIApp = (): {
     onKeyUp: new Signal<[number]>(),
     onAnyGamepadButtonDown: new Signal<[Gamepad, GamepadButton, number]>(),
     _finishInteractionFrame: (): void => undefined,
+    _actionSample: () => ({ values: new Float32Array(ChannelSize.Container), batches: [], frameId: 0, timestamp: 0 }),
   };
   const canvas = document.createElement('canvas');
   const scene = new Scene();

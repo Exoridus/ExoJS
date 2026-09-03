@@ -375,6 +375,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   scene state, while a pointer press at the same moment was already
   swallowed. Key dispatch now honours the same `SceneState` and
   transition-gate check pointer dispatch does.
+- **A hidden focused node releases focus, and releasing one `Shift` key no
+  longer flips `Tab`'s direction.** Focus eligibility ignored `visible`, so a
+  dialog hidden while still focused kept swallowing keys; and `Shift` was
+  latched per physical key, so releasing one side while the other was still
+  held reported the modifier as up. Eligibility now includes visibility, and
+  `Tab`'s direction reads the aggregate `Shift` channel `InputSystem` already
+  reconciles between both sides.
 
 ## [0.16.1] - 2026-09-02
 
