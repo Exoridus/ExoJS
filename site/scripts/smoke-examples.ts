@@ -82,8 +82,6 @@ const BLANK_FAILURE = 'canvas rendered but appears blank - one uniform color, no
  * WebGPU-adapter skip: the environment's limit, not the example's.
  */
 const SOFTWARE_RASTERISER_LIMITED: Readonly<Record<string, string>> = {
-  'particles/gpu-particles.js': 'the CPU particle fallback paints nothing through SwiftShader (reproduced locally with --use-angle=swiftshader)',
-  'particles/custom-wgsl-module.js': 'the CPU particle fallback paints nothing through SwiftShader (reproduced locally with --use-angle=swiftshader)',
   'performance/backend-comparison.js':
     '2200 moving sprites plus the debug overlay saturate a software-rasterised main thread; the harness cannot reach the page',
 };
