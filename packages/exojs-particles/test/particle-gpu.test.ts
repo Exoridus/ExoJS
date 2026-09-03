@@ -9,6 +9,7 @@ import { ColorGradient } from '../src/distributions/ColorGradient';
 import { Constant } from '../src/distributions/Constant';
 import { Curve } from '../src/distributions/Curve';
 import { ParticleGpuState } from '../src/gpu/ParticleGpuState';
+import { ParticleModuleKeyCollisionError } from '../src/gpu/ParticleModuleKeyCollisionError';
 import { ApplyForce } from '../src/modules/ApplyForce';
 import { BurstSpawn } from '../src/modules/BurstSpawn';
 import { ColorOverLifetime } from '../src/modules/ColorOverLifetime';
@@ -1284,7 +1285,7 @@ describe('Out-of-range textureIndex', () => {
   });
 });
 
-describe('ParticleGpuState prelude deduplication', () => {
+describe('ParticleGpuState module key collisions', () => {
   let restoreGlobals: () => void;
 
   beforeEach(() => {
@@ -1295,28 +1296,38 @@ describe('ParticleGpuState prelude deduplication', () => {
     restoreGlobals();
   });
 
-  test('two modules sharing a wgsl() key emit the prelude helper block only once', () => {
+  test('two modules of the same class are rejected by name instead of producing invalid WGSL', () => {
     const env = makeMockDevice();
     const system = new ParticleSystem(makeTexture(), { capacity: 4, device: env.device });
 
-    // Two Turbulence instances share the same wgsl() `key` ("Turbulence") -
-    // documented as unsupported ("Two ApplyForce instances on one system
-    // aren't supported - combine into one", WgslContribution.key) but not
-    // rejected at runtime. This is the only way to reach the prelude
-    // deduplication branch, so we use it purely to exercise that path.
+    // A key names one struct and one uniform-block member, so two ApplyForce
+    // instances used to emit `struct ApplyForceUniforms` and `u_ApplyForce`
+    // twice - a raw WGSL validation failure at the first update, on WebGPU
+    // only, while the CPU path ran the same scene fine.
+    system.addUpdateModule(new ApplyForce(0, 980));
+    system.addUpdateModule(new ApplyForce(90, 0));
+
+    const slot = system._spawnSlot();
+
+    system._storage.lifetime[slot] = 10;
+
+    expect(() => system.update(tick(0.016))).toThrow(ParticleModuleKeyCollisionError);
+    expect(env.device.createComputePipeline).not.toHaveBeenCalled();
+  });
+
+  test('the collision is reported before the device is asked to build anything, whatever the module class', () => {
+    const env = makeMockDevice();
+    const system = new ParticleSystem(makeTexture(), { capacity: 4, device: env.device });
+
     system.addUpdateModule(new Turbulence(50));
     system.addUpdateModule(new Turbulence(30));
 
     const slot = system._spawnSlot();
+
     system._storage.lifetime[slot] = 10;
-    system.update(tick(0.016));
 
-    expect(system.gpuMode).toBe(true);
-
-    const shaderSource = env.shaderSources[0]!;
-    const preludeOccurrences = shaderSource.match(/fn exojs_turbulence_hash21/g) ?? [];
-
-    expect(preludeOccurrences.length).toBe(1);
+    expect(() => system.update(tick(0.016))).toThrow(/Turbulence/);
+    expect(env.device.createShaderModule).not.toHaveBeenCalled();
   });
 });
 

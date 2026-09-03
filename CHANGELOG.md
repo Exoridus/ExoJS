@@ -285,6 +285,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   outright, and a texture swapped in later left the UVs divided by the previous
   texture's dimensions. The same scene drew a sub-rect on WebGL2 and the whole
   atlas on WebGPU. Both setters now re-bake the block.
+- **Two update modules of the same class are reported by name instead of
+  breaking WebGPU only.** A module's WGSL `key` names one struct and one member
+  of the composite compute shader's uniform block, so a second module under the
+  same key made the codegen declare each twice - invalid WGSL that failed
+  pipeline creation at the first `update()`, while WebGL2 ran the same scene.
+  `@codexo/exojs-particles` now throws `ParticleModuleKeyCollisionError` naming
+  both modules and the key, before the device is asked to build anything.
 
 ## [0.16.1] - 2026-09-02
 

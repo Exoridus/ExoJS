@@ -10,6 +10,7 @@ import type { WgslContribution, WgslUniformField } from '#modules/WgslContributi
 import { getWgslUniformByteSize } from '#modules/WgslContribution';
 import type { ParticleSystem } from '#ParticleSystem';
 
+import { ParticleModuleKeyCollisionError } from './ParticleModuleKeyCollisionError';
 import particleSimulateWgsl from './shaders/particle-simulate.wgsl';
 
 /**
@@ -220,7 +221,16 @@ export class ParticleGpuState {
       addressModeU: 'clamp-to-edge',
     });
 
-    this.setProgram(modules, reportsDeaths);
+    try {
+      this.setProgram(modules, reportsDeaths);
+    } catch (error) {
+      // The simulation buffers above already exist on the device. A rejected
+      // program must not strand them there, since nothing holds a reference to
+      // this half-built state to destroy it later.
+      this.destroy();
+
+      throw error;
+    }
   }
 
   /**
@@ -232,10 +242,33 @@ export class ParticleGpuState {
    * every live particle keeps the position and velocity the GPU last integrated.
    */
   public setProgram(modules: readonly UpdateModule[], reportsDeaths: boolean): void {
+    const contributions: WgslContribution[] = [];
+
     for (const m of modules) {
       if (!m.wgsl) {
         throw new Error(`ParticleGpuState: module ${m.constructor.name} has no wgsl() - all registered UpdateModules must be GPU-eligible.`);
       }
+
+      contributions.push(m.wgsl());
+    }
+
+    // Rejected before anything is torn down, so a system that hits this keeps
+    // the program it was running. A key names one struct and one uniform-block
+    // member, so a second contribution under it has nowhere to put its own
+    // values - the device would either reject the duplicate declarations or,
+    // worse, run both bodies against one instance's uniforms while the CPU path
+    // ran the two modules independently.
+    const firstByKey = new Map<string, string>();
+
+    for (let i = 0; i < modules.length; i++) {
+      const key = contributions[i]!.key;
+      const first = firstByKey.get(key);
+
+      if (first !== undefined) {
+        throw new ParticleModuleKeyCollisionError(key, first, modules[i]!.constructor.name);
+      }
+
+      firstByKey.set(key, modules[i]!.constructor.name);
     }
 
     this._destroyProgram();
@@ -245,15 +278,15 @@ export class ParticleGpuState {
     const slots: ModuleSlot[] = [];
     let uniformOffset = 0;
 
-    for (const m of modules) {
-      const c = m.wgsl!();
+    for (let i = 0; i < modules.length; i++) {
+      const c = contributions[i]!;
       const fields = c.uniforms ?? [];
       const size = getWgslUniformByteSize(fields);
 
       uniformOffset = Math.ceil(uniformOffset / 16) * 16;
 
       slots.push({
-        module: m,
+        module: modules[i]!,
         contribution: c,
         uniformByteOffset: uniformOffset,
         uniformByteSize: size,
@@ -812,15 +845,20 @@ struct FrameUniforms {
         `);
 
     const moduleStructFields: string[] = [];
+    // Emitted once per key, like the preludes below: a struct or a uniform-block
+    // member declared twice is invalid WGSL, and `setProgram` is the only place
+    // that can explain a repeat to the caller.
+    const seenStructKeys = new Set<string>();
 
     for (const slot of slots) {
       const c = slot.contribution;
       const fields = c.uniforms ?? [];
 
-      if (fields.length === 0) {
+      if (fields.length === 0 || seenStructKeys.has(c.key)) {
         continue;
       }
 
+      seenStructKeys.add(c.key);
       sections.push(this._renderModuleStruct(c.key, fields));
       moduleStructFields.push(`u_${c.key}: ${c.key}Uniforms,`);
     }
@@ -837,11 +875,20 @@ ${moduleStructFields.map(s => `    ${s}`).join('\n')}
 
     let textureBindingIndex = moduleStructFields.length > 0 ? 3 : 2;
 
+    const seenTextureNames = new Set<string>();
+
     for (const slot of slots) {
       for (const t of slot.contribution.textures ?? []) {
+        const name = `${slot.contribution.key}_${t.name}`;
+
+        if (seenTextureNames.has(name)) {
+          continue;
+        }
+
+        seenTextureNames.add(name);
         sections.push(`
-@group(0) @binding(${textureBindingIndex++}) var u_${slot.contribution.key}_${t.name}: texture_1d<f32>;
-@group(0) @binding(${textureBindingIndex++}) var u_${slot.contribution.key}_${t.name}_sampler: sampler;
+@group(0) @binding(${textureBindingIndex++}) var u_${name}: texture_1d<f32>;
+@group(0) @binding(${textureBindingIndex++}) var u_${name}_sampler: sampler;
                 `);
       }
     }

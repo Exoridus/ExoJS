@@ -2,6 +2,7 @@
 // No registration is performed on import.
 
 export * from './distributions';
+export { ParticleModuleKeyCollisionError } from './gpu/ParticleModuleKeyCollisionError';
 export * from './modules';
 export type { ParticlesBuildInfo } from './particlesBuildInfo';
 export { particlesBuildInfo } from './particlesBuildInfo';
