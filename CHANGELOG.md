@@ -323,6 +323,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   character after the caret. The direction now follows the caret the widget
   last mirrored in, which is the only thing that separates a backspace from a
   forward delete.
+- **An IME commit passes the same gates a typed insert does.** Committing a
+  composition applied only `maxLength`, so a `filter` was never consulted and a
+  single-line field could end up holding a newline - breaking the single-line
+  assumptions every caret and hit-test calculation makes. A commit is now
+  admitted, truncated or refused exactly like an insertion, and still creates
+  no undo entry.
 
 ## [0.16.1] - 2026-09-02
 

@@ -445,37 +445,21 @@ export class TextEditingModel {
    * refuse it whole.
    */
   public insert(text: string, source: TextInsertSource = 'input'): boolean {
-    if (this._composition !== null || text === '') {
-      return false;
-    }
-
-    if (!this._multiline && text.includes('\n')) {
+    if (this._composition !== null) {
       return false;
     }
 
     const start = this.selectionStart;
     const end = this.selectionEnd;
+    const admitted = this._admit(text, start, end);
 
-    if (this._maxLength !== null) {
-      const available = this._maxLength - (this._value.length - (end - start));
-
-      if (available <= 0) {
-        return false;
-      }
-
-      text = trimSplitSurrogate(text.slice(0, available));
-
-      if (text === '') {
-        return false;
-      }
-    }
-
-    const candidate = this._value.slice(0, start) + text + this._value.slice(end);
-
-    if (this._filter !== null && !this._filter(candidate)) {
+    if (admitted === null) {
       return false;
     }
 
+    text = admitted;
+
+    const candidate = this._value.slice(0, start) + text + this._value.slice(end);
     const canStartRun = source !== 'paste' && start === end && !hasWhitespace(text);
     const extendsRun = canStartRun && this._undoOpen && this._lastInsertEnd === start;
 
@@ -713,22 +697,57 @@ export class TextEditingModel {
       return;
     }
 
-    let text = state.text;
-
-    if (this._maxLength !== null) {
-      text = trimSplitSurrogate(text.slice(0, Math.max(0, this._maxLength - this._value.length)));
-    }
-
     const start = this._composition.start;
+    // A commit is an insertion like any other: the same length, newline and
+    // filter rules decide what it may leave in the value.
+    const text = this._admit(state.text, start, start) ?? '';
 
-    this._value = this._value.slice(0, start) + text + this._value.slice(start);
     this._composition = null;
     this._anchor = this._focus = start + text.length;
     this._lastInsertEnd = -1;
 
     if (text !== '') {
+      this._value = this._value.slice(0, start) + text + this._value.slice(start);
       this.onChange.dispatch(this._value);
     }
+  }
+
+  /**
+   * What an insertion of `text` over `[start, end)` may actually apply, or
+   * `null` when the model refuses it whole. Truncation to `maxLength` never
+   * splits a surrogate pair; `filter` sees the value the edit would produce,
+   * so a rule the result breaks drops the whole edit rather than part of it.
+   */
+  private _admit(text: string, start: number, end: number): string | null {
+    if (text === '') {
+      return null;
+    }
+
+    if (!this._multiline && text.includes('\n')) {
+      return null;
+    }
+
+    if (this._maxLength !== null) {
+      const available = this._maxLength - (this._value.length - (end - start));
+
+      if (available <= 0) {
+        return null;
+      }
+
+      text = trimSplitSurrogate(text.slice(0, available));
+
+      if (text === '') {
+        return null;
+      }
+    }
+
+    const candidate = this._value.slice(0, start) + text + this._value.slice(end);
+
+    if (this._filter !== null && !this._filter(candidate)) {
+      return null;
+    }
+
+    return text;
   }
 
   /** One grapheme backward from `offset`, never one code unit. */
