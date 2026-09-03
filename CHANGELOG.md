@@ -8,6 +8,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Fixed
 
+- **A `Sprite` whose frame was set before its texture finished loading gets the
+  right UVs.** Texture coordinates are the frame divided by the texture's
+  dimensions, so a frame chosen against a still-loading handle - what
+  `Spritesheet` does on an atlas that has not arrived - was computed against
+  0x0 and never recomputed: the sprite sampled a single texel, and a retained
+  product recorded around it kept the non-finite coordinates for the life of
+  the root. The sprite now recomputes its coordinates and announces the change
+  when the payload lands.
 - **Tile layers on WebGL2 sample their own tileset again when a sprite is drawn
   between them.** `@codexo/exojs-tilemap`'s WebGL2 chunk renderer skipped its
   texture bind and blend call whenever its private memo matched, but the memo

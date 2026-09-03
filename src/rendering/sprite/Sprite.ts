@@ -6,6 +6,7 @@ import { Drawable } from '#rendering/Drawable';
 import type { Material } from '#rendering/material/Material';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { RenderNode } from '#rendering/RenderNode';
+import { invalidateOnTextureLoad } from '#rendering/texture/deferredTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 
@@ -297,6 +298,10 @@ export class Sprite extends Drawable {
       if (texture !== null) {
         this.resetTextureFrame();
         this._scheduleTextureLoadHeal(texture);
+        // The heal rebuilds the frame, but a retained product replays from the
+        // node's revisions alone and never visits a node it skipped, so the
+        // rebuild is only reachable if the load is announced as a change.
+        invalidateOnTextureLoad(this, texture as Texture);
       }
 
       this.invalidateCache();
@@ -327,12 +332,20 @@ export class Sprite extends Drawable {
       return; // failed load shows Texture.missing; nothing to heal
     }
 
-    // Guard against a texture swap or destroy between scheduling and resolution -
-    // and against an explicit frame set in the meantime (a Spritesheet slicing
-    // frames out of a still-loading atlas). The schedule-time reset above left a
-    // 0×0 frame, so a non-empty frame here means someone chose one deliberately;
-    // only heal the untouched case.
-    if (this._texture === texture && !this.destroyed && this._textureFrame.width === 0 && this._textureFrame.height === 0) {
+    // Guard against a texture swap or destroy between scheduling and resolution.
+    if (this._texture !== texture || this.destroyed) {
+      return;
+    }
+
+    // UVs are the frame divided by the texture's dimensions, so every frame -
+    // including one a caller chose deliberately against a still-loading atlas
+    // (a Spritesheet slicing frames out of one) - was computed against 0x0 and
+    // has to be recomputed now the real dimensions are known.
+    this.flags.addMask(SpriteFlags.TextureCoords);
+
+    // A frame the caller chose stands; only the schedule-time reset's own 0x0
+    // frame is replaced by the real dimensions.
+    if (this._textureFrame.width === 0 && this._textureFrame.height === 0) {
       // Read before the reset: it sizes the sprite to the new frame, and that
       // assignment goes through the same setter, which clears what is pending.
       const width = this._pendingWidth;
