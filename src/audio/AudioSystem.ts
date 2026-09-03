@@ -270,19 +270,14 @@ export class AudioSystem {
     //
     // - `onAudioContextReady` is the fast one - it fires synchronously inside
     //   the unlock gesture, so playback starts on the same tick as the click.
-    //   But it is a documented ONE-SHOT (`readyDispatched`): it cannot report a
-    //   context that drops back to suspended and is resumed again, and it is
-    //   already spent for any system constructed after the first gesture.
-    //   Subscribing to it while already running would therefore only leak a
-    //   handler that can never fire.
-    // - `preUpdate` closes both gaps by polling the transition. It already
-    //   reads `isAudioContextReady()` every frame to re-arm the locked-playback
-    //   warning, so this adds no work - and unlike the signal it keeps working
-    //   across arbitrarily many lock cycles.
-    //
-    // There is no per-transition stream to subscribe to instead: audio-context
-    // keeps its `statechange` listener module-private and uses it only to
-    // re-arm the gesture listeners.
+    //   It does not dispatch to handlers subscribed while the context is
+    //   already running, so subscribing in that case would only leak a handler
+    //   that never fires.
+    // - `preUpdate` closes the remaining gaps by polling the transition. It
+    //   already reads `isAudioContextReady()` every frame to re-arm the
+    //   locked-playback warning, so this adds no work - and it is the only
+    //   source that observes the running-to-suspended edge, which the ready
+    //   signal never reports.
     this._unlockObserved = isAudioContextReady();
 
     if (!this._unlockObserved) {

@@ -206,6 +206,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   on a leaf node took its transform, bounds and flags through a second
   teardown, and on a `RenderNode` re-ran the filter and signal release as well.
   A second call is now a no-op at every layer.
+- **Audio objects created while the context is locked again are set up on the
+  next unlock.** `onAudioContextReady` latched after its very first dispatch,
+  so a bus, listener, stream voice, worklet or effect constructed while the
+  context sat suspended - after an iOS audio-session interruption or a bfcache
+  restore - subscribed to a signal that could never fire and stayed silent for
+  the rest of the session. The signal now dispatches once per run of the
+  context, to whoever is subscribed at that moment.
 
 ## [0.16.1] - 2026-09-02
 

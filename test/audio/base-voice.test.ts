@@ -535,9 +535,10 @@ describe('BaseVoice — deferred bus connect while the bus is not yet set up', (
     const ctx = getAudioContext();
     const destination = ctx.destination;
 
-    // A bus constructed while the context is suspended has no input node yet,
-    // and only the (one-shot) ready signal ever gives it one - so it stays that
-    // way even after the context itself runs again.
+    // A bus constructed while the context is suspended has no input node yet:
+    // only the ready signal gives it one, and this double never fires the
+    // native `statechange` the signal keys off, so the bus stays deferred until
+    // the dispatch below.
     const originalState = ctx.state;
     mutable(ctx).state = 'suspended';
     const bus = new AudioBus('deferred', { parent: null });
