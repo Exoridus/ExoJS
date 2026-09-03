@@ -6,10 +6,10 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 125,
+  "memberCount": 126,
   "counts": {
     "constructors": 1,
-    "methods": 62,
+    "methods": 63,
     "properties": 48,
     "events": 14
   },
@@ -2101,6 +2101,53 @@
           ],
           "returnType": "this",
           "description": ""
+        },
+        {
+          "name": "removeItem",
+          "signature": "removeItem(child: RenderNode): this",
+          "signatureTokens": [
+            {
+              "text": "removeItem",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "child",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderNode",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "child",
+              "type": "RenderNode",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Remove a child; the stack re-flows on its own. No-op if child is not one of its items."
         },
         {
           "name": "render",

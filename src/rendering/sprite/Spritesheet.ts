@@ -76,6 +76,15 @@ export class Spritesheet {
     this.sprites.set(name, sprite);
   }
 
+  /** Destroy and remove a single frame's {@link Rectangle} and {@link Sprite} by name. No-op if the frame does not exist. */
+  public removeFrame(name: string): void {
+    this.frames.get(name)?.destroy();
+    this.frames.delete(name);
+
+    this.sprites.get(name)?.destroy();
+    this.sprites.delete(name);
+  }
+
   /** Register an animation sequence as an ordered list of frame names. All referenced frames must already exist. */
   public defineAnimation(name: string, frameNames: readonly string[]): this {
     if (name.trim().length === 0) {

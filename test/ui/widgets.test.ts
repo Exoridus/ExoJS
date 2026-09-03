@@ -403,6 +403,31 @@ describe('Stack', () => {
     expect(stack.uiHeight).toBe(30);
   });
 
+  test('removeItem removes a child and re-flows the remaining ones', () => {
+    const stack = new Stack({ direction: 'column', spacing: 10 });
+    const a = new Panel({ width: 100, height: 30 });
+    const b = new Panel({ width: 80, height: 40 });
+
+    stack.addItem(a);
+    stack.addItem(b);
+    stack.removeItem(a);
+
+    expect(stack.children).toEqual([b]);
+    expect(b.position.y).toBe(0);
+    expect(stack.uiHeight).toBe(40);
+  });
+
+  test('removeItem is a no-op for a node that is not one of its items', () => {
+    const stack = new Stack();
+    const a = new Panel({ width: 100, height: 30 });
+    const stray = new Panel({ width: 10, height: 10 });
+
+    stack.addItem(a);
+
+    expect(() => stack.removeItem(stray)).not.toThrow();
+    expect(stack.children).toEqual([a]);
+  });
+
   test('exposes direction, spacing, padding getters', () => {
     const stack = new Stack({ direction: 'row', spacing: 12, padding: 4 });
 

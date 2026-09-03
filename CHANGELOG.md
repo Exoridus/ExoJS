@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+
+- **`Spritesheet.removeFrame(name)` and `Stack.removeItem(item)`.** Both
+  mirror their existing `add`-side methods, completing the add/remove pair
+  every other mutator on these classes already has.
+
 ### Fixed
 
 - **`RenderTexturePool` keys pooled textures by format as well as size.**
