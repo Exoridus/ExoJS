@@ -90,6 +90,9 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
   // batches is booked once, against the batch its first run lands in.
   private _batchNodeCount = 0;
   private _nodeBooked = false;
+  // Blend mode and tileset texture of the batch currently accumulating, used to
+  // detect a batch break. Neither is a mirror of backend state: `flush()`
+  // establishes both at the draw (see {@link _resetBatchState}).
   private _currentBlendMode: BlendModes | null = null;
   private _currentTexture: Texture | null = null;
   private _currentView: View | null = null;
@@ -129,31 +132,24 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(node);
 
     for (const page of pages) {
-      this._renderPage(backend, page.texture, page.quads, blendMode, tintRgba, nodeIndex);
+      this._renderPage(page.texture, page.quads, blendMode, tintRgba, nodeIndex);
     }
   }
 
-  private _renderPage(backend: WebGl2Backend, texture: Texture, quads: readonly TileQuad[], blendMode: BlendModes, tintRgba: number, nodeIndex: number): void {
+  private _renderPage(texture: Texture, quads: readonly TileQuad[], blendMode: BlendModes, tintRgba: number, nodeIndex: number): void {
     if (quads.length === 0) {
       return;
     }
 
     const textureChanged = this._currentTexture !== null && texture !== this._currentTexture;
-    const blendModeChanged = blendMode !== this._currentBlendMode;
+    const blendModeChanged = this._currentBlendMode !== null && blendMode !== this._currentBlendMode;
 
     if (this._quadIndex > 0 && (blendModeChanged || textureChanged || this._quadIndex + quads.length > this._batchSize)) {
       this.flush();
     }
 
-    if (this._currentBlendMode === null || this._currentBlendMode !== blendMode) {
-      this._currentBlendMode = blendMode;
-      backend.setBlendMode(blendMode);
-    }
-
-    if (this._currentTexture !== texture) {
-      this._currentTexture = texture;
-      backend.bindTexture(texture, 0);
-    }
+    this._currentBlendMode = blendMode;
+    this._currentTexture = texture;
 
     const flipY = texture.flipY;
 
@@ -172,9 +168,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
       if (offset < quads.length) {
         this.flush();
         this._currentBlendMode = blendMode;
-        backend.setBlendMode(blendMode);
         this._currentTexture = texture;
-        backend.bindTexture(texture, 0);
       }
     }
   }
@@ -243,15 +237,18 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     const vao = this._vao;
 
     if (this._quadIndex === 0 || backend === null || instanceBuffer === null || vao === null) {
-      this._quadIndex = 0;
-      this._maxNodeIndex = 0;
-      this._batchNodeCount = 0;
+      this._resetBatchState();
       return;
     }
 
     this._stageViewUniforms(backend);
 
+    // Blend state and texture unit 0 are global and shared with every other
+    // renderer - a sprite drawn between two tile layers binds its own texture
+    // to the same unit - so this batch establishes both at its own draw. The
+    // backend collapses a redundant call.
     if (this._currentTexture !== null) {
+      backend.bindTexture(this._currentTexture, 0);
       this._shader.getUniform('u_texture').setValue(this._baseTextureUnitScratch);
     }
 
@@ -261,6 +258,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     this._shader.sync();
     backend.bindVertexArrayObject(vao);
     instanceBuffer.upload(this._instanceFloat32, 0, this._quadIndex * wordsPerInstance);
+    backend.setBlendMode(this._currentBlendMode ?? BlendModes.Normal);
     vao.drawInstanced(4, 0, this._quadIndex, RenderingPrimitives.TriangleStrip);
     backend.stats.batches++;
     backend.stats.drawCalls++;
@@ -285,9 +283,20 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
       );
     }
 
+    this._resetBatchState();
+  }
+
+  /**
+   * Scope the batch memos to one batch: they describe what is accumulating, not
+   * what GL holds, so a memo that outlived its flush would let the next batch
+   * skip establishing state another renderer has since changed.
+   */
+  private _resetBatchState(): void {
     this._quadIndex = 0;
     this._maxNodeIndex = 0;
     this._batchNodeCount = 0;
+    this._currentBlendMode = null;
+    this._currentTexture = null;
   }
 
   /**
@@ -410,10 +419,6 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
       return;
     }
 
-    if (payload.blendMode !== this._currentBlendMode) {
-      this._currentBlendMode = payload.blendMode;
-    }
-
     backend.setBlendMode(payload.blendMode);
     this._stageViewUniforms(backend);
 
@@ -422,16 +427,6 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     for (let i = 0; i < textures.length; i++) {
       // In-bounds: i < textures.length.
       backend.bindTexture(textures[i]!, i);
-    }
-
-    // Keep the live path's redundant-bind-skip cache coherent (a live
-    // TileChunkNode outside the group and the replayed batches inside it
-    // share this one renderer instance): unit 0 now actually holds this
-    // batch's texture, bypassing render()'s `_currentTexture` check, so the
-    // NEXT live draw must see the true bound texture or it wrongly skips its
-    // own bind and renders with this batch's leftover texture.
-    if (textures.length > 0) {
-      this._currentTexture = textures[0] as Texture;
     }
 
     this._shader.getUniform('u_texture').setValue(this._baseTextureUnitScratch);

@@ -8,6 +8,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Fixed
 
+- **Tile layers on WebGL2 sample their own tileset again when a sprite is drawn
+  between them.** `@codexo/exojs-tilemap`'s WebGL2 chunk renderer skipped its
+  texture bind and blend call whenever its private memo matched, but the memo
+  outlived the batch it described - and a sprite drawn between two tile layers
+  binds its own texture to the very unit the tile shader samples. The layer
+  after it drew the sprite's pixels, with the sprite's blend mode. The WebGPU
+  chunk renderer was never affected, so the backends visibly disagreed.
 - **`Text` and `BitmapText` honour `blendMode` on both backends.** The setter
   is public on every drawable and already broke the render batch, but neither
   text renderer applied it: WebGPU baked `Normal` into its pipeline, and WebGL2
