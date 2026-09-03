@@ -735,17 +735,20 @@ export class AssetResidency {
    */
   public _getSeamless(asset: CanonicalAsset, adapter: SeamlessAdapter<unknown>, options?: unknown): unknown {
     const stored = this._resources.get(asset.key)?.value;
+    const entry = this._deferred.get(asset.key);
 
     if (stored !== undefined) {
+      this._warnIgnoredOptions(asset, entry?.options, options);
+
       return stored;
     }
-
-    const entry = this._deferred.get(asset.key);
 
     if (entry !== undefined) {
       const representative = entry.handles.first();
 
       if (representative !== undefined) {
+        this._warnIgnoredOptions(asset, entry.options, options);
+
         if (adapter.stateOf(representative) === 'failed') {
           adapter.begin(representative);
           this._startFetch(asset, entry.options);
@@ -763,6 +766,27 @@ export class AssetResidency {
     this._startFetch(asset, options);
 
     return handle;
+  }
+
+  /**
+   * Dev-only diagnostic for the first-wins options contract: an existing
+   * instance keeps the options it was created with, so options a later `get()`
+   * asks for are dropped. Warns ONCE per source. Stripped in production.
+   *
+   * Options that take part in identity never reach this: they resolve to their
+   * own key, and therefore to their own instance, so nothing is ignored.
+   */
+  private _warnIgnoredOptions(asset: CanonicalAsset, existing: unknown, requested: unknown): void {
+    if (!__DEV__ || requested === undefined || requested === null || sameOptions(existing, requested)) {
+      return;
+    }
+
+    logger.warn(
+      `Asset "${asset.source}" is already loaded or loading, so the options this get() asked for were ignored - ` +
+        `the first call's options win, and an instance keeps the options it was created with. ` +
+        `Pass the options on the first acquisition, or use an Assets catalog leaf / Asset.type(...) for an independent instance.`,
+      { source: 'Loader', once: `loader:ignored-options:${asset.key}` },
+    );
   }
 
   /**
@@ -784,6 +808,8 @@ export class AssetResidency {
       const representative = this._representative(entry.refs);
 
       if (representative !== undefined) {
+        this._warnIgnoredOptions(asset, entry.options, options);
+
         if (representative.loadState === 'failed') {
           representative._begin();
           this._startFetch(asset, entry.options);
@@ -1645,3 +1671,25 @@ export class AssetResidency {
     this._settleBackgroundWaiters();
   }
 }
+
+/**
+ * Structural comparison of two option bags, for the dev-only ignored-options
+ * diagnostic. Depth-limited: an option value nested deeper than an asset type's
+ * own configuration ever goes is compared by identity rather than risking an
+ * unbounded walk of whatever a caller put there.
+ */
+const sameOptions = (a: unknown, b: unknown, depth = 0): boolean => {
+  if (Object.is(a, b)) {
+    return true;
+  }
+
+  if (depth >= 4 || typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) {
+    return false;
+  }
+
+  const keys = Object.keys(a);
+
+  return (
+    keys.length === Object.keys(b).length && keys.every(key => sameOptions((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key], depth + 1))
+  );
+};

@@ -130,6 +130,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   application-wide abort signal worked for `.exoa` containers and silently did
   nothing for every other asset. The two are composed now: either one aborts
   the request, and neither disables the other.
+- **Options a later `get()` loses are diagnosed in development.** `Loader.get`
+  documents that the same source yields the same instance and that conflicting
+  options on a later call are ignored with a one-time dev warning - but no such
+  warning existed, so a second `get('x.png', { textureOptions })` dropped its
+  sampler request with nothing to diagnose it. The warning now exists (once per
+  source, stripped in production). Options that take part in asset identity are
+  unaffected: they resolve to their own instance and lose nothing.
 
 ## [0.16.1] - 2026-09-02
 
