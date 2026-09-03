@@ -15,6 +15,13 @@ const readSince = (cursor: number, channels: number = DirtyChannel.Transform): S
   return seen;
 };
 
+/** Every node the index still holds a reference to, across all of its buckets. */
+const retainedNodes = (): unknown[] => {
+  const buckets = (nodeDirtyIndex as unknown as Record<string, unknown>)['_buckets'] as Array<{ nodes: unknown[] }>;
+
+  return buckets.flatMap(bucket => bucket.nodes.filter(node => node !== null));
+};
+
 beforeEach(() => {
   nodeDirtyIndex.reset();
 });
@@ -204,6 +211,56 @@ describe('NodeDirtyIndex', () => {
     expect(nodeDirtyIndex.readSince(stale, DirtyChannel.Transform, () => true)).toBe(false);
 
     node.destroy();
+  });
+
+  test('a generation that falls out of the window stops holding its nodes', () => {
+    // The index is process-wide and only recycles a bucket by resetting its
+    // logical length, so an entry left above that length pinned the node - and
+    // through its parent link, the whole graph it belonged to - for the life of
+    // the process, long after `covers()` stopped answering for it.
+    const node = new Container();
+    const stale = nodeDirtyIndex.sequence;
+
+    nodeDirtyIndex.mark(node, DirtyChannel.Transform);
+
+    for (let generation = 0; generation < 8; generation++) {
+      nodeDirtyIndex.advance();
+    }
+
+    expect(nodeDirtyIndex.covers(stale)).toBe(false);
+    expect(retainedNodes()).not.toContain(node);
+
+    node.destroy();
+  });
+
+  test('destroying a node drops the entry the index is still holding for it', () => {
+    // What makes Application.destroy() leave nothing pinned: a destroyed scene
+    // graph is released at once rather than eight advances later, and a
+    // destroyed application performs no further advance at all.
+    const node = new Container();
+
+    nodeDirtyIndex.mark(node, DirtyChannel.Transform);
+
+    expect(retainedNodes()).toContain(node);
+
+    node.destroy();
+
+    expect(retainedNodes()).not.toContain(node);
+  });
+
+  test('a read still reports the marks that outlived a destroyed neighbour', () => {
+    const first = new Container();
+    const second = new Container();
+    const before = nodeDirtyIndex.sequence;
+
+    nodeDirtyIndex.mark(first, DirtyChannel.Transform);
+    nodeDirtyIndex.mark(second, DirtyChannel.Transform);
+
+    first.destroy();
+
+    expect(readSince(before)).toEqual([second]);
+
+    second.destroy();
   });
 
   test('a fresh cursor of -1 is never covered, so nothing starts out silently up to date', () => {

@@ -996,6 +996,12 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     this._localBounds.destroy();
     this._bounds.destroy();
     this._orientedBounds?.destroy();
+
+    // Last, after the unlink: detaching is itself a change and would re-enter
+    // an entry this node no longer needs. The index is process-wide and only
+    // ages entries out as frames advance, so a node destroyed with the frame
+    // loop already gone would otherwise stay reachable through it forever.
+    nodeDirtyIndex.release(this);
   }
 
   /**

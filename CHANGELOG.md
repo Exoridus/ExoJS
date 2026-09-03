@@ -164,6 +164,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   that no longer existed. The disposal now awaits the run it just aborted, the
   same way it already awaits a preload. A scene whose `load()` never settles is
   bounded by `destroy()`'s existing teardown grace period.
+- **A destroyed scene graph is no longer pinned by the changed-record index.**
+  The process-wide dirty index recycled a generation by resetting its logical
+  length only, leaving every entry above it in place - and a `SceneNode` links
+  to its parent while a `Container` links to its children, so one retired entry
+  kept a whole destroyed scene alive for the life of the process, long after
+  the index itself reported those marks as outside its window. A recycled
+  generation now drops its references, and a node releases its entry when it is
+  destroyed, which is what leaves nothing pinned once `Application.destroy()`
+  has stopped advancing the index.
 
 ## [0.16.1] - 2026-09-02
 
