@@ -18,6 +18,7 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { materializeRendererBindings } from '#extensions/materialize';
+import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Geometry } from '#rendering/geometry/Geometry';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -395,6 +396,88 @@ describe('WebGL2 ParticleSystem — mesh', () => {
     } finally {
       root.destroy();
       mesh.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+describe('WebGL2 ParticleSystem — texture mutation', () => {
+  test('a payload that arrives after the first draw reaches the GPU on the next one', async () => {
+    const backend = await createBackend();
+    // What `loader.get(...)` hands a system: an empty handle whose pixels are
+    // installed once the download finishes, which is usually after the system
+    // has already been drawn at least once.
+    const texture = new Texture();
+    const root = new Container();
+    const system = new ParticleSystem(texture, { capacity: 4 });
+
+    try {
+      // The quad's extent comes from the frame, which an empty handle cannot
+      // supply yet; setting it explicitly keeps this about the upload alone.
+      system.setTextureFrame(new Rectangle(0, 0, 16, 16));
+      system.emit();
+      system.setPosition(32, 32);
+      root.addChild(system);
+
+      render(backend, root);
+
+      const payload = document.createElement('canvas');
+
+      payload.width = 16;
+      payload.height = 16;
+
+      const ctx = payload.getContext('2d')!;
+
+      ctx.fillStyle = '#ff0000';
+      ctx.fillRect(0, 0, 16, 16);
+
+      texture.setSource(payload);
+
+      render(backend, root);
+
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [255, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('an in-place edit to the texture reaches the GPU on the next draw', async () => {
+    const backend = await createBackend();
+    const source = document.createElement('canvas');
+
+    source.width = 16;
+    source.height = 16;
+
+    const ctx = source.getContext('2d')!;
+
+    ctx.fillStyle = '#0000ff';
+    ctx.fillRect(0, 0, 16, 16);
+
+    const texture = new Texture(source);
+    const root = new Container();
+    const system = new ParticleSystem(texture, { capacity: 4 });
+
+    try {
+      system.emit();
+      system.setPosition(32, 32);
+      root.addChild(system);
+
+      render(backend, root);
+
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [0, 0, 255, 255]);
+
+      ctx.fillStyle = '#ff0000';
+      ctx.fillRect(0, 0, 16, 16);
+      texture.updateSource();
+
+      render(backend, root);
+
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [255, 0, 0, 255]);
+    } finally {
+      root.destroy();
       texture.destroy();
       backend.destroy();
     }

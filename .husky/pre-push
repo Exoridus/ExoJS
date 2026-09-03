@@ -17,10 +17,12 @@
 #                 does NOT run is a lane the change cannot affect — a src-only
 #                 change never waits for the audio or tilemap-worker browser
 #                 lanes.
-# Tag pushes:     full `verify:release` (mirrors CI's verify job, including
-#                 verify:exports + npm pack --dry-run) so a release tag is
-#                 never published until the same checks CI runs have all
-#                 passed locally.
+# Tag pushes:     `scripts/ci/trust.ts` - the release workflow's own admission
+#                 check: the tagged commit carries the package.json version,
+#                 sits on origin/main and has a green `verdict`. Nothing is
+#                 re-verified locally because CI already ran every lane on the
+#                 push that brought the commit to main; a tag that would be
+#                 rejected remotely is rejected here first.
 #
 # Also, on branch pushes only: a path-gated `@codexo/exojs-bench` typecheck
 # (see the block below verify:quick — it is intentionally NOT part of
@@ -30,6 +32,7 @@
 #   <local_ref> <local_sha> <remote_ref> <remote_sha>
 is_tag_push=0
 is_branch_push=0
+pushed_tags=""
 push_head_sha=""
 push_base_sha=""
 null_sha="0000000000000000000000000000000000000000"
@@ -38,7 +41,10 @@ while read local_ref local_sha remote_ref remote_sha; do
     # Deletions carry the null SHA — nothing to verify when removing a ref.
     [ "$local_sha" = "$null_sha" ] && continue
     case "$remote_ref" in
-        refs/tags/*) is_tag_push=1 ;;
+        refs/tags/*)
+            is_tag_push=1
+            pushed_tags="$pushed_tags ${remote_ref#refs/tags/}"
+            ;;
         *)
             is_branch_push=1
             # Only the last pushed branch ref wins when a push carries several
@@ -51,16 +57,16 @@ while read local_ref local_sha remote_ref remote_sha; do
     esac
 done
 
-# Both verify:quick and verify:release include `typecheck:site`, which
-# type-checks the site/examples package against the PUBLISHED entry points
-# (package.json `exports` → dist/esm/*.d.ts) rather than against src/. Without
-# a build those declaration files don't exist and tsc reports a wall of
-# ts(2307) "Cannot find module 'exojs'" — a failure mode that reads like a
-# broken import in the pushed change, not like a missing prerequisite. Checking
-# for the root entry point's .d.ts up front turns that into one actionable
-# line. Deliberately not running the build here: it is slow enough that a hook
-# doing it silently would be the thing people bypass.
-if [ "$is_tag_push" = "1" ] || [ "$is_branch_push" = "1" ]; then
+# verify:quick includes `typecheck:site`, which type-checks the site/examples
+# package against the PUBLISHED entry points (package.json `exports` →
+# dist/esm/*.d.ts) rather than against src/. Without a build those declaration
+# files don't exist and tsc reports a wall of ts(2307) "Cannot find module
+# 'exojs'" — a failure mode that reads like a broken import in the pushed
+# change, not like a missing prerequisite. Checking for the root entry point's
+# .d.ts up front turns that into one actionable line. Deliberately not running
+# the build here: it is slow enough that a hook doing it silently would be the
+# thing people bypass.
+if [ "$is_branch_push" = "1" ]; then
     if [ ! -e dist/esm/index.d.ts ]; then
         echo "[pre-push] dist/ is missing — 'typecheck:site' would fail with ts(2307) 'Cannot find module exojs'."
         echo "[pre-push] It type-checks site/examples against the published entry points, which only exist after a build."
@@ -70,9 +76,14 @@ if [ "$is_tag_push" = "1" ] || [ "$is_branch_push" = "1" ]; then
 fi
 
 if [ "$is_tag_push" = "1" ]; then
-    echo "[pre-push] tag push detected — running full release verification"
-    npm run verify:release || exit 1
-elif [ "$is_branch_push" = "1" ]; then
+    echo "[pre-push] tag push detected - checking the tagged commit is releasable"
+    git fetch --quiet origin main || exit 1
+    for tag in $pushed_tags; do
+        node scripts/ci/trust.ts "$tag" || exit 1
+    done
+fi
+
+if [ "$is_branch_push" = "1" ]; then
     echo "[pre-push] running verify:quick (static CI-parity gates)"
     npm run verify:quick || exit 1
 

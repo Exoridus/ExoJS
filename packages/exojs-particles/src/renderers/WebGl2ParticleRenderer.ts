@@ -1,6 +1,4 @@
 import type { AttributeType, GeometryUsage, Material, Topology } from '@codexo/exojs';
-import type { BlendModes } from '@codexo/exojs/renderer-sdk';
-import type { Texture } from '@codexo/exojs/renderer-sdk';
 import type { View } from '@codexo/exojs/renderer-sdk';
 import type { WebGl2Backend } from '@codexo/exojs/renderer-sdk';
 import { BufferTypes, BufferUsage, RenderingPrimitives } from '@codexo/exojs/renderer-sdk';
@@ -132,8 +130,6 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
   private _drawCount = 0;
   private _pendingMode: ParticleRenderMode | null = null;
   private _pendingResources: ParticleModeResources | null = null;
-  private _currentTexture: Texture | null = null;
-  private _currentBlendMode: BlendModes | null = null;
   private _connection: ParticleRendererConnection | null = null;
 
   public constructor(batchSize: number) {
@@ -145,23 +141,20 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
   public render(system: ParticleSystem): this {
     const backend = this.getBackend();
     const { texture, blendMode } = system;
-    const textureChanged = texture !== this._currentTexture;
-    const blendModeChanged = blendMode !== this._currentBlendMode;
 
     // System transform / texture / UV / local-bounds are uniforms, so
     // mixing systems in one batch is invalid. Flush any prior system
     // before setting up this one.
     this.flush();
 
-    if (textureChanged) {
-      this._currentTexture = texture;
-      backend.bindTexture(texture);
-    }
-
-    if (blendModeChanged) {
-      this._currentBlendMode = blendMode;
-      backend.setBlendMode(blendMode);
-    }
+    // Offered to the backend on every system, never filtered against what this
+    // renderer bound last: the backend is the only holder of the live GL state
+    // (another renderer can have taken the unit or the blend mode since), and
+    // it alone sees a texture whose payload changed under a stable identity -
+    // which is what a handle from the loader does the moment its download
+    // lands. Both calls collapse to nothing when the state already matches.
+    backend.bindTexture(texture);
+    backend.setBlendMode(blendMode);
 
     const mode = system.renderMode;
     const resources = this._getOrCreateResources(mode);
@@ -256,8 +249,6 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
 
     this._resources.clear();
     this._connection = null;
-    this._currentTexture = null;
-    this._currentBlendMode = null;
     this._drawCount = 0;
     this._pendingMode = null;
     this._pendingResources = null;

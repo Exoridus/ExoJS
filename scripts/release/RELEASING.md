@@ -59,8 +59,11 @@ version in the tree indefinitely).
    git push && git push origin refs/tags/vx.y.z
    ```
 
-7. **Watch the CI.** The `Release` workflow checks out the **tag commit**, runs the
-   full CI gate, builds once, packs/hashes/attw/consumer-tests the tarballs, and
+7. **Watch the CI.** The pre-push hook already ran `scripts/ci/trust.ts` on the
+   tag: the tagged commit carries the package.json version, sits on `main` and
+   has a green `verdict` check. The `Release` workflow repeats that check in its
+   `trust` job instead of re-running CI, then checks out the **tag commit**,
+   builds once, packs/hashes/attw/consumer-tests the tarballs, and
    publishes them directly to the `latest` dist-tag via OIDC in lockstep order
    (Core first, then the extensions). Every tarball is `attw`-checked; the offline
    consumer smoke covers all packages **except `@codexo/exojs-react`** (its
