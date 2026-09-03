@@ -308,6 +308,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   `app.input.canvasFocused` and `onCanvasFocusChange` mean "this application
   holds keyboard focus"; a press on a surface the host refuses focus for
   reports the change instead of flipping the flag silently.
+- **Text input works again in browsers that ship `EditContext`.** The backend
+  attached its context with `EditContext.attachToElement()`, a draft method no
+  browser implements, and hung it on a `<textarea>`, which a host refuses to
+  attach a context to at all. Constructing the transport therefore threw on
+  every Chromium-based browser, leaving text fields focusable but completely
+  dead - no typing, no IME, no clipboard. The context is now attached through
+  the element's own `editContext` property, on a plain focusable element, and
+  detached when the transport is destroyed.
 
 ## [0.16.1] - 2026-09-02
 

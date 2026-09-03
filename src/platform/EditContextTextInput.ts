@@ -24,7 +24,6 @@ interface EditContextLike {
   selectionEnd: number;
   inputMode: string;
   enterKeyHint: string;
-  attachToElement(element: HTMLElement): void;
   updateText(rangeStart: number, rangeEnd: number, text: string): void;
   updateSelection(start: number, end: number): void;
   updateControlBounds(bounds: DOMRect): void;
@@ -43,6 +42,12 @@ interface EditContextLike {
 }
 
 type EditContextConstructor = new (options?: Record<string, unknown>) => EditContextLike;
+
+/**
+ * The element side of the association. An `EditContext` is attached by
+ * assigning it to the element, never by a method on the context itself.
+ */
+type EditContextHost = HTMLElement & { editContext?: EditContextLike | null };
 
 interface EditContextGlobal {
   // eslint-disable-next-line @typescript-eslint/naming-convention -- the global's name is fixed by the web platform
@@ -68,7 +73,7 @@ export const editContextSupported = (): boolean => (globalThis as EditContextGlo
  */
 export class EditContextTextInput implements PlatformTextInput {
   private readonly _context: EditContextLike;
-  private readonly _element: HTMLTextAreaElement;
+  private readonly _element: HTMLDivElement;
   private readonly _canvas: HTMLCanvasElement;
   private readonly _onEdit = new Signal<[TextEditIntent]>();
   private readonly _onComposition = new Signal<[CompositionState]>();
@@ -211,11 +216,13 @@ export class EditContextTextInput implements PlatformTextInput {
       throw new Error('EditContextTextInput requires the EditContext API');
     }
 
-    const element = document.createElement('textarea');
+    // A plain element, never a `<textarea>` or `<input>`: a host refuses to
+    // attach an `EditContext` to a natively editable element, which is the
+    // whole point of the API - the context replaces the element's editing
+    // behaviour rather than riding on top of it. `tabindex` is what makes it
+    // focusable at all.
+    const element = document.createElement('div');
 
-    element.autocomplete = 'off';
-    element.setAttribute('autocorrect', 'off');
-    element.setAttribute('autocapitalize', 'off');
     element.spellcheck = false;
     element.tabIndex = -1;
     element.setAttribute('aria-hidden', 'true');
@@ -225,10 +232,6 @@ export class EditContextTextInput implements PlatformTextInput {
     style.position = 'absolute';
     style.opacity = '0';
     style.pointerEvents = 'none';
-    style.border = 'none';
-    style.padding = '0';
-    style.margin = '0';
-    style.resize = 'none';
     style.overflow = 'hidden';
     style.background = 'transparent';
     style.color = 'transparent';
@@ -244,7 +247,8 @@ export class EditContextTextInput implements PlatformTextInput {
     document.body.append(element);
 
     const context = new Ctor({});
-    context.attachToElement(element);
+
+    (element as EditContextHost).editContext = context;
     this._context = context;
 
     context.addEventListener('textupdate', this._textUpdate);
@@ -347,6 +351,7 @@ export class EditContextTextInput implements PlatformTextInput {
     this._element.removeEventListener('copy', this._clipboardWrite);
     this._element.removeEventListener('cut', this._clipboardWrite);
     this._element.removeEventListener('paste', this._clipboardPaste);
+    (this._element as EditContextHost).editContext = null;
     this._element.remove();
     this._onEdit.destroy();
     this._onComposition.destroy();

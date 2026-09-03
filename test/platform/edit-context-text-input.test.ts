@@ -14,16 +14,11 @@ class FakeEditContext {
   public selectionEnd = 0;
   public inputMode = '';
   public enterKeyHint = '';
-  public attachedTo: HTMLElement | null = null;
   public controlBounds: DOMRect | null = null;
   public selectionBounds: DOMRect | null = null;
   public characterBounds: { rangeStart: number; bounds: DOMRect[] } | null = null;
 
   private readonly _listeners = new Map<string, Set<(event: never) => void>>();
-
-  public attachToElement(element: HTMLElement): void {
-    this.attachedTo = element;
-  }
 
   public updateText(rangeStart: number, rangeEnd: number, text: string): void {
     this.text = this.text.slice(0, rangeStart) + text + this.text.slice(rangeEnd);
@@ -84,14 +79,14 @@ const lastContext = (): FakeEditContext => {
   return context;
 };
 
-const transportElement = (): HTMLTextAreaElement => {
-  const element = document.body.querySelector('textarea');
+const transportElement = (): HTMLDivElement => {
+  const element = document.body.querySelector('div[aria-hidden="true"]');
 
   if (element === null) {
     throw new Error('the backend created no transport element');
   }
 
-  return element as HTMLTextAreaElement;
+  return element as HTMLDivElement;
 };
 
 /** A clipboard event jsdom can dispatch, with a data store the test can read back. */
@@ -123,7 +118,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete (globalThis as { EditContext?: unknown }).EditContext;
-  document.body.querySelectorAll('textarea').forEach(element => element.remove());
+  document.body.querySelectorAll('div[aria-hidden="true"]').forEach(element => element.remove());
 });
 
 const createBackend = (): { backend: EditContextTextInput; edits: TextEditIntent[]; compositions: CompositionState[] } => {
@@ -143,6 +138,17 @@ describe('EditContextTextInput', () => {
 
     delete (globalThis as { EditContext?: unknown }).EditContext;
     expect(editContextSupported()).toBe(false);
+  });
+
+  test('the context is attached through the element that holds host focus', () => {
+    const { backend } = createBackend();
+    const element = transportElement() as HTMLDivElement & { editContext?: unknown };
+
+    expect(element.editContext).toBe(lastContext());
+
+    backend.destroy();
+
+    expect(element.editContext).toBeNull();
   });
 
   test('a textupdate that adds text is forwarded as an insert', () => {
