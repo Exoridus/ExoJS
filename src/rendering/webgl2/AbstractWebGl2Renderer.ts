@@ -15,6 +15,18 @@ import type { WebGl2Backend } from './WebGl2Backend';
  * - onDisconnect(): tear down GL resources
  * - render(drawable): batch or immediately draw the given drawable
  * - flush(): submit any batched draw calls to the GPU
+ *
+ * Backend state ownership: GL state is global and every renderer shares it, so
+ * a renderer must establish the state it draws with immediately before its own
+ * draw call - another renderer, a compositor, or a retained replay may have
+ * changed it since the batch started accumulating. `setBlendMode`,
+ * `bindTexture`, `bindShader` and `bindVertexArrayObject` compare against the
+ * live state themselves and collapse a redundant call, so calling them
+ * unconditionally costs a comparison. Do not mirror backend state in the
+ * renderer to suppress those calls: a private copy is a batch-break signal at
+ * most and must not outlive the flush that ends its batch. Skipping a bind also
+ * skips the upload the backend performs there, which is the only thing that
+ * carries a texture whose payload changed under a stable identity to the GPU.
  */
 export abstract class AbstractWebGl2Renderer<Target extends Drawable> implements Renderer<WebGl2Backend, Target> {
   public readonly backendType = RenderBackendType.WebGl2;
