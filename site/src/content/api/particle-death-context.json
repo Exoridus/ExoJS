@@ -1,6 +1,6 @@
 {
   "title": "ParticleDeathContext",
-  "description": "The state of one particle at the moment it expired. A snapshot, not a view: it is copied out of the simulation when the particle dies and stays valid for the whole callback, whichever backend ran the simulation and whether or not the slot has already been reused. It carries no slot index for that reason - there is nothing to read back afterwards.",
+  "description": "The state of one particle at the moment it expired. A snapshot, not a view: it is copied out of the simulation when the particle dies and stays valid for the whole callback, whichever backend ran the simulation and whether or not the slot has already been reused. It carries no slot index for that reason - there is nothing to read back afterwards. On the GPU backend, the death branch re-integrates `x`/`y`/`rotation`/ `elapsed` to match the CPU path exactly, but returns before running that frame's update modules - so `velocityX`/`velocityY`/`scaleX`/`scaleY`/ `color` are the PREVIOUS frame's values, one integration step stale relative to the CPU backend, which runs every module before snapshotting. A `ColorOverLifetime` particle therefore dies at its second-to-last colour on WebGPU and its final colour on WebGL2; an `ApplyForce`/`Drag` particle's reported velocity is one step behind. A `SpawnOnDeath` sub-emitter or a custom death module reading these fields sees this divergence.",
   "symbol": "ParticleDeathContext",
   "kind": "interface",
   "subsystem": "particles",
@@ -20,7 +20,8 @@
       "members": [],
       "paragraphs": [
         "The state of one particle at the moment it expired.",
-        "A snapshot, not a view: it is copied out of the simulation when the particle dies and stays valid for the whole callback, whichever backend ran the simulation and whether or not the slot has already been reused. It carries no slot index for that reason - there is nothing to read back afterwards."
+        "A snapshot, not a view: it is copied out of the simulation when the particle dies and stays valid for the whole callback, whichever backend ran the simulation and whether or not the slot has already been reused. It carries no slot index for that reason - there is nothing to read back afterwards.",
+        "On the GPU backend, the death branch re-integrates `x`/`y`/`rotation`/ `elapsed` to match the CPU path exactly, but returns before running that frame's update modules - so `velocityX`/`velocityY`/`scaleX`/`scaleY`/ `color` are the PREVIOUS frame's values, one integration step stale relative to the CPU backend, which runs every module before snapshotting. A `ColorOverLifetime` particle therefore dies at its second-to-last colour on WebGPU and its final colour on WebGL2; an `ApplyForce`/`Drag` particle's reported velocity is one step behind. A `SpawnOnDeath` sub-emitter or a custom death module reading these fields sees this divergence."
       ],
       "importLine": "import { ParticleDeathContext } from '@codexo/exojs-particles'",
       "sourceLink": null

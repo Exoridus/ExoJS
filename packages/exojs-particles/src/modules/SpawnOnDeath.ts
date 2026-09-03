@@ -17,7 +17,8 @@ import type { SpawnModule } from './SpawnModule';
  * distributions decide everything else, and their sampled positions are treated
  * as offsets from the death position. To keep child particles riding the
  * parent's velocity, configure the child's velocity distribution to match, or
- * read {@link ParticleDeathContext.velocityX} in a custom death module.
+ * read {@link ParticleDeathContext.velocityX} in a custom death module -
+ * see that type's docs for how it can be one frame stale on the GPU backend.
  */
 export class SpawnOnDeath extends DeathModule {
   public targetSystem: ParticleSystem;
