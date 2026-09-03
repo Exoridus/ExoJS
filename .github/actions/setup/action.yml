@@ -1,0 +1,69 @@
+name: Set up the workspace
+description: pnpm, Node, dependencies, and optionally a Playwright browser, the Naga validator and the built dist.
+
+inputs:
+  node-version:
+    description: Node version for setup-node
+    default: '24.x'
+  browser:
+    description: Playwright browser to install (chromium or firefox); empty installs none
+    default: ''
+  apt:
+    description: Space-separated apt packages to install; empty installs none
+    default: ''
+  naga:
+    description: Install the Naga WGSL validator (pinned by NAGA_VERSION in the workflow env)
+    default: 'false'
+  dist:
+    description: Download the dist artifact the build job uploaded
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    # The pnpm version comes from `packageManager` in package.json.
+    - uses: pnpm/action-setup@v6
+      with:
+        run_install: false
+
+    - uses: actions/setup-node@v6
+      with:
+        node-version: ${{ inputs.node-version }}
+        check-latest: true
+        cache: pnpm
+        cache-dependency-path: pnpm-lock.yaml
+
+    - shell: bash
+      run: pnpm bootstrap
+
+    - if: inputs.apt != ''
+      shell: bash
+      run: sudo apt-get update && sudo apt-get install -y ${{ inputs.apt }}
+
+    - if: inputs.browser != ''
+      uses: actions/cache@v5
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-playwright-
+
+    - if: inputs.browser != ''
+      shell: bash
+      run: pnpm exec playwright install --with-deps ${{ inputs.browser }}
+
+    - if: inputs.naga == 'true'
+      id: naga-cache
+      uses: actions/cache@v5
+      with:
+        path: ~/.cargo/bin/naga
+        key: naga-cli-${{ env.NAGA_VERSION }}-${{ runner.os }}
+
+    - if: inputs.naga == 'true' && steps.naga-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: cargo install naga-cli --version "$NAGA_VERSION" --locked
+
+    - if: inputs.dist == 'true'
+      uses: actions/download-artifact@v4
+      with:
+        name: dist

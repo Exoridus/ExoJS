@@ -1,11 +1,9 @@
-import { pathToFileURL } from 'node:url';
-
 /**
  * CI lane selection - the single source of truth for which validation lanes a
  * set of changed files must trigger.
  *
  * Consumed by:
- *   - the "Detect changes" job in .github/workflows/_ci-checks.yml (plain
+ *   - scripts/ci/lanes.ts, which the `plan` job in .github/workflows/ci.yml runs (plain
  *     `node`, no `pnpm install`); and
  *   - test/ci/select-lanes.test.ts, which asserts representative changed-file
  *     sets against `selectAreas` / `effectiveLanes`.
@@ -20,7 +18,7 @@ import { pathToFileURL } from 'node:url';
  * Background / the defect this prevents:
  * a PR touching only `packages/exojs-tilemap/**` or `packages/exojs-tiled/**`
  * used to leave `engine` false, so the unit, package-verify and browser lanes
- * were skipped while Required CI still went green. The extension packages are
+ * were skipped while the required check still went green. The extension packages are
  * runtime engine code (their source is imported by the in-repo unit AND browser
  * tests via the vitest aliases), so a change to them must run the full engine
  * validation set - not just the docs/site lane.
@@ -34,6 +32,7 @@ export interface LaneAreas {
   tilemapWorker: boolean;
   exampleCatalog: boolean;
   benchStructural: boolean;
+  release: boolean;
 }
 
 /** The concrete CI lanes those areas enable. */
@@ -51,6 +50,7 @@ export interface EffectiveLanes {
   siteBuild: boolean;
   benchStructural: boolean;
   exampleSmoke: boolean;
+  releaseDryRun: boolean;
 }
 
 /**
@@ -229,6 +229,18 @@ const isBenchStructuralPath = (file: string): boolean => {
   return false;
 };
 
+/**
+ * Release area: the release tooling and every manifest it packs. Gates the
+ * release dry run, which builds and packs everything a release would.
+ */
+const isReleasePath = (file: string): boolean => {
+  if (file.startsWith('scripts/release/')) return true;
+  if (file === 'package.json' || file === 'pnpm-lock.yaml') return true;
+  if (/^packages\/[^/]+\/package\.json$/.test(file)) return true;
+  if (file === '.github/workflows/release.yml') return true;
+  return false;
+};
+
 export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
   let engine = false;
   let site = false;
@@ -236,6 +248,7 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
   let tilemapWorker = false;
   let exampleCatalog = false;
   let benchStructural = false;
+  let release = false;
   for (const raw of changedFiles) {
     // Normalise Windows separators and trim stray whitespace/blank entries.
     const file = String(raw).replace(/\\/g, '/').trim();
@@ -246,14 +259,15 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
     if (!tilemapWorker && isTilemapWorkerPath(file)) tilemapWorker = true;
     if (!exampleCatalog && isExampleCatalogPath(file)) exampleCatalog = true;
     if (!benchStructural && isBenchStructuralPath(file)) benchStructural = true;
-    if (engine && site && audioFx && tilemapWorker && exampleCatalog && benchStructural) break;
+    if (!release && isReleasePath(file)) release = true;
+    if (engine && site && audioFx && tilemapWorker && exampleCatalog && benchStructural && release) break;
   }
-  return { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural };
+  return { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural, release };
 };
 
 /**
- * Map effective areas to the concrete CI lanes. This MIRRORS the job `if:` gates
- * in _ci-checks.yml - keep the two in sync:
+ * Map effective areas to the concrete CI lanes. The lane table in `lanes.ts`
+ * reads these to decide what each stage's matrix contains:
  *   - typecheck + lint are ungated (always run, on every PR);
  *   - unit/coverage, package-verify and all three browser lanes gate on `engine`
  *     (the WebGPU + Firefox browser lanes still run when engine is true; they are
@@ -267,7 +281,7 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
  *     bench harness, or the committed counter baseline).
  */
 export const effectiveLanes = (areas: LaneAreas): EffectiveLanes => {
-  const { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural } = areas;
+  const { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural, release } = areas;
   return {
     typecheck: true,
     lint: true,
@@ -282,57 +296,6 @@ export const effectiveLanes = (areas: LaneAreas): EffectiveLanes => {
     siteBuild: site,
     exampleSmoke: exampleCatalog,
     benchStructural,
+    releaseDryRun: release,
   };
 };
-
-/**
- * Parse the changed-file list emitted by dorny/paths-filter (`list-files: json`)
- * - tolerant of an empty value or a newline-delimited list.
- */
-const parseChangedFiles = (raw: string | undefined): string[] => {
-  const text = (raw ?? '').trim();
-  if (text === '') return [];
-  if (text.startsWith('[')) {
-    try {
-      const parsed = JSON.parse(text);
-      if (Array.isArray(parsed)) return parsed.map(String);
-    } catch {
-      // Fall through to newline parsing below.
-    }
-  }
-  return text
-    .split(/\r?\n/)
-    .map(line => line.trim())
-    .filter(Boolean);
-};
-
-/**
- * CLI entry: read the event name + changed-file list from the environment and
- * print `engine=<bool>` / `site=<bool>` lines for `$GITHUB_OUTPUT`.
- *
- * On any non-`pull_request` event the changed-file list is irrelevant and every
- * area runs: a push to main, a tag release (via release.yml) or a manual
- * dispatch is always validated in full, never partially.
- */
-const main = (): void => {
-  const eventName = process.env['EVENT_NAME'] ?? '';
-  const areas =
-    eventName === 'pull_request'
-      ? selectAreas(parseChangedFiles(process.env['CHANGED_FILES']))
-      : { engine: true, site: true, audioFx: true, tilemapWorker: true, exampleCatalog: true, benchStructural: true };
-
-  // Human-readable trace to the job log (stderr keeps it out of $GITHUB_OUTPUT).
-  process.stderr.write(
-    `select-lanes: event=${eventName || 'unknown'} engine=${areas.engine} site=${areas.site} audioFx=${areas.audioFx} tilemapWorker=${areas.tilemapWorker} exampleCatalog=${areas.exampleCatalog} benchStructural=${areas.benchStructural}\n`,
-  );
-  process.stdout.write(
-    `engine=${areas.engine}\nsite=${areas.site}\naudioFx=${areas.audioFx}\ntilemapWorker=${areas.tilemapWorker}\nexampleCatalog=${areas.exampleCatalog}\nbenchStructural=${areas.benchStructural}\n`,
-  );
-};
-
-// Only run the CLI when executed directly (`node scripts/ci/select-lanes.ts`),
-// never when imported by the test suite.
-const invokedPath = process.argv[1];
-if (invokedPath && import.meta.url === pathToFileURL(invokedPath).href) {
-  main();
-}

@@ -3,95 +3,63 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { LANES } from '../../scripts/ci/lanes.ts';
 import { effectiveLanes } from '../../scripts/ci/select-lanes.ts';
-import { LOCAL_LANES } from '../../scripts/lanes';
 
 /**
- * Locks `pnpm lanes` to the lane vocabulary the CI detector uses.
- *
- * The selector decides WHICH lanes a change needs; this table decides WHAT each
- * of them runs locally. The failure mode the assertions below guard against is a
- * lane being added to the selector - and therefore to CI - while the local
- * runner silently has nothing to run for it, which turns `pnpm lanes --run` into
- * a green result that proves less than it appears to.
+ * The lane table against the selector and the package manifest: every lane the
+ * selector can turn on has an entry, every entry runs scripts that exist, and
+ * the flags the runners rely on are set where they must be.
  */
 
 const repoRoot = resolve(import.meta.dirname!, '../..');
 
-/**
- * Lanes the local runner deliberately has no command for. `coverage` is the unit
- * suite measured; running it locally doubles the wall time for no extra signal,
- * and it is covered by the `unit` entry.
- */
-const INTENTIONALLY_LOCAL_ONLY_IN_CI = new Set(['coverage', 'browserFirefox', 'packageVerify']);
+/** Lane keys the table covers elsewhere: `coverage` is a mode of `unit`, the site and smoke keys are jobs of their own. */
+const COVERED_OUTSIDE_THE_TABLE = new Set(['coverage', 'siteBuild', 'exampleSmoke']);
 
-const allLaneKeys = Object.keys(effectiveLanes({ engine: true, site: true, audioFx: true, tilemapWorker: true, exampleCatalog: true, benchStructural: true }));
+const allLaneKeys = Object.keys(
+  effectiveLanes({ engine: true, site: true, audioFx: true, tilemapWorker: true, exampleCatalog: true, benchStructural: true, release: true }),
+);
 
-/**
- * The package scripts a lane runs. A lane may chain steps with `&&` - the
- * example smoke serves the site build's output, so locally the build is part
- * of the lane - and every step named in it has to exist.
- */
-const laneScripts = (command: readonly string[]): string[] => command.filter((part, index) => command[index - 1] === 'pnpm');
+const scriptsIn = (command: string): string[] =>
+  [...command.matchAll(/\bpnpm (?:--filter "[^"]+" )*([\w:-]+)/g)].map(match => match[1]!).filter(script => script !== 'pack');
 
-const packageScripts = (): Record<string, string> => {
-  const manifest = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8')) as { scripts: Record<string, string> };
+const packageScripts = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8')) as { scripts: Record<string, string> };
 
-  return manifest.scripts;
-};
-
-describe('local lane commands', () => {
+describe('lane table', () => {
   it('covers every lane the selector can turn on', () => {
-    const covered = new Set(LOCAL_LANES.map(lane => lane.key as string));
-    const uncovered = allLaneKeys.filter(key => !covered.has(key) && !INTENTIONALLY_LOCAL_ONLY_IN_CI.has(key));
-
+    const covered = new Set(LANES.map(lane => lane.when as string));
+    const uncovered = allLaneKeys.filter(key => !covered.has(key) && !COVERED_OUTSIDE_THE_TABLE.has(key));
     expect(uncovered).toEqual([]);
   });
 
   it('names no lane the selector does not know', () => {
-    for (const lane of LOCAL_LANES) {
-      expect([...allLaneKeys, 'always']).toContain(lane.key);
+    for (const lane of LANES) {
+      expect([...allLaneKeys, 'always']).toContain(lane.when);
     }
   });
 
-  it('runs the ungated gate groups that have no lane key of their own', () => {
-    // `gates sync` is ungated in CI - no path decides whether it runs - so the
-    // selector has no key for it and the local runner has to claim it
-    // explicitly, or `pnpm lanes --run` would silently skip the API-doc and
-    // example-sync checks.
-    const groups = LOCAL_LANES.filter(lane => lane.command[1] === 'gates').map(lane => lane.command[2]);
-
-    expect(groups).toContain('sync');
+  it('runs the sync gates on every event', () => {
+    expect(LANES.find(lane => lane.run === 'pnpm gates sync')?.when).toBe('always');
   });
 
   it('runs only package scripts that exist', () => {
-    const scripts = packageScripts();
-
-    for (const lane of LOCAL_LANES) {
-      expect(lane.command[0]).toBe('pnpm');
-
-      const named = laneScripts(lane.command);
-
-      expect(named.length).toBeGreaterThan(0);
-
-      for (const script of named) {
-        expect(Object.keys(scripts)).toContain(script);
+    for (const lane of LANES) {
+      for (const command of [lane.run, lane.ciRun, lane.coverageRun].filter((value): value is string => value !== undefined)) {
+        const named = scriptsIn(command);
+        expect(named.length, `${lane.id}: ${command}`).toBeGreaterThan(0);
+        for (const script of named) {
+          expect(Object.keys(packageScripts.scripts), `${lane.id} runs \`pnpm ${script}\``).toContain(script);
+        }
       }
     }
   });
 
-  it('marks every browser-driven lane so --quick can skip it', () => {
-    for (const lane of LOCAL_LANES) {
-      // `test:examples:smoke` drives a real Chromium too - it boots the whole
-      // example catalog - and so does the bench structural gate, which runs the
-      // benchmark harness on the software rasterizer. The flag has to follow what
-      // a lane actually does, not just the `test:browser*` naming the vitest
-      // projects happen to use.
-      const drivesBrowser = laneScripts(lane.command).some(
-        script => script.startsWith('test:browser') || script === 'test:examples:smoke' || script === 'gate:bench:structural',
-      );
-
-      expect(lane.browser ?? false).toBe(drivesBrowser);
+  it('marks every browser-driven lane so --quick can skip it and CI installs the browser', () => {
+    for (const lane of LANES) {
+      const drivesBrowser = scriptsIn(lane.run).some(script => script.startsWith('test:browser') || script === 'gate:bench:structural');
+      expect(lane.local === 'browser', `${lane.id} local`).toBe(drivesBrowser);
+      expect(lane.browser !== undefined, `${lane.id} browser`).toBe(drivesBrowser);
     }
   });
 });

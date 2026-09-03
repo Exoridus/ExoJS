@@ -4,7 +4,7 @@ import { effectiveLanes, selectAreas } from '../../scripts/ci/select-lanes.ts';
 
 // Deterministic coverage for the CI path-to-lane policy. The logic under test is
 // scripts/ci/select-lanes.ts - the SAME module the "Detect changes" job in
-// .github/workflows/_ci-checks.yml runs - so these assertions exercise the real
+// .github/workflows/ci.yml runs - so these assertions exercise the real
 // lane-selection decision, not a copy of it.
 
 /** Areas + concrete lanes for a set of changed files. */
@@ -112,7 +112,7 @@ describe('CI lane selection — engine/site areas', () => {
 
   it('workflow change triggers broad validation (engine + site)', () => {
     expect(selectAreas(['.github/workflows/ci.yml'])).toMatchObject({ engine: true, site: true, audioFx: true, tilemapWorker: true });
-    expect(selectAreas(['.github/workflows/_ci-checks.yml'])).toMatchObject({ engine: true, site: true, audioFx: true, tilemapWorker: true });
+    expect(selectAreas(['.github/workflows/ci.yml'])).toMatchObject({ engine: true, site: true, audioFx: true, tilemapWorker: true });
   });
 
   it('lockfile / workspace-topology change triggers broad validation (engine + site)', () => {
@@ -178,7 +178,7 @@ describe('CI lane selection — package-only change must not skip engine lanes',
   // A change touching only files under the two extension packages (tiled,
   // tilemap), with no core engine files. If `engine` stayed false here, the
   // unit, package-verify and all three browser lanes would be SKIPPED while
-  // Required CI still went green. This locks in the corrected behavior.
+  // the required check still went green. This locks in the corrected behavior.
   const EXTENSION_PACKAGE_ONLY_FILES = [
     'packages/exojs-tiled/README.md',
     'packages/exojs-tiled/src/TiledMap.ts',
@@ -337,7 +337,7 @@ describe('CI lane selection - example-smoke lane', () => {
   });
 
   it('workflow / lockfile / workspace changes run the lane', () => {
-    expect(decide('.github/workflows/_ci-checks.yml').lanes.exampleSmoke).toBe(true);
+    expect(decide('.github/workflows/ci.yml').lanes.exampleSmoke).toBe(true);
     expect(decide('pnpm-lock.yaml').lanes.exampleSmoke).toBe(true);
     expect(decide('pnpm-workspace.yaml').lanes.exampleSmoke).toBe(true);
   });

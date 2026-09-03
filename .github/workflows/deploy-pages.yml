@@ -1,10 +1,10 @@
 name: Deploy Pages
 
 # Deploys the site EXACTLY as CI built and validated it — this workflow builds
-# no source code. `_ci-checks.yml`'s `site-build` job runs `gates site` and
-# `site:build` and uploads `site/dist/**` as `site-dist-<sha>`; here that same
-# artifact is downloaded from the run that triggered this one and handed to
-# Pages unchanged.
+# no source code. CI's `site` job (and a release's `prepare` job) runs the site
+# gates and `site:build` and uploads `site/dist/**` as `site-dist-<sha>`; here
+# that same artifact is downloaded from the run that triggered this one and
+# handed to Pages unchanged.
 #
 # The defect this prevents: the workflow used to check the sources out and
 # rebuild the library and the site itself, so what went live was a second build

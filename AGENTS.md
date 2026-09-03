@@ -112,7 +112,7 @@ Before completion, run `pnpm lanes` to see which lanes the change requires,
 run those, and run `git diff --check`.
 
 Do not run a full suite immediately before pushing. The pre-push hook already
-runs `verify:quick` plus the lanes `scripts/ci/select-lanes.ts` selects for
+runs `verify:quick` plus the lanes `scripts/ci/lanes.ts` selects for
 the pushed range, so a full local run beforehand is the same work twice.
 
 Do not weaken, delete, skip, or baseline a failing test or gate merely to make

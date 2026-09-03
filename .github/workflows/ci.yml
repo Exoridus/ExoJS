@@ -1,28 +1,288 @@
 name: CI
 
+# One workflow, five stages. Which lanes run is decided once, in `plan`, from
+# the lane table in scripts/ci/lanes.ts - the same table the pre-push hook
+# runs locally. A lane is added there, never here.
+#
+#   plan ─┬─► gates (matrix)
+#         ├─► test (matrix) ─► skip-budget
+#         └─► build ─┬─► verify (matrix)
+#                    └─► site ─► smoke
+#                                       all ─► verdict   (the required check)
+#
+# A pull request runs the lanes its changed files require; a push, a tag or a
+# dispatch runs every lane. Coverage is collected on pushes to the long-lived
+# branches only, so a pull request's unit lane runs uninstrumented.
+
 on:
   push:
     branches: [main, next]
   pull_request:
     branches: [main, next]
-  # Run the same gate on merge-queue entries so the queue can require it. On a
-  # merge_group event select-lanes.ts (non-PR path) runs every lane, so the
-  # queued merge is checked against the full matrix.
-  merge_group:
   workflow_dispatch:
 
 permissions:
   contents: read
+  # Codecov posts its coverage comment on pull requests.
   pull-requests: write
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  CI: true
+  # Pinned so the WGSL gate is reproducible: a newer Naga accepts more of the
+  # language, which moves what the gate rejects.
+  NAGA_VERSION: 26.0.0
+
 jobs:
-  checks:
-    uses: ./.github/workflows/_ci-checks.yml
-    # Reusable workflows do NOT see caller secrets by default; without this the
-    # Codecov upload runs tokenless and is rejected ("Token required because
-    # branch is protected").
-    secrets: inherit
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      gates: ${{ steps.plan.outputs.gates }}
+      test: ${{ steps.plan.outputs.test }}
+      verify: ${{ steps.plan.outputs.verify }}
+      hasTest: ${{ steps.plan.outputs.hasTest }}
+      hasVerify: ${{ steps.plan.outputs.hasVerify }}
+      build: ${{ steps.plan.outputs.build }}
+      site: ${{ steps.plan.outputs.site }}
+      smoke: ${{ steps.plan.outputs.smoke }}
+      smokeSample: ${{ steps.plan.outputs.smokeSample }}
+      skipBudget: ${{ steps.plan.outputs.skipBudget }}
+      coverage: ${{ steps.plan.outputs.coverage }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - if: github.event_name == 'pull_request'
+        id: changed
+        uses: dorny/paths-filter@v3
+        with:
+          list-files: json
+          filters: |
+            all:
+              - '**'
+
+      # No install: the planner is dependency-free TypeScript that node strips.
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+
+      - id: plan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          CHANGED_FILES: ${{ steps.changed.outputs.all_files }}
+          REF_NAME: ${{ github.ref_name }}
+        run: node scripts/ci/lanes.ts >> "$GITHUB_OUTPUT"
+
+  gates:
+    name: gates (${{ matrix.id }})
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.gates) }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+      - run: ${{ matrix.run }}
+
+  test:
+    name: test (${{ matrix.id }})
+    needs: plan
+    if: needs.plan.outputs.hasTest == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ matrix.timeoutMinutes }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.test) }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+        with:
+          browser: ${{ matrix.browser }}
+          apt: ${{ matrix.apt }}
+          naga: ${{ matrix.naga }}
+
+      - run: ${{ matrix.run }}
+
+      - name: Keep the JUnit report for the skip budget
+        if: ${{ matrix.junit && !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-${{ matrix.id }}
+          path: test-results/${{ matrix.id }}.junit.xml
+          retention-days: 1
+          if-no-files-found: warn
+
+      - if: ${{ matrix.junit && !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          files: ./test-results/${{ matrix.id }}.junit.xml
+          flags: ${{ matrix.id }}
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - if: ${{ matrix.coverage }}
+        uses: codecov/codecov-action@v6.0.2
+        with:
+          files: ./coverage/lcov.info
+          flags: ${{ matrix.id }}
+          fail_ci_if_error: ${{ secrets.CODECOV_TOKEN != '' }}
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: Exoridus/ExoJS
+
+  # One budget over every lane's report: a test that moves from one lane to
+  # another must not change the count.
+  skip-budget:
+    needs: [plan, test]
+    if: ${{ !cancelled() && needs.plan.outputs.skipBudget == 'true' && needs.test.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: junit-*
+          path: test-results
+          merge-multiple: true
+      - run: pnpm test:skips:check
+
+  # Built once; everything downstream consumes the artifact.
+  build:
+    needs: plan
+    if: needs.plan.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+
+      - name: Build core
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          EXOJS_FULL_BUNDLE: '1'
+        run: pnpm build
+
+      - name: Build extension packages
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: >-
+          pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled"
+          --filter "@codexo/exojs-physics" --filter "@codexo/exojs-tilemap-physics" --filter "@codexo/exojs-audio-fx"
+          --filter "@codexo/exojs-aseprite" --filter "@codexo/exojs-ldtk" --filter "@codexo/exojs-react" build
+
+      - name: Verify production stripping against the built dist
+        env:
+          EXOJS_REQUIRE_PRODUCTION_BUILD: '1'
+        run: pnpm test:production-stripping
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: |
+            dist/
+            packages/*/dist/
+          retention-days: 1
+          if-no-files-found: error
+
+  verify:
+    name: verify (${{ matrix.id }})
+    needs: [plan, build]
+    if: ${{ !cancelled() && needs.plan.outputs.hasVerify == 'true' && needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ matrix.timeoutMinutes }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.verify) }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+        with:
+          dist: ${{ matrix.dist }}
+      - run: ${{ matrix.run }}
+
+  site:
+    needs: [plan, build]
+    if: ${{ !cancelled() && needs.plan.outputs.site == 'true' && needs.build.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+        with:
+          dist: 'true'
+
+      # Typechecks the site against the published entry points, so it needs
+      # the dist the build job produced.
+      - run: pnpm gates site
+
+      - env:
+          EXOJS_PACKAGE_PATH: ..
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: pnpm site:build
+
+      # Deploy Pages ships exactly this artifact; it builds nothing itself.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site-dist-${{ github.sha }}
+          path: site/dist/
+          retention-days: 1
+          if-no-files-found: error
+
+  # Every catalog example through the real playground route, against the site
+  # job's artifact. A pull request smokes one example per category.
+  # `--renderer webgl2` withholds the WebGPU adapter: the runner has no GPU,
+  # and a software-rasterised WebGPU canvas reaches the capture as the clear
+  # colour alone, which reads as blank for every entry. WebGPU itself is
+  # covered by the webgpu test lane.
+  smoke:
+    needs: [plan, site]
+    if: ${{ !cancelled() && needs.plan.outputs.smoke == 'true' && needs.site.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+        with:
+          browser: chromium
+      - uses: actions/download-artifact@v4
+        with:
+          name: site-dist-${{ github.sha }}
+          path: site/dist
+
+      - run: pnpm test:examples:smoke --renderer webgl2 ${{ needs.plan.outputs.smokeSample == 'true' && '--sample' || '' }}
+
+      - name: Keep the smoke report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: example-smoke-report
+          path: |
+            .workspace/reports/example-smoke.md
+            .workspace/reports/example-smoke-artifacts
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # The one required status check. Fails on any job the plan asked for that
+  # did not succeed - a skipped one included.
+  verdict:
+    if: always()
+    needs: [plan, gates, test, skip-budget, build, verify, site, smoke]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+      - env:
+          NEEDS: ${{ toJSON(needs) }}
+          PLAN: ${{ toJSON(needs.plan.outputs) }}
+        run: node scripts/ci/verdict.ts
