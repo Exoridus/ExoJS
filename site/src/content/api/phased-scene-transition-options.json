@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Seconds of *each* phase (enter and exit run this long independently), in milliseconds. Default 220."
+          "description": "Duration of *each* phase (enter and exit run this long independently), in milliseconds. Default 220."
         },
         {
           "name": "easing",

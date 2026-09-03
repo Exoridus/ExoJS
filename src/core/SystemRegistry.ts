@@ -228,6 +228,13 @@ export class SystemRegistry implements Destroyable {
    * (`const world = app.systems.add(new PhysicsWorld())`). Adding the same
    * object twice is a no-op. See the class docs for buffering timing.
    *
+   * Takes ownership: the registry calls `system.destroy?.()` when it is
+   * removed by the registry's own {@link SystemRegistry.destroy}, in reverse
+   * registration order. `remove()` does not destroy - see its own docs - so
+   * a system meant to outlive this registry (e.g. an application-lifetime
+   * `PhysicsWorld` registered on a scene) must be `remove()`d before the
+   * registry that would otherwise destroy it tears down.
+   *
    * Re-adding a system removed earlier in the same frame is not that no-op: it
    * cancels the pending removal and registers the system again with this
    * call's options, which is how a system changes its own order or phase
