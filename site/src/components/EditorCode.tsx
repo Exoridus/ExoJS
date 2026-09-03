@@ -420,45 +420,51 @@ export const EditorCode = ({
       <input ref={fileInputRef} className={css(styles, 'file-input')} type="file" accept=".js,.ts" onChange={onFileImport} />
       <div className={css(styles, 'editor-shell')}>
         <div className={css(styles, 'editor-host')}>
-          <MonacoReactEditor
-            beforeMount={beforeMount}
-            height="100%"
-            language={language}
-            loading={null}
-            onChange={(value: string | undefined) => setEditorValue(value ?? '')}
-            onMount={onMount}
-            options={{
-              automaticLayout: true,
-              fixedOverflowWidgets: true,
-              fontFamily: MONACO_FONT_FAMILY,
-              fontSize: 14,
-              glyphMargin: false,
-              hover: { delay: 250, enabled: true, sticky: true, hidingDelay: 300 },
-              lineDecorationsWidth: 8,
-              lineHeight: 21,
-              lineNumbersMinChars: 4,
-              minimap: { enabled: false },
-              overviewRulerLanes: 0,
-              readOnly,
-              renderValidationDecorations: 'on',
-              scrollBeyondLastLine: false,
-              tabSize: 4,
-            }}
-            path={getModelUrl(sourcePath, language)}
-            theme="vs-dark"
-            value={editorValue}
-          />
+          {/*
+            Withheld until the selected example is known. Mounting earlier would
+            create a throwaway model under a placeholder path in whatever
+            language the not-yet-loaded example defaults to; switching `path`
+            afterwards leaves that model alive, and Monaco keeps one TypeScript
+            language service - one 6.9 MB `ts.worker` download - per language
+            that owns a live model.
+          */}
+          {sourcePath === null ? null : (
+            <MonacoReactEditor
+              beforeMount={beforeMount}
+              height="100%"
+              language={language}
+              loading={null}
+              onChange={(value: string | undefined) => setEditorValue(value ?? '')}
+              onMount={onMount}
+              options={{
+                automaticLayout: true,
+                fixedOverflowWidgets: true,
+                fontFamily: MONACO_FONT_FAMILY,
+                fontSize: 14,
+                glyphMargin: false,
+                hover: { delay: 250, enabled: true, sticky: true, hidingDelay: 300 },
+                lineDecorationsWidth: 8,
+                lineHeight: 21,
+                lineNumbersMinChars: 4,
+                minimap: { enabled: false },
+                overviewRulerLanes: 0,
+                readOnly,
+                renderValidationDecorations: 'on',
+                scrollBeyondLastLine: false,
+                tabSize: 4,
+              }}
+              path={getModelUrl(sourcePath)}
+              theme="vs-dark"
+              value={editorValue}
+            />
+          )}
         </div>
       </div>
     </section>
   );
 };
 
-const getModelUrl = (sourcePath: string | null, language: 'javascript' | 'typescript'): string => {
-  const defaultExt = language === 'typescript' ? '.ts' : '.js';
-  const normalizedPath = (sourcePath ?? `examples/active-example${defaultExt}`).replace(/^\/+/, '');
-  return `file:///${normalizedPath}`;
-};
+const getModelUrl = (sourcePath: string): string => `file:///${sourcePath.replace(/^\/+/, '')}`;
 
 const monacoSeverityToString = (severity: number): EditorDiagnosticSeverity => {
   if (severity >= 8) return 'error';
