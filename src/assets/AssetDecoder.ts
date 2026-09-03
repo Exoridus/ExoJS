@@ -43,7 +43,7 @@ export interface AssetDecoderOptions {
 const CONTAINER_NAMESPACE = 'exoa';
 
 /** A container is acquired whole, so one record holds it. */
-const containerLayout = SingleEntryLayout.version<ArrayBuffer>(1);
+const containerLayout = SingleEntryLayout.version<ArrayBuffer>(2);
 
 /** The shape an identity hook sees. Options are omitted entirely when the request carried none. */
 const toRequest = (source: string, options: unknown): AssetRequest<unknown> => (options === undefined || options === null ? { source } : { source, options });

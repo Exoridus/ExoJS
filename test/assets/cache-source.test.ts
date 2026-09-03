@@ -8,13 +8,19 @@ import type { CacheRecordKey } from '#assets/cache/CacheRecordKey';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { TextAsset } from '#assets/tokens';
+import { textType } from '#assets/types/data';
 import { materializeAssetTypes } from '#extensions/materialize';
 
 import { type CacheStoreDouble, createCacheStoreDouble } from './cache-test-doubles';
 import { testAssetType } from './test-asset-type';
 
 /** The record key an acquisition of `source` writes under, for `namespace`. */
-const recordKey = (namespace: string, source: string): CacheRecordKey => ({ namespace, source: `url:${source}`, version: 1, record: 'value' });
+const recordKey = (namespace: string, source: string): CacheRecordKey => ({
+  namespace,
+  source: `url:${source}`,
+  version: textType.layout.version,
+  record: 'value',
+});
 
 const originalFetch = global.fetch;
 

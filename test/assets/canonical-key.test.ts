@@ -1,4 +1,4 @@
-import { canonicalizeSource, resolveAssetUrl, resourceKey } from '#assets/canonicalKey';
+import { canonicalizeSource, resolveAssetUrl, resourceKey, sourceKey } from '#assets/canonicalKey';
 
 describe('canonicalizeSource', () => {
   test('joins a relative source onto the base path', () => {
@@ -61,5 +61,25 @@ describe('resourceKey', () => {
 
   test('the same locator under two types never collides', () => {
     expect(resourceKey('1', 'url:/a.json')).not.toBe(resourceKey('2', 'url:/a.json'));
+  });
+
+  test('a source that spells out a discriminator never composes that request key', () => {
+    // Browsers accept an unencoded `|` in a query string, so a source may
+    // legitimately look like "<source>|<discriminator>" already.
+    expect(resourceKey('texture', 'url:/a.png?v=1|mimeType=image/webp')).not.toBe(resourceKey('texture', 'url:/a.png?v=1', 'mimeType=image/webp'));
+  });
+
+  test('escaping is itself unambiguous, so an escape sequence in a source stays distinct', () => {
+    expect(resourceKey('texture', 'url:/a.png?v=1%7Cx')).not.toBe(resourceKey('texture', 'url:/a.png?v=1|x'));
+  });
+});
+
+describe('sourceKey', () => {
+  test('a locator that spells out a discriminator never composes that acquisition key', () => {
+    expect(sourceKey('url:/a.png?v=1|de')).not.toBe(sourceKey('url:/a.png?v=1', 'de'));
+  });
+
+  test('an absent and an empty discriminator are one key', () => {
+    expect(sourceKey('url:/a.png')).toBe(sourceKey('url:/a.png', ''));
   });
 });

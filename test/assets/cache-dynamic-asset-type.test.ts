@@ -161,8 +161,10 @@ describe('a runtime-installed asset type', () => {
 
     const source = 'url:https://assets.test/level.world';
 
-    expect(store.records.get(serializeCacheRecordKey({ namespace: 'com.example.world', source, version: 1, record: 'value' }))).toBe(payload);
-    expect(store.records.get(serializeCacheRecordKey({ namespace: 'com.example.world-raw', source, version: 1, record: 'value' }))).toBe(payload);
+    const version = worldType.layout.version;
+
+    expect(store.records.get(serializeCacheRecordKey({ namespace: 'com.example.world', source, version, record: 'value' }))).toBe(payload);
+    expect(store.records.get(serializeCacheRecordKey({ namespace: 'com.example.world-raw', source, version, record: 'value' }))).toBe(payload);
     expect(store.records.size).toBe(2);
 
     loader.destroy();
@@ -193,7 +195,7 @@ describe('a runtime-installed asset type', () => {
 
   test('a raised layout version re-acquires rather than decoding the old representation', async () => {
     class VersionedWorldAssetType extends WorldAssetType {
-      public override readonly layout = SingleEntryLayout.version<string>(2);
+      public override readonly layout = SingleEntryLayout.version<string>(new WorldAssetType().layout.version + 1);
     }
 
     const store = createCacheStoreDouble();

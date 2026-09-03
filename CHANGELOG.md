@@ -75,6 +75,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   Both entries resolved to a single asset identity, so the second payload
   replaced the first - and for a texture, video or music entry the replaced one
   owned a GPU upload or a media element that no owner could release.
+- **Two sources that differ only in a `|` are two assets again.** Resource and
+  source keys joined their fields with an unescaped separator, so a URL
+  carrying an unencoded `|` in its query could compose the very key another
+  request composes from a source plus a discriminator - and the two then shared
+  one residency entry, one fetch and one claim set. The fields are now escaped
+  the way persisted cache record keys already were. Because the source key is
+  part of a persisted record's identity, the default cache layout version is
+  raised: records written by an earlier version are no longer found and are
+  acquired again rather than read under the old spelling.
 
 ## [0.16.1] - 2026-09-02
 

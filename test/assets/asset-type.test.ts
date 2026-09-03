@@ -445,9 +445,11 @@ describe('AssetType source-variant storage', () => {
     await loader.load(worldType.asset('level.world', { locale: 'de' }));
     await loader.load(worldType.asset('level.world', { locale: 'en' }));
 
+    const version = worldType.layout.version;
+
     expect(store.set.mock.calls.map(call => call[0])).toEqual([
-      { namespace: 'com.example.world', source: 'url:https://assets.test/level.world|de', version: 1, record: 'value' },
-      { namespace: 'com.example.world', source: 'url:https://assets.test/level.world|en', version: 1, record: 'value' },
+      { namespace: 'com.example.world', source: 'url:https://assets.test/level.world|de', version, record: 'value' },
+      { namespace: 'com.example.world', source: 'url:https://assets.test/level.world|en', version, record: 'value' },
     ]);
     expect(store.records.size).toBe(2);
   });

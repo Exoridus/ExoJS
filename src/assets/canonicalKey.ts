@@ -193,9 +193,24 @@ export const resolveAssetUrl = (basePath: string, source: string): string => {
 /** The canonical locator for a fetchable source. */
 export const canonicalizeSource = (basePath: string, source: string): AssetLocator => `url:${resolveAssetUrl(basePath, source)}`;
 
+/**
+ * Escape the field separator and the escape character itself, so no combination
+ * of fields can spell another key. A URL may legitimately carry an unencoded
+ * `|` in its query, which without this makes one composed key readable as two
+ * different requests.
+ *
+ * The trailing discriminator is left unescaped: nothing follows it that it
+ * could be confused with. Every other field is escaped whether a discriminator
+ * follows it or not, or a source that spells out `<source>|<discriminator>`
+ * would compose the same key as that pair.
+ */
+const escapeField = (value: string): string => (value.includes('%') || value.includes('|') ? value.replaceAll('%', '%25').replaceAll('|', '%7C') : value);
+
 /** Compose the {@link ResourceKey} for a type identity, the source it is built from, and an optional resource discriminator. */
 export const resourceKey = (typeId: string, source: SourceKey, discriminator?: string): ResourceKey =>
-  discriminator === undefined || discriminator === '' ? `${typeId}|${source}` : `${typeId}|${source}|${discriminator}`;
+  discriminator === undefined || discriminator === ''
+    ? `${escapeField(typeId)}|${escapeField(source)}`
+    : `${escapeField(typeId)}|${escapeField(source)}|${discriminator}`;
 
 /**
  * Compose the {@link SourceKey} for a locator and an optional source
@@ -203,4 +218,4 @@ export const resourceKey = (typeId: string, source: SourceKey, discriminator?: s
  * one locator plus one source variant is one acquisition.
  */
 export const sourceKey = (locator: AssetLocator, discriminator?: string): SourceKey =>
-  discriminator === undefined || discriminator === '' ? locator : `${locator}|${discriminator}`;
+  discriminator === undefined || discriminator === '' ? escapeField(locator) : `${escapeField(locator)}|${discriminator}`;
