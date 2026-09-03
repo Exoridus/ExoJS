@@ -405,6 +405,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   The twist channel (0-359 degrees) was normalized by 359 instead of 360, so
   180 degrees read back as roughly 0.5014 instead of 0.5 and the error grew
   toward the top of the range.
+- **A destroyed chain collider could keep answering broad-phase queries
+  forever.** `PhysicsWorld`'s CCD pass re-synced the authored collider list
+  into the broad-phase tree instead of the detection list, so a chain was
+  inserted as its own tree leaf - a leaf the CCD pass never updates and
+  destruction never removes, since only the chain's edge proxies are torn
+  down. `queryAabb`, `rayCast` and `overlapShape` could report a destroyed
+  chain's body indefinitely. The CCD pass now resyncs the detection list,
+  matching what the broad and narrow phases actually read.
 
 ## [0.16.1] - 2026-09-02
 

@@ -1168,7 +1168,7 @@ export class PhysicsWorld implements BodyOwner {
     // `_finalizePosition` moved collider geometry after this step's detection
     // pass, so the index's leaves are stale for the sweep queries below. A leaf
     // whose tight AABB is still inside its fat one costs nothing to re-sync.
-    this._backend.spatialIndex?.sync(this._colliders);
+    this._backend.spatialIndex?.sync(this._detectionColliders);
 
     for (const body of this._bodies) {
       if (!body.isBullet || body.type !== 'dynamic' || body.isSleeping) {
