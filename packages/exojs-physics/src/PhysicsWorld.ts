@@ -883,6 +883,12 @@ export class PhysicsWorld implements BodyOwner {
 
     this._destroyed = true;
 
+    // Apply queued commands first: a body added (or a collider registered)
+    // from inside the event dispatch that triggered this destroy() is not in
+    // `_bodies` yet, and clearing `_commands` without running them first would
+    // leave it reporting `attached === true` / `destroyed === false` forever.
+    this._drainCommands();
+
     // Mark colliders before their bodies: a collider that still reported
     // `destroyed === false` while `collider.body.destroyed === true` would look
     // usable after the world that owned it is gone. Walk each body's own list

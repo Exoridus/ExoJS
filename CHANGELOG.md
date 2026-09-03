@@ -441,6 +441,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   `pixelToTile` already read the live, mutable fields - moving a layer at
   runtime moved its collision but left its pixels in place, with no error.
   The node now re-reads the offset every frame.
+- **A body added while `PhysicsWorld.destroy()` was running from inside that
+  same dispatch was never marked destroyed.** `destroy()` cleared the queued
+  command list without running it first, so a body added from a collision or
+  sensor callback that itself called `destroy()` stayed `attached === true`
+  and `destroyed === false` against a torn-down world. Queued commands are
+  now drained before the world tears down.
 
 ## [0.16.1] - 2026-09-02
 

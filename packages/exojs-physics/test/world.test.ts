@@ -233,6 +233,31 @@ describe('PhysicsWorld lifecycle and mass model', () => {
     expect(second._treeProxy).toBe(-1);
   });
 
+  it('destroy() called from inside a dispatch still marks a body added during that same dispatch', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
+    colliderAt(world, new BoxShape(10, 10), { x: 5, y: 0 });
+
+    let strayBody: PhysicsBody | null = null;
+
+    world.onCollisionStart.add(() => {
+      if (strayBody) {
+        return;
+      }
+
+      // Queued (not yet pushed to `_bodies`) when destroy() runs on the next line.
+      strayBody = world.add(new PhysicsBody({ type: 'dynamic', colliders: [{ shape: new BoxShape(10, 10) }] }));
+      world.destroy();
+    });
+
+    world.step(1 / 60);
+
+    expect(strayBody).not.toBeNull();
+    const stray = strayBody as unknown as PhysicsBody;
+    expect(stray.attached).toBe(true);
+    expect(stray.destroyed).toBe(true);
+  });
+
   it('rejects an invalid subStepCount (non-integer or below 1)', () => {
     expect(() => new PhysicsWorld({ subStepCount: 2.5 })).toThrow(RangeError);
     expect(() => new PhysicsWorld({ subStepCount: 0 })).toThrow(RangeError);
