@@ -1,6 +1,7 @@
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audioContext';
 import { AudioEffect } from '#audio/AudioEffect';
 import { registerAudioWorkletProcessor } from '#audio/worklet/registerWorklet';
+import { logger } from '#core/Logger';
 
 /**
  * Base class for filters implemented as AudioWorkletProcessors. Subclasses
@@ -98,7 +99,12 @@ export abstract class WorkletEffect extends AudioEffect {
     }
   }
 
-  /** Resolves once the worklet is loaded and inserted into the wet path. */
+  /**
+   * Resolves once the worklet is loaded and inserted into the wet path. Also
+   * resolves when the load fails - the effect then stays the clean passthrough
+   * it is until the worklet arrives, and the failure is reported through the
+   * engine log rather than by rejecting.
+   */
   public override get ready(): Promise<void> {
     return this._ready ?? Promise.resolve();
   }
@@ -169,7 +175,7 @@ export abstract class WorkletEffect extends AudioEffect {
     this._dryGain = dryGain;
     this._wetGain = wetGain;
 
-    this._ready = registerAudioWorkletProcessor(audioContext, this._workletName, this._workletSource).then(() => {
+    const ready = registerAudioWorkletProcessor(audioContext, this._workletName, this._workletSource).then(() => {
       if (!this._inputGain || !this._dryGain || !this._wetGain) return; // destroyed during load
 
       // Read _dryLatencySeconds here, not in _setup(), because the addModule
@@ -199,6 +205,18 @@ export abstract class WorkletEffect extends AudioEffect {
       this.wet = this._wet;
 
       this._onWorkletReady?.(audioContext);
+    });
+
+    // A blocked `addModule` (a Content-Security-Policy that forbids `blob:`
+    // worker sources is the realistic case) must not surface as an unhandled
+    // rejection: `ready` is a public promise most callers never await, and the
+    // wet path is already silent, so the effect simply stays a passthrough.
+    this._ready = ready.catch((error: unknown) => {
+      logger.warn(`${this.constructor.name}: the audio worklet "${this._workletName}" failed to load; the effect stays a passthrough.`, {
+        source: 'WorkletEffect',
+        once: `workleteffect-load-failed:${this._workletName}`,
+        ...(error instanceof Error && { error }),
+      });
     });
   }
 }

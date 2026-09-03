@@ -220,6 +220,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   microtask, where no caller could see it - and the bus stayed cut from its pan
   stage for good. The chain is now resolved before anything is disconnected,
   and an unready effect is bypassed with one diagnostic naming it.
+- **A worklet effect whose module fails to load degrades to a passthrough.**
+  `WorkletEffect.ready` rejected with nobody attached, so a blocked
+  `addModule` - a Content-Security-Policy forbidding `blob:` worker sources is
+  the realistic case - surfaced as an unhandled rejection. The failure is
+  logged instead and `ready` resolves; the effect keeps passing dry signal.
 
 ## [0.16.1] - 2026-09-02
 

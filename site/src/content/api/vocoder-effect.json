@@ -263,7 +263,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Resolves once the worklet is loaded and inserted into the wet path."
+          "description": "Resolves once the worklet is loaded and inserted into the wet path. Also resolves when the load fails - the effect then stays the clean passthrough it is until the worklet arrives, and the failure is reported through the engine log rather than by rejecting."
         },
         {
           "name": "wet",
