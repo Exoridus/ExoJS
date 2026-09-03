@@ -71,6 +71,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   the blocking connection went away, handing over an `IDBDatabase` nobody was
   waiting for and nothing closed - which then blocked every future upgrade in
   its turn. A connection arriving after a rejected open is closed.
+- **A container that packs one source twice is rejected instead of unpacked.**
+  Both entries resolved to a single asset identity, so the second payload
+  replaced the first - and for a texture, video or music entry the replaced one
+  owned a GPU upload or a media element that no owner could release.
 
 ## [0.16.1] - 2026-09-02
 

@@ -172,6 +172,17 @@ describe('asset container format', () => {
     expect(() => parseContainer(encodeRawIndex([{ source: 'a', type: 'text', offset: 0, length: 0, mime: 123 }]))).toThrow(/non-string "mime"/);
   });
 
+  test('rejects an index that packs one source twice', () => {
+    const duplicated = encodeContainer([
+      { source: 'cfg.json', type: 'json', bytes: utf8('{"which":"first"}') },
+      { source: 'cfg.json', type: 'json', bytes: utf8('{"which":"second"}') },
+    ]);
+
+    // Both entries resolve to one asset identity, so the second unpack would
+    // build a payload for it that no owner can ever release.
+    expect(() => parseContainer(duplicated)).toThrow(/index entry "cfg.json" is packed twice/);
+  });
+
   test('rejects an index region that is not valid JSON', () => {
     expect(() => parseContainer(encodeRawIndexBuffer(utf8('{not valid json')))).toThrow(/index is not valid JSON/);
   });
