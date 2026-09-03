@@ -4,7 +4,7 @@ import type { MockInstance } from 'vitest';
  * Lifecycle guards around teardown: the terminal states must stay terminal
  * whatever a startup run that is still in flight goes on to write, and
  * teardown must not release a subsystem out from under a navigation that is
- * still running.
+ * still running, and the public update() must not fork the frame loop.
  */
 import { Application, ApplicationState } from '#core/Application';
 import { Scene } from '#core/scene/Scene';
@@ -167,5 +167,27 @@ describe('Application lifecycle guards', () => {
     expect(events.indexOf('incoming.init')).toBeGreaterThanOrEqual(0);
     expect(events.indexOf('incoming.init')).toBeLessThan(events.indexOf('destroy settled'));
     expect(events.indexOf('incoming.destroy')).toBeLessThan(events.indexOf('destroy settled'));
+  });
+
+  test('a manual update() while the loop is live does not schedule a second frame chain', async () => {
+    const app = new Application({ backend: { type: 'webgl2' } });
+
+    await app.start();
+
+    const scheduledBeforeManualTick = rafSpy.mock.calls.length;
+
+    app.update(performance.now() + 16);
+
+    // A manual tick that reschedules would run alongside the loop's own
+    // callback from the next frame on, doubling the frame rate.
+    expect(rafSpy.mock.calls.length).toBe(scheduledBeforeManualTick);
+
+    // The scheduled callback still chains the next frame - the split must not
+    // cost the loop its self-rescheduling.
+    rafCallbacks.at(-1)!(performance.now() + 32);
+
+    expect(rafSpy.mock.calls.length).toBe(scheduledBeforeManualTick + 1);
+
+    await app.destroy();
   });
 });

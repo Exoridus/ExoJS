@@ -177,7 +177,9 @@ describe('Application.update() — loop timing', () => {
       app.pauseOnHidden = true;
       (app as unknown as Record<string, unknown>)['_documentVisible'] = false;
 
-      app.update();
+      // Through the scheduled callback, which is what chains the next frame:
+      // a hidden frame skips its body but must not let the loop die.
+      ((app as unknown as Record<string, unknown>)['_updateHandler'] as (timestamp: number) => void)(0);
 
       expect(rafSpy).toHaveBeenCalledTimes(1);
     });

@@ -829,6 +829,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this.random = new Random(this.options.seed);
       this._updateHandler = (timestamp: number): void => {
         this.update(timestamp);
+
+        // Only the scheduled callback chains the next frame. `update()` is
+        // public, so a manual call made while the loop is live would otherwise
+        // fork a second RAF chain and silently double the frame rate.
+        if (this._frameLoopActive) this._frameRequest = this.platform.requestFrame(this._updateHandler);
       };
 
       const fixedStepMs = this.options.fixedTimeStep !== undefined ? this.options.fixedTimeStep * 1000 : defaultFixedStepMs;
@@ -1437,7 +1442,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    *    `placement` (`'scene'`: below app overlays; `'screen'`: above them,
    *    matching the pre-transition-runtime default).
    * 5. **Frame dispatch / flush** - {@link Application.onFrame}, backend GPU
-   *    flush, frame-time stat write, RAF reschedule.
+   *    flush, frame-time stat write.
+   *
+   * Running one frame is all this does: scheduling belongs to the loop, so a
+   * manual call runs an extra frame alongside a live loop rather than forking
+   * a second one, and does not restart a loop that {@link Application.stop}
+   * has halted - the body is skipped entirely while the loop is not live.
    *
    * The simulation `delta` forwarded to all update recipients is clamped to
    * an internal maximum (100 ms) so that debugger pauses, device sleep/resume,
@@ -1451,7 +1461,6 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this._lastFrameTimestamp = timestamp;
         this._frameClock.restart();
         this._fixed.reset();
-        this._frameRequest = this.platform.requestFrame(this._updateHandler);
 
         return this;
       }
@@ -1544,12 +1553,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this.scenes._endFrame();
         this.systems._endFrame();
 
-        // RAF rescheduling always happens unless the guard halted the loop -
-        // this is what keeps the canvas alive through a throwing frame.
-        if (this._frameLoopActive) {
-          this._frameRequest = this.platform.requestFrame(this._updateHandler);
-          this._frameCount++;
-        }
+        if (this._frameLoopActive) this._frameCount++;
       }
     }
 

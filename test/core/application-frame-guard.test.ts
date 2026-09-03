@@ -112,6 +112,15 @@ const mockFrameElapsed = (app: Application, ms: number): void => {
   vi.spyOn(frameClock(app), 'elapsedSeconds', 'get').mockReturnValue(Time.toSeconds(Time.milliseconds(ms)));
 };
 
+/**
+ * Run one frame the way the loop does. The scheduled callback, not the public
+ * `update()`, is what chains the next frame, so any assertion about
+ * rescheduling has to go through it.
+ */
+const tick = (app: Application): void => {
+  ((app as unknown as Record<string, unknown>)['_updateHandler'] as (timestamp: number) => void)(0);
+};
+
 describe('Application frame guard', () => {
   let app: Application;
   let rafSpy: MockInstance;
@@ -175,7 +184,7 @@ describe('Application frame guard', () => {
     test('reschedules RAF so frame N+1 runs', () => {
       makeFlushThrow(new Error('boom'));
 
-      app.update();
+      tick(app);
 
       expect(rafSpy).toHaveBeenCalledTimes(1);
       expect(app.state).toBe(ApplicationState.Running);
@@ -238,9 +247,9 @@ describe('Application frame guard', () => {
     test('halts the loop: status Stopped, RAF canceled, no further reschedule', () => {
       makeFlushThrow(new Error('persistent'));
 
-      app.update();
-      app.update();
-      app.update();
+      tick(app);
+      tick(app);
+      tick(app);
 
       expect(app.state).toBe(ApplicationState.Stopped);
       expect(cafSpy).toHaveBeenCalled();
@@ -294,15 +303,15 @@ describe('Application frame guard', () => {
   describe('a successful frame resets the consecutive counter (contract 5)', () => {
     test('error, error, success, error, error keeps the loop alive', () => {
       makeFlushThrow(new Error('a'));
-      app.update();
-      app.update();
+      tick(app);
+      tick(app);
 
       makeFlushSucceed();
-      app.update();
+      tick(app);
 
       makeFlushThrow(new Error('b'));
-      app.update();
-      app.update();
+      tick(app);
+      tick(app);
 
       expect(app.state).toBe(ApplicationState.Running);
       expect(rafSpy).toHaveBeenCalledTimes(5);

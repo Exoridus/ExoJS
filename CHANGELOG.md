@@ -194,6 +194,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   saw a live claim scope or a destroyed one depending on whether activation had
   succeeded, and a claim taken on the failed path was never released. Both
   paths now release last.
+- **A manual `Application.update()` no longer forks the frame loop.** The
+  public tick rescheduled the next animation frame unconditionally, so calling
+  it while the loop was live - from `onFrame`, from an external fixed-rate
+  host, from a test harness that also lets the loop run - started a second
+  chain alongside the first and silently doubled the frame rate. Scheduling now
+  belongs to the loop's own callback: `update()` runs exactly one frame.
 
 ## [0.16.1] - 2026-09-02
 

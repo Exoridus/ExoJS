@@ -277,7 +277,9 @@ describe('Application', () => {
     expect(backend.flush).toHaveBeenCalledTimes(1);
     expect(backend.stats.frameTimeMs).toBeGreaterThanOrEqual(0);
     expect(frameClock.restart).toHaveBeenCalledTimes(1);
-    expect(rafSpy).toHaveBeenCalledTimes(1);
+    // Scheduling is the loop's, not update()'s: a manual tick runs one frame
+    // and leaves the RAF chain alone.
+    expect(rafSpy).not.toHaveBeenCalled();
   });
 
   test('defaults to WebGPU when available', async () => {
