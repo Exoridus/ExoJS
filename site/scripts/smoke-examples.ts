@@ -22,7 +22,7 @@
  *   ... --only camera-basic        # smoke a single example (path substring)
  *   ... --sample                   # one example per category (the PR-stage subset)
  *   ... --renderer webgl2          # withhold the WebGPU adapter (see `forceWebGl2`)
- *   ... --concurrency 4            # parallel pages (default 4)
+ *   ... --concurrency 4            # parallel pages (default: half the cores, at most 4)
  *   ... --browser firefox          # run under Firefox headed (cross-browser)
  *   ... --headed                   # force headed mode for any browser
  *   ... --color-scheme dark        # emulate dark-mode OS preference
@@ -43,13 +43,14 @@
  * not fail the run.
  */
 import { createServer, type Server } from 'node:http';
-import { existsSync, readFileSync, statSync } from 'node:fs';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { existsSync, readFileSync } from 'node:fs';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { availableParallelism } from 'node:os';
 import { dirname, extname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
-import { chromium, firefox, type Browser, type Frame, type Page } from 'playwright';
+import { chromium, firefox, type Browser, type BrowserContext, type Frame, type Page } from 'playwright';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(here, '..'); // site/
@@ -73,6 +74,19 @@ const SITE_BASE = '/ExoJS';
  */
 const BLANK_ALLOWLIST: Readonly<Record<string, string>> = {};
 const BLANK_FAILURE = 'canvas rendered but appears blank - one uniform color, no error thrown';
+
+/**
+ * Examples a software rasteriser cannot run, each with the reason. Applied only
+ * when the browser reports SwiftShader or llvmpipe behind WebGL2 - on a GPU
+ * these run and are judged like every other entry. Same category as the
+ * WebGPU-adapter skip: the environment's limit, not the example's.
+ */
+const SOFTWARE_RASTERISER_LIMITED: Readonly<Record<string, string>> = {
+  'particles/gpu-particles.js': 'the CPU particle fallback paints nothing through SwiftShader (reproduced locally with --use-angle=swiftshader)',
+  'particles/custom-wgsl-module.js': 'the CPU particle fallback paints nothing through SwiftShader (reproduced locally with --use-angle=swiftshader)',
+  'performance/backend-comparison.js':
+    '2200 moving sprites plus the debug overlay saturate a software-rasterised main thread; the harness cannot reach the page',
+};
 
 /**
  * Press pointers onto the preview canvas and leave them down. The engine binds
@@ -213,39 +227,72 @@ interface Result {
   shellErrors?: string[];
 }
 
+interface ServedFile {
+  body: Buffer;
+  type: string;
+}
+
 const startServer = (root: string): Promise<{ port: number; server: Server }> => {
-  const server = createServer((req, res) => {
-    try {
-      let urlPath = decodeURIComponent((req.url ?? '/').split('?')[0]);
-      // The site is built with a configured `base`, so every URL the emitted
-      // HTML references carries that prefix while `dist` itself is flat.
-      if (urlPath.startsWith(SITE_BASE)) {
-        urlPath = urlPath.slice(SITE_BASE.length) || '/';
-      }
-      let filePath = resolve(join(root, urlPath));
-      if (!filePath.startsWith(root)) {
-        res.writeHead(403);
-        res.end('Forbidden');
-        return;
-      }
-      if (existsSync(filePath) && statSync(filePath).isDirectory()) {
-        filePath = join(filePath, 'index.html');
-      }
-      if (!existsSync(filePath)) {
-        res.writeHead(404);
-        res.end('Not found');
-        return;
-      }
-      const body = readFileSync(filePath);
-      res.writeHead(200, {
-        'Content-Type': MIME[extname(filePath).toLowerCase()] ?? 'application/octet-stream',
-        'Cache-Control': 'no-store',
-      });
-      res.end(body);
-    } catch (error) {
-      res.writeHead(500);
-      res.end(error instanceof Error ? error.message : String(error));
+  // Every playground page pulls the editor shell, Monaco and the vendored
+  // engine typings - upwards of a thousand files - and the run asks for the same
+  // ones again for each example. `dist` cannot change while the run is in
+  // flight, so each file is read once and answered from memory afterwards, and
+  // never with a blocking read: one thread serves every concurrent page, and a
+  // synchronous read stalls all of them for the duration of the slowest one.
+  const files = new Map<string, Promise<ServedFile | null>>();
+
+  const load = async (urlPath: string): Promise<ServedFile | null> => {
+    let filePath = resolve(join(root, urlPath));
+    const stats = await stat(filePath).catch(() => null);
+
+    if (stats?.isDirectory()) {
+      filePath = join(filePath, 'index.html');
     }
+
+    const body = await readFile(filePath).catch(() => null);
+
+    return body && { body, type: MIME[extname(filePath).toLowerCase()] ?? 'application/octet-stream' };
+  };
+
+  const server = createServer((req, res) => {
+    let urlPath = decodeURIComponent((req.url ?? '/').split('?')[0]);
+    // The site is built with a configured `base`, so every URL the emitted
+    // HTML references carries that prefix while `dist` itself is flat.
+    if (urlPath.startsWith(SITE_BASE)) {
+      urlPath = urlPath.slice(SITE_BASE.length) || '/';
+    }
+
+    if (!resolve(join(root, urlPath)).startsWith(root)) {
+      res.writeHead(403);
+      res.end('Forbidden');
+      return;
+    }
+
+    let pending = files.get(urlPath);
+    if (!pending) {
+      pending = load(urlPath);
+      files.set(urlPath, pending);
+    }
+
+    pending
+      .then(file => {
+        if (!file) {
+          res.writeHead(404);
+          res.end('Not found');
+          return;
+        }
+
+        // Uncacheable on purpose: with cacheable responses the playground shell
+        // raised a bare `Event` on its very first load - Monaco fetches its
+        // TypeScript worker twice in quick succession, and the second load
+        // fails against the entry the first is still writing.
+        res.writeHead(200, { 'Content-Type': file.type, 'Cache-Control': 'no-store' });
+        res.end(file.body);
+      })
+      .catch((error: unknown) => {
+        res.writeHead(500);
+        res.end(error instanceof Error ? error.message : String(error));
+      });
   });
 
   return new Promise(resolvePromise => {
@@ -473,36 +520,115 @@ const collectErrors = async (page: Page, pageErrors: readonly string[]): Promise
   return { shell, preview };
 };
 
-const detectWebGpu = async (browser: Browser, baseUrl: string): Promise<boolean> => {
+interface Graphics {
+  /** A WebGPU adapter can be acquired. */
+  webgpu: boolean;
+  /** WebGL2 is rasterised in software (SwiftShader, llvmpipe). */
+  softwareRasteriser: boolean;
+}
+
+const probeGraphics = async (browser: Browser, baseUrl: string): Promise<Graphics> => {
   // Navigate to a real origin rather than about:blank - some Chromium builds
   // refuse to expose navigator.gpu on opaque origins.
   const page = await browser.newPage();
   try {
     await page.goto(`${baseUrl}/preview.html`, { waitUntil: 'domcontentloaded', timeout: 10_000 });
     return await page.evaluate(async () => {
-      try {
-        const gpu = (navigator as unknown as { gpu?: { requestAdapter(): Promise<unknown> } }).gpu;
-        if (!gpu) return false;
-        return (await gpu.requestAdapter()) !== null;
-      } catch {
-        return false;
-      }
+      const webgpu = await (async () => {
+        try {
+          const gpu = (navigator as unknown as { gpu?: { requestAdapter(): Promise<unknown> } }).gpu;
+          return gpu !== undefined && (await gpu.requestAdapter()) !== null;
+        } catch {
+          return false;
+        }
+      })();
+
+      const renderer = (() => {
+        try {
+          const gl = document.createElement('canvas').getContext('webgl2');
+          const info = gl?.getExtension('WEBGL_debug_renderer_info');
+          return gl && info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : '';
+        } catch {
+          return '';
+        }
+      })();
+
+      return { webgpu, softwareRasteriser: /swiftshader|llvmpipe|softpipe/i.test(renderer) };
     });
   } catch {
-    return false;
+    return { webgpu: false, softwareRasteriser: false };
   } finally {
     await page.close();
   }
 };
 
+interface ContextPool {
+  acquire: (hasTouch: boolean) => Promise<BrowserContext>;
+  close: () => Promise<void>;
+}
+
+/**
+ * Hands out one long-lived browser context per touch mode instead of a fresh
+ * one per example.
+ *
+ * A playground page pulls the editor shell, Monaco and the vendored engine
+ * typings - on the order of a thousand requests and tens of megabytes - and a
+ * new context starts with an empty HTTP cache and an empty V8 code cache, so
+ * every example paid for all of it again: the preview took about three times as
+ * long to mount as it does in a warm context, which is what pushed the catalog
+ * past its budget on a runner with no GPU. Each example still gets its own page,
+ * and the playground's only persistent state is the layout toggle and the
+ * version picker, neither of which an example can write.
+ *
+ * One pool per worker rather than one for the whole run: same-origin pages in a
+ * single context share a renderer process, so a shared pool would put every
+ * concurrent example on one main thread.
+ */
+const createContextPool = (browser: Browser, colorScheme: 'light' | 'dark'): ContextPool => {
+  const contexts = new Map<boolean, Promise<BrowserContext>>();
+
+  return {
+    acquire: (hasTouch: boolean): Promise<BrowserContext> => {
+      let pending = contexts.get(hasTouch);
+
+      if (!pending) {
+        // Wide enough that the playground lays out sidebar, editor and preview
+        // panel side by side. A narrower viewport collapses the layout and can
+        // leave the preview outside the rasterised area, where the compositor
+        // never paints it and every example would read as blank.
+        // `hasTouch` is what makes a touch-only example testable at all: without
+        // it the browser reports no touch points, the playground's capability
+        // gate replaces the stage with an overlay, and the example is never run.
+        //
+        // Declared per example rather than for the whole run, and not as a
+        // refinement: enabling touch emulation everywhere turned the entire
+        // catalog blank on CI's software rasteriser while a local GPU run stayed
+        // green, so every example that does not ask for touch keeps exactly the
+        // context it had.
+        pending = browser.newContext({ viewport: { width: 1600, height: 900 }, colorScheme, hasTouch }).then(async context => {
+          await context.addInitScript(captureErrors);
+          return context;
+        });
+        contexts.set(hasTouch, pending);
+      }
+
+      return pending;
+    },
+    close: async (): Promise<void> => {
+      const pending = [...contexts.values()];
+      contexts.clear();
+      await Promise.all(pending.map(async context => (await context).close()));
+    },
+  };
+};
+
 const runExample = async (
-  browser: Browser,
+  pool: ContextPool,
   baseUrl: string,
   entry: CatalogEntry & { category: string },
   index: number,
-  webgpuAvailable: boolean,
+  graphics: Graphics,
   timeoutMs: number,
-  colorScheme: 'light' | 'dark' = 'light',
 ): Promise<Result> => {
   const capabilities = entry.capabilities ?? [];
   const result: Result = {
@@ -515,9 +641,16 @@ const runExample = async (
   };
 
   const needsWebGpu = entry.backend === 'advanced' || capabilities.includes('webgpu');
-  if (needsWebGpu && !webgpuAvailable) {
+  if (needsWebGpu && !graphics.webgpu) {
     result.status = 'skipped';
     result.note = 'WebGPU adapter unavailable in this environment';
+    return result;
+  }
+
+  const rasteriserLimit = graphics.softwareRasteriser ? SOFTWARE_RASTERISER_LIMITED[entry.path] : undefined;
+  if (rasteriserLimit) {
+    result.status = 'skipped';
+    result.note = `software rasteriser: ${rasteriserLimit}`;
     return result;
   }
 
@@ -527,21 +660,7 @@ const runExample = async (
     return result;
   }
 
-  // Wide enough that the playground lays out sidebar, editor and preview panel
-  // side by side. A narrower viewport collapses the layout and can leave the
-  // preview outside the rasterised area, where the compositor never paints it
-  // and every example would read as blank.
-  // `hasTouch` is what makes a touch-only example testable at all: without it
-  // the browser reports no touch points, the playground's capability gate
-  // replaces the stage with an overlay, and the example is never run.
-  //
-  // Declared per example rather than for the whole run, and not as a
-  // refinement: enabling touch emulation everywhere turned the entire catalog
-  // blank on CI's software rasteriser while a local GPU run stayed green, so
-  // every example that does not ask for touch keeps exactly the context it had.
-  const hasTouch = entry.capabilities?.includes('touch') ?? false;
-  const context = await browser.newContext({ viewport: { width: 1600, height: 900 }, colorScheme, hasTouch });
-  await context.addInitScript(captureErrors);
+  const context = await pool.acquire(entry.capabilities?.includes('touch') ?? false);
   const page = await context.newPage();
   const pageErrors: string[] = [];
   page.on('pageerror', error => pageErrors.push(error.message));
@@ -632,7 +751,9 @@ const runExample = async (
     result.status = 'failed';
     result.note = oneLine(`harness error: ${error instanceof Error ? error.message : String(error)}`);
   } finally {
-    await context.close();
+    // The page, never the context: the context is pooled and its warm caches are
+    // what the next example in this worker starts from.
+    await page.close();
   }
 
   return result;
@@ -704,7 +825,11 @@ const main = async (): Promise<void> => {
     entries = sampleByCategory(entries);
   }
 
-  const concurrency = Math.max(1, Number.parseInt(values.concurrency ?? '4', 10) || 4);
+  // Half the cores, at most four: every page runs a main thread and, without a
+  // GPU, a software rasteriser beside it. Four pages on a four-core runner
+  // starved the heavy examples until the capture itself timed out.
+  const defaultConcurrency = Math.min(4, Math.max(1, Math.floor(availableParallelism() / 2)));
+  const concurrency = Math.max(1, Number.parseInt(values.concurrency ?? '', 10) || defaultConcurrency);
   const timeoutMs = Math.max(4000, Number.parseInt(values['timeout-ms'] ?? '15000', 10) || 15000);
 
   const { port, server } = await startServer(distDir);
@@ -738,10 +863,12 @@ const main = async (): Promise<void> => {
     });
   }
 
-  const webgpuAvailable = await detectWebGpu(browser, baseUrl);
+  const graphics = await probeGraphics(browser, baseUrl);
+  const webgpuAvailable = graphics.webgpu;
   console.log(
     `[smoke] ${entries.length} example(s) · ${browserName} · ${headless ? 'headless' : 'headed'} · ` +
       `color-scheme: ${colorScheme} · WebGPU adapter: ${webgpuAvailable ? 'yes' : 'no'}` +
+      `${graphics.softwareRasteriser ? ' · WebGL2: software rasteriser' : ''}` +
       `${forceWebGl2 ? ' (withheld: --renderer webgl2)' : ''} · concurrency ${concurrency}`,
   );
 
@@ -749,19 +876,25 @@ const main = async (): Promise<void> => {
   let cursor = 0;
 
   const worker = async (): Promise<void> => {
-    while (true) {
-      const index = cursor;
-      cursor += 1;
-      if (index >= entries.length) return;
+    const pool = createContextPool(browser, colorScheme);
 
-      const entry = entries[index];
-      const result = await runExample(browser, baseUrl, entry, index, webgpuAvailable, timeoutMs, colorScheme);
-      results[index] = result;
+    try {
+      while (true) {
+        const index = cursor;
+        cursor += 1;
+        if (index >= entries.length) return;
 
-      const tag = result.status.toUpperCase().padEnd(7);
-      const line = `[smoke] ${tag} ${entry.path}${result.note ? ` — ${result.note}` : ''}`;
-      if (result.status === 'failed') console.error(line);
-      else console.log(line);
+        const entry = entries[index];
+        const result = await runExample(pool, baseUrl, entry, index, graphics, timeoutMs);
+        results[index] = result;
+
+        const tag = result.status.toUpperCase().padEnd(7);
+        const line = `[smoke] ${tag} ${entry.path}${result.note ? ` — ${result.note}` : ''}`;
+        if (result.status === 'failed') console.error(line);
+        else console.log(line);
+      }
+    } finally {
+      await pool.close();
     }
   };
 
@@ -773,6 +906,7 @@ const main = async (): Promise<void> => {
   // blank remains a failure; thrown errors and missing canvases are never
   // softened by this retry.
   const blankFailureIndexes = results.flatMap((result, index) => (result.status === 'failed' && result.note === BLANK_FAILURE ? [index] : []));
+  const retryPool = createContextPool(browser, colorScheme);
 
   for (const index of blankFailureIndexes) {
     const entry = entries[index]!;
@@ -780,7 +914,7 @@ const main = async (): Promise<void> => {
 
     console.log(`[smoke] RETRY  ${entry.path} - serial blank verification`);
 
-    const retryResult = await runExample(browser, baseUrl, entry, index + entries.length, webgpuAvailable, timeoutMs, colorScheme);
+    const retryResult = await runExample(retryPool, baseUrl, entry, index + entries.length, graphics, timeoutMs);
 
     retryResult.shellErrors = [...new Set([...(firstResult.shellErrors ?? []), ...(retryResult.shellErrors ?? [])])];
     results[index] = retryResult;
@@ -791,6 +925,7 @@ const main = async (): Promise<void> => {
     else console.log(line);
   }
 
+  await retryPool.close();
   await browser.close();
   await new Promise<void>(resolveClose => server.close(() => resolveClose()));
 
@@ -802,23 +937,30 @@ const main = async (): Promise<void> => {
   };
 
   // One shell defect throws for every example, so the distinct messages are
-  // what carries information - not how many entries tripped over them.
-  const shellErrors = [...new Set(results.flatMap(result => result.shellErrors ?? []))];
+  // what carries information - not how many entries tripped over them. The
+  // example each message was first seen in is kept: a message that only some
+  // entries produce is a different problem from one the shell raises always.
+  const shellErrors = new Map<string, string>();
+  for (const result of results) {
+    for (const message of result.shellErrors ?? []) {
+      if (!shellErrors.has(message)) shellErrors.set(message, result.path);
+    }
+  }
 
   await writeReport(results, counts, webgpuAvailable, browserName, colorScheme, headless, shellErrors);
 
   console.log(`[smoke] passed ${counts.passed} · warned ${counts.warned} · skipped ${counts.skipped} · failed ${counts.failed}`);
 
-  if (shellErrors.length > 0) {
-    console.error(`[smoke] playground shell raised ${shellErrors.length} distinct error(s) - a site defect, not an example defect:`);
-    for (const message of shellErrors) {
-      console.error(`[smoke]   ${message}`);
+  if (shellErrors.size > 0) {
+    console.error(`[smoke] playground shell raised ${shellErrors.size} distinct error(s) - a site defect, not an example defect:`);
+    for (const [message, path] of shellErrors) {
+      console.error(`[smoke]   ${message} (first seen in ${path})`);
     }
   }
 
   console.log(`[smoke] report: ${reportPath}`);
 
-  if (counts.failed > 0 || shellErrors.length > 0) {
+  if (counts.failed > 0 || shellErrors.size > 0) {
     process.exitCode = 1;
   }
 };
@@ -830,7 +972,7 @@ const writeReport = async (
   browserName = 'chromium',
   colorScheme = 'light',
   headless = true,
-  shellErrors: readonly string[] = [],
+  shellErrors: ReadonlyMap<string, string> = new Map(),
 ): Promise<void> => {
   const icon: Record<Status, string> = { passed: '✅', failed: '❌', skipped: '⏭️', warned: '⚠️' };
   const lines: string[] = [];
@@ -851,11 +993,11 @@ const writeReport = async (
   lines.push(`| --- | --- | --- | --- | --- |`);
   lines.push(`| ${results.length} | ${counts.passed} | ${counts.warned} | ${counts.skipped} | ${counts.failed} |`, '');
 
-  if (shellErrors.length > 0) {
+  if (shellErrors.size > 0) {
     lines.push('## ❌ Playground shell', '');
-    lines.push('Raised by the playground page itself, not by any example - it reproduces on every entry and is one site defect:', '');
-    for (const message of shellErrors) {
-      lines.push(`- ${message}`);
+    lines.push('Raised by the playground page itself rather than by the example it ran - the entry named is where the message was first seen:', '');
+    for (const [message, path] of shellErrors) {
+      lines.push(`- ${message} — first seen in \`${path}\``);
     }
     lines.push('');
   }
