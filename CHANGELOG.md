@@ -56,6 +56,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   memo could hold a stale blend mode after another renderer changed it. Both
   are now offered to the backend on every system, which already collapses a
   redundant bind and is the only holder of the live GL state.
+- **A payload of one to three bytes is sniffed as `text/plain` instead of
+  throwing.** The MP4 magic-byte check read a 32-bit box size without checking
+  that the buffer holds one, so a truncated or near-empty response surfaced as
+  `Offset is outside the bounds of the DataView` wrapped in a load failure,
+  rather than as the documented fallback.
 
 ## [0.16.1] - 2026-09-02
 

@@ -33,6 +33,16 @@ describe('determineMimeType', () => {
     expect(determineMimeType(unknown)).toBe('text/plain');
   });
 
+  test('falls back to text/plain for a payload too short to sniff, instead of throwing', () => {
+    // A truncated or near-empty response must surface as the documented
+    // fallback, not as a DataView range error from a magic-byte read.
+    for (const length of [1, 2, 3]) {
+      const truncated = toBuffer(Array.from({ length }, () => 0x21));
+
+      expect(determineMimeType(truncated)).toBe('text/plain');
+    }
+  });
+
   describe('MP4 detection (matchesMp4Video)', () => {
     test('detects a valid MP4 box (correct box size, "ftypmp4" brand)', () => {
       // 20-byte box: [box size u32][ 'ftypmp4' ][ padding ] - header.length === boxSize (20),
