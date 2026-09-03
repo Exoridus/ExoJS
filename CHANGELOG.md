@@ -382,6 +382,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   held reported the modifier as up. Eligibility now includes visibility, and
   `Tab`'s direction reads the aggregate `Shift` channel `InputSystem` already
   reconciles between both sides.
+- **A `Gamepad`-owned binding on a non-gamepad channel is rejected instead of
+  silently behaving differently from `Application.input`.** `pad.onTrigger(Keyboard.Space)`
+  type-checked and appeared to work, but skipped the construction-baseline
+  watermark and keyboard-capture bookkeeping `InputSystem`'s own binding
+  methods apply. It now throws.
 
 ## [0.16.1] - 2026-09-02
 

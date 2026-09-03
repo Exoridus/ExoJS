@@ -485,26 +485,34 @@ export class Gamepad {
     }
   }
 
+  /**
+   * @throws {Error} If `channel` (or any element, for a channel list) is not
+   * a {@link GamepadButtonChannel} or {@link GamepadAxisChannel}. A binding
+   * created here only ever watches THIS pad's slot, so a Keyboard/Pointer
+   * channel would silently skip the construction-baseline watermark and
+   * keyboard-capture bookkeeping `InputSystem`'s own `onTrigger`/`onActive`/
+   * `onStart`/`onStop` apply - it would type-check and appear to work while
+   * behaving differently from the same channel bound through `app.input`.
+   */
   private _createBinding(channel: InputChannel | readonly InputChannel[], options: InputBindingOptions = {}): InputBinding {
     // `Array.isArray` narrows `readonly T[] | T` to `any[]`, dropping the element
     // type; annotate `list` so the element type is restored for `.map`.
     const list: readonly InputChannel[] = Array.isArray(channel) ? channel : [channel];
-    const resolved = list.map(c => this._resolveExternalChannel(c));
+    const resolved = list.map(c => this._resolveGamepadChannel(c));
     const binding = new InputBinding(resolved, options, this._detacher);
     this._bindings.add(binding);
     return binding;
   }
 
-  private _resolveExternalChannel(channel: InputChannel): number {
-    // Keyboard channels are global (no slot offset). Gamepad channels
-    // need slot-aware translation. Any channel value within the
-    // gamepad-section maps through this pad's slot offset; others
-    // (Keyboard, Pointer) pass through as-is.
-    if (channel >= ChannelOffset.Gamepads && channel < ChannelOffset.Gamepads + ChannelSize.Category) {
-      return this._resolveOffset(channel as GamepadButtonChannel | GamepadAxisChannel);
+  /** Slot-aware translation for a channel that must address THIS pad - see {@link _createBinding}'s `@throws`. */
+  private _resolveGamepadChannel(channel: InputChannel): number {
+    if (channel < ChannelOffset.Gamepads || channel >= ChannelOffset.Gamepads + ChannelSize.Category) {
+      throw new Error(
+        `Gamepad: channel ${String(channel)} is not a gamepad button or axis channel. Bind Keyboard/Pointer channels through Application.input instead.`,
+      );
     }
 
-    return channel;
+    return this._resolveOffset(channel as GamepadButtonChannel | GamepadAxisChannel);
   }
 
   private _updateBindings(): void {

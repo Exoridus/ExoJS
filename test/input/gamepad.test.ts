@@ -307,11 +307,13 @@ describe('Gamepad', () => {
     expect(onActive).toHaveBeenCalledTimes(1);
   });
 
-  test('a channel outside the gamepad range passes through unresolved', () => {
+  test('a non-gamepad channel is rejected rather than silently bound', () => {
     const pad = new Gamepad(0, new Float32Array(ChannelSize.Container));
-    const binding = pad.onActive(Keyboard.Space, vi.fn());
 
-    expect(binding.channels).toEqual([Keyboard.Space]);
+    // A binding built here would skip InputSystem's construction-baseline
+    // watermark and keyboard-capture bookkeeping while still type-checking -
+    // silently different from the same channel bound through Application.input.
+    expect(() => pad.onActive(Keyboard.Space, vi.fn())).toThrow(/not a gamepad button or axis channel/);
   });
 
   test('resolveChannelOffset resolves a slot-relative channel to its absolute buffer offset', () => {
