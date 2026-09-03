@@ -157,7 +157,7 @@ export interface LoadOptions {
  * `AssetDecoder` (URL resolution, acquisition, codec and factory dispatch),
  * and `AssetResidency` (claims, in-flight dedup, the resident-resource store,
  * deferred-handle healing, the background queue). `Loader` itself keeps the
- * public call-shape dispatch (`load`/`get`/`unload` and their `@internal`
+ * public call-shape dispatch (`load`/`get`/`unload` and their internal
  * scene-scope entry points) and the foreground-batch progress signals.
  */
 export class Loader {

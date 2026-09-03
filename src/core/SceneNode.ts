@@ -172,7 +172,7 @@ const NO_PARENT_VERSION = 0;
  *
  * `_invalidate*` methods are exported as `public` for friend-class access
  * from {@link Container} and {@link InteractionSystem}; treat them as
- * `@internal`.
+ * implementation detail, not public API.
  *
  * Subclasses: {@link Container} (carries children), {@link RenderNode}
  * (carries draw payloads).
