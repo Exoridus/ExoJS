@@ -505,13 +505,11 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
       this.resetTextureFrame();
     }
 
-    // Atlas UVs are divided by the texture size and uploaded to the device once,
-    // when the GPU state is built. A system that reached the GPU path while the
-    // texture was still 0x0 therefore holds non-finite coordinates that no
-    // frame-level invalidation reaches.
-    if (this._gpuState !== null && this._frames.length > 0) {
-      this._gpuState.refreshFrames(this._frames, texture);
-    }
+    // Frame UVs are divided by the texture size and uploaded to the device
+    // once, when the GPU state is built. A system that reached the GPU path
+    // while the texture was still 0x0 therefore holds non-finite coordinates
+    // that no frame-level invalidation reaches.
+    this._refreshGpuFrames();
   }
 
   public setTextureFrame(frame: Rectangle): this {
@@ -520,8 +518,22 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     this._updateVertices = true;
 
     this._setLocalBounds(0, 0, frame.width, frame.height);
+    // Every public path that changes the texture or the frame - including
+    // `setTexture`, which resets the frame - funnels through here, and the
+    // device's copy of the UVs is only written when something asks for it.
+    this._refreshGpuFrames();
 
     return this;
+  }
+
+  /**
+   * Re-bakes the device-side frame UVs. The CPU path recomputes them every
+   * frame from the live texture and `textureFrame`; the GPU path holds them in
+   * a uniform buffer that is written only here and at construction, so the two
+   * backends sample different rects until this runs.
+   */
+  private _refreshGpuFrames(): void {
+    this._gpuState?.refreshFrames(this._frames, this._texture, this._textureFrame);
   }
 
   public resetTextureFrame(): this {
@@ -854,7 +866,15 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
       return;
     }
 
-    this._gpuState = new ParticleGpuState(device, this.capacity, this._updateModules, this._frames, this._texture, this._deathModules.length > 0);
+    this._gpuState = new ParticleGpuState(
+      device,
+      this.capacity,
+      this._updateModules,
+      this._frames,
+      this._texture,
+      this._textureFrame,
+      this._deathModules.length > 0,
+    );
     this._gpuMode = true;
 
     // Mark every currently-alive slot dirty so the initial upload

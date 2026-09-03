@@ -1086,7 +1086,7 @@ describe('ParticleGpuState direct construction', () => {
       }
     }
 
-    expect(() => new ParticleGpuState(env.device, 4, [new NoWgslModule()], [], makeTexture())).toThrow(/has no wgsl/);
+    expect(() => new ParticleGpuState(env.device, 4, [new NoWgslModule()], [], makeTexture(), new Rectangle(0, 0, 16, 16))).toThrow(/has no wgsl/);
   });
 
   test('uploadTextures loop tolerates a module that implements uploadTextures() without declaring any wgsl() textures', () => {
@@ -1109,7 +1109,7 @@ describe('ParticleGpuState direct construction', () => {
       }
     }
 
-    expect(() => new ParticleGpuState(env.device, 4, [new UploaderWithoutTextures()], [], makeTexture())).not.toThrow();
+    expect(() => new ParticleGpuState(env.device, 4, [new UploaderWithoutTextures()], [], makeTexture(), new Rectangle(0, 0, 16, 16))).not.toThrow();
     expect(uploadCalls).toBe(1);
   });
 
@@ -1501,7 +1501,7 @@ describe('ParticleGpuState atlas UVs against a deferred texture', () => {
     expect([...afterLoad.at(-1)!]).toEqual([0, 0, 0.5, 0.5]);
   });
 
-  test('a system without declared frames needs no re-upload - its fallback carries no dimensions', async () => {
+  test('a system without declared frames re-uploads its fallback UVs once the texture finishes loading', async () => {
     const env = makeMockDevice();
     const { texture, finishLoad } = makeDeferredTexture();
     const system = new ParticleSystem(texture, { capacity: 4, device: env.device });
@@ -1509,14 +1509,68 @@ describe('ParticleGpuState atlas UVs against a deferred texture', () => {
     system.addUpdateModule(new ApplyForce(0, 0));
     system.update(tick(0.016));
 
+    // The fallback covers the system's own texture frame, which is 0x0 while
+    // the handle is empty - so it is divided by a 0x0 texture just like an
+    // atlas frame is.
     const beforeLoad = framesWrites(env);
 
-    expect(beforeLoad.at(-1)!.every(Number.isFinite)).toBe(true);
+    expect(beforeLoad.at(-1)!.every(Number.isFinite)).toBe(false);
 
     finishLoad(64, 64);
     await texture.loaded;
     await Promise.resolve();
 
-    expect(framesWrites(env)).toHaveLength(beforeLoad.length);
+    const afterLoad = framesWrites(env);
+
+    expect(afterLoad.length).toBeGreaterThan(beforeLoad.length);
+    expect([...afterLoad.at(-1)!]).toEqual([0, 0, 1, 1]);
+  });
+
+  test('setTextureFrame re-bakes the device UVs, so the GPU path samples the frame the CPU path does', () => {
+    const env = makeMockDevice();
+    const system = new ParticleSystem(makeTexture(), { capacity: 4, device: env.device });
+
+    system.addUpdateModule(new ApplyForce(0, 0));
+    system.update(tick(0.016));
+
+    expect(system.gpuMode).toBe(true);
+
+    const before = framesWrites(env);
+
+    expect([...before.at(-1)!]).toEqual([0, 0, 1, 1]);
+
+    // The top-left quarter of the 16x16 texture.
+    system.setTextureFrame(new Rectangle(0, 0, 8, 8));
+
+    const after = framesWrites(env);
+
+    expect(after.length).toBeGreaterThan(before.length);
+    expect([...after.at(-1)!]).toEqual([0, 0, 0.5, 0.5]);
+  });
+
+  test('setTexture re-bakes the device UVs against the new texture size', () => {
+    const env = makeMockDevice();
+    const system = new ParticleSystem(makeTexture(), { capacity: 4, device: env.device });
+
+    system.addUpdateModule(new ApplyForce(0, 0));
+    system.update(tick(0.016));
+    system.setTextureFrame(new Rectangle(0, 0, 8, 8));
+
+    const before = framesWrites(env);
+
+    expect([...before.at(-1)!]).toEqual([0, 0, 0.5, 0.5]);
+
+    // A swap resets the frame to the whole texture, so the UVs cover it again
+    // rather than staying divided by the previous texture's dimensions.
+    const replacement = document.createElement('canvas');
+
+    replacement.width = 32;
+    replacement.height = 32;
+    system.setTexture(new Texture(replacement));
+
+    const after = framesWrites(env);
+
+    expect(after.length).toBeGreaterThan(before.length);
+    expect([...after.at(-1)!]).toEqual([0, 0, 1, 1]);
   });
 });

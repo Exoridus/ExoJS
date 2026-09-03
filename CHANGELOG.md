@@ -278,6 +278,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   soon as the emitter's origin scrolled out of view. Systems opt out of culling
   by default; `cullArea` is the documented way back in for a system whose reach
   is known.
+- **The WebGPU compute path samples the texture frame the CPU path does.**
+  `@codexo/exojs-particles` baked a particle system's frame UVs into a uniform
+  block once, when the GPU state was built, and assumed the whole texture
+  whenever no atlas was declared - so `system.textureFrame` was ignored
+  outright, and a texture swapped in later left the UVs divided by the previous
+  texture's dimensions. The same scene drew a sub-rect on WebGL2 and the whole
+  atlas on WebGPU. Both setters now re-bake the block.
 
 ## [0.16.1] - 2026-09-02
 

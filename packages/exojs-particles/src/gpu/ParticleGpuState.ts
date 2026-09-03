@@ -170,6 +170,7 @@ export class ParticleGpuState {
     modules: readonly UpdateModule[],
     frames: readonly Rectangle[],
     texture: Texture,
+    textureFrame: Rectangle,
     reportsDeaths = false,
   ) {
     this.device = device;
@@ -179,7 +180,7 @@ export class ParticleGpuState {
     this._framesUniformData = new ArrayBuffer(this._frameCount * 16);
     this._framesUniformView = new Float32Array(this._framesUniformData);
     this._framesUniformBuffer = new WebGpuUniformBuffer(device, this._framesUniformData.byteLength, 'particle-frames-uniforms');
-    this._writeFrames(frames, texture);
+    this._writeFrames(frames, texture, textureFrame);
 
     const vec2Bytes = capacity * 8;
     const vec4Bytes = capacity * 16;
@@ -587,35 +588,41 @@ export class ParticleGpuState {
   }
 
   /**
-   * Recomputes the atlas UVs against the texture's current dimensions.
+   * Recomputes the frame UVs against the texture's current dimensions and
+   * `textureFrame`.
    *
-   * Only meaningful for a system whose texture was still a deferred handle when
-   * this state was built: the UVs are divided by the texture size and uploaded
-   * once at construction, so a handle that reported 0x0 back then baked
-   * non-finite coordinates into the uniform buffer that nothing else rewrites.
-   * A system without declared frames is unaffected - it uploads the whole-
-   * texture fallback, which carries no dimensions.
+   * The UVs are divided by the texture size and uploaded once at construction,
+   * so nothing else rewrites them: a texture swap, a frame chosen after the
+   * state was built, and a deferred handle that reported 0x0 back then all
+   * leave the device sampling the wrong rect until this runs.
    */
-  public refreshFrames(frames: readonly Rectangle[], texture: Texture): void {
+  public refreshFrames(frames: readonly Rectangle[], texture: Texture, textureFrame: Rectangle): void {
     if (this._destroyed) {
       return;
     }
 
-    this._writeFrames(frames, texture);
+    this._writeFrames(frames, texture, textureFrame);
   }
 
-  private _writeFrames(frames: readonly Rectangle[], texture: Texture): void {
+  private _writeFrames(frames: readonly Rectangle[], texture: Texture, textureFrame: Rectangle): void {
     const view = this._framesUniformView;
     const w = texture.width;
     const h = texture.height;
     const flipY = texture.flipY;
 
     if (frames.length === 0) {
-      // Single-frame fallback - full texture.
-      view[0] = 0;
-      view[1] = flipY ? 1 : 0;
-      view[2] = 1;
-      view[3] = flipY ? 0 : 1;
+      // No atlas: the whole quad samples the system's own texture frame, which
+      // is what the CPU path writes into `a_uvMin`/`a_uvMax` too. Assuming the
+      // full texture here made the two backends sample different rects.
+      const minU = textureFrame.left / w;
+      const maxU = textureFrame.right / w;
+      const topV = textureFrame.top / h;
+      const bottomV = textureFrame.bottom / h;
+
+      view[0] = minU;
+      view[1] = flipY ? bottomV : topV;
+      view[2] = maxU;
+      view[3] = flipY ? topV : bottomV;
     } else {
       for (let i = 0; i < frames.length; i++) {
         const f = frames[i]!;
