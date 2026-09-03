@@ -469,6 +469,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   earlier binding's GPU-backed renderer had already been created and bound.
   The duplicate-target scan now runs over every binding before any renderer
   is created.
+- **A guide-content-only change now runs the unit lane, which is what
+  validates it.** `test/site/guide-structure.test.ts` and its siblings live
+  under `test/` and check `site/src/content/**`, so they ran on every engine
+  change and never on the guide content they exist to validate. CI lane
+  selection now gates the unit lane on a `guides` area as well as `engine`.
+- **`packages/exojs-bench/test/**` and `packages/create-exo-app/**` changes
+  now run a validation lane.** Neither package is a runtime dependency of
+  the engine, so both sat outside `RUNTIME_PACKAGES` and a change to either
+  left CI green without exercising it. A bench test change now gates the
+  existing structural-gate lane; a create-exo-app change now gates a new
+  verify lane that runs `verify:create-exo-app`.
 
 ## [0.16.1] - 2026-09-02
 

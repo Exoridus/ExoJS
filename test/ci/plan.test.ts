@@ -43,7 +43,7 @@ describe('plan for a push to a long-lived branch', () => {
   it('runs every stage in full with coverage', () => {
     expect(ids(plan.gates)).toEqual(['typecheck', 'lint', 'sync']);
     expect(ids(plan.test)).toEqual(['unit', 'webgl', 'webgpu', 'firefox', 'audio', 'tilemap', 'bench']);
-    expect(ids(plan.verify)).toEqual(['package']);
+    expect(ids(plan.verify)).toEqual(['package', 'create-exo-app']);
     expect(plan).toMatchObject({ build: true, site: true, smoke: true, smokeSample: false, skipBudget: true, coverage: true });
   });
 
@@ -69,7 +69,7 @@ describe('plan for a pull request', () => {
   it('adds the release dry run when the release tooling or a packed manifest changes', () => {
     expect(ids(pullRequest(['scripts/release/prepare.ts']).verify)).toEqual(['package', 'release']);
     expect(ids(pullRequest(['packages/exojs-tiled/package.json']).verify)).toEqual(['package', 'release']);
-    expect(ids(planCi({ eventName: 'push', changedFiles: [], refName: 'next' }).verify)).toEqual(['package']);
+    expect(ids(planCi({ eventName: 'push', changedFiles: [], refName: 'next' }).verify)).toEqual(['package', 'create-exo-app']);
   });
 
   it('runs only the gates for a docs-only change', () => {

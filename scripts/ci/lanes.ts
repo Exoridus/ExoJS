@@ -157,6 +157,12 @@ export const LANES: readonly Lane[] = [
     run: 'pnpm release:prepare --build --skip-zip',
     pullRequestOnly: true,
   },
+  {
+    id: 'create-exo-app',
+    stage: 'verify',
+    when: 'createExoAppVerify',
+    run: 'pnpm verify:create-exo-app',
+  },
 ];
 
 /** A `test`/`verify` matrix entry as the workflow consumes it. */
@@ -201,7 +207,17 @@ export interface PlanInput {
 
 const COVERAGE_BRANCHES = new Set(['main', 'next']);
 
-const ALL_AREAS: LaneAreas = { engine: true, site: true, audioFx: true, tilemapWorker: true, exampleCatalog: true, benchStructural: true, release: true };
+const ALL_AREAS: LaneAreas = {
+  engine: true,
+  site: true,
+  audioFx: true,
+  tilemapWorker: true,
+  exampleCatalog: true,
+  benchStructural: true,
+  release: true,
+  guides: true,
+  createExoApp: true,
+};
 
 const toEntry = (lane: Lane, coverage: boolean): MatrixEntry => ({
   id: lane.id,

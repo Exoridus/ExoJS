@@ -174,6 +174,55 @@ describe('CI lane selection — engine/site areas', () => {
   });
 });
 
+describe('CI lane selection — guide content gates the unit lane', () => {
+  it('a guide content change runs the unit lane, without pulling in the rest of engine', () => {
+    const { areas, lanes } = decide('site/src/content/guide/en/rendering/sprites.mdx');
+    expect(areas.guides).toBe(true);
+    expect(areas.engine).toBe(false);
+    expect(lanes.unit).toBe(true);
+    expect(lanes.coverage).toBe(false);
+    expect(lanes.packageVerify).toBe(false);
+    expect(lanes.browserWebgl2).toBe(false);
+  });
+
+  it('a site change outside content does not set the guides area', () => {
+    const { areas, lanes } = decide('site/src/pages/index.astro');
+    expect(areas.guides).toBe(false);
+    expect(lanes.unit).toBe(false);
+  });
+
+  it('an engine change still runs unit through the engine area, independent of guides', () => {
+    const { areas, lanes } = decide('src/rendering/Drawable.ts');
+    expect(areas.guides).toBe(false);
+    expect(lanes.unit).toBe(true);
+  });
+});
+
+describe('CI lane selection — create-exo-app verify lane', () => {
+  it('a create-exo-app SOURCE change runs its own verify lane, not the engine lanes', () => {
+    const { areas, lanes } = decide('packages/create-exo-app/src/index.ts');
+    expect(areas.createExoApp).toBe(true);
+    expect(areas.engine).toBe(false);
+    expect(lanes.createExoAppVerify).toBe(true);
+    expect(lanes.unit).toBe(false);
+    expect(lanes.packageVerify).toBe(false);
+  });
+
+  it('a create-exo-app template change runs the verify lane', () => {
+    expect(decide('packages/create-exo-app/templates/minimal/package.json').lanes.createExoAppVerify).toBe(true);
+  });
+
+  it('an unrelated package change does not run the create-exo-app verify lane', () => {
+    expect(decide('packages/exojs-tiled/src/TiledMap.ts').lanes.createExoAppVerify).toBe(false);
+  });
+
+  it('workflow / lockfile / workspace changes run the create-exo-app verify lane', () => {
+    expect(decide('.github/workflows/ci.yml').lanes.createExoAppVerify).toBe(true);
+    expect(decide('pnpm-lock.yaml').lanes.createExoAppVerify).toBe(true);
+    expect(decide('pnpm-workspace.yaml').lanes.createExoAppVerify).toBe(true);
+  });
+});
+
 describe('CI lane selection — package-only change must not skip engine lanes', () => {
   // A change touching only files under the two extension packages (tiled,
   // tilemap), with no core engine files. If `engine` stayed false here, the
@@ -356,6 +405,10 @@ describe('CI lane selection - bench structural gate', () => {
     expect(decide('packages/exojs-bench/src/rendering/adapters/exojs.ts').lanes.benchStructural).toBe(true);
     expect(decide('packages/exojs-bench/baselines/structural.json').lanes.benchStructural).toBe(true);
     expect(decide('packages/exojs-bench/package.json').lanes.benchStructural).toBe(true);
+  });
+
+  it('a bench TEST-only change runs the gate too, so it never lands unvalidated', () => {
+    expect(decide('packages/exojs-bench/test/rendering/archetype-matrix.test.ts').lanes.benchStructural).toBe(true);
   });
 
   it('engine code that cannot move a draw-call count does NOT run it', () => {

@@ -51,7 +51,17 @@ const readFlag = (argv: readonly string[], flag: string): string | undefined => 
   return index === -1 ? undefined : argv[index + 1];
 };
 
-const ALL_AREAS: LaneAreas = { engine: true, site: true, audioFx: true, tilemapWorker: true, exampleCatalog: true, benchStructural: true, release: true };
+const ALL_AREAS: LaneAreas = {
+  engine: true,
+  site: true,
+  audioFx: true,
+  tilemapWorker: true,
+  exampleCatalog: true,
+  benchStructural: true,
+  release: true,
+  guides: true,
+  createExoApp: true,
+};
 
 /** The catalog smoke has no CI lane entry: CI smokes the site job's artifact instead. */
 const SMOKE_LANE: Lane = {

@@ -33,6 +33,8 @@ export interface LaneAreas {
   exampleCatalog: boolean;
   benchStructural: boolean;
   release: boolean;
+  guides: boolean;
+  createExoApp: boolean;
 }
 
 /** The concrete CI lanes those areas enable. */
@@ -51,6 +53,7 @@ export interface EffectiveLanes {
   benchStructural: boolean;
   exampleSmoke: boolean;
   releaseDryRun: boolean;
+  createExoAppVerify: boolean;
 }
 
 /**
@@ -222,10 +225,31 @@ const isSitePath = (file: string): boolean => {
 const isBenchStructuralPath = (file: string): boolean => {
   if (file.startsWith('src/rendering/')) return true;
   if (file.startsWith('packages/exojs-bench/src/')) return true;
+  if (file.startsWith('packages/exojs-bench/test/')) return true;
   if (file.startsWith('packages/exojs-bench/baselines/')) return true;
   if (file === 'packages/exojs-bench/package.json') return true;
   if (file.startsWith('.github/workflows/')) return true;
 
+  return false;
+};
+
+/**
+ * Guides area: guide content itself. `test/site/guide-*.test.ts` validates
+ * exactly these files but lives under `test/`, so it already runs on every
+ * engine change and would otherwise never run on the content change it
+ * exists to check. Gates the unit lane on its own, independent of `engine`.
+ */
+const isGuidesPath = (file: string): boolean => file.startsWith('site/src/content/');
+
+/**
+ * create-exo-app area: the scaffolding CLI is a standalone package with no
+ * engine or browser impact, so it is deliberately outside `RUNTIME_PACKAGES`
+ * and outside `engine`. Gates its own verify script instead.
+ */
+const isCreateExoAppPath = (file: string): boolean => {
+  if (file.startsWith('.github/workflows/')) return true;
+  if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') return true;
+  if (file.startsWith('packages/create-exo-app/')) return true;
   return false;
 };
 
@@ -249,6 +273,8 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
   let exampleCatalog = false;
   let benchStructural = false;
   let release = false;
+  let guides = false;
+  let createExoApp = false;
   for (const raw of changedFiles) {
     // Normalise Windows separators and trim stray whitespace/blank entries.
     const file = String(raw).replace(/\\/g, '/').trim();
@@ -260,9 +286,11 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
     if (!exampleCatalog && isExampleCatalogPath(file)) exampleCatalog = true;
     if (!benchStructural && isBenchStructuralPath(file)) benchStructural = true;
     if (!release && isReleasePath(file)) release = true;
-    if (engine && site && audioFx && tilemapWorker && exampleCatalog && benchStructural && release) break;
+    if (!guides && isGuidesPath(file)) guides = true;
+    if (!createExoApp && isCreateExoAppPath(file)) createExoApp = true;
+    if (engine && site && audioFx && tilemapWorker && exampleCatalog && benchStructural && release && guides && createExoApp) break;
   }
-  return { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural, release };
+  return { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural, release, guides, createExoApp };
 };
 
 /**
@@ -278,14 +306,18 @@ export const selectAreas = (changedFiles: readonly string[]): LaneAreas => {
  *     additionally waits for site-build, because it smokes that job's artifact
  *     rather than building the site a second time;
  *   - bench-structural-gate gates on `benchStructural` (rendering source, the
- *     bench harness, or the committed counter baseline).
+ *     bench harness, or the committed counter baseline);
+ *   - the unit lane also gates on `guides` (guide content under
+ *     `site/src/content/**`, which the `test/site/guide-*` suites validate);
+ *   - create-exo-app-verify gates on `createExoApp`, independent of `engine`
+ *     (the scaffolder has no engine or browser impact of its own).
  */
 export const effectiveLanes = (areas: LaneAreas): EffectiveLanes => {
-  const { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural, release } = areas;
+  const { engine, site, audioFx, tilemapWorker, exampleCatalog, benchStructural, release, guides, createExoApp } = areas;
   return {
     typecheck: true,
     lint: true,
-    unit: engine,
+    unit: engine || guides,
     coverage: engine,
     browserWebgl2: engine,
     browserWebgpu: engine,
@@ -297,5 +329,6 @@ export const effectiveLanes = (areas: LaneAreas): EffectiveLanes => {
     exampleSmoke: exampleCatalog,
     benchStructural,
     releaseDryRun: release,
+    createExoAppVerify: createExoApp,
   };
 };
