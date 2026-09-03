@@ -267,8 +267,11 @@ export class SystemRegistry implements Destroyable {
 
   /**
    * Remove `system` without destroying it - never destroys. Returns `true`
-   * if it was registered. See the class docs for the exact timing of
-   * structural cleanup and {@link SystemRegistry.onRemove}.
+   * if the system was registered and eligible to run, matching
+   * {@link SystemRegistry.has}; a buffered add made earlier in the same frame
+   * is cancelled but reports `false`, since it never became a registration.
+   * See the class docs for the exact timing of structural cleanup and
+   * {@link SystemRegistry.onRemove}.
    */
   public remove(system: System): boolean {
     if (__DEV__ && this._coreSystems.has(system)) {
@@ -287,7 +290,7 @@ export class SystemRegistry implements Destroyable {
         this._pending.splice(index, 1);
       }
 
-      return true;
+      return false;
     }
 
     const registration = this._registrations.get(system);

@@ -181,6 +181,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   pattern is what a system re-registering itself to change its order or phase
   does, and it silently lost the system. `add()` now cancels a pending removal
   and re-registers with the options that call asks for.
+- **`SystemRegistry.remove()` reports the truth for a buffered add.** Removing
+  a system added earlier in the same frame - one that never became a
+  registration, and for which `has()` answers `false` - returned `true`,
+  contradicting the method's own "true if it was registered". The add is still
+  cancelled; the return value now agrees with `has()`.
 
 ## [0.16.1] - 2026-09-02
 

@@ -261,7 +261,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Remove system without destroying it - never destroys. Returns true if it was registered. See the class docs for the exact timing of structural cleanup and SystemRegistry.onRemove."
+          "description": "Remove system without destroying it - never destroys. Returns true if the system was registered and eligible to run, matching SystemRegistry.has; a buffered add made earlier in the same frame is cancelled but reports false, since it never became a registration. See the class docs for the exact timing of structural cleanup and SystemRegistry.onRemove."
         }
       ],
       "paragraphs": [],

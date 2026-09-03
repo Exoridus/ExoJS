@@ -237,4 +237,21 @@ describe('SystemRegistry frame-scoped mutations', () => {
 
     expect(log).toEqual(['second', 'first']);
   });
+
+  test('remove() reports false for a buffered add that was never registered', () => {
+    const registry = new SystemRegistry();
+    const system = makeSystem([], 'a');
+
+    registry._beginFrame();
+    registry.add(system);
+
+    // has() already answers false for it, so a `true` here would contradict
+    // remove()'s own "true if it was registered".
+    expect(registry.has(system)).toBe(false);
+    expect(registry.remove(system)).toBe(false);
+
+    registry._endFrame();
+
+    expect(registry.has(system)).toBe(false);
+  });
 });
