@@ -242,6 +242,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   `play('attack', { repeat: 2 })` followed by `play('idle')` stopped the
   indefinitely-looping idle clip after two cycles. An override now belongs to
   the playback run that set it.
+- **A single-frame `AnimatedSprite` clip completes.** `update()` returned before
+  any timing ran for a clip with one frame - the shape an Aseprite frame tag
+  covering a single frame exports - so `onComplete` never fired, the sprite
+  stayed `playing`, and its `AnimationSystem` registration was never released.
+  The frame is now held for its own duration and then takes the normal
+  completion path.
 
 ## [0.16.1] - 2026-09-02
 

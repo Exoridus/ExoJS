@@ -407,7 +407,7 @@ export class AnimatedSprite extends Sprite {
 
     const clip = this._clips.get(this._currentClipName);
 
-    if (!clip || clip.frames.length <= 1) {
+    if (!clip) {
       return this;
     }
 
@@ -450,7 +450,7 @@ export class AnimatedSprite extends Sprite {
 
         if (shouldWrap) {
           this._currentFrameIndex = 0;
-          // clip has > 1 frame here (early-returned otherwise).
+          // Normalized clips always hold at least one frame.
           this._applyFrame(clip, 0);
           this.onFrame.dispatch(this._currentClipName, 0);
           thresholdMs = clip.frameDurations?.[this._currentFrameIndex] ?? clip.frameDurationMs;
