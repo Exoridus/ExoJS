@@ -172,7 +172,9 @@ export class AssetResidency {
   private _backgroundActive = 0;
   private _backgroundTotal = 0;
   private _backgroundLoaded = 0;
-  private _backgroundResolve: (() => void) | null = null;
+  // Every outstanding awaitBackground() caller, not just the newest: a loading
+  // screen and a scene preloader may wait on one drain, and both have to settle.
+  private readonly _backgroundResolvers = new Set<() => void>();
 
   public constructor(typeRegistry: AssetTypeRegistry, decoder: AssetDecoder, signals: AssetResidencySignals, concurrency: number, hooks: AssetResidencyHooks) {
     this._typeRegistry = typeRegistry;
@@ -467,6 +469,12 @@ export class AssetResidency {
 
     if (queued !== -1) {
       this._backgroundQueue.splice(queued, 1);
+      // The entry counted towards the queue's total when it was enqueued, and
+      // dropping it is the only way it can leave the queue without completing.
+      // Without this, an awaitBackground() outstanding over the eviction of the
+      // last queued entry never settles, and onProgress stays below its total.
+      this._backgroundTotal--;
+      this._onBackgroundItemDone();
     }
   }
 
@@ -1315,10 +1323,24 @@ export class AssetResidency {
   private _onBackgroundItemDone(): void {
     this._signals.onProgress.dispatch(this._backgroundLoaded, this._backgroundTotal);
 
-    if (this._backgroundResolve && this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
-      const resolve = this._backgroundResolve;
+    if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
+      this._settleBackgroundWaiters();
+    }
+  }
 
-      this._backgroundResolve = null;
+  /** Settle every outstanding {@link awaitBackground} promise. A caller arriving afterwards starts a fresh wait. */
+  private _settleBackgroundWaiters(): void {
+    if (this._backgroundResolvers.size === 0) {
+      return;
+    }
+
+    // Snapshot and clear first: a resolver may enqueue new background work
+    // synchronously, and that work belongs to the next wait, not to this one.
+    const waiters = [...this._backgroundResolvers];
+
+    this._backgroundResolvers.clear();
+
+    for (const resolve of waiters) {
       resolve();
     }
   }
@@ -1353,7 +1375,7 @@ export class AssetResidency {
         return;
       }
 
-      this._backgroundResolve = resolve;
+      this._backgroundResolvers.add(resolve);
     });
   }
 
@@ -1600,11 +1622,6 @@ export class AssetResidency {
     this._backgroundTotal = 0;
 
     // A pending awaitBackground() caller must not hang forever past destroy().
-    if (this._backgroundResolve) {
-      const resolve = this._backgroundResolve;
-
-      this._backgroundResolve = null;
-      resolve();
-    }
+    this._settleBackgroundWaiters();
   }
 }

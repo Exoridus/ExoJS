@@ -84,6 +84,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   part of a persisted record's identity, the default cache layout version is
   raised: records written by an earlier version are no longer found and are
   acquired again rather than read under the old spelling.
+- **`awaitBackground()` settles for every caller, and for a queue an eviction
+  emptied.** The residency kept a single resolver slot, so a second concurrent
+  call overwrote the first and that promise never settled - a loading screen
+  and a scene preloader awaiting one drain deadlocked one of them, with no
+  error. Dropping a queued entry because its last claim went away (a scene
+  teardown, a cancelled load) also left the queue counted as unfinished
+  forever, so a lone awaiting caller hung and `onProgress` stayed below its
+  total. Both now settle.
 
 ## [0.16.1] - 2026-09-02
 
