@@ -182,7 +182,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Evict every chunk this instance has loaded and stop responding to update. Does not affect chunks predating attachment or installed by another source. Idempotent."
+          "description": "Evict every chunk this instance has loaded and stop responding to update. Does not affect chunks predating attachment or installed by another source. Idempotent. Does not destroy the ChunkSource passed to the constructor: this class only reads from it and never took ownership. A source with its own destroy() (e.g. import('./WorkerSampledChunkSource').createWorkerSampledChunkSource's, which tears down a real Worker) must be destroyed separately by whoever created it."
         },
         {
           "name": "update",

@@ -109,10 +109,12 @@ interface PendingRequest {
  * {@link WorkerSampledChunkSourceOptions.workerSource} is a self-contained
  * worker script string; see its documentation for the protocol.
  *
- * The returned value's `destroy()` MUST be called when done with it (e.g.
- * alongside your `ChunkStreamer.destroy()` call) - the underlying `Worker`
- * is a real resource that leaks otherwise. `ChunkSource` itself has no
- * lifecycle hook, so this is not automatic.
+ * The returned value's `destroy()` MUST be called when done with it - the
+ * underlying `Worker` is a real resource that leaks otherwise.
+ * {@link import('./ChunkStreamer').ChunkStreamer} does not own the source it
+ * is given and never calls this for you: `ChunkSource` itself has no
+ * lifecycle hook, so nothing ties the two together automatically. Call it
+ * yourself alongside your own `ChunkStreamer.destroy()` call.
  *
  * Implementation note: `workerSource` is Blob-URL'd into a real `Worker`
  * (`new Blob([workerSource])` → `URL.createObjectURL` → `new Worker(url)`) -
