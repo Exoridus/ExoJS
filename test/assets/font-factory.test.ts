@@ -140,6 +140,37 @@ describe('FontFactory', () => {
     expect(fontsDelete).toHaveBeenCalledTimes(2);
   });
 
+  test('dispose() unregisters the released face, and only that one', async () => {
+    const factory = new FontFactory();
+
+    const released = await factory.create(new ArrayBuffer(8), factoryContext({ family: 'Released' }));
+    const kept = await factory.create(new ArrayBuffer(8), factoryContext({ family: 'Kept' }));
+
+    factory.dispose(released);
+
+    // Releasing a font has to take it out of document.fonts: while it is
+    // registered there, CSS and Canvas still resolve the family it declares.
+    expect(fontsDelete).toHaveBeenCalledExactlyOnceWith(released);
+
+    factory.destroy();
+
+    expect(fontsDelete).toHaveBeenCalledTimes(2);
+    expect(fontsDelete).toHaveBeenLastCalledWith(kept);
+  });
+
+  test('dispose() tolerates a face that was never added to the document, and a second release', async () => {
+    const factory = new FontFactory();
+
+    const untracked = await factory.create(new ArrayBuffer(8), factoryContext({ family: 'Untracked', addToDocument: false }));
+    const added = await factory.create(new ArrayBuffer(8), factoryContext({ family: 'Added' }));
+
+    factory.dispose(untracked);
+    factory.dispose(added);
+    factory.dispose(added);
+
+    expect(fontsDelete).toHaveBeenCalledExactlyOnceWith(added);
+  });
+
   test('destroy() does not remove fonts that were created with addToDocument: false', async () => {
     const factory = new FontFactory();
 

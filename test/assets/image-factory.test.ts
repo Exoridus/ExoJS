@@ -60,6 +60,44 @@ describe('ImageFactory', () => {
       expect(result).toBe(fakeBitmap);
     });
 
+    test('dispose() closes a bitmap this factory decoded', async () => {
+      const fakeBitmap = { width: 4, height: 4, close: vi.fn() };
+      vi.stubGlobal(
+        'createImageBitmap',
+        vi.fn(async () => fakeBitmap),
+      );
+
+      const factory = new ImageFactory();
+      const image = await factory.create(PNG_HEADER, factoryContext());
+
+      factory.dispose(image);
+
+      // The decoded bitmap is the only thing an image asset owns; without this
+      // a release frees nothing until the garbage collector gets to it.
+      expect(fakeBitmap.close).toHaveBeenCalledTimes(1);
+    });
+
+    test('dispose() leaves a bitmap this factory did not decode alone, and tolerates a second release', async () => {
+      const fakeBitmap = { width: 4, height: 4, close: vi.fn() };
+      vi.stubGlobal(
+        'createImageBitmap',
+        vi.fn(async () => fakeBitmap),
+      );
+
+      const factory = new ImageFactory();
+      const foreign = { width: 1, height: 1, close: vi.fn() } as unknown as ImageBitmap;
+
+      factory.dispose(foreign);
+
+      const image = await factory.create(PNG_HEADER, factoryContext());
+
+      factory.dispose(image);
+      factory.dispose(image);
+
+      expect((foreign as unknown as { close: ReturnType<typeof vi.fn> }).close).not.toHaveBeenCalled();
+      expect(fakeBitmap.close).toHaveBeenCalledTimes(1);
+    });
+
     test('create() forwards a Blob built with the inferred mime type', async () => {
       let seenBlob: Blob | undefined;
       vi.stubGlobal(

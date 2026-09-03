@@ -110,6 +110,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   continuation that outlived a scene teardown pinned its assets for the
   application's lifetime, and `Loader.inspect()` listed a destroyed scope as an
   owner. They now throw instead.
+- **Releasing a font or an image frees what it owns.** Neither factory
+  implemented the per-resource teardown its resources need: a released font
+  stayed registered on `document.fonts` (so CSS and Canvas went on resolving
+  its family) and pinned for the loader's lifetime, and a released image never
+  closed the `ImageBitmap` it had decoded. Only a bitmap the engine decoded
+  itself is closed.
 
 ## [0.16.1] - 2026-09-02
 

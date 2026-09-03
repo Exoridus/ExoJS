@@ -20,14 +20,32 @@ export interface ImageAssetOptions {
  */
 export class ImageFactory implements AssetFactory<ArrayBuffer, DecodedImage, ImageAssetOptions> {
   private readonly _objectUrls = new ObjectUrlPool();
+  // Only a bitmap this factory decoded may be closed. Closing one the engine
+  // merely passed through would tear down a source its owner still draws from.
+  private readonly _decoded = new WeakSet<ImageBitmap>();
 
-  public create(source: ArrayBuffer, context: AssetFactoryContext<ImageAssetOptions>): Promise<DecodedImage> {
+  public async create(source: ArrayBuffer, context: AssetFactoryContext<ImageAssetOptions>): Promise<DecodedImage> {
     const blob = new Blob([source], { type: context.options?.mimeType ?? determineMimeType(source) });
+    const image = await decodeImageBlob(blob, this._objectUrls);
 
-    return decodeImageBlob(blob, this._objectUrls);
+    if (isClosable(image)) {
+      this._decoded.add(image);
+    }
+
+    return image;
+  }
+
+  /** Frees the decoded bitmap behind a released image instead of leaving it to the garbage collector. */
+  public dispose(resource: DecodedImage): void {
+    if (this._decoded.delete(resource as ImageBitmap)) {
+      (resource as ImageBitmap).close();
+    }
   }
 
   public destroy(): void {
     this._objectUrls.revokeAll();
   }
 }
+
+/** The `<img>` fallback owns no releasable decode, so only a real bitmap is tracked. */
+const isClosable = (image: DecodedImage): image is ImageBitmap => typeof (image as ImageBitmap).close === 'function';
