@@ -47,31 +47,19 @@ jobs:
           fetch-depth: 0
           ref: ${{ env.TARGET_TAG }}
 
+      # No install: the trust check is dependency-free TypeScript that node
+      # strips - the same script the pre-push hook runs before a tag leaves
+      # the developer's machine.
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+
       - id: resolve
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          sha="$(git rev-parse "${TARGET_TAG}^{commit}")"
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
-
-          pkg="v$(node -p "require('./package.json').version")"
-          if [ "$TARGET_TAG" != "$pkg" ]; then
-            echo "::error::Tag '$TARGET_TAG' does not match package.json version '$pkg'."
-            exit 1
-          fi
-
-          if ! git merge-base --is-ancestor "$sha" origin/main; then
-            echo "::error::$TARGET_TAG ($sha) is not on main. Releases are cut from main only."
-            exit 1
-          fi
-
-          verdict="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}/check-runs?check_name=verdict&per_page=100" \
-            --jq '[.check_runs[] | select(.conclusion == "success")] | length')"
-          if [ "$verdict" = "0" ]; then
-            echo "::error::No successful 'verdict' check run on $sha. Let CI finish on main before tagging."
-            exit 1
-          fi
-          echo "$TARGET_TAG = $sha, on main, verdict green."
+          echo "sha=$(git rev-parse "${TARGET_TAG}^{commit}")" >> "$GITHUB_OUTPUT"
+          node scripts/ci/trust.ts "$TARGET_TAG"
 
   # Build every lockstep package exactly once, then pack/hash/attw/consumers/
   # full-zip without rebuilding, and upload the result. Any failure here means
