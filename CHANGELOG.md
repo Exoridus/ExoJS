@@ -225,6 +225,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   `addModule` - a Content-Security-Policy forbidding `blob:` worker sources is
   the realistic case - surfaced as an unhandled rejection. The failure is
   logged instead and `ready` resolves; the effect keeps passing dry signal.
+- **A rejected `AudioContext.resume()` is logged instead of surfacing as an
+  unhandled rejection.** The autoplay-unlock gesture handler attached no
+  rejection handler, so a context the browser refused to resume produced a bare
+  rejection with no hint of where it came from.
 
 ## [0.16.1] - 2026-09-02
 

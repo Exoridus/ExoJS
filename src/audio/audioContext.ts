@@ -1,3 +1,4 @@
+import { logger } from '#core/Logger';
 import { Signal } from '#core/Signal';
 
 import { AudioUnsupportedError } from './AudioUnsupportedError';
@@ -172,9 +173,21 @@ const onUserInteraction = (): void => {
     return;
   }
 
-  void audioContext.resume().then(() => {
-    dispatchReadyIfRunning();
-  });
+  audioContext
+    .resume()
+    .then(() => {
+      dispatchReadyIfRunning();
+    })
+    .catch((error: unknown) => {
+      // Without this the browser reports a bare unhandled rejection with no
+      // hint that it came from the autoplay unlock. The gesture listeners stay
+      // armed, so a later gesture can still unlock the context.
+      logger.warn('The AudioContext could not be resumed on the user gesture; audio stays locked until the next one.', {
+        source: 'audioContext',
+        once: 'audiocontext-resume-failed',
+        ...(error instanceof Error && { error }),
+      });
+    });
 };
 
 /**
