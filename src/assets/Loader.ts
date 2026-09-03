@@ -1034,7 +1034,7 @@ export class Loader {
       source = resolved.source;
     } else {
       throw new Error(
-        'Loader: peek() accepts a path string or an Asset.type(...) descriptor. A catalog leaf is already a handle — read its loadState instead.',
+        'Loader: peek() accepts a path string or an Asset.type(...) descriptor. A catalog leaf is already a handle - read its loadState instead.',
       );
     }
 

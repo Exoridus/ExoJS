@@ -189,7 +189,7 @@ export const parseContainer = (buffer: ArrayBuffer): ParsedContainer => {
     // Version 1 indexed entries by an opaque alias rather than by their logical
     // source, so its entries cannot be resolved to an asset identity at all.
     // There is nothing to read partially: rebuild the container.
-    fail(`unsupported version ${version} (this build reads version ${CONTAINER_VERSION}) — rebuild it with scripts/build-container`);
+    fail(`unsupported version ${version} (this build reads version ${CONTAINER_VERSION}) - rebuild it with scripts/build-container`);
   }
 
   const indexLength = view.getUint32(8, true);
