@@ -587,9 +587,12 @@ export class Pointer {
 
 /**
  * Channel-identifier constants merged onto the `Pointer` class. The
- * un-prefixed members (Active, X, Y, ...) address slot 0 (the primary
- * pointer). For multi-touch access use `Pointer.Slot{N}Active /
- * Slot{N}X / Slot{N}Y`.
+ * un-prefixed members (Active, X, Y, ...) address slot 0 - the pointer that
+ * happened to claim the first free slot (see `InputSystem`'s slot
+ * assignment), NOT necessarily the one whose `isPrimary` field is `true`.
+ * With multi-touch, an action bound to one of these follows whichever finger
+ * took slot 0, which can change across a session. For multi-touch access use
+ * `Pointer.Slot{N}Active / Slot{N}X / Slot{N}Y`.
  */
 export namespace Pointer {
   // --- Primary-pointer convenience aliases (slot 0) ---
