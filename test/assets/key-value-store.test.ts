@@ -191,6 +191,25 @@ describe('WebStorageStore', () => {
     await expect(store.set('k', circular)).rejects.toThrow('WebStorageStore.set() failed: value is not JSON-serializable.');
   });
 
+  test('rejects rather than throws synchronously when the storage quota is full', async () => {
+    const storage = createWebStorage();
+
+    storage.setItem = (): never => {
+      throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+    };
+
+    const store = new WebStorageStore(storage);
+    // A synchronous throw from a Promise-returning method never reaches the
+    // caller's `.catch()`, which is the only handler a write has.
+    let rejection: unknown;
+
+    await store.set('k', { score: 1 }).catch((error: unknown) => (rejection = error));
+
+    expect(rejection).toBeInstanceOf(Error);
+    expect((rejection as Error).message).toBe('WebStorageStore.set() failed: the storage rejected the write for key "k".');
+    expect((rejection as Error).cause).toBeInstanceOf(DOMException);
+  });
+
   test('rejects on read when the stored value is not valid JSON', async () => {
     const storage = createWebStorage();
 

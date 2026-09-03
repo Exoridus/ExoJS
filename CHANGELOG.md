@@ -61,6 +61,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   that the buffer holds one, so a truncated or near-empty response surfaced as
   `Offset is outside the bounds of the DataView` wrapped in a load failure,
   rather than as the documented fallback.
+- **`WebStorageStore.set()` rejects on a full quota instead of throwing
+  synchronously.** Web Storage is synchronous, so a `QuotaExceededError`
+  escaped the returned promise and never reached the `.catch()` that is the
+  only handler a write has - unlike the serialization failure two lines above
+  it, which did reject.
 
 ## [0.16.1] - 2026-09-02
 

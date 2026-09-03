@@ -61,9 +61,14 @@ export class WebStorageStore implements KeyValueStore {
       return Promise.reject(new Error('WebStorageStore.set() failed: value is not JSON-serializable.'));
     }
 
-    // A full quota throws synchronously (QuotaExceededError); surface it rather
-    // than swallow, so the caller knows the write did not persist.
-    this._storage.setItem(this._prefix + key, payload);
+    try {
+      // Web Storage is synchronous, so a full quota throws where an async store
+      // would reject. Turning it into a rejection is what lets one `.catch()`
+      // see every way this write can fail.
+      this._storage.setItem(this._prefix + key, payload);
+    } catch (error: unknown) {
+      return Promise.reject(new Error(`WebStorageStore.set() failed: the storage rejected the write for key "${key}".`, { cause: error }));
+    }
 
     return Promise.resolve();
   }
