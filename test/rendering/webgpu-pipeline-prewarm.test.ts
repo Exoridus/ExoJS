@@ -332,11 +332,15 @@ describe('WebGpuTextRenderer pipeline prewarm', () => {
 
     await renderer.prewarmPipelines(formats);
 
-    const lookup = renderer as unknown as { _getPipeline(shaderType: 'sdf' | 'msdf' | 'color', format: GPUTextureFormat, stencil: boolean): GPURenderPipeline };
+    const lookup = renderer as unknown as {
+      _getPipeline(shaderType: 'sdf' | 'msdf' | 'color', blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline;
+    };
 
+    // Prewarm covers the default blend mode only, which is the one the lookup
+    // asks for on all but a deliberately blended text node.
     for (const shaderType of shaderTypes) {
       for (const format of formats) {
-        lookup._getPipeline(shaderType, format, false);
+        lookup._getPipeline(shaderType, BlendModes.Normal, format, false);
       }
     }
 

@@ -8,6 +8,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Fixed
 
+- **`Text` and `BitmapText` honour `blendMode` on both backends.** The setter
+  is public on every drawable and already broke the render batch, but neither
+  text renderer applied it: WebGPU baked `Normal` into its pipeline, and WebGL2
+  drew with whatever blend state the previously flushed renderer had left, so
+  the same run could composite differently from frame to frame. A text batch
+  now breaks on a blend change and draws with the mode it declares.
 - **Sprites and meshes on WebGL2 draw with the blend mode they declare, even
   when another renderer type is interleaved.** The WebGL2 blend state is one
   global the backend owns, but the sprite and mesh renderers kept a private
