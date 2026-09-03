@@ -8,6 +8,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Fixed
 
+- **A press that hits no interactive node now clears keyboard focus.**
+  Nothing blurred the focused node on a click or tap that resolved to empty
+  canvas, so an open `Dropdown` stayed open and a `TextInput` kept its caret
+  and DOM transport after the user clicked away from it.
 - **An infinitely repeating `Tween` releases its target once that target is
   destroyed.** A tween had no link to its target's lifetime, so
   `repeat(-1)` kept interpolating and writing to a destroyed `SceneNode`

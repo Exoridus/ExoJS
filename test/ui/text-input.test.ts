@@ -30,6 +30,21 @@ describe('TextInput', () => {
     expect(field.selectionStart).toBe(5);
   });
 
+  test('a press on empty canvas blurs the field and tears down its transport', () => {
+    const harness = createUIApp();
+    const field = new TextInput({ width: 200, height: 36 });
+
+    harness.scene.ui.addChild(field);
+    press(harness, 5, 18);
+    expect(harness.im.focused).toBe(field);
+    expect(document.body.querySelector('textarea')).not.toBeNull();
+
+    press(harness, 500, 500);
+
+    expect(harness.im.focused).toBeNull();
+    expect(document.body.querySelector('textarea')).toBeNull();
+  });
+
   test('a press-drag extends a selection from the anchor', () => {
     const harness = createUIApp();
     const field = new TextInput({ width: 200, height: 36 });

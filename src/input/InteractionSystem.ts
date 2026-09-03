@@ -1076,6 +1076,12 @@ export class InteractionSystem implements InteractionHooks {
                 this._registerDragCandidate(id, hit, x, y, phaseX, phaseY);
               }
             }
+          } else {
+            // A press that lands on nothing interactive is the canvas
+            // equivalent of clicking outside a focused control - without
+            // this, a Dropdown stays open and a TextInput keeps its caret
+            // and DOM transport after a click on empty space.
+            this._focus.blur();
           }
 
           break;

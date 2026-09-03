@@ -25,6 +25,8 @@ import { createUITheme } from '#ui/theme';
 import { Toggle } from '#ui/Toggle';
 import { UIRoot } from '#ui/UIRoot';
 
+import { createUIApp, press } from '../support/text-field-harness';
+
 // Text (used by Label/Button) needs a glyph atlas; inject a deterministic mock
 // so widgets are constructible without a real canvas (jsdom has no measureText).
 const fixedGlyphInfo: GlyphInfo = { x: 0, y: 0, width: 8, height: 16, advance: 10, ascent: 13, page: 0, uvLeft: 0, uvTop: 0, uvRight: 0.01, uvBottom: 0.02 };
@@ -1017,6 +1019,24 @@ describe('Dropdown', () => {
     expect(dropdown.isOpen).toBe(true);
 
     dropdown.onBlur.dispatch(dropdown);
+    expect(dropdown.isOpen).toBe(false);
+  });
+
+  test('a press on empty canvas blurs a focused, open dropdown and closes its list', () => {
+    const harness = createUIApp();
+    const dropdown = new Dropdown({ items });
+
+    harness.scene.ui.addChild(dropdown);
+    harness.im.focus(dropdown);
+    dropdown.open();
+
+    expect(harness.im.focused).toBe(dropdown);
+    expect(dropdown.isOpen).toBe(true);
+
+    // Outside the dropdown's default 180x36 bounds.
+    press(harness, 500, 500);
+
+    expect(harness.im.focused).toBeNull();
     expect(dropdown.isOpen).toBe(false);
   });
 
