@@ -16,6 +16,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   the real state in the meantime, so the next batch composited with a foreign
   blend mode - visibly disagreeing with WebGPU, which resolves blend per
   pipeline. Each batch now establishes its blend mode at its own draw call.
+- **Nine-slice sprites on WebGL2 pick up a texture whose payload changed under
+  a stable identity, and keep their own blend mode.** The renderer bound the
+  batch texture only when the identity differed from the last one it had seen,
+  and the bind is what carries the upload - so a skin repainted through
+  `Texture.setSource()` / `updateSource()`, a canvas or `ImageBitmap` texture
+  refreshed per frame, and a `RenderTexture` re-rendered into went on drawing
+  the pixels of their first upload forever. The same memo skipped the live
+  check that rejects a destroyed texture, and its blend counterpart let another
+  renderer's blend mode through. Texture and blend state are now established at
+  the batch's own draw call.
 - **Particle systems on WebGL2 pick up a texture whose payload arrives after
   the first draw.** `WebGl2ParticleRenderer` bound the system's texture only
   when its identity changed, which for a single-system scene meant exactly
