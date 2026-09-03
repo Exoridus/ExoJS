@@ -905,6 +905,17 @@ describe('DeathModule', () => {
   });
 });
 
+describe('view culling', () => {
+  test('a system opts out of viewport culling, because its bounds are one frame at the origin', () => {
+    const system = new ParticleSystem(makeTexture(), { capacity: 4 });
+
+    // Culling against those bounds would drop the whole cloud the moment the
+    // emitter's own origin scrolled out of view.
+    expect(system.cullable).toBe(false);
+    expect(system.cullArea).toBeNull();
+  });
+});
+
 describe('emit()', () => {
   test('fills a particle with the spawn defaults', () => {
     const system = new ParticleSystem({ capacity: 4 });

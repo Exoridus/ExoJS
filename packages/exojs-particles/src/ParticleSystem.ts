@@ -164,6 +164,17 @@ export interface ParticleSystemOptions {
  * Position the system itself via `system.setPosition(...)` and emit relative
  * to `(0, 0)`.
  *
+ * **View culling:** a system is created with `cullable = false`. Its local
+ * bounds cover one texture frame at the local origin, because the particles
+ * themselves are simulated on the GPU in half the configurations and no
+ * emitted extent is tracked in either - so culling against those bounds would
+ * remove the entire cloud as soon as the emitter's own origin left the view.
+ * For a system whose reach is known, set the node's `cullArea` to a rectangle
+ * in local space covering where its particles travel and set `cullable = true`
+ * again; the viewport check then uses that rectangle instead of the bounds.
+ * `getBounds()` still reports the one-frame box, not an extent of the live
+ * particles.
+ *
  * **Pixel snapping:** {@link Drawable.pixelSnapMode} is intentionally ignored
  * for particle systems. Particle instances bake their own per-particle
  * transforms in the emitter/compute path rather than reading the shared
@@ -310,6 +321,13 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
         this._frames.push(frame.clone());
       }
     }
+
+    // Particles live in the system's local space and travel arbitrarily far
+    // from its origin, but the node's own bounds only ever describe one
+    // texture frame there - so the viewport check would drop the whole cloud
+    // the moment the emitter's origin scrolled off screen. See the class docs
+    // for `cullArea`, which is how a system opts back in.
+    this.cullable = false;
 
     this.resetTextureFrame();
     this._healTextureFrameOnLoad(this._texture);

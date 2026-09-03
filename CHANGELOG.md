@@ -271,6 +271,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   became `4464` - both of which can be a frame the system declares, instead of
   the documented frame-0 fallback. Development builds throw with the offending
   index; production clamps.
+- **A particle system is no longer culled by the size of one particle.** A
+  `ParticleSystem`'s local bounds cover one texture frame at its local origin -
+  a single pixel for the default white texture - while its particles travel
+  arbitrarily far from there, so the viewport check removed the whole cloud as
+  soon as the emitter's origin scrolled out of view. Systems opt out of culling
+  by default; `cullArea` is the documented way back in for a system whose reach
+  is known.
 
 ## [0.16.1] - 2026-09-02
 
