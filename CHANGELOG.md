@@ -435,6 +435,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   combined into a dynamic body with `invMass === 0` and live boundary
   colliders - the exact state the guard exists to reject. The guard now
   treats a collider already queued for removal as already gone.
+- **A tile layer's rendering stopped following its offset once mutated at
+  runtime.** `@codexo/exojs-tilemap`'s `TileLayerNode` cached
+  `layer.offsetX`/`offsetY` at construction, while `TileColliderStreamer` and
+  `pixelToTile` already read the live, mutable fields - moving a layer at
+  runtime moved its collision but left its pixels in place, with no error.
+  The node now re-reads the offset every frame.
 
 ## [0.16.1] - 2026-09-02
 

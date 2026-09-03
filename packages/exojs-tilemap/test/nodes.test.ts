@@ -221,6 +221,50 @@ describe('TileLayerNode', () => {
     expect(node.cullable).toBe(false);
   });
 
+  it('follows a layer offset mutated after construction (non-parallax)', () => {
+    const tileset = makeTileset();
+    const layer = makeLayer(tileset, { offsetX: 64, offsetY: -32 });
+    const node = new TileLayerNode(layer);
+
+    layer.offsetX = 128;
+    layer.offsetY = 40;
+
+    const mockBuilder = { view: { center: { x: 0, y: 0 } } };
+    (node as unknown as { _collectContent(b: unknown): void })._collectContent(mockBuilder);
+
+    expect(node.x).toBe(128);
+    expect(node.y).toBe(40);
+  });
+
+  it('follows a layer offset mutated after construction (parallax)', () => {
+    const tileset = makeTileset();
+    const layer = new TileLayer({
+      id: 1,
+      name: 'bg',
+      width: 4,
+      height: 4,
+      tileWidth: 32,
+      tileHeight: 32,
+      tilesets: [tileset],
+      offsetX: 10,
+      offsetY: 20,
+      parallaxX: 0.5,
+      parallaxY: 0.5,
+    });
+    const node = new TileLayerNode(layer);
+
+    layer.offsetX = 100;
+    layer.offsetY = 200;
+
+    // View center at the origin, so the render-time position is exactly the
+    // (now moved) base offset regardless of the parallax factor.
+    const mockBuilder = { view: { center: { x: 0, y: 0 } } };
+    (node as unknown as { _collectContent(b: unknown): void })._collectContent(mockBuilder);
+
+    expect(node.x).toBe(100);
+    expect(node.y).toBe(200);
+  });
+
   it('reports local bounds as the layer pixel rect (even when empty)', () => {
     const tileset = makeTileset();
     const layer = makeLayer(tileset, { width: 5, height: 3 });

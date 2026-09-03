@@ -29,8 +29,8 @@ export interface TileLayerNodeOptions {
  * Each non-empty loaded chunk becomes one child positioned at its pixel
  * origin, so the engine's existing per-node culling drops individual chunks and
  * the render-plan optimiser batches them by tileset texture. The layer's pixel
- * `offset` is applied to this node's transform; `visible` and `opacity` are
- * read live from the runtime layer on every frame (no rebuild required).
+ * `offset`, `visible` and `opacity` are all read live from the runtime layer on
+ * every frame (no rebuild required).
  *
  * A `parallax` factor other than `1` makes this node's rendered position
  * camera-dependent, resolved per frame in {@link _collectContent} by patching
@@ -60,8 +60,6 @@ export class TileLayerNode extends Container {
   private _syncedOpacity = -1;
   private _syncedTint: number | null | undefined = undefined;
   private _pixelSnapMode: PixelSnapMode = PixelSnapMode.None;
-  private readonly _baseOffsetX: number;
-  private readonly _baseOffsetY: number;
 
   /**
    * Bound once so `TileLayer._addStructuralListener`/`_removeStructuralListener`
@@ -97,8 +95,6 @@ export class TileLayerNode extends Container {
 
     this._layer = layer;
     this._cullChunks = options?.cullable ?? true;
-    this._baseOffsetX = layer.offsetX;
-    this._baseOffsetY = layer.offsetY;
 
     this.setPosition(layer.offsetX, layer.offsetY);
     this._buildChunkNodes();
@@ -209,16 +205,20 @@ export class TileLayerNode extends Container {
     const patchesPosition = layer.parallaxX !== 1 || layer.parallaxY !== 1;
     const patchesScale = layer.parallaxScale !== 1;
 
+    // `offsetX`/`offsetY` are live, mutable fields (`TileColliderStreamer` and
+    // `pixelToTile` already read them per call) - re-read here every frame so a
+    // runtime-moved layer's rendering follows its collision rather than freezing
+    // at the position it had when this node was constructed.
     if (patchesPosition || patchesScale) {
       const camCenter = builder.view.center;
-      const prevX = this.x;
-      const prevY = this.y;
       const prevScaleX = this.scale.x;
       const prevScaleY = this.scale.y;
 
       if (patchesPosition) {
-        this.x = this._baseOffsetX + camCenter.x * (1 - layer.parallaxX);
-        this.y = this._baseOffsetY + camCenter.y * (1 - layer.parallaxY);
+        this.x = layer.offsetX + camCenter.x * (1 - layer.parallaxX);
+        this.y = layer.offsetY + camCenter.y * (1 - layer.parallaxY);
+      } else {
+        this.setPosition(layer.offsetX, layer.offsetY);
       }
 
       if (patchesScale) {
@@ -229,7 +229,7 @@ export class TileLayerNode extends Container {
         super._collectContent(builder);
       } finally {
         if (patchesPosition) {
-          this.setPosition(prevX, prevY);
+          this.setPosition(layer.offsetX, layer.offsetY);
         }
 
         if (patchesScale) {
@@ -237,6 +237,7 @@ export class TileLayerNode extends Container {
         }
       }
     } else {
+      this.setPosition(layer.offsetX, layer.offsetY);
       super._collectContent(builder);
     }
   }
