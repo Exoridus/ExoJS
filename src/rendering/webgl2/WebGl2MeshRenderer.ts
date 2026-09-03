@@ -162,7 +162,6 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   private _pendingCount = 0;
   private readonly _geometryCache = new Map<Geometry, GeometryCacheEntry>();
   private _connection: MeshRendererConnection | null = null;
-  private _currentBlendMode: BlendModes | null = null;
 
   public render(mesh: Mesh): void {
     const connection = this._connection;
@@ -271,7 +270,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       connection.dynamicInstanceBuffer,
     );
 
-    this._setBlendMode(blendMode, backend);
+    backend.setBlendMode(blendMode);
     this._ensureNodeIndexCapacity(count);
 
     const maxNodeIndex = (startNodeIndex + count - 1) >>> 0;
@@ -430,7 +429,6 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     connection.dynamicVao.destroy();
 
     this._connection = null;
-    this._currentBlendMode = null;
     this._pendingDraws.length = 0;
     this._pendingCount = 0;
   }
@@ -475,7 +473,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       backend._writeTransformCommand(this._createSyntheticCommand(draw.mesh, nodeIndex));
     }
 
-    this._setBlendMode(draw.blendMode, backend);
+    backend.setBlendMode(draw.blendMode);
     this._bindInstancedShaderState(draw.shader, draw.texture, draw.material, backend, nodeIndex);
 
     const indexFormat = draw.mesh.indexFormat;
@@ -517,7 +515,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     const cacheEntry = this._getOrCreateGeometryEntry(geometry, first.mesh, connection);
     const vao = this._getOrCreateStaticGeometryVao(cacheEntry, first.shader, connection.gl, connection.dynamicNodeIndexBuffer);
 
-    this._setBlendMode(first.blendMode, backend);
+    backend.setBlendMode(first.blendMode);
 
     let maxNodeIndex = 0;
 
@@ -561,7 +559,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     const mesh = draw.mesh;
     const shader = draw.shader;
 
-    this._setBlendMode(draw.blendMode, backend);
+    backend.setBlendMode(draw.blendMode);
 
     if (shader.uniforms.has('u_projection')) {
       shader.getUniform('u_projection').setValue(backend.view.getTransform().toArray(false));
@@ -769,12 +767,6 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     }
 
     const shader = this._defaultShader;
-
-    // Keep this renderer's blend tracking in sync, then apply unconditionally
-    // (another renderer may have changed the GL blend state between batches).
-    if (payload.blendMode !== this._currentBlendMode) {
-      this._currentBlendMode = payload.blendMode;
-    }
 
     backend.setBlendMode(payload.blendMode);
 
@@ -1075,13 +1067,6 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     perLayout.set(layoutKey, vao);
 
     return vao;
-  }
-
-  private _setBlendMode(next: BlendModes, backend: WebGl2Backend): void {
-    if (this._currentBlendMode !== next) {
-      this._currentBlendMode = next;
-      backend.setBlendMode(next);
-    }
   }
 
   private _packVertices(mesh: Mesh, vertexStart: number, floatView: Float32Array = this._float32View, uintView: Uint32Array = this._uint32View): void {

@@ -164,6 +164,9 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   // Highest transform-buffer row referenced by the pending batch; drives the
   // minimum row count uploaded for the transform texture at flush time.
   private _maxNodeIndex = 0;
+  // Blend mode of the batch currently accumulating, used to detect a batch
+  // break. It is not a mirror of the GL blend state: that state is global and
+  // shared with every other renderer, so `flush()` establishes it at the draw.
   private _currentBlendMode: BlendModes | null = null;
   private _currentView: View | null = null;
   private _currentViewId = -1;
@@ -340,6 +343,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
     if (this._instanceCount === 0 || backend === null || instanceBuffer === null || vao === null || connection === null) {
       this._maxNodeIndex = 0;
+      this._currentBlendMode = null;
       this._resetSlots();
 
       return;
@@ -390,6 +394,12 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     backend.bindVertexArrayObject(vao);
     instanceBuffer.upload(this._instanceFloat32, 0, this._instanceCount * wordsPerInstance);
     this._bindBaseTextureSamplers(backend, material, this._slotCount);
+    // The GL blend state is global and any other renderer may have changed it
+    // since this batch started accumulating, so it is established here - at the
+    // draw - rather than where the batch break was detected.
+    const blendMode = this._currentBlendMode ?? BlendModes.Normal;
+
+    backend.setBlendMode(blendMode);
     vao.drawInstanced(4, 0, this._instanceCount, RenderingPrimitives.TriangleStrip);
     this._unbindBaseTextureSamplers(backend, material, this._slotCount);
     backend.stats.batches++;
@@ -402,7 +412,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
         this,
         this._instanceUint32.subarray(0, this._instanceCount * wordsPerInstance),
         this._instanceCount,
-        this._currentBlendMode ?? BlendModes.Normal,
+        blendMode,
         this._activeTextures,
         this._slotCount,
         null,
@@ -412,6 +422,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
     this._instanceCount = 0;
     this._maxNodeIndex = 0;
+    this._currentBlendMode = null;
 
     this._resetSlots();
   }
@@ -531,12 +542,6 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
       // Defensive: a bundle in this state never validates (generation), so a
       // spliced replay cannot reach here; skip rather than crash mid-frame.
       return;
-    }
-
-    // Keep this renderer's blend tracking in sync so the next live batch
-    // still detects its own blend changes correctly.
-    if (payload.blendMode !== this._currentBlendMode) {
-      this._currentBlendMode = payload.blendMode;
     }
 
     backend.setBlendMode(payload.blendMode);
@@ -720,13 +725,9 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
     if (batchFull || blendModeChanged || slotExhausted || materialSwitch) {
       this.flush();
-
-      if (blendModeChanged) {
-        this._currentBlendMode = blendMode;
-        backend.setBlendMode(blendMode);
-      }
     }
 
+    this._currentBlendMode = blendMode;
     this._currentMaterial = null;
 
     let slot = this._textureSlots.get(texture);
@@ -756,11 +757,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
       this.flush();
     }
 
-    if (blendModeChanged) {
-      this._currentBlendMode = blendMode;
-      backend.setBlendMode(blendMode);
-    }
-
+    this._currentBlendMode = blendMode;
     this._currentMaterial = material;
 
     // Resolve / assign texture slot, exactly as the default path does - the

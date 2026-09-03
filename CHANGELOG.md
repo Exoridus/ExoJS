@@ -8,6 +8,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Fixed
 
+- **Sprites and meshes on WebGL2 draw with the blend mode they declare, even
+  when another renderer type is interleaved.** The WebGL2 blend state is one
+  global the backend owns, but the sprite and mesh renderers kept a private
+  copy and skipped the backend call whenever a batch declared the mode that
+  copy already held. A `Graphics` or nine-slice drawn in between had changed
+  the real state in the meantime, so the next batch composited with a foreign
+  blend mode - visibly disagreeing with WebGPU, which resolves blend per
+  pipeline. Each batch now establishes its blend mode at its own draw call.
 - **Particle systems on WebGL2 pick up a texture whose payload arrives after
   the first draw.** `WebGl2ParticleRenderer` bound the system's texture only
   when its identity changed, which for a single-system scene meant exactly
