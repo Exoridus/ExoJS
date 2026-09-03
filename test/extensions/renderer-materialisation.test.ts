@@ -126,6 +126,18 @@ describe('materializeRendererBindings', () => {
     expect(() => materializeRendererBindings(backend, [bindingA, bindingB])).toThrow('Two bindings target the same drawable type CustomDrawableA');
   });
 
+  it('does not call create() on an earlier, valid binding when a later binding conflicts', () => {
+    const backend = createStubBackend();
+    const createA = vi.fn(() => createStubRenderer());
+    const createB = vi.fn(() => createStubRenderer());
+    const bindingA: RendererBinding = { targets: [CustomDrawableA], create: createA };
+    const bindingB: RendererBinding = { targets: [CustomDrawableB, CustomDrawableB], create: createB };
+
+    expect(() => materializeRendererBindings(backend, [bindingA, bindingB])).toThrow('Two bindings target the same drawable type CustomDrawableB');
+    expect(createA).not.toHaveBeenCalled();
+    expect(createB).not.toHaveBeenCalled();
+  });
+
   it('throws when empty targets array passed to bindRenderer', () => {
     const backend = createStubBackend();
     const renderer = createStubRenderer();

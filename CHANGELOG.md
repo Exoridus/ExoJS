@@ -462,6 +462,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   `BitmapText` to one renderer, so every WebGPU initialization compiled the
   text pipelines twice. The three methods now iterate the same deduplicated
   view `destroy()` uses.
+- **A duplicate renderer target across two bindings no longer leaves an
+  earlier, valid binding's renderer already created.** `materializeRendererBindings`
+  validated each binding's targets and created its renderer in the same pass,
+  so a conflict discovered on a later binding was reported only after an
+  earlier binding's GPU-backed renderer had already been created and bound.
+  The duplicate-target scan now runs over every binding before any renderer
+  is created.
 
 ## [0.16.1] - 2026-09-02
 
