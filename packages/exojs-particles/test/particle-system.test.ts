@@ -946,6 +946,25 @@ describe('emit()', () => {
     expect(second.lifetime).toBe(1);
   });
 
+  test('an out-of-range frame index is rejected rather than wrapped into a valid frame', () => {
+    const system = new ParticleSystem({ capacity: 4 });
+
+    // The frame channel is a Uint16Array: -1 would land on 65535 and 70000 on
+    // 4464, either of which may be a frame the system actually declares.
+    expect(() => {
+      system.emit()!.frame = -1;
+    }).toThrow(/frame index/);
+
+    expect(() => {
+      system.emit()!.frame = 70000;
+    }).toThrow(/frame index/);
+
+    const particle = system.emit()!;
+
+    particle.frame = 3;
+    expect(particle.frame).toBe(3);
+  });
+
   test('a writer kept past the next emit refuses to write in development builds', () => {
     const system = new ParticleSystem({ capacity: 4 });
     const stale = system.emit()!;

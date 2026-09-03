@@ -266,6 +266,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - **`RateSpawn` recovers from a negative rate sample.** A distribution that can
   return a value below zero drove the accumulator down without bound, and the
   emitter never spawned again. The sampled rate is clamped at zero.
+- **An out-of-range `ParticleWriter.frame` no longer wraps onto a valid frame.**
+  The frame channel is a `Uint16Array`, so `-1` became `65535` and `70000`
+  became `4464` - both of which can be a frame the system declares, instead of
+  the documented frame-0 fallback. Development builds throw with the offending
+  index; production clamps.
 
 ## [0.16.1] - 2026-09-02
 
