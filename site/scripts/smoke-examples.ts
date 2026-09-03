@@ -302,6 +302,16 @@ const startServer = (root: string): Promise<{ port: number; server: Server }> =>
   });
 };
 
+// Runs in every frame before any page script. Overriding the prototype rather
+// than leaving out `--enable-unsafe-webgpu`: current Chromium exposes the
+// adapter without that flag, so only the page-level property is a reliable way
+// to make the playground see no WebGPU at all. A data property, not a getter:
+// the function is serialised into the page by source, where a nested arrow
+// would drop its transpiler helpers.
+const withholdWebGpu = (): void => {
+  Object.defineProperty(Navigator.prototype, 'gpu', { configurable: true, value: undefined });
+};
+
 const captureErrors = (): void => {
   interface SmokeWindow {
     __SMOKE_ERRORS__?: { message: string }[];
@@ -525,11 +535,15 @@ interface Graphics {
   softwareRasteriser: boolean;
 }
 
-const probeGraphics = async (browser: Browser, baseUrl: string): Promise<Graphics> => {
+const probeGraphics = async (browser: Browser, baseUrl: string, forceWebGl2: boolean): Promise<Graphics> => {
   // Navigate to a real origin rather than about:blank - some Chromium builds
   // refuse to expose navigator.gpu on opaque origins.
   const page = await browser.newPage();
   try {
+    if (forceWebGl2) {
+      await page.addInitScript(withholdWebGpu);
+    }
+
     await page.goto(`${baseUrl}/preview.html`, { waitUntil: 'domcontentloaded', timeout: 10_000 });
     return await page.evaluate(async () => {
       const webgpu = await (async () => {
@@ -582,7 +596,7 @@ interface ContextPool {
  * single context share a renderer process, so a shared pool would put every
  * concurrent example on one main thread.
  */
-const createContextPool = (browser: Browser, colorScheme: 'light' | 'dark'): ContextPool => {
+const createContextPool = (browser: Browser, colorScheme: 'light' | 'dark', forceWebGl2: boolean): ContextPool => {
   const contexts = new Map<boolean, Promise<BrowserContext>>();
 
   return {
@@ -604,6 +618,9 @@ const createContextPool = (browser: Browser, colorScheme: 'light' | 'dark'): Con
         // green, so every example that does not ask for touch keeps exactly the
         // context it had.
         pending = browser.newContext({ viewport: { width: 1600, height: 900 }, colorScheme, hasTouch }).then(async context => {
+          if (forceWebGl2) {
+            await context.addInitScript(withholdWebGpu);
+          }
           await context.addInitScript(captureErrors);
           return context;
         });
@@ -803,7 +820,7 @@ const main = async (): Promise<void> => {
   }
 
   const browserName = values.browser === 'firefox' ? 'firefox' : 'chromium';
-  // Withholding the WebGPU flag rather than passing a backend preference: the
+  // Withholding `navigator.gpu` rather than passing a backend preference: the
   // playground picks its renderer from what the browser actually reports, so
   // an adapter that is never offered is the only way to make that choice from
   // outside the page. Examples that declare `webgpu` as a required capability
@@ -857,11 +874,11 @@ const main = async (): Promise<void> => {
     browser = await chromium.launch({
       channel: 'chromium',
       headless,
-      args: forceWebGl2 ? ['--enable-webgl', '--ignore-gpu-blocklist'] : ['--enable-webgl', '--enable-unsafe-webgpu', '--ignore-gpu-blocklist'],
+      args: ['--enable-webgl', '--enable-unsafe-webgpu', '--ignore-gpu-blocklist'],
     });
   }
 
-  const graphics = await probeGraphics(browser, baseUrl);
+  const graphics = await probeGraphics(browser, baseUrl, forceWebGl2);
   const webgpuAvailable = graphics.webgpu;
   console.log(
     `[smoke] ${entries.length} example(s) · ${browserName} · ${headless ? 'headless' : 'headed'} · ` +
@@ -874,7 +891,7 @@ const main = async (): Promise<void> => {
   let cursor = 0;
 
   const worker = async (): Promise<void> => {
-    const pool = createContextPool(browser, colorScheme);
+    const pool = createContextPool(browser, colorScheme, forceWebGl2);
 
     try {
       while (true) {
@@ -904,7 +921,7 @@ const main = async (): Promise<void> => {
   // blank remains a failure; thrown errors and missing canvases are never
   // softened by this retry.
   const blankFailureIndexes = results.flatMap((result, index) => (result.status === 'failed' && result.note === BLANK_FAILURE ? [index] : []));
-  const retryPool = createContextPool(browser, colorScheme);
+  const retryPool = createContextPool(browser, colorScheme, forceWebGl2);
 
   for (const index of blankFailureIndexes) {
     const entry = entries[index]!;
