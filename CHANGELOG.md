@@ -252,6 +252,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   were stopped but registered tickers were only dropped, so a `TweenSequencer`
   kept reporting `Active` after an application teardown with nothing left to
   advance it.
+- **A `TweenSequencer` delay stage carries its overshoot into the next stage.**
+  The time past a `wait()` stage's own duration was dropped, so a chain of
+  waits drifted by up to one frame per stage and a repeated sequence
+  accumulated the error - `Tween.update` already carries the same remainder
+  into its next repeat cycle.
 
 ## [0.16.1] - 2026-09-02
 
