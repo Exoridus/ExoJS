@@ -154,6 +154,42 @@ describe('PhysicsWorld lifecycle and mass model', () => {
     expect(() => world.destroyCollider(collider)).not.toThrow();
   });
 
+  it('rejects two destroyCollider calls in one dispatch that would together strand a boundary-only body', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const body = world.add(
+      new PhysicsBody({
+        type: 'dynamic',
+        position: { x: 0, y: 0 },
+        colliders: [{ shape: new BoxShape(10, 10) }, { shape: new BoxShape(10, 10), offset: { x: 12, y: 0 } }, { shape: new SegmentShape(0, 20, 20, 20) }],
+      }),
+    );
+    const box0 = body.colliders[0]!;
+    const box1 = body.colliders[1]!;
+    colliderAt(world, new BoxShape(4, 4), { x: 0, y: 0 }, 0, 'static', { isSensor: true });
+
+    let sawSensorEnter = false;
+    world.onSensorEnter.add(() => {
+      if (sawSensorEnter) {
+        return;
+      }
+
+      sawSensorEnter = true;
+      world.destroyCollider(box0);
+      // Each call validates against the *current* collider set at the time it
+      // runs; without accounting for box0's own already-queued removal, this
+      // second call would also pass, and both deferred removals would then
+      // apply together, leaving body with only the massless segment.
+      expect(() => world.destroyCollider(box1)).toThrow();
+    });
+
+    world.step(1 / 60);
+
+    expect(sawSensorEnter).toBe(true);
+    expect(body.colliders).toHaveLength(2);
+    expect(body.invMass).toBeGreaterThan(0);
+    expect(body.isMassReady).toBe(true);
+  });
+
   it('throws when used after destroy', () => {
     const world = new PhysicsWorld();
     world.destroy();

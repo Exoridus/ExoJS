@@ -58,7 +58,7 @@ const clampAlpha = (alpha: number): number => {
  * Removing the body's *only* collider is fine: a body with no geometry at all is
  * a body still being assembled, not a silently broken one.
  */
-const assertBodyKeepsItsMass = (collider: Collider): void => {
+const assertBodyKeepsItsMass = (collider: Collider, pendingRemovals: ReadonlySet<Collider>): void => {
   const body = collider.body;
 
   if (body.type !== 'dynamic' || collider.shape.massProperties === null || collider.density <= 0) {
@@ -68,7 +68,11 @@ const assertBodyKeepsItsMass = (collider: Collider): void => {
   let remaining = 0;
 
   for (const other of body.colliders) {
-    if (other === collider) {
+    // A collider already queued for removal in this same dispatch is as good as
+    // gone: without this, two `destroyCollider` calls in one callback each pass
+    // the check against the pre-deferral set, and both deferred removals then
+    // apply, leaving the body massless.
+    if (other === collider || pendingRemovals.has(other)) {
       continue;
     }
 
@@ -400,6 +404,8 @@ export class PhysicsWorld implements BodyOwner {
   private readonly _bindings = new BindingRegistry();
   private readonly _query: QueryEngine;
   private readonly _commands: Array<() => void> = [];
+  /** Colliders with a deferred removal queued but not yet applied; see {@link assertBodyKeepsItsMass}. */
+  private readonly _pendingColliderRemovals = new Set<Collider>();
   /** Pooled union-find parent array for the per-step island pass (reused; sized to the body count). */
   private readonly _islandParent: number[] = [];
   /** Pooled per-island minimum sleep time, indexed by union-find root. */
@@ -571,9 +577,13 @@ export class PhysicsWorld implements BodyOwner {
   public destroyCollider(collider: Collider): void {
     // Checked here rather than in the deferred removal so the error surfaces at
     // the call site that caused it, not out of the middle of a `step()`.
-    assertBodyKeepsItsMass(collider);
+    assertBodyKeepsItsMass(collider, this._pendingColliderRemovals);
 
-    this._defer(() => this._removeCollider(collider));
+    this._pendingColliderRemovals.add(collider);
+    this._defer(() => {
+      this._pendingColliderRemovals.delete(collider);
+      this._removeCollider(collider);
+    });
   }
 
   /** Live joints (read-only view). */

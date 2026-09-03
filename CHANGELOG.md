@@ -428,6 +428,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   added to a world" instead, and `addCollider()` then registered further
   colliders into a world the body was never actually tracked by. The mass
   check now runs before any attachment state changes.
+- **Destroying two colliders of the same dynamic body from one event callback
+  could leave it massless.** `destroyCollider`'s mass guard validated against
+  the collider set as it stood before either deferred removal had run, so two
+  individually-legal calls made from the same dispatch both passed and then
+  combined into a dynamic body with `invMass === 0` and live boundary
+  colliders - the exact state the guard exists to reject. The guard now
+  treats a collider already queued for removal as already gone.
 
 ## [0.16.1] - 2026-09-02
 
