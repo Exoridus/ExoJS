@@ -454,6 +454,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   had already warned about that shape kind - contradicting the class's own
   "holds no module-level state" documentation. The set now lives on the
   world instance.
+- **A renderer bound to more than one drawable type connects, disconnects and
+  pre-warms once, not once per bound type.** `RendererRegistry.connect`,
+  `disconnect` and `renderers()` iterated the underlying map's raw values,
+  which repeats a shared renderer for every target it is bound to, while
+  `destroy()` already deduplicated by instance. Core binds `Text` and
+  `BitmapText` to one renderer, so every WebGPU initialization compiled the
+  text pipelines twice. The three methods now iterate the same deduplicated
+  view `destroy()` uses.
 
 ## [0.16.1] - 2026-09-02
 

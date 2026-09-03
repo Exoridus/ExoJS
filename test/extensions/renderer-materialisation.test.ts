@@ -210,6 +210,21 @@ describe('materializeRendererBindings', () => {
   });
 });
 
+describe('RendererRegistry deduplicates multi-target renderers', () => {
+  it('connects, disconnects and yields a two-target renderer exactly once', () => {
+    const registry = new RendererRegistry<RenderBackend>();
+    const renderer = createStubRenderer();
+
+    registry.bindRenderer([CustomDrawableA, CustomDrawableB], renderer);
+    registry.connect({} as RenderBackend);
+    registry.disconnect();
+
+    expect(renderer.connect).toHaveBeenCalledTimes(1);
+    expect(renderer.disconnect).toHaveBeenCalledTimes(1);
+    expect([...registry.renderers()]).toHaveLength(1);
+  });
+});
+
 describe('coreRendererBindings multi-target', () => {
   it('coreRendererBindings provides Text+BitmapText as multi-target binding', async () => {
     const { buildCoreRendererBindings } = await import('#rendering/coreRendererBindings');

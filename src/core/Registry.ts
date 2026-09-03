@@ -75,19 +75,26 @@ export class Registry<Key, Value> {
     return this._entries.values();
   }
 
+  /** Iterates every stored value exactly once, even when shared across several keys. */
+  public *uniqueValues(): IterableIterator<Value> {
+    const seen = new Set<Value>();
+
+    for (const value of this._entries.values()) {
+      if (!seen.has(value)) {
+        seen.add(value);
+        yield value;
+      }
+    }
+  }
+
   /**
    * Disposes every unique value (if a disposer was configured) and clears the
    * store.
    */
   public destroy(): void {
     if (this._dispose !== null) {
-      const seen = new Set<Value>();
-
-      for (const value of this._entries.values()) {
-        if (!seen.has(value)) {
-          seen.add(value);
-          this._dispose(value);
-        }
+      for (const value of this.uniqueValues()) {
+        this._dispose(value);
       }
     }
 

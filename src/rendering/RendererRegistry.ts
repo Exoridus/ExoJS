@@ -107,12 +107,12 @@ export class RendererRegistry<Runtime extends RenderBackend> {
   }
 
   /**
-   * Iterate all registered renderers. Used by managers to dispatch
-   * lifecycle hooks (e.g. WebGPU pipeline pre-warmup) to whichever
-   * renderers expose them.
+   * Iterate all registered renderers, deduplicated by instance.
+   * Used by managers to dispatch lifecycle hooks (e.g. WebGPU pipeline
+   * pre-warmup) to whichever renderers expose them.
    */
   public renderers(): Iterable<Renderer<Runtime>> {
-    return this._renderers.values();
+    return this._renderers.uniqueValues();
   }
 
   /**
@@ -147,20 +147,22 @@ export class RendererRegistry<Runtime extends RenderBackend> {
 
   /**
    * Connect all registered renderers to the given backend.
+   * A renderer bound to several targets is connected exactly once.
    */
   public connect(backend: Runtime): void {
     this._backend = backend;
 
-    for (const renderer of this._renderers.values()) {
+    for (const renderer of this._renderers.uniqueValues()) {
       renderer.connect(backend);
     }
   }
 
   /**
    * Disconnect all registered renderers from the current backend.
+   * A renderer bound to several targets is disconnected exactly once.
    */
   public disconnect(): void {
-    for (const renderer of this._renderers.values()) {
+    for (const renderer of this._renderers.uniqueValues()) {
       renderer.disconnect();
     }
 
