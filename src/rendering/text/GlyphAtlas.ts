@@ -480,10 +480,13 @@ export class GlyphAtlas implements GlyphProvider {
       advance: this._metrics.advance(char, size),
       ascent: ascent / ratio,
       page: page.index,
-      uvLeft: slot.x / ps,
-      uvTop: slot.y / ps,
-      uvRight: (slot.x + slotW) / ps,
-      uvBottom: (slot.y + slotH) / ps,
+      // Ink is drawn inset by `glyphPadding` inside the slot (`AtlasPage.rasterize`), so
+      // the UVs must span that same inset region, not the full padded slot - otherwise
+      // the quad (sized to the unpadded glyph) samples a wider, offset texel span.
+      uvLeft: (slot.x + glyphPadding) / ps,
+      uvTop: (slot.y + glyphPadding) / ps,
+      uvRight: (slot.x + glyphPadding + glyphWidth) / ps,
+      uvBottom: (slot.y + glyphPadding + glyphHeight) / ps,
     };
 
     this._cache.set(key, info);

@@ -85,6 +85,21 @@ describe('GlyphAtlas', () => {
     expect(info.uvBottom).toBeGreaterThan(info.uvTop);
   });
 
+  test('color-glyph UVs span the unpadded ink, matching the quad size, not the padded slot', () => {
+    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 1024, 'color');
+    const info = atlas.getGlyph('A', 16);
+    const pageSize = atlas.pages[0].texture.width;
+
+    // AtlasPage.rasterize draws the glyph inset by glyphPadding (2px) inside
+    // its reserved slot; the UVs must span exactly that inset region so a
+    // quad sized to `info.width`/`info.height` samples the glyph itself, not
+    // a wider, offset span that includes the padding.
+    expect(info.uvLeft * pageSize).toBeCloseTo(info.x + 2, 5);
+    expect(info.uvTop * pageSize).toBeCloseTo(info.y + 2, 5);
+    expect(info.uvRight * pageSize).toBeCloseTo(info.x + 2 + info.width, 5);
+    expect(info.uvBottom * pageSize).toBeCloseTo(info.y + 2 + info.height, 5);
+  });
+
   test('same call twice returns the same cached instance', () => {
     const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 1024, 'color');
     const a = atlas.getGlyph('A', 16);

@@ -365,6 +365,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   grabbed right before a transition kept following the pointer once the gate
   lifted. A gated frame now runs the same cleanup a failed dispatch already
   did.
+- **Colour-glyph (emoji) quads sample the glyph, not a texel span that
+  includes its padding.** The UVs spanned the whole padded atlas slot while
+  the quad was sized to the unpadded glyph, so an emoji rendered compressed
+  and offset up-left. UVs are now offset by the same padding the rasterizer
+  insets the ink by.
 
 ## [0.16.1] - 2026-09-02
 
