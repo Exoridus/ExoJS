@@ -173,7 +173,7 @@
             }
           ],
           "returnType": "number",
-          "description": "How strongly this zone applies at (x, y, z): 1 inside the shape, 0 beyond AudioZone.falloff, and a linear ramp between. The ramp is measured on the distance to the shape's boundary rather than to its centre, so a long corridor fades over the same distance at its middle as at its ends."
+          "description": "How strongly this zone applies at (x, y, z): 1 inside the shape, 0 beyond AudioZone.falloff, and a linear ramp between. The ramp is measured on the distance to the shape's boundary rather than to its centre, so a long corridor fades over the same distance at its middle as at its ends. A z beyond AudioZone.height is outside the zone regardless of (x, y)."
         }
       ],
       "paragraphs": [],
@@ -245,7 +245,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Height band above and below the world plane the zone covers."
+          "description": "How far the zone reaches above and below the world plane; 100 covers z from -100 to 100."
         },
         {
           "name": "name",

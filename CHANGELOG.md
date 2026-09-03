@@ -234,6 +234,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   voice - so a reverb zone opened a send on UI blips and music beds that have no
   position in the world at all. A voice that stops being positional now has its
   zone sends closed instead of keeping them open untouched.
+- **`AudioZone.height` is documented as the half-band it is.** The option and
+  the field described it two different ways; `height: 100` covers `z` from
+  `-100` to `100`, which both now say.
 
 ## [0.16.1] - 2026-09-02
 

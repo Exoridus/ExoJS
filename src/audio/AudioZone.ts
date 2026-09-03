@@ -26,7 +26,10 @@ export interface AudioZoneOptions {
   readonly send?: number;
   /** Distance outside the shape over which the weight ramps to zero. Default `0` - a hard edge. */
   readonly falloff?: number;
-  /** Height band the zone occupies, measured from the world plane. Default `Infinity` - the zone is a column. */
+  /**
+   * How far the zone reaches above and below the world plane, so `100` covers
+   * `z` from `-100` to `100`. Default `Infinity` - the zone is a column.
+   */
   readonly height?: number;
   /** Free label for diagnostics. */
   readonly name?: string;
@@ -67,7 +70,7 @@ export class AudioZone {
   public send: number;
   /** Distance outside the shape over which the weight ramps from `1` to `0`. */
   public falloff: number;
-  /** Height band above and below the world plane the zone covers. */
+  /** How far the zone reaches above and below the world plane; `100` covers `z` from `-100` to `100`. */
   public height: number;
 
   public constructor({ shape, bus, send = 1, falloff = 0, height = Number.POSITIVE_INFINITY, name = 'zone' }: AudioZoneOptions) {
@@ -85,7 +88,8 @@ export class AudioZone {
    *
    * The ramp is measured on the distance to the shape's boundary rather than to
    * its centre, so a long corridor fades over the same distance at its middle as
-   * at its ends.
+   * at its ends. A `z` beyond {@link AudioZone.height} is outside the zone
+   * regardless of `(x, y)`.
    */
   public weightAt(x: number, y: number, z = 0): number {
     if (Math.abs(z) > this.height) {
