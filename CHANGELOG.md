@@ -387,6 +387,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   type-checked and appeared to work, but skipped the construction-baseline
   watermark and keyboard-capture bookkeeping `InputSystem`'s own binding
   methods apply. It now throws.
+- **`GamepadButtonChannel` no longer admits reserved, token-less channels.**
+  Offsets 24-31 of the button section type-checked but had no
+  `InputToken`, so a custom mapping using one made `serialize()` and
+  `conflicts()` throw a bare error at the worst possible moment. The type now
+  only admits the 24 named, serializable channels.
 
 ## [0.16.1] - 2026-09-02
 
