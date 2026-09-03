@@ -365,10 +365,12 @@ export class SceneScope<Data = unknown> {
 
   /**
    * Failed-activation cleanup: aborts {@link Scene.lifecycleSignal}, destroys
-   * every engine-managed registration this scope created, releases loader
-   * claims, and invokes `scene.destroy()` - but never `scene.unload()`, since
-   * the scene never completed activation. Never throws; cleanup failures are
-   * reported through the application error pipeline. Idempotent.
+   * every engine-managed registration this scope created, invokes
+   * `scene.destroy()` - but never `scene.unload()`, since the scene never
+   * completed activation - and releases loader claims last, the same order
+   * {@link SceneScope.destroy} uses, so a `destroy()` override that takes a
+   * claim sees the same scope state on either path. Never throws; cleanup
+   * failures are reported through the application error pipeline. Idempotent.
    */
   public destroyFailedActivation(): void {
     if (!canDestroy(this._state)) {
@@ -389,9 +391,9 @@ export class SceneScope<Data = unknown> {
     this._guard(errors, () => this.audio.destroy());
     this._guard(errors, () => this.inputs.destroy());
     this._guard(errors, () => this.interaction.destroy());
-    this._guard(errors, () => this.loader.destroy());
     this._callSceneDestroy(errors);
     this._guard(errors, () => this.scene._teardownInternals());
+    this._guard(errors, () => this.loader.destroy());
 
     this._state = SceneState.Destroyed;
     this._onStateChange(SceneState.Destroying, this._state);

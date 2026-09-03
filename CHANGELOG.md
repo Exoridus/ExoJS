@@ -186,6 +186,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   registration, and for which `has()` answers `false` - returned `true`,
   contradicting the method's own "true if it was registered". The add is still
   cancelled; the return value now agrees with `has()`.
+- **Loader claims are released last on both scene teardown paths.** A scope
+  torn down after a failed `load()`/`init()` released its loader claims before
+  calling `scene.destroy()`, while the ordinary teardown - whose documentation
+  names "release loader claims last" as the normative order - released them
+  after it. A `Scene.destroy()` override reaching for `this.loader` therefore
+  saw a live claim scope or a destroyed one depending on whether activation had
+  succeeded, and a claim taken on the failed path was never released. Both
+  paths now release last.
 
 ## [0.16.1] - 2026-09-02
 

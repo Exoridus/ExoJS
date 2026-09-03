@@ -255,6 +255,33 @@ describe('SceneScope', () => {
       expect(app.interaction.detachRoot).not.toHaveBeenCalled();
     });
 
+    test('releases loader claims after scene.destroy(), matching the successful teardown order', async () => {
+      const app = createAppStub();
+      const order: string[] = [];
+      const scene = Object.assign(new Scene(), {
+        init(): void {
+          throw new Error('init failed');
+        },
+        destroy(): void {
+          order.push('scene.destroy');
+        },
+      });
+      const scope = new SceneScope(app, scene);
+
+      await expect(scope.prepare(undefined)).rejects.toThrow('init failed');
+
+      (app.loader._releaseScope as ReturnType<typeof vi.fn>).mockImplementation(() => {
+        order.push('loader.release');
+      });
+
+      scope.destroyFailedActivation();
+
+      // destroy() names "release loader claims last" as the normative order, so
+      // a Scene.destroy() override reaching for this.loader must see the same
+      // live claim scope whether activation succeeded or failed.
+      expect(order).toEqual(['scene.destroy', 'loader.release']);
+    });
+
     test('is idempotent', async () => {
       const app = createAppStub();
       const scene = Object.assign(new Scene(), {
