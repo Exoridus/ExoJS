@@ -7,6 +7,7 @@ import type { AudioGeneratorVoice } from '#audio/AudioGeneratorVoice';
 import { AudioSystem } from '#audio/AudioSystem';
 import { Envelope } from '#audio/Envelope';
 import { SoundPoolStrategy } from '#audio/Sound';
+import { Time } from '#core/units';
 
 interface MockAudioParam {
   value: number;
@@ -116,7 +117,7 @@ describe('AudioGenerator', () => {
   });
 
   test('construction with custom options', () => {
-    const env = new Envelope({ attackMs: 20 });
+    const env = new Envelope({ attack: Time.seconds(0.02) });
     const gen = new AudioGenerator({
       frequency: 880,
       type: 'square',
@@ -233,7 +234,7 @@ describe('AudioGenerator', () => {
   test('with an envelope, play() triggers it on the voice envelope gain', () => {
     const system = new AudioSystem();
     const spy = setupSpy();
-    const env = new Envelope({ attackMs: 10, decayMs: 50, sustainLevel: 0.8, releaseMs: 100 });
+    const env = new Envelope({ attack: Time.seconds(0.01), decay: Time.seconds(0.05), sustainLevel: 0.8, release: Time.seconds(0.1) });
     const triggerSpy = vi.spyOn(env, 'trigger');
     const gen = new AudioGenerator({ envelope: env });
 
@@ -248,11 +249,11 @@ describe('AudioGenerator', () => {
     gen.destroy();
   });
 
-  test('with an envelope, voice.stop() releases it and stops the oscillator after releaseMs', () => {
+  test('with an envelope, voice.stop() releases it and stops the oscillator after release', () => {
     const system = new AudioSystem();
     const spy = setupSpy();
-    const env = new Envelope({ attackMs: 10, decayMs: 50, sustainLevel: 0.8, releaseMs: 200 });
-    const releaseSpy = vi.spyOn(env, 'release');
+    const env = new Envelope({ attack: Time.seconds(0.01), decay: Time.seconds(0.05), sustainLevel: 0.8, release: Time.seconds(0.2) });
+    const releaseSpy = vi.spyOn(env, 'releaseAt');
     const gen = new AudioGenerator({ envelope: env });
 
     const voice = system.play(gen);
@@ -260,7 +261,7 @@ describe('AudioGenerator', () => {
 
     expect(releaseSpy).toHaveBeenCalledTimes(1);
     const ctx = getAudioContext();
-    expect(spy.oscillators[0].stop).toHaveBeenCalledWith(ctx.currentTime + 200 / 1000);
+    expect(spy.oscillators[0].stop).toHaveBeenCalledWith(ctx.currentTime + 0.2);
 
     spy.restore();
     gen.destroy();

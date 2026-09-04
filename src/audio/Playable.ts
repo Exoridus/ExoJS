@@ -1,5 +1,6 @@
 import type { SceneNode } from '#core/SceneNode';
 import type { Signal } from '#core/Signal';
+import type { Seconds } from '#core/units';
 import type { Vector } from '#math/Vector';
 
 import type { AudioBus } from './AudioBus';
@@ -28,18 +29,18 @@ import type { AudioSystem } from './AudioSystem';
  */
 export interface Voice extends Spatializable {
   /**
-   * Stop playback and release this voice's resources. Pass `fadeMs` to ramp
-   * the volume to zero over that many milliseconds before stopping; omit (or
-   * pass `0`) to stop immediately. Idempotent - calling again is a no-op.
+   * Stop playback and release this voice's resources. Pass `fade` to ramp the
+   * volume to zero over that duration before stopping; omit (or pass `0`) to
+   * stop immediately. Idempotent - calling again is a no-op.
    */
-  stop(fadeMs?: number): void;
+  stop(fade?: Seconds): void;
   /** Playback volume in the range [0, 1]. Bus volume (0..2) can amplify beyond this. */
   volume: number;
   /**
-   * Ramp the volume to `to` (clamped to [0, 1]) over `ms` milliseconds without
+   * Ramp the volume to `to` (clamped to [0, 1]) over `duration` without
    * stopping. Use {@link Voice.stop} with a fade argument to fade out and stop.
    */
-  fade(to: number, ms: number): void;
+  fade(to: number, duration: Seconds): void;
   /** `true` once playback has ended naturally or been stopped. */
   readonly ended: boolean;
   /** Fires once when this voice ends (natural end or {@link Voice.stop}). */

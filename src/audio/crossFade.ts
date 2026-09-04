@@ -1,3 +1,4 @@
+import type { Seconds } from '#core/units';
 import { clamp } from '#math/utils';
 
 import type { Voice } from './Playable';
@@ -15,8 +16,7 @@ export interface CrossFadeOptions {
 }
 
 /**
- * Cross-fade from one playing {@link Voice} to another over `durationMs`,
- * in milliseconds.
+ * Cross-fade from one playing {@link Voice} to another over `duration`.
  *
  * Ramps `to` up to `toVolume` and `from` down to silence. By default `from` is
  * stopped when the fade finishes; pass `stopAfter: false` to keep it alive.
@@ -25,24 +25,24 @@ export interface CrossFadeOptions {
  *
  * ```ts
  * const next = app.audio.play(track, { volume: 0 });
- * await crossFade(current, next, 1000);
+ * await crossFade(current, next, Time.seconds(1));
  * ```
  *
- * Returns a Promise that resolves once `durationMs` elapses.
+ * Returns a Promise that resolves once `duration` elapses.
  */
-export const crossFade = async (from: Voice, to: Voice, durationMs: number, options: CrossFadeOptions = {}): Promise<void> => {
+export const crossFade = async (from: Voice, to: Voice, duration: Seconds, options: CrossFadeOptions = {}): Promise<void> => {
   const target = clamp(options.toVolume ?? 1, 0, 1);
   const stopAfter = options.stopAfter ?? true;
 
-  to.fade(target, durationMs);
+  to.fade(target, duration);
 
   if (stopAfter) {
-    from.stop(durationMs);
+    from.stop(duration);
   } else {
-    from.fade(0, durationMs);
+    from.fade(0, duration);
   }
 
   return new Promise<void>(resolve => {
-    setTimeout(resolve, Math.max(0, durationMs));
+    setTimeout(resolve, Math.max(0, duration * 1000));
   });
 };

@@ -4,6 +4,7 @@ import { AudioBus } from '#audio/AudioBus';
 import { getAudioContext } from '#audio/audioContext';
 import type { AudioEffect } from '#audio/AudioEffect';
 import { Signal } from '#core/Signal';
+import { Time } from '#core/units';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -252,7 +253,7 @@ describe('AudioBus', () => {
     const ctx = getAudioContext();
     const bus = new AudioBus('fade-in-test', { volume: 0.7 });
 
-    bus.fadeIn(500);
+    bus.fadeIn(Time.seconds(0.5));
 
     expect(spy.outputNode.gain.cancelScheduledValues).toHaveBeenCalledWith(ctx.currentTime);
     expect(spy.outputNode.gain.setValueAtTime).toHaveBeenCalledWith(0, ctx.currentTime);
@@ -268,7 +269,7 @@ describe('AudioBus', () => {
     const ctx = getAudioContext();
     const bus = new AudioBus('fade-out-test', { volume: 1 });
 
-    bus.fadeOut(500);
+    bus.fadeOut(Time.seconds(0.5));
 
     expect(spy.outputNode.gain.cancelScheduledValues).toHaveBeenCalled();
     expect(spy.outputNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0, ctx.currentTime + 0.5);
@@ -286,7 +287,7 @@ describe('AudioBus', () => {
     const spy = spyOnBusCreation();
     const bus = new AudioBus('fade-out-no-stop');
 
-    bus.fadeOut(500, { stopAfter: false });
+    bus.fadeOut(Time.seconds(0.5), { stopAfter: false });
     vi.advanceTimersByTime(600);
     expect(bus.muted).toBe(false);
 
@@ -299,9 +300,9 @@ describe('AudioBus', () => {
     const spy = spyOnBusCreation();
     const bus = new AudioBus('cancel-fade');
 
-    bus.fadeOut(500);
+    bus.fadeOut(Time.seconds(0.5));
     vi.advanceTimersByTime(100);
-    bus.fadeIn(500);
+    bus.fadeIn(Time.seconds(0.5));
     vi.advanceTimersByTime(500);
 
     expect(bus.muted).toBe(false);
@@ -561,7 +562,7 @@ describe('AudioBus', () => {
     const ctx = getAudioContext();
     const bus = new AudioBus('fade-in-muted', { volume: 0.9, muted: true });
 
-    bus.fadeIn(500);
+    bus.fadeIn(Time.seconds(0.5));
 
     expect(spy.outputNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0, ctx.currentTime + 0.5);
 
@@ -617,13 +618,13 @@ describe('AudioBus', () => {
     child.destroy();
   });
 
-  // ---- fadeIn / fadeOut: durationMs <= 0 short-circuits ----
+  // ---- fadeIn / fadeOut: duration <= 0 short-circuits ----
 
   test('fadeIn(0) returns immediately without scheduling a ramp', () => {
     const spy = spyOnBusCreation();
     const bus = new AudioBus('fade-in-zero');
 
-    const result = bus.fadeIn(0);
+    const result = bus.fadeIn(Time.seconds(0));
 
     expect(result).toBe(bus);
     expect(spy.outputNode.gain.linearRampToValueAtTime).not.toHaveBeenCalled();
@@ -636,7 +637,7 @@ describe('AudioBus', () => {
     const spy = spyOnBusCreation();
     const bus = new AudioBus('fade-out-zero');
 
-    const result = bus.fadeOut(0);
+    const result = bus.fadeOut(Time.seconds(0));
 
     expect(result).toBe(bus);
     expect(bus.muted).toBe(true);
@@ -650,7 +651,7 @@ describe('AudioBus', () => {
     const spy = spyOnBusCreation();
     const bus = new AudioBus('fade-out-zero-no-stop');
 
-    bus.fadeOut(0, { stopAfter: false });
+    bus.fadeOut(Time.seconds(0), { stopAfter: false });
 
     expect(bus.muted).toBe(false);
     expect(spy.outputNode.gain.linearRampToValueAtTime).not.toHaveBeenCalled();

@@ -1,5 +1,6 @@
 import { assert } from '#core/dev';
 import { logger } from '#core/Logger';
+import type { Seconds } from '#core/units';
 import { clamp } from '#math/utils';
 
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audioContext';
@@ -186,12 +187,11 @@ export class AudioBus {
 
   /**
    * Linearly ramp the output gain from 0 to the current volume over
-   * `durationMs`, in milliseconds. Cancels any in-flight ramps on the same
-   * gain node.
+   * `duration`. Cancels any in-flight ramps on the same gain node.
    */
-  public fadeIn(durationMs: number): this {
+  public fadeIn(duration: Seconds): this {
     this._clearScheduledStop();
-    if (durationMs <= 0 || !this._setup) {
+    if (duration <= 0 || !this._setup) {
       return this;
     }
     const ctx = this._setup.audioContext;
@@ -199,20 +199,19 @@ export class AudioBus {
     const target = this._muted ? 0 : this._volume;
     node.gain.cancelScheduledValues(ctx.currentTime);
     node.gain.setValueAtTime(0, ctx.currentTime);
-    node.gain.linearRampToValueAtTime(target, ctx.currentTime + durationMs / 1000);
+    node.gain.linearRampToValueAtTime(target, ctx.currentTime + duration);
     return this;
   }
 
   /**
-   * Linearly ramp the output gain to 0 over `durationMs`, in milliseconds.
-   * By default mutes the bus once the ramp completes (`stopAfter: true`);
-   * pass `stopAfter: false` to let the ramp finish silently while leaving
-   * `muted` unchanged.
+   * Linearly ramp the output gain to 0 over `duration`. By default mutes the
+   * bus once the ramp completes (`stopAfter: true`); pass `stopAfter: false`
+   * to let the ramp finish silently while leaving `muted` unchanged.
    */
-  public fadeOut(durationMs: number, options: { stopAfter?: boolean } = {}): this {
+  public fadeOut(duration: Seconds, options: { stopAfter?: boolean } = {}): this {
     const stopAfter = options.stopAfter ?? true;
     this._clearScheduledStop();
-    if (durationMs <= 0 || !this._setup) {
+    if (duration <= 0 || !this._setup) {
       if (stopAfter) this.muted = true;
       return this;
     }
@@ -220,12 +219,12 @@ export class AudioBus {
     const node = this._setup.outputNode;
     node.gain.cancelScheduledValues(ctx.currentTime);
     node.gain.setValueAtTime(node.gain.value, ctx.currentTime);
-    node.gain.linearRampToValueAtTime(0, ctx.currentTime + durationMs / 1000);
+    node.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
     if (stopAfter) {
       this._scheduledStopId = setTimeout(() => {
         this._scheduledStopId = null;
         this.muted = true;
-      }, durationMs);
+      }, duration * 1000);
     }
     return this;
   }
