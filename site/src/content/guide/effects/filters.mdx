@@ -89,6 +89,26 @@ The transform runs on straight alpha — the shader divides the premultiplied sa
 
 For a plain per-drawable multiply, prefer [`Drawable.tint`](/ExoJS/en/guide/rendering/sprites/): it costs no render target at all. Reach for this filter when the transform is more than a multiply, or when it has to cover a whole subtree as one image.
 
+## DropShadowFilter
+
+A soft, offset silhouette of the filtered node drawn behind it. The shadow is the input's coverage flattened to `color` (its alpha is the opacity), blurred by `blur`, and composited at `offsetX`/`offsetY` under the unchanged source; `shadowOnly` leaves the source out, which turns the same filter into a glow or a detached shadow:
+
+```ts
+import { Color, DropShadowFilter, Sprite } from '@codexo/exojs';
+
+declare const label: Sprite;
+declare const orb: Sprite;
+
+label.filters = [new DropShadowFilter({ offsetX: 2, offsetY: 3, blur: 3 })];
+
+// A coloured glow: no offset, wide blur, saturated colour, drawn on its own
+// behind the sprite.
+const glow = new DropShadowFilter({ offsetX: 0, offsetY: 0, blur: 12, color: new Color(80, 200, 255, 0.8) });
+orb.filters = [glow];
+```
+
+All lengths are logical units, so the shadow keeps its on-screen size at every pixel ratio and filter resolution, and the filter declares the extra reach it needs through `getOutputBounds`, so a shadow is never clipped by the sprite's own bounds. Every setter (`offsetX`, `offsetY`, `blur`, `quality`, `color`, `shadowOnly`) invalidates, so the shadow can be animated.
+
 ## LutFilter
 
 Maps every pixel through a Look-Up Table texture. Two modes:

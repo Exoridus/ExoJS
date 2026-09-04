@@ -8,6 +8,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Changed
 
+- **`ShaderSource.glsl.vertex` is optional.** A sprite material and a shader
+  filter never compiled the author's vertex stage (the sprite vertex program is
+  engine-owned, the filter draws a fullscreen quad), yet the source required a
+  non-empty string, so callers passed a dummy. `glsl: { fragment }` is now
+  enough for both; `ShaderSource.glsl.vertex` reads `null` in that case, and a
+  mesh or particle material without a vertex stage fails with a named error.
 - **Punctuation keys are named after their `code` on both input surfaces.**
   `Keyboard.Colon`, `Equals`, `Dash`, `QuestionMark`, `Tilde`, `OpenBracket`,
   `BackwardSlash`, `ClosedBracket` and `Quotes` are now `Semicolon`, `Equal`,
@@ -77,6 +83,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Added
 
+- **`when` on `SceneInteraction.observe()` and `scope()`.** Interaction
+  registrations take the same `SceneAvailability` policy the input, tween and
+  audio facades have. The default stays `'always'`, so a pause menu drawn by
+  the paused scene keeps receiving pointer events; `'active'` detaches a
+  registration while the scene is paused and `'paused'` attaches it only then.
 - **`DisplacementFilter`.** Warps the filtered node by a direction read out of a
   map texture - heat haze, water refraction, glass, shockwaves. `map`'s red and
   green channels are decoded to `[-1, 1]` and scaled by `scale` (one number or
