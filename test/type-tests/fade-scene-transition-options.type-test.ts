@@ -1,8 +1,8 @@
-import { Color, Ease, FadeSceneTransition, type FadeSceneTransitionOptions } from '../../src/index';
+import { Color, Ease, FadeSceneTransition, type FadeSceneTransitionOptions, Time } from '../../src/index';
 
 const options: FadeSceneTransitionOptions = {
   color: Color.black,
-  duration: 250,
+  duration: Time.seconds(0.25),
   easing: Ease.cubicOut,
   placement: 'screen',
 };

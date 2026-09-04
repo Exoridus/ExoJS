@@ -1,6 +1,6 @@
 import { Ease } from '#animation/Ease';
 import type { EasingFunction } from '#animation/types';
-import type { Seconds } from '#core/units';
+import { type Seconds, seconds } from '#core/units';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import { Sprite } from '#rendering/sprite/Sprite';
 
@@ -46,8 +46,8 @@ export const mergeSceneTransitionRequirements = (a: SceneTransitionPhaseRequirem
 
 /** Construction options for {@link PhasedSceneTransition} and its subclasses. */
 export interface PhasedSceneTransitionOptions {
-  /** Duration of *each* phase (enter and exit run this long independently), in milliseconds. Default `220`. */
-  readonly duration?: number;
+  /** Duration of *each* phase (enter and exit run this long independently). Default `0.22` seconds. */
+  readonly duration?: Seconds;
   /** Applied to both phases' `progress` to produce `easedProgress`. Default {@link Ease.linear}. */
   readonly easing?: EasingFunction;
   /** Which render layer this transition's output composites against. Default `'screen'`. */
@@ -87,7 +87,7 @@ export interface SceneTransitionPhaseContext {
  * @stable
  */
 export abstract class PhasedSceneTransition<PhaseState = void> extends SceneTransition {
-  public readonly duration: number;
+  public readonly duration: Seconds;
   public readonly easing: EasingFunction;
   public readonly placement: 'scene' | 'screen';
 
@@ -102,7 +102,7 @@ export abstract class PhasedSceneTransition<PhaseState = void> extends SceneTran
    */
   public constructor(options: PhasedSceneTransitionOptions = {}) {
     super();
-    this.duration = options.duration ?? 220;
+    this.duration = seconds(options.duration ?? 0.22);
     this.easing = options.easing ?? Ease.linear;
     this.placement = options.placement ?? 'screen';
   }
@@ -195,7 +195,7 @@ type PhasedTransitionPhaseState = 'exit' | 'holding' | 'enter' | 'done';
  */
 export class PhasedSceneTransitionSession implements SceneTransitionSession {
   private _phaseState: PhasedTransitionPhaseState = 'exit';
-  private _elapsedMs = 0;
+  private _elapsed: Seconds = seconds(0);
   /** Reusable sprite for the direct→texture identity-composite fallback - session-owned, never shared with the phase definitions. */
   private readonly _identitySprite = new Sprite(null);
   private readonly _exitPhaseState: unknown;
@@ -234,14 +234,14 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
       // enter phase's own duration, but the frame that finally observes
       // `committed` should not be a second no-op frame on top of that.
       this._phaseState = 'enter';
-      this._elapsedMs = 0;
+      this._elapsed = seconds(0);
     }
 
     const activePhase = this._phaseState === 'exit' ? this._exitPhase : this._enterPhase;
 
-    this._elapsedMs = Math.min(activePhase.duration, this._elapsedMs + Math.max(0, delta * 1000));
+    this._elapsed = seconds(Math.min(activePhase.duration, this._elapsed + Math.max(0, delta)));
 
-    if (this._elapsedMs >= activePhase.duration) {
+    if (this._elapsed >= activePhase.duration) {
       if (this._phaseState === 'exit') {
         if (!this._environment.commitRequested) {
           this._environment.commit();
@@ -288,7 +288,7 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
       context.render(this._identitySprite, { view: context.screenView });
     }
 
-    const progress = activePhase.duration === 0 ? 1 : Math.min(1, this._elapsedMs / activePhase.duration);
+    const progress = activePhase.duration === 0 ? 1 : Math.min(1, this._elapsed / activePhase.duration);
     const easedProgress = activePhase.easing(progress);
     const presence = phase === 'enter' ? easedProgress : 1 - easedProgress;
 
@@ -351,7 +351,7 @@ class NoOpPhasedSceneTransition extends PhasedSceneTransition {
   }
 }
 
-const noOpPhasedSceneTransition = new NoOpPhasedSceneTransition({ duration: 0 });
+const noOpPhasedSceneTransition = new NoOpPhasedSceneTransition({ duration: seconds(0) });
 
 /**
  * Resolve an optional `{ enter, exit }` pair (either side may be omitted -

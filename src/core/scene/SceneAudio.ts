@@ -9,6 +9,7 @@ import { SceneState } from '#core/scene/SceneState';
 import type { SceneNode } from '#core/SceneNode';
 import { Signal } from '#core/Signal';
 import type { Destroyable } from '#core/types';
+import { type Seconds, seconds } from '#core/units';
 import { Vector } from '#math/Vector';
 
 const isPausable = (voice: Voice): voice is Voice & Pausable => 'pause' in voice && 'resume' in voice;
@@ -105,7 +106,7 @@ class PendingVoice implements Voice {
   private readonly _dummyOutput: AudioNode;
   /** Volume a buffered {@link PendingVoice.fade} ramps from, or `null` when no fade is pending. */
   private _fadeFrom: number | null = null;
-  private _fadeMs = 0;
+  private _fadeDuration: Seconds = seconds(0);
   private readonly _spatial: BufferedSpatialWrites = {};
   private _followTarget: SceneNode | null | undefined;
   private _position: Vector | null = null;
@@ -166,21 +167,21 @@ class PendingVoice implements Voice {
    * write supersedes the buffered ramp; a later `fade` keeps the original
    * starting volume and replaces the target and duration.
    */
-  public fade(to: number, ms: number): void {
+  public fade(to: number, duration: Seconds): void {
     if (this._real) {
-      this._real.fade(to, ms);
+      this._real.fade(to, duration);
 
       return;
     }
 
     this._fadeFrom ??= this._volume;
-    this._fadeMs = ms;
+    this._fadeDuration = duration;
     this._volume = to;
   }
 
-  public stop(fadeMs?: number): void {
+  public stop(fade?: Seconds): void {
     if (this._real) {
-      this._real.stop(fadeMs);
+      this._real.stop(fade);
 
       return;
     }
@@ -466,7 +467,7 @@ class PendingVoice implements Voice {
       real.volume = this._volume;
     } else {
       real.volume = this._fadeFrom;
-      real.fade(this._volume, this._fadeMs);
+      real.fade(this._volume, this._fadeDuration);
       this._fadeFrom = null;
     }
 

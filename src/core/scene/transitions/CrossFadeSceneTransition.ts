@@ -2,21 +2,21 @@ import type { EasingFunction } from '#animation/Ease';
 import { Ease } from '#animation/Ease';
 import type { SceneTransitionEnvironment, SceneTransitionFrame, SceneTransitionRequirements, SceneTransitionSession } from '#core/scene/SceneTransition';
 import { SceneTransition } from '#core/scene/SceneTransition';
-import type { Seconds } from '#core/units';
+import { type Seconds, seconds } from '#core/units';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import { Sprite } from '#rendering/sprite/Sprite';
 
 /** Options for {@link CrossFadeSceneTransition}. */
 export interface CrossFadeSceneTransitionOptions {
-  /** Blend duration in ms, counted from the moment the switch commits (not from session start). Default `220`. */
-  readonly duration?: number;
+  /** Blend duration, counted from the moment the switch commits (not from session start). Default `0.22` seconds. */
+  readonly duration?: Seconds;
   /** Default {@link Ease.linear}. */
   readonly easing?: EasingFunction;
 }
 
 class CrossFadeSession implements SceneTransitionSession {
   public readonly placement = 'scene';
-  private _elapsedMs = 0;
+  private _elapsed: Seconds = seconds(0);
   private _done = false;
 
   /** Reusable sprite for the live "current" surface - the outgoing scene pre-commit, the incoming scene post-commit. */
@@ -30,7 +30,7 @@ class CrossFadeSession implements SceneTransitionSession {
   private readonly _snapshotSprite = new Sprite(null);
 
   public constructor(
-    private readonly _durationMs: number,
+    private readonly _duration: Seconds,
     private readonly _easing: EasingFunction,
     private readonly _environment: SceneTransitionEnvironment,
   ) {}
@@ -44,9 +44,9 @@ class CrossFadeSession implements SceneTransitionSession {
       return;
     }
 
-    this._elapsedMs += delta * 1000;
+    this._elapsed = seconds(this._elapsed + delta);
 
-    if (this._elapsedMs >= this._durationMs) {
+    if (this._elapsed >= this._duration) {
       this._done = true;
     }
   }
@@ -61,7 +61,7 @@ class CrossFadeSession implements SceneTransitionSession {
       return;
     }
 
-    const progress = this._durationMs > 0 ? Math.min(1, this._elapsedMs / this._durationMs) : 1;
+    const progress = this._duration > 0 ? Math.min(1, this._elapsed / this._duration) : 1;
     const alpha = this._easing(progress);
 
     if (frame.outgoing !== null) {
@@ -100,12 +100,12 @@ class CrossFadeSession implements SceneTransitionSession {
  * @stable
  */
 export class CrossFadeSceneTransition extends SceneTransition {
-  public readonly duration: number;
+  public readonly duration: Seconds;
   public readonly easing: EasingFunction;
 
   public constructor(options: CrossFadeSceneTransitionOptions = {}) {
     super();
-    this.duration = Math.max(0, options.duration ?? 220);
+    this.duration = seconds(Math.max(0, options.duration ?? 0.22));
     this.easing = options.easing ?? Ease.linear;
   }
 

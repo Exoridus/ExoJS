@@ -71,17 +71,17 @@ describe('FadeSceneTransition', () => {
     const fade = new FadeSceneTransition();
 
     expect(fade.color.equals(Color.black)).toBe(true);
-    expect(fade.duration).toBe(220);
+    expect(fade.duration).toBe(0.22);
     expect(fade.easing).toBe(Ease.linear);
     expect(fade.placement).toBe('screen');
   });
 
   test('accepts a custom color and options', () => {
     const customColor = new Color(255, 0, 0, 1);
-    const fade = new FadeSceneTransition({ color: customColor, duration: 500, easing: Ease.cubicOut, placement: 'screen' });
+    const fade = new FadeSceneTransition({ color: customColor, duration: Time.seconds(0.5), easing: Ease.cubicOut, placement: 'screen' });
 
     expect(fade.color).toBe(customColor);
-    expect(fade.duration).toBe(500);
+    expect(fade.duration).toBe(0.5);
     expect(fade.easing).toBe(Ease.cubicOut);
     expect(fade.placement).toBe('screen');
   });
@@ -91,10 +91,10 @@ describe('FadeSceneTransition', () => {
   // the options object to `color` instead of defaulting it - leaving both
   // assertions below false.
   test('options-only call with color omitted keeps the color default alongside the supplied option', () => {
-    const fade = new FadeSceneTransition({ duration: 300 });
+    const fade = new FadeSceneTransition({ duration: Time.seconds(0.3) });
 
     expect(fade.color.equals(Color.black)).toBe(true);
-    expect(fade.duration).toBe(300);
+    expect(fade.duration).toBe(0.3);
   });
 
   test('getPhaseRequirements: none/direct for both phases (no texture, no snapshot)', () => {
