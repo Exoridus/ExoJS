@@ -655,6 +655,7 @@ const EXTENSION_PACKAGES: ReadonlyArray<{ baseUrl: string; packageName: string }
   { baseUrl: 'vendor/exojs-ldtk/', packageName: '@codexo/exojs-ldtk' },
   { baseUrl: 'vendor/exojs-physics/', packageName: '@codexo/exojs-physics' },
   { baseUrl: 'vendor/exojs-tilemap-physics/', packageName: '@codexo/exojs-tilemap-physics' },
+  { baseUrl: 'vendor/exojs-lighting/', packageName: '@codexo/exojs-lighting' },
 ];
 
 const loadTypingsForVersion = async (versionId: string): Promise<ReadonlyArray<ExtraLib>> => {

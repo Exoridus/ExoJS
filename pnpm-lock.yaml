@@ -253,6 +253,15 @@ importers:
         specifier: workspace:*
         version: link:../exojs-tilemap
 
+  packages/exojs-lighting:
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../..
+      '@codexo/exojs-config':
+        specifier: workspace:*
+        version: link:../exojs-config
+
   packages/exojs-particles:
     devDependencies:
       '@codexo/exojs':

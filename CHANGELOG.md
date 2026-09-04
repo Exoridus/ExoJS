@@ -34,13 +34,31 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   shadow opacity) and `shadowOnly` for glows and detached shadows. Composed from
   the stock colour-matrix and blur passes, so it runs on both backends and
   declares the extra reach it needs through `getOutputBounds`.
+- **`@codexo/exojs-lighting`, forward normal-mapped point lighting for
+  sprites.** Lighting happens inside the sprite fragment stage, so a lit scene
+  costs no extra render pass and no extra draw call - sprites sharing one
+  `LitSpriteMaterial` stay in one batch. `PointLight` is plain mutable
+  world-space data (`x`, `y`, `radius`, `color`, `intensity`, `height`);
+  `LightingSystem` collects lights and packs them, together with the active
+  count and the ambient term, into one `rgba32f` data texture per frame, and
+  registers on any `SystemRegistry` like every other system. The light list
+  being a texture rather than a uniform array is what makes the light count a
+  shader loop bound instead of a compiled-in constant: a material user uniform
+  is one `vec4` per name, which would have capped a scene at a handful of
+  lights and needed a recompile to change. `LitSpriteMaterial` samples a
+  tangent-space normal map next to the albedo and rotates the normal by the
+  instance's local-to-world basis, so spinning and mirrored sprites keep their
+  bumps facing the right way. One normal map per material (= per atlas) is the
+  v1 contract; there is no deferred path yet. Two examples ship with it:
+  `lighting/normal-mapped-sprites` and `lighting/many-lights`, which walks from
+  1 to 48 lights over a normal-mapped floor without leaving a single draw call.
 - **Custom sprite materials receive the fragment's world position and the
   instance's local-to-world basis.** `v_worldPosition` / `v_basis` (GLSL) and
   `worldPosition` / `basis` on `VertexOutput` (WGSL) let a fragment shade
   against world-space lights and rotate a tangent-space normal with the
   sprite, which is what a lighting effect needs and what the varyings did not
-  carry before. The new `lighting/normal-mapped-sprites` example lights a batch
-  of spinning and mirrored sprites through one material and four point lights.
+  carry before. The `lighting/normal-mapped-sprites` example lights a batch of
+  spinning and mirrored sprites through one material and four point lights.
 - **`Scene.animations`, a scene-bound animation facade with the same `when`
   policy the tween and audio facades already have.** An `AnimatedSprite`
   attached to a scene tree kept advancing through `SceneDirector.pause()` and

@@ -750,6 +750,42 @@ export default defineConfig([
     },
   },
 
+  // The light packer walks the registered lights by computed index inside a
+  // loop bounded by the count it just derived from their length, so `arr[i]!`
+  // says what the reader already knows and a per-frame `for...of` iterator is
+  // exactly the allocation this path exists to avoid.
+  {
+    files: ['packages/exojs-lighting/src/LightingSystem.ts'],
+    rules: {
+      '@typescript-eslint/no-non-null-assertion': 'off',
+    },
+  },
+
+  // A package's Rolldown config belongs to no package's TypeScript program:
+  // each package tsconfig covers `src/**` only, so the ProjectService has no
+  // type information to serve for these files and every type-aware rule throws
+  // on them. The syntactic and stylistic policy still applies.
+  {
+    files: ['packages/*/rolldown.config.ts'],
+    ...tseslint.configs.disableTypeChecked,
+  },
+  {
+    files: ['packages/*/rolldown.config.ts'],
+    languageOptions: {
+      parserOptions: { projectService: false, project: null },
+    },
+  },
+
+  // Material binding names are GLSL/WGSL identifiers, which the shader sources
+  // declare in snake_case with the engine's `u_` prefix. The object literal has
+  // to spell them exactly as the shader does.
+  {
+    files: ['packages/exojs-lighting/src/LitSpriteMaterial.ts'],
+    rules: {
+      '@typescript-eslint/naming-convention': 'off',
+    },
+  },
+
   // `Map.forEach` is the allocation-free way to walk a Map: `for...of` builds a
   // fresh iterator on every step, which these two per-frame paths cannot
   // afford. Deleting the current entry mid-`forEach` is well-defined and both

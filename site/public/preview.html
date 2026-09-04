@@ -73,6 +73,7 @@
                 var physicsEntry;
                 var physicsDebugEntry;
                 var tilemapPhysicsEntry;
+                var lightingEntry;
                 if (!safeVersion || safeVersion === 'current') {
                     exoEntry = './vendor/exojs/esm/index.js?no-cache=' + noCache;
                     exoDebugEntry = './vendor/exojs/esm/debug/index.js?no-cache=' + noCache;
@@ -87,6 +88,7 @@
                     physicsEntry = './vendor/exojs-physics/esm/index.js?no-cache=' + noCache;
                     physicsDebugEntry = './vendor/exojs-physics/esm/debug/index.js?no-cache=' + noCache;
                     tilemapPhysicsEntry = './vendor/exojs-tilemap-physics/esm/index.js?no-cache=' + noCache;
+                    lightingEntry = './vendor/exojs-lighting/esm/index.js?no-cache=' + noCache;
                 } else {
                     // jsDelivr serves immutable npm tarballs — the version pin
                     // alone is enough, no cache-buster needed.
@@ -104,6 +106,7 @@
                     physicsEntry = cdnBase + 'exojs-physics@' + safeVersion + '/dist/esm/index.js';
                     physicsDebugEntry = cdnBase + 'exojs-physics@' + safeVersion + '/dist/esm/debug/index.js';
                     tilemapPhysicsEntry = cdnBase + 'exojs-tilemap-physics@' + safeVersion + '/dist/esm/index.js';
+                    lightingEntry = cdnBase + 'exojs-lighting@' + safeVersion + '/dist/esm/index.js';
                 }
 
                 var importMap = {
@@ -121,6 +124,7 @@
                         '@codexo/exojs-physics': physicsEntry,
                         '@codexo/exojs-physics/debug': physicsDebugEntry,
                         '@codexo/exojs-tilemap-physics': tilemapPhysicsEntry,
+                        '@codexo/exojs-lighting': lightingEntry,
                         '@examples/runtime': './examples/shared/runtime.js?no-cache=' + noCache,
                         '@examples/terrain-noise': './examples/shared/terrain-noise.js?no-cache=' + noCache,
                     },

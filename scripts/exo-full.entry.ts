@@ -114,5 +114,8 @@ export {
   ldtkToTileMap,
 } from '@codexo/exojs-ldtk';
 
+// ── Lighting ───────────────────────────────────────────────────────────────
+export * from '@codexo/exojs-lighting';
+
 // ── Tilemap physics bridge ────────────────────────────────────────────────────
 export { buildObjectLayerColliders, TileColliderStreamer } from '@codexo/exojs-tilemap-physics';
