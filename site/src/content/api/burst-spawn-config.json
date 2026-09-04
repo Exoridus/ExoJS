@@ -29,6 +29,31 @@
       "title": "Properties",
       "members": [
         {
+          "name": "interval",
+          "signature": "interval?: number",
+          "signatureTokens": [
+            {
+              "text": "interval",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Seconds from one run of the schedule to the next, measured from the schedule's own t=0. Omit for a one-shot: the schedule fires once and then stays exhausted until BurstSpawn.reset. The clock wraps by subtracting the period rather than restarting from zero, so overshoot carries into the next cycle and a given span of time produces the same bursts at any frame rate. A period shorter than the schedule's last entry overlaps cycles; each one still fires in full."
+        },
+        {
           "name": "lifetime",
           "signature": "lifetime?: Distribution<number>",
           "signatureTokens": [
@@ -64,31 +89,6 @@
           "params": [],
           "returnType": null,
           "description": "Total lifetime in seconds. Drives expiry."
-        },
-        {
-          "name": "loop",
-          "signature": "loop?: boolean",
-          "signatureTokens": [
-            {
-              "text": "loop",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "boolean",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Whether to repeat the schedule from t=0 once exhausted. Default false. The restart happens in the same apply() call that exhausts the schedule, zeroing the elapsed clock outright rather than wrapping it modulo a declared period - so a schedule whose last entry is { time: 0, count: N } (or, more generally, any schedule with nothing after its final burst) re-fires that burst on every subsequent frame instead of waiting: emission becomes a function of frame rate, not of time. Overshoot past the last entry's time is discarded on each restart rather than carried into the next cycle. To loop a burst schedule with a genuine period, add a trailing no-op entry at the period's end (e.g. { time: period, count: 0 }) so _elapsed has somewhere to catch up to before it restarts."
         },
         {
           "name": "position",

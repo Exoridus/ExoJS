@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Changed
+
+- **`BurstSpawn`'s `loop: boolean` is replaced by `interval: number`, the
+  period in seconds between two runs of the schedule.** `loop: true` restarted
+  the schedule in the same `apply()` call that exhausted it and zeroed the
+  clock, so a schedule with nothing after its final burst re-fired every frame
+  and the emitted count followed the frame rate rather than elapsed time. The
+  period is now declared, the clock wraps by subtracting it so overshoot
+  carries into the next cycle, and a long frame fires every period it covered.
+  Replace `loop: true` with `interval: <seconds>`; a schedule that used a
+  trailing `{ time: period, count: 0 }` entry to fake a period can drop it.
+
 ### Added
 
 - **`Scene.animations`, a scene-bound animation facade with the same `when`
