@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 14,
+  "memberCount": 15,
   "counts": {
     "constructors": 1,
-    "methods": 9,
+    "methods": 10,
     "properties": 4,
     "events": 0
   },
@@ -206,6 +206,53 @@
           ],
           "returnType": "SceneTransitionSession",
           "description": "Construct this navigation's session. Override in a subclass."
+        },
+        {
+          "name": "destroyPhaseState",
+          "signature": "destroyPhaseState(state: FadePhaseState): void",
+          "signatureTokens": [
+            {
+              "text": "destroyPhaseState",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "state",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FadePhaseState",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "state",
+              "type": "FadePhaseState",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Release whatever PhasedSceneTransition.createPhaseState allocated for one navigation. Called exactly once per session, on every exit path - normal completion, an abort before the commit, or the application being destroyed mid-transition. Override it whenever the phase state owns GPU-backed resources (a Geometry, a Material, a Graphics, a RenderTexture you created yourself); plain scratch objects need no override. Textures handed in through SceneTransitionFrame are borrowed and must not be released here."
         },
         {
           "name": "enter",

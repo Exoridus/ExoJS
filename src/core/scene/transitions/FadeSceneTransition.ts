@@ -50,6 +50,10 @@ export class FadeSceneTransition extends PhasedSceneTransition<FadePhaseState> {
     return { quad: new QuadGeometry(), transform: new Matrix(), tint: new Color() };
   }
 
+  protected override destroyPhaseState(state: FadePhaseState): void {
+    state.quad.destroy();
+  }
+
   protected override enter(context: SceneTransitionPhaseContext, state: FadePhaseState): void {
     this._draw(context, state);
   }

@@ -136,6 +136,18 @@ export abstract class PhasedSceneTransition<PhaseState = void> extends SceneTran
   }
 
   /**
+   * Release whatever {@link PhasedSceneTransition.createPhaseState} allocated
+   * for one navigation. Called exactly once per session, on every exit path -
+   * normal completion, an abort before the commit, or the application being
+   * destroyed mid-transition. Override it whenever the phase state owns
+   * GPU-backed resources (a `Geometry`, a `Material`, a `Graphics`, a
+   * `RenderTexture` you created yourself); plain scratch objects need no
+   * override. Textures handed in through {@link SceneTransitionFrame} are
+   * borrowed and must not be released here.
+   */
+  protected destroyPhaseState(_state: PhaseState): void {}
+
+  /**
    * @internal Public forwarder for {@link PhasedSceneTransition.createPhaseState} -
    * mirrors {@link PhasedSceneTransition.getRequirementsForPhase}'s existing
    * pattern: `PhasedSceneTransitionSession` (and a composed sibling
@@ -144,6 +156,11 @@ export abstract class PhasedSceneTransition<PhaseState = void> extends SceneTran
    */
   public _createPhaseStateForSession(): PhaseState {
     return this.createPhaseState();
+  }
+
+  /** @internal Public forwarder for {@link PhasedSceneTransition.destroyPhaseState}, for the same reason {@link PhasedSceneTransition._createPhaseStateForSession} exists. */
+  public _destroyPhaseStateForSession(state: PhaseState): void {
+    this.destroyPhaseState(state);
   }
 
   /** Draw one frame of the `enter` phase. No-op by default - override for a visible enter effect. */
@@ -200,6 +217,7 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
   private readonly _identitySprite = new Sprite(null);
   private readonly _exitPhaseState: unknown;
   private readonly _enterPhaseState: unknown;
+  private _phaseStateDestroyed = false;
 
   public constructor(
     private readonly _exitPhase: PhasedSceneTransition<unknown>,
@@ -300,6 +318,18 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
     // (Director-owned) and is never attached to a scene graph - dropping the
     // session's own reference is enough for GC to reclaim it, no explicit
     // Sprite.destroy() needed here.
+    //
+    // The two phase states are separate objects even when both phases are the
+    // same instance (each side got its own `_createPhaseStateForSession()`
+    // call), so both are released. The flag keeps a redundant `destroy()` from
+    // handing an author's `destroyPhaseState()` an already-released state.
+    if (this._phaseStateDestroyed) {
+      return;
+    }
+
+    this._phaseStateDestroyed = true;
+    this._exitPhase._destroyPhaseStateForSession(this._exitPhaseState);
+    this._enterPhase._destroyPhaseStateForSession(this._enterPhaseState);
   }
 }
 

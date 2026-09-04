@@ -5,6 +5,7 @@ import type { SceneTransitionContext, SceneTransitionEnvironment } from '#core/s
 import { FadeSceneTransition } from '#core/scene/transitions/FadeSceneTransition';
 import { Time } from '#core/units';
 import type { Matrix } from '#math/Matrix';
+import { Geometry } from '#rendering/geometry/Geometry';
 import { QuadGeometry } from '#rendering/geometry/QuadGeometry';
 
 // Exposes the protected authoring hooks through public wrappers - the
@@ -182,5 +183,35 @@ describe('FadeSceneTransition', () => {
     expect(quadA).not.toBe(quadB); // different object identity — proves no shared scratch QuadGeometry
     expect(optionsA.tint).not.toBe(optionsB.tint); // different object identity — proves no shared scratch Color
     expect(optionsA.tint.a).not.toBeCloseTo(optionsB.tint.a); // different progress -> different alpha, would have been clobbered if shared
+  });
+
+  test("destroy() releases the session's geometry, and a second destroy() does not release it again", () => {
+    const fade = new FadeSceneTransition();
+    const session = fade.beginSession(new TestEnvironment());
+    const drawGeometry = vi.fn();
+
+    session.render(stubRendering(drawGeometry), { outgoing: null, current: null, committed: false });
+
+    const [quad] = drawGeometry.mock.calls[0] as [QuadGeometry, Matrix, { tint: Color }];
+    const disposed = vi.fn();
+
+    // Backend GPU buffers hang off this callback, so it firing is what
+    // "the geometry was released" actually means.
+    quad._onDispose(disposed);
+
+    // Both phase states hold a quad, even though only the exit phase rendered.
+    const geometryDestroy = vi.spyOn(Geometry.prototype, 'destroy');
+
+    session.destroy();
+
+    expect(disposed).toHaveBeenCalledTimes(1);
+    expect(geometryDestroy).toHaveBeenCalledTimes(2);
+
+    session.destroy();
+
+    expect(disposed).toHaveBeenCalledTimes(1);
+    expect(geometryDestroy).toHaveBeenCalledTimes(2);
+
+    geometryDestroy.mockRestore();
   });
 });
