@@ -12,6 +12,7 @@ packages:
   - packages/exojs-react
   - packages/exojs-audio-fx
   - packages/exojs-tilemap-physics
+  - packages/exojs-lighting
   - packages/create-exo-app
 
 # Packages permitted to run install/build scripts. pnpm v10+ blocks build

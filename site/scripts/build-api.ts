@@ -112,6 +112,13 @@ const EXTENSION_PACKAGES: readonly ExtensionPackage[] = [
     sourceMarker: 'packages/exojs-tilemap-physics/src/',
   },
   {
+    importPath: '@codexo/exojs-lighting',
+    subsystem: 'lighting',
+    entryPoint: 'packages/exojs-lighting/src/index.ts',
+    tsconfig: 'packages/exojs-lighting/tsconfig.json',
+    sourceMarker: 'packages/exojs-lighting/src/',
+  },
+  {
     importPath: '@codexo/exojs-ldtk',
     subsystem: 'ldtk',
     entryPoint: 'packages/exojs-ldtk/src/index.ts',

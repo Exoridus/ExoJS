@@ -30,6 +30,7 @@ const aliasConfig = [
   { find: '@codexo/exojs-ldtk', replacement: fileURLToPath(new URL('./packages/exojs-ldtk/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-physics', replacement: fileURLToPath(new URL('./packages/exojs-physics/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-tilemap-physics', replacement: fileURLToPath(new URL('./packages/exojs-tilemap-physics/src/index.ts', import.meta.url)) },
+  { find: '@codexo/exojs-lighting', replacement: fileURLToPath(new URL('./packages/exojs-lighting/src/index.ts', import.meta.url)) },
 ] as const;
 
 // Loads every shader source (`.vert`/`.frag`/`.wgsl`) as its REAL text, exactly
@@ -103,6 +104,7 @@ export default defineConfig({
         'packages/exojs-particles/src/**/*.ts',
         'packages/exojs-tilemap/src/**/*.ts',
         'packages/exojs-tilemap-physics/src/**/*.ts',
+        'packages/exojs-lighting/src/**/*.ts',
         'packages/exojs-tiled/src/**/*.ts',
         'packages/exojs-physics/src/**/*.ts',
         'packages/exojs-audio-fx/src/**/*.ts',
@@ -208,6 +210,14 @@ export default defineConfig({
         alias: aliasConfig,
         include: ['packages/exojs-tilemap-physics/test/**/*.test.ts'],
       }),
+      {
+        ...createJsdomTestProject({
+          name: 'exojs-lighting',
+          alias: aliasConfig,
+          include: ['packages/exojs-lighting/test/**/*.test.ts'],
+        }),
+        plugins: [realShaderPlugin],
+      },
       createJsdomTestProject({
         name: 'exojs-audio-fx',
         alias: aliasConfig,

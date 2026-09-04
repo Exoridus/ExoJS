@@ -72,6 +72,7 @@
       "@codexo/exojs-physics": ["./packages/exojs-physics/src/index.ts"],
       "@codexo/exojs-physics/debug": ["./packages/exojs-physics/src/debug/index.ts"],
       "@codexo/exojs-tilemap-physics": ["./packages/exojs-tilemap-physics/src/index.ts"],
+      "@codexo/exojs-lighting": ["./packages/exojs-lighting/src/index.ts"],
       "@codexo/exojs-audio-fx": ["./packages/exojs-audio-fx/src/index.ts"],
       "@examples/runtime": ["./examples/shared/runtime.ts"],
       "@examples/terrain-noise": ["./examples/shared/terrain-noise.ts"]

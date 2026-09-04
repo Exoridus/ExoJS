@@ -174,7 +174,7 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: >-
           pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled"
-          --filter "@codexo/exojs-physics" --filter "@codexo/exojs-tilemap-physics" --filter "@codexo/exojs-audio-fx"
+          --filter "@codexo/exojs-physics" --filter "@codexo/exojs-tilemap-physics" --filter "@codexo/exojs-lighting" --filter "@codexo/exojs-audio-fx"
           --filter "@codexo/exojs-aseprite" --filter "@codexo/exojs-ldtk" --filter "@codexo/exojs-react" build
 
       - name: Verify production stripping against the built dist
