@@ -117,5 +117,8 @@ export {
 // ── Lighting ───────────────────────────────────────────────────────────────
 export * from '@codexo/exojs-lighting';
 
+// ── Pathfinding ────────────────────────────────────────────────────────────
+export * from '@codexo/exojs-pathfinding';
+
 // ── Tilemap physics bridge ────────────────────────────────────────────────────
 export { buildObjectLayerColliders, TileColliderStreamer } from '@codexo/exojs-tilemap-physics';

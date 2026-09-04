@@ -1,0 +1,245 @@
+{
+  "title": "PathResult",
+  "description": "Result of Pathfinder.findPath and Pathfinder.findPathBetween.",
+  "symbol": "PathResult",
+  "kind": "interface",
+  "subsystem": "pathfinding",
+  "importPath": "@codexo/exojs-pathfinding",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Result of Pathfinder.findPath and Pathfinder.findPathBetween."
+      ],
+      "importLine": "import { PathResult } from '@codexo/exojs-pathfinding'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "cost",
+          "signature": "cost: number",
+          "signatureTokens": [
+            {
+              "text": "cost",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Total traversal cost of nodes. Smoothing does not change it."
+        },
+        {
+          "name": "edges",
+          "signature": "edges: readonly PathEdge<Payload>[]",
+          "signatureTokens": [
+            {
+              "text": "edges",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PathEdge",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Payload",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Traversal steps for spaces that describe them, empty otherwise. Not filled for smoothed paths, whose steps are no longer space edges."
+        },
+        {
+          "name": "expandedNodes",
+          "signature": "expandedNodes: number",
+          "signatureTokens": [
+            {
+              "text": "expandedNodes",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Nodes taken off the open list. Useful for sizing maxExpandedNodes."
+        },
+        {
+          "name": "nodes",
+          "signature": "nodes: readonly number[]",
+          "signatureTokens": [
+            {
+              "text": "nodes",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Node ids from start to goal inclusive. Consecutive entries are adjacent in the space unless the path was smoothed, which removes intermediate nodes by design."
+        },
+        {
+          "name": "points",
+          "signature": "points: readonly Vector[]",
+          "signatureTokens": [
+            {
+              "text": "points",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "nodes mapped through the space's node-to-point conversion."
+        },
+        {
+          "name": "revision",
+          "signature": "revision: number",
+          "signatureTokens": [
+            {
+              "text": "revision",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "space.revision at search time. Compare it against the space's current revision to detect a path that the world has invalidated since."
+        },
+        {
+          "name": "status",
+          "signature": "status: PathStatus",
+          "signatureTokens": [
+            {
+              "text": "status",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PathStatus",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-pathfinding/src/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-pathfinding/src/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/types.ts"
+}

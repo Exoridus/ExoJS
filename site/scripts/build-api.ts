@@ -119,6 +119,13 @@ const EXTENSION_PACKAGES: readonly ExtensionPackage[] = [
     sourceMarker: 'packages/exojs-lighting/src/',
   },
   {
+    importPath: '@codexo/exojs-pathfinding',
+    subsystem: 'pathfinding',
+    entryPoint: 'packages/exojs-pathfinding/src/index.ts',
+    tsconfig: 'packages/exojs-pathfinding/tsconfig.json',
+    sourceMarker: 'packages/exojs-pathfinding/src/',
+  },
+  {
     importPath: '@codexo/exojs-ldtk',
     subsystem: 'ldtk',
     entryPoint: 'packages/exojs-ldtk/src/index.ts',

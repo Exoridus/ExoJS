@@ -1,0 +1,748 @@
+{
+  "title": "NavigationSpace",
+  "description": "The search core's view of a world: integer node ids, a neighbour relation and a heuristic. GridSpace and WaypointGraph implement it, and so can application code - a space needs no scene node, no renderer and no asset. Implementations must be deterministic: the same query on an unmutated space has to produce the same neighbours in the same order, or paths stop being reproducible across runs and machines.",
+  "symbol": "NavigationSpace",
+  "kind": "interface",
+  "subsystem": "pathfinding",
+  "importPath": "@codexo/exojs-pathfinding",
+  "tier": "stable",
+  "memberCount": 11,
+  "counts": {
+    "constructors": 0,
+    "methods": 8,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The search core's view of a world: integer node ids, a neighbour relation and a heuristic. GridSpace and WaypointGraph implement it, and so can application code - a space needs no scene node, no renderer and no asset.",
+        "Implementations must be deterministic: the same query on an unmutated space has to produce the same neighbours in the same order, or paths stop being reproducible across runs and machines."
+      ],
+      "importLine": "import { NavigationSpace } from '@codexo/exojs-pathfinding'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "describeEdge",
+          "signature": "describeEdge?(from: number, to: number): PathEdge<Payload> | null",
+          "signatureTokens": [
+            {
+              "text": "describeEdge",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "from",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "to",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PathEdge",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Payload",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "from",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "to",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "PathEdge<Payload> | null",
+          "description": "Describes the traversal from from to to, if the space models one."
+        },
+        {
+          "name": "heuristic",
+          "signature": "heuristic(node: number, goal: number): number",
+          "signatureTokens": [
+            {
+              "text": "heuristic",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "goal",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "goal",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Estimated remaining cost from node to goal. Must never overestimate, or the result stops being cost-optimal; returning 0 degrades the search to Dijkstra, which is the correct answer for a space without positions."
+        },
+        {
+          "name": "nearestNode",
+          "signature": "nearestNode?(x: number, y: number): number",
+          "signatureTokens": [
+            {
+              "text": "nearestNode",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "The node closest to a point, whether or not it is traversable and whether or not the point lies inside the space. Backs snapToNearest for coordinate queries; without it such a query reports unreachable."
+        },
+        {
+          "name": "neighbors",
+          "signature": "neighbors(node: number, agentSize: number, outNodes: Int32Array, outCosts: Float64Array): number",
+          "signatureTokens": [
+            {
+              "text": "neighbors",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "agentSize",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "outNodes",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Int32Array",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "outCosts",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float64Array",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "agentSize",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "outNodes",
+              "type": "Int32Array",
+              "optional": false
+            },
+            {
+              "name": "outCosts",
+              "type": "Float64Array",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Writes the neighbours of node and the cost of stepping to each into the buffers, and returns how many were written. The buffers belong to the pathfinder and are reused across nodes and searches, so an implementation must not retain them. Costs must be positive and finite. agentSize is the requested clearance; spaces that do not model clearance ignore it."
+        },
+        {
+          "name": "nodeToPoint",
+          "signature": "nodeToPoint(node: number, out: Vector): void",
+          "signatureTokens": [
+            {
+              "text": "nodeToPoint",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "out",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "out",
+              "type": "Vector",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Writes the node's position into out."
+        },
+        {
+          "name": "pointToNode",
+          "signature": "pointToNode(x: number, y: number): number",
+          "signatureTokens": [
+            {
+              "text": "pointToNode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "The node at a point, or -1 when the point lies outside the space."
+        },
+        {
+          "name": "pruning",
+          "signature": "pruning?(agentSize: number): PrunedExpansion | null",
+          "signatureTokens": [
+            {
+              "text": "pruning",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "agentSize",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PrunedExpansion",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "agentSize",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "PrunedExpansion | null",
+          "description": "Returns a pruned expansion valid for a search at this agentSize, or null when the space cannot prune under those conditions. Called once per search, so an implementation may build state here - but not per node."
+        },
+        {
+          "name": "smoothPath",
+          "signature": "smoothPath?(nodes: readonly number[], agentSize: number): number[]",
+          "signatureTokens": [
+            {
+              "text": "smoothPath",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "nodes",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "agentSize",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "nodes",
+              "type": "readonly number[]",
+              "optional": false
+            },
+            {
+              "name": "agentSize",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number[]",
+          "description": "Returns a shortened node sequence with the same start and goal that is still traversable for an agent of agentSize. Backs smooth."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "maxDegree",
+          "signature": "maxDegree: number",
+          "signatureTokens": [
+            {
+              "text": "maxDegree",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Upper bound on how many neighbours one node can have."
+        },
+        {
+          "name": "nodeCapacity",
+          "signature": "nodeCapacity: number",
+          "signatureTokens": [
+            {
+              "text": "nodeCapacity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "One past the largest node id. Sizes the pathfinder's search buffers."
+        },
+        {
+          "name": "revision",
+          "signature": "revision: number",
+          "signatureTokens": [
+            {
+              "text": "revision",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Increments on every mutation that can invalidate a path. Carried into PathResult.revision so callers can detect stale paths."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-pathfinding/src/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-pathfinding/src/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/types.ts"
+}

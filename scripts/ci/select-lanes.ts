@@ -85,6 +85,7 @@ const RUNTIME_PACKAGES = [
   'exojs-react',
   'exojs-tilemap-physics',
   'exojs-lighting',
+  'exojs-pathfinding',
 ];
 
 /**

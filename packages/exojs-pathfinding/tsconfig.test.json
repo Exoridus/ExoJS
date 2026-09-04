@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "_comment": "Type-checks this package's own test/** - the package's main program only includes src/**. Run by the package's 'typecheck' script. The loosened flags live in the shared package-test profile.",
+  "extends": ["./tsconfig.json", "@codexo/exojs-config/typescript/package-test.json"],
+  "include": ["test/**/*", "../../src/typings.d.ts"],
+  "exclude": ["dist", "node_modules"]
+}

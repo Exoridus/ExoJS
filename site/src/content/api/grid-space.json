@@ -1,0 +1,1534 @@
+{
+  "title": "GridSpace",
+  "description": "A rectangular window of weighted, optionally blocked cells. The window is finite by construction: everything outside it is blocked, so a search always terminates and an infinite or streamed world is served by sizing the window to the region the actors are in, then feeding chunk changes back through setCost. Coordinates in the public API are absolute cell coordinates - the same numbers a tilemap uses - not offsets into the window. Cost `0` blocks a cell, `1` is ordinary ground and larger values are terrain an agent will route around when it is cheaper to do so. Diagonal steps cost their length, so the metric stays consistent with the octile heuristic. The space carries no scene node and no rendering: it is data plus a neighbour relation, and it is built and mutated entirely by the application.",
+  "symbol": "GridSpace",
+  "kind": "class",
+  "subsystem": "pathfinding",
+  "importPath": "@codexo/exojs-pathfinding",
+  "tier": "stable",
+  "memberCount": 28,
+  "counts": {
+    "constructors": 1,
+    "methods": 15,
+    "properties": 12,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A rectangular window of weighted, optionally blocked cells.",
+        "The window is finite by construction: everything outside it is blocked, so a search always terminates and an infinite or streamed world is served by sizing the window to the region the actors are in, then feeding chunk changes back through setCost. Coordinates in the public API are absolute cell coordinates - the same numbers a tilemap uses - not offsets into the window.",
+        "Cost `0` blocks a cell, `1` is ordinary ground and larger values are terrain an agent will route around when it is cheaper to do so. Diagonal steps cost their length, so the metric stays consistent with the octile heuristic.",
+        "The space carries no scene node and no rendering: it is data plus a neighbour relation, and it is built and mutated entirely by the application."
+      ],
+      "importLine": "import { GridSpace } from '@codexo/exojs-pathfinding'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(width: number, height: number, options: GridSpaceOptions): GridSpace",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GridSpaceOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GridSpace",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "GridSpaceOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "GridSpace",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clearanceAt",
+          "signature": "clearanceAt(x: number, y: number): number",
+          "signatureTokens": [
+            {
+              "text": "clearanceAt",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Largest agent width that fits with its top-left corner on this cell, or 0 for a blocked cell. Recomputed lazily after the first edit that follows a query."
+        },
+        {
+          "name": "costAt",
+          "signature": "costAt(x: number, y: number): number",
+          "signatureTokens": [
+            {
+              "text": "costAt",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Traversal cost of a cell; 0 for blocked cells and everything outside the window."
+        },
+        {
+          "name": "heuristic",
+          "signature": "heuristic(node: number, goal: number): number",
+          "signatureTokens": [
+            {
+              "text": "heuristic",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "goal",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "goal",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Estimated remaining cost from node to goal. Must never overestimate, or the result stops being cost-optimal; returning 0 degrades the search to Dijkstra, which is the correct answer for a space without positions."
+        },
+        {
+          "name": "isWalkable",
+          "signature": "isWalkable(x: number, y: number): boolean",
+          "signatureTokens": [
+            {
+              "text": "isWalkable",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": ""
+        },
+        {
+          "name": "nearestNode",
+          "signature": "nearestNode(x: number, y: number): number",
+          "signatureTokens": [
+            {
+              "text": "nearestNode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "The node closest to a point, whether or not it is traversable and whether or not the point lies inside the space. Backs snapToNearest for coordinate queries; without it such a query reports unreachable."
+        },
+        {
+          "name": "neighbors",
+          "signature": "neighbors(node: number, agentSize: number, outNodes: Int32Array, outCosts: Float64Array): number",
+          "signatureTokens": [
+            {
+              "text": "neighbors",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "agentSize",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "outNodes",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Int32Array",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "outCosts",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float64Array",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "agentSize",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "outNodes",
+              "type": "Int32Array",
+              "optional": false
+            },
+            {
+              "name": "outCosts",
+              "type": "Float64Array",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Writes the neighbours of node and the cost of stepping to each into the buffers, and returns how many were written. The buffers belong to the pathfinder and are reused across nodes and searches, so an implementation must not retain them. Costs must be positive and finite. agentSize is the requested clearance; spaces that do not model clearance ignore it."
+        },
+        {
+          "name": "nodeAt",
+          "signature": "nodeAt(x: number, y: number): number",
+          "signatureTokens": [
+            {
+              "text": "nodeAt",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "The node at absolute cell coordinates, or -1 outside the window."
+        },
+        {
+          "name": "nodeToPoint",
+          "signature": "nodeToPoint(node: number, out: Vector): void",
+          "signatureTokens": [
+            {
+              "text": "nodeToPoint",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "out",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "out",
+              "type": "Vector",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Writes the node's position into out."
+        },
+        {
+          "name": "nodeX",
+          "signature": "nodeX(node: number): number",
+          "signatureTokens": [
+            {
+              "text": "nodeX",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Absolute cell x of a node."
+        },
+        {
+          "name": "nodeY",
+          "signature": "nodeY(node: number): number",
+          "signatureTokens": [
+            {
+              "text": "nodeY",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Absolute cell y of a node."
+        },
+        {
+          "name": "pointToNode",
+          "signature": "pointToNode(x: number, y: number): number",
+          "signatureTokens": [
+            {
+              "text": "pointToNode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "The node at a point, or -1 when the point lies outside the space."
+        },
+        {
+          "name": "pruning",
+          "signature": "pruning(agentSize: number): PrunedExpansion | null",
+          "signatureTokens": [
+            {
+              "text": "pruning",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "agentSize",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PrunedExpansion",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "agentSize",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "PrunedExpansion | null",
+          "description": "Returns a pruned expansion valid for a search at this agentSize, or null when the space cannot prune under those conditions. Called once per search, so an implementation may build state here - but not per node."
+        },
+        {
+          "name": "setCost",
+          "signature": "setCost(x: number, y: number, cost: number): void",
+          "signatureTokens": [
+            {
+              "text": "setCost",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "cost",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "cost",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Sets a cell's cost and bumps revision. Values that are not finite and positive block the cell. Coordinates outside the window are ignored."
+        },
+        {
+          "name": "smoothPath",
+          "signature": "smoothPath(nodes: readonly number[], agentSize: number): number[]",
+          "signatureTokens": [
+            {
+              "text": "smoothPath",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "nodes",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "agentSize",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "nodes",
+              "type": "readonly number[]",
+              "optional": false
+            },
+            {
+              "name": "agentSize",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number[]",
+          "description": "String-pulls the path: keeps a node only when the straight line past it is blocked, so the result is the same route with its staircase removed. The returned nodes are no longer adjacent - the guarantee is that the straight segment between two consecutive ones stays inside walkable cells an agent of agentSize fits through, and never crosses terrain more expensive than the section it replaces."
+        },
+        {
+          "name": "from",
+          "signature": "from(width: number, height: number, cost: (x: number, y: number) => number, options: GridSpaceOptions): GridSpace",
+          "signatureTokens": [
+            {
+              "text": "from",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "cost",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GridSpaceOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GridSpace",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "cost",
+              "type": "(x: number, y: number) => number",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "GridSpaceOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "GridSpace",
+          "description": "Builds a window and fills it from a cost callback, which receives absolute cell coordinates. This is the tilemap bridge: return 0 for a solid tile and the terrain's cost for a walkable one, and the grid never learns what a tilemap is. Values that are not finite and positive are stored as blocked."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "cellOriginX",
+          "signature": "cellOriginX: number",
+          "signatureTokens": [
+            {
+              "text": "cellOriginX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "cellOriginY",
+          "signature": "cellOriginY: number",
+          "signatureTokens": [
+            {
+              "text": "cellOriginY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "cellSize",
+          "signature": "cellSize: number",
+          "signatureTokens": [
+            {
+              "text": "cellSize",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "diagonals",
+          "signature": "diagonals: DiagonalPolicy",
+          "signatureTokens": [
+            {
+              "text": "diagonals",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DiagonalPolicy",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "maxDegree",
+          "signature": "maxDegree: number",
+          "signatureTokens": [
+            {
+              "text": "maxDegree",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Upper bound on how many neighbours one node can have."
+        },
+        {
+          "name": "originX",
+          "signature": "originX: number",
+          "signatureTokens": [
+            {
+              "text": "originX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "originY",
+          "signature": "originY: number",
+          "signatureTokens": [
+            {
+              "text": "originY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "nodeCapacity",
+          "signature": "nodeCapacity: number",
+          "signatureTokens": [
+            {
+              "text": "nodeCapacity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "One past the largest node id. Sizes the pathfinder's search buffers."
+        },
+        {
+          "name": "revision",
+          "signature": "revision: number",
+          "signatureTokens": [
+            {
+              "text": "revision",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Increments on every mutation that can invalidate a path. Carried into PathResult.revision so callers can detect stale paths."
+        },
+        {
+          "name": "uniformCost",
+          "signature": "uniformCost: boolean",
+          "signatureTokens": [
+            {
+              "text": "uniformCost",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true while every walkable cell costs exactly 1. Jump-point search is only available on such a grid."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-pathfinding/src/spaces/GridSpace.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/spaces/GridSpace.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-pathfinding/src/spaces/GridSpace.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/spaces/GridSpace.ts"
+}

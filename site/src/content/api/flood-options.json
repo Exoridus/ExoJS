@@ -1,0 +1,125 @@
+{
+  "title": "FloodOptions",
+  "description": "Options for Pathfinder.floodFrom.",
+  "symbol": "FloodOptions",
+  "kind": "interface",
+  "subsystem": "pathfinding",
+  "importPath": "@codexo/exojs-pathfinding",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for Pathfinder.floodFrom."
+      ],
+      "importLine": "import { FloodOptions } from '@codexo/exojs-pathfinding'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "agentSize",
+          "signature": "agentSize?: number",
+          "signatureTokens": [
+            {
+              "text": "agentSize",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Agent width in nodes, as in FindPathOptions.agentSize."
+        },
+        {
+          "name": "maxCost",
+          "signature": "maxCost?: number",
+          "signatureTokens": [
+            {
+              "text": "maxCost",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Highest traversal cost to include. Defaults to Infinity."
+        },
+        {
+          "name": "maxExpandedNodes",
+          "signature": "maxExpandedNodes?: number",
+          "signatureTokens": [
+            {
+              "text": "maxExpandedNodes",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Node budget, as in FindPathOptions.maxExpandedNodes."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-pathfinding/src/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-pathfinding/src/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/types.ts"
+}

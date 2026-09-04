@@ -435,6 +435,7 @@ const syncVendor = (): void => {
     'exojs-physics',
     'exojs-tilemap-physics',
     'exojs-lighting',
+    'exojs-pathfinding',
   ] as const;
   for (const pkgName of extensionPackages) {
     let pkgRoot: string;

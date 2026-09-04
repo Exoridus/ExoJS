@@ -111,6 +111,10 @@ component_management:
       name: lighting
       paths:
         - packages/exojs-lighting/src/**
+    - component_id: pathfinding
+      name: pathfinding
+      paths:
+        - packages/exojs-pathfinding/src/**
     - component_id: audio-fx
       name: audio-fx
       paths:

@@ -271,6 +271,15 @@ importers:
         specifier: workspace:*
         version: link:../exojs-config
 
+  packages/exojs-pathfinding:
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../..
+      '@codexo/exojs-config':
+        specifier: workspace:*
+        version: link:../exojs-config
+
   packages/exojs-physics:
     devDependencies:
       '@codexo/exojs':

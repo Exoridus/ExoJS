@@ -108,6 +108,23 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Added
 
+- **`@codexo/exojs-pathfinding`, the official pathfinding extension.** One
+  search core - A\* over integer node handles - serving pluggable navigation
+  spaces. `GridSpace` is a finite window of weighted cells with diagonal
+  policies, `setCost`/`revision` for runtime edits, brushfire clearance for
+  agents wider than one cell, and string-pulling smoothing; `WaypointGraph` is a
+  directed graph whose edges carry a `kind` and a typed payload, which is what a
+  platformer's jump and fall links need and what a grid cannot express, and
+  which degrades to plain Dijkstra when its nodes have no positions.
+  `Pathfinder.findPath`/`findPathBetween` return a `PathResult` whose `status`
+  distinguishes `found`, `unreachable` and `budget-exceeded` instead of throwing
+  or returning `null`, and `floodFrom` answers "everything reachable within this
+  cost". Jump-point search self-enables on a uniform-cost grid and returns the
+  same optimal path from a fraction of the expanded nodes. Paths are
+  reproducible across runs and machines, and a search allocates nothing that
+  scales with the nodes it visits. The package depends on `@codexo/exojs` alone:
+  a tilemap reaches it through the cost callback `GridSpace.from` takes, not
+  through a package edge.
 - **`when` on `SceneInteraction.observe()` and `scope()`.** Interaction
   registrations take the same `SceneAvailability` policy the input, tween and
   audio facades have. The default stays `'always'`, so a pause menu drawn by

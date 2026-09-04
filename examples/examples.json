@@ -793,6 +793,31 @@
       "level": "advanced"
     }
   ],
+  "pathfinding": [
+    {
+      "slug": "grid-navigation",
+      "path": "pathfinding/grid-navigation.js",
+      "language": "typescript",
+      "title": "Grid Navigation",
+      "description": "Click to move an agent across a weighted grid: paint walls and mud, toggle jump-point pruning, path smoothing and a 2x2 agent, and watch the expanded-node counter react.",
+      "backend": "core",
+      "featured": true,
+      "tags": ["pathfinding", "grid", "pointer"],
+      "capabilities": ["pointer"],
+      "level": "intermediate"
+    },
+    {
+      "slug": "tilemap-navigation",
+      "path": "pathfinding/tilemap-navigation.js",
+      "language": "typescript",
+      "title": "Tilemap Navigation",
+      "description": "Build a GridSpace from a tile layer through a cost callback, then route an agent over it — carving a door edits map and grid together.",
+      "backend": "core",
+      "tags": ["pathfinding", "tilemap", "pointer"],
+      "capabilities": ["pointer"],
+      "level": "intermediate"
+    }
+  ],
   "performance": [
     {
       "slug": "sprite-stress",

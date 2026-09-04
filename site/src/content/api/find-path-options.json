@@ -1,0 +1,175 @@
+{
+  "title": "FindPathOptions",
+  "description": "Options for Pathfinder.findPath and Pathfinder.findPathBetween.",
+  "symbol": "FindPathOptions",
+  "kind": "interface",
+  "subsystem": "pathfinding",
+  "importPath": "@codexo/exojs-pathfinding",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for Pathfinder.findPath and Pathfinder.findPathBetween."
+      ],
+      "importLine": "import { FindPathOptions } from '@codexo/exojs-pathfinding'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "agentSize",
+          "signature": "agentSize?: number",
+          "signatureTokens": [
+            {
+              "text": "agentSize",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Agent width in nodes. Spaces that model clearance restrict expansion to nodes where an agent this wide fits; spaces that do not ignore it. Defaults to 1."
+        },
+        {
+          "name": "maxExpandedNodes",
+          "signature": "maxExpandedNodes?: number",
+          "signatureTokens": [
+            {
+              "text": "maxExpandedNodes",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Stop after this many expanded nodes and return the best partial path with status budget-exceeded. Defaults to 0, meaning no budget - a search over a finite space terminates regardless."
+        },
+        {
+          "name": "pruning",
+          "signature": "pruning?: boolean",
+          "signatureTokens": [
+            {
+              "text": "pruning",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Allow the space to substitute a pruned expansion (jump-point search on uniform grids) for plain neighbour expansion. Both produce a cost-optimal path; pruning expands far fewer nodes. Defaults to true."
+        },
+        {
+          "name": "smooth",
+          "signature": "smooth?: boolean",
+          "signatureTokens": [
+            {
+              "text": "smooth",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Run the space's path smoother over the result. No-op for spaces that implement none. Defaults to false."
+        },
+        {
+          "name": "snapToNearest",
+          "signature": "snapToNearest?: boolean",
+          "signatureTokens": [
+            {
+              "text": "snapToNearest",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When the goal cannot be reached, return the path to the reachable node closest to it instead of unreachable. For coordinate queries this also resolves a goal point outside the space to the space's nearest node. Defaults to false."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-pathfinding/src/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-pathfinding/src/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/types.ts"
+}

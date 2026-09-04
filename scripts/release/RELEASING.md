@@ -156,10 +156,10 @@ followed by its Trusted Publisher config on npmjs.com.
 
 ### Open at the time of writing (checked against the registry 2026-08-29)
 
-- `@codexo/exojs-tilemap-physics` and `@codexo/exojs-lighting` are in
-  `LOCKSTEP_PACKAGES` and therefore in `PUBLISH_ORDER`, but neither has ever
-  been published (npm answers E404). The next coordinated release would reach
-  them and abort the chain there.
+- `@codexo/exojs-tilemap-physics`, `@codexo/exojs-lighting` and
+  `@codexo/exojs-pathfinding` are in `LOCKSTEP_PACKAGES` and therefore in
+  `PUBLISH_ORDER`, but none of them has ever been published (npm answers E404).
+  The next coordinated release would reach them and abort the chain there.
 
   **Bootstrap each as part of that release, not before it:** run `release:cut`
   first so the package carries the release version, then
