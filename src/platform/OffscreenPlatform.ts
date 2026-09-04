@@ -237,6 +237,15 @@ export class OffscreenPlatform implements PlatformAdapter {
   /** Counterpart to {@link OffscreenPlatform.capturePointer}, equally inert. */
   public readonly releasePointer = inert;
 
+  /** No document to lock a pointer to; a host that locks one forwards the relative motion itself. */
+  public readonly lockPointer = inert;
+
+  /** Counterpart to {@link OffscreenPlatform.lockPointer}, equally inert. */
+  public readonly unlockPointer = inert;
+
+  /** Always `false`: nothing here can hold a pointer lock. */
+  public readonly pointerLocked = false;
+
   public getSurfaceMetrics(): PlatformSurfaceMetrics {
     return {
       left: this._rect.left,
@@ -277,6 +286,11 @@ export class OffscreenPlatform implements PlatformAdapter {
     this._pixelRatioListeners.add(listener);
 
     return once(() => this._pixelRatioListeners.delete(listener));
+  }
+
+  /** Never fires - {@link OffscreenPlatform.pointerLocked} cannot change. */
+  public onPointerLockChange(_listener: (locked: boolean) => void): PlatformSubscription {
+    return once(inert);
   }
 
   public now(): number {

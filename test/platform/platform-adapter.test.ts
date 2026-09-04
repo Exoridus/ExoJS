@@ -64,6 +64,10 @@ const createRecordingPlatform = (): PlatformAdapter & {
     visible: true,
     networkHint: 'online' as NetworkHint,
     devicePixelRatio: 1,
+    pointerLocked: false,
+    lockPointer: () => void calls.push('lockPointer'),
+    unlockPointer: () => void calls.push('unlockPointer'),
+    onPointerLockChange: () => () => undefined,
 
     surfaceFocused: false,
     textInputFocused: false,

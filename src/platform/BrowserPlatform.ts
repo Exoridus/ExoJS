@@ -67,8 +67,25 @@ export class BrowserPlatform implements PlatformAdapter {
     }
   };
 
+  private readonly _pointerLockListeners = new Set<(locked: boolean) => void>();
+  private readonly _pointerLockHandler = (): void => {
+    const locked = this.pointerLocked;
+
+    if (locked === this._lastPointerLocked) {
+      return;
+    }
+
+    this._lastPointerLocked = locked;
+
+    for (const listener of [...this._pointerLockListeners]) {
+      listener(locked);
+    }
+  };
+
   private _lastVisible: boolean;
   private _visibilityBound = false;
+  private _pointerLockBound = false;
+  private _lastPointerLocked = false;
   private _pixelRatioQuery: MediaQueryList | null = null;
   private _lastPixelRatio: number;
   /**
@@ -181,6 +198,49 @@ export class BrowserPlatform implements PlatformAdapter {
     }
   }
 
+  public get pointerLocked(): boolean {
+    return typeof document !== 'undefined' && document.pointerLockElement === this._canvas;
+  }
+
+  public lockPointer(): void {
+    try {
+      // Newer hosts return a promise that rejects when the request is denied -
+      // outside a user gesture, or while the document is not focused. That is
+      // an expected outcome rather than a fault, and the lock listeners report
+      // the real answer either way.
+      void Promise.resolve(this._canvas.requestPointerLock()).catch(() => {
+        // The lock listeners report the real answer either way.
+      });
+    } catch {
+      // Older hosts return nothing and throw instead; some have no API at all.
+    }
+  }
+
+  public unlockPointer(): void {
+    if (!this.pointerLocked) {
+      return;
+    }
+
+    try {
+      document.exitPointerLock();
+    } catch {
+      // A host that reports a lock but has no way to end it.
+    }
+  }
+
+  public onPointerLockChange(listener: (locked: boolean) => void): PlatformSubscription {
+    this._pointerLockListeners.add(listener);
+    this._bindPointerLock();
+
+    return this._track(() => {
+      this._pointerLockListeners.delete(listener);
+
+      if (this._pointerLockListeners.size === 0) {
+        this._unbindPointerLock();
+      }
+    });
+  }
+
   public pollGamepads(): ReadonlyArray<BrowserGamepad | null> {
     if (typeof navigator === 'undefined' || typeof navigator.getGamepads !== 'function') {
       return noGamepads;
@@ -269,7 +329,9 @@ export class BrowserPlatform implements PlatformAdapter {
     this._textInputs.clear();
     this._visibilityListeners.clear();
     this._pixelRatioListeners.clear();
+    this._pointerLockListeners.clear();
     this._unbindVisibility();
+    this._unbindPointerLock();
     this._disarmPixelRatioQuery();
     this._networkHints?.destroy();
     this._networkHints = null;
@@ -352,5 +414,24 @@ export class BrowserPlatform implements PlatformAdapter {
 
     this._visibilityBound = false;
     document.removeEventListener('visibilitychange', this._visibilityHandler);
+  }
+
+  private _bindPointerLock(): void {
+    if (this._pointerLockBound || typeof document === 'undefined') {
+      return;
+    }
+
+    this._pointerLockBound = true;
+    this._lastPointerLocked = this.pointerLocked;
+    document.addEventListener('pointerlockchange', this._pointerLockHandler);
+  }
+
+  private _unbindPointerLock(): void {
+    if (!this._pointerLockBound) {
+      return;
+    }
+
+    this._pointerLockBound = false;
+    document.removeEventListener('pointerlockchange', this._pointerLockHandler);
   }
 }

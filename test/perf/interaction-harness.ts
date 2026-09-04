@@ -51,6 +51,7 @@ class FakePlatformAdapter implements PlatformAdapter {
   public readonly textInputFocused = false;
   public readonly documentVisible = true;
   public readonly devicePixelRatio = 1;
+  public readonly pointerLocked = false;
   public readonly networkHint = 'online' as const;
   private readonly _metrics: PlatformSurfaceMetrics;
   private readonly _surfaceListeners = new Map<string, SurfaceListener[]>();
@@ -86,6 +87,18 @@ class FakePlatformAdapter implements PlatformAdapter {
 
   public releasePointer(): void {
     /* no host pointer capture to release */
+  }
+
+  public lockPointer(): void {
+    /* no host pointer to lock */
+  }
+
+  public unlockPointer(): void {
+    /* no host pointer lock to release */
+  }
+
+  public onPointerLockChange(): PlatformSubscription {
+    return () => undefined;
   }
 
   public pollGamepads(): ReadonlyArray<BrowserGamepad | null> {
