@@ -1,4 +1,4 @@
-import { Application, Asset, AudioStream, RenderingContext, Scene, type Seconds, Texture, Vector, View } from '@codexo/exojs';
+import { Application, Asset, AudioStream, RenderingContext, Scene, type Seconds, Texture, Time, Vector, View } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem } from '@codexo/exojs-particles';
 
@@ -48,7 +48,7 @@ class AudioReactiveScene extends Scene {
     // Beat → burst + shake
     this.detector.onBeat.add(() => {
       this.burst.reset();
-      this.view.shake(14, 200, { frequency: 30, decay: true });
+      this.view.shake(14, Time.seconds(0.2), { frequency: 30, decay: true });
     });
   }
 

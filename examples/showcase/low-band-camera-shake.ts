@@ -9,6 +9,7 @@ import {
   type Seconds,
   Sprite,
   Text,
+  Time,
   View,
   type Voice,
 } from '@codexo/exojs';
@@ -63,7 +64,7 @@ class LowBandCameraShakeScene extends Scene {
     // No constant floor: amplitude is purely low-band energy, so a quiet
     // passage produces zero shake. A small deadzone keeps faint noise still.
     const amplitude = low > 0.04 ? low * 28 : 0;
-    this.view.shake(amplitude, 90, { decay: true, frequency: 22 });
+    this.view.shake(amplitude, Time.seconds(0.09), { decay: true, frequency: 22 });
 
     // Advance the shake oscillation (the View only animates when updated).
     this.view.update(delta * 1000);

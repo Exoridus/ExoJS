@@ -9,6 +9,7 @@ import {
   type RenderingContext,
   Scene,
   Text,
+  Time,
   type Voice,
 } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
@@ -83,10 +84,10 @@ class CrossfadeTracksScene extends Scene {
     app.input.onPointerTap.add(() => {
       // stopAfter: false keeps both loops alive so we can crossfade back.
       if (this.toB) {
-        void crossFade(this.trackAVoice, this.trackBVoice, 2000, { toVolume: PEAK, stopAfter: false });
+        void crossFade(this.trackAVoice, this.trackBVoice, Time.seconds(2), { toVolume: PEAK, stopAfter: false });
         this.hud.setStatus('Crossfading to Track B…');
       } else {
-        void crossFade(this.trackBVoice, this.trackAVoice, 2000, { toVolume: PEAK, stopAfter: false });
+        void crossFade(this.trackBVoice, this.trackAVoice, Time.seconds(2), { toVolume: PEAK, stopAfter: false });
         this.hud.setStatus('Crossfading to Track A…');
       }
       this.toB = !this.toB;
