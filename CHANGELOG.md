@@ -23,6 +23,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Fixed
 
+- **`Application.destroy()` now aborts the lifecycle signal of a navigation
+  still inside `load()`.** Teardown already waited for an in-flight navigation
+  to settle, but nothing told the incoming scene to stop: a `load()` awaiting
+  `Scene.lifecycleSignal` never resolved, so the wait ran out the full
+  five-second grace period and the backend went down while the scene was still
+  preparing. The signal is aborted at the same point the navigation's
+  generation is invalidated, so a cooperative `load()` returns immediately and
+  the incoming scope's teardown completes before anything it depends on is
+  released.
 - **Two class doc comments no longer erase their class from the published
   declarations under `stripInternal`.** `SceneNode` and `Loader` mentioned
   `@internal` in prose, which TypeScript reads as a real tag on the class; the

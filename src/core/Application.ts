@@ -1978,7 +1978,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * anyway, rather than leaving the whole application pinned by one scene whose
    * `unload()` never resolves. A scene that wants to cooperate with this should
    * watch {@link Scene.lifecycleSignal}, which is aborted when its teardown
-   * begins.
+   * begins - including for the incoming scene of a navigation still inside
+   * `load()`, which is aborted and awaited rather than left to finish
+   * preparing against subsystems this call has released.
    *
    * Idempotent: every call after the first returns the same Promise as the
    * first and starts no second teardown. {@link Application.state} is
