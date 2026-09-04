@@ -1,16 +1,16 @@
 {
   "title": "Scene",
-  "description": "A scene's lifecycle host. Subclass to define scene behavior: class GameScene extends Scene { override init(): void { ... } override update(delta: Seconds): void { ... } override draw(context: RenderingContext): void { ... } } `Data` is this scene's activation-data type - the value passed to Scene.load and Scene.init. Scenes that need no activation data use the default: class TitleScene extends Scene { ... } A scene that needs typed data declares it through the generic: interface GameData { readonly level: number; } class GameScene extends Scene<GameData> { ... } `AppLike` (second generic, default Application) types Scene.app as the concrete Application subclass the scene runs under, so a project's own `Application` members are visible inside scene code, not just at the call site that constructs it: class AppScene<Data = void> extends Scene<Data, GameApplication> {} class TitleScene extends AppScene { ... } // this.app: GameApplication For a project whose own base scene needs `typeof app` (an already- constructed `Application` instance) rather than a named subclass, see ApplicationOf's doc for the explicit-fixed-point pattern required to avoid an unresolvable inference cycle. Scene-bound facilities (Scene.systems, Scene.loader, Scene.inputs, Scene.interaction, Scene.tweens, Scene.audio) are unavailable during construction and class-field initialization - they become available once the scene is attached and remain available through Scene.load, Scene.init, the frame hooks, Scene.unload, and Scene.destroy.",
+  "description": "A scene's lifecycle host. Subclass to define scene behavior: class GameScene extends Scene { override init(): void { ... } override update(delta: Seconds): void { ... } override draw(context: RenderingContext): void { ... } } `Data` is this scene's activation-data type - the value passed to Scene.load and Scene.init. Scenes that need no activation data use the default: class TitleScene extends Scene { ... } A scene that needs typed data declares it through the generic: interface GameData { readonly level: number; } class GameScene extends Scene<GameData> { ... } `AppLike` (second generic, default Application) types Scene.app as the concrete Application subclass the scene runs under, so a project's own `Application` members are visible inside scene code, not just at the call site that constructs it: class AppScene<Data = void> extends Scene<Data, GameApplication> {} class TitleScene extends AppScene { ... } // this.app: GameApplication For a project whose own base scene needs `typeof app` (an already- constructed `Application` instance) rather than a named subclass, see ApplicationOf's doc for the explicit-fixed-point pattern required to avoid an unresolvable inference cycle. Scene-bound facilities (Scene.systems, Scene.loader, Scene.inputs, Scene.interaction, Scene.tweens, Scene.audio, Scene.animations) are unavailable during construction and class-field initialization - they become available once the scene is attached and remain available through Scene.load, Scene.init, the frame hooks, Scene.unload, and Scene.destroy.",
   "symbol": "Scene",
   "kind": "class",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 31,
+  "memberCount": 32,
   "counts": {
     "constructors": 1,
     "methods": 13,
-    "properties": 13,
+    "properties": 14,
     "events": 4
   },
   "sections": [
@@ -28,7 +28,7 @@
         "`AppLike` (second generic, default Application) types Scene.app as the concrete Application subclass the scene runs under, so a project's own `Application` members are visible inside scene code, not just at the call site that constructs it:",
         "class AppScene<Data = void> extends Scene<Data, GameApplication> {} class TitleScene extends AppScene { ... } // this.app: GameApplication",
         "For a project whose own base scene needs `typeof app` (an already- constructed `Application` instance) rather than a named subclass, see ApplicationOf's doc for the explicit-fixed-point pattern required to avoid an unresolvable inference cycle.",
-        "Scene-bound facilities (Scene.systems, Scene.loader, Scene.inputs, Scene.interaction, Scene.tweens, Scene.audio) are unavailable during construction and class-field initialization - they become available once the scene is attached and remain available through Scene.load, Scene.init, the frame hooks, Scene.unload, and Scene.destroy."
+        "Scene-bound facilities (Scene.systems, Scene.loader, Scene.inputs, Scene.interaction, Scene.tweens, Scene.audio, Scene.animations) are unavailable during construction and class-field initialization - they become available once the scene is attached and remain available through Scene.load, Scene.init, the frame hooks, Scene.unload, and Scene.destroy."
       ],
       "importLine": "import { Scene } from '@codexo/exojs'",
       "sourceLink": null
@@ -725,6 +725,27 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "animations",
+          "signature": "animations: SceneAnimations",
+          "signatureTokens": [
+            {
+              "text": "animations",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneAnimations",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Scene-bound animation facade. An AnimatedSprite handed to this.animations.add(...) follows this scene's pause, retention and teardown instead of running for as long as it is attached to the tree. Throws if accessed before the scene is attached to an Application."
+        },
         {
           "name": "app",
           "signature": "app: ApplicationOf<AppLike>",

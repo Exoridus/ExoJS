@@ -8,6 +8,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Added
 
+- **`Scene.animations`, a scene-bound animation facade with the same `when`
+  policy the tween and audio facades already have.** An `AnimatedSprite`
+  attached to a scene tree kept advancing through `SceneDirector.pause()` and
+  through retention, so a pause menu drawn over a "frozen" world still had
+  moving sprites and a suspended scene kept burning frames.
+  `this.animations.add(sprite, { when: 'active' })` binds playback to the
+  scene: frozen while it is paused, frozen while it is retained, stopped when
+  it ends. `when` takes the same `SceneAvailability` values with the same
+  `'always'` default, so an untracked sprite behaves exactly as before.
 - **`Spritesheet.removeFrame(name)` and `Stack.removeItem(item)`.** Both
   mirror their existing `add`-side methods, completing the add/remove pair
   every other mutator on these classes already has.
