@@ -1,6 +1,6 @@
 {
   "title": "Envelope",
-  "description": "ADSR (Attack-Decay-Sustain-Release) envelope generator. Schedules a gain curve on a target `AudioParam`: attack: 0 → 1.0 (peak) over attackMs decay: 1.0 → sustainLevel over decayMs sustain: held at sustainLevel release: current → 0 over releaseMs (triggered by `release()`) Use `trigger()` to start the attack/decay/sustain phase, and `release()` to start the release phase. Multiple envelopes can target the same AudioParam; the latest schedule wins (cancel via `gain.cancelScheduledValues` if needed).",
+  "description": "ADSR (Attack-Decay-Sustain-Release) envelope generator. Schedules a gain curve on a target `AudioParam`: attack: 0 → 1.0 (peak) over attack decay: 1.0 → sustainLevel over decay sustain: held at sustainLevel release: current → 0 over release (triggered by `release()`) Use `trigger()` to start the attack/decay/sustain phase, and `release()` to start the release phase. Multiple envelopes can target the same AudioParam; the latest schedule wins (cancel via `gain.cancelScheduledValues` if needed).",
   "symbol": "Envelope",
   "kind": "class",
   "subsystem": "audio",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "ADSR (Attack-Decay-Sustain-Release) envelope generator. Schedules a gain curve on a target `AudioParam`:",
-        "attack: 0 → 1.0 (peak) over attackMs decay: 1.0 → sustainLevel over decayMs sustain: held at sustainLevel release: current → 0 over releaseMs (triggered by `release()`)",
+        "attack: 0 → 1.0 (peak) over attack decay: 1.0 → sustainLevel over decay sustain: held at sustainLevel release: current → 0 over release (triggered by `release()`)",
         "Use `trigger()` to start the attack/decay/sustain phase, and `release()` to start the release phase. Multiple envelopes can target the same AudioParam; the latest schedule wins (cancel via `gain.cancelScheduledValues` if needed)."
       ],
       "importLine": "import { Envelope } from '@codexo/exojs'",
@@ -181,14 +181,14 @@
             }
           ],
           "returnType": "void",
-          "description": "Freeze the running automation at its current value without releasing the note. Used when a voice is paused: the scheduled ramps must not keep advancing against audioContext.currentTime while nothing is audible. Unlike Envelope.release this keeps the trigger bookkeeping, so the envelope can be picked up again with trigger(param, now, elapsedMs)."
+          "description": "Freeze the running automation at its current value without releasing the note. Used when a voice is paused: the scheduled ramps must not keep advancing against audioContext.currentTime while nothing is audible. Unlike Envelope.release this keeps the trigger bookkeeping, so the envelope can be picked up again with trigger(param, now, elapsed)."
         },
         {
-          "name": "release",
-          "signature": "release(gainParam: AudioParam, atTime: number): void",
+          "name": "releaseAt",
+          "signature": "releaseAt(gainParam: AudioParam, atTime: number): void",
           "signatureTokens": [
             {
-              "text": "release",
+              "text": "releaseAt",
               "kind": "name"
             },
             {
@@ -253,7 +253,7 @@
         },
         {
           "name": "trigger",
-          "signature": "trigger(gainParam: AudioParam, atTime: number, elapsedMs: number): void",
+          "signature": "trigger(gainParam: AudioParam, atTime: number, elapsed: Seconds): void",
           "signatureTokens": [
             {
               "text": "trigger",
@@ -296,7 +296,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "elapsedMs",
+              "text": "elapsed",
               "kind": "param"
             },
             {
@@ -304,8 +304,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Seconds",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -332,13 +332,13 @@
               "optional": false
             },
             {
-              "name": "elapsedMs",
-              "type": "number",
+              "name": "elapsed",
+              "type": "Seconds",
               "optional": false
             }
           ],
           "returnType": "void",
-          "description": "Schedule attack → decay → sustain on the target gain parameter starting at atTime (audioContext.currentTime). elapsedMs resumes an envelope that had already run for that long when it was frozen (see Envelope.hold): the schedule is laid out as if the note had been triggered elapsedMs ago, so the parameter is pinned to the value the envelope had reached and only the stages still ahead are scheduled. A stage already behind the resume point is skipped rather than replayed - that is what keeps a paused voice from starting its attack over, and equally from finding the envelope run out against a clock that kept ticking while it was silent."
+          "description": "Schedule attack → decay → sustain on the target gain parameter starting at atTime (audioContext.currentTime). elapsed resumes an envelope that had already run for that long when it was frozen (see Envelope.hold): the schedule is laid out as if the note had been triggered elapsed ago, so the parameter is pinned to the value the envelope had reached and only the stages still ahead are scheduled. A stage already behind the resume point is skipped rather than replayed - that is what keeps a paused voice from starting its attack over, and equally from finding the envelope run out against a clock that kept ticking while it was silent."
         }
       ],
       "paragraphs": [],
@@ -350,11 +350,11 @@
       "title": "Properties",
       "members": [
         {
-          "name": "attackMs",
-          "signature": "attackMs: number",
+          "name": "attack",
+          "signature": "attack: Seconds",
           "signatureTokens": [
             {
-              "text": "attackMs",
+              "text": "attack",
               "kind": "name"
             },
             {
@@ -362,20 +362,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Seconds",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Attack time in milliseconds - gain ramps from 0 to peak (1.0)."
+          "description": "Attack time - gain ramps from 0 to peak (1.0)."
         },
         {
-          "name": "decayMs",
-          "signature": "decayMs: number",
+          "name": "decay",
+          "signature": "decay: Seconds",
           "signatureTokens": [
             {
-              "text": "decayMs",
+              "text": "decay",
               "kind": "name"
             },
             {
@@ -383,20 +383,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Seconds",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Decay time in milliseconds - gain ramps from peak to sustain level."
+          "description": "Decay time - gain ramps from peak to sustain level."
         },
         {
-          "name": "releaseMs",
-          "signature": "releaseMs: number",
+          "name": "release",
+          "signature": "release: Seconds",
           "signatureTokens": [
             {
-              "text": "releaseMs",
+              "text": "release",
               "kind": "name"
             },
             {
@@ -404,13 +404,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Seconds",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Release time in milliseconds - gain ramps from current to 0 on Envelope.release."
+          "description": "Release time - gain ramps from current to 0 on Envelope.release."
         },
         {
           "name": "sustainLevel",
@@ -434,11 +434,11 @@
           "description": "Sustain level, 0..1."
         },
         {
-          "name": "totalDurationMs",
-          "signature": "totalDurationMs: number",
+          "name": "totalDuration",
+          "signature": "totalDuration: Seconds",
           "signatureTokens": [
             {
-              "text": "totalDurationMs",
+              "text": "totalDuration",
               "kind": "name"
             },
             {
@@ -446,8 +446,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Seconds",
+              "kind": "type"
             }
           ],
           "params": [],

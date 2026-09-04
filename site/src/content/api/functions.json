@@ -1248,7 +1248,7 @@
         },
         {
           "name": "crossFade",
-          "signature": "crossFade(from: Voice, to: Voice, durationMs: number, options: CrossFadeOptions): Promise<void>",
+          "signature": "crossFade(from: Voice, to: Voice, duration: Seconds, options: CrossFadeOptions): Promise<void>",
           "signatureTokens": [
             {
               "text": "crossFade",
@@ -1291,7 +1291,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "durationMs",
+              "text": "duration",
               "kind": "param"
             },
             {
@@ -1299,8 +1299,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Seconds",
+              "kind": "type"
             },
             {
               "text": ", ",
@@ -1355,8 +1355,8 @@
               "optional": false
             },
             {
-              "name": "durationMs",
-              "type": "number",
+              "name": "duration",
+              "type": "Seconds",
               "optional": false
             },
             {
@@ -1366,7 +1366,7 @@
             }
           ],
           "returnType": "Promise<void>",
-          "description": "Cross-fade from one playing Voice to another over durationMs, in milliseconds. Ramps to up to toVolume and from down to silence. By default from is stopped when the fade finishes; pass stopAfter: false to keep it alive. Both voices must already be playing - start the incoming voice (typically at volume 0) before calling: ts const next = app.audio.play(track, { volume: 0 }); await crossFade(current, next, 1000);  Returns a Promise that resolves once durationMs elapses."
+          "description": "Cross-fade from one playing Voice to another over duration. Ramps to up to toVolume and from down to silence. By default from is stopped when the fade finishes; pass stopAfter: false to keep it alive. Both voices must already be playing - start the incoming voice (typically at volume 0) before calling: ts const next = app.audio.play(track, { volume: 0 }); await crossFade(current, next, Time.seconds(1));  Returns a Promise that resolves once duration elapses."
         },
         {
           "name": "decodeAudioData",

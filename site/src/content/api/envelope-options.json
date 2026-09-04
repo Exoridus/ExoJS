@@ -27,11 +27,11 @@
       "title": "Properties",
       "members": [
         {
-          "name": "attackMs",
-          "signature": "attackMs?: number",
+          "name": "attack",
+          "signature": "attack?: Seconds",
           "signatureTokens": [
             {
-              "text": "attackMs",
+              "text": "attack",
               "kind": "name"
             },
             {
@@ -43,20 +43,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Seconds",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Attack time in ms - gain ramps from 0 to peak (1.0). Default 10."
+          "description": "Attack time - gain ramps from 0 to peak (1.0). Default 0.01."
         },
         {
-          "name": "decayMs",
-          "signature": "decayMs?: number",
+          "name": "decay",
+          "signature": "decay?: Seconds",
           "signatureTokens": [
             {
-              "text": "decayMs",
+              "text": "decay",
               "kind": "name"
             },
             {
@@ -68,20 +68,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Seconds",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Decay time in ms - gain ramps from peak to sustain level. Default 100."
+          "description": "Decay time - gain ramps from peak to sustain level. Default 0.1."
         },
         {
-          "name": "releaseMs",
-          "signature": "releaseMs?: number",
+          "name": "release",
+          "signature": "release?: Seconds",
           "signatureTokens": [
             {
-              "text": "releaseMs",
+              "text": "release",
               "kind": "name"
             },
             {
@@ -93,13 +93,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Seconds",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Release time in ms - gain ramps from current to 0 on release(). Default 200."
+          "description": "Release time - gain ramps from current to 0 on release(). Default 0.2."
         },
         {
           "name": "sustainLevel",
