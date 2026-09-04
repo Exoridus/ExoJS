@@ -29,7 +29,7 @@ import { View } from '#rendering/View';
 class Leaf extends Drawable {
   public constructor(public readonly id: string) {
     super();
-    this._setLocalBounds(0, 0, 16, 16);
+    this.setLocalBounds(0, 0, 16, 16);
   }
 }
 
@@ -505,7 +505,7 @@ describe('render-root source: draw order', () => {
 
     expect(draws).toEqual(['near']);
     // The selection skipped the whole far group on its aggregate bounds instead
-    // of scanning its items, exactly as `SceneNode._collect` would have.
+    // of scanning its items, exactly as `SceneNode.collect` would have.
     expect(far.collects).toBe(farCollects);
 
     root.destroy();

@@ -216,7 +216,7 @@ const maxTextureSetsPerAnchor = 8;
 
 /**
  * Per-material GPU resources for the custom sprite path, cached against the
- * material instance and released when the material's `_onDispose` fires.
+ * material instance and released when the material's `onDispose` fires.
  * group(0) reuses the shared projection UBO; group(1) is the base-texture slot
  * table; group(2) is the user UBO + texture/sampler pairs.
  */
@@ -522,7 +522,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     // A direct, non-plan `backend.draw(sprite)` has no command - push the
     // sprite's transform into the buffer and use the freshly-allocated slot.
     const command = backend.activeDrawCommand;
-    const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(sprite);
+    const nodeIndex = command !== null ? command.nodeIndex : backend.pushTransform(sprite);
 
     this._activeBounds = this._resolveBounds(sprite);
 
@@ -644,7 +644,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     // fixed texture table.
     if (coordinator.passHasDraws) {
       for (const texture of store.textures) {
-        if (backend._textureUploadWouldMutate(texture)) {
+        if (backend.textureUploadWouldMutate(texture)) {
           coordinator.endPass();
           this._instanceArena.resetPass();
           break;
@@ -988,7 +988,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       // Resolving the transform storage may reallocate (and free) its GPU buffer;
       // earlier batches in this open pass still reference the old one, so end the
       // pass first when it already holds batches, then reopen with a fresh slice.
-      if (coordinator.passHasDraws && backend._transformStorageWouldGrow(needCount)) {
+      if (coordinator.passHasDraws && backend.transformStorageWouldGrow(needCount)) {
         active = this._reopenPass(backend);
       }
 
@@ -1059,7 +1059,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     // descriptor. Geometry/transform rows stay recorded; material values and
     // texture identities are resolved again at replay.
     if (this._instanceCount > 0 && backend._retainedCaptureActive && this._currentBlendMode !== null) {
-      backend._recordRetainedBatch(
+      backend.recordRetainedBatch(
         this,
         this._instanceData,
         this._instanceCount * instanceStrideBytes,
@@ -1123,14 +1123,14 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
   /**
    * Whether any texture the pending batch binds would be re-uploaded or resized
-   * when synced (see {@link WebGpuBackend._textureUploadWouldMutate}). Both paths
+   * when synced (see {@link WebGpuBackend.textureUploadWouldMutate}). Both paths
    * rotate their base textures through the slot table, so the check is the same.
    */
   private _batchWouldMutateTexture(backend: WebGpuBackend): boolean {
     for (let i = 0; i < this._slotCount; i++) {
       const texture = this._activeTextures[i];
 
-      if (texture !== null && texture !== undefined && backend._textureUploadWouldMutate(texture)) {
+      if (texture !== null && texture !== undefined && backend.textureUploadWouldMutate(texture)) {
         return true;
       }
     }
@@ -1220,11 +1220,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   // The bundle/stage stores raw instance bytes; this renderer owns the
   // 32-byte (8-word) layout, so the layout-aware finalize steps (node-index
   // scan/rebase) and the replay dispatch live here - the WebGPU counterpart
-  // of WebGl2SpriteRenderer's `_scanRetainedNodeIndexRange` /
-  // `_rebaseRetainedNodeIndices` / `_replayRetainedBatch`.
+  // of WebGl2SpriteRenderer's `scanRetainedNodeIndexRange` /
+  // `rebaseRetainedNodeIndices` / `replayRetainedBatch`.
 
-  /** @internal See {@link WebGpuRetainedBatchReplayer._scanRetainedNodeIndexRange}. */
-  public _scanRetainedNodeIndexRange(bytes: Uint8Array, range: WebGpuRetainedNodeIndexRange): void {
+  /** @internal See {@link WebGpuRetainedBatchReplayer.scanRetainedNodeIndexRange}. */
+  public scanRetainedNodeIndexRange(bytes: Uint8Array, range: WebGpuRetainedNodeIndexRange): void {
     const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
 
     for (let i = 7; i < words.length; i += 8) {
@@ -1242,8 +1242,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     }
   }
 
-  /** @internal See {@link WebGpuRetainedBatchReplayer._rebaseRetainedNodeIndices} (rebases to group-local indices). */
-  public _rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void {
+  /** @internal See {@link WebGpuRetainedBatchReplayer.rebaseRetainedNodeIndices} (rebases to group-local indices). */
+  public rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void {
     const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
 
     for (let i = 7; i < words.length; i += 8) {
@@ -1273,7 +1273,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
    * on the cached path do not fragment the single-submit frame.
    * @internal
    */
-  public _replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void {
+  public replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void {
     const backend = this._backend;
     const device = this._device;
     const bundle = payload.bundle;
@@ -1318,7 +1318,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       const batchTextures = payload.textures;
 
       for (let i = 0; i < batchTextures.length; i++) {
-        if (backend._textureUploadWouldMutate(batchTextures[i]!)) {
+        if (backend.textureUploadWouldMutate(batchTextures[i]!)) {
           coordinator.endPass();
           this._instanceArena.resetPass();
           break;
@@ -1339,7 +1339,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       if (customResources.replayEpoch !== backend.renderPlanEpoch || customResources.replayBindGroup === null) {
         if (coordinator.passHasDraws) {
           for (const texture of collectTextureBindings(material)) {
-            if (backend._textureUploadWouldMutate(texture)) {
+            if (backend.textureUploadWouldMutate(texture)) {
               coordinator.endPass();
               this._instanceArena.resetPass();
               break;
@@ -1432,11 +1432,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     backend.stats.drawCalls++;
   }
 
-  /** Scratch for the packed group matrix compared at replay (see `_replayRetainedBatch`). */
+  /** Scratch for the packed group matrix compared at replay (see `replayRetainedBatch`). */
   private readonly _stagedReplayGroupData = new Float32Array(16);
 
   /** Structural preflight called for every batch before the set is spliced. @internal */
-  public _validateRetainedBatch(payload: WebGpuRetainedBatchPayload): boolean {
+  public validateRetainedBatch(payload: WebGpuRetainedBatchPayload): boolean {
     const state = this._retainedMaterialState(payload);
 
     return state === null || isRetainedMaterialStateValid(state);
@@ -1934,7 +1934,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     this._customMaterials.set(material, resources);
 
-    material._onDispose(() => {
+    material.onDispose(() => {
       const stored = this._customMaterials.get(material);
 
       if (stored !== undefined) {

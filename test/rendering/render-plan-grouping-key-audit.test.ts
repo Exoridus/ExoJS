@@ -72,7 +72,7 @@ import { BlendModes } from '#rendering/types';
 class AuditDrawable extends Drawable {
   public constructor() {
     super();
-    this._setLocalBounds(0, 0, 16, 16);
+    this.setLocalBounds(0, 0, 16, 16);
   }
 }
 

@@ -471,8 +471,18 @@ export abstract class RenderNode extends SceneNode {
     return this;
   }
 
-  /** Part of the renderer SDK contract for extension renderers. */
-  public _collect(builder: RenderPlanBuilder, seq?: number): void {
+  /**
+   * Contribute this node to the render plan under construction: skip it when it
+   * is destroyed, invisible, or outside the builder's cull rect, otherwise emit
+   * it as one plan entry.
+   *
+   * Custom node types override this to add their own admission rules and must
+   * call `super.collect(builder, seq)` to keep the skip semantics. `seq` orders
+   * the entry within its parent; omit it to append.
+   *
+   * Part of the renderer SDK contract for extension renderers.
+   */
+  public collect(builder: RenderPlanBuilder, seq?: number): void {
     if (this.destroyed) {
       // A destroyed node has released its pooled transform/bounds; collecting
       // it would read freed state and re-pin it. `destroy()` unlinks the node,

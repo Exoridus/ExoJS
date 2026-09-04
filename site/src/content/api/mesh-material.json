@@ -86,11 +86,40 @@
       "title": "Methods",
       "members": [
         {
-          "name": "_onDispose",
-          "signature": "_onDispose(callback: () => void): void",
+          "name": "destroy",
+          "signature": "destroy(): void",
           "signatureTokens": [
             {
-              "text": "_onDispose",
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Release GPU resources cached against this material on every backend that has compiled it. Safe to call multiple times. After destroy, the material can still be re-used - renderers recompile on next draw - but typical usage is to drop the reference."
+        },
+        {
+          "name": "onDispose",
+          "signature": "onDispose(callback: () => void): void",
+          "signatureTokens": [
+            {
+              "text": "onDispose",
               "kind": "name"
             },
             {
@@ -139,35 +168,6 @@
           ],
           "returnType": "void",
           "description": "Hook for renderers to register a per-material-instance cleanup callback (release compiled program, pipeline, or bind groups). The callback fires on destroy; renderers MUST also tolerate the material being garbage-collected without destroy ever being called. Part of the renderer SDK contract for extension renderers."
-        },
-        {
-          "name": "destroy",
-          "signature": "destroy(): void",
-          "signatureTokens": [
-            {
-              "text": "destroy",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": "Release GPU resources cached against this material on every backend that has compiled it. Safe to call multiple times. After destroy, the material can still be re-used - renderers recompile on next draw - but typical usage is to drop the reference."
         },
         {
           "name": "setTexture",

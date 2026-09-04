@@ -473,7 +473,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     // on the queue timeline ahead of the deferred submit. The pass survives a
     // renderer switch, so the endangered draw need not be one of ours - hence
     // the coordinator-side question rather than a local cursor.
-    if (coordinator.passHasDraws && backend._textureUploadWouldMutate(drawCall.texture)) {
+    if (coordinator.passHasDraws && backend.textureUploadWouldMutate(drawCall.texture)) {
       return true;
     }
 
@@ -553,7 +553,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
 
       // A destroyed mode takes its GPU resources with it: `ParticleSystem.destroy`
       // destroys a mode it owns, which destroys the material.
-      material._onDispose(() => {
+      material.onDispose(() => {
         // `Material.destroy` drops its callbacks after firing them, so this
         // registration is gone - forget it, and the next creation re-registers.
         this._disposeListenerRegistered.delete(material);

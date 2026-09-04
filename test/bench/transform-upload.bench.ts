@@ -17,7 +17,7 @@ const FRAME_COUNT = 240;
 class ConsumingDrawable extends Drawable {
   public constructor(x: number, y: number) {
     super();
-    this._setLocalBounds(0, 0, 16, 16);
+    this.setLocalBounds(0, 0, 16, 16);
     this.setPosition(x, y);
   }
 }
@@ -26,7 +26,7 @@ class ConsumingDrawable extends Drawable {
 class NonConsumingDrawable extends Drawable {
   public constructor(x: number, y: number) {
     super();
-    this._setLocalBounds(0, 0, 16, 16);
+    this.setLocalBounds(0, 0, 16, 16);
     this.setPosition(x, y);
   }
 }

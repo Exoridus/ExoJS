@@ -95,7 +95,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
   private _currentTexture: Texture | RenderTexture | null = null;
 
   // ── Retained-batch replay state ───────────────────────────────────────────
-  // Scratch for the packed group matrix compared at replay (see _replayRetainedBatch).
+  // Scratch for the packed group matrix compared at replay (see replayRetainedBatch).
   private readonly _stagedReplayGroupData = new Float32Array(16);
   // Reused single-slot texture list handed to the backend at record time; the
   // nine-slice batch always binds exactly one base texture (slot 0).
@@ -205,7 +205,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     const blendMode = sprite.blendMode;
 
     const command = backend.activeDrawCommand;
-    const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(sprite);
+    const nodeIndex = command !== null ? command.nodeIndex : backend.pushTransform(sprite);
 
     const blendModeChanged = this._currentBlendMode !== null && blendMode !== this._currentBlendMode;
     const textureChanged = this._currentTexture !== null && texture !== this._currentTexture;
@@ -327,14 +327,14 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
       // content, then reopen and re-upload into the fresh slice. The texture
       // cache is shared and the pass survives a renderer switch, so the guard
       // asks the coordinator whether ANY draw is recorded, not just our arena.
-      if (coordinator.passHasDraws && this._currentTexture !== null && backend._textureUploadWouldMutate(this._currentTexture)) {
+      if (coordinator.passHasDraws && this._currentTexture !== null && backend.textureUploadWouldMutate(this._currentTexture)) {
         active = this._reopenPass(coordinator);
       }
 
       // Resolving the transform storage may reallocate (and free) its GPU buffer;
       // end the pass first when earlier batches in it still reference the old
       // one - again from any renderer sharing this pass, not only ours.
-      if (coordinator.passHasDraws && backend._transformStorageWouldGrow(needCount)) {
+      if (coordinator.passHasDraws && backend.transformStorageWouldGrow(needCount)) {
         active = this._reopenPass(coordinator);
       }
 
@@ -385,7 +385,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     // pixel-snapped draw already poisoned the capture in render().
     if (this._quadIndex > 0 && backend._retainedCaptureActive && this._currentBlendMode !== null && this._currentTexture !== null) {
       this._recordTextures[0] = this._currentTexture;
-      backend._recordRetainedBatch(
+      backend.recordRetainedBatch(
         this,
         this._instanceData,
         this._quadIndex * instanceStrideBytes,
@@ -457,8 +457,8 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
   // (node-index scan/rebase) and the replay dispatch live here - mirroring
   // WebGpuSpriteRenderer's seam, adapted to nine-slice's single-texture path.
 
-  /** @internal See {@link WebGpuRetainedBatchReplayer._scanRetainedNodeIndexRange}. */
-  public _scanRetainedNodeIndexRange(bytes: Uint8Array, range: WebGpuRetainedNodeIndexRange): void {
+  /** @internal See {@link WebGpuRetainedBatchReplayer.scanRetainedNodeIndexRange}. */
+  public scanRetainedNodeIndexRange(bytes: Uint8Array, range: WebGpuRetainedNodeIndexRange): void {
     const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
 
     for (let i = 7; i < words.length; i += 8) {
@@ -476,8 +476,8 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     }
   }
 
-  /** @internal See {@link WebGpuRetainedBatchReplayer._rebaseRetainedNodeIndices} (rebases to group-local indices). */
-  public _rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void {
+  /** @internal See {@link WebGpuRetainedBatchReplayer.rebaseRetainedNodeIndices} (rebases to group-local indices). */
+  public rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void {
     const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
 
     for (let i = 7; i < words.length; i += 8) {
@@ -500,7 +500,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
    * cached path do not fragment the single-submit frame.
    * @internal
    */
-  public _replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void {
+  public replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void {
     const backend = this._backend;
     const device = this._device;
     const bundle = payload.bundle;
@@ -532,7 +532,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     // switch, so any recorded draw is at risk, not just one of ours.
     if (coordinator.passHasDraws) {
       for (const texture of payload.textures) {
-        if (backend._textureUploadWouldMutate(texture)) {
+        if (backend.textureUploadWouldMutate(texture)) {
           coordinator.endPass();
           this._instanceArena.resetPass();
           break;

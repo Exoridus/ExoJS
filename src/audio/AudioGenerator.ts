@@ -129,7 +129,7 @@ export class AudioGenerator implements Playable {
    * locked by the autoplay policy - oscillators are ephemeral and cannot be
    * deferred.
    */
-  public _createVoice(system: AudioSystem, options: PlayOptions): Voice {
+  public createVoice(system: AudioSystem, options: PlayOptions): Voice {
     const bus = options.bus ?? system.sound;
 
     if (!isAudioContextReady()) {

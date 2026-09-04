@@ -79,7 +79,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
     withHarness(harness => {
       const { root, group } = buildScene();
       const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(harness.backend, 'replayRetainedBatch');
 
       // F1 - dirty first frame: full collect + fragment capture, no recording
       // (record-on-first-clean-frame policy), no replay.
@@ -209,7 +209,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       measureFrame(harness, root); // F3 splice
 
       const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(harness.backend, 'replayRetainedBatch');
 
       // Camera pan: the fragment key is view-independent; replay stages the
       // live projection.
@@ -244,7 +244,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       measureFrame(harness, root); // F3 splice
 
       const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(harness.backend, 'replayRetainedBatch');
 
       // Content mutation (a bare move would be row-patched instead -
       // exercised by the fast-patch gate below): content-dirty wins, so the
@@ -291,7 +291,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
 
       const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(harness.backend, 'replayRetainedBatch');
 
       // Resize: bumps only the texture version - no node revision, the
       // fragment stays clean. The recorded UV words are normalized against
@@ -347,7 +347,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       expect(f3.visibleNodes).toBe(2);
 
       const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(harness.backend, 'replayRetainedBatch');
 
       // A nested group move is decoupled from the outer content revision: the
       // outer set keeps splicing, the inner matrix is composed live from the
@@ -380,7 +380,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       expect(set.isValidFor(harness.backend)).toBe(false);
 
       const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(harness.backend, 'replayRetainedBatch');
 
       // Recovery frame: entry replay + re-record against the restored device.
       const recovery = measureFrame(harness, root);
@@ -458,7 +458,7 @@ describe('WebGL2 retained instruction set: fast transform-row patch', () => {
       measureFrame(harness, root); // F3 splice
 
       const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(harness.backend, 'replayRetainedBatch');
 
       // A pure transform move: content/structure stay clean (the flip), so the
       // group keeps its recording and patches just this child's row.

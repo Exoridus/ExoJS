@@ -118,7 +118,7 @@ describe('GPU position pixel-snap: retained recording gates (PR 1)', () => {
       expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
 
       const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(harness.backend, 'replayRetainedBatch');
 
       // A panned frame: the fragment key is view-independent, so the group
       // replays its recorded batches instead of re-collecting.
@@ -159,7 +159,7 @@ describe('GPU position pixel-snap: retained recording gates (PR 1)', () => {
       expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
 
       const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(harness.backend, 'replayRetainedBatch');
 
       const panned = measureFrame(harness, root, () => harness.view.move(1.37, 0.61));
 
@@ -185,7 +185,7 @@ describe('GPU position pixel-snap: retained recording gates (PR 1)', () => {
       expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
 
       const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(harness.backend, 'replayRetainedBatch');
 
       const panned = measureFrame(harness, root, () => harness.view.move(1.37, 0.61));
 
@@ -224,7 +224,7 @@ describe('GPU position pixel-snap: retained recording gates (PR 1)', () => {
       expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
 
       const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(harness.backend, 'replayRetainedBatch');
 
       const panned = measureFrame(harness, root, () => harness.view.move(1.37, 0.61));
 
@@ -248,7 +248,7 @@ describe('GPU position pixel-snap: retained recording gates (PR 1)', () => {
       measureFrame(harness, root); // F3 splice
 
       const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(harness.backend, 'replayRetainedBatch');
 
       // A pure transform move on a position-snapped direct child: content and
       // structure stay clean, so the group keeps its recording and patches just

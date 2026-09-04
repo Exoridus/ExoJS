@@ -500,7 +500,7 @@ export class Sound implements Playable {
    * Pool limits are enforced: if the pool is full the configured eviction
    * strategy picks a victim to stop before the new voice starts.
    */
-  public _createVoice(system: AudioSystem, options: SoundPlayOptions): Voice {
+  public createVoice(system: AudioSystem, options: SoundPlayOptions): Voice {
     const bus = options.bus ?? system.sound;
 
     // A suspended context's `currentTime` stands still, so `source.start(0, ...)`
@@ -542,7 +542,7 @@ export class Sound implements Playable {
   /**
    * If the sound is not playable-loaded, return a {@link NoopVoice} with a
    * differentiated warning; otherwise return `null` so the caller builds a
-   * real voice. {@link Sound._createVoice} routes through this before reaching
+   * real voice. {@link Sound.createVoice} routes through this before reaching
    * {@link Sound._buildVoice}, which covers full sounds, {@link Sound.clip}s
    * and {@link Sound.sprite}s alike - they are all just Sounds - so
    * `_buildVoice` can never be handed a `null` buffer (a sprite defined while
@@ -635,7 +635,7 @@ export class Sound implements Playable {
     return voice;
   }
 
-  /** Stop all currently active voices (e.g. for replace mode). */
+  /** @internal - stop all currently active voices (e.g. for replace mode). */
   public _stopAllVoices(): void {
     const voices = [...this._activeVoices];
     this._activeVoices.length = 0;

@@ -165,7 +165,7 @@ describe('custom SpriteMaterial WebGPU browser', () => {
       await render(backend, group);
       expectPixelNear(readWebGpuPixels(backend, 64)(31, 24), [255, 0, 0, 255]);
 
-      const replay = vi.spyOn(backend, '_replayRetainedBatch');
+      const replay = vi.spyOn(backend, 'replayRetainedBatch');
 
       material.sampler.scaleMode = ScaleModes.Linear;
       await render(backend, group);
@@ -229,7 +229,7 @@ describe('custom SpriteMaterial WebGPU browser', () => {
       await render(backend, group); // fragment capture
       await render(backend, group); // instruction recording
 
-      let replay = vi.spyOn(backend, '_replayRetainedBatch');
+      let replay = vi.spyOn(backend, 'replayRetainedBatch');
 
       await render(backend, group);
       expect(replay).toHaveBeenCalledTimes(1);
@@ -266,7 +266,7 @@ describe('custom SpriteMaterial WebGPU browser', () => {
       expect(replay).not.toHaveBeenCalled();
 
       replay.mockRestore();
-      replay = vi.spyOn(backend, '_replayRetainedBatch');
+      replay = vi.spyOn(backend, 'replayRetainedBatch');
       await render(backend, group);
       expect(replay).toHaveBeenCalledTimes(1);
       replay.mockRestore();
@@ -315,7 +315,7 @@ describe('custom SpriteMaterial WebGPU browser', () => {
       await render(backend, group);
       expectPixelNear(readWebGpuPixels(backend, 64)(24, 24), [255, 0, 0, 255]);
 
-      const replay = vi.spyOn(backend, '_replayRetainedBatch');
+      const replay = vi.spyOn(backend, 'replayRetainedBatch');
 
       material.setTexture('u_pattern', secondPattern);
       await render(backend, group);

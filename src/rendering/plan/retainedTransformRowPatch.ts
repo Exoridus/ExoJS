@@ -9,14 +9,14 @@ import type { RetainedFragmentDraw, RetainedGroupFragment } from './RetainedGrou
 import type { RetainedGroupBundle } from './RetainedInstructionSet';
 
 /**
- * A {@link RetainedGroupBundle} with its optional `_patchTransformRow` capability
+ * A {@link RetainedGroupBundle} with its optional `patchTransformRow` capability
  * confirmed present. Established once by {@link reconcileRetainedTransformRows}
  * so the narrowing carries into the patch call instead of a blind non-null
  * assertion at the call site.
  * @internal
  */
 export type PatchableRetainedGroupBundle = RetainedGroupBundle & {
-  _patchTransformRow: NonNullable<RetainedGroupBundle['_patchTransformRow']>;
+  patchTransformRow: NonNullable<RetainedGroupBundle['patchTransformRow']>;
 };
 
 /**
@@ -99,7 +99,7 @@ export const tryPatchRetainedTransformRow = (
   // Transform-only patch: tint is not part of this row (it lives in the bundle's
   // separate tint texture) and a moved node's tint does not change.
   packTransformRow(patchRowScratch, 0, node.getGlobalTransform(), drawable.pixelSnapMode);
-  bundle._patchTransformRow(nodeIndex - base, patchRowScratch);
+  bundle.patchTransformRow(nodeIndex - base, patchRowScratch);
 
   return true;
 };
@@ -229,7 +229,7 @@ export const reconcileRetainedTransformRows = (
 
   const bundle = set.ownedBundle;
 
-  if (bundle === null || typeof bundle._patchTransformRow !== 'function' || bundle.transformRowBase === undefined) {
+  if (bundle === null || typeof bundle.patchTransformRow !== 'function' || bundle.transformRowBase === undefined) {
     // The set holds a recording whose baked rows we cannot patch (a backend
     // without row-patch support), yet a transform-only move must still take
     // effect. Drop the recording so validation fails and the caller falls back to
@@ -288,7 +288,7 @@ export const reconcileRetainedTransformRows = (
 export const reconcileRetainedTintRows = (fragment: RetainedGroupFragment, owns: (node: RenderNode) => boolean): boolean => {
   const set = fragment.instructions;
   const bundle = set?.hasRecording === true ? set.ownedBundle : null;
-  const patchable = bundle !== null && typeof bundle._patchTintRow === 'function' && bundle.transformRowBase !== undefined;
+  const patchable = bundle !== null && typeof bundle.patchTintRow === 'function' && bundle.transformRowBase !== undefined;
   const base = fragment.recordedRowBase();
 
   const applied = nodeDirtyIndex.readSince(fragment.contentCursor, DirtyChannel.Content | DirtyChannel.Tint, (node, marked) => {
@@ -330,7 +330,7 @@ export const reconcileRetainedTintRows = (fragment: RetainedGroupFragment, owns:
     }
 
     packTintRow(patchTintScratch, 0, drawable.tint);
-    bundle._patchTintRow!(rowIndex - base, patchTintScratch);
+    bundle.patchTintRow!(rowIndex - base, patchTintScratch);
 
     return true;
   });

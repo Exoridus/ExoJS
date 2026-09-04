@@ -21,7 +21,7 @@ class TestDrawable extends Drawable {
   public override updateBounds(): this {
     // Treat the drawable as a 100x100 unit-square in local space so bounds
     // assertions have something nontrivial to verify. Written through the
-    // protected rectangle rather than `_setLocalBounds` because this runs
+    // protected rectangle rather than `setLocalBounds` because this runs
     // inside a bounds recompute, where an invalidating write would re-dirty
     // the node on every read (the same reason the lazy `getLocalBounds()`
     // overrides in the engine write it directly).

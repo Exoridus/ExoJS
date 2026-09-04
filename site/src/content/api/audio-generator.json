@@ -88,11 +88,11 @@
       "title": "Methods",
       "members": [
         {
-          "name": "_createVoice",
-          "signature": "_createVoice(system: AudioSystem, options: PlayOptions): Voice",
+          "name": "createVoice",
+          "signature": "createVoice(system: AudioSystem, options: PlayOptions): Voice",
           "signatureTokens": [
             {
-              "text": "_createVoice",
+              "text": "createVoice",
               "kind": "name"
             },
             {

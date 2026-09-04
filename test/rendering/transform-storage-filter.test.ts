@@ -16,7 +16,7 @@ const floatsPerSlot = TRANSFORM_FLOATS_PER_ROW;
 class ConsumingDrawable extends Drawable {
   public constructor(x: number, y: number, tint: Color) {
     super();
-    this._setLocalBounds(0, 0, 16, 16);
+    this.setLocalBounds(0, 0, 16, 16);
     this.setPosition(x, y);
     this.setTint(tint);
   }
@@ -26,7 +26,7 @@ class ConsumingDrawable extends Drawable {
 class NonConsumingDrawable extends Drawable {
   public constructor(x: number, y: number, tint: Color) {
     super();
-    this._setLocalBounds(0, 0, 16, 16);
+    this.setLocalBounds(0, 0, 16, 16);
     this.setPosition(x, y);
     this.setTint(tint);
   }

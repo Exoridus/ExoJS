@@ -86,7 +86,7 @@ const focusable = (tabIndex = 0): Container => {
 const spatial = (x: number, y: number, size = 10): Container => {
   const node = focusable();
 
-  node._setLocalBounds(0, 0, size, size);
+  node.setLocalBounds(0, 0, size, size);
   node.setPosition(x, y);
 
   return node;

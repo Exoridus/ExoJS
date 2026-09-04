@@ -498,7 +498,7 @@ export class Container extends RenderNode {
       // for - throwing away a valid capture in the process.
       for (let index = 0; index < this._childList.length; index++) {
         // In-bounds: index < length.
-        this._childList[index]!._collect(builder, index);
+        this._childList[index]!.collect(builder, index);
       }
 
       return;
@@ -528,7 +528,7 @@ export class Container extends RenderNode {
    * children with a captured slot are replayed without cull/bounds/
    * material-key work; every other direct child (Container, or a
    * barrier-having Drawable, or a child that was culled/invisible last
-   * capture) still goes through a normal `_collect` call, which recurses into
+   * capture) still goes through a normal `collect` call, which recurses into
    * its own independent skip decision.
    */
   private _replayRetainedChildren(builder: RenderPlanBuilder): void {
@@ -545,7 +545,7 @@ export class Container extends RenderNode {
         slotIndex++;
       } else {
         // In-bounds: index < length.
-        this._childList[index]!._collect(builder, index);
+        this._childList[index]!.collect(builder, index);
       }
     }
   }
@@ -573,7 +573,7 @@ export class Container extends RenderNode {
       // peek/capture bookkeeping entirely -- most containers have no direct
       // drawable children and would otherwise pay pure overhead here.
       if (!child._isDrawableForRenderPlan() || child._renderPlanHasBarrierEffects()) {
-        child._collect(builder, index);
+        child.collect(builder, index);
 
         continue;
       }
@@ -584,7 +584,7 @@ export class Container extends RenderNode {
       // the array itself may run past it (see `_peekCurrentScopeEntries`).
       const beforeCount = builder._peekCurrentScopeEntryCount();
 
-      child._collect(builder, index);
+      child.collect(builder, index);
 
       const afterCount = builder._peekCurrentScopeEntryCount();
 

@@ -390,7 +390,7 @@ export class Sprite extends Drawable {
 
     this._textureFrame.copy(frame);
     this.flags.addMask(SpriteFlags.TextureCoords);
-    this._setLocalBounds(0, 0, frame.width, frame.height);
+    this.setLocalBounds(0, 0, frame.width, frame.height);
 
     // Sizing against an empty frame is skipped rather than assigned: the size
     // setters hold what they cannot express yet, and a zero from this internal

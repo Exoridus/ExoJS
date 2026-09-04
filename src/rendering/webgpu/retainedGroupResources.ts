@@ -51,7 +51,7 @@ export const retainedGroupUniformBytes = 144;
  * as the opaque `payload` of a
  * {@link RetainedBatchInstruction}; everything here is DATA - all state
  * (pipeline, projection/group uniforms, texture bindings) is resolved live at
- * replay by the owning {@link WebGpuRetainedBatchReplayer._replayRetainedBatch}.
+ * replay by the owning {@link WebGpuRetainedBatchReplayer.replayRetainedBatch}.
  */
 export interface WebGpuRetainedBatchPayload {
   /** The renderer that recorded (and replays) this batch. */
@@ -136,13 +136,13 @@ export interface WebGpuRetainedNodeIndexRange {
  */
 export interface WebGpuRetainedBatchReplayer extends Renderer {
   /** Widen `range` to cover every shared-transform row `bytes` (one batch's packed instances) references. */
-  _scanRetainedNodeIndexRange(bytes: Uint8Array, range: WebGpuRetainedNodeIndexRange): void;
+  scanRetainedNodeIndexRange(bytes: Uint8Array, range: WebGpuRetainedNodeIndexRange): void;
   /** Rewrite `bytes`' instance node indices in place to group-local (`index - base`). */
-  _rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void;
+  rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void;
   /** Preflight structural live state before any instruction in the set draws. */
-  _validateRetainedBatch?(payload: WebGpuRetainedBatchPayload): boolean;
+  validateRetainedBatch?(payload: WebGpuRetainedBatchPayload): boolean;
   /** Replay the batch: live state (pipeline, uniforms, textures), cached data (bytes, transforms). */
-  _replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void;
+  replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void;
 }
 
 /** One sprite flush staged during a capture window, finalized at capture end. @internal */

@@ -486,7 +486,7 @@ describe('BaseVoice — effect chain / bus routing', () => {
 
     // The effect's outputNode (not the raw voice output) was connected onward
     // to the new bus's input - proving _tail() returned the effect chain's tail.
-    expect((fx.outputNode as unknown as { connect: MockInstance }).connect).toHaveBeenCalledWith(newBus._getInputNode());
+    expect((fx.outputNode as unknown as { connect: MockInstance }).connect).toHaveBeenCalledWith(newBus.getInputNode());
 
     sound.destroy();
   });
@@ -543,7 +543,7 @@ describe('BaseVoice — deferred bus connect while the bus is not yet set up', (
     const originalState = ctx.state;
     mutable(ctx).state = 'suspended';
     const bus = new AudioBus('deferred', { parent: null });
-    expect(bus._getInputNode()).toBeNull();
+    expect(bus.getInputNode()).toBeNull();
     mutable(ctx).state = originalState;
 
     const sound = new Sound(createAudioBufferStub());
@@ -560,9 +560,9 @@ describe('BaseVoice — deferred bus connect while the bus is not yet set up', (
     // finds a real input node and rewires the tail onto it.
     onAudioContextReady.dispatch(ctx);
 
-    expect(bus._getInputNode()).not.toBeNull();
+    expect(bus.getInputNode()).not.toBeNull();
     expect(output.node!.disconnect).toHaveBeenCalled();
-    expect(output.node!.connect).toHaveBeenCalledWith(bus._getInputNode());
+    expect(output.node!.connect).toHaveBeenCalledWith(bus.getInputNode());
     expect(voice.ended).toBe(false);
 
     output.restore();

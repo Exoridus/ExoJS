@@ -45,7 +45,7 @@ export interface RetainedGroupBundle {
    * backends without patch support - the caller then falls back to entry replay
    * (which re-reads live transforms) or a re-record.
    */
-  _patchTransformRow?(localRow: number, floats: Float32Array): void;
+  patchTransformRow?(localRow: number, floats: Float32Array): void;
   /**
    * Fast patch: overwrite one group-local tint row in place with `bytes`
    * (`TRANSFORM_TINT_BYTES_PER_ROW` = one rgba8 texel / one packed `u32`) and
@@ -54,7 +54,7 @@ export interface RetainedGroupBundle {
    * colour behind the index changed. Absent on backends without patch support -
    * a tint change then re-records, which is what every backend did before.
    */
-  _patchTintRow?(localRow: number, bytes: Uint8Array): void;
+  patchTintRow?(localRow: number, bytes: Uint8Array): void;
   /** Release the bundle's GPU resources (container destroy / disengage). */
   destroy?(): void;
 }

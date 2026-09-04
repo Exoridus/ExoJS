@@ -116,7 +116,7 @@ const buildGroupScene = (texture: Texture, fill: (group: RetainedContainer) => v
 const runLadder = (harness: WebGl2Harness, root: Container) => {
   const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
   const poisonSpy = vi.spyOn(harness.backend, '_poisonRetainedCaptures');
-  const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
+  const replaySpy = vi.spyOn(harness.backend, 'replayRetainedBatch');
   const frames = [measureFrame(harness, root), measureFrame(harness, root), measureFrame(harness, root), measureFrame(harness, root)];
 
   return {

@@ -107,6 +107,7 @@ export class AudioListener {
    * {@link AudioListener.target}. Deliberately writes nothing to the WebAudio
    * listener - that one is global and stays pinned at the origin; the voices
    * pan relative to this position instead. See the class docs.
+   * @internal
    */
   public _tick(): void {
     if (this.target === null) {

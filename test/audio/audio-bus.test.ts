@@ -445,7 +445,7 @@ describe('AudioBus', () => {
     bus.destroy();
   });
 
-  // ---- inputNode / _getInputNode / _getOutputNode getters ----
+  // ---- inputNode / getInputNode / getOutputNode getters ----
 
   test('inputNode getter returns the live GainNode once set up', () => {
     const spy = spyOnBusCreation();
@@ -464,16 +464,16 @@ describe('AudioBus', () => {
     (bus as unknown as { _setup: unknown })._setup = null;
 
     expect(bus.inputNode).toBeNull();
-    expect(bus._getInputNode()).toBeNull();
-    expect(bus._getOutputNode()).toBeNull();
+    expect(bus.getInputNode()).toBeNull();
+    expect(bus.getOutputNode()).toBeNull();
   });
 
-  test('_getInputNode / _getOutputNode return the live nodes once set up', () => {
+  test('getInputNode / getOutputNode return the live nodes once set up', () => {
     const spy = spyOnBusCreation();
     const bus = new AudioBus('internal-node-getters');
 
-    expect(bus._getInputNode()).toBe(spy.inputNode as unknown as GainNode);
-    expect(bus._getOutputNode()).toBe(spy.outputNode as unknown as GainNode);
+    expect(bus.getInputNode()).toBe(spy.inputNode as unknown as GainNode);
+    expect(bus.getOutputNode()).toBe(spy.outputNode as unknown as GainNode);
 
     spy.restore();
     bus.destroy();
@@ -582,7 +582,7 @@ describe('AudioBus', () => {
     const spy = spyOnBusCreation();
     let capturedCallback: (() => void) | undefined;
     const fakeParent = {
-      _getInputNode: vi.fn().mockReturnValue(null),
+      getInputNode: vi.fn().mockReturnValue(null),
       onceSetup: vi.fn((cb: () => void) => {
         capturedCallback = cb;
       }),
@@ -602,14 +602,14 @@ describe('AudioBus', () => {
     const spy = spyOnBusCreation();
     let capturedCallback: (() => void) | undefined;
     const fakeParent = {
-      _getInputNode: vi.fn().mockReturnValue(null),
+      getInputNode: vi.fn().mockReturnValue(null),
       onceSetup: vi.fn((cb: () => void) => {
         capturedCallback = cb;
       }),
     } as unknown as AudioBus;
 
     const child = new AudioBus('parent-input-still-absent', { parent: fakeParent });
-    const childOutput = child._getOutputNode() as unknown as { connect: MockInstance };
+    const childOutput = child.getOutputNode() as unknown as { connect: MockInstance };
 
     expect(() => capturedCallback?.()).not.toThrow();
     expect(childOutput.connect).not.toHaveBeenCalled();
@@ -814,11 +814,11 @@ describe('AudioBus', () => {
     // guards: `parentInput` is null, so the child subscribes via
     // `parent.onceSetup(...)` instead of connecting directly.
     childReady(fakeCtx);
-    expect(child._getInputNode()).not.toBeNull();
-    expect(parent._getInputNode()).toBeNull();
+    expect(child.getInputNode()).not.toBeNull();
+    expect(parent.getInputNode()).toBeNull();
     // The child's output has not been connected upstream yet - it queued a
     // reconnect on the parent via parent.onceSetup(...).
-    const childOutput = child._getOutputNode() as unknown as { connect: MockInstance };
+    const childOutput = child.getOutputNode() as unknown as { connect: MockInstance };
     expect(childOutput.connect).not.toHaveBeenCalled();
 
     // Now the parent becomes ready - its own setup runs and flushes the queued
@@ -826,8 +826,8 @@ describe('AudioBus', () => {
     // freshly-created input node (AU3: the flush happens on the bus's own setup,
     // not on a separate global dispatch).
     parentReady(fakeCtx);
-    expect(parent._getInputNode()).not.toBeNull();
-    expect(childOutput.connect).toHaveBeenCalledWith(parent._getInputNode());
+    expect(parent.getInputNode()).not.toBeNull();
+    expect(childOutput.connect).toHaveBeenCalledWith(parent.getInputNode());
 
     vi.doUnmock('#audio/audioContext');
     vi.resetModules();

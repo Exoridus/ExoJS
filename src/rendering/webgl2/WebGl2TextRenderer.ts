@@ -92,7 +92,7 @@ const sharesAtlasBatchClass = (a: PendingQuad, b: PendingQuad): boolean =>
   a.atlasTexture.height === b.atlasTexture.height;
 
 /**
- * Record-time payload carried from `flush()` to `_configureRetainedVao`/replay.
+ * Record-time payload carried from `flush()` to `configureRetainedVao`/replay.
  * `drawables[i]` is the node owning dense row `i` of `nodeData` - the
  * own-transform-move O(1) patch looks a node up here to find its row.
  */
@@ -541,7 +541,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
         shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
       }
-      backend._stageViewportUniform(shader);
+      backend.stageViewportUniform(shader);
       if (shader.uniforms.has('u_nodeData')) {
         shader.getUniform('u_nodeData').setValue(this._nodeDataUnitScratch);
       }
@@ -613,7 +613,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     // The batch's instances are its glyph quads; its NODES are the text runs the
     // quads came from - a single run contributes one to `submittedNodes` however
     // many glyphs it draws, on this tier as on the live one.
-    backend._recordRetainedBatch(
+    backend.recordRetainedBatch(
       this,
       this._uint32View.subarray(0, wordCount),
       quadCount,
@@ -655,18 +655,18 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   // the generic bundle/scan/rebase machinery can meaningfully rebase; both
   // hooks below are true no-ops, and the renderer instead carries its own node
   // data end-to-end via `rendererData`, uploaded into a group-owned
-  // `DataTexture` on first configure (`_configureRetainedVao`).
+  // `DataTexture` on first configure (`configureRetainedVao`).
 
-  /** @internal See {@link WebGl2RetainedBatchReplayer._scanRetainedNodeIndexRange}. */
-  public _scanRetainedNodeIndexRange(_payload: WebGl2RetainedBatchPayload, _range: WebGl2RetainedNodeIndexRange): void {
+  /** @internal See {@link WebGl2RetainedBatchReplayer.scanRetainedNodeIndexRange}. */
+  public scanRetainedNodeIndexRange(_payload: WebGl2RetainedBatchPayload, _range: WebGl2RetainedNodeIndexRange): void {
     // Deliberately does not touch `_range`: Text's node index addresses its own
     // group-owned style texture, not a shared-transform row, and widening the
     // range here would corrupt the shared span the backend computes across every
     // OTHER (shared-transform-consuming) batch recorded into the same bundle.
   }
 
-  /** @internal See {@link WebGl2RetainedBatchReplayer._rebaseRetainedNodeIndices}. */
-  public _rebaseRetainedNodeIndices(_payload: WebGl2RetainedBatchPayload, _base: number): void {
+  /** @internal See {@link WebGl2RetainedBatchReplayer.rebaseRetainedNodeIndices}. */
+  public rebaseRetainedNodeIndices(_payload: WebGl2RetainedBatchPayload, _base: number): void {
     // Deliberately does not touch the bytes: Text's node indices are already
     // dense and group-local (0..nodeCount-1, matching the group-owned style
     // texture rows) and have no relationship to the shared-buffer rebase base.
@@ -680,7 +680,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
    * and the drawable→row-index map the own-transform-move patch uses.
    * @internal
    */
-  public _configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
+  public configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
     const backend = this.getBackend();
     const gl = backend.context;
     const buffer = payload.bundle.instanceBuffer;
@@ -735,7 +735,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
    * static quad-index pattern, and the group-owned per-node style texture.
    * @internal
    */
-  public _replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
+  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
     const backend = this.getBackendOrNull();
     const vao = payload.vao;
     const data = payload.rendererData as TextRetainedRendererData | null;
@@ -770,7 +770,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
       shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
     }
-    backend._stageViewportUniform(shader);
+    backend.stageViewportUniform(shader);
     if (shader.uniforms.has('u_nodeData')) {
       shader.getUniform('u_nodeData').setValue(this._retainedNodeDataUnitScratch);
     }

@@ -281,15 +281,15 @@ describe('Sound', () => {
     sound.destroy();
   });
 
-  test('_createVoice() past the clip end returns a NoopVoice on the requested bus', () => {
+  test('createVoice() past the clip end returns a NoopVoice on the requested bus', () => {
     const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(2));
 
-    const voice = sound._createVoice(system, { time: 10 });
+    const voice = sound.createVoice(system, { time: 10 });
     expect(voice).toBeInstanceOf(NoopVoice);
 
     // With no explicit bus, falls back to system.sound.
-    const withBus = sound._createVoice(system, { time: 10, bus: system.music });
+    const withBus = sound.createVoice(system, { time: 10, bus: system.music });
     expect(withBus).toBeInstanceOf(NoopVoice);
 
     sound.destroy();

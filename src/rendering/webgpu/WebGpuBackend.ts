@@ -1499,7 +1499,7 @@ export class WebGpuBackend implements RenderBackend {
    *
    * Part of the renderer SDK contract for extension renderers.
    */
-  public _pushTransform(drawable: Drawable): number {
+  public pushTransform(drawable: Drawable): number {
     // Raw world transform + snap-mode flag; the vertex stage snaps the origin.
     return this._getTransformStorage().push(drawable, undefined, drawable.pixelSnapMode);
   }
@@ -1698,7 +1698,7 @@ export class WebGpuBackend implements RenderBackend {
    * not just the sprite renderer).
    * @internal
    */
-  public _replayRetainedBatch(batch: RetainedBatchInstruction): void {
+  public replayRetainedBatch(batch: RetainedBatchInstruction): void {
     // Drain the pending LIVE batch first (WebGL2 parity). The player's ordering
     // guarantee - a group-transform switch, and therefore a flush, immediately
     // before the first replay of a spliced scope - only holds for scopes entered
@@ -1727,7 +1727,7 @@ export class WebGpuBackend implements RenderBackend {
     // RetainedBatchInstruction), not its instance count.
     this._stats.submittedNodes += batch.nodeCount ?? batch.instanceCount;
     this._setActiveRenderer(payload.renderer);
-    payload.renderer._replayRetainedBatch(payload);
+    payload.renderer.replayRetainedBatch(payload);
   }
 
   /**
@@ -1768,7 +1768,7 @@ export class WebGpuBackend implements RenderBackend {
         return false;
       }
 
-      if (payload.renderer._validateRetainedBatch?.(payload) === false) {
+      if (payload.renderer.validateRetainedBatch?.(payload) === false) {
         set.invalidate();
 
         return false;
@@ -1822,7 +1822,7 @@ export class WebGpuBackend implements RenderBackend {
    *
    * Part of the renderer SDK contract for extension renderers.
    */
-  public _recordRetainedBatch(
+  public recordRetainedBatch(
     replayer: WebGpuRetainedBatchReplayer,
     instanceData: ArrayBuffer,
     byteLength: number,
@@ -1858,7 +1858,7 @@ export class WebGpuBackend implements RenderBackend {
 
     range.min = 0xffffffff;
     range.max = 0;
-    replayer._scanRetainedNodeIndexRange(bytes, range);
+    replayer.scanRetainedNodeIndexRange(bytes, range);
 
     const textureList: Array<Texture | RenderTexture> = [];
     const recordedViews: GPUTextureView[] = [];
@@ -1962,7 +1962,7 @@ export class WebGpuBackend implements RenderBackend {
     // A batch whose renderer opts out of the shared transform store
     // (`_consumesSharedTransform === false`, e.g. Text - its per-instance
     // "node index" addresses its OWN private data store, not a row in the
-    // shared TransformBuffer) leaves `_scanRetainedNodeIndexRange` a no-op, so
+    // shared TransformBuffer) leaves `scanRetainedNodeIndexRange` a no-op, so
     // its `minNodeIndex`/`maxNodeIndex` stay at the unset sentinel
     // (`max < min`). Such batches must not contribute to the shared-range
     // span below - merging their sentinel into `base`/`maxNodeIndex` would
@@ -2007,7 +2007,7 @@ export class WebGpuBackend implements RenderBackend {
       // `base` is irrelevant to it either way.
       const payload = batch.instruction.payload as WebGpuRetainedBatchPayload;
 
-      payload.renderer._rebaseRetainedNodeIndices(batch.bytes, base);
+      payload.renderer.rebaseRetainedNodeIndices(batch.bytes, base);
 
       device.queue.writeBuffer(bundle.instanceBuffer!, batch.byteOffset, batch.bytes.buffer, batch.bytes.byteOffset, batch.bytes.byteLength);
       stampRetainedBatchGeneration(batch.instruction);
@@ -2044,7 +2044,7 @@ export class WebGpuBackend implements RenderBackend {
    *
    * Part of the renderer SDK contract for extension renderers.
    */
-  public _transformStorageWouldGrow(minCount: number): boolean {
+  public transformStorageWouldGrow(minCount: number): boolean {
     return this._getTransformStorage().wouldGrow(minCount);
   }
 
@@ -2066,7 +2066,7 @@ export class WebGpuBackend implements RenderBackend {
    *
    * Part of the renderer SDK contract for extension renderers.
    */
-  public _textureUploadWouldMutate(texture: Texture | RenderTexture): boolean {
+  public textureUploadWouldMutate(texture: Texture | RenderTexture): boolean {
     const state = this._textureStates.get(texture);
 
     if (state === undefined || state.version === -1) {

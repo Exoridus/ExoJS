@@ -72,7 +72,7 @@ describe('Sound.play before load', () => {
       const system = new AudioSystem();
       const sound = new Sound(null);
       sound._loadState.begin(); // -> 'loading'
-      const voice = sound._createVoice(system, {});
+      const voice = sound.createVoice(system, {});
       expect(voice).toBeInstanceOf(NoopVoice);
       expect(warnings.some(m => /not yet loaded/i.test(m))).toBe(true);
     } finally {
@@ -89,7 +89,7 @@ describe('Sound.play before load', () => {
       const system = new AudioSystem();
       const sound = new Sound(null);
       sound._loadState.fail(new Error('boom'));
-      const voice = sound._createVoice(system, {});
+      const voice = sound.createVoice(system, {});
       expect(voice).toBeInstanceOf(NoopVoice);
       expect(warnings.some(m => /failed to load/i.test(m))).toBe(true);
     } finally {

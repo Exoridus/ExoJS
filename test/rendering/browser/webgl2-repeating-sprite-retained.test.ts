@@ -149,7 +149,7 @@ describe('WebGL2 renderer matrix: RepeatingSprite retained instruction-set repla
     group.setPosition(8, 24);
     root.addChild(group);
 
-    const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+    const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
     try {
       render(backend, root); // F1 — full collect + fragment capture
@@ -201,7 +201,7 @@ describe('WebGL2 renderer matrix: RepeatingSprite retained instruction-set repla
       render(backend, root); // F2 record
       render(backend, root); // F3 splice — now on the fast tier
 
-      let replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      let replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       render(backend, root); // steady replay before the mutation
 
@@ -221,7 +221,7 @@ describe('WebGL2 renderer matrix: RepeatingSprite retained instruction-set repla
       render(backend, root); // recapture with the new bytes
       render(backend, root); // splice of the fresh recording
 
-      replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       render(backend, root); // steady replay AFTER the mutation
 
@@ -253,7 +253,7 @@ describe('WebGL2 renderer matrix: RepeatingSprite retained instruction-set repla
     group.setPosition(8, 24);
     root.addChild(group);
 
-    const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+    const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
     try {
       // Render many frames, including a scroll mutation - the shader path

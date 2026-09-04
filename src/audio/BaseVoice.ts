@@ -60,6 +60,7 @@ export interface BaseVoiceInit {
 
 /** A voice the {@link AudioSystem} ticks each frame for spatial updates. */
 export interface SpatialVoice extends Voice {
+  /** @internal - called once per frame by {@link AudioSystem.update}. */
   _tickSpatial(): void;
 }
 
@@ -829,7 +830,7 @@ export abstract class BaseVoice implements Voice {
 
   /** Connect `tail` to the bus input, or to the destination with a deferred reroute while the bus is still locked. */
   private _connectTail(tail: AudioNode): void {
-    const input = this._bus._getInputNode();
+    const input = this._bus.getInputNode();
     if (input !== null) {
       tail.connect(input);
       return;
@@ -845,7 +846,7 @@ export abstract class BaseVoice implements Voice {
     this._pendingBusSetup = this._bus.onceSetup((): void => {
       this._pendingBusSetup = null;
       if (this._ended) return;
-      const node = this._bus._getInputNode();
+      const node = this._bus.getInputNode();
       if (node !== null) {
         const current = this._tail();
         current.disconnect();

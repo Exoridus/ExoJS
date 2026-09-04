@@ -225,7 +225,7 @@ export class Video extends Sprite {
     }
     this._bus = bus;
     if (this._audioSetup) {
-      const inputNode = bus?._getInputNode() ?? null;
+      const inputNode = bus?.getInputNode() ?? null;
       if (inputNode) {
         this._audioSetup.gainNode.connect(inputNode);
       } else {
@@ -365,13 +365,13 @@ export class Video extends Sprite {
   }
 
   /** @internal */
-  public override _collect(builder: RenderPlanBuilder, seq?: number): void {
+  public override collect(builder: RenderPlanBuilder, seq?: number): void {
     if (this.visible) {
       this._markTextureDirtyOnPlaybackAdvance();
       this.updateTexture();
     }
 
-    super._collect(builder, seq);
+    super.collect(builder, seq);
   }
 
   /**
@@ -487,7 +487,7 @@ export class Video extends Sprite {
     const gainNode = audioContext.createGain();
     gainNode.gain.setTargetAtTime(this.muted ? 0 : this.volume, audioContext.currentTime, 0.01);
 
-    const inputNode = this.bus?._getInputNode() ?? null;
+    const inputNode = this.bus?.getInputNode() ?? null;
     if (inputNode) {
       gainNode.connect(inputNode);
     } else {

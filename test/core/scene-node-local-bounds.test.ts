@@ -1,12 +1,12 @@
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 
-describe('SceneNode._setLocalBounds', () => {
+describe('SceneNode.setLocalBounds', () => {
   test('writes the local rectangle in place without reallocating it', () => {
     const node = new Drawable();
     const bounds = node.getLocalBounds();
 
-    node._setLocalBounds(2, 3, 16, 24);
+    node.setLocalBounds(2, 3, 16, 24);
 
     expect(node.getLocalBounds()).toBe(bounds);
     expect(node.getLocalBounds().x).toBe(2);
@@ -28,7 +28,7 @@ describe('SceneNode._setLocalBounds', () => {
     const nodeContentBefore = node._contentRevision;
     const parentContentBefore = parent._contentRevision;
 
-    node._setLocalBounds(0, 0, 16, 24);
+    node.setLocalBounds(0, 0, 16, 24);
 
     expect(node._contentRevision).toBeGreaterThan(nodeContentBefore);
     expect(parent._contentRevision).toBeGreaterThan(parentContentBefore);
@@ -46,7 +46,7 @@ describe('SceneNode._setLocalBounds', () => {
   test('feeds the local-space hit test of a rotated node', () => {
     const node = new Drawable();
 
-    node._setLocalBounds(0, 0, 40, 20);
+    node.setLocalBounds(0, 0, 40, 20);
     node.setRotation(45);
 
     // Rotated off-axis: contains() maps the world point back through the

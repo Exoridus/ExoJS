@@ -39,7 +39,7 @@ import type { View } from '#rendering/View';
 class LeafDrawable extends Drawable {
   public constructor(public readonly id: string) {
     super();
-    this._setLocalBounds(0, 0, 16, 16);
+    this.setLocalBounds(0, 0, 16, 16);
   }
 }
 
@@ -234,12 +234,12 @@ const isDevGated = (node: ts.Node, source: ts.SourceFile): boolean => {
   return false;
 };
 
-/** The body of `RenderNode._collect`, located structurally rather than by line number. */
+/** The body of `RenderNode.collect`, located structurally rather than by line number. */
 const findCollectBody = (source: ts.SourceFile): ts.Block => {
   let found: ts.Block | undefined;
 
   const visit = (node: ts.Node): void => {
-    if (ts.isMethodDeclaration(node) && node.name.getText(source) === '_collect' && node.body !== undefined) {
+    if (ts.isMethodDeclaration(node) && node.name.getText(source) === 'collect' && node.body !== undefined) {
       found = node.body;
     }
 
@@ -249,13 +249,13 @@ const findCollectBody = (source: ts.SourceFile): ts.Block => {
   visit(source);
 
   if (found === undefined) {
-    throw new Error('Could not locate RenderNode._collect — update this structural check.');
+    throw new Error('Could not locate RenderNode.collect — update this structural check.');
   }
 
   return found;
 };
 
-/** Every `if` inside `_collect` whose condition tests `this.destroyed`. */
+/** Every `if` inside `collect` whose condition tests `this.destroyed`. */
 const destroyedGuards = (body: ts.Block, source: ts.SourceFile): ts.IfStatement[] => {
   const guards: ts.IfStatement[] = [];
 
@@ -273,7 +273,7 @@ const destroyedGuards = (body: ts.Block, source: ts.SourceFile): ts.IfStatement[
 };
 
 describe('destroyed-but-attached node: production parity', () => {
-  test('the destroyed-node skip in RenderNode._collect is not __DEV__-gated', () => {
+  test('the destroyed-node skip in RenderNode.collect is not __DEV__-gated', () => {
     const rel = 'src/rendering/RenderNode.ts';
     const source = parseSource(rel);
     const guards = destroyedGuards(findCollectBody(source), source);

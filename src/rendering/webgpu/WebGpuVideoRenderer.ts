@@ -210,7 +210,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
     }
 
     const command = backend.activeDrawCommand;
-    const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(video);
+    const nodeIndex = command !== null ? command.nodeIndex : backend.pushTransform(video);
 
     this._pendingVideo = video;
     this._pendingTexture = texture;
@@ -295,7 +295,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
       // Only relevant when this flush will actually sync the texture cache
       // (the fallback path) - the external path never calls getTextureBinding,
       // so a would-be mutation this frame is never actually issued.
-      if (externalTexture === null && coordinator.passHasDraws && backend._textureUploadWouldMutate(texture)) {
+      if (externalTexture === null && coordinator.passHasDraws && backend.textureUploadWouldMutate(texture)) {
         active = this._reopenPass(backend);
       }
 
@@ -304,7 +304,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
       // Resolving the transform storage may reallocate (and free) its GPU
       // buffer; earlier draws in this open pass still reference the old one, so
       // end the pass first when it already holds draws, then reopen.
-      if (coordinator.passHasDraws && backend._transformStorageWouldGrow(needCount)) {
+      if (coordinator.passHasDraws && backend.transformStorageWouldGrow(needCount)) {
         active = this._reopenPass(backend);
       }
 

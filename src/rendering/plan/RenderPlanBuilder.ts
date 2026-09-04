@@ -35,7 +35,7 @@ import { clampResolutionToTextureSize, resolveBarrierResolution } from './target
 
 /**
  * Collect-time view of the backend's retained-batch hooks.
- * `_replayRetainedBatch` gates the splice tier, the capture pair gates record
+ * `replayRetainedBatch` gates the splice tier, the capture pair gates record
  * arming, and `_validateRetainedInstructionSet` is the backend's optional
  * extra collect-time validation (e.g. WebGPU texture-view identity) on
  * top of the plan-level generation check.
@@ -61,7 +61,7 @@ import { clampResolutionToTextureSize, resolveBarrierResolution } from './target
 interface RetainedBackendHooks {
   _beginRetainedCapture?(set: RetainedInstructionSet): void;
   _endRetainedCapture?(set: RetainedInstructionSet): void;
-  _replayRetainedBatch?(batch: unknown): void;
+  replayRetainedBatch?(batch: unknown): void;
   _validateRetainedInstructionSet?(set: RetainedInstructionSet): boolean;
 }
 
@@ -364,7 +364,7 @@ export class RenderPlanBuilder {
     const rootScope = this._acquireGroupScope(false);
 
     this._pushScope(rootScope);
-    root._collect(this);
+    root.collect(this);
     this._popScope();
 
     this._plan.setSinglePass(rootScope.entries.length > 0 ? this._viewUnobserved() : null, rootScope);
@@ -850,7 +850,7 @@ export class RenderPlanBuilder {
     // placement. A view-dependent producer therefore sees the CURRENT view and
     // rebuilds its coverage; a barrier or boundary keeps every bit of its own
     // semantics, including its own retention tier.
-    other.node._collect(this, other.seq);
+    other.node.collect(this, other.seq);
   }
 
   /**
@@ -1421,7 +1421,7 @@ export class RenderPlanBuilder {
    * @internal - true while collecting below a transform-group boundary.
    * Inside a group, child bounds are group-local, so testing them against the
    * world-space view rect would be meaningless; the group is culled as a
-   * whole by RetainedContainer._collect instead.
+   * whole by RetainedContainer.collect instead.
    */
   public get _isViewCullSuppressed(): boolean {
     // Source discovery suppresses culling too, and must: the whole point of the
@@ -1525,7 +1525,7 @@ export class RenderPlanBuilder {
     if (
       typeof hooks._beginRetainedCapture !== 'function' ||
       typeof hooks._endRetainedCapture !== 'function' ||
-      typeof hooks._replayRetainedBatch !== 'function'
+      typeof hooks.replayRetainedBatch !== 'function'
     ) {
       return;
     }
@@ -1541,7 +1541,7 @@ export class RenderPlanBuilder {
   private _validateRetainedSet(set: RetainedInstructionSet): boolean {
     const hooks = this.backend as RenderBackend & RetainedBackendHooks;
 
-    if (typeof hooks._replayRetainedBatch !== 'function') {
+    if (typeof hooks.replayRetainedBatch !== 'function') {
       return false;
     }
 
@@ -1558,7 +1558,7 @@ export class RenderPlanBuilder {
    * no material keys - draws re-acquire pooled commands with fresh
    * frame-local nodeIndex values (multi-render() bases stay coherent), nested
    * groups re-acquire pooled scopes, and barrier nodes re-dispatch through a
-   * normal `_collect`.
+   * normal `collect`.
    */
   public _replayRetainedFragment(entries: readonly RetainedFragmentEntry[], entryCount = entries.length): void {
     for (let index = 0; index < entryCount; index++) {
@@ -1569,7 +1569,7 @@ export class RenderPlanBuilder {
       } else if (entry.kind === RenderEntryKind.Group) {
         this._replayRetainedGroup(entry);
       } else {
-        entry.node._collect(this, entry.seq);
+        entry.node.collect(this, entry.seq);
       }
     }
   }
@@ -1585,7 +1585,7 @@ export class RenderPlanBuilder {
 
     if (innerSet !== null && !this._validateRetainedSet(innerSet)) {
       if (fragment.transformNode !== null) {
-        fragment.transformNode._collect(this, fragment.seq);
+        fragment.transformNode.collect(this, fragment.seq);
 
         return;
       }

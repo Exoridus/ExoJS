@@ -39,7 +39,7 @@ describe('structural — NineSlice', () => {
   it('submittedNodes counts nodes, not the 9 quad instances each node emits, on every tier', () => {
     withHarness(harness => {
       const { root, sprites } = buildNineSliceScene({ count: 4, textures: makeTextures(1), fill: 'stretch' });
-      const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(harness.backend, 'replayRetainedBatch');
 
       expect(sprites[0].quads.length).toBe(9);
 

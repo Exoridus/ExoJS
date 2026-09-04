@@ -126,7 +126,7 @@ const buildStressTree = (targetCount: number, seed: number): StressTree => {
 
     const leaf = new Drawable();
 
-    leaf._setLocalBounds(0, 0, 16, 16);
+    leaf.setLocalBounds(0, 0, 16, 16);
     leaf.setPosition(WORLD_OX + rng() * WORLD_W, WORLD_OY + rng() * WORLD_H);
     parent.addChild(leaf);
     leaves.push(leaf);
@@ -363,9 +363,9 @@ const instrument = (proto: any, method: string, phase: PhaseName): (() => void) 
 
 const installInstrumentation = (): (() => void) => {
   const uninstallers = [
-    instrument(Container.prototype, '_collect', 'traversal'),
+    instrument(Container.prototype, 'collect', 'traversal'),
     instrument(Container.prototype, '_collectContent', 'traversal'),
-    instrument(Drawable.prototype, '_collect', 'traversal'),
+    instrument(Drawable.prototype, 'collect', 'traversal'),
     instrument(SceneNode.prototype, 'inView', 'cull'),
     instrument(SceneNode.prototype, 'getGlobalTransform', 'world-transform'),
     instrument(Drawable.prototype, '_getOrComputeMaterialKey', 'material-key'),

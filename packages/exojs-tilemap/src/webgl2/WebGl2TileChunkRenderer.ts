@@ -129,7 +129,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     const tintRgba = node.tint.toRgba8();
 
     const command = backend.activeDrawCommand;
-    const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(node);
+    const nodeIndex = command !== null ? command.nodeIndex : backend.pushTransform(node);
 
     for (const page of pages) {
       this._renderPage(page.texture, page.quads, blendMode, tintRgba, nodeIndex);
@@ -270,7 +270,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     // render().
     if (backend._isRetainedCapturing && this._currentTexture !== null) {
       this._recordTextures[0] = this._currentTexture;
-      backend._recordRetainedBatch(
+      backend.recordRetainedBatch(
         this,
         this._instanceUint32.subarray(0, this._quadIndex * wordsPerInstance),
         this._quadIndex,
@@ -323,7 +323,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
       this._hasWrittenGroup = true;
     }
 
-    backend._stageViewportUniform(this._shader);
+    backend.stageViewportUniform(this._shader);
   }
 
   // ── Retained-batch record/replay ──────────────────────────────────────────
@@ -333,8 +333,8 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
   // attribute wiring) and the replay dispatch live here - mirroring
   // WebGl2NineSliceSpriteRenderer's seam.
 
-  /** @internal See {@link WebGl2RetainedBatchReplayer._scanRetainedNodeIndexRange}. */
-  public _scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void {
+  /** @internal See {@link WebGl2RetainedBatchReplayer.scanRetainedNodeIndexRange}. */
+  public scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void {
     const words = payload.bundle.instanceWords;
     const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
 
@@ -355,8 +355,8 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     }
   }
 
-  /** @internal See {@link WebGl2RetainedBatchReplayer._rebaseRetainedNodeIndices} (group-local indices). */
-  public _rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void {
+  /** @internal See {@link WebGl2RetainedBatchReplayer.rebaseRetainedNodeIndices} (group-local indices). */
+  public rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void {
     const words = payload.bundle.instanceWords;
     const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
 
@@ -379,7 +379,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
    * set/locations as the live VAO in {@link onConnect}.
    * @internal
    */
-  public _configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
+  public configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
     const gl = this.getBackend().context;
     const buffer = payload.bundle.instanceBuffer;
     const vao = payload.vao;
@@ -408,7 +408,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
    * dispatching here and bumps the stats from the instruction descriptor.
    * @internal
    */
-  public _replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
+  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
     const backend = this.getBackendOrNull();
     const vao = payload.vao;
     const transformTexture = payload.bundle.transformTexture;

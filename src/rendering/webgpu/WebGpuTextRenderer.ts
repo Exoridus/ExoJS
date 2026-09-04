@@ -124,7 +124,7 @@ const sharesAtlasBatchClass = (a: PendingQuad, b: PendingQuad): boolean =>
  * Text opts out of the shared `TransformBuffer` (`_consumesSharedTransform ===
  * false`), so the generic bundle machinery has nothing to persist for it - this
  * is the renderer's own carrier from record time (`flush()`) through to replay
- * (`_replayRetainedBatch`), where `TextRetainedReplayState` uploads it into a
+ * (`replayRetainedBatch`), where `TextRetainedReplayState` uploads it into a
  * persistent, group-owned GPU buffer on first use.
  */
 interface TextRetainedRendererData {
@@ -544,7 +544,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     if (coordinator.passHasDraws) {
       outer: for (const batch of batches) {
         for (const texture of batch.atlasTextures) {
-          if (backend._textureUploadWouldMutate(texture)) {
+          if (backend.textureUploadWouldMutate(texture)) {
             coordinator.endPass();
             break outer;
           }
@@ -1084,16 +1084,16 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   // data end-to-end via `WebGpuRetainedBatchPayload.rendererData`, uploaded
   // into a group-owned buffer (`TextRetainedReplayState`) on first replay.
 
-  /** @internal See {@link WebGpuRetainedBatchReplayer._scanRetainedNodeIndexRange}. */
-  public _scanRetainedNodeIndexRange(_bytes: Uint8Array, _range: WebGpuRetainedNodeIndexRange): void {
+  /** @internal See {@link WebGpuRetainedBatchReplayer.scanRetainedNodeIndexRange}. */
+  public scanRetainedNodeIndexRange(_bytes: Uint8Array, _range: WebGpuRetainedNodeIndexRange): void {
     // Deliberately does not touch `_range`: widening it here would corrupt
     // the shared-transform-row span `WebGpuBackend._finalizeRetainedCapture`
     // computes across every OTHER (shared-transform-consuming) renderer's
     // batches recorded into the same bundle this capture.
   }
 
-  /** @internal See {@link WebGpuRetainedBatchReplayer._rebaseRetainedNodeIndices}. */
-  public _rebaseRetainedNodeIndices(_bytes: Uint8Array, _base: number): void {
+  /** @internal See {@link WebGpuRetainedBatchReplayer.rebaseRetainedNodeIndices}. */
+  public rebaseRetainedNodeIndices(_bytes: Uint8Array, _base: number): void {
     // Deliberately does not touch `_bytes`: Text's node indices are already
     // correct as packed (dense, 0-based, matching the parallel `rendererData`
     // uploaded alongside them) and have no relationship to the shared-buffer
@@ -1143,7 +1143,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     // The batch's instances are its glyph quads; its NODES are the text runs the
     // quads came from - a single run contributes one to `submittedNodes` however
     // many glyphs it draws, on this tier as on the live one.
-    backend._recordRetainedBatch(
+    backend.recordRetainedBatch(
       this,
       vertexBytes,
       vertexByteLength,
@@ -1169,7 +1169,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
    * recording, on first replay).
    * @internal
    */
-  public _replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void {
+  public replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void {
     const backend = this._backend;
     const device = this._device;
     const bundle = payload.bundle;
@@ -1248,7 +1248,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     // pass survives a renderer switch.
     if (coordinator.passHasDraws) {
       for (const texture of payload.textures) {
-        if (backend._textureUploadWouldMutate(texture)) {
+        if (backend.textureUploadWouldMutate(texture)) {
           coordinator.endPass();
           state.drawsInPass = null;
           break;

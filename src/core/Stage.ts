@@ -8,9 +8,13 @@ import type { Application } from './Application';
  * the {@link Stage} so a node never needs a direct reference to the system.
  */
 export interface InteractionHooks {
+  /** @internal */
   _notifyNodeAdded(node: RenderNode): void;
+  /** @internal */
   _notifyNodeRemoved(node: RenderNode): void;
+  /** @internal */
   _notifyInteractiveChanged(node: RenderNode, becameInteractive: boolean): void;
+  /** @internal */
   _notifyBoundsInvalidated(node: RenderNode): void;
   /**
    * Called when a transform-group boundary ({@link RetainedContainer}) moves as
@@ -18,6 +22,7 @@ export interface InteractionHooks {
    * this exists for the group's world-space (escaped, non-anchored) interactive
    * descendants, which are indexed in the world quadtree with bounds captured at
    * insert time and would otherwise go stale after the group move.
+   * @internal
    */
   _notifyTransformGroupMoved(group: RenderNode): void;
 }

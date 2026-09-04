@@ -51,7 +51,7 @@ const createSlot = (): MutableRetainedDrawSlot => ({
  * `updateId`, and the active `RenderBackend` identity.
  *
  * Direct container/effect-bearing children are never represented here - they
- * are always re-dispatched through a normal `_collect` call by the owning
+ * are always re-dispatched through a normal `collect` call by the owning
  * `Container`, which recurses into their own independent `RetainedPlanCache`.
  * This keeps every reused scope shape byte-for-byte identical to a full
  * collect (nested containers keep their own material-grouping/z-sort
@@ -111,6 +111,7 @@ export class RetainedPlanCache {
   /**
    * Start a new capture: drops the previous one (it is being replaced) and
    * rewinds the record pool. A freshly constructed cache is already "begun".
+   * @internal
    */
   public _beginCapture(): void {
     this._hasCapture = false;
@@ -121,6 +122,7 @@ export class RetainedPlanCache {
    * Record one direct-drawable draw into the capture, copying the command's
    * placement/material/bounds into a pooled record (no allocation once the
    * pool has grown to the child count).
+   * @internal
    */
   public _appendSlot(childIndex: number, command: DrawCommand): void {
     const slot = this._slotPool.acquire();
@@ -129,7 +131,7 @@ export class RetainedPlanCache {
     copyRetainedDrawData(slot, command);
   }
 
-  /** Key the capture; only after this does {@link isClean} consider it. */
+  /** @internal - key the capture; only after this does {@link isClean} consider it. */
   public _commitCapture(contentRevision: number, structureRevision: number, transformRevision: number, viewUpdateId: number, backend: RenderBackend): void {
     this._contentRevision = contentRevision;
     this._structureRevision = structureRevision;

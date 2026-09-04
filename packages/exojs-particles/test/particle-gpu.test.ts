@@ -576,7 +576,7 @@ describe('ParticleSystem render-inject backend detection', () => {
   });
 });
 
-describe('ParticleSystem._collect backend-change detection', () => {
+describe('ParticleSystem.collect backend-change detection', () => {
   let restoreGlobals: () => void;
 
   beforeEach(() => {
@@ -591,15 +591,15 @@ describe('ParticleSystem._collect backend-change detection', () => {
     const env = makeMockDevice();
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
 
-    // visible=false makes the inherited RenderNode._collect() return
+    // visible=false makes the inherited RenderNode.collect() return
     // immediately after ParticleSystem's own backend-tracking logic runs,
-    // so we can drive `_collect` directly without a full render-plan builder.
+    // so we can drive `collect` directly without a full render-plan builder.
     system.visible = false;
     system.addUpdateModule(new ApplyForce(0, 0));
 
     const builderA = makeBuilder(env.device);
 
-    system._collect(builderA);
+    system.collect(builderA);
     expect(system.gpuState).toBeNull();
 
     const slot = system._spawnSlot();
@@ -611,14 +611,14 @@ describe('ParticleSystem._collect backend-change detection', () => {
     expect(gpuStateAfterCompile).not.toBeNull();
 
     // Same backend reference again - must not touch the existing GPU state.
-    system._collect(builderA);
+    system.collect(builderA);
     expect(system.gpuState).toBe(gpuStateAfterCompile);
 
     // A different backend forces a teardown of the existing GPU state.
     const env2 = makeMockDevice();
     const builderB = makeBuilder(env2.device);
 
-    system._collect(builderB);
+    system.collect(builderB);
     expect(system.gpuState).toBeNull();
   });
 });
@@ -933,7 +933,7 @@ describe('ParticleSystem GPU mode — natural expiry death modules', () => {
     // the device buffer those queued records live in.
     const env2 = makeMockDevice();
 
-    system._collect(makeBuilder(env2.device));
+    system.collect(makeBuilder(env2.device));
 
     expect(system.gpuState).toBeNull();
     expect(pendingDeathCount(system)).toBe(0);

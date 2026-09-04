@@ -41,7 +41,7 @@ export interface RetainedFragmentGroup {
    * frame: its scope had no entries, so the outer fragment
    * must carry the set reference to reproduce the splice at replay. The set
    * object is per-fragment stable; validity is re-checked per replay, and a
-   * stale set falls back to re-dispatching `transformNode._collect`. `null`
+   * stale set falls back to re-dispatching `transformNode.collect`. `null`
    * for scopes that collected entries normally.
    */
   retainedInstructions: RetainedInstructionSet | null;
@@ -57,7 +57,7 @@ export interface RetainedFragmentGroup {
 
 /**
  * A barrier-effect node inside the fragment. NOT captured - re-dispatched
- * through a normal `_collect` on every replay (semantics-neutral by
+ * through a normal `collect` on every replay (semantics-neutral by
  * construction; the node reference stays valid because any change below it
  * content-dirties the owning RetainedContainer and drops the fragment).
  * @internal

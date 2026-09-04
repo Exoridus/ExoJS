@@ -107,7 +107,7 @@ const setupSpy = (): Spy => {
 
 /**
  * The voice's envelope gain. Two gains are created per play: the voice output
- * (in `AudioGenerator._createVoice`) and then the envelope gain (in the voice
+ * (in `AudioGenerator.createVoice`) and then the envelope gain (in the voice
  * constructor).
  */
 const envelopeGainOf = (spy: Spy): MockGainNode => {

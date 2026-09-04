@@ -109,80 +109,6 @@
       "title": "Methods",
       "members": [
         {
-          "name": "_getInputNode",
-          "signature": "_getInputNode(): GainNode | null",
-          "signatureTokens": [
-            {
-              "text": "_getInputNode",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "GainNode",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "GainNode | null",
-          "description": "Internal: returns the input GainNode where children should connect."
-        },
-        {
-          "name": "_getOutputNode",
-          "signature": "_getOutputNode(): GainNode | null",
-          "signatureTokens": [
-            {
-              "text": "_getOutputNode",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "GainNode",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "GainNode | null",
-          "description": "Internal: returns the output GainNode that connects upstream."
-        },
-        {
           "name": "addEffect",
           "signature": "addEffect(effect: AudioEffect): this",
           "signatureTokens": [
@@ -392,6 +318,80 @@
           ],
           "returnType": "this",
           "description": "Linearly ramp the output gain to 0 over duration. By default mutes the bus once the ramp completes (stopAfter: true); pass stopAfter: false to let the ramp finish silently while leaving muted unchanged."
+        },
+        {
+          "name": "getInputNode",
+          "signature": "getInputNode(): GainNode | null",
+          "signatureTokens": [
+            {
+              "text": "getInputNode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GainNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "GainNode | null",
+          "description": "The GainNode a source connects to in order to feed this bus. null until the AudioContext is unlocked and the bus has built its node chain, and again after destroy, so callers must re-read it rather than cache it - the chain is rebuilt on context recovery. Part of the audio extension contract for custom effects and analysers."
+        },
+        {
+          "name": "getOutputNode",
+          "signature": "getOutputNode(): GainNode | null",
+          "signatureTokens": [
+            {
+              "text": "getOutputNode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GainNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "GainNode | null",
+          "description": "The GainNode carrying this bus's post-effect, post-pan signal, for taps that read the bus without altering it (analysers, sidechain sources). null under the same conditions as getInputNode, and subject to the same no-caching rule. Part of the audio extension contract for custom effects and analysers."
         },
         {
           "name": "onceSetup",

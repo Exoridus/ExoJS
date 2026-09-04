@@ -64,12 +64,12 @@ export class DuckingEffect extends WorkletEffect {
 
     // Wire sidechain to input 1 of the worklet
     const sidechain = this._sidechain;
-    const sidechainOut = sidechain._getOutputNode();
+    const sidechainOut = sidechain.getOutputNode();
     if (sidechainOut && this._workletNode) {
       sidechainOut.connect(this._workletNode, 0, 1);
     } else {
       sidechain.onceSetup(() => {
-        const node = sidechain._getOutputNode();
+        const node = sidechain.getOutputNode();
         if (node && this._workletNode) {
           node.connect(this._workletNode, 0, 1);
         }

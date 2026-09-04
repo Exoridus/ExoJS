@@ -3,7 +3,7 @@
  * instruction-set replay.
  *
  * A retained group holding TileMapNode(s) whose playback was recorded replays
- * through `_replayRetainedBatch` from group-owned resources (persistent
+ * through `replayRetainedBatch` from group-owned resources (persistent
  * instance buffer + group transform texture) and must produce BYTE-IDENTICAL
  * frames to the entry-replay slow path. A live TileMapNode OUTSIDE the group
  * keeps the group's shared transform rows starting at a non-zero frame-global
@@ -197,7 +197,7 @@ describe('WebGL2 renderer matrix: TileChunkNode retained instruction-set replay 
     const backend = await createBackend();
     const scene = buildScene();
     const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
-    const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+    const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
     try {
       render(backend, scene.root); // F1 — full collect + fragment capture (slow tier)
@@ -245,7 +245,7 @@ describe('WebGL2 renderer matrix: TileChunkNode retained instruction-set replay 
       render(backend, scene.root);
 
       const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       backend.view.setCenter(backend.view.center.x + 16, backend.view.center.y);
       render(backend, scene.root);
@@ -272,7 +272,7 @@ describe('WebGL2 renderer matrix: TileChunkNode retained instruction-set replay 
       render(backend, scene.root);
 
       const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       scene.group.setPosition(24, 8);
       render(backend, scene.root);
@@ -313,7 +313,7 @@ describe('WebGL2 renderer matrix: TileChunkNode retained instruction-set replay 
       expectPixelNear(readWebGl2Pixel(backend, 52, 8), [0, 0, 255, 255]); // live outside tile unaffected
 
       const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       render(backend, scene.root); // clean entry-replay + re-arm record
 

@@ -179,7 +179,7 @@ describe('AudioAnalyser', () => {
 
     it('taps the bus output node', () => {
       const bus = new AudioBus('tap-bus');
-      const outputNode = bus._getOutputNode();
+      const outputNode = bus.getOutputNode();
       if (outputNode) {
         const connectSpy = vi.spyOn(outputNode, 'connect');
         const a = new AudioAnalyser();
@@ -636,9 +636,9 @@ describe('AudioAnalyser', () => {
   describe('source setter — AudioBus not yet internally set up', () => {
     it('defers via the bus onceSetup hook and connects once the bus becomes available', () => {
       const bus = new AudioBus('deferred-bus');
-      const outputNode = bus._getOutputNode();
+      const outputNode = bus.getOutputNode();
       const onceSetupSpy = vi.spyOn(bus, 'onceSetup');
-      vi.spyOn(bus, '_getOutputNode').mockReturnValueOnce(null);
+      vi.spyOn(bus, 'getOutputNode').mockReturnValueOnce(null);
 
       expect(outputNode).not.toBeNull();
       const connectSpy = vi.spyOn(outputNode!, 'connect');
@@ -654,7 +654,7 @@ describe('AudioAnalyser', () => {
 
     it('the bus onceSetup callback is a no-op if the source changed before it fired', () => {
       const bus = new AudioBus('deferred-bus-2');
-      vi.spyOn(bus, '_getOutputNode').mockReturnValue(null);
+      vi.spyOn(bus, 'getOutputNode').mockReturnValue(null);
       let capturedCallback: (() => void) | undefined;
       vi.spyOn(bus, 'onceSetup').mockImplementation(cb => {
         capturedCallback = cb;

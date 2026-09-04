@@ -263,7 +263,7 @@ describe('WebGPU renderer matrix: Text retained instruction replay cells', () =>
 
       // The O(1) patch rewrites the persisted row in place - the SAME
       // recorded instruction object replays; a full re-record would have
-      // produced a fresh instruction from a fresh `_recordRetainedBatch` call.
+      // produced a fresh instruction from a fresh `recordRetainedBatch` call.
       expect(fragmentOf(scene.group).instructions!.instructions[0]).toBe(recordedInstruction);
       expect(fragmentOf(scene.group).instructions!.hasRecording).toBe(true);
 
@@ -309,10 +309,10 @@ describe('WebGPU renderer matrix: Text retained instruction replay cells', () =>
     }
   });
 
-  test('cell 6 — deliberate break: a neutered _replayRetainedBatch drops the retained draw and diverges', async ctx => {
+  test('cell 6 — deliberate break: a neutered replayRetainedBatch drops the retained draw and diverges', async ctx => {
     const backend = await setupBackend();
     const scene = buildScene();
-    const original = WebGpuTextRenderer.prototype._replayRetainedBatch;
+    const original = WebGpuTextRenderer.prototype.replayRetainedBatch;
 
     try {
       for (let frame = 0; frame < 2; frame++) {
@@ -329,16 +329,16 @@ describe('WebGPU renderer matrix: Text retained instruction replay cells', () =>
       // F3 (static, no scene change): the fast/instruction-replay tier is the
       // ONLY path that can reach this frame's draw - no move, no content
       // change, nothing to reconcile - so `backend.stats.drawCalls` only
-      // increments if `_replayRetainedBatch` actually ran. A neutered version
+      // increments if `replayRetainedBatch` actually ran. A neutered version
       // that never acquires a pass or issues `drawIndexed` leaves it at 0.
-      WebGpuTextRenderer.prototype._replayRetainedBatch = function (): void {};
+      WebGpuTextRenderer.prototype.replayRetainedBatch = function (): void {};
 
       if (!(await renderScene(ctx, backend, scene.root))) return; // F3: broken replay
 
       expect(backend.stats.drawCalls).toBe(0);
       expect(backend.stats.drawCalls).not.toBe(recordDraws);
     } finally {
-      WebGpuTextRenderer.prototype._replayRetainedBatch = original;
+      WebGpuTextRenderer.prototype.replayRetainedBatch = original;
       scene.destroy();
       backend.destroy();
     }

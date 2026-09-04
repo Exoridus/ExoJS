@@ -924,7 +924,7 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
 
     floats[4] = 42; // tx
 
-    bundle._patchTransformRow!(1, floats);
+    bundle.patchTransformRow!(1, floats);
 
     const patchWrites = writes.slice(mark).filter(write => write.label === 'sprite:retained-transform-buffer');
 
@@ -943,7 +943,7 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
     const { device, writes } = createFakeDevice();
 
     // Before any range is recorded: row count is 0 → every patch is a no-op.
-    bundle._patchTransformRow!(0, new Float32Array(8));
+    bundle.patchTransformRow!(0, new Float32Array(8));
 
     expect(writes).toHaveLength(0);
 
@@ -952,8 +952,8 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
 
     const mark = writes.length;
 
-    bundle._patchTransformRow!(2, new Float32Array(8)); // == rowCount, out of range
-    bundle._patchTransformRow!(-1, new Float32Array(8));
+    bundle.patchTransformRow!(2, new Float32Array(8)); // == rowCount, out of range
+    bundle.patchTransformRow!(-1, new Float32Array(8));
 
     expect(writes.slice(mark)).toHaveLength(0);
   });
@@ -970,7 +970,7 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
 
     const mark = writes.length;
 
-    bundle._patchTransformRow!(0, new Float32Array(8));
+    bundle.patchTransformRow!(0, new Float32Array(8));
 
     expect(bundle.transformRowBase).toBe(0);
     expect(writes.slice(mark)).toHaveLength(0);
