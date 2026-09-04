@@ -96,6 +96,7 @@ export class DistanceJoint extends Joint {
     this.maxLength = options.maxLength ?? (this._limited ? Infinity : this.length);
   }
 
+  /** @internal */
   public override _prepare(h: number): void {
     const bodyA = this.bodyA;
     const bodyB = this.bodyB;
@@ -179,12 +180,14 @@ export class DistanceJoint extends Joint {
     }
   }
 
+  /** @internal */
   public override _warmStart(): void {
     if (this._active) {
       this._applyAxisImpulse(this._impulse);
     }
   }
 
+  /** @internal */
   public override _solve(useBias: boolean): void {
     if (!this._active) {
       return;

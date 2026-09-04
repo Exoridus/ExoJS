@@ -208,7 +208,7 @@ export class TiledMap {
       // lost at conversion. Out-of-range entries are skipped defensively.
       const defs = buildTileDefinitions(tiledTs.tiles, tiledTs.tileCount);
       if (defs.length > 0) {
-        rts._setDefinitions(defs);
+        rts.setDefinitions(defs);
       }
       runtimeTilesets.push(rts);
       indexToRuntime.push(rts);

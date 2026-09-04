@@ -47,7 +47,7 @@ export const makeTileset = (collisionByTile: Record<number, readonly TileMapObje
     collision,
   }));
 
-  tileset._setDefinitions(definitions);
+  tileset.setDefinitions(definitions);
 
   return tileset;
 };

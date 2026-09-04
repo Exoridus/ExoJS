@@ -116,7 +116,7 @@ describe('TileSet._setDefinition', () => {
   });
 });
 
-describe('TileSet._setDefinitions', () => {
+describe('TileSet.setDefinitions', () => {
   it('replaces the internal definitions map from an array, copying each field', () => {
     const ts = new TileSet({ name: 't', texture: fakeRegion(), tileWidth: 32, tileHeight: 32, tileCount: 4 });
     const collision = [
@@ -147,7 +147,7 @@ describe('TileSet._setDefinitions', () => {
       { localTileId: 1 }, // no properties/animation/collision at all
     ];
 
-    ts._setDefinitions(definitions);
+    ts.setDefinitions(definitions);
 
     const def0 = ts.getTileDefinition(0);
     expect(def0?.properties).toEqual({ solid: true });
@@ -166,7 +166,7 @@ describe('TileSet._setDefinitions', () => {
     ts._setDefinition(2, { properties: { a: 1 } });
     expect(ts.getTileDefinition(2)).toBeDefined();
 
-    ts._setDefinitions([{ localTileId: 0 }]);
+    ts.setDefinitions([{ localTileId: 0 }]);
 
     expect(ts.getTileDefinition(2)).toBeUndefined();
     expect(ts.getTileDefinition(0)).toBeDefined();

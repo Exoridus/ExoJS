@@ -322,7 +322,7 @@ export class Collider {
     return edges;
   }
 
-  /** Internal: mark destroyed (called by the world). */
+  /** @internal - mark destroyed (called by the world). */
   public _markDestroyed(): void {
     this._destroyed = true;
 

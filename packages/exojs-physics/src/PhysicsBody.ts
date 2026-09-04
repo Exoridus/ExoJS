@@ -34,7 +34,9 @@ export interface BodyOptions {
  * and registered without the body importing the concrete world class.
  */
 export interface BodyOwner {
+  /** @internal */
   _allocateColliderId(): number;
+  /** @internal */
   _registerCollider(collider: Collider): void;
 }
 
@@ -514,7 +516,7 @@ export class PhysicsBody {
     this._deltaSin = 0;
   }
 
-  /** Internal: detach a collider (called by the world during destruction). */
+  /** @internal - detach a collider (called by the world during destruction). */
   public _removeCollider(collider: Collider): void {
     const index = this._colliders.indexOf(collider);
 
@@ -567,7 +569,7 @@ export class PhysicsBody {
     }
   }
 
-  /** Internal: mark destroyed (called by the world). */
+  /** @internal - mark destroyed (called by the world). */
   public _markDestroyed(): void {
     this._destroyed = true;
   }

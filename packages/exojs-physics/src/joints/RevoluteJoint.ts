@@ -104,6 +104,7 @@ export class RevoluteJoint extends Joint {
     this._referenceAngle = options.bodyB.angle - options.bodyA.angle;
   }
 
+  /** @internal */
   public override _prepare(h: number): void {
     const bodyA = this.bodyA;
     const bodyB = this.bodyB;
@@ -176,6 +177,7 @@ export class RevoluteJoint extends Joint {
     }
   }
 
+  /** @internal */
   public override _warmStart(): void {
     if (!this._active) {
       return;
@@ -189,6 +191,7 @@ export class RevoluteJoint extends Joint {
     this._applyImpulse(this._impulseX, this._impulseY);
   }
 
+  /** @internal */
   public override _solve(useBias: boolean): void {
     if (!this._active) {
       return;
