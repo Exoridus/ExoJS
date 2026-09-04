@@ -190,16 +190,6 @@ export const graphemeCount = (text: string, locale?: string): number => {
 };
 
 /**
- * Reverse `text` by grapheme cluster.
- *
- * This is what the right-to-left approximation of the simple path needs:
- * reversing by code point moves a combining mark in front of its base and
- * tears a ZWJ sequence apart. It is still only a reversal - see
- * {@link LayoutOptions.direction} for what that does and does not buy.
- */
-export const reverseGraphemes = (text: string, locale?: string): string => graphemes(text, locale).reverse().join('');
-
-/**
  * One word-granularity segment of a string. Segments tile the input:
  * consecutive `[start, end)` ranges concatenate back to it with no gaps.
  */

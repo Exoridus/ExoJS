@@ -5,7 +5,7 @@
  * plus the wrapping runs the line breaker consumes.
  */
 
-import { graphemeCount, graphemes, graphemeStarts, hasIntlSegmenter, reverseGraphemes, textRuns, wordSegments } from '#rendering/text/segmentation';
+import { graphemeCount, graphemes, graphemeStarts, hasIntlSegmenter, isTrivialText, textRuns, wordSegments } from '#rendering/text/segmentation';
 
 const COMBINING = 'é'; // e + combining acute
 const SKIN_TONE = '\u{1F44D}\u{1F3FD}'; // thumbs up + medium skin tone
@@ -46,9 +46,12 @@ describe('grapheme segmentation', () => {
     expect(graphemeCount('')).toBe(0);
   });
 
-  test('reversal moves whole clusters, keeping a combining mark on its base', () => {
-    expect(reverseGraphemes(`A${COMBINING}B`)).toBe(`B${COMBINING}A`);
-    expect(reverseGraphemes(`${ZWJ_FAMILY}!`)).toBe(`!${ZWJ_FAMILY}`);
+  test('text below the first combining mark is segmented without the platform segmenter', () => {
+    expect(isTrivialText('Score: 1234')).toBe(true);
+    expect(isTrivialText(`A${COMBINING}`)).toBe(false);
+    expect(isTrivialText(FLAG)).toBe(false);
+    // CR is excluded because CRLF is a single cluster.
+    expect(isTrivialText('a\r\nb')).toBe(false);
   });
 });
 

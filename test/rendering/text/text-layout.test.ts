@@ -705,6 +705,8 @@ describe('buildTextPageQuads', () => {
       height: 12,
       penX: 0,
       penAdvance: 8,
+      sourceStart: 0,
+      sourceEnd: 1,
       page: 0,
       uvLeft: 0,
       uvTop: 0,
@@ -804,6 +806,56 @@ describe('buildTextPageQuads', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Source indexes - what maps a caret or a selection onto a laid-out glyph
+// ---------------------------------------------------------------------------
+
+describe('layoutText source indexes', () => {
+  const provider = makeProvider(10);
+  const style = (): TextStyle => new TextStyle({ fontSize: 16, lineHeight: 1, leading: 0, align: 'left' });
+
+  test('a single line maps one glyph to one source character', () => {
+    const { placements, lines } = layoutText('Hello', style(), {}, provider);
+
+    expect(placements.map(placement => placement.sourceStart)).toEqual([0, 1, 2, 3, 4]);
+    expect(lines[0]).toMatchObject({ sourceStart: 0, sourceEnd: 5 });
+  });
+
+  test('a hard line break advances the next line past the break character', () => {
+    const { lines } = layoutText('ab\ncd', style(), {}, provider);
+
+    expect(lines[0]).toMatchObject({ sourceStart: 0, sourceEnd: 2 });
+    expect(lines[1]).toMatchObject({ sourceStart: 3, sourceEnd: 5 });
+  });
+
+  test('a soft wrap splits one string into lines that still point back into it', () => {
+    // 'alpha beta' at advance 10 wraps after 'alpha'; nothing in the string
+    // marks the break, so only the source range can locate the second line.
+    const { lines } = layoutText('alpha beta', style(), { maxWidth: 60 }, provider);
+
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toMatchObject({ sourceStart: 0, sourceEnd: 5 });
+    expect(lines[1]).toMatchObject({ sourceStart: 6, sourceEnd: 10 });
+  });
+
+  test('collapsed blanks do not shift the offsets the glyphs report', () => {
+    // Preprocessing turns 'a   b' into 'a b'; 'b' is still source offset 4.
+    const { placements } = layoutText('a   b', style(), { whiteSpace: 'pre-line' }, provider);
+
+    expect(placements).toHaveLength(3);
+    expect(placements.at(-1)).toMatchObject({ sourceStart: 4, sourceEnd: 5 });
+  });
+
+  test('the ellipsis stands for nothing and reports an empty range at the cut', () => {
+    const { placements } = layoutText('ABCD\nE', style(), { maxWidth: 30, maxHeight: 16, overflow: 'ellipsis' }, provider);
+
+    const ellipsis = placements.at(-1)!;
+
+    expect(ellipsis.sourceStart).toBe(ellipsis.sourceEnd);
+    expect(ellipsis.sourceStart).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Grapheme safety - the unit of layout is a cluster, never a code point
 // ---------------------------------------------------------------------------
 
@@ -884,6 +936,20 @@ describe('layoutText grapheme safety', () => {
     layoutText(`A${COMBINING}`, style, { direction: 'rtl' }, provider);
 
     expect(units).toEqual([COMBINING, 'A']);
+  });
+
+  test('a cluster reports the source range it came from, astral offsets included', () => {
+    const { provider } = makeRecordingProvider(10);
+    const style = new TextStyle({ fontSize: 16, align: 'left' });
+    const text = `A${FLAG}B`;
+
+    const placements = layoutText(text, style, {}, provider).placements;
+
+    expect(placements.map(placement => [placement.sourceStart, placement.sourceEnd])).toEqual([
+      [0, 1],
+      [1, 5],
+      [5, 6],
+    ]);
   });
 
   test('a line wraps at the word boundaries of an unspaced script', () => {

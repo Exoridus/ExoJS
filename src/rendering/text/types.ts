@@ -145,6 +145,20 @@ export interface TextLineMetrics {
   /** Top of this line's box. */
   readonly y: number;
   /**
+   * UTF-16 offset in the laid-out string where this line's content starts.
+   *
+   * The index space is the string handed to {@link layoutText}, before
+   * whitespace preprocessing and wrapping. This is what maps a caret or a
+   * selection onto a line, and it is the only thing that can: a soft wrap
+   * splits one string into several lines with no character to mark the break.
+   */
+  readonly sourceStart: number;
+  /**
+   * UTF-16 offset one past this line's content. Whitespace a wrap dropped and
+   * characters an ellipsis replaced lie outside the range.
+   */
+  readonly sourceEnd: number;
+  /**
    * Advance width of the line, with no trailing letter spacing. For a
    * justified line this is the width AFTER justification (equal to the
    * paragraph's widest line), not the line's natural pre-justify width.
@@ -170,6 +184,16 @@ export interface GlyphPlacement {
   readonly penX: number;
   /** Pen step from this glyph to the next, `letterSpacing` included. */
   readonly penAdvance: number;
+  /**
+   * UTF-16 offset in the laid-out string this glyph was produced from.
+   *
+   * The index space is the string handed to {@link layoutText}. A glyph that
+   * stands for no source character - the ellipsis an overflow appended -
+   * reports an empty range at the point it replaced.
+   */
+  readonly sourceStart: number;
+  /** UTF-16 offset one past this glyph's source characters. */
+  readonly sourceEnd: number;
   /** Which {@link AtlasPage} within the atlas holds this glyph's texture data. */
   readonly page: number;
   readonly uvLeft: number;
