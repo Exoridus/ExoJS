@@ -103,6 +103,7 @@ const internals = (
   _textFrame: Text | null;
   _textDraws: Text | null;
   _textNodes: Text | null;
+  _textBudget: Text | null;
   _sparkline: { moveTo: unknown } | null;
   _root: unknown;
 } => layer as unknown as ReturnType<typeof internals>;
@@ -233,10 +234,68 @@ describe('PerformanceLayer', () => {
     expect(int._textFrame).toBeNull();
     expect(int._textDraws).toBeNull();
     expect(int._textNodes).toBeNull();
+    expect(int._textBudget).toBeNull();
     expect(int._sparkline).toBeNull();
 
     // Double-destroy (and destroy before any update()) must also be safe.
     expect(() => layer.destroy()).not.toThrow();
     expect(() => new PerformanceLayer(makeApp()).destroy()).not.toThrow();
+  });
+
+  describe('frame budget', () => {
+    test('defaults to one 60 Hz frame', () => {
+      expect(new PerformanceLayer(makeApp()).frameBudget).toBeCloseTo(1 / 60, 10);
+    });
+
+    test('a frame inside the budget leaves the overrun count at zero', () => {
+      const layer = new PerformanceLayer(makeApp());
+
+      layer.update(time(10));
+
+      expect(internals(layer)._textBudget?.text).toBe('Over: 0/120 (16.7ms)');
+    });
+
+    test('the Over row counts only the frames longer than the budget', () => {
+      const layer = new PerformanceLayer(makeApp());
+
+      layer.update(time(10));
+      layer.update(time(40));
+      layer.update(time(50));
+
+      expect(internals(layer)._textBudget?.text).toBe('Over: 2/120 (16.7ms)');
+    });
+
+    test('a reassigned budget re-decides which retained samples count as overruns', () => {
+      const layer = new PerformanceLayer(makeApp());
+
+      layer.update(time(20));
+      expect(internals(layer)._textBudget?.text).toBe('Over: 1/120 (16.7ms)');
+
+      layer.frameBudget = Time.seconds(1 / 30);
+      layer.update(time(20));
+
+      // Both retained 20ms samples now sit inside the 33.3ms budget.
+      expect(internals(layer)._textBudget?.text).toBe('Over: 0/120 (33.3ms)');
+    });
+
+    test('the frame-time and budget rows turn red while the window holds an overrun and revert once it ages out', () => {
+      const layer = new PerformanceLayer(makeApp());
+
+      layer.update(time(10));
+
+      const int = internals(layer);
+      const inBudgetColor = int._textFrame?.style.fillColor.clone();
+
+      layer.update(time(40));
+
+      expect(int._textFrame?.style.fillColor.equals(inBudgetColor!)).toBe(false);
+      expect(int._textBudget?.style.fillColor.equals(inBudgetColor!)).toBe(false);
+
+      // Push the 40ms sample out of the 120-entry ring.
+      for (let i = 0; i < 120; i++) layer.update(time(10));
+
+      expect(int._textFrame?.style.fillColor.equals(inBudgetColor!)).toBe(true);
+      expect(int._textBudget?.style.fillColor.equals(inBudgetColor!)).toBe(true);
+    });
   });
 });
