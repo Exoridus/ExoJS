@@ -177,13 +177,13 @@ export class TileSet {
   }
 
   /**
-   * Build definitions from an array, replacing the internal definitions map.
-   * Each entry's properties are copied and frozen.
+   * Replace all tile definitions with the given array. Each entry's
+   * properties are copied and frozen.
    *
    * Part of the tilemap SDK contract for extension packages that build
    * tilesets programmatically.
    */
-  public _setDefinitions(definitions: readonly TileDefinition[]): void {
+  public setDefinitions(definitions: readonly TileDefinition[]): void {
     const map = this._definitions as Map<number, TileDefinition>;
     map.clear();
     for (const def of definitions) {

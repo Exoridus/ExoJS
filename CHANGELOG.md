@@ -80,6 +80,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   carries into the next cycle, and a long frame fires every period it covered.
   Replace `loop: true` with `interval: <seconds>`; a schedule that used a
   trailing `{ time: period, count: 0 }` entry to fake a period can drop it.
+- **`TileSet._setDefinitions` is now `setDefinitions`.** The tilemap SDK
+  contract for extension packages that build tilesets programmatically loses
+  the leading underscore now that the method is the only cross-package member
+  in the extension packages that isn't `@internal`; the other 25
+  package-private members across `@codexo/exojs-physics` and
+  `@codexo/exojs-tilemap` are now tagged `@internal` and no longer appear in
+  the published `.d.ts`. Rename the call.
 
 ### Added
 
