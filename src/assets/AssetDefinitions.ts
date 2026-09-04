@@ -243,6 +243,31 @@ export type CatalogLeafForPath<S extends string> = [KindByPath<S>] extends [neve
 export type CatalogEntry = string | Asset<unknown> | AnyAssetConfig;
 
 /**
+ * The diagnostic a bare path with an unregistered suffix turns into at the
+ * catalog literal. The failure branch IS the message: the offending string is
+ * not assignable to it, so the error names the path and the way out.
+ */
+export type UnrecognisedAssetSuffix<S extends string> =
+  `ExoJS: no built-in asset type claims the suffix of "${S}". Name it with Asset.type(...) or use a compound suffix.`;
+
+/**
+ * A catalog entry checked at the literal: a bare path keeps its type when its
+ * suffix resolves to a registered asset type and becomes
+ * {@link UnrecognisedAssetSuffix} when it does not. Non-literal strings pass
+ * through untouched, so a path that only exists at runtime is still accepted.
+ */
+export type ValidatedCatalogEntry<E extends CatalogEntry> = E extends string
+  ? string extends E
+    ? E
+    : [KindByPath<E>] extends [never]
+      ? UnrecognisedAssetSuffix<E>
+      : E
+  : E;
+
+/** {@link ValidatedCatalogEntry} applied to every field of a catalog literal. */
+export type ValidatedCatalog<M extends Record<string, CatalogEntry>> = { readonly [K in keyof M]: ValidatedCatalogEntry<M[K]> };
+
+/**
  * The leaf type a {@link CatalogEntry} materializes as - always BRANDED (see
  * {@link LeafForKind}), because every one of these is produced by `createLeaf`
  * and therefore carries the runtime `_assetMeta` stamp. A {@link ValueAsset}
