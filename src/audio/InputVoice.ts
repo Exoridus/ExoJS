@@ -22,8 +22,6 @@ export interface InputVoiceInit extends BaseVoiceInit {
  * A live stream cannot be seeked, paused, looped, or rate-shifted, so it only
  * mixes in {@link Spatializable} (via {@link BaseVoice}) on top of the base
  * Voice surface (volume / fade / stop / effects / output tap / bus).
- *
- * @internal
  */
 export class InputVoice extends BaseVoice {
   private readonly _sourceNode: MediaStreamAudioSourceNode;

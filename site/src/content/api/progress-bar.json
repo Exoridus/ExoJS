@@ -3535,7 +3535,7 @@
         },
         {
           "name": "barNode",
-          "signature": "barNode: BackgroundNode | null",
+          "signature": "barNode: UIBackgroundNode | null",
           "signatureTokens": [
             {
               "text": "barNode",
@@ -3546,7 +3546,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "BackgroundNode",
+              "text": "UIBackgroundNode",
               "kind": "type"
             },
             {
@@ -4569,7 +4569,7 @@
         },
         {
           "name": "trackNode",
-          "signature": "trackNode: BackgroundNode | null",
+          "signature": "trackNode: UIBackgroundNode | null",
           "signatureTokens": [
             {
               "text": "trackNode",
@@ -4580,7 +4580,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "BackgroundNode",
+              "text": "UIBackgroundNode",
               "kind": "type"
             },
             {

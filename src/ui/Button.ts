@@ -8,7 +8,7 @@ import type { TextStyleOptions } from '#rendering/text/TextStyle';
 import type { UIBackground, UIBackgroundInput, UIBackgroundOptions, UIFillPatch, UIWidgetState } from './theme';
 import { applyUIFillPatch, backgroundOptionsFrom, createUIBackground, resolveUISkin } from './theme';
 import { Widget } from './Widget';
-import { WidgetBackground } from './WidgetBackground';
+import { type UIBackgroundNode, WidgetBackground } from './WidgetBackground';
 
 export interface ButtonOptions {
   width?: number;
@@ -134,7 +134,7 @@ export class Button extends Widget {
   }
 
   /** The node painting the background, or `null` while it paints nothing. */
-  public get backgroundNode(): WidgetBackground['node'] {
+  public get backgroundNode(): UIBackgroundNode | null {
     return this._surface.node;
   }
 

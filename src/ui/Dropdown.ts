@@ -8,7 +8,7 @@ import type { TextStyleOptions } from '#rendering/text/TextStyle';
 import type { UIWidgetState } from './theme';
 import { resolveUISkin } from './theme';
 import { Widget } from './Widget';
-import { WidgetBackground } from './WidgetBackground';
+import { type UIBackgroundNode, WidgetBackground } from './WidgetBackground';
 
 /** One selectable entry of a {@link Dropdown}. */
 export interface DropdownItem<T> {
@@ -237,7 +237,7 @@ export class Dropdown<T = string> extends Widget {
   }
 
   /** The node painting the closed control, or `null` while it paints nothing. */
-  public get backgroundNode(): WidgetBackground['node'] {
+  public get backgroundNode(): UIBackgroundNode | null {
     return this._surface.node;
   }
 

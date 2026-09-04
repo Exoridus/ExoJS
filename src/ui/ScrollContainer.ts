@@ -9,7 +9,7 @@ import { Scrollbar } from './Scrollbar';
 import type { UIBackground, UIBackgroundInput, UIBackgroundOptions } from './theme';
 import { applyUIFillPatch, backgroundOptionsFrom, createUIBackground } from './theme';
 import { Widget } from './Widget';
-import { WidgetBackground } from './WidgetBackground';
+import { type UIBackgroundNode, WidgetBackground } from './WidgetBackground';
 
 const transparentBackground: UIBackground = { kind: 'none' };
 
@@ -180,7 +180,7 @@ export class ScrollContainer extends Widget {
   }
 
   /** The node painting the background, or `null` while it paints nothing. */
-  public get backgroundNode(): WidgetBackground['node'] {
+  public get backgroundNode(): UIBackgroundNode | null {
     return this._surface.node;
   }
 

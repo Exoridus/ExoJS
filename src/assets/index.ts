@@ -15,6 +15,7 @@ export type {
   KindByPath,
 } from './AssetDefinitions';
 export type { AssetDependencyScope, AssetFactory, AssetFactoryContext } from './AssetFactory';
+export type { CatalogResourceLeaf, CatalogValueLeaf } from './assetMeta';
 export type { AssetNetworkErrorOptions } from './AssetNetworkError';
 export { AssetNetworkError } from './AssetNetworkError';
 export { AssetRef } from './AssetRef';

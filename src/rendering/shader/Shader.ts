@@ -4,7 +4,6 @@ import type { ShaderUniform } from './ShaderUniform';
 /**
  * Backend-specific GPU program object paired to a {@link Shader}.
  * Implemented separately for WebGL2 and WebGPU so `Shader` stays backend-agnostic.
- * @internal
  */
 export interface ShaderProgram {
   /** Compile and link the GPU program, then populate `shader.attributes` and `shader.uniforms`. */

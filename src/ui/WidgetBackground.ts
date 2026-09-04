@@ -6,7 +6,14 @@ import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 
 import type { UIAnimatedBackground, UIBackground, UIFillBackground, UINineSliceBackground, UISpriteBackground } from './theme';
 
-type BackgroundNode = Graphics | NineSliceSprite | RepeatingSprite | AnimatedSprite;
+/**
+ * The node a widget's painted surface currently uses: a {@link Graphics} for a
+ * vector fill, a {@link NineSliceSprite} or {@link RepeatingSprite} for a
+ * texture, an {@link AnimatedSprite} for a clip. Widgets expose theirs so a
+ * caller can reach the live node for effects or measurements; the widget owns
+ * it and swaps it whenever the skin's background kind changes.
+ */
+export type UIBackgroundNode = Graphics | NineSliceSprite | RepeatingSprite | AnimatedSprite;
 
 const sameNineSlice = (a: UINineSliceBackground, b: UINineSliceBackground): boolean =>
   a.texture === b.texture && a.slices === b.slices && a.border === b.border && a.modes === b.modes;
@@ -28,7 +35,7 @@ const sameAnimated = (a: UIAnimatedBackground, b: UIAnimatedBackground): boolean
 export class WidgetBackground {
   private readonly _owner: Container;
   private readonly _index: number;
-  private _node: BackgroundNode | null = null;
+  private _node: UIBackgroundNode | null = null;
   private _painted: UIBackground | null = null;
 
   /**
@@ -43,7 +50,7 @@ export class WidgetBackground {
   }
 
   /** The live node, or `null` while the background paints nothing. */
-  public get node(): BackgroundNode | null {
+  public get node(): UIBackgroundNode | null {
     return this._node;
   }
 
@@ -130,7 +137,7 @@ export class WidgetBackground {
   }
 
   /** Swap the painted node, re-inserting the replacement at the declared slot. */
-  private _replaceNode<T extends BackgroundNode | null>(next: T): T {
+  private _replaceNode<T extends UIBackgroundNode | null>(next: T): T {
     const previous = this._node;
 
     if (previous === next) {

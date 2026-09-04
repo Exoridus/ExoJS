@@ -29,7 +29,6 @@ const bytesPerElementOf = (data: DataContainer): number => (data as { BYTES_PER_
  * a `subarray()` view to express the length. Every runtime must go through this
  * (and {@link uploadBufferStore}) rather than calling `gl` directly - a direct
  * call would silently upload the whole array for a partial range.
- * @internal
  */
 export const uploadBufferRange = (gl: WebGL2RenderingContext, buffer: WebGl2RenderBuffer, byteOffset: number): void => {
   const { data, uploadElementCount } = buffer;
@@ -47,7 +46,6 @@ export const uploadBufferRange = (gl: WebGL2RenderingContext, buffer: WebGl2Rend
  * (Re)allocate the buffer's GPU store from its pending upload - the orphaning
  * `bufferData` counterpart to {@link uploadBufferRange}. The store is sized to
  * the uploaded RANGE, exactly as a `subarray()` argument used to size it.
- * @internal
  */
 export const uploadBufferStore = (gl: WebGL2RenderingContext, buffer: WebGl2RenderBuffer): void => {
   const { data, uploadElementCount } = buffer;
@@ -136,6 +134,11 @@ export class WebGl2RenderBuffer {
     return this._version;
   }
 
+  /**
+   * Bind the buffer to `runtime` and flush whatever upload is already pending.
+   * Returns `this` for chaining onto the constructor. `accountant` is supplied
+   * by the backend; a renderer connecting its own buffer omits it.
+   */
   public connect(runtime: WebGl2RenderBufferRuntime, accountant?: GpuResourceAccountant): this {
     this._runtime = runtime;
     this._accountant = accountant ?? null;

@@ -5,7 +5,7 @@ import type { Pointer } from '#input/Pointer';
 import { Vector } from '#math/Vector';
 
 import { Widget } from './Widget';
-import { WidgetBackground } from './WidgetBackground';
+import { type UIBackgroundNode, WidgetBackground } from './WidgetBackground';
 
 /** The axis a {@link Scrollbar} runs along. */
 export type ScrollbarOrientation = 'vertical' | 'horizontal';
@@ -196,7 +196,7 @@ export class Scrollbar extends Widget {
   }
 
   /** The node painting the track, or `null` while it paints nothing. */
-  public get trackNode(): WidgetBackground['node'] {
+  public get trackNode(): UIBackgroundNode | null {
     return this._track.node;
   }
 

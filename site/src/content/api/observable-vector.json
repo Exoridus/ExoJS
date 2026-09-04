@@ -6,9 +6,9 @@
   "subsystem": "math",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 26,
+  "memberCount": 25,
   "counts": {
-    "constructors": 1,
+    "constructors": 0,
     "methods": 20,
     "properties": 5,
     "events": 0
@@ -25,133 +25,6 @@
         "Deliberately has no `clone()`. A clone is a value, not a second notification channel into this vector's owner, so it would have to hand back a plain `Vector` - and importing `Vector` here closes a module-evaluation cycle (`Vector` imports `Rectangle`, which constructs at module scope). Copy explicitly instead: `new Vector(v.x, v.y)`."
       ],
       "importLine": "import { ObservableVector } from '@codexo/exojs'",
-      "sourceLink": null
-    },
-    {
-      "id": "constructors",
-      "title": "Constructors",
-      "members": [
-        {
-          "name": "new",
-          "signature": "new(owner: ObservableVectorOwner | null, channel: number, x: number, y: number): ObservableVector",
-          "signatureTokens": [
-            {
-              "text": "new",
-              "kind": "keyword"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "owner",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ObservableVectorOwner",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "channel",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "x",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "y",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ObservableVector",
-              "kind": "type"
-            }
-          ],
-          "params": [
-            {
-              "name": "owner",
-              "type": "ObservableVectorOwner | null",
-              "optional": false
-            },
-            {
-              "name": "channel",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "x",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "y",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "ObservableVector",
-          "description": ""
-        }
-      ],
-      "paragraphs": [],
-      "importLine": null,
       "sourceLink": null
     },
     {

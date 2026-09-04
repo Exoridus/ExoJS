@@ -19,8 +19,8 @@ const fill = <T>(cursor: T[], source: readonly T[]): T[] => {
   return cursor;
 };
 
-/** Any object that can be driven each frame by a delta in seconds. @internal */
-interface Ticker {
+/** Any object that can be driven each frame by a delta in seconds. */
+export interface Ticker {
   update(deltaSeconds: number): void;
   /** Cancel whatever this ticker is driving. Called by {@link TweenSystem.clear}. */
   stop?(): void;

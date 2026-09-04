@@ -35,7 +35,6 @@ const growCapacity = (current: number, min: number): number => {
  * recreated or dropped (growth, device loss, destroy); instruction sets
  * stamped with an older generation fail plan-level validation and fall back
  * to entry replay.
- * @internal
  */
 export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   private _generation = 1;
@@ -80,6 +79,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
    */
   public rendererReplayState: WebGpuRetainedRendererReplayState | null = null;
 
+  /** @internal */
   public constructor(accountant: GpuResourceAccountant, onRelease: (bundle: WebGpuRetainedGroupBundle) => void) {
     this._accountant = accountant;
     this._onRelease = onRelease;

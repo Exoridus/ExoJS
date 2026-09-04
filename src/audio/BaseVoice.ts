@@ -75,10 +75,8 @@ export interface SpatialVoice extends Voice {
  * inserted between the source and the gain only once the voice is actually
  * spatialized. Concrete voices provide the two source-specific hooks
  * {@link BaseVoice._routeThroughPanner} and {@link BaseVoice._teardownSource}.
- *
- * @internal
  */
-export abstract class BaseVoice implements Voice, SpatialVoice {
+export abstract class BaseVoice implements Voice {
   protected readonly _audioContext: AudioContext;
   protected readonly _output: GainNode;
   protected readonly _system: AudioSystem;

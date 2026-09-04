@@ -21,8 +21,6 @@ declare const gamepadAxisChannelBrand: unique symbol;
  * {@link GamepadButtonChannel} or raw `number`s during mapping authoring.
  * User code does not construct values of this type directly - read them
  * from the {@link GamepadAxis} namespace (`GamepadAxis.LeftStickLeft`, ...).
- *
- * @internal
  */
 export type GamepadAxisChannel = (
   | 544

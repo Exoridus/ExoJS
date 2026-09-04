@@ -233,6 +233,7 @@ export class AssetResidency {
   // screen and a scene preloader may wait on one drain, and both have to settle.
   private readonly _backgroundResolvers = new Set<() => void>();
 
+  /** @internal */
   public constructor(typeRegistry: AssetTypeRegistry, decoder: AssetDecoder, signals: AssetResidencySignals, concurrency: number, hooks: AssetResidencyHooks) {
     this._typeRegistry = typeRegistry;
     this._decoder = decoder;

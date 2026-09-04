@@ -1,0 +1,83 @@
+{
+  "title": "CatalogResourceLeaf",
+  "description": "A resource type's catalog leaf: the heal-in-place placeholder resource itself (`Texture`, `Sound`, ...), branded. Stays assignable to the bare resource, so `const texture: Texture = bag.player` keeps working.",
+  "symbol": "CatalogResourceLeaf",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A resource type's catalog leaf: the heal-in-place placeholder resource itself (`Texture`, `Sound`, ...), branded. Stays assignable to the bare resource, so `const texture: Texture = bag.player` keeps working."
+      ],
+      "importLine": "import { CatalogResourceLeaf } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "CatalogResourceLeaf",
+          "signature": "T & CatalogLeafBrand<T>",
+          "signatureTokens": [
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CatalogLeafBrand",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/assetMeta.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/assetMeta.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/assetMeta.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/assetMeta.ts"
+}

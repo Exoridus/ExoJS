@@ -1,0 +1,88 @@
+{
+  "title": "PointerChannel",
+  "description": "Branded numeric type identifying a canonical pointer-state input channel. Values are absolute offsets into the engine's shared Float32Array input channel buffer; the brand keeps the type system from confusing pointer channels with other channel kinds. User code reads channel constants from the Pointer namespace (`Pointer.X`, `Pointer.Active`, `Pointer.Slot1X`, ...).",
+  "symbol": "PointerChannel",
+  "kind": "type",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Branded numeric type identifying a canonical pointer-state input channel. Values are absolute offsets into the engine's shared Float32Array input channel buffer; the brand keeps the type system from confusing pointer channels with other channel kinds.",
+        "User code reads channel constants from the Pointer namespace (`Pointer.X`, `Pointer.Active`, `Pointer.Slot1X`, ...)."
+      ],
+      "importLine": "import { PointerChannel } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "PointerChannel",
+          "signature": "number & { [pointerChannelBrand]: void }",
+          "signatureTokens": [
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[pointerChannelBrand]",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/Pointer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/Pointer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/Pointer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/Pointer.ts"
+}

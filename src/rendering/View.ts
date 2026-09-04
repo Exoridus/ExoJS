@@ -5,7 +5,7 @@ import { Bounds } from '#math/Bounds';
 import { Flags } from '#math/Flags';
 import { Matrix } from '#math/Matrix';
 import { ObservableSize } from '#math/ObservableSize';
-import { ObservableVector, type ObservableVectorOwner } from '#math/ObservableVector';
+import { ObservableVector } from '#math/ObservableVector';
 import type { PointLike } from '#math/PointLike';
 import { Rectangle } from '#math/Rectangle';
 import type { Size } from '#math/Size';
@@ -73,7 +73,7 @@ export interface ViewOptions {
  * shake animations.
  * @stable
  */
-export class View implements ObservableVectorOwner {
+export class View {
   private readonly _center: ObservableVector;
   private readonly _size: ObservableSize;
   private readonly _viewport: Rectangle;

@@ -233,7 +233,12 @@ const ASSETS_DEV_PROXY_DUCK_TYPING_KEYS = new Set(['then', 'toJSON']);
  */
 let assetsDevProxyInstanceCounter = 0;
 
-/** @internal */
+/**
+ * The class behind the {@link Assets} type. Catalogs are created through
+ * {@link Assets.from} / {@link Assets.one} / {@link Assets.compose}, never with
+ * `new` - the public {@link Assets} type adds the per-key properties that make
+ * `catalog.player` resolve to its leaf, which this class alone cannot express.
+ */
 export class AssetsImpl<M extends Record<string, CatalogEntry>> {
   public readonly entries!: InferAssetsEntries<M>;
 

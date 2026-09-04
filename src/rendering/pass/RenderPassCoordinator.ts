@@ -16,7 +16,6 @@ import type { RenderPassDescriptor, RenderPassLoad } from './RenderPassDescripto
  * clipping needs, while each maps it onto its own state model: WebGL2 onto
  * ambient GL state (bound framebuffer, viewport, scissor, stencil), WebGPU onto
  * explicit render passes built up front with their attachments.
- * @internal
  */
 export interface RenderPassCoordinator {
   /** The target the active pass draws into (the backend root when idle). */

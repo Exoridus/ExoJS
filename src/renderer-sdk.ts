@@ -14,11 +14,17 @@
 export { defineRendererBinding } from '#extensions/defineRendererBinding';
 export { packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
 export { Drawable } from '#rendering/Drawable';
+export type { MaterialKey } from '#rendering/material/MaterialKey';
+export type { RenderPassCoordinator } from '#rendering/pass/RenderPassCoordinator';
+export type { RenderPassDescriptor, RenderPassLoad } from '#rendering/pass/RenderPassDescriptor';
+export { StencilAttachmentMode } from '#rendering/pass/RenderPassDescriptor';
 export { PixelSnapMode } from '#rendering/pixelSnap';
+export type { DrawCommand } from '#rendering/plan/renderCommand';
 export type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 export type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet';
 export type { RenderBackend } from '#rendering/RenderBackend';
 export { RenderBackendType } from '#rendering/RenderBackendType';
+export type { InstanceAttributeBinding, InstanceDataView } from '#rendering/RenderBatch';
 export type { DrawableConstructor, Renderer } from '#rendering/Renderer';
 export { RendererRegistry } from '#rendering/RendererRegistry';
 export type { ShaderProgram } from '#rendering/shader/Shader';

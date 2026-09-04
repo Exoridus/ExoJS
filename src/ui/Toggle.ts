@@ -1,7 +1,7 @@
 import type { CheckableOptions } from './CheckableWidget';
 import { CheckableWidget } from './CheckableWidget';
 import type { UIThemeRole } from './theme';
-import { WidgetBackground } from './WidgetBackground';
+import { type UIBackgroundNode, WidgetBackground } from './WidgetBackground';
 
 /** Options for {@link Toggle}. */
 export interface ToggleOptions extends CheckableOptions {
@@ -38,12 +38,12 @@ export class Toggle extends CheckableWidget {
   }
 
   /** The node painting the track, or `null` while it paints nothing. */
-  public get trackNode(): WidgetBackground['node'] {
+  public get trackNode(): UIBackgroundNode | null {
     return this._track.node;
   }
 
   /** The node painting the knob, or `null` while it paints nothing. */
-  public get knobNode(): WidgetBackground['node'] {
+  public get knobNode(): UIBackgroundNode | null {
     return this._knob.node;
   }
 

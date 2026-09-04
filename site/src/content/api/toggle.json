@@ -1486,7 +1486,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": ""
+          "description": "Destroy this container and every node beneath it. Ownership is by containment: detaching a subtree only unlinks it, so the descendants' GPU-backed resources (cached textures, filters, render textures) and signal listeners would outlive the tree that owned them and leak on every scene change. Idempotent: a second call is a no-op."
         },
         {
           "name": "focus",
@@ -3787,7 +3787,7 @@
         },
         {
           "name": "knobNode",
-          "signature": "knobNode: BackgroundNode | null",
+          "signature": "knobNode: UIBackgroundNode | null",
           "signatureTokens": [
             {
               "text": "knobNode",
@@ -3798,7 +3798,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "BackgroundNode",
+              "text": "UIBackgroundNode",
               "kind": "type"
             },
             {
@@ -4297,7 +4297,7 @@
         },
         {
           "name": "trackNode",
-          "signature": "trackNode: BackgroundNode | null",
+          "signature": "trackNode: UIBackgroundNode | null",
           "signatureTokens": [
             {
               "text": "trackNode",
@@ -4308,7 +4308,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "BackgroundNode",
+              "text": "UIBackgroundNode",
               "kind": "type"
             },
             {

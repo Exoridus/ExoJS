@@ -86,7 +86,6 @@ export const packAffineMat3Std140 = (matrix: Matrix, out: Float32Array, offset =
  * `offset`: the 3×3 affine embedded in a 4×4 with a passthrough z-axis, so
  * `mat * vec4(worldX, worldY, 0.0, 1.0)` applies the canonical map. Returns
  * `out` for chaining.
- * @internal
  */
 export const packAffineMat4 = (matrix: Matrix, out: Float32Array, offset = 0): Float32Array => {
   // col0 = (a, c, 0, e)
@@ -125,7 +124,6 @@ export const packAffineMat4 = (matrix: Matrix, out: Float32Array, offset = 0): F
  * render pass, so a projection change is a pass boundary - and a boundary that
  * merely leaves and re-enters a group, restoring byte-identical group bytes,
  * would otherwise split the single-submit frame for no visible difference.
- * @internal
  */
 export const packedGroupChanged = (staged: Float32Array, written: Float32Array, writtenOffset: number): boolean => {
   for (let i = 0; i < staged.length; i++) {

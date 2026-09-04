@@ -20,6 +20,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   millisecond literals with `Time.seconds(ms / 1000)` (or write the value
   directly in seconds); `Envelope.releaseAt` replaces `envelope.release(...)`
   now that `release` names the duration property.
+- **The published `.d.ts` no longer carries `@internal` members.** The
+  declaration emit now strips them, so consumer autocomplete on `Loader`,
+  `AssetRef`, `Text`, `Tween`, `AudioBus` and the rest shows the API instead of
+  the engine's internals, and the published types finally agree with the
+  published API reference. Types that a public or renderer-SDK signature
+  genuinely exposes became part of the surface rather than disappearing with
+  the tag: `CheckableWidget`, `TextEditWidget`, `UIBackgroundNode`, `Ticker`,
+  `InputVoice`, `ShapeLike`, `PointerChannel`, `GamepadButtonChannel`,
+  `GamepadAxisChannel`, `CatalogResourceLeaf`, `CatalogValueLeaf`,
+  `OwnedNetworkHintSource` and `BmFontAdapter` on the root barrel;
+  `RenderPlanBuilder`, `DrawCommand`, `MaterialKey`, `InstanceDataView`,
+  `InstanceAttributeBinding`, `ShaderProgram`, `RenderPassCoordinator`,
+  `RenderPassDescriptor`, `RenderPassLoad`, `StencilAttachmentMode`, the
+  retained-group payload/replayer types and `WebGpuActiveRenderPass` on
+  `@codexo/exojs/renderer-sdk`. Going the other way, `SpriteFlags` and
+  `ViewFlags` - internal dirty-flag bitmasks that were exported by accident -
+  are gone from the root barrel, `ObservableVector`'s owner constructor is
+  internal (construct a plain vector with `new ObservableVector()`), and
+  `onAudioContextReady` is typed as the `Signal<[AudioContext]>` it always
+  was.
 - **`AnimatedSprite.defineClip` is now `addClip`, `Sound.defineSprite` is now
   `addSprite`, and `Spritesheet.addFrame`/`removeFrame` return `this`.** One
   verb pair, `add`/`remove`, for every named-registration mutator, and every

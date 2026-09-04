@@ -9,7 +9,14 @@ export const enum RenderEntryKind {
   Barrier,
 }
 
-/** @internal */
+/**
+ * One drawable submission inside a render plan, as the plan player hands it to
+ * a backend. A renderer reads the command the backend is currently submitting
+ * through `activeDrawCommand` to key per-draw state on it.
+ *
+ * Commands are pooled and recycled across frames - read what you need during
+ * the submission and never retain the object.
+ */
 export interface DrawCommand {
   readonly kind: RenderEntryKind.Draw;
   /** Mutable so the builder can recycle a pooled command across frames. */

@@ -9,7 +9,7 @@ export interface AssetMeta {
   readonly opts?: unknown;
 }
 
-/** Symbol under which {@link AssetMeta} rides on a handle-hybrid leaf. @internal */
+/** Symbol under which {@link AssetMeta} rides on a handle-hybrid leaf. */
 export const _assetMeta: unique symbol = Symbol('exo.assetMeta');
 
 /**
@@ -22,8 +22,6 @@ export const _assetMeta: unique symbol = Symbol('exo.assetMeta');
  * resolves to: a naked type parameter inside an intersection is skipped for
  * inference, so `T & CatalogLeafBrand<T>` infers `T` from THIS field alone and
  * yields the plain resource (`Texture`), not the branded leaf type.
- *
- * @internal
  */
 export interface CatalogLeafBrand<T> {
   readonly [_assetMeta]: AssetMeta & { readonly _resolvedType?: T };
@@ -33,14 +31,12 @@ export interface CatalogLeafBrand<T> {
  * A resource type's catalog leaf: the heal-in-place placeholder resource itself
  * (`Texture`, `Sound`, ...), branded. Stays assignable to the bare resource, so
  * `const texture: Texture = bag.player` keeps working.
- * @internal
  */
 export type CatalogResourceLeaf<T> = T & CatalogLeafBrand<T>;
 
 /**
  * A value type's catalog leaf: a deferred {@link AssetRef}, branded with the
  * DECODED payload type - which is what loading it resolves to.
- * @internal
  */
 export type CatalogValueLeaf<T> = AssetRef<T> & CatalogLeafBrand<T>;
 

@@ -14,7 +14,6 @@ import type { WebGpuBackend } from './WebGpuBackend';
  * change (e.g. an attachment resize with an unchanged view), so callers fold
  * this flag into their dirty condition. Staging is idempotent: when the rect is
  * unchanged the write is an identity and skipping the upload stays sound.
- * @internal
  */
 export const packSnapViewport = (backend: WebGpuBackend, out: Float32Array, offset: number): boolean => {
   const vp = backend._snapViewport;

@@ -18,7 +18,10 @@ import type { Loader } from './Loader';
 import type { LoaderScope } from './LoaderScope';
 import { isAbortError } from './SharedAbort';
 
-/** Sink a decoded resource is handed to, returning the value callers should see for it. */
+/**
+ * Sink a decoded resource is handed to, returning the value callers should see for it.
+ * @internal
+ */
 export type ResourceStore = (asset: CanonicalAsset, resource: unknown) => unknown;
 
 /** Construction options for {@link AssetDecoder}. Values are already resolved by `Loader` - see `Loader`'s constructor. */
