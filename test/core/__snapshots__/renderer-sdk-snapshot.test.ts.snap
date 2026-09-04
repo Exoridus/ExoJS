@@ -30,6 +30,7 @@ exports[`renderer-sdk export surface snapshot > sorted runtime export names matc
   "WebGpuStorageBuffer",
   "WebGpuUniformBuffer",
   "createWebGl2ShaderProgram",
+  "defineRendererBinding",
   "fillShaderSource",
   "getWebGpuBlendState",
   "isSampleableTexture",

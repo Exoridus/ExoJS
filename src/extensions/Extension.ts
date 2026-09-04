@@ -16,6 +16,11 @@ import type { DrawableConstructor, Renderer } from '#rendering/Renderer';
  * `targets` must contain at least one entry. All targets share the single renderer
  * instance produced by `create`. Returning `undefined` from `create` means the
  * backend is unsupported; the entire binding is skipped for that backend.
+ *
+ * The declared type erases the pairing between `targets` and what `create`
+ * returns, so write bindings with `defineRendererBinding`
+ * (`@codexo/exojs/renderer-sdk`), which infers the drawable union from `targets`
+ * and rejects a renderer that does not handle it.
  * @advanced
  */
 export interface RendererBinding<Target extends Drawable = Drawable> {

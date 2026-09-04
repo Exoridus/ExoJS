@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 30,
+  "memberCount": 31,
   "counts": {
     "constructors": 2,
-    "methods": 13,
+    "methods": 14,
     "properties": 15,
     "events": 0
   },
@@ -856,6 +856,78 @@
           ],
           "returnType": "Color",
           "description": "Build from a packed 0xRRGGBB number, a hex string, another color, or a plain { r, g, b, a } object. alpha overrides whatever the value carried. A number never carries alpha here - see the constructor for why six digits is the limit. Hex strings have no such problem, because their length is still there to read: '#f0f', '#f0fc', '#ff00ff' and '#ff00ffcc' are all accepted, alpha last, as CSS Color 4 spells them."
+        },
+        {
+          "name": "fromCss",
+          "signature": "fromCss(value: string, alpha?: number): Color",
+          "signatureTokens": [
+            {
+              "text": "fromCss",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "alpha",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "value",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "alpha",
+              "type": "number",
+              "optional": true
+            }
+          ],
+          "returnType": "Color",
+          "description": "Build from any CSS color the runtime's own parser understands: the four hex forms, rgb()/rgba(), hsl()/hsla(), hwb(), the CSS named colors, and anything else the engine resolves into sRGB. alpha overrides an alpha the value carried. The parsing is the platform's, not this package's, so the set of accepted syntaxes is the host engine's and the call needs a document - it throws in a worker and in any non-DOM host. It also throws on a value the engine rejects, and on one it accepts but keeps in a wider color space than sRGB (lab(), oklch(), color-mix() on some engines). Reach for Color.fromHex when the value is already hex: that path is self-contained, needs no document, and cannot be affected by the host."
         },
         {
           "name": "fromHex",

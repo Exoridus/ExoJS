@@ -95,6 +95,7 @@ export {
 export {
   createLdtkIntGridCellSource,
   getLdtkIntGridValueAt,
+  isLdtkFieldEnumType,
   LDTK_FLIP_NONE,
   LDTK_FLIP_X,
   LDTK_FLIP_XY,

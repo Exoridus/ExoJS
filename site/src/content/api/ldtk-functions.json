@@ -6,10 +6,10 @@
   "subsystem": "ldtk",
   "importPath": "@codexo/exojs-ldtk",
   "tier": "stable",
-  "memberCount": 13,
+  "memberCount": 14,
   "counts": {
     "constructors": 0,
-    "methods": 4,
+    "methods": 5,
     "properties": 9,
     "events": 0
   },
@@ -179,6 +179,53 @@
           ],
           "returnType": "LdtkIntGridValueDef | undefined",
           "description": "Look up the named/coloured LdtkIntGridValueDef at a tile coordinate on a TileLayer converted from an LDtk IntGrid layer instance. Returns undefined when the coordinate is out of bounds, the cell's raw value is 0 (empty), the raw value has no matching definition, or layer was not converted from an IntGrid layer instance (no IntGrid data attached via ldtkIntGridCsvProperty / ldtkIntGridValuesProperty). The underlying JSON-encoded CSV/value-defs properties are parsed once per layer and cached (see getParsedIntGridData) - safe to call from a hot path (e.g. per-cell or per-frame collision/classification checks)."
+        },
+        {
+          "name": "isLdtkFieldEnumType",
+          "signature": "isLdtkFieldEnumType(typeName: string): typeName",
+          "signatureTokens": [
+            {
+              "text": "isLdtkFieldEnumType",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "typeName",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "typeName",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "typeName",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "typeName",
+          "description": "Whether a raw LDtk __type names an enum. Applies to an Array<T> element type as well - LDtk spells a list of enum values Array<LocalEnum.Name>."
         },
         {
           "name": "ldtkToMapWorld",

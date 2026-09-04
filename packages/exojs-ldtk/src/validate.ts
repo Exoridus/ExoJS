@@ -17,6 +17,7 @@
 // `LdtkData`.
 
 import type { LdtkData, LdtkLayerType, LdtkLevel, LdtkWorldLayout } from './LdtkData';
+import { isLdtkFieldEnumType } from './LdtkData';
 
 /**
  * Thrown when an LDtk JSON document does not match the expected shape.
@@ -229,11 +230,18 @@ const validateDefs = (raw: unknown, source: string, path: string): void => {
  * genuine one until something read it.
  *
  * A `__type` this package does not model (a future LDtk field type, or an
- * `Array<T>` element type of one) is left unchecked: forward compatibility
- * matters more than rejecting a value the conversion already skips.
+ * `Array<T>` element type of one) is left unchecked here: the conversion pass
+ * is where an unsupported type is reported, and it names the type.
  */
 const validateFieldValue = (typeName: string, value: unknown, source: string, path: string): void => {
   if (value === null || value === undefined) return;
+
+  // `LocalEnum.X` / `ExternEnum.X` - the selected entry's identifier.
+  if (isLdtkFieldEnumType(typeName)) {
+    expectString(value, source, path);
+
+    return;
+  }
 
   switch (typeName) {
     case 'Int':

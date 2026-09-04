@@ -1,6 +1,5 @@
 import type { Extension, RendererBinding } from '@codexo/exojs/extensions';
-import type { RenderBackend } from '@codexo/exojs/renderer-sdk';
-import { RenderBackendType } from '@codexo/exojs/renderer-sdk';
+import { defineRendererBinding, RenderBackendType } from '@codexo/exojs/renderer-sdk';
 
 import { TileChunkNode } from './TileChunkNode';
 import { TileMapNode } from './TileMapNode';
@@ -19,9 +18,8 @@ const tileRendererBatchSize = 4096;
  * {@link import('./TileLayerNode').TileLayerNode}, whose chunk children resolve
  * to this renderer through the registry prototype walk.
  */
-const buildTileChunkRendererBinding = (batchSize: number): RendererBinding => ({
-  targets: [TileChunkNode],
-  create(backend: RenderBackend) {
+const buildTileChunkRendererBinding = (batchSize: number): RendererBinding =>
+  defineRendererBinding([TileChunkNode], backend => {
     if (backend.backendType === RenderBackendType.WebGl2) {
       return new WebGl2TileChunkRenderer(batchSize);
     }
@@ -31,8 +29,7 @@ const buildTileChunkRendererBinding = (batchSize: number): RendererBinding => ({
     }
 
     throw new Error(`Unsupported render backend: ${String(backend.backendType satisfies never)}`);
-  },
-});
+  });
 
 /**
  * Default immutable tilemap extension descriptor.
