@@ -14,6 +14,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   `Minus`, `Slash`, `Backquote`, `BracketLeft`, `Backslash`, `BracketRight` and
   `Quote`, matching the pattern tokens (`keyboard.semicolon`, ...) and
   `KeyboardEvent.code`. Channel values, bindings and actions are unchanged.
+- **`ShaderFilter` sources get a `uOrientation` auto-bind, so one shader offsets
+  along `v` the same way on both backends.** A WebGL2 render texture stores the
+  effect domain bottom-up and a WebGPU one top-down, which used to make a
+  directional `v` offset move the image up on one backend and down on the other.
+  `uOrientation` is `+1` where `v` grows along the domain's y axis and `-1`
+  where it grows against it (GLSL `uniform float uOrientation`, WGSL
+  `@group(0) @binding(3) var<uniform> uOrientation: f32`); multiply the v
+  component of a directional offset by it. Existing sources that only sample
+  their own texel need no change.
+
 - **Every remaining public duration input takes branded `Seconds` instead of a
   plain millisecond `number`.** `AudioBus.fadeIn`/`fadeOut`, `Voice.fade`/`stop`
   (and `crossFade`'s duration), `InputVoice.record`, `Envelope`'s

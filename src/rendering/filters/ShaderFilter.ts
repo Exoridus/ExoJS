@@ -188,14 +188,16 @@ export const createFilterShaderSource = (options: ShaderFilterSourceOptions): Sh
  *
  * ## Auto-bound entries
  *
- * Both languages receive the filter's input texture and the output dimensions,
- * and both see a `vUv` varying running 0..1 across the quad.
+ * Both languages receive the filter's input texture, the output dimensions and
+ * the v-axis orientation, and both see a `vUv` varying running 0..1 across the
+ * quad. Declare only the ones the source reads.
  *
  * ### GLSL
  *
  * ```glsl
  * uniform sampler2D uTexture;  // the filter's input, texture slot 0
  * uniform vec2 uResolution;    // output dimensions in texels
+ * uniform float uOrientation;  // sign of the v axis against the effect domain
  * in vec2 vUv;
  * ```
  *
@@ -205,7 +207,32 @@ export const createFilterShaderSource = (options: ShaderFilterSourceOptions): Sh
  * @group(0) @binding(0) var<uniform> uResolution: vec2<f32>;
  * @group(0) @binding(1) var uTexture: texture_2d<f32>;
  * @group(0) @binding(2) var uSampler: sampler;
+ * @group(0) @binding(3) var<uniform> uOrientation: f32;
  * ```
+ *
+ * ## Sampling and the v axis
+ *
+ * `vUv` addresses the input in TEXEL space: sampling `uTexture` at `vUv`
+ * reproduces the input unchanged, whatever the effect domain looks like. The
+ * two backends store that domain the other way up, though - a WebGL2 render
+ * texture bottom-up, a WebGPU one top-down - so `v` runs downwards through the
+ * effect on one and upwards on the other.
+ *
+ * `uOrientation` is the sign that relates the two: `+1` where `v` grows ALONG
+ * the effect domain's y axis (downwards) and `-1` where it grows against it.
+ * Multiply the v component of any DIRECTIONAL offset by it and one source
+ * behaves identically on both backends:
+ *
+ * ```glsl
+ * // Read the texel `dy` below this one, on either backend.
+ * vec4 below = texture(uTexture, vUv + vec2(0.0, dy * uOrientation));
+ * ```
+ *
+ * Offsets that are not directional - a radial blur kernel, a symmetric
+ * neighbourhood, anything that only recolours its own texel - need nothing.
+ * The same sign also maps `vUv` onto a texture sampled ALONGSIDE the input
+ * (a displacement or mask map, whose own row 0 is its top on both backends):
+ * `0.5 + (vUv.y - 0.5) * uOrientation` is that texture's v.
  *
  * ## User uniforms
  *

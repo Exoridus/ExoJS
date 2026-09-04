@@ -35,6 +35,17 @@ const vertexStrideBytes = 16;
 /** Resolution uniform buffer size: vec2<f32> = 8 bytes, padded to 16 */
 const resolutionBufferBytes = 16;
 
+/** Orientation uniform buffer size: f32 = 4 bytes, padded to 16 */
+const orientationBufferBytes = 16;
+
+/**
+ * The `uOrientation` this backend binds. A WebGPU render texture stores the
+ * effect domain top-down, so `v` grows ALONG the domain's y axis.
+ *
+ * Written once when the pass connects: it is constant for the backend.
+ */
+const orientationValue = new Float32Array([1, 0, 0, 0]);
+
 /** Returns true when the value is a texture (goes into a bind group, not a UBO). */
 const isTextureValue = (value: ShaderFilterUniformValue): value is Texture | RenderTexture =>
   value instanceof Texture ||
@@ -50,6 +61,7 @@ interface WebGpuConnection {
   readonly device: GPUDevice;
   readonly vertexBuffer: GPUBuffer;
   readonly resolutionBuffer: GPUBuffer;
+  readonly orientationBuffer: GPUBuffer;
   readonly autoBindGroupLayout: GPUBindGroupLayout;
   readonly userBindGroupLayout: GPUBindGroupLayout;
   readonly pipelineLayout: GPUPipelineLayout;
@@ -110,6 +122,7 @@ export class WebGpuShaderFilterPass {
     if (this._connection !== null) {
       this._connection.vertexBuffer.destroy();
       this._connection.resolutionBuffer.destroy();
+      this._connection.orientationBuffer.destroy();
       this._connection.userUniformBuffer?.destroy();
       this._connection = null;
     }
@@ -137,6 +150,7 @@ export class WebGpuShaderFilterPass {
         { binding: 0, resource: { buffer: conn.resolutionBuffer } },
         { binding: 1, resource: inputBinding.view },
         { binding: 2, resource: conn.sampler },
+        { binding: 3, resource: { buffer: conn.orientationBuffer } },
       ],
     });
 
@@ -172,7 +186,7 @@ export class WebGpuShaderFilterPass {
     // is built: `vertexMain` and `fragmentMain` live in the same compilation.
     const module = device.createShaderModule({ code: this._source });
 
-    // ---- Group 0 layout: resolution uniform + input texture + sampler ----
+    // ---- Group 0 layout: resolution uniform + input texture + sampler + orientation ----
     const autoBindGroupLayout = device.createBindGroupLayout({
       entries: [
         {
@@ -189,6 +203,11 @@ export class WebGpuShaderFilterPass {
           binding: 2,
           visibility: GPUShaderStage.FRAGMENT,
           sampler: {},
+        },
+        {
+          binding: 3,
+          visibility: GPUShaderStage.FRAGMENT | GPUShaderStage.VERTEX,
+          buffer: { type: 'uniform' },
         },
       ],
     });
@@ -247,6 +266,14 @@ export class WebGpuShaderFilterPass {
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
+    // ---- Orientation uniform buffer ----
+    const orientationBuffer = device.createBuffer({
+      size: orientationBufferBytes,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+
+    device.queue.writeBuffer(orientationBuffer, 0, orientationValue);
+
     // ---- Sampler ----
     const sampler = device.createSampler({
       magFilter: 'linear',
@@ -259,6 +286,7 @@ export class WebGpuShaderFilterPass {
       device,
       vertexBuffer,
       resolutionBuffer,
+      orientationBuffer,
       autoBindGroupLayout,
       userBindGroupLayout,
       pipelineLayout,
