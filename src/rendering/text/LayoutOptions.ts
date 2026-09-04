@@ -22,14 +22,19 @@ export interface LayoutOptions {
   /** Additional gap in pixels between glyphs (on top of the font's advance). */
   letterSpacing?: number;
   /**
-   * Text direction. Defaults to `'ltr'`.
+   * Base direction for text layout. Defaults to `'ltr'`.
    *
-   * `'rtl'` reverses each line's glyphs visually after wrapping, which is
-   * correct for uniformly right-to-left text. Full bidi (mixed LTR/RTL runs),
-   * Arabic contextual shaping, and direction-relative alignment are not
-   * implemented - `align` stays literal in both directions.
+   * Direction-relative alignment is not derived from it - `align` stays
+   * literal in both directions.
    */
   direction?: 'ltr' | 'rtl';
+  /**
+   * Language tag (`'en'`, `'ja'`, `'ar-EG'`) used for Unicode text
+   * segmentation - which clusters count as one character, and where a line may
+   * break. It selects no font and loads nothing; the platform default locale
+   * applies when it is absent.
+   */
+  locale?: string;
   /**
    * Break individual words that are wider than `maxWidth` at character boundaries.
    * Only applies when `maxWidth` is set. Defaults to `false`.

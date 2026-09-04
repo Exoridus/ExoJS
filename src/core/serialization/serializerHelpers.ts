@@ -2,7 +2,7 @@ import { Color } from '#core/Color';
 import type { LayoutOptions } from '#rendering/text/LayoutOptions';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 
-import { FONT_WEIGHTS, readBoolean, readEnum, readNumber, TEXT_ALIGNMENTS } from './read';
+import { FONT_WEIGHTS, readBoolean, readEnum, readNumber, readString, TEXT_ALIGNMENTS } from './read';
 
 // ── Options bags ───────────────────────────────────────────────────────────────
 
@@ -191,6 +191,7 @@ const LAYOUT_READERS: {
   overflow: (source, key) => readEnum(source, key, OVERFLOWS),
   letterSpacing: readNumber,
   direction: (source, key) => readEnum(source, key, DIRECTIONS),
+  locale: readString,
   breakWords: readBoolean,
   whiteSpace: (source, key) => readEnum(source, key, WHITE_SPACES),
 };

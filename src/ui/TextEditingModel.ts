@@ -1,5 +1,7 @@
 import { Signal } from '#core/Signal';
 import type { CompositionState } from '#platform/PlatformTextInput';
+import type { WordSegment } from '#rendering/text/segmentation';
+import { graphemeCount, graphemeStarts, wordSegments } from '#rendering/text/segmentation';
 
 /** Which side of the caret an edit acts on. */
 export type TextEditDirection = 'backward' | 'forward';
@@ -62,62 +64,17 @@ const trimSplitSurrogate = (text: string): string => {
   return text;
 };
 
-const hasGraphemeSegmenter = typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function';
-
-const graphemeSegmenter = hasGraphemeSegmenter ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
-const wordSegmenter = hasGraphemeSegmenter ? new Intl.Segmenter(undefined, { granularity: 'word' }) : null;
-
 /**
- * UTF-16 offsets where each glyph (one code point) of `text` starts. This is
- * the index space an unmasked text layout's placements are expressed in.
+ * UTF-16 offsets where each grapheme cluster of `text` starts.
+ *
+ * This is the index space a text layout's placements are expressed in - the
+ * layout places one glyph per cluster - and a masked field is no exception,
+ * because one mask character replaces one cluster.
  */
-export const codePointOffsets = (text: string): number[] => {
-  const offsets: number[] = [];
-
-  for (let i = 0; i < text.length; i++) {
-    offsets.push(i);
-
-    if (isHighSurrogate(text.charCodeAt(i))) {
-      i++;
-    }
-  }
-
-  return offsets;
-};
-
-/**
- * UTF-16 offsets where each grapheme cluster of `text` starts. A masked
- * layout replaces one grapheme with one mask character, so this is its
- * index space - the mapping stays one glyph per grapheme.
- */
-export const graphemeOffsets = (text: string): number[] => {
-  if (graphemeSegmenter !== null) {
-    const offsets: number[] = [];
-
-    for (const segment of graphemeSegmenter.segment(text)) {
-      offsets.push(segment.index);
-    }
-
-    return offsets;
-  }
-
-  return codePointOffsets(text);
-};
+export const graphemeOffsets = (text: string): number[] => graphemeStarts(text);
 
 /** The glyph count of `text`. */
-export const glyphCount = (text: string): number => {
-  if (graphemeSegmenter !== null) {
-    let count = 0;
-
-    for (const _segment of graphemeSegmenter.segment(text)) {
-      count++;
-    }
-
-    return count;
-  }
-
-  return codePointOffsets(text).length;
-};
+export const glyphCount = (text: string): number => graphemeCount(text);
 
 /**
  * Start of the line `offset` sits on: the position after the preceding line
@@ -162,47 +119,6 @@ export const glyphOffsetAtIndex = (offsets: number[], index: number, textLength:
   return clamped >= offsets.length ? textLength : (offsets[clamped] ?? textLength);
 };
 
-interface WordSegment {
-  start: number;
-  end: number;
-  wordLike: boolean;
-}
-
-const wordSegmentsOf = (text: string): WordSegment[] => {
-  if (wordSegmenter !== null) {
-    const segments: WordSegment[] = [];
-
-    for (const segment of wordSegmenter.segment(text)) {
-      segments.push({ start: segment.index, end: segment.index + segment.segment.length, wordLike: segment.isWordLike === true });
-    }
-
-    return segments;
-  }
-
-  const segments: WordSegment[] = [];
-  let start = 0;
-  let inWord = text.length > 0 && !hasWhitespace(text[0] ?? '');
-
-  for (let i = 1; i <= text.length; i++) {
-    const wasWord = inWord;
-
-    if (i === text.length) {
-      segments.push({ start, end: i, wordLike: wasWord });
-
-      break;
-    }
-
-    inWord = !hasWhitespace(text[i] ?? '');
-
-    if (inWord !== wasWord) {
-      segments.push({ start, end: i, wordLike: wasWord });
-      start = i;
-    }
-  }
-
-  return segments;
-};
-
 const isWhitespaceUnit = (unit: number): boolean => unit === 0x20 || unit === 0x09 || unit === 0x0a || unit === 0x0d || unit === 0x0b || unit === 0x0c;
 
 /**
@@ -212,8 +128,7 @@ const isWhitespaceUnit = (unit: number): boolean => unit === 0x20 || unit === 0x
  * cluster at a time).
  */
 const wordBoundaryBackward = (text: string, from: number): number => {
-  const graphemes = graphemeOffsets(text);
-  const glyphs = graphemeSegmenter !== null ? graphemes : codePointOffsets(text);
+  const glyphs = graphemeOffsets(text);
   let i = from;
 
   while (i > 0 && isWhitespaceUnit(text.charCodeAt(i - 1))) {
@@ -221,7 +136,7 @@ const wordBoundaryBackward = (text: string, from: number): number => {
   }
 
   if (i > 0) {
-    const segments = wordSegmentsOf(text);
+    const segments = wordSegments(text);
     let previous: WordSegment | null = null;
 
     for (const segment of segments) {
@@ -260,8 +175,7 @@ const wordBoundaryBackward = (text: string, from: number): number => {
  * character at the caret is not word-like.
  */
 const wordBoundaryForward = (text: string, from: number): number => {
-  const graphemes = graphemeOffsets(text);
-  const glyphs = graphemeSegmenter !== null ? graphemes : codePointOffsets(text);
+  const glyphs = graphemeOffsets(text);
   const length = text.length;
   let i = from;
 
@@ -270,7 +184,7 @@ const wordBoundaryForward = (text: string, from: number): number => {
   }
 
   if (i < length) {
-    const segments = wordSegmentsOf(text);
+    const segments = wordSegments(text);
 
     for (const segment of segments) {
       if (segment.start <= i && segment.end > i) {
@@ -566,7 +480,7 @@ export class TextEditingModel {
     }
 
     const index = Math.min(offset, this._value.length - 1);
-    const segments = wordSegmentsOf(this._value);
+    const segments = wordSegments(this._value);
 
     for (const segment of segments) {
       if (segment.start <= index && index < segment.end) {
@@ -752,14 +666,14 @@ export class TextEditingModel {
 
   /** One grapheme backward from `offset`, never one code unit. */
   private _stepBackward(offset: number): number {
-    const glyphs = graphemeSegmenter !== null ? graphemeOffsets(this._value) : codePointOffsets(this._value);
+    const glyphs = graphemeOffsets(this._value);
 
     return glyphOffsetAtIndex(glyphs, glyphIndexAtOffset(glyphs, offset) - 1, this._value.length);
   }
 
   /** One grapheme forward from `offset`. */
   private _stepForward(offset: number): number {
-    const glyphs = graphemeSegmenter !== null ? graphemeOffsets(this._value) : codePointOffsets(this._value);
+    const glyphs = graphemeOffsets(this._value);
 
     return glyphOffsetAtIndex(glyphs, glyphIndexAtOffset(glyphs, offset) + 1, this._value.length);
   }

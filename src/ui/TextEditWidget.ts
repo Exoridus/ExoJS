@@ -15,7 +15,7 @@ import type { TextStyleOptions } from '#rendering/text/TextStyle';
 import type { TextLayoutResult } from '#rendering/text/types';
 
 import type { TextEditGranularity } from './TextEditingModel';
-import { codePointOffsets, glyphCount, glyphOffsetAtIndex, graphemeOffsets, lineStartAt, TextEditingModel } from './TextEditingModel';
+import { glyphCount, glyphOffsetAtIndex, graphemeOffsets, lineStartAt, TextEditingModel } from './TextEditingModel';
 import type { UIWidgetState } from './theme';
 import { resolveUISkin } from './theme';
 import { Widget } from './Widget';
@@ -804,7 +804,7 @@ export abstract class TextEditWidget extends Widget {
       line++;
     }
 
-    return { line, glyph: codePointOffsets(text.slice(start, clamped)).length };
+    return { line, glyph: glyphCount(text.slice(start, clamped)) };
   }
 
   /** The inverse of {@link TextEditWidget._locate}. */
@@ -830,7 +830,7 @@ export abstract class TextEditWidget extends Widget {
     }
 
     const lineText = text.slice(start, !text.includes('\n', start) ? text.length : text.indexOf('\n', start));
-    const offsets = codePointOffsets(lineText);
+    const offsets = graphemeOffsets(lineText);
 
     return start + glyphOffsetAtIndex(offsets, glyph, lineText.length);
   }

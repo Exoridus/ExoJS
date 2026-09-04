@@ -802,3 +802,98 @@ describe('buildTextPageQuads', () => {
     ]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Grapheme safety - the unit of layout is a cluster, never a code point
+// ---------------------------------------------------------------------------
+
+describe('layoutText grapheme safety', () => {
+  const ZWJ_FAMILY = '\u{1F468}‍\u{1F469}‍\u{1F467}';
+  const FLAG = '\u{1F1E9}\u{1F1EA}';
+  const COMBINING = 'é';
+
+  /** Records every text unit the provider was asked to measure or rasterize. */
+  const makeRecordingProvider = (advance = 10): { provider: GlyphProvider; units: string[] } => {
+    const units: string[] = [];
+
+    return {
+      units,
+      provider: {
+        getGlyph: (char: string, fontSize: number): GlyphInfo => {
+          units.push(char);
+
+          return {
+            x: 0,
+            y: 0,
+            width: advance,
+            height: fontSize,
+            advance,
+            ascent: fontSize,
+            page: 0,
+            uvLeft: 0,
+            uvTop: 0,
+            uvRight: 1,
+            uvBottom: 1,
+          };
+        },
+      },
+    };
+  };
+
+  test.each([
+    ['a ZWJ sequence', ZWJ_FAMILY],
+    ['a regional-indicator flag', FLAG],
+    ['a combining sequence', COMBINING],
+  ])('%s is placed as a single glyph', (_label, text) => {
+    const { provider, units } = makeRecordingProvider();
+    const style = new TextStyle({ fontSize: 16, align: 'left' });
+
+    expect(layoutText(text, style, {}, provider).placements).toHaveLength(1);
+    expect(units).toEqual([text]);
+  });
+
+  test('breakWords splits between clusters, never inside one', () => {
+    const { provider } = makeRecordingProvider(10);
+    const style = new TextStyle({ fontSize: 16, align: 'left' });
+
+    // Three cluster-wide glyphs at 10px each against a 25px budget: two
+    // clusters fit the first line, the third moves down. A code-point split
+    // would place six half-flag glyphs instead.
+    const placements = layoutText(`${FLAG}${FLAG}${FLAG}`, style, { maxWidth: 25, breakWords: true }, provider).placements;
+
+    expect(placements).toHaveLength(3);
+    expect([...new Set(placements.map(placement => placement.y))]).toHaveLength(2);
+  });
+
+  test('ellipsis drops whole clusters, so no dangling combining mark is left', () => {
+    const { provider } = makeRecordingProvider(10);
+    const style = new TextStyle({ fontSize: 16, lineHeight: 1, leading: 0, align: 'left' });
+
+    // 'A', the combining sequence and 'B' plus the ellipsis is 40px against a
+    // 30px budget, so one cluster has to go - the combining sequence, whole.
+    const layout = layoutText(`A${COMBINING}B\nX`, style, { maxWidth: 30, maxHeight: 16, overflow: 'ellipsis' }, provider);
+
+    expect(layout.placements).toHaveLength(3);
+    expect(layout.lines).toHaveLength(1);
+  });
+
+  test('direction "rtl" reverses clusters, keeping a combining mark on its base', () => {
+    const { provider, units } = makeRecordingProvider();
+    const style = new TextStyle({ fontSize: 16, align: 'left' });
+
+    layoutText(`A${COMBINING}`, style, { direction: 'rtl' }, provider);
+
+    expect(units).toEqual([COMBINING, 'A']);
+  });
+
+  test('a line wraps at the word boundaries of an unspaced script', () => {
+    const { provider } = makeRecordingProvider(10);
+    const style = new TextStyle({ fontSize: 16, align: 'left' });
+
+    // No space to break on: without locale-aware word segmentation the whole
+    // string would overflow one line.
+    const placements = layoutText('日本語のテキスト', style, { maxWidth: 45 }, provider).placements;
+
+    expect([...new Set(placements.map(placement => placement.y))].length).toBeGreaterThan(1);
+  });
+});
