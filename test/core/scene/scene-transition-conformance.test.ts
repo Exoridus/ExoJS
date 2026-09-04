@@ -27,12 +27,21 @@ interface BarWipeState {
  * stock transition's effect.
  */
 class MinimalPhasedSceneTransition extends PhasedSceneTransition<BarWipeState> {
+  public liveStates = 0;
+
   protected override getPhaseRequirements(): SceneTransitionPhaseRequirements {
     return { outgoingFrame: 'none', currentFrame: 'direct' };
   }
 
   protected override createPhaseState(): BarWipeState {
+    this.liveStates++;
+
     return { quad: new QuadGeometry(), transform: new Matrix(), tint: new Color(0, 0, 0, 1) };
+  }
+
+  protected override destroyPhaseState(state: BarWipeState): void {
+    this.liveStates--;
+    state.quad.destroy();
   }
 
   protected override enter(context: SceneTransitionPhaseContext, state: BarWipeState): void {
@@ -59,4 +68,16 @@ describeSceneTransitionConformance('CrossFadeSceneTransition', () => new CrossFa
 describeSceneTransitionConformance('SlideSceneTransition (push)', () => new SlideSceneTransition({ duration: fastDuration, mode: 'push' }));
 describeSceneTransitionConformance('SlideSceneTransition (cover)', () => new SlideSceneTransition({ duration: fastDuration, mode: 'cover' }));
 describeSceneTransitionConformance('SlideSceneTransition (reveal)', () => new SlideSceneTransition({ duration: fastDuration, mode: 'reveal' }));
-describeSceneTransitionConformance('PhasedSceneTransition subclass', () => new MinimalPhasedSceneTransition({ duration: fastDuration }));
+// A session allocates one phase state per side, so a definition whose sessions
+// have all ended is back at zero - once, not twice.
+let phased: MinimalPhasedSceneTransition;
+
+describeSceneTransitionConformance(
+  'PhasedSceneTransition subclass',
+  () => {
+    phased = new MinimalPhasedSceneTransition({ duration: fastDuration });
+
+    return phased;
+  },
+  { expectReleased: () => expect(phased.liveStates, 'every phase state must be torn down exactly once').toBe(0) },
+);

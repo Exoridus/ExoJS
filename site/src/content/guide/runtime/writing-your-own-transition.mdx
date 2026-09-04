@@ -218,8 +218,8 @@ Your side of that is small but real:
 - Do not hold a promise the navigation's outcome depends on. The director owns settling the navigation; a session that awaits something of its own can hang a navigation that nothing will ever abort.
 - Do not treat `destroy()` as the "transition finished" hook. It runs on the abort path too, before the commit, with the old scene still active.
 
-<Callout type="warning" title="Anything you allocate per session, you release in destroy()">
-`Graphics`, `Geometry`, `Material`, a `RenderTexture` you created yourself — all own GPU resources, and a session is created fresh per navigation. Release them in `destroy()` and a hundred scene changes cost nothing; skip it and each one leaks. Textures the director hands you in `SceneTransitionFrame` are the exception: they are borrowed, and releasing them corrupts the pool.
+<Callout type="warning" title="Anything you allocate per session, you release once">
+`Graphics`, `Geometry`, `Material`, a `RenderTexture` you created yourself — all own GPU resources, and a session is created fresh per navigation. Release them in `destroy()` (or, on a `PhasedSceneTransition`, in `destroyPhaseState()`) and a hundred scene changes cost nothing; skip it and each one leaks. Textures the director hands you in `SceneTransitionFrame` are the exception: they are borrowed, and releasing them corrupts the pool.
 </Callout>
 
 ## The shortcut: PhasedSceneTransition
@@ -244,6 +244,10 @@ class PhasedBarWipe extends PhasedSceneTransition<{ readonly bar: Graphics }> {
     return { bar };
   }
 
+  protected override destroyPhaseState(state: { readonly bar: Graphics }): void {
+    state.bar.destroy();
+  }
+
   protected override enter(context: SceneTransitionPhaseContext, state: { readonly bar: Graphics }): void {
     this.drawBar(context, state.bar);
   }
@@ -262,10 +266,10 @@ class PhasedBarWipe extends PhasedSceneTransition<{ readonly bar: Graphics }> {
 }
 ```
 
-`exit` runs while the old scene leaves, `enter` while the new one arrives, and `context.presence` goes `1 → 0` in `exit` and `0 → 1` in `enter` — so one formula serves both phases without inverting anything. `createPhaseState()` gives each session its own scratch objects; the definition itself stays immutable.
+`exit` runs while the old scene leaves, `enter` while the new one arrives, and `context.presence` goes `1 → 0` in `exit` and `0 → 1` in `enter` — so one formula serves both phases without inverting anything. `createPhaseState()` gives each session its own scratch objects and `destroyPhaseState()` releases them again; the definition itself stays immutable.
 
-<Callout type="info" title="Phase state has no teardown hook">
-`createPhaseState()` runs per session, but nothing calls a matching release when the session ends. Keep phase state to plain scratch — a `Matrix`, a `Color`, numbers — and put anything GPU-backed on the definition, which you own and keep. When a navigation genuinely needs its own GPU resources, implement the full `SceneTransition` and release them in `destroy()`.
+<Callout type="info" title="Phase state is created and released in pairs">
+`createPhaseState()` runs once per session and `destroyPhaseState(state)` once per session, on every exit path — including an abort before the commit. Override the second whenever the first allocates something GPU-backed (a `Graphics`, a `Geometry`, a `Material`); plain scratch — a `Matrix`, a `Color`, numbers — needs no override. A `{ enter, exit }` pair gets one state per side, and each side is released with its own phase's hook.
 </Callout>
 
 ## Prove it

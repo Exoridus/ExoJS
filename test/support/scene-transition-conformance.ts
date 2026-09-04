@@ -31,6 +31,13 @@ export interface SceneTransitionConformanceOptions {
   readonly abortAfterFrames?: number;
   /** Canvas backing-store size the harness reports, which sizes every transition render texture. Default `320x180`. */
   readonly canvasSize?: { readonly width: number; readonly height: number };
+  /**
+   * Assert that whatever the transition allocates per session was released.
+   * Called after one completed navigation whose session has been destroyed
+   * twice, so it also proves the release does not run a second time. Adds the
+   * teardown scenario; omit it and the scenario is not registered.
+   */
+  readonly expectReleased?: () => void;
 }
 
 /** Everything one instrumented session did, from `beginSession()` to `destroy()`. */
@@ -368,6 +375,8 @@ const newRecord = (): TransitionRecord => ({ sessions: [], requirements: [] });
  * - an abort mid-session (frame loop stopped, Director disposed) settles the
  *   navigation, destroys the session exactly once, and leaves no update/render
  *   call or unreleased render texture behind;
+ * - what the session allocated is released once, when `expectReleased` says
+ *   how to check it;
  * - the definition instance itself stays reusable across navigations.
  *
  * `createTransition` must return a fresh definition on every call. Scenarios
@@ -506,6 +515,27 @@ export const runSceneTransitionConformance = (createTransition: () => SceneTrans
     expect(() => session.destroyInner(), 'destroy() must be safe to call again - release resources once and null the handles').not.toThrow();
     expectBalancedTextures(harness);
   });
+
+  const expectReleased = options.expectReleased;
+
+  if (expectReleased !== undefined) {
+    test('tears its per-session state down exactly once', async () => {
+      const harness = createHarness(options);
+      const record = newRecord();
+
+      await harness.director.change(harness.first);
+
+      const navigation = harness.director.change(harness.second, { transition: new RecordingTransition(createTransition(), record) });
+
+      expectResolved(await drive(harness, navigation, maxFrames), maxFrames);
+
+      const { session } = expectOneSession(record);
+
+      session.destroyInner();
+      expectReleased();
+      expectBalancedTextures(harness);
+    });
+  }
 
   test('one definition instance drives two consecutive navigations', async () => {
     const harness = createHarness(options);

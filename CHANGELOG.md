@@ -84,6 +84,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   is sampled, so animating them scrolls the distortion. The reach is declared
   through `getOutputBounds`, and a fragment displaced past the effect domain
   comes out transparent rather than smearing the border.
+- **`PhasedSceneTransition.destroyPhaseState(state)`.** The release half of
+  `createPhaseState()`, called exactly once per session on every exit path -
+  normal completion, an abort before the commit, or the application being
+  destroyed mid-transition. Override it when the phase state owns GPU-backed
+  resources; plain scratch needs no override. A `{ enter, exit }` pair holds
+  one state per side and each side is released through its own phase's hook.
 - **A guide chapter and a playground example for writing your own scene
   transition.** The **Writing your own transition** chapter spells out the
   lifecycle contract `SceneTransitionLifecycleError` enforces - the
@@ -146,6 +152,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Fixed
 
+- **`FadeSceneTransition` no longer leaks a `QuadGeometry` per navigation.**
+  Its per-session phase state allocates one, and nothing released it, so every
+  faded scene change left a backend vertex/index buffer pair behind for the
+  lifetime of the context. It now releases the quad through the new
+  `destroyPhaseState` hook.
 - **WebGPU shader filters no longer mirror their input vertically.** The
   fullscreen pass sampled v = 0 at the bottom of the quad, which is texel row
   0 on WebGL2 but the last row on WebGPU, so every `ShaderFilter` pass on
