@@ -29,4 +29,6 @@ export { ParticleRenderMode } from './renderModes/ParticleRenderMode';
 export { QuadParticles } from './renderModes/QuadParticles';
 export type { RibbonParticlesOptions } from './renderModes/RibbonParticles';
 export { RibbonParticles } from './renderModes/RibbonParticles';
+export type { TrailParticlesOptions } from './renderModes/TrailParticles';
+export { TrailParticles } from './renderModes/TrailParticles';
 export type { Extension, RendererBinding } from '@codexo/exojs/extensions';

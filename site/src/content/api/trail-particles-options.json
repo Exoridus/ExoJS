@@ -1,0 +1,150 @@
+{
+  "title": "TrailParticlesOptions",
+  "description": "Construction options for TrailParticles.",
+  "symbol": "TrailParticlesOptions",
+  "kind": "interface",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for TrailParticles."
+      ],
+      "importLine": "import { TrailParticlesOptions } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "fade",
+          "signature": "fade?: number",
+          "signatureTokens": [
+            {
+              "text": "fade",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Alpha multiplier at the oldest end of a trail, interpolated from 1 at the particle itself. A trail carries one particle's tint from end to end, so this is what separates head from tail; 1 draws it as a solid band."
+        },
+        {
+          "name": "interval",
+          "signature": "interval?: number",
+          "signatureTokens": [
+            {
+              "text": "interval",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Seconds between two recorded positions, measured on each particle's own age so the trail spans the same amount of travel at any frame rate. A floor rather than a guarantee: a frame longer than the interval records one position, not several, because the positions in between were never simulated."
+        },
+        {
+          "name": "points",
+          "signature": "points?: number",
+          "signatureTokens": [
+            {
+              "text": "points",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Recorded positions kept behind each particle, rounded down to a whole number and at least one. Together with interval this fixes how far back a trail reaches: points * interval seconds of travel. Costs capacity * points * 2 floats of history for the system this mode is attached to."
+        },
+        {
+          "name": "width",
+          "signature": "width?: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Width of the trail in system-local units, before per-particle scaling. The half-width actually emitted is width * scaleX[i] / 2."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/renderModes/TrailParticles.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/renderModes/TrailParticles.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/renderModes/TrailParticles.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/renderModes/TrailParticles.ts"
+}

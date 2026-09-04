@@ -29,6 +29,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   scene: frozen while it is paused, frozen while it is retained, stopped when
   it ends. `when` takes the same `SceneAvailability` values with the same
   `'always'` default, so an untracked sprite behaves exactly as before.
+- **`TrailParticles`, a particle render mode that draws a motion trail behind
+  every particle.** Where `RibbonParticles` connects the particles of one
+  system into a single band, this gives each particle its own strip through the
+  positions it recently occupied, kept in a per-particle ring buffer and drawn
+  in one non-instanced draw. Positions are recorded on each particle's own
+  clock (`interval`), so a trail covers the same travel at any frame rate;
+  `points` sets how far back it reaches, `width` its thickness and `fade` how
+  its alpha falls off towards the tail. CPU-only, like `RibbonParticles`.
 - **`Spritesheet.removeFrame(name)` and `Stack.removeItem(item)`.** Both
   mirror their existing `add`-side methods, completing the add/remove pair
   every other mutator on these classes already has.

@@ -86,8 +86,9 @@ const shaders: readonly ShaderEntry[] = Object.entries(shaderModules)
 const sourceByName: Record<string, string> = Object.fromEntries(shaders.map(entry => [entry.name, entry.runtimeSource]));
 
 // Vertex/fragment pairs as wired up by the renderer sources; `text.vert` is
-// shared across all three text-fragment variants, while `particle.*` and
-// `ribbon.*` come from the particles package's two render modes. Every file the
+// shared across all three text-fragment variants, while `particle.*`,
+// `ribbon.*` and `trail.*` come from the particles package's render modes.
+// Every file the
 // globs pick up must appear here or in `standaloneStages` (guarded below) so a
 // dead `.vert`/`.frag` cannot sit in the folder being compiled-but-never-used:
 // it has to be wired, declared or removed.
@@ -98,6 +99,7 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['mesh.vert', 'mesh.frag'],
   ['particle.vert', 'particle.frag'],
   ['ribbon.vert', 'ribbon.frag'],
+  ['trail.vert', 'trail.frag'],
   ['text.vert', 'text-color.frag'],
   ['text.vert', 'text-sdf.frag'],
   ['text.vert', 'text-msdf.frag'],
