@@ -618,6 +618,37 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
     ],
   },
   {
+    slug: 'pathfinding',
+    title: 'Pathfinding',
+    description:
+      'Route agents through a world with @codexo/exojs-pathfinding: weighted grids, jump-point search, path smoothing, reachable-area queries, and waypoint graphs for traversal a grid cannot express.',
+    chapters: [
+      {
+        slug: 'grid-pathfinding',
+        level: 'intermediate',
+        learningGoals: [
+          'build a GridSpace from your own map data and query it',
+          'read a PathResult status instead of catching an exception',
+          'use costs, diagonals, clearance and smoothing to shape a route',
+        ],
+        prerequisites: ['runtime/scenes-and-lifecycle'],
+        examples: ['pathfinding/grid-navigation', 'pathfinding/tilemap-navigation'],
+        apiLinks: ['pathfinder', 'grid-space', 'grid-space-options', 'path-result', 'find-path-options'],
+      },
+      {
+        slug: 'waypoint-graphs',
+        level: 'advanced',
+        learningGoals: [
+          'model jump and fall links a grid cannot express',
+          'read traversal kinds and payloads off a path',
+          'implement NavigationSpace for a world of your own',
+        ],
+        prerequisites: ['pathfinding/grid-pathfinding'],
+        apiLinks: ['waypoint-graph', 'waypoint-edge-options', 'path-edge', 'navigation-space'],
+      },
+    ],
+  },
+  {
     slug: 'recipes',
     title: 'Recipes',
     description: 'Practical scene patterns you can adapt directly, ending with a complete small game.',

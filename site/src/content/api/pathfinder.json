@@ -1,0 +1,489 @@
+{
+  "title": "Pathfinder",
+  "description": "Runs path queries against any NavigationSpace. One pathfinder owns the search buffers and reuses them across every query, including queries against different spaces of different sizes, so a search itself allocates nothing once the buffers have reached their size. The result objects are freshly allocated by design: callers hold on to a path, and pooling something a caller retains trades a little garbage for use-after-reuse bugs. A pathfinder holds no world state and no lifecycle - construct one per system that needs paths, or share one, as long as queries do not interleave with a mutation of the space being searched.",
+  "symbol": "Pathfinder",
+  "kind": "class",
+  "subsystem": "pathfinding",
+  "importPath": "@codexo/exojs-pathfinding",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 1,
+    "methods": 3,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Runs path queries against any NavigationSpace.",
+        "One pathfinder owns the search buffers and reuses them across every query, including queries against different spaces of different sizes, so a search itself allocates nothing once the buffers have reached their size. The result objects are freshly allocated by design: callers hold on to a path, and pooling something a caller retains trades a little garbage for use-after-reuse bugs.",
+        "A pathfinder holds no world state and no lifecycle - construct one per system that needs paths, or share one, as long as queries do not interleave with a mutation of the space being searched."
+      ],
+      "importLine": "import { Pathfinder } from '@codexo/exojs-pathfinding'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): Pathfinder",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Pathfinder",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Pathfinder",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "findPath",
+          "signature": "findPath(space: NavigationSpace<Payload>, start: number, goal: number, options: FindPathOptions): PathResult<Payload>",
+          "signatureTokens": [
+            {
+              "text": "findPath",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "space",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NavigationSpace",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Payload",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "start",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "goal",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FindPathOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PathResult",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Payload",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "space",
+              "type": "NavigationSpace<Payload>",
+              "optional": false
+            },
+            {
+              "name": "start",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "goal",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "FindPathOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "PathResult<Payload>",
+          "description": "Finds a cost-optimal path between two node ids. unreachable yields an empty path unless FindPathOptions.snapToNearest is set; budget-exceeded always carries the best partial path found, which is a real, traversable prefix and not a guess at the rest."
+        },
+        {
+          "name": "findPathBetween",
+          "signature": "findPathBetween(space: NavigationSpace<Payload>, startX: number, startY: number, goalX: number, goalY: number, options: FindPathOptions): PathResult<Payload>",
+          "signatureTokens": [
+            {
+              "text": "findPathBetween",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "space",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NavigationSpace",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Payload",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "startX",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "startY",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "goalX",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "goalY",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FindPathOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PathResult",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Payload",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "space",
+              "type": "NavigationSpace<Payload>",
+              "optional": false
+            },
+            {
+              "name": "startX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "startY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "goalX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "goalY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "FindPathOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "PathResult<Payload>",
+          "description": "findPath between two points instead of node ids. A point outside the space makes the query unreachable unless FindPathOptions.snapToNearest is set and the space can resolve a nearest node."
+        },
+        {
+          "name": "floodFrom",
+          "signature": "floodFrom(space: NavigationSpace, origin: number, options: FloodOptions): FloodRegion",
+          "signatureTokens": [
+            {
+              "text": "floodFrom",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "space",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NavigationSpace",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "origin",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FloodOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FloodRegion",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "space",
+              "type": "NavigationSpace",
+              "optional": false
+            },
+            {
+              "name": "origin",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "FloodOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "FloodRegion",
+          "description": "Every node reachable from origin within FloodOptions.maxCost, with its cost - the \"tiles I can still move to this turn\" query, and the input a flow field for many agents heading to one goal is built from."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-pathfinding/src/Pathfinder.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/Pathfinder.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-pathfinding/src/Pathfinder.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/Pathfinder.ts"
+}

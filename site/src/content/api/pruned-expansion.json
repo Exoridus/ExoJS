@@ -1,0 +1,275 @@
+{
+  "title": "PrunedExpansion",
+  "description": "A parent-dependent successor generator that prunes symmetric alternatives without losing optimality - the shape jump-point search takes. Obtained from NavigationSpace.pruning for the duration of one search.",
+  "symbol": "PrunedExpansion",
+  "kind": "interface",
+  "subsystem": "pathfinding",
+  "importPath": "@codexo/exojs-pathfinding",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A parent-dependent successor generator that prunes symmetric alternatives without losing optimality - the shape jump-point search takes.",
+        "Obtained from NavigationSpace.pruning for the duration of one search."
+      ],
+      "importLine": "import { PrunedExpansion } from '@codexo/exojs-pathfinding'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "expand",
+          "signature": "expand(from: number, to: number, out: number[]): void",
+          "signatureTokens": [
+            {
+              "text": "expand",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "from",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "to",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "out",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "from",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "to",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "out",
+              "type": "number[]",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Appends the nodes strictly between from and to, then to itself, to out - turning a path of pruned successors back into a contiguous one."
+        },
+        {
+          "name": "successors",
+          "signature": "successors(node: number, parent: number, goal: number, outNodes: Int32Array, outCosts: Float64Array): number",
+          "signatureTokens": [
+            {
+              "text": "successors",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "parent",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "goal",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "outNodes",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Int32Array",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "outCosts",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float64Array",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "parent",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "goal",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "outNodes",
+              "type": "Int32Array",
+              "optional": false
+            },
+            {
+              "name": "outCosts",
+              "type": "Float64Array",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Writes the pruned successors of node, reached from parent (-1 for the start node), into the buffers and returns how many were written. The successors may lie several nodes away; expand fills in what lies between."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-pathfinding/src/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-pathfinding/src/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/types.ts"
+}

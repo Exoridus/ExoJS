@@ -1,0 +1,105 @@
+---
+title: 'Waypoint graphs'
+description: 'Model traversal a grid cannot express — jumps, falls, ladders, teleports — with WaypointGraph, and implement NavigationSpace for a world of your own.'
+---
+
+import Callout from '../../../components/Callout.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
+
+# Waypoint graphs
+
+A grid answers "which cells may I stand on". That is the whole question in a top-down world and
+almost none of it in a sidescroller, where getting from one platform to the next is a *jump*
+with an impulse, a *fall* off a ledge, or a ladder — none of which is a property of a cell.
+
+[`WaypointGraph`](/ExoJS/en/api/waypoint-graph/) models that directly: nodes you place, edges
+you type, and a path that tells you which kind of move each step was.
+
+## Nodes and typed edges
+
+<SourceSnippet
+  source="examples/guides/pathfinding/waypoint-graph.ts"
+  region="waypoint-graph"
+  language="ts"
+  title="examples/guides/pathfinding/waypoint-graph.ts"
+/>
+
+Edges are **directed**: falling off a platform is not the same move as jumping onto it, and
+`connect` is the shorthand for the cases where it is. An edge's cost defaults to the straight-line
+distance between its nodes, which is the right default for a walk and the wrong one for a jump —
+price those yourself.
+
+`kind` is a free-form string and `data` is whatever your movement controller needs. Both come
+back on the path:
+
+<SourceSnippet
+  source="examples/guides/pathfinding/waypoint-graph.ts"
+  region="waypoint-follow"
+  language="ts"
+  title="examples/guides/pathfinding/waypoint-graph.ts"
+/>
+
+`WaypointGraph<Move>` carries the payload type through to `result.edges[i].data`, so the
+controller reads a typed value rather than casting one.
+
+<Callout type="info" title="Authoring the graph">
+Nothing says the graph has to be written in code. A Tiled object layer of points and polylines
+with a `kind` property maps onto `addNode`/`addEdge` in a few lines, which keeps the level
+designer in the level editor.
+</Callout>
+
+## Graphs without geometry
+
+Positions are optional. Leave them out and the heuristic drops to zero, which turns the same A\*
+into plain Dijkstra over an abstract graph — a dialogue tree, a quest dependency, a routing
+problem in an application that never draws a tile:
+
+<SourceSnippet
+  source="examples/guides/pathfinding/waypoint-graph.ts"
+  region="dijkstra-mode"
+  language="ts"
+  title="examples/guides/pathfinding/waypoint-graph.ts"
+/>
+
+A single positionless node is enough to switch the whole graph into that mode, because a
+geometric estimate stops being meaningful as soon as one node has no place in the world.
+
+<Callout type="warning" title="Node ids are recycled">
+`removeNode` frees its id, and a later `addNode` may hand the same id out again. An id held
+across a removal can silently name a different node — store node ids the way you would store
+array indices into a pool.
+</Callout>
+
+## Pricing an edge below its length
+
+An edge cheaper than the straight line between its ends — a zipline, a teleporter — would make a
+distance heuristic overestimate, and an overestimating heuristic costs the search its
+optimality. The graph handles this by scaling its heuristic down to the cheapest ratio any edge
+has, rather than by forbidding the edge. You pay a slightly weaker heuristic on that graph, and
+you keep optimal paths.
+
+## Your own space
+
+Both built-in spaces implement one interface,
+[`NavigationSpace`](/ExoJS/en/api/navigation-space/), and so can your own — a room graph, a
+hex grid, a navmesh. Everything in the package works against it unchanged.
+
+<SourceSnippet
+  source="examples/guides/pathfinding/custom-space.ts"
+  region="custom-space"
+  language="ts"
+  title="examples/guides/pathfinding/custom-space.ts"
+/>
+
+Two contracts matter:
+
+- **`neighbors` writes into the buffers it is handed** rather than returning an array. They
+  belong to the pathfinder and are reused across nodes and searches, so do not retain them — and
+  in exchange your space is allocation-free on the same terms as the built-in ones.
+- **`heuristic` must never overestimate** the remaining cost. Returning `0` is always safe and
+  turns the search into Dijkstra; anything else has to be a genuine lower bound, or paths stop
+  being optimal in ways that are very hard to notice.
+
+`nodeToPoint`, `pointToNode`, `nearestNode`, `describeEdge`, `smoothPath` and `pruning` are the
+optional extras: implement the ones your world can answer, and the queries that need the rest
+degrade rather than break.

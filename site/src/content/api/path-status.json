@@ -1,0 +1,80 @@
+{
+  "title": "PathStatus",
+  "description": "Outcome of a path query. - `found` - a complete path from start to goal (or, with `snapToNearest`, to the reachable node closest to the goal). - `unreachable` - the search exhausted the space without reaching the goal. - `budget-exceeded` - `maxExpandedNodes` ran out first. The result still carries the best partial path found so far.",
+  "symbol": "PathStatus",
+  "kind": "type",
+  "subsystem": "pathfinding",
+  "importPath": "@codexo/exojs-pathfinding",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Outcome of a path query.",
+        "- `found` - a complete path from start to goal (or, with `snapToNearest`, to the reachable node closest to the goal). - `unreachable` - the search exhausted the space without reaching the goal. - `budget-exceeded` - `maxExpandedNodes` ran out first. The result still carries the best partial path found so far."
+      ],
+      "importLine": "import { PathStatus } from '@codexo/exojs-pathfinding'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "PathStatus",
+          "signature": "\"budget-exceeded\" | \"found\" | \"unreachable\"",
+          "signatureTokens": [
+            {
+              "text": "\"budget-exceeded\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"found\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"unreachable\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-pathfinding/src/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-pathfinding/src/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/types.ts"
+}
