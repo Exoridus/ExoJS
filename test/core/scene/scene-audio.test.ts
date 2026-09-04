@@ -232,6 +232,53 @@ describe('SceneAudio — Preparing gate', () => {
     expect(voice.volume).toBe(0.3);
   });
 
+  test('fade() before flush replays the ramp on the real voice instead of dropping its duration', () => {
+    const voice = makeVoice({ volume: 1, fade: vi.fn() });
+    const app = createAppStub(voice);
+    const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+    const pending = audio.play(fakePlayable, { volume: 0.8 });
+    pending.fade(0.2, 500);
+
+    expect(pending.volume).toBe(0.2);
+
+    audio._flushPending();
+
+    expect(voice.volume).toBe(0.8);
+    expect(voice.fade).toHaveBeenCalledWith(0.2, 500);
+  });
+
+  test('a second fade() before flush keeps the original starting volume', () => {
+    const voice = makeVoice({ volume: 1, fade: vi.fn() });
+    const app = createAppStub(voice);
+    const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+    const pending = audio.play(fakePlayable, { volume: 0.9 });
+    pending.fade(0.5, 100);
+    pending.fade(0.1, 250);
+
+    audio._flushPending();
+
+    expect(voice.volume).toBe(0.9);
+    expect(voice.fade).toHaveBeenCalledTimes(1);
+    expect(voice.fade).toHaveBeenCalledWith(0.1, 250);
+  });
+
+  test('a volume write after fade() before flush supersedes the buffered ramp', () => {
+    const voice = makeVoice({ volume: 1, fade: vi.fn() });
+    const app = createAppStub(voice);
+    const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+    const pending = audio.play(fakePlayable, { volume: 0.9 });
+    pending.fade(0.2, 400);
+    pending.volume = 0.6;
+
+    audio._flushPending();
+
+    expect(voice.volume).toBe(0.6);
+    expect(voice.fade).not.toHaveBeenCalled();
+  });
+
   test('stop() before flush cancels playback — the real voice is never created', () => {
     const voice = makeVoice();
     const app = createAppStub(voice);
