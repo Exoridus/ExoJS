@@ -79,6 +79,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "DestroyScope",
   "DockContainer",
   "Drawable",
+  "DropShadowFilter",
   "Dropdown",
   "DuplicateSceneRegistrationError",
   "DynamicAabbTree",

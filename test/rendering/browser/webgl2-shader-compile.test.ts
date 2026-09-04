@@ -115,6 +115,7 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   // The built-in filters: one pass-through fullscreen-quad vertex stage, three
   // fragment stages, exactly as `ShaderFilter` assembles them.
   ['default-vertex.vert', 'color-matrix.frag'],
+  ['default-vertex.vert', 'drop-shadow.frag'],
   ['default-vertex.vert', 'lut-3d.frag'],
   ['default-vertex.vert', 'lut-rgb1d.frag'],
 ];

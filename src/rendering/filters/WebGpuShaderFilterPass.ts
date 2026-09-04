@@ -14,12 +14,20 @@ import type { ShaderFilterUniformValue } from './ShaderFilter';
  * Layout per vertex: [posX, posY, uvX, uvY]
  *
  * Vertices (clip-space positions, 0..1 UVs):
- *   0: bottom-left  (-1, -1, 0, 0)
- *   1: bottom-right ( 1, -1, 1, 0)
- *   2: top-left     (-1,  1, 0, 1)
- *   3: top-right    ( 1,  1, 1, 1)
+ *   0: bottom-left  (-1, -1, 0, 1)
+ *   1: bottom-right ( 1, -1, 1, 1)
+ *   2: top-left     (-1,  1, 0, 0)
+ *   3: top-right    ( 1,  1, 1, 0)
+ *
+ * Clip-space y grows upwards while texel row 0 is the TOP of a WebGPU texture,
+ * so the bottom edge of the quad has to sample v = 1 for the pass to copy
+ * texel row k of the input into row k of the output. With v = 0 at the
+ * bottom (the WebGL2 layout, where row 0 IS the bottom) every pass mirrors
+ * its input vertically - invisible while the effect domain equals the
+ * content bounds, and wrong the moment a filter declares asymmetric reach or
+ * samples away from its own texel.
  */
-const quadVertexData = new Float32Array([-1, -1, 0, 0, 1, -1, 1, 0, -1, 1, 0, 1, 1, 1, 1, 1]);
+const quadVertexData = new Float32Array([-1, -1, 0, 1, 1, -1, 1, 1, -1, 1, 0, 0, 1, 1, 1, 0]);
 
 /** Bytes per vertex: 2 floats position + 2 floats UV = 16 bytes */
 const vertexStrideBytes = 16;
