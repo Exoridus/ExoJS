@@ -30,7 +30,7 @@ class ZoomScene extends Scene {
   override init(): void {
     this.zoom = 1;
 
-    this.inputs.onTrigger(Keyboard.Equals, () => {
+    this.inputs.onTrigger(Keyboard.Equal, () => {
       // the key printed =/+ on US QWERTY
       this.zoom += 0.1;
     });

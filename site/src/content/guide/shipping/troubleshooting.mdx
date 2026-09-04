@@ -155,7 +155,7 @@ If you're using the `audio-reactive` template from `create-exo-app`, it already 
 
 **Key name mismatch.** ExoJS uses the `Keyboard` enum — `Keyboard.Space`, `Keyboard.A`, `Keyboard.Left`. Each member is a physical key position resolved from the Web `KeyboardEvent.code`, mapped to a numeric channel; the arrow keys are `Left`/`Up`/`Right`/`Down`, not `ArrowLeft`. Check the [Keyboard guide](/ExoJS/en/guide/input/keyboard-and-actions/) for the full enum.
 
-**A key produces a different character than its name.** That is intended: the enum names a *position* by its US-QWERTY legend, so `Keyboard.Z` is the key printed "Y" on a German QWERTZ keyboard and `Keyboard.Colon` the one printed "ö". Bindings stay physically where the player expects them. Never use the channel system to read typed text — use a DOM text input for characters, dead keys, and IME composition.
+**A key produces a different character than its name.** That is intended: the enum names a *position* by its US-QWERTY legend, so `Keyboard.Z` is the key printed "Y" on a German QWERTZ keyboard and `Keyboard.Semicolon` the one printed "ö". Bindings stay physically where the player expects them. Never use the channel system to read typed text — use a DOM text input for characters, dead keys, and IME composition.
 
 **Input not polled in `update`.** Keyboard held-key state (`isActive`) and gamepad axis values are sampled per-frame inside `update`. Reading them in `init` or outside the frame loop gives stale results.
 

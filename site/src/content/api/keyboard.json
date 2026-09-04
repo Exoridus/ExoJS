@@ -1,6 +1,6 @@
 {
   "title": "Keyboard",
-  "description": "Channel indices for keyboard keys, addressed by PHYSICAL key position. Pass any value to the Input constructor to react to that key. A key is identified by the Web platform's layout-independent `KeyboardEvent.code` (see keyboardChannelFromCode), not by the layout-dependent `keyCode`: Keyboard.A is the key at the QWERTY \"A\" position on every layout - the one an AZERTY keyboard prints \"Q\" on - so WASD-style bindings stay in the same place under the player's hand regardless of the player's layout. Every member therefore names a POSITION, described by the glyph a US-QWERTY keyboard prints there, and NOT the character the key actually produces: Keyboard.Z is the key a German QWERTZ keyboard prints \"Y\" on, and Keyboard.Colon the key it prints \"ö\" on. Use DOM text input for anything that needs the typed character, dead keys, or IME composition. The values are opaque channel indices inside the keyboard category - do not assume they equal any `keyCode`. Each modifier has both a side-specific channel (`ShiftLeft`, `ShiftRight`, `ControlLeft`, `ControlRight`, `AltLeft`, `AltRight`, `MetaLeft`, `MetaRight`) and an aggregate one (`Shift`, `Control`, `Alt`, `Meta`) that is active whenever either side is held - the aggregate is what a game binding wants (\"was Control held\", regardless of which hand), while the side-specific channels exist for a key-press visualizer or a rebinding UI that needs to tell the two physical keys apart. Releasing one side while the other stays held keeps the aggregate active.",
+  "description": "Channel indices for keyboard keys, addressed by PHYSICAL key position. Pass any value to the Input constructor to react to that key. A key is identified by the Web platform's layout-independent `KeyboardEvent.code` (see keyboardChannelFromCode), not by the layout-dependent `keyCode`: Keyboard.A is the key at the QWERTY \"A\" position on every layout - the one an AZERTY keyboard prints \"Q\" on - so WASD-style bindings stay in the same place under the player's hand regardless of the player's layout. Every member therefore names a POSITION, described by the glyph a US-QWERTY keyboard prints there, and NOT the character the key actually produces: Keyboard.Z is the key a German QWERTZ keyboard prints \"Y\" on, and Keyboard.Semicolon the key it prints \"ö\" on. Use DOM text input for anything that needs the typed character, dead keys, or IME composition. The values are opaque channel indices inside the keyboard category - do not assume they equal any `keyCode`. Each modifier has both a side-specific channel (`ShiftLeft`, `ShiftRight`, `ControlLeft`, `ControlRight`, `AltLeft`, `AltRight`, `MetaLeft`, `MetaRight`) and an aggregate one (`Shift`, `Control`, `Alt`, `Meta`) that is active whenever either side is held - the aggregate is what a game binding wants (\"was Control held\", regardless of which hand), while the side-specific channels exist for a key-press visualizer or a rebinding UI that needs to tell the two physical keys apart. Releasing one side while the other stays held keeps the aggregate active.",
   "symbol": "Keyboard",
   "kind": "enum",
   "subsystem": "input",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Channel indices for keyboard keys, addressed by PHYSICAL key position. Pass any value to the Input constructor to react to that key.",
         "A key is identified by the Web platform's layout-independent `KeyboardEvent.code` (see keyboardChannelFromCode), not by the layout-dependent `keyCode`: Keyboard.A is the key at the QWERTY \"A\" position on every layout - the one an AZERTY keyboard prints \"Q\" on - so WASD-style bindings stay in the same place under the player's hand regardless of the player's layout.",
-        "Every member therefore names a POSITION, described by the glyph a US-QWERTY keyboard prints there, and NOT the character the key actually produces: Keyboard.Z is the key a German QWERTZ keyboard prints \"Y\" on, and Keyboard.Colon the key it prints \"ö\" on. Use DOM text input for anything that needs the typed character, dead keys, or IME composition.",
+        "Every member therefore names a POSITION, described by the glyph a US-QWERTY keyboard prints there, and NOT the character the key actually produces: Keyboard.Z is the key a German QWERTZ keyboard prints \"Y\" on, and Keyboard.Semicolon the key it prints \"ö\" on. Use DOM text input for anything that needs the typed character, dead keys, or IME composition.",
         "The values are opaque channel indices inside the keyboard category - do not assume they equal any `keyCode`.",
         "Each modifier has both a side-specific channel (`ShiftLeft`, `ShiftRight`, `ControlLeft`, `ControlRight`, `AltLeft`, `AltRight`, `MetaLeft`, `MetaRight`) and an aggregate one (`Shift`, `Control`, `Alt`, `Meta`) that is active whenever either side is held - the aggregate is what a game binding wants (\"was Control held\", regardless of which hand), while the side-specific channels exist for a key-press visualizer or a rebinding UI that needs to tell the two physical keys apart. Releasing one side while the other stays held keeps the aggregate active."
       ],
@@ -98,6 +98,32 @@
           "description": ""
         },
         {
+          "name": "Backquote",
+          "signature": "Backquote",
+          "signatureTokens": [
+            {
+              "text": "Backquote",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Backslash",
+          "signature": "Backslash",
+          "signatureTokens": [
+            {
+              "text": "Backslash",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "Backspace",
           "signature": "Backspace",
           "signatureTokens": [
@@ -111,11 +137,24 @@
           "description": ""
         },
         {
-          "name": "BackwardSlash",
-          "signature": "BackwardSlash",
+          "name": "BracketLeft",
+          "signature": "BracketLeft",
           "signatureTokens": [
             {
-              "text": "BackwardSlash",
+              "text": "BracketLeft",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "BracketRight",
+          "signature": "BracketRight",
+          "signatureTokens": [
+            {
+              "text": "BracketRight",
               "kind": "name"
             }
           ],
@@ -142,32 +181,6 @@
           "signatureTokens": [
             {
               "text": "CapsLock",
-              "kind": "name"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "ClosedBracket",
-          "signature": "ClosedBracket",
-          "signatureTokens": [
-            {
-              "text": "ClosedBracket",
-              "kind": "name"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "Colon",
-          "signature": "Colon",
-          "signatureTokens": [
-            {
-              "text": "Colon",
               "kind": "name"
             }
           ],
@@ -254,19 +267,6 @@
           "description": ""
         },
         {
-          "name": "Dash",
-          "signature": "Dash",
-          "signatureTokens": [
-            {
-              "text": "Dash",
-              "kind": "name"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
           "name": "Delete",
           "signature": "Delete",
           "signatureTokens": [
@@ -345,11 +345,11 @@
           "description": ""
         },
         {
-          "name": "Equals",
-          "signature": "Equals",
+          "name": "Equal",
+          "signature": "Equal",
           "signatureTokens": [
             {
-              "text": "Equals",
+              "text": "Equal",
               "kind": "name"
             }
           ],
@@ -787,6 +787,19 @@
           "description": ""
         },
         {
+          "name": "Minus",
+          "signature": "Minus",
+          "signatureTokens": [
+            {
+              "text": "Minus",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "N",
           "signature": "N",
           "signatureTokens": [
@@ -1073,19 +1086,6 @@
           "description": ""
         },
         {
-          "name": "OpenBracket",
-          "signature": "OpenBracket",
-          "signatureTokens": [
-            {
-              "text": "OpenBracket",
-              "kind": "name"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
           "name": "P",
           "signature": "P",
           "signatureTokens": [
@@ -1177,24 +1177,11 @@
           "description": ""
         },
         {
-          "name": "QuestionMark",
-          "signature": "QuestionMark",
+          "name": "Quote",
+          "signature": "Quote",
           "signatureTokens": [
             {
-              "text": "QuestionMark",
-              "kind": "name"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "Quotes",
-          "signature": "Quotes",
-          "signatureTokens": [
-            {
-              "text": "Quotes",
+              "text": "Quote",
               "kind": "name"
             }
           ],
@@ -1247,6 +1234,19 @@
           "signatureTokens": [
             {
               "text": "ScrollLock",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Semicolon",
+          "signature": "Semicolon",
+          "signatureTokens": [
+            {
+              "text": "Semicolon",
               "kind": "name"
             }
           ],
@@ -1320,6 +1320,19 @@
           "description": ""
         },
         {
+          "name": "Slash",
+          "signature": "Slash",
+          "signatureTokens": [
+            {
+              "text": "Slash",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "Space",
           "signature": "Space",
           "signatureTokens": [
@@ -1364,19 +1377,6 @@
           "signatureTokens": [
             {
               "text": "Three",
-              "kind": "name"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "Tilde",
-          "signature": "Tilde",
-          "signatureTokens": [
-            {
-              "text": "Tilde",
               "kind": "name"
             }
           ],
