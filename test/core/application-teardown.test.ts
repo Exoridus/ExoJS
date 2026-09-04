@@ -5,6 +5,8 @@
  * `Scene.unload()` from pinning the whole engine, and the
  * `Scene.lifecycleSignal` that lets a scene cooperate with all of it.
  */
+import type { Mock } from 'vitest';
+
 import { Application, ApplicationState } from '#core/Application';
 import { Scene } from '#core/scene/Scene';
 
@@ -91,6 +93,36 @@ class CooperativeScene extends Scene {
   }
 }
 
+/**
+ * The incoming half of `CooperativeScene`: its `load()` resolves only once the
+ * lifecycle signal aborts, so a navigation to it stays in flight until
+ * something aborts it.
+ */
+class SlowLoadingScene extends Scene {
+  public static events: string[] = [];
+  public static loadStarted = Promise.resolve();
+  private static _loadStarted: () => void = () => {};
+
+  public static arm(events: string[]): void {
+    SlowLoadingScene.events = events;
+    SlowLoadingScene.loadStarted = new Promise<void>(resolve => {
+      SlowLoadingScene._loadStarted = resolve;
+    });
+  }
+
+  public override async load(): Promise<void> {
+    SlowLoadingScene._loadStarted();
+
+    await new Promise<void>(resolve => {
+      this.lifecycleSignal.addEventListener('abort', () => resolve(), { once: true });
+    });
+  }
+
+  public override destroy(): void {
+    SlowLoadingScene.events.push('scene.destroy');
+  }
+}
+
 const createApp = (): Application =>
   new Application({
     backend: { type: 'webgl2' },
@@ -101,6 +133,7 @@ const createApp = (): Application =>
       hanging: HangingScene,
       watching: WatchingScene,
       cooperative: CooperativeScene,
+      slowLoading: SlowLoadingScene,
     },
   });
 
@@ -265,6 +298,31 @@ describe('Scene.lifecycleSignal', () => {
     expect(app.scenes.currentScene?.lifecycleSignal.aborted).toBe(false);
 
     await app.destroy();
+  });
+
+  test('aborts a navigation still inside load(), so the incoming scene is torn down before the backend is', async () => {
+    const app = createApp();
+    const events: string[] = [];
+
+    SlowLoadingScene.arm(events);
+
+    // Never awaited here: the navigation only settles once destroy() aborts
+    // it. Its rejection belongs to this caller, not to the teardown.
+    const navigation = app.scenes.change(SlowLoadingScene);
+
+    navigation.catch(() => {});
+
+    await SlowLoadingScene.loadStarted;
+
+    (app.backend.destroy as unknown as Mock).mockImplementation(() => events.push('backend.destroy'));
+
+    // No fake timers: without the abort reaching the incoming scene, load()
+    // would hold this open for the full grace period and the backend would be
+    // released while the scene was still preparing.
+    await app.destroy();
+
+    expect(events).toEqual(['scene.destroy', 'backend.destroy']);
+    expect(app.state).toBe(ApplicationState.Destroyed);
   });
 
   test('lets a cooperative scene bail out, so teardown settles well inside the grace period', async () => {

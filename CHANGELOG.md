@@ -8,12 +8,30 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Added
 
+- **`Scene.animations`, a scene-bound animation facade with the same `when`
+  policy the tween and audio facades already have.** An `AnimatedSprite`
+  attached to a scene tree kept advancing through `SceneDirector.pause()` and
+  through retention, so a pause menu drawn over a "frozen" world still had
+  moving sprites and a suspended scene kept burning frames.
+  `this.animations.add(sprite, { when: 'active' })` binds playback to the
+  scene: frozen while it is paused, frozen while it is retained, stopped when
+  it ends. `when` takes the same `SceneAvailability` values with the same
+  `'always'` default, so an untracked sprite behaves exactly as before.
 - **`Spritesheet.removeFrame(name)` and `Stack.removeItem(item)`.** Both
   mirror their existing `add`-side methods, completing the add/remove pair
   every other mutator on these classes already has.
 
 ### Fixed
 
+- **`Application.destroy()` now aborts the lifecycle signal of a navigation
+  still inside `load()`.** Teardown already waited for an in-flight navigation
+  to settle, but nothing told the incoming scene to stop: a `load()` awaiting
+  `Scene.lifecycleSignal` never resolved, so the wait ran out the full
+  five-second grace period and the backend went down while the scene was still
+  preparing. The signal is aborted at the same point the navigation's
+  generation is invalidated, so a cooperative `load()` returns immediately and
+  the incoming scope's teardown completes before anything it depends on is
+  released.
 - **Two class doc comments no longer erase their class from the published
   declarations under `stripInternal`.** `SceneNode` and `Loader` mentioned
   `@internal` in prose, which TypeScript reads as a real tag on the class; the
