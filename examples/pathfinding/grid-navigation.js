@@ -134,8 +134,8 @@ class GridNavigationScene extends Scene {
   }
   replan(mutate) {
     mutate?.();
-    // The agent is somewhere between two cells, so the query starts from the
-    // cell it currently stands in rather than from the previous path's start.
+    // Replanning starts from the cell the walker currently stands in, not from
+    // the previous path's start: it is usually somewhere between two cells.
     this.result = this.pathfinder.findPathBetween(this.grid, this.agent.x, this.agent.y, (this.goal.x + 0.5) * CELL, (this.goal.y + 0.5) * CELL, {
       smooth: this.smooth,
       pruning: this.pruning,
