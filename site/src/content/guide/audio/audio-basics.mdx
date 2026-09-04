@@ -238,8 +238,8 @@ import { type Application, Sound } from '@codexo/exojs';
 declare const application: Application;
 declare const sound: Sound;
 
-sound.defineSprite('impact', { start: 0.5, end: 0.8 });
-sound.defineSprite('whoosh', { start: 1.2, end: 1.6, loop: true });
+sound.addSprite('impact', { start: 0.5, end: 0.8 });
+sound.addSprite('whoosh', { start: 1.2, end: 1.6, loop: true });
 
 // `sprite(name)` is the playback side: it returns a `Sound` over that window.
 application.audio.play(sound.sprite('impact'));

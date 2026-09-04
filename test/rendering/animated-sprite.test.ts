@@ -210,7 +210,7 @@ describe('AnimatedSprite', () => {
     const sprite = new AnimatedSprite(null);
 
     expect(() =>
-      sprite.defineClip('bad', {
+      sprite.addClip('bad', {
         frames,
         frameDurations: [100, 100],
       }),
@@ -222,7 +222,7 @@ describe('AnimatedSprite', () => {
     const sprite = new AnimatedSprite(null);
 
     expect(() =>
-      sprite.defineClip('bad', {
+      sprite.addClip('bad', {
         frames,
         frameDurations: [100, 0, 100],
       }),
@@ -300,7 +300,7 @@ describe('AnimatedSprite', () => {
     const sprite = new AnimatedSprite(null);
 
     expect(() =>
-      sprite.defineClip('bad', {
+      sprite.addClip('bad', {
         frames,
         frameOffsets: [{ x: 0, y: 0 }],
       }),
@@ -312,7 +312,7 @@ describe('AnimatedSprite', () => {
     const sprite = new AnimatedSprite(null);
 
     expect(() =>
-      sprite.defineClip('bad', {
+      sprite.addClip('bad', {
         frames,
         frameOffsets: [
           { x: 0, y: 0 },
@@ -471,9 +471,9 @@ describe('AnimatedSprite', () => {
       const frames = createFrames();
       const sprite = new AnimatedSprite(null);
 
-      expect(() => sprite.defineClip('bad', { frames, repeat: 0 })).toThrow(/repeat/);
-      expect(() => sprite.defineClip('bad', { frames, repeat: -2 })).toThrow(/repeat/);
-      expect(() => sprite.defineClip('bad', { frames, repeat: 1.5 })).toThrow(/repeat/);
+      expect(() => sprite.addClip('bad', { frames, repeat: 0 })).toThrow(/repeat/);
+      expect(() => sprite.addClip('bad', { frames, repeat: -2 })).toThrow(/repeat/);
+      expect(() => sprite.addClip('bad', { frames, repeat: 1.5 })).toThrow(/repeat/);
     });
 
     test("repeat honors each frame's own frameDurations hold time on every cycle, not an averaged/uniform value", () => {
@@ -535,7 +535,7 @@ describe('AnimatedSprite', () => {
       expect(completeSpy).toHaveBeenCalledWith('combo');
     });
 
-    // A single-frame clip is a legal clip (`defineClip` accepts one frame), and
+    // A single-frame clip is a legal clip (`addClip` accepts one frame), and
     // an Aseprite frame tag covering one frame with `repeat: 1` is the common
     // source of one. It holds for its frame duration and then completes like
     // any other clip.

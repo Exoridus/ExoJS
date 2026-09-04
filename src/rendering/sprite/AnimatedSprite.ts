@@ -60,7 +60,7 @@ interface NormalizedAnimatedSpriteClip {
    * The clip's untrimmed source canvas, or `null` for a clip without
    * {@link AnimatedSpriteClipDefinition.frameOffsets} (nothing was trimmed, so
    * the frame rectangle IS the layout box). Computed once at
-   * {@link AnimatedSprite.defineClip} time; see
+   * {@link AnimatedSprite.addClip} time; see
    * {@link AnimatedSprite._updateOrigin} for how it is derived and why.
    */
   readonly sourceSize: { readonly width: number; readonly height: number } | null;
@@ -73,7 +73,7 @@ const infiniteRepeat = -1;
 
 /**
  * Throws if `repeat` is not `infiniteRepeat` (`-1`) or a positive integer.
- * Shared by {@link AnimatedSprite.defineClip}, the {@link AnimatedSprite.repeat}
+ * Shared by {@link AnimatedSprite.addClip}, the {@link AnimatedSprite.repeat}
  * setter, and {@link AnimatedSprite.play}'s `options.repeat` so every entry
  * point rejects the same invalid values consistently.
  */
@@ -87,7 +87,7 @@ const assertValidRepeat = (context: string, repeat: number): void => {
  * A {@link Sprite} that advances through a sequence of texture-frame
  * {@link Rectangle}s over time to produce frame-based animation.
  *
- * Multiple named clips can be registered via {@link defineClip} or the
+ * Multiple named clips can be registered via {@link addClip} or the
  * constructor. Call {@link play} to start a clip. Playback then advances by
  * itself: a playing sprite attached to an {@link Application}'s scene tree
  * registers with that application's {@link AnimationSystem} and is ticked
@@ -173,14 +173,14 @@ export class AnimatedSprite extends Sprite {
     this._clips.clear();
 
     for (const [name, clip] of Object.entries(clips)) {
-      this.defineClip(name, clip);
+      this.addClip(name, clip);
     }
 
     return this;
   }
 
   /** Register a named clip. Frame rectangles are cloned so the caller may mutate the originals. */
-  public defineClip(name: string, clip: AnimatedSpriteClipDefinition): this {
+  public addClip(name: string, clip: AnimatedSpriteClipDefinition): this {
     if (name.trim().length === 0) {
       throw new Error('AnimatedSprite clip names must be non-empty strings.');
     }
@@ -566,7 +566,7 @@ export class AnimatedSprite extends Sprite {
    * `height = max(offset.y + frame.height)` over every frame, anchored at the
    * local origin `(0, 0)` - the point the offsets are expressed relative to.
    * That is the smallest canvas every frame of the clip fits on, it is
-   * computed once per clip in {@link defineClip}, and it is identical for
+   * computed once per clip in {@link addClip}, and it is identical for
    * every frame index. It can under-report an authored canvas whose right or
    * bottom edge is empty in every single frame; nothing in the frame data can
    * distinguish that case, and the pivot stays stable either way.

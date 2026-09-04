@@ -135,7 +135,7 @@ export class AsepriteSheet {
   /**
    * Animation clips derived from the Aseprite `frameTags` metadata.
    * Each clip's frames are live references into {@link spritesheet.frames};
-   * they are cloned automatically when passed to {@link AnimatedSprite.defineClip}.
+   * they are cloned automatically when passed to {@link AnimatedSprite.addClip}.
    */
   public readonly clips: ReadonlyMap<string, AnimatedSpriteClipDefinition>;
 
@@ -289,7 +289,7 @@ export class AsepriteSheet {
   /**
    * Create an {@link AnimatedSprite} with all frame-tag clips pre-defined.
    *
-   * Each clip is registered via {@link AnimatedSprite.defineClip}, which
+   * Each clip is registered via {@link AnimatedSprite.addClip}, which
    * clones the frame {@link Rectangle}s so the sprite owns its own copies.
    * Call {@link AnimatedSprite.play} with a tag name to start playback.
    */
@@ -297,7 +297,7 @@ export class AsepriteSheet {
     const sprite = new AnimatedSprite(this.spritesheet.texture);
 
     for (const [name, clip] of this.clips) {
-      sprite.defineClip(name, clip);
+      sprite.addClip(name, clip);
     }
 
     return sprite;

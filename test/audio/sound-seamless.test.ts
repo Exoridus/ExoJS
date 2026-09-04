@@ -100,7 +100,7 @@ describe('Sound.play before load', () => {
   test('a sprite replayed after eviction returns NoopVoice, not a throw', () => {
     const system = new AudioSystem();
     const sound = new Sound(bufferStub(4));
-    sound.defineSprite('hit', { start: 0, end: 1 }); // defined while loaded
+    sound.addSprite('hit', { start: 0, end: 1 }); // defined while loaded
     sound._evictBuffer();
     sound._loadState.begin(); // evicted -> loading
 

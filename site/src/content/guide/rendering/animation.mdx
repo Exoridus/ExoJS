@@ -199,7 +199,7 @@ declare const spriteTexture: Texture;
 
 const player = new AnimatedSprite(spriteTexture);
 
-player.defineClip('walk', {
+player.addClip('walk', {
     frames: [
         new Rectangle(0, 0, 32, 32),
         new Rectangle(32, 0, 32, 32),
@@ -220,8 +220,8 @@ import { AnimatedSprite, Rectangle } from '@codexo/exojs';
 
 declare const player: AnimatedSprite;
 
-player.defineClip('idle', { frames: [new Rectangle(0, 32, 32, 32)], fps: 1 });              // repeat: -1 (default) — loops forever
-player.defineClip('jump', { frames: [new Rectangle(128, 0, 32, 32)], fps: 1, repeat: 1 });  // plays once
+player.addClip('idle', { frames: [new Rectangle(0, 32, 32, 32)], fps: 1 });              // repeat: -1 (default) — loops forever
+player.addClip('jump', { frames: [new Rectangle(128, 0, 32, 32)], fps: 1, repeat: 1 });  // plays once
 ```
 
 Call `setClips()` to replace all clips at once with a map.
@@ -241,7 +241,7 @@ declare const frame0: Rectangle;
 declare const frame1: Rectangle;
 declare const frame2: Rectangle;
 
-player.defineClip('hit', {
+player.addClip('hit', {
     frames: [frame0, frame1, frame2],
     frameDurations: [80, 40, 200],                                    // ms per frame — frame1 is a quick flash, frame2 lingers
     frameOffsets: [{ x: 0, y: 0 }, { x: -2, y: 1 }, { x: 0, y: 0 }],   // keep the trimmed frame1 anchored

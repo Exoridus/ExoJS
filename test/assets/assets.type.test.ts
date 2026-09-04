@@ -1,6 +1,6 @@
 import '#assets/coreAssetTypes';
 
-import { describe, expectTypeOf, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 
 // `CatalogResourceLeaf` / `CatalogValueLeaf` are deliberately not part of the
 // root API - the brand mirrors the internal `_assetMeta` runtime stamp and is an
@@ -16,6 +16,19 @@ describe('Assets.from types', () => {
   it('infers Texture + AssetRef leaves from bare strings', () => {
     const a = Assets.from({ ship: 'a.png', level: 'b.json' });
     expectTypeOf(a.ship).toEqualTypeOf<CatalogResourceLeaf<Texture>>();
+    expectTypeOf(a.level).toEqualTypeOf<CatalogValueLeaf<unknown>>();
+  });
+
+  it('rejects a bare path whose suffix no asset type claims, at the literal', () => {
+    // @ts-expect-error - 'hero.pgn' is not assignable to the suffix diagnostic.
+    expect(() => Assets.from({ hero: 'hero.pgn' })).toThrow();
+    // @ts-expect-error - one bad entry is enough; the good neighbour does not rescue it.
+    expect(() => Assets.from({ ship: 'a.png', hero: 'hero.pgn' })).toThrow();
+  });
+
+  it('still accepts a path that only exists at runtime', () => {
+    const fromConfig = (path: string): string => path;
+    const a = Assets.from({ ship: fromConfig('a.png'), level: 'b.json' });
     expectTypeOf(a.level).toEqualTypeOf<CatalogValueLeaf<unknown>>();
   });
 });
