@@ -17,6 +17,7 @@ import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 
 import { fillShaderSource } from '#rendering/shader/fillShaderSource';
 import { resolveTransformTextureGlsl } from '#rendering/shader/transformTextureLayout';
+import { composeSpriteMaterialFragmentGlsl } from '#rendering/sprite/materialSources';
 import { composeTextAtlasFragmentGlsl } from '#rendering/text/atlasTextureSlots';
 
 import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../../../packages/exojs-tilemap/src/tileWord';
@@ -66,8 +67,17 @@ const placeholderValues: Readonly<Record<string, Readonly<Record<string, number>
 const composeRuntimeSource = (name: string, source: string): string => {
   const values = placeholderValues[name];
   const filled = values ? fillShaderSource(source, values) : source;
+  // A sprite-material fragment is authored without the base-texture slot table
+  // and `sampleBase()`: the renderer splices those in. `lit-sprite.frag` ships
+  // from the lighting package and only compiles in that spliced form.
+  const composed =
+    name.startsWith('text-') && name.endsWith('.frag')
+      ? composeTextAtlasFragmentGlsl(filled)
+      : name === 'lit-sprite.frag'
+        ? composeSpriteMaterialFragmentGlsl(filled)
+        : filled;
 
-  return resolveTransformTextureGlsl(name.startsWith('text-') && name.endsWith('.frag') ? composeTextAtlasFragmentGlsl(filled) : filled);
+  return resolveTransformTextureGlsl(composed);
 };
 
 const shaders: readonly ShaderEntry[] = Object.entries(shaderModules)
@@ -118,6 +128,9 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['default-vertex.vert', 'drop-shadow.frag'],
   ['default-vertex.vert', 'lut-3d.frag'],
   ['default-vertex.vert', 'lut-rgb1d.frag'],
+  // The custom sprite-material path: the engine owns the vertex stage, and the
+  // lighting package's lit fragment is the in-repo counterpart it links with.
+  ['sprite-material.vert', 'lit-sprite.frag'],
 ];
 
 const referencedShaderFiles = new Set(programPairs.flat());
@@ -129,7 +142,7 @@ const referencedShaderFiles = new Set(programPairs.flat());
 // case has no meaning for them. An entry is a claim that the missing half is
 // the caller's, not that the stage is untested.
 const standaloneStages: ReadonlyMap<string, string> = new Map([
-  ['sprite-material.vert', 'the custom SpriteMaterial path takes its fragment stage from the application'],
+  ['lit-sprite.vert', 'placeholder the lighting package hands ShaderSource; the renderer owns the sprite vertex stage and never compiles it'],
 ]);
 
 interface CompiledShader {
