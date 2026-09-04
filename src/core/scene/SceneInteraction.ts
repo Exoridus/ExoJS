@@ -1,8 +1,20 @@
 import type { Application } from '#core/Application';
+import { SceneAvailability } from '#core/scene/SceneAvailability';
 import { SceneState } from '#core/scene/SceneState';
 import type { Destroyable } from '#core/types';
 import type { ScopeToken } from '#input/ScopeToken';
 import type { RenderNode } from '#rendering/RenderNode';
+
+/** Options for {@link SceneInteraction.observe} and {@link SceneInteraction.scope}. */
+export interface SceneInteractionOptions {
+  /**
+   * When the registration takes part in dispatch: `'always'` (the default)
+   * keeps it live through {@link SceneDirector.pause}, so a pause menu drawn by
+   * the paused scene still receives pointer events; `'active'` detaches it
+   * while the scene is paused; `'paused'` attaches it only then.
+   */
+  readonly when?: SceneAvailability;
+}
 
 /**
  * Handle returned by {@link SceneInteraction.observe}. Detaches the observed
@@ -32,6 +44,7 @@ export interface InteractionScope extends Destroyable {
 }
 
 interface TrackedObservation extends InteractionObservation {
+  readonly when: SceneAvailability;
   readonly root: RenderNode;
   /** Whether this observation currently reached `app.interaction` - false while created/left dormant. */
   attached: boolean;
@@ -39,6 +52,7 @@ interface TrackedObservation extends InteractionObservation {
 }
 
 interface TrackedScope extends InteractionScope {
+  readonly when: SceneAvailability;
   readonly root: RenderNode;
   /** The live scope's token while pushed onto `app.interaction`'s stack, `null` while created/left dormant. */
   token: ScopeToken | null;
@@ -74,10 +88,24 @@ export class SceneInteraction implements Destroyable {
   public constructor(
     private readonly _app: Application,
     private readonly _getState: () => SceneState,
+    private readonly _getPaused: () => boolean = () => false,
   ) {}
 
   private _isLive(): boolean {
     return this._getState() === SceneState.Active;
+  }
+
+  /** Whether a registration with policy `when` belongs in dispatch right now. */
+  private _allows(when: SceneAvailability): boolean {
+    if (!this._isLive()) {
+      return false;
+    }
+
+    if (when === SceneAvailability.Always) {
+      return true;
+    }
+
+    return when === SceneAvailability.Active ? !this._getPaused() : this._getPaused();
   }
 
   /**
@@ -88,8 +116,9 @@ export class SceneInteraction implements Destroyable {
    * early; otherwise it is detached automatically when the scene ends
    * permanently.
    */
-  public observe(root: RenderNode): InteractionObservation {
-    const live = this._isLive();
+  public observe(root: RenderNode, options: SceneInteractionOptions = {}): InteractionObservation {
+    const when = options.when ?? SceneAvailability.Always;
+    const live = this._allows(when);
 
     if (live) {
       this._app.interaction.attachRoot(root);
@@ -97,6 +126,7 @@ export class SceneInteraction implements Destroyable {
 
     const observation: TrackedObservation = {
       root,
+      when,
       attached: live,
       released: false,
       release: () => this._release(observation),
@@ -117,12 +147,13 @@ export class SceneInteraction implements Destroyable {
    * created, preserving the relative order of the rest. Buffered until the
    * owning scope is `Active`, same as {@link SceneInteraction.observe}.
    */
-  public scope(root: RenderNode): InteractionScope {
-    const live = this._isLive();
-    const token = live ? this._app.interaction.pushScope(root) : null;
+  public scope(root: RenderNode, options: SceneInteractionOptions = {}): InteractionScope {
+    const when = options.when ?? SceneAvailability.Always;
+    const token = this._allows(when) ? this._app.interaction.pushScope(root) : null;
 
     const scope: TrackedScope = {
       root,
+      when,
       token,
       released: false,
       release: () => this._releaseScope(scope),
@@ -167,24 +198,36 @@ export class SceneInteraction implements Destroyable {
   }
 
   /**
-   * Attach every observation and push every scope not currently attached
-   * to `app.interaction`, in tracking order - covers both a fresh
-   * activation flushing whatever was registered while dormant, and a
+   * Bring every registration in line with its `when` policy and the scope's
+   * state: attach observations and push scopes that belong in dispatch now,
+   * detach and pop the ones that no longer do, in tracking order. Covers a
+   * fresh activation flushing whatever was registered while dormant, a
    * retention restore reinstating whatever {@link SceneInteraction.suspend}
-   * detached. Idempotent - already-attached entries are left alone.
+   * detached, and a pause or resume flipping the `'active'`/`'paused'`
+   * registrations. Idempotent.
    * @internal
    */
   public resume(): void {
     for (const observation of this._observations) {
-      if (!observation.attached) {
+      const wanted = this._allows(observation.when);
+
+      if (wanted && !observation.attached) {
         this._app.interaction.attachRoot(observation.root);
         observation.attached = true;
+      } else if (!wanted && observation.attached) {
+        this._app.interaction.detachRoot(observation.root);
+        observation.attached = false;
       }
     }
 
     for (const scope of this._scopes) {
-      if (scope.token === null) {
+      const wanted = this._allows(scope.when);
+
+      if (wanted && scope.token === null) {
         scope.token = this._app.interaction.pushScope(scope.root);
+      } else if (!wanted && scope.token !== null) {
+        this._app.interaction.popScope(scope.token);
+        scope.token = null;
       }
     }
   }

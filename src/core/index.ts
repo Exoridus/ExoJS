@@ -67,7 +67,7 @@ export {
   UnregisteredSceneError,
 } from '#core/scene/sceneErrors';
 export type { SceneActionMapOptions, SceneInputBindingOptions } from '#core/scene/SceneInputs';
-export type { InteractionObservation, InteractionScope } from '#core/scene/SceneInteraction';
+export type { InteractionObservation, InteractionScope, SceneInteractionOptions } from '#core/scene/SceneInteraction';
 export { SceneState } from '#core/scene/SceneState';
 export type {
   SceneTransitionContext,
