@@ -8,6 +8,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Changed
 
+- **Every remaining public duration input takes branded `Seconds` instead of a
+  plain millisecond `number`.** `AudioBus.fadeIn`/`fadeOut`, `Voice.fade`/`stop`
+  (and `crossFade`'s duration), `InputVoice.record`, `Envelope`'s
+  `attack`/`decay`/`release`/`totalDuration` (renamed from the `*Ms` fields,
+  with `trigger`'s `elapsed` following) and its `releaseAt` method (renamed
+  from `release`, which now names the duration field instead),
+  `View.shake`'s duration, `AnimatedSprite`'s `frameDuration`/`frameDurations`,
+  and `PhasedSceneTransition`/`CrossFadeSceneTransition`'s `duration` all match
+  the `Seconds` unit the rest of the engine already uses. Wrap existing
+  millisecond literals with `Time.seconds(ms / 1000)` (or write the value
+  directly in seconds); `Envelope.releaseAt` replaces `envelope.release(...)`
+  now that `release` names the duration property.
 - **`AnimatedSprite.defineClip` is now `addClip`, `Sound.defineSprite` is now
   `addSprite`, and `Spritesheet.addFrame`/`removeFrame` return `this`.** One
   verb pair, `add`/`remove`, for every named-registration mutator, and every
