@@ -84,6 +84,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   is sampled, so animating them scrolls the distortion. The reach is declared
   through `getOutputBounds`, and a fragment displaced past the effect domain
   comes out transparent rather than smearing the border.
+- **A guide chapter and a playground example for writing your own scene
+  transition.** The **Writing your own transition** chapter spells out the
+  lifecycle contract `SceneTransitionLifecycleError` enforces - the
+  definition/session split, what the director guarantees per frame, why
+  `commit()` does not switch the scene in the same call, and what an abort and
+  a `destroy()` have to leave behind - and builds a complete bar-wipe
+  transition against it, both as a full `SceneTransition` and as a
+  `PhasedSceneTransition`. The matching `application-scenes/custom-transition`
+  example runs that transition between two scenes. No API change.
 - **`DropShadowFilter`.** A soft, offset silhouette of the filtered node drawn
   behind it: `offsetX`/`offsetY`, `blur`, `quality`, `color` (alpha is the
   shadow opacity) and `shadowOnly` for glows and detached shadows. Composed from

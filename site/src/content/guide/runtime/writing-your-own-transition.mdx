@@ -1,0 +1,311 @@
+---
+title: 'Writing your own transition'
+description: 'The scene-transition lifecycle contract from the inside: what the director guarantees, what your transition must guarantee, and a complete custom transition built against it.'
+---
+
+import ExamplePreview from '../../../components/ExamplePreview.astro';
+import TryIt from '../../../components/TryIt.astro';
+import Callout from '../../../components/Callout.astro';
+
+# Writing your own transition
+
+The stock transitions — [`FadeSceneTransition`](/ExoJS/en/api/fade-scene-transition/), [`CrossFadeSceneTransition`](/ExoJS/en/api/cross-fade-scene-transition/), [`SlideSceneTransition`](/ExoJS/en/api/slide-scene-transition/) — cover most projects. When your game needs its own look for a scene change, you write a [`SceneTransition`](/ExoJS/en/api/scene-transition/) yourself. The rules are few, but they are not optional: the director enforces them at runtime and aborts the navigation when one is broken.
+
+This chapter is that contract, in order, with a complete transition built against it.
+
+## Definition and session
+
+A transition is two objects, and keeping them apart is the whole design:
+
+- The **definition** is your `SceneTransition` subclass. You construct it once and reuse it for every navigation — even for two applications at the same time. It is immutable: it holds options (duration, colour, direction), never progress.
+- The **session** is one navigation's worth of state. The director asks the definition for a fresh session at the start of every navigation, drives it once per frame, and destroys it when the navigation ends. Nothing is reused between navigations.
+
+Progress, elapsed time, sprites you mutate per frame — all of that belongs to the session. Put it on the definition and two concurrent navigations will fight over it.
+
+## What the director guarantees
+
+For one navigation, in this order:
+
+1. It calls `getRequirements(context)` **once, before the session exists**, and provisions the render resources you asked for.
+2. It calls `beginSession(environment)` and gets your session.
+3. Every frame it calls `session.update(delta)`, then reads `session.done`, then reads `session.placement`, then calls `session.render(context, frame)`, then reads `session.done` again.
+4. When you call `environment.commit()`, it performs the scene switch — asynchronously, never inside the call that requested it. Once the switch has crossed its atomic boundary, `environment.committed` flips to `true`.
+5. Once `done` reads `true` **and** the commit has happened, the navigation resolves.
+6. It calls `session.destroy()` **exactly once**, on every exit path: normal completion, an abort before the commit, a failure after it, or the application being destroyed mid-transition. No `update()` or `render()` call ever follows `destroy()`.
+
+## What your transition must guarantee
+
+1. `getRequirements()` is pure and synchronous. The director calls it before every session; it may not allocate, mutate, or await.
+2. The session calls `environment.commit()` **exactly once**. Nothing else will: a session that never commits leaves the navigation hanging forever, and a second call throws a [`SceneTransitionLifecycleError`](/ExoJS/en/api/scene-transition-lifecycle-error/) with reason `'commit-reentrant'` in a development build.
+3. `done` is never `true` while `environment.committed` is `false`. The director treats that as reason `'done-before-commit'`, rejects the navigation, and leaves the old scene active — in production builds too.
+4. `destroy()` releases everything the session allocated, and releases it once.
+
+<Callout type="pitfall" title="commit() does not switch the scene in the same call">
+`commit()` only _requests_ the switch. The incoming scene still has to run `load()` and `init()`, so `committed` turns `true` on a later frame. A session that finishes its animation and reports `done` in the same breath as `commit()` trips `'done-before-commit'` and the navigation fails. Hold at the closed state until you observe `committed`.
+</Callout>
+
+## Declaring what you need to draw
+
+`getRequirements()` tells the director which render resources to hand your session each frame, via the [`SceneTransitionFrame`](/ExoJS/en/api/scene-transition-frame/):
+
+- `currentFrame: 'direct'` — the live scene draws straight to the screen. Your `render()` draws on top of it. `frame.current` stays `null`. This is what an overlay effect (a fade, a wipe, a flash) wants.
+- `currentFrame: 'texture'` — the live scene is redirected into an off-screen texture instead, handed to you as `frame.current`. You decide where and how it lands on screen. This is what a slide or a cross-fade wants, and it is the only way to move the scene itself.
+- `outgoingFrame: 'snapshot'` — one frozen capture of the outgoing scene, taken before the session starts, handed to you as `frame.outgoing` for the whole session. Use it to keep the old scene visible after it is gone.
+
+Both default to `'none'`. Ask for the least you need: `'texture'` costs a full-screen render target per frame, `'snapshot'` costs one for the session.
+
+`frame.current` is the outgoing scene before the commit and the incoming scene after it — the same field, a different scene. The textures are borrowed: draw from them, never retain or destroy them.
+
+## A complete transition
+
+Two bars close in from the top and bottom edges, the scene switches behind them, then they open again. It draws over the live surface, so it needs no texture and no snapshot:
+
+```ts
+import { Color, SceneTransition, type SceneTransitionEnvironment, type SceneTransitionRequirements, type SceneTransitionSession, type Seconds, Time } from '@codexo/exojs';
+
+class BarWipeSceneTransition extends SceneTransition {
+  public constructor(
+    private readonly halfDuration: Seconds = Time.seconds(0.3),
+    private readonly color: Color = Color.black,
+  ) {
+    super();
+  }
+
+  public override getRequirements(): SceneTransitionRequirements {
+    return { outgoingFrame: 'none', currentFrame: 'direct' };
+  }
+
+  protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+    return new BarWipeSession(this.halfDuration, this.color, environment);
+  }
+}
+```
+
+`createSession` is `protected`: the director reaches it through the public `beginSession()`, and your own code never calls either.
+
+The session owns the animation and the two nodes it draws:
+
+```ts
+import { Graphics, type Color, type RenderingContext, type SceneTransitionEnvironment, type SceneTransitionSession, type Seconds } from '@codexo/exojs';
+
+type WipePhase = 'closing' | 'holding' | 'opening' | 'done';
+
+const createBar = (color: Color): Graphics => {
+  const bar = new Graphics();
+
+  bar.fillColor = color;
+  bar.drawRectangle(0, 0, 1, 1);
+
+  return bar;
+};
+
+class BarWipeSession implements SceneTransitionSession {
+  public readonly placement = 'screen';
+
+  private phase: WipePhase = 'closing';
+  private elapsed = 0;
+  private readonly topBar: Graphics;
+  private readonly bottomBar: Graphics;
+
+  public constructor(
+    private readonly halfDuration: Seconds,
+    color: Color,
+    private readonly environment: SceneTransitionEnvironment,
+  ) {
+    this.topBar = createBar(color);
+    this.bottomBar = createBar(color);
+  }
+
+  public get done(): boolean {
+    return this.phase === 'done';
+  }
+
+  public update(delta: Seconds): void {
+    if (this.phase === 'done') {
+      return;
+    }
+
+    if (this.phase === 'holding') {
+      if (!this.environment.committed) {
+        return;
+      }
+
+      this.phase = 'opening';
+      this.elapsed = 0;
+    }
+
+    this.elapsed = Math.min(this.halfDuration, this.elapsed + Math.max(0, delta));
+
+    if (this.elapsed < this.halfDuration) {
+      return;
+    }
+
+    if (this.phase === 'closing') {
+      this.environment.commit();
+      this.phase = 'holding';
+    } else {
+      this.phase = 'done';
+    }
+  }
+
+  public render(context: RenderingContext): void {
+    const bounds = context.screenView.getBounds();
+    const width = bounds.right - bounds.left;
+    const barHeight = ((bounds.bottom - bounds.top) / 2) * this.coverage();
+
+    if (barHeight <= 0) {
+      return;
+    }
+
+    this.topBar.setPosition(bounds.left, bounds.top).setScale(width, barHeight);
+    this.bottomBar.setPosition(bounds.left, bounds.bottom - barHeight).setScale(width, barHeight);
+
+    context.render(this.topBar, { view: context.screenView });
+    context.render(this.bottomBar, { view: context.screenView });
+  }
+
+  public destroy(): void {
+    this.topBar.destroy();
+    this.bottomBar.destroy();
+  }
+
+  private coverage(): number {
+    const progress = this.halfDuration > 0 ? Math.min(1, this.elapsed / this.halfDuration) : 1;
+
+    if (this.phase === 'closing') {
+      return progress;
+    }
+
+    return this.phase === 'holding' ? 1 : 1 - progress;
+  }
+}
+```
+
+Then hand an instance to any navigation:
+
+```ts
+import { Scene, Time } from '@codexo/exojs';
+
+class GameScene extends Scene {}
+
+const wipe = new BarWipeSceneTransition(Time.seconds(0.3));
+
+await app.scenes.change(GameScene, { transition: wipe });
+```
+
+Three details in that session are the contract, not style:
+
+- **The `'holding'` phase.** `commit()` is requested at the end of `'closing'`, and the bars stay shut until `committed` is observed on a later frame. Skipping the hold is the `'done-before-commit'` bug.
+- **`Math.max(0, delta)`.** A negative or absurd delta must not run the animation backwards or skip the commit.
+- **Two `Graphics` nodes, not one drawn twice.** `context.render(...)` submits a draw, it does not execute it. A single node rendered twice in one frame has its second transform overwrite the first before either reaches the GPU.
+
+## placement: above or below the app's own draw
+
+`placement` is read live, every frame:
+
+- `'screen'` draws the transition after the scene _and_ after the application's own draw systems — an overlay above everything.
+- `'scene'` draws it between the scene and the app's draw systems, so an app-level HUD or debug overlay stays on top of the transition.
+
+A session may change its answer mid-transition; the director re-reads it each frame.
+
+## Aborting
+
+A transition can be interrupted: `app.stop()`, `app.destroy()`, or a fatal frame error all end an in-flight navigation. The director then settles the navigation with a `SceneTransitionLifecycleError` (reason `'aborted'` for a disposal), and calls `destroy()` on your session — still exactly once, still with no further `update()`/`render()` call.
+
+Your side of that is small but real:
+
+- Do not leave visible state behind in something you do not own. Draw only in `render()`, into the context you are handed; never mutate the scene graph, the clear colour, or the application's view. Whatever you drew simply stops being drawn.
+- Do not hold a promise the navigation's outcome depends on. The director owns settling the navigation; a session that awaits something of its own can hang a navigation that nothing will ever abort.
+- Do not treat `destroy()` as the "transition finished" hook. It runs on the abort path too, before the commit, with the old scene still active.
+
+<Callout type="warning" title="Anything you allocate per session, you release in destroy()">
+`Graphics`, `Geometry`, `Material`, a `RenderTexture` you created yourself — all own GPU resources, and a session is created fresh per navigation. Release them in `destroy()` and a hundred scene changes cost nothing; skip it and each one leaks. Textures the director hands you in `SceneTransitionFrame` are the exception: they are borrowed, and releasing them corrupts the pool.
+</Callout>
+
+## The shortcut: PhasedSceneTransition
+
+Most transitions are symmetric: something covers the screen, the scene switches, the same thing uncovers it. [`PhasedSceneTransition`](/ExoJS/en/api/phased-scene-transition/) implements that whole session — timing, easing, the commit request and the hold — and leaves you two drawing hooks. The bar wipe as a phased transition:
+
+```ts
+import { Color, PhasedSceneTransition, type SceneTransitionPhaseContext, type SceneTransitionPhaseRequirements } from '@codexo/exojs';
+import { Graphics } from '@codexo/exojs';
+
+class PhasedBarWipe extends PhasedSceneTransition<{ readonly bar: Graphics }> {
+  protected override getPhaseRequirements(): SceneTransitionPhaseRequirements {
+    return { outgoingFrame: 'none', currentFrame: 'direct' };
+  }
+
+  protected override createPhaseState(): { readonly bar: Graphics } {
+    const bar = new Graphics();
+
+    bar.fillColor = Color.black;
+    bar.drawRectangle(0, 0, 1, 1);
+
+    return { bar };
+  }
+
+  protected override enter(context: SceneTransitionPhaseContext, state: { readonly bar: Graphics }): void {
+    this.drawBar(context, state.bar);
+  }
+
+  protected override exit(context: SceneTransitionPhaseContext, state: { readonly bar: Graphics }): void {
+    this.drawBar(context, state.bar);
+  }
+
+  private drawBar(context: SceneTransitionPhaseContext, bar: Graphics): void {
+    const bounds = context.rendering.screenView.getBounds();
+    const height = (bounds.bottom - bounds.top) * (1 - context.presence);
+
+    bar.setPosition(bounds.left, bounds.top).setScale(bounds.right - bounds.left, height);
+    context.rendering.render(bar, { view: context.rendering.screenView });
+  }
+}
+```
+
+`exit` runs while the old scene leaves, `enter` while the new one arrives, and `context.presence` goes `1 → 0` in `exit` and `0 → 1` in `enter` — so one formula serves both phases without inverting anything. `createPhaseState()` gives each session its own scratch objects; the definition itself stays immutable.
+
+<Callout type="info" title="Phase state has no teardown hook">
+`createPhaseState()` runs per session, but nothing calls a matching release when the session ends. Keep phase state to plain scratch — a `Matrix`, a `Color`, numbers — and put anything GPU-backed on the definition, which you own and keep. When a navigation genuinely needs its own GPU resources, implement the full `SceneTransition` and release them in `destroy()`.
+</Callout>
+
+## Prove it
+
+A transition that looks right in one happy-path navigation can still be wrong in the three cases nobody exercises by hand. Drive your own transition through a real director and assert:
+
+**1. Commit before done.** Navigate with your transition, step frames until the navigation settles, and assert that it _resolved_ — a rejection carrying `'done-before-commit'` means the session declared itself finished while the switch had not happened. Assert the commit was requested exactly once while you are there; a second request rejects with `'commit-reentrant'`.
+
+**2. Abort mid-transition.** Start the navigation, drive two or three frames, then stop the application. The navigation must settle (not hang), your session's `destroy()` must have run exactly once, and driving further frames afterwards must not reach the session again.
+
+**3. Release, once.** Count the allocations your session makes and the releases it performs. Drive one full navigation and assert they match — then drive an aborted one and assert they still match. A transition that only balances on the happy path leaks on every interrupted one.
+
+A fourth, cheap and worth having: run **two consecutive navigations through one definition instance** and assert both complete. That is the test that catches per-navigation state accidentally parked on the definition, which shows up in production as a transition that plays once and then freezes.
+
+```ts
+import { Application, Scene, Time } from '@codexo/exojs';
+
+class MenuScene extends Scene {}
+class LevelScene extends Scene {}
+
+const shared = new BarWipeSceneTransition(Time.seconds(0.1));
+const game = new Application({ scenes: { MenuScene, LevelScene } });
+
+await game.start(MenuScene);
+await game.scenes.change(LevelScene, { transition: shared });
+await game.scenes.change(MenuScene, { transition: shared });
+```
+
+## Examples
+
+<ExamplePreview chapter="application-scenes" slug="custom-transition" />
+
+The bar wipe from this chapter, running: press Space and Escape to navigate between two scenes.
+
+<ExamplePreview chapter="application-scenes" slug="multiple-scenes" />
+
+The same navigation without a transition, for comparison.
+
+<TryIt examples={['application-scenes/custom-transition', 'application-scenes/multiple-scenes']} api={['scene-transition', 'phased-scene-transition', 'scene-director']} />
+
+## Where to go next
+
+[Scene graph](/ExoJS/en/guide/runtime/scene-graph/) covers the tree your transition draws over. For effects that live inside a scene rather than between two of them, see [Post-processing](/ExoJS/en/guide/effects/post-processing/).

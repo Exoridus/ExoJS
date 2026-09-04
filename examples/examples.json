@@ -77,6 +77,17 @@
       "level": "intermediate"
     },
     {
+      "slug": "custom-transition",
+      "path": "application-scenes/custom-transition.js",
+      "language": "typescript",
+      "title": "Custom Transition",
+      "description": "Write your own SceneTransition: two bars close over the screen, the scene switch commits behind them, then they open again - with the commit/done ordering and the destroy-time resource release the lifecycle contract requires.",
+      "backend": "core",
+      "tags": ["scene", "scenes", "transition"],
+      "capabilities": ["keyboard"],
+      "level": "advanced"
+    },
+    {
       "slug": "loading-screen",
       "path": "application-scenes/loading-screen.js",
       "language": "typescript",

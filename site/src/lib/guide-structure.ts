@@ -165,6 +165,18 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         apiLinks: ['scene', 'loader', 'time'],
       },
       {
+        slug: 'writing-your-own-transition',
+        level: 'advanced',
+        learningGoals: [
+          'implement the SceneTransition definition/session split',
+          'order commit, committed and done the way the director requires',
+          'survive an abort and release session resources exactly once',
+        ],
+        prerequisites: ['runtime/scenes-and-lifecycle'],
+        examples: ['application-scenes/custom-transition', 'application-scenes/multiple-scenes'],
+        apiLinks: ['scene-transition', 'phased-scene-transition', 'scene-transition-session', 'scene-transition-lifecycle-error', 'scene-director'],
+      },
+      {
         slug: 'scene-graph',
         level: 'intermediate',
         learningGoals: ['compose drawables with containers', 'reason about transforms, draw order, and masks'],
