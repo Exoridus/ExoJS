@@ -19,13 +19,15 @@ version in the tree indefinitely).
 1. **Land everything on `next`.** Feature PRs merge without version bumps — the
    packages stay at the previous version throughout development.
 
-2. **Keep the CHANGELOG's `## [Unreleased]` section current.** Entries land
-   with the change that causes them, under `## [Unreleased]` at the top of
-   `CHANGELOG.md` - the Keep a Changelog shape this file declares in its own
-   second line. `release:cut` dates that section as the release and opens a
-   fresh empty one, so nothing has to be written twice and no pull request ever
-   carries a heading naming a version nobody has bumped to yet (which is what
-   `release-coherence` refuses).
+2. **Let the cut write the CHANGELOG.** Pull requests do not touch
+   `CHANGELOG.md` (`lint:changelog` refuses a branch that does). `release:cut`
+   assembles the `## [Unreleased]` section from the squash commits since the
+   last tag - Conventional Commits type to heading, subject to headline, pull
+   request description to prose - writes it, and stops so you can review the
+   wording; commit the result and run the cut again, which then dates the
+   section and opens a fresh empty one. `pnpm release:changelog` previews the
+   entries at any time; a hand-written entry that already names a pull request
+   is kept and never duplicated.
 
 3. **Merge `next` into `main`.** Fast-forward if `main` has taken no patch
    commits since the last release; otherwise a regular merge commit:

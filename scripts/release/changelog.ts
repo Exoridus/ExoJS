@@ -2,9 +2,10 @@
  * The CHANGELOG half of the release cut, kept apart from `cut.ts` so it can be
  * tested: that file runs on import.
  *
- * Entries accumulate under `## [Unreleased]` as the changes causing them land -
- * the Keep a Changelog shape the file declares in its own second line - and the
- * cut dates that section. Writing a dated heading ahead of the cut instead
+ * Entries are assembled under `## [Unreleased]` by the cut from the squash
+ * commits since the last tag (see `changelogFromCommits.ts`) - the Keep a
+ * Changelog shape the file declares in its own second line - and the cut then
+ * dates that section. Writing a dated heading ahead of the cut instead
  * contradicts `release-coherence`, which requires the newest dated section to
  * match the version in `package.json`: every pull request between the two would
  * fail on a heading naming a version nobody has bumped to yet.
