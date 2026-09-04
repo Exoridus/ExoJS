@@ -142,9 +142,7 @@ const referencedShaderFiles = new Set(programPairs.flat());
 // production-stripped text - from the two compile cases above; only the link
 // case has no meaning for them. An entry is a claim that the missing half is
 // the caller's, not that the stage is untested.
-const standaloneStages: ReadonlyMap<string, string> = new Map([
-  ['lit-sprite.vert', 'placeholder the lighting package hands ShaderSource; the renderer owns the sprite vertex stage and never compiles it'],
-]);
+const standaloneStages: ReadonlyMap<string, string> = new Map();
 
 interface CompiledShader {
   readonly shader: WebGLShader;
