@@ -13,6 +13,7 @@ import {
   type Seekable,
   Sprite,
   Text,
+  Time,
   View,
   type Voice,
 } from '@codexo/exojs';
@@ -125,7 +126,7 @@ class BossIntroCinematicScene extends Scene {
       .to({ count: titleText.length }, 1.0)
       .delay(1.6)
       .onStart(() => {
-        this.view.shake(18, 520, { frequency: 24, decay: true });
+        this.view.shake(18, Time.seconds(0.52), { frequency: 24, decay: true });
       })
       .onUpdate(() => {
         this.title.text = titleText.slice(0, this.titleState.count | 0);

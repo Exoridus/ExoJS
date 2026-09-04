@@ -17,6 +17,7 @@ import type { AudioEffect } from '#audio/AudioEffect';
 import { AudioSystem } from '#audio/AudioSystem';
 import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
+import { Time } from '#core/units';
 
 import { mutable } from '../support/mutable';
 
@@ -204,7 +205,7 @@ describe('BaseVoice — post-ended no-ops', () => {
     voice.stop();
     out.node!.gain.setTargetAtTime.mockClear();
 
-    expect(() => voice.fade(1, 200)).not.toThrow();
+    expect(() => voice.fade(1, Time.seconds(0.2))).not.toThrow();
     expect(out.node!.gain.setTargetAtTime).not.toHaveBeenCalled();
 
     out.restore();
@@ -276,7 +277,7 @@ describe('BaseVoice — fade()', () => {
     const sound = new Sound(createAudioBufferStub());
     const voice = system.play(sound);
 
-    voice.fade(0.2, 0);
+    voice.fade(0.2, Time.seconds(0));
 
     expect(voice.volume).toBe(0.2);
     expect(out.node!.gain.setTargetAtTime).toHaveBeenCalledWith(0.2, expect.any(Number), 0.01);
@@ -286,13 +287,13 @@ describe('BaseVoice — fade()', () => {
     sound.destroy();
   });
 
-  test('fade(to, ms) schedules a linear ramp and clamps the target to [0, 1]', () => {
+  test('fade(to, duration) schedules a linear ramp and clamps the target to [0, 1]', () => {
     const system = new AudioSystem(); // before capture, so bus gains are not captured
     const out = captureVoiceOutput();
     const sound = new Sound(createAudioBufferStub());
     const voice = system.play(sound);
 
-    voice.fade(5, 300);
+    voice.fade(5, Time.seconds(0.3));
 
     expect(voice.volume).toBe(1); // clamped
     expect(out.node!.gain.cancelScheduledValues).toHaveBeenCalled();

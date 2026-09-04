@@ -1,5 +1,5 @@
 // #region guide:end-to-end
-import { FadeSceneTransition } from '@codexo/exojs';
+import { FadeSceneTransition, Time } from '@codexo/exojs';
 import { ExoCanvas, Scene, Scenes, useActiveScene } from '@codexo/exojs-react';
 import { useState } from 'react';
 
@@ -15,7 +15,7 @@ export function App() {
 
   return (
     <ExoCanvas options={{ canvas: { width: 1280, height: 720 } }} style={{ width: 1280, height: 720 }}>
-      <Scenes active={screen} transition={new FadeSceneTransition({ duration: 300 })}>
+      <Scenes active={screen} transition={new FadeSceneTransition({ duration: Time.seconds(0.3) })}>
         <Scene name="title" component={TitleScene}>
           <button style={{ position: 'absolute', inset: 0 }} onClick={() => setScreen('game')}>
             Start

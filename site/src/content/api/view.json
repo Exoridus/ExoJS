@@ -1241,7 +1241,7 @@
         },
         {
           "name": "shake",
-          "signature": "shake(intensity: number, durationMs: number, options: ViewShakeOptions): this",
+          "signature": "shake(intensity: number, duration: Seconds, options: ViewShakeOptions): this",
           "signatureTokens": [
             {
               "text": "shake",
@@ -1268,7 +1268,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "durationMs",
+              "text": "duration",
               "kind": "param"
             },
             {
@@ -1276,8 +1276,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Seconds",
+              "kind": "type"
             },
             {
               "text": ", ",
@@ -1315,8 +1315,8 @@
               "optional": false
             },
             {
-              "name": "durationMs",
-              "type": "number",
+              "name": "duration",
+              "type": "Seconds",
               "optional": false
             },
             {
@@ -1326,7 +1326,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Start a procedural camera shake effect. The shake applies a sinusoidal offset to the view's center position, then stops automatically when durationMs elapses. Call clearShake to cancel early."
+          "description": "Start a procedural camera shake effect. The shake applies a sinusoidal offset to the view's center position, then stops automatically when duration elapses. Call clearShake to cancel early."
         },
         {
           "name": "update",

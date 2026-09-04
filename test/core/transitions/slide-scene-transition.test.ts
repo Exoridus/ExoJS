@@ -143,7 +143,7 @@ describe('SlideSceneTransition', () => {
     });
 
     test('no identity-composite draw through a real session — both phases already declare currentFrame texture themselves, so the promotion branch never fires', () => {
-      const slide = new SlideSceneTransition({ mode: 'push', duration: 100 });
+      const slide = new SlideSceneTransition({ mode: 'push', duration: Time.seconds(0.1) });
       const environment = new TestEnvironment();
       const session = slide.beginSession(environment);
       const render = vi.fn();
@@ -179,7 +179,7 @@ describe('SlideSceneTransition', () => {
     });
 
     test('composites frame.current unchanged during the enter phase — the session-wide requirement was promoted to texture by the exit phase, but enter itself only declared direct', () => {
-      const slide = new SlideSceneTransition({ mode: 'reveal', duration: 100 });
+      const slide = new SlideSceneTransition({ mode: 'reveal', duration: Time.seconds(0.1) });
       const environment = new TestEnvironment();
       const session = slide.beginSession(environment);
       const render = vi.fn();
@@ -224,7 +224,7 @@ describe('SlideSceneTransition', () => {
     });
 
     test('composites frame.current unchanged during the exit phase — the session-wide requirement was promoted to texture by the enter phase, but exit itself only declared direct', () => {
-      const slide = new SlideSceneTransition({ mode: 'cover', duration: 100 });
+      const slide = new SlideSceneTransition({ mode: 'cover', duration: Time.seconds(0.1) });
       const environment = new TestEnvironment();
       const session = slide.beginSession(environment);
       const render = vi.fn();

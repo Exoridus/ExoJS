@@ -63,7 +63,7 @@ describe('CrossFadeSceneTransition', () => {
   });
 
   test('done stays false while not yet committed, even after ticks past the configured duration', () => {
-    const crossFade = new CrossFadeSceneTransition({ duration: 100 });
+    const crossFade = new CrossFadeSceneTransition({ duration: Time.seconds(0.1) });
     const environment: SceneTransitionEnvironment = {
       context: navContext,
       commitRequested: false,
@@ -107,7 +107,7 @@ describe('CrossFadeSceneTransition', () => {
   });
 
   test('once committed, blends outgoing snapshot (alpha 1) under current texture (alpha ramping via easing)', () => {
-    const crossFade = new CrossFadeSceneTransition({ duration: 100, easing: Ease.linear });
+    const crossFade = new CrossFadeSceneTransition({ duration: Time.seconds(0.1), easing: Ease.linear });
     const environment = makeEnvironment();
     const session = crossFade.beginSession(environment); // commit() already ran synchronously
 
@@ -136,7 +136,7 @@ describe('CrossFadeSceneTransition', () => {
   });
 
   test('done becomes true once elapsed (post-commit) reaches duration, never before', () => {
-    const crossFade = new CrossFadeSceneTransition({ duration: 100 });
+    const crossFade = new CrossFadeSceneTransition({ duration: Time.seconds(0.1) });
     const environment = makeEnvironment();
     const session = crossFade.beginSession(environment);
 
@@ -148,7 +148,7 @@ describe('CrossFadeSceneTransition', () => {
   });
 
   test('duration 0 completes on the first post-commit update() tick', () => {
-    const crossFade = new CrossFadeSceneTransition({ duration: 0 });
+    const crossFade = new CrossFadeSceneTransition({ duration: Time.seconds(0) });
     const environment = makeEnvironment();
     const session = crossFade.beginSession(environment);
 
@@ -167,7 +167,7 @@ describe('CrossFadeSceneTransition', () => {
   test('defaults: duration 220, linear easing', () => {
     const crossFade = new CrossFadeSceneTransition();
 
-    expect(crossFade.duration).toBe(220);
+    expect(crossFade.duration).toBe(0.22);
     expect(crossFade.easing).toBe(Ease.linear);
   });
 });

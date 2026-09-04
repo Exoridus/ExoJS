@@ -7,6 +7,7 @@
 import { Application, ApplicationState } from '#core/Application';
 import { Scene } from '#core/scene/Scene';
 import { FadeSceneTransition } from '#core/scene/transitions/FadeSceneTransition';
+import { Time } from '#core/units';
 
 vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
   WebGl2Backend: vi.fn().mockImplementation(function () {
@@ -76,14 +77,14 @@ describe('Application.start() with a real FadeSceneTransition', () => {
     // argument RAF hands its callback - so driving frames in a tight
     // microtask loop (real wall-clock deltas of a fraction of a millisecond
     // each) would need many thousands of iterations to accumulate the
-    // transition's 40ms-per-phase duration. Control the clock directly
+    // transition's 0.04s-per-phase duration. Control the clock directly
     // instead: advance a fake `performance.now()` by one simulated 16ms
     // frame tick immediately before invoking each callback.
     let now = 0;
     const perfSpy = vi.spyOn(performance, 'now').mockImplementation(() => now);
 
     try {
-      const startPromise = app.start(TitleScene, { transition: new FadeSceneTransition({ duration: 40 }) });
+      const startPromise = app.start(TitleScene, { transition: new FadeSceneTransition({ duration: Time.seconds(0.04) }) });
 
       let settled = false;
       void startPromise.then(() => {

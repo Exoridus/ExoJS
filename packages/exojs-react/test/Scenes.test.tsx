@@ -1,4 +1,4 @@
-import { Application, FadeSceneTransition, Scene as ExoScene, type SceneTransitionSelection } from '@codexo/exojs';
+import { Application, FadeSceneTransition, Scene as ExoScene, type SceneTransitionSelection, Time } from '@codexo/exojs';
 import { render, waitFor } from '@testing-library/react';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -82,7 +82,7 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
 
     // A real SceneTransition instance - the wrapper only forwards it to the
     // director's change(), so its concrete behavior is irrelevant here.
-    const transition = new FadeSceneTransition({ duration: 300 });
+    const transition = new FadeSceneTransition({ duration: Time.seconds(0.3) });
     view.rerender(<Tree app={app} active="game" transition={transition} />);
 
     await waitFor(() => expect(app.scenes.change).toHaveBeenCalled());

@@ -1,6 +1,7 @@
 ﻿import type { Mocked } from 'vitest';
 
 import { Envelope } from '#audio/Envelope';
+import { Time } from '#core/units';
 
 const makeMockAudioParam = (): Mocked<AudioParam> =>
   ({
@@ -32,34 +33,34 @@ describe('Envelope', () => {
   test('default values match spec', () => {
     const env = new Envelope();
 
-    expect(env.attackMs).toBe(10);
-    expect(env.decayMs).toBe(100);
+    expect(env.attack).toBe(0.01);
+    expect(env.decay).toBe(0.1);
     expect(env.sustainLevel).toBe(0.7);
-    expect(env.releaseMs).toBe(200);
+    expect(env.release).toBe(0.2);
   });
 
   test('construction with custom options', () => {
-    const env = new Envelope({ attackMs: 50, decayMs: 200, sustainLevel: 0.5, releaseMs: 400 });
+    const env = new Envelope({ attack: Time.seconds(0.05), decay: Time.seconds(0.2), sustainLevel: 0.5, release: Time.seconds(0.4) });
 
-    expect(env.attackMs).toBe(50);
-    expect(env.decayMs).toBe(200);
+    expect(env.attack).toBe(0.05);
+    expect(env.decay).toBe(0.2);
     expect(env.sustainLevel).toBe(0.5);
-    expect(env.releaseMs).toBe(400);
+    expect(env.release).toBe(0.4);
   });
 
-  test('clamps negative attackMs to 0', () => {
-    const env = new Envelope({ attackMs: -10 });
-    expect(env.attackMs).toBe(0);
+  test('clamps negative attack to 0', () => {
+    const env = new Envelope({ attack: Time.seconds(-0.01) });
+    expect(env.attack).toBe(0);
   });
 
-  test('clamps negative decayMs to 0', () => {
-    const env = new Envelope({ decayMs: -50 });
-    expect(env.decayMs).toBe(0);
+  test('clamps negative decay to 0', () => {
+    const env = new Envelope({ decay: Time.seconds(-0.05) });
+    expect(env.decay).toBe(0);
   });
 
-  test('clamps negative releaseMs to 0', () => {
-    const env = new Envelope({ releaseMs: -100 });
-    expect(env.releaseMs).toBe(0);
+  test('clamps negative release to 0', () => {
+    const env = new Envelope({ release: Time.seconds(-0.1) });
+    expect(env.release).toBe(0);
   });
 
   test('clamps sustainLevel > 1 to 1', () => {
@@ -73,14 +74,14 @@ describe('Envelope', () => {
   });
 
   test('trigger() calls cancelScheduledValues, setValueAtTime(0), then linearRamps', () => {
-    const env = new Envelope({ attackMs: 10, decayMs: 100, sustainLevel: 0.7 });
+    const env = new Envelope({ attack: Time.seconds(0.01), decay: Time.seconds(0.1), sustainLevel: 0.7 });
     const param = makeMockAudioParam();
     const atTime = 1.0;
 
     env.trigger(param, atTime);
 
-    const attackEnd = atTime + 10 / 1000;
-    const decayEnd = attackEnd + 100 / 1000;
+    const attackEnd = atTime + 0.01;
+    const decayEnd = attackEnd + 0.1;
 
     expect(param.cancelScheduledValues).toHaveBeenCalledWith(atTime);
     expect(param.setValueAtTime).toHaveBeenCalledWith(0, atTime);
@@ -89,7 +90,7 @@ describe('Envelope', () => {
   });
 
   test('trigger() schedules in the correct order', () => {
-    const env = new Envelope({ attackMs: 20, decayMs: 80, sustainLevel: 0.5 });
+    const env = new Envelope({ attack: Time.seconds(0.02), decay: Time.seconds(0.08), sustainLevel: 0.5 });
     const param = makeMockAudioParam();
     const callOrder: string[] = [];
 
@@ -111,12 +112,12 @@ describe('Envelope', () => {
     expect(callOrder).toEqual(['cancel', 'setValue', 'ramp', 'ramp']);
   });
 
-  test('release() holds the running value via cancelAndHoldAtTime, then ramps to 0', () => {
-    const env = new Envelope({ releaseMs: 300 });
+  test('releaseAt() holds the running value via cancelAndHoldAtTime, then ramps to 0', () => {
+    const env = new Envelope({ release: Time.seconds(0.3) });
     const param = makeMockAudioParam();
     const atTime = 2.0;
 
-    env.release(param, atTime);
+    env.releaseAt(param, atTime);
 
     expect(param.cancelAndHoldAtTime).toHaveBeenCalledWith(atTime);
     // cancelScheduledValues would discard the in-flight ramp and snap the param
@@ -127,13 +128,13 @@ describe('Envelope', () => {
 
   // Firefox still ships no cancelAndHoldAtTime, so the analytical fallback is
   // the path that actually runs there - not an optional extra.
-  describe('release() without cancelAndHoldAtTime (browser fallback)', () => {
+  describe('releaseAt() without cancelAndHoldAtTime (browser fallback)', () => {
     test('releasing mid-attack holds the interpolated attack value', () => {
-      const env = new Envelope({ attackMs: 100, decayMs: 100, sustainLevel: 0.5 });
+      const env = new Envelope({ attack: Time.seconds(0.1), decay: Time.seconds(0.1), sustainLevel: 0.5 });
       const param = makeLegacyAudioParam();
 
       env.trigger(param, 0);
-      env.release(param, 0.05); // halfway through the 100ms attack
+      env.releaseAt(param, 0.05); // halfway through the 0.1s attack
 
       expect(param.cancelScheduledValues).toHaveBeenCalledWith(0.05);
       expect(param.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0.5, 6), 0.05);
@@ -141,54 +142,54 @@ describe('Envelope', () => {
     });
 
     test('releasing mid-decay holds the interpolated decay value', () => {
-      const env = new Envelope({ attackMs: 100, decayMs: 100, sustainLevel: 0.5 });
+      const env = new Envelope({ attack: Time.seconds(0.1), decay: Time.seconds(0.1), sustainLevel: 0.5 });
       const param = makeLegacyAudioParam();
 
       env.trigger(param, 0);
-      env.release(param, 0.15); // halfway through the decay: 1 -> 0.5
+      env.releaseAt(param, 0.15); // halfway through the decay: 1 -> 0.5
 
       expect(param.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0.75, 6), 0.15);
     });
 
     test('releasing during sustain holds the sustain level', () => {
-      const env = new Envelope({ attackMs: 100, decayMs: 100, sustainLevel: 0.5 });
+      const env = new Envelope({ attack: Time.seconds(0.1), decay: Time.seconds(0.1), sustainLevel: 0.5 });
       const param = makeLegacyAudioParam();
 
       env.trigger(param, 0);
-      env.release(param, 1);
+      env.releaseAt(param, 1);
 
       expect(param.setValueAtTime).toHaveBeenCalledWith(0.5, 1);
     });
 
     test('releasing an envelope that was never triggered holds the live param value', () => {
-      const env = new Envelope({ attackMs: 100, decayMs: 100, sustainLevel: 0.5 });
+      const env = new Envelope({ attack: Time.seconds(0.1), decay: Time.seconds(0.1), sustainLevel: 0.5 });
       const param = makeLegacyAudioParam();
       param.value = 0.3;
 
-      env.release(param, 1);
+      env.releaseAt(param, 1);
 
       expect(param.setValueAtTime).toHaveBeenCalledWith(0.3, 1);
     });
 
     test('a zero-length attack and decay hold the sustain level immediately', () => {
-      const env = new Envelope({ attackMs: 0, decayMs: 0, sustainLevel: 0.4 });
+      const env = new Envelope({ attack: Time.seconds(0), decay: Time.seconds(0), sustainLevel: 0.4 });
       const param = makeLegacyAudioParam();
 
       env.trigger(param, 0);
-      env.release(param, 0);
+      env.releaseAt(param, 0);
 
       expect(param.setValueAtTime).toHaveBeenCalledWith(0.4, 0);
     });
   });
 
-  // `elapsedMs` is what lets a voice resume a partially-elapsed envelope after
+  // `elapsed` is what lets a voice resume a partially-elapsed envelope after
   // a pause instead of restarting it or finding it already run out.
-  describe('trigger() with elapsedMs (resuming a partially-elapsed envelope)', () => {
+  describe('trigger() with elapsed (resuming a partially-elapsed envelope)', () => {
     test('mid-attack: pins the interpolated value and shortens the remaining attack', () => {
-      const env = new Envelope({ attackMs: 100, decayMs: 100, sustainLevel: 0.25 });
+      const env = new Envelope({ attack: Time.seconds(0.1), decay: Time.seconds(0.1), sustainLevel: 0.25 });
       const param = makeMockAudioParam();
 
-      env.trigger(param, 5, 50);
+      env.trigger(param, 5, Time.seconds(0.05));
 
       expect(param.cancelScheduledValues).toHaveBeenCalledWith(5);
       expect(param.setValueAtTime).toHaveBeenCalledWith(0.5, 5);
@@ -197,10 +198,10 @@ describe('Envelope', () => {
     });
 
     test('mid-decay: pins the interpolated value and schedules only the rest of the decay', () => {
-      const env = new Envelope({ attackMs: 100, decayMs: 200, sustainLevel: 0.4 });
+      const env = new Envelope({ attack: Time.seconds(0.1), decay: Time.seconds(0.2), sustainLevel: 0.4 });
       const param = makeMockAudioParam();
 
-      env.trigger(param, 3, 200);
+      env.trigger(param, 3, Time.seconds(0.2));
 
       expect(param.setValueAtTime).toHaveBeenCalledWith(0.7, 3);
       expect(param.linearRampToValueAtTime).toHaveBeenCalledTimes(1);
@@ -208,22 +209,22 @@ describe('Envelope', () => {
     });
 
     test('past decay: pins the sustain level and schedules nothing', () => {
-      const env = new Envelope({ attackMs: 10, decayMs: 100, sustainLevel: 0.6 });
+      const env = new Envelope({ attack: Time.seconds(0.01), decay: Time.seconds(0.1), sustainLevel: 0.6 });
       const param = makeMockAudioParam();
 
-      env.trigger(param, 2, 5000);
+      env.trigger(param, 2, Time.seconds(5));
 
       expect(param.setValueAtTime).toHaveBeenCalledWith(0.6, 2);
       expect(param.linearRampToValueAtTime).not.toHaveBeenCalled();
     });
 
     test('a resumed envelope releases from its shifted trigger point, not from the resume time', () => {
-      const env = new Envelope({ attackMs: 100, decayMs: 100, sustainLevel: 0.25, releaseMs: 300 });
+      const env = new Envelope({ attack: Time.seconds(0.1), decay: Time.seconds(0.1), sustainLevel: 0.25, release: Time.seconds(0.3) });
       const param = makeLegacyAudioParam();
 
-      env.trigger(param, 5, 50);
-      // 25 ms further into the attack: 75 / 100.
-      env.release(param, 5.025);
+      env.trigger(param, 5, Time.seconds(0.05));
+      // 0.025s further into the attack: 0.075 / 0.1.
+      env.releaseAt(param, 5.025);
 
       expect(param.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0.75, 9), 5.025);
     });
@@ -231,7 +232,7 @@ describe('Envelope', () => {
 
   describe('hold()', () => {
     test('freezes the automation at the running value via cancelAndHoldAtTime', () => {
-      const env = new Envelope({ attackMs: 100, decayMs: 100 });
+      const env = new Envelope({ attack: Time.seconds(0.1), decay: Time.seconds(0.1) });
       const param = makeMockAudioParam();
 
       env.trigger(param, 0);
@@ -243,7 +244,7 @@ describe('Envelope', () => {
     });
 
     test('without cancelAndHoldAtTime, pins the reconstructed value instead', () => {
-      const env = new Envelope({ attackMs: 100, decayMs: 100, sustainLevel: 0.25 });
+      const env = new Envelope({ attack: Time.seconds(0.1), decay: Time.seconds(0.1), sustainLevel: 0.25 });
       const param = makeLegacyAudioParam();
 
       env.trigger(param, 0);
@@ -254,13 +255,13 @@ describe('Envelope', () => {
     });
 
     test('keeps the trigger bookkeeping, so a later release still reconstructs the envelope', () => {
-      const env = new Envelope({ attackMs: 100, decayMs: 100, sustainLevel: 0.25 });
+      const env = new Envelope({ attack: Time.seconds(0.1), decay: Time.seconds(0.1), sustainLevel: 0.25 });
       const param = makeLegacyAudioParam();
 
       env.trigger(param, 0);
       env.hold(param, 0.05);
       param.setValueAtTime.mockClear();
-      env.release(param, 0.05);
+      env.releaseAt(param, 0.05);
 
       // Reconstructed from the envelope geometry (0.5), not from the param's
       // untouched mock `value` (0).
@@ -268,24 +269,24 @@ describe('Envelope', () => {
     });
   });
 
-  test('release() uses tau = releaseMs / 3 / 1000', () => {
-    const env = new Envelope({ releaseMs: 300 });
+  test('releaseAt() uses tau = release / 3', () => {
+    const env = new Envelope({ release: Time.seconds(0.3) });
     const param = makeMockAudioParam();
 
-    env.release(param, 0);
+    env.releaseAt(param, 0);
 
-    const tau = 300 / 1000 / 3; // 0.1
+    const tau = 0.3 / 3; // 0.1
     expect(param.setTargetAtTime).toHaveBeenCalledWith(0, 0, tau);
   });
 
-  test('totalDurationMs returns sum of attack + decay + release', () => {
-    const env = new Envelope({ attackMs: 50, decayMs: 150, sustainLevel: 0.8, releaseMs: 300 });
-    expect(env.totalDurationMs).toBe(500);
+  test('totalDuration returns sum of attack + decay + release', () => {
+    const env = new Envelope({ attack: Time.seconds(0.05), decay: Time.seconds(0.15), sustainLevel: 0.8, release: Time.seconds(0.3) });
+    expect(env.totalDuration).toBe(0.5);
   });
 
-  test('totalDurationMs with default values', () => {
+  test('totalDuration with default values', () => {
     const env = new Envelope();
-    expect(env.totalDurationMs).toBe(10 + 100 + 200);
+    expect(env.totalDuration).toBe(0.01 + 0.1 + 0.2);
   });
 
   test('destroy() does not throw', () => {

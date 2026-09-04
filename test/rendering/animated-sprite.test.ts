@@ -1,3 +1,4 @@
+import { Time } from '#core/units';
 import { Rectangle } from '#math/Rectangle';
 import { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
 import { Spritesheet } from '#rendering/sprite/Spritesheet';
@@ -13,9 +14,9 @@ const createTextureStub = (): Texture =>
 
 /**
  * Frame delta helper. `AnimatedSprite.update()` takes SECONDS (matching
- * `Tween.update`), while clips are authored in milliseconds (`fps`,
- * `frameDurations`) - these specs are written against the clip's own ms
- * timings, so they convert at the call site.
+ * `Tween.update`), same as `frameDurations`. These specs are written against
+ * millisecond-scale hold times, so they convert at the call site for
+ * readability.
  */
 const seconds = (milliseconds: number): number => milliseconds / 1000;
 
@@ -183,7 +184,7 @@ describe('AnimatedSprite', () => {
     const sprite = new AnimatedSprite(null, {
       idle: {
         frames,
-        frameDurations: [100, 100, 300],
+        frameDurations: [Time.seconds(0.1), Time.seconds(0.1), Time.seconds(0.3)],
       },
     });
 
@@ -212,7 +213,7 @@ describe('AnimatedSprite', () => {
     expect(() =>
       sprite.addClip('bad', {
         frames,
-        frameDurations: [100, 100],
+        frameDurations: [Time.seconds(0.1), Time.seconds(0.1)],
       }),
     ).toThrow(/frameDurations/);
   });
@@ -224,7 +225,7 @@ describe('AnimatedSprite', () => {
     expect(() =>
       sprite.addClip('bad', {
         frames,
-        frameDurations: [100, 0, 100],
+        frameDurations: [Time.seconds(0.1), Time.seconds(0), Time.seconds(0.1)],
       }),
     ).toThrow(/frameDurations/);
   });
@@ -485,7 +486,7 @@ describe('AnimatedSprite', () => {
           // if a cycle ever fell back to the uniform default (1000/12 ≈ 83.3ms)
           // instead of re-reading `frameDurations`, these exact-boundary
           // assertions would drift and fail.
-          frameDurations: [100, 100, 300],
+          frameDurations: [Time.seconds(0.1), Time.seconds(0.1), Time.seconds(0.3)],
           repeat: 2,
         },
       });

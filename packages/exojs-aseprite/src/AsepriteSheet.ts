@@ -1,4 +1,4 @@
-import { AnimatedSprite, type AnimatedSpriteClipDefinition, Spritesheet, type Texture } from '@codexo/exojs';
+import { AnimatedSprite, type AnimatedSpriteClipDefinition, Spritesheet, type Texture, Time } from '@codexo/exojs';
 
 import { type AsepriteData, type AsepriteFrameData, type AsepriteFrameTag, type AsepriteLayer, type AsepriteSlice, isAsepriteArrayData } from './AsepriteData';
 
@@ -242,9 +242,10 @@ export class AsepriteSheet {
       // Per-frame hold duration (Aseprite "duration"), so uneven hold-frames
       // (e.g. a lingering idle frame) survive into playback instead of being
       // flattened to the tag's average fps. A non-positive duration (same
-      // degenerate case `avgFps` guards against) falls back to the average.
-      const avgDurationFallback = 1000 / fps;
-      const frameDurations = taggedFrames.map(({ frameData }) => (frameData.duration > 0 ? frameData.duration : avgDurationFallback));
+      // degenerate case `avgFps` guards against) falls back to the average -
+      // computed as `1 / fps` directly, not `(1000 / fps) / 1000`, so it is
+      // bit-for-bit the reciprocal of the fps this clip actually carries.
+      const frameDurations = taggedFrames.map(({ frameData }) => Time.seconds(frameData.duration > 0 ? frameData.duration / 1000 : 1 / fps));
 
       // Per-frame trim offset (Aseprite "spriteSourceSize"), so frames trimmed
       // by different amounts stay anchored to the same point in the untrimmed

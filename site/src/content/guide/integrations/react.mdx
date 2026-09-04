@@ -139,7 +139,7 @@ one is active:
 
 Each `<Scene>` takes a unique `name`, the scene `component` class to instantiate, and optional
 `children` that render as the active scene's overlay. The `transition` (a `SceneTransition`
-instance — e.g. `new FadeSceneTransition({ duration: 300 })`, `duration` in milliseconds) only
+instance — e.g. `new FadeSceneTransition({ duration: Time.seconds(0.3) })`) only
 applies to switches, not the first start.
 If `active` matches no `<Scene>`, the underlying engine scene is left running
 untouched (there is no public API to clear it mid-lifetime) — only the

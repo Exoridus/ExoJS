@@ -1,5 +1,5 @@
 // Auto-generated from screen-shake-on-explosion.ts - edit the .ts source, not this file.
-import { Application, Color, FixedResolutionCanvasSizing, Scene, Vector, View } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, Time, Vector, View } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem } from '@codexo/exojs-particles';
 class ScreenShakeOnExplosionScene extends Scene {
   view;
@@ -26,7 +26,7 @@ class ScreenShakeOnExplosionScene extends Scene {
     app.input.onPointerTap.add(p => {
       this.burstPos.set(p.x - this.ps.position.x, p.y - this.ps.position.y);
       this.burst.reset();
-      this.view.shake(22, 280, { frequency: 26, decay: true });
+      this.view.shake(22, Time.seconds(0.28), { frequency: 26, decay: true });
     });
   }
   draw(context) {

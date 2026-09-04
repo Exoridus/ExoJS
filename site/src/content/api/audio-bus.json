@@ -260,7 +260,7 @@
         },
         {
           "name": "fadeIn",
-          "signature": "fadeIn(durationMs: number): this",
+          "signature": "fadeIn(duration: Seconds): this",
           "signatureTokens": [
             {
               "text": "fadeIn",
@@ -271,7 +271,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "durationMs",
+              "text": "duration",
               "kind": "param"
             },
             {
@@ -279,8 +279,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Seconds",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -297,17 +297,17 @@
           ],
           "params": [
             {
-              "name": "durationMs",
-              "type": "number",
+              "name": "duration",
+              "type": "Seconds",
               "optional": false
             }
           ],
           "returnType": "this",
-          "description": "Linearly ramp the output gain from 0 to the current volume over durationMs, in milliseconds. Cancels any in-flight ramps on the same gain node."
+          "description": "Linearly ramp the output gain from 0 to the current volume over duration. Cancels any in-flight ramps on the same gain node."
         },
         {
           "name": "fadeOut",
-          "signature": "fadeOut(durationMs: number, options: { stopAfter?: boolean }): this",
+          "signature": "fadeOut(duration: Seconds, options: { stopAfter?: boolean }): this",
           "signatureTokens": [
             {
               "text": "fadeOut",
@@ -318,7 +318,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "durationMs",
+              "text": "duration",
               "kind": "param"
             },
             {
@@ -326,8 +326,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Seconds",
+              "kind": "type"
             },
             {
               "text": ", ",
@@ -380,8 +380,8 @@
           ],
           "params": [
             {
-              "name": "durationMs",
-              "type": "number",
+              "name": "duration",
+              "type": "Seconds",
               "optional": false
             },
             {
@@ -391,7 +391,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Linearly ramp the output gain to 0 over durationMs, in milliseconds. By default mutes the bus once the ramp completes (stopAfter: true); pass stopAfter: false to let the ramp finish silently while leaving muted unchanged."
+          "description": "Linearly ramp the output gain to 0 over duration. By default mutes the bus once the ramp completes (stopAfter: true); pass stopAfter: false to let the ramp finish silently while leaving muted unchanged."
         },
         {
           "name": "onceSetup",

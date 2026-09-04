@@ -55,7 +55,7 @@
         },
         {
           "name": "duration",
-          "signature": "duration?: number",
+          "signature": "duration?: Seconds",
           "signatureTokens": [
             {
               "text": "duration",
@@ -70,13 +70,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Seconds",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Duration of *each* phase (enter and exit run this long independently), in milliseconds. Default 220."
+          "description": "Duration of *each* phase (enter and exit run this long independently). Default 0.22 seconds."
         },
         {
           "name": "easing",

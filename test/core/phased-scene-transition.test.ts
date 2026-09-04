@@ -36,16 +36,16 @@ describe('PhasedSceneTransition', () => {
   test('constructor options default duration=220, easing=Ease.linear, placement="screen"', () => {
     const instance = new MinimalPhase();
 
-    expect(instance.duration).toBe(220);
+    expect(instance.duration).toBe(0.22);
     expect(instance.easing).toBe(Ease.linear);
     expect(instance.placement).toBe('screen');
   });
 
   test('constructor options override the defaults', () => {
-    const options: PhasedSceneTransitionOptions = { duration: 500, easing: Ease.quadIn, placement: 'scene' };
+    const options: PhasedSceneTransitionOptions = { duration: Time.seconds(0.5), easing: Ease.quadIn, placement: 'scene' };
     const instance = new MinimalPhase(options);
 
-    expect(instance.duration).toBe(500);
+    expect(instance.duration).toBe(0.5);
     expect(instance.easing).toBe(Ease.quadIn);
     expect(instance.placement).toBe('scene');
   });
@@ -116,7 +116,7 @@ class RecordingPhase extends PhasedSceneTransition {
 
 describe('PhasedSceneTransition — single-instance session driving', () => {
   test('runPhase() is callable from outside the class hierarchy and forwards to enter()/exit()', () => {
-    const instance = new RecordingPhase({ duration: 10 });
+    const instance = new RecordingPhase({ duration: Time.seconds(0.01) });
     const context: SceneTransitionPhaseContext = {
       phase: 'exit',
       progress: 1,
@@ -134,7 +134,7 @@ describe('PhasedSceneTransition — single-instance session driving', () => {
   });
 
   test('drives exit (0→1) → requests commit() exactly once → holds → drives enter (0→1) → done, with correct presence', () => {
-    const phase = new RecordingPhase({ duration: 100 });
+    const phase = new RecordingPhase({ duration: Time.seconds(0.1) });
     const environment = new TestEnvironment();
     const session = phase.beginSession(environment);
 
@@ -167,7 +167,7 @@ describe('PhasedSceneTransition — single-instance session driving', () => {
   });
 
   test("session.placement reflects the instance's own placement throughout (single-instance case)", () => {
-    const phase = new RecordingPhase({ duration: 10, placement: 'scene' });
+    const phase = new RecordingPhase({ duration: Time.seconds(0.01), placement: 'scene' });
     const session = phase.beginSession(new TestEnvironment());
 
     expect(session.placement).toBe('scene');
@@ -176,7 +176,7 @@ describe('PhasedSceneTransition — single-instance session driving', () => {
   });
 
   test('a zero-duration phase completes its half immediately on the first update() past commit', () => {
-    const phase = new RecordingPhase({ duration: 0 });
+    const phase = new RecordingPhase({ duration: Time.seconds(0) });
     const environment = new TestEnvironment();
     const session = phase.beginSession(environment);
 
@@ -202,16 +202,16 @@ class TexturePhase extends RecordingPhase {
 
 describe('composePhasedSceneTransition', () => {
   test("merges the two instances' own requirements via getRequirementsForPhase", () => {
-    const exitPhase = new DirectPhase({ duration: 10 });
-    const enterPhase = new TexturePhase({ duration: 10 });
+    const exitPhase = new DirectPhase({ duration: Time.seconds(0.01) });
+    const enterPhase = new TexturePhase({ duration: Time.seconds(0.01) });
     const composed = composePhasedSceneTransition(exitPhase, enterPhase);
 
     expect(composed.getRequirements(fakeContext)).toEqual({ outgoingFrame: 'snapshot', currentFrame: 'texture' });
   });
 
   test('drives exit from the exit instance and enter from the enter instance — never crossed', () => {
-    const exitPhase = new RecordingPhase({ duration: 10 });
-    const enterPhase = new RecordingPhase({ duration: 10 });
+    const exitPhase = new RecordingPhase({ duration: Time.seconds(0.01) });
+    const enterPhase = new RecordingPhase({ duration: Time.seconds(0.01) });
     const environment = new TestEnvironment();
     const composed = composePhasedSceneTransition(exitPhase, enterPhase);
     const session = composed.beginSession(environment);
@@ -231,8 +231,8 @@ describe('composePhasedSceneTransition', () => {
   });
 
   test("session.placement switches from the exit instance's to the enter instance's at the commit boundary", () => {
-    const exitPhase = new RecordingPhase({ duration: 10, placement: 'screen' });
-    const enterPhase = new RecordingPhase({ duration: 10, placement: 'scene' });
+    const exitPhase = new RecordingPhase({ duration: Time.seconds(0.01), placement: 'screen' });
+    const enterPhase = new RecordingPhase({ duration: Time.seconds(0.01), placement: 'scene' });
     const composed = composePhasedSceneTransition(exitPhase, enterPhase);
     const session = composed.beginSession(new TestEnvironment());
 
@@ -246,7 +246,7 @@ describe('composePhasedSceneTransition', () => {
 
 describe('resolvePhasedSelection', () => {
   test('falls back to a no-op phase for whichever side is omitted, without forcing texture/snapshot', () => {
-    const exitPhase = new TexturePhase({ duration: 10 });
+    const exitPhase = new TexturePhase({ duration: Time.seconds(0.01) });
     const resolved = resolvePhasedSelection(exitPhase, undefined);
 
     // TexturePhase alone requests snapshot/texture; the no-op fallback requests

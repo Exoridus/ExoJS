@@ -55,7 +55,7 @@
         },
         {
           "name": "frameDurations",
-          "signature": "frameDurations?: readonly number[]",
+          "signature": "frameDurations?: readonly Seconds[]",
           "signatureTokens": [
             {
               "text": "frameDurations",
@@ -78,8 +78,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Seconds",
+              "kind": "type"
             },
             {
               "text": "[]",
@@ -88,7 +88,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Per-frame hold duration in milliseconds, indexed the same as frames. When provided it is authoritative for playback timing and fps is ignored while advancing frames (still accepted as a display-only average). Use this to preserve uneven hold-frames - e.g. an Aseprite export where one frame intentionally lingers longer than the rest."
+          "description": "Per-frame hold duration, indexed the same as frames. When provided it is authoritative for playback timing and fps is ignored while advancing frames (still accepted as a display-only average). Use this to preserve uneven hold-frames - e.g. an Aseprite export where one frame intentionally lingers longer than the rest."
         },
         {
           "name": "frameOffsets",

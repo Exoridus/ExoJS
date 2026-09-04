@@ -6,6 +6,7 @@ import { AudioSystem } from '#audio/AudioSystem';
 import { AudioUnsupportedError } from '#audio/AudioUnsupportedError';
 import type { InputVoice } from '#audio/InputVoice';
 import { Sound } from '#audio/Sound';
+import { Time } from '#core/units';
 
 // ---------------------------------------------------------------------------
 // Mocks: getUserMedia / MediaStream / MediaRecorder (jsdom has none)
@@ -148,7 +149,7 @@ describe('AudioInput / InputVoice', () => {
     const system = new AudioSystem();
     const voice = system.open(input);
 
-    const promise = voice.record(50);
+    const promise = voice.record(Time.seconds(0.05));
     await vi.advanceTimersByTimeAsync(60);
     const sound = await promise;
 
@@ -186,7 +187,7 @@ describe('AudioInput / InputVoice', () => {
     const system = new AudioSystem();
     const voice = system.open(input);
 
-    const promise = voice.record(10);
+    const promise = voice.record(Time.seconds(0.01));
     await vi.advanceTimersByTimeAsync(20);
     const sound = await promise;
 
@@ -206,7 +207,7 @@ describe('AudioInput / InputVoice', () => {
     const system = new AudioSystem();
     const voice = system.open(input);
 
-    const promise = voice.record(50);
+    const promise = voice.record(Time.seconds(0.05));
     const recorder = MockMediaRecorder.instances[0]!;
     const stopSpy = vi.spyOn(recorder, 'stop');
 
@@ -233,7 +234,7 @@ describe('AudioInput / InputVoice', () => {
     const system = new AudioSystem();
     const voice = system.open(input);
 
-    const promise = voice.record(1000);
+    const promise = voice.record(Time.seconds(1));
     const recorder = MockMediaRecorder.instances[0]!;
 
     // Empty chunk: the size === 0 guard skips pushing it into the buffer.
@@ -255,7 +256,7 @@ describe('AudioInput / InputVoice', () => {
     const system = new AudioSystem();
     const voice = system.open(input);
 
-    const promise = voice.record(1000);
+    const promise = voice.record(Time.seconds(1));
     const recorder = MockMediaRecorder.instances[0]!;
     recorder.triggerError();
 
@@ -275,7 +276,7 @@ describe('AudioInput / InputVoice', () => {
     const system = new AudioSystem();
     const voice = system.open(input);
 
-    const promise = voice.record(1000);
+    const promise = voice.record(Time.seconds(1));
     const recorder = MockMediaRecorder.instances[0]!;
     recorder.stop();
 
@@ -295,7 +296,7 @@ describe('AudioInput / InputVoice', () => {
     const system = new AudioSystem();
     const voice = system.open(input);
 
-    const promise = voice.record(1000);
+    const promise = voice.record(Time.seconds(1));
     const recorder = MockMediaRecorder.instances[0]!;
     recorder.stop();
 

@@ -237,7 +237,7 @@ describe('AsepriteSheet.parse — per-frame durations', () => {
       },
     };
     const sheet = AsepriteSheet.parse(data, newTexture());
-    expect(sheet.clips.get('idle')!.frameDurations).toEqual([100, 100, 300]);
+    expect(sheet.clips.get('idle')!.frameDurations).toEqual([0.1, 0.1, 0.3]);
     // fps stays the computed average, unaffected by the per-frame durations.
     expect(sheet.clips.get('idle')!.fps).toBeCloseTo(1000 / ((100 + 100 + 300) / 3));
   });
@@ -263,8 +263,8 @@ describe('AsepriteSheet.parse — per-frame durations', () => {
       },
     };
     const sheet = AsepriteSheet.parse(data, newTexture());
-    // Expanded sequence is [0,1,2,1] -> durations [100, 300, 100, 300].
-    expect(sheet.clips.get('clip')!.frameDurations).toEqual([100, 300, 100, 300]);
+    // Expanded sequence is [0,1,2,1] -> durations [100, 300, 100, 300]ms.
+    expect(sheet.clips.get('clip')!.frameDurations).toEqual([0.1, 0.3, 0.1, 0.3]);
   });
 
   it('falls back to the average duration for a non-positive per-frame duration', () => {
@@ -289,8 +289,8 @@ describe('AsepriteSheet.parse — per-frame durations', () => {
     };
     const sheet = AsepriteSheet.parse(data, newTexture());
     const clip = sheet.clips.get('clip')!;
-    const avgMs = 1000 / clip.fps!;
-    expect(clip.frameDurations).toEqual([100, avgMs, 100]);
+    const avgSeconds = 1 / clip.fps!;
+    expect(clip.frameDurations).toEqual([0.1, avgSeconds, 0.1]);
   });
 });
 

@@ -1,4 +1,5 @@
 import { SceneNode } from '#core/SceneNode';
+import type { Seconds } from '#core/units';
 import type { AbstractVector } from '#math/AbstractVector';
 import { Bounds } from '#math/Bounds';
 import { Flags } from '#math/Flags';
@@ -359,16 +360,16 @@ export class View implements ObservableVectorOwner {
   /**
    * Start a procedural camera shake effect.
    * The shake applies a sinusoidal offset to the view's center position, then
-   * stops automatically when `durationMs` elapses. Call {@link clearShake} to
+   * stops automatically when `duration` elapses. Call {@link clearShake} to
    * cancel early.
    *
-   * @param intensity  - Maximum pixel displacement at peak amplitude.
-   * @param durationMs - How long the shake lasts in milliseconds.
-   * @param options    - Shake behaviour overrides ({@link ViewShakeOptions}).
+   * @param intensity - Maximum pixel displacement at peak amplitude.
+   * @param duration  - How long the shake lasts.
+   * @param options   - Shake behaviour overrides ({@link ViewShakeOptions}).
    */
-  public shake(intensity: number, durationMs: number, options: ViewShakeOptions = {}): this {
+  public shake(intensity: number, duration: Seconds, options: ViewShakeOptions = {}): this {
     this._shakeIntensity = Math.max(0, intensity);
-    this._shakeDurationMs = Math.max(0, durationMs);
+    this._shakeDurationMs = Math.max(0, duration * 1000);
     this._shakeElapsedMs = 0;
     this._shakeFrequency = Math.max(0, options.frequency ?? 16);
     this._shakeDecay = options.decay ?? true;

@@ -1,4 +1,5 @@
 import { logger } from '#core/Logger';
+import { seconds } from '#core/units';
 import { Rectangle } from '#math/Rectangle';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { Graphics } from '#rendering/primitives/Graphics';
@@ -263,7 +264,7 @@ const animatedSpriteSerializer: NodeSerializer<AnimatedSprite> = {
             })
           : [];
 
-        const frameDurations = Array.isArray(clip.frameDurations) ? (asNumberArray(clip.frameDurations) ?? undefined) : undefined;
+        const frameDurations = Array.isArray(clip.frameDurations) ? asNumberArray(clip.frameDurations)?.map(seconds) : undefined;
 
         const frameOffsets = Array.isArray(clip.frameOffsets)
           ? clip.frameOffsets.map(entry => {

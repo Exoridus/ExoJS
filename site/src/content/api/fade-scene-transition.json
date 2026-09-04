@@ -624,7 +624,7 @@
         },
         {
           "name": "duration",
-          "signature": "duration: number",
+          "signature": "duration: Seconds",
           "signatureTokens": [
             {
               "text": "duration",
@@ -635,8 +635,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Seconds",
+              "kind": "type"
             }
           ],
           "params": [],

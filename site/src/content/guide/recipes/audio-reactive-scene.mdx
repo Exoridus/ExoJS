@@ -42,7 +42,7 @@ The pattern scales by adding more independent listeners, each reacting to a diff
 
 ## Camera shake from audio
 
-`View.shake(intensity, durationMs, { frequency, decay })` displaces the view center by a decaying sinusoidal offset for `durationMs` milliseconds. `decay: true` reduces the shake intensity over the duration; `frequency` controls the oscillation rate. Call `view.shake()` inside `onBeat` for a bass hit, or `onDownbeat` for a stronger effect on the first beat of each bar.
+`View.shake(intensity, duration, { frequency, decay })` displaces the view center by a decaying sinusoidal offset for `duration` seconds. `decay: true` reduces the shake intensity over the duration; `frequency` controls the oscillation rate. Call `view.shake()` inside `onBeat` for a bass hit, or `onDownbeat` for a stronger effect on the first beat of each bar.
 
 For frequency-driven shake (low-end rumble instead of discrete hits), lerp the view center by the low-band energy in `update`:
 

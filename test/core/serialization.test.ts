@@ -9,6 +9,7 @@ import { defaultSerializationRegistry, registerSerializer, SerializationRegistry
 import { _resetDefaultSerializers, deserializeTree, serializeTree } from '#core/serialization/serialize';
 import { SERIALIZATION_VERSION, type SerializedNode } from '#core/serialization/types';
 import { Signal } from '#core/Signal';
+import { Time } from '#core/units';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Mesh } from '#rendering/mesh/Mesh';
@@ -579,7 +580,7 @@ describe('serialization — AnimatedSprite', () => {
     const sprite = new AnimatedSprite(texture, {
       idle: {
         frames: [new Rectangle(0, 0, 16, 16), new Rectangle(16, 0, 16, 16)],
-        frameDurations: [100, 300],
+        frameDurations: [Time.seconds(0.1), Time.seconds(0.3)],
       },
     });
 

@@ -1,6 +1,7 @@
 import { assert } from '#core/dev';
 import type { SceneNode } from '#core/SceneNode';
 import { Signal } from '#core/Signal';
+import type { Seconds } from '#core/units';
 import { clamp, degreesToRadians } from '#math/utils';
 import { Vector } from '#math/Vector';
 
@@ -216,7 +217,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     return this;
   }
 
-  public fade(to: number, ms: number): void {
+  public fade(to: number, duration: Seconds): void {
     if (this._ended) return;
 
     const target = clamp(to, 0, 1);
@@ -225,31 +226,31 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     const ctx = this._audioContext;
     const node = this._output;
 
-    if (ms <= 0) {
+    if (duration <= 0) {
       node.gain.setTargetAtTime(target, ctx.currentTime, 0.01);
       return;
     }
 
     node.gain.cancelScheduledValues(ctx.currentTime);
     node.gain.setValueAtTime(node.gain.value, ctx.currentTime);
-    node.gain.linearRampToValueAtTime(target, ctx.currentTime + ms / 1000);
+    node.gain.linearRampToValueAtTime(target, ctx.currentTime + duration);
   }
 
-  public stop(fadeMs?: number): void {
+  public stop(fade?: Seconds): void {
     if (this._ended) return;
 
-    if (fadeMs !== undefined && fadeMs > 0) {
+    if (fade !== undefined && fade > 0) {
       const ctx = this._audioContext;
       const node = this._output;
       node.gain.cancelScheduledValues(ctx.currentTime);
       node.gain.setValueAtTime(node.gain.value, ctx.currentTime);
-      node.gain.linearRampToValueAtTime(0, ctx.currentTime + fadeMs / 1000);
+      node.gain.linearRampToValueAtTime(0, ctx.currentTime + fade);
 
       this._clearStopTimer();
       this._stopTimer = setTimeout(() => {
         this._stopTimer = null;
         this._finish();
-      }, fadeMs);
+      }, fade * 1000);
       return;
     }
 

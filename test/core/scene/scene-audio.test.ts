@@ -8,6 +8,7 @@ import { SceneAudio } from '#core/scene/SceneAudio';
 import { SceneAvailability } from '#core/scene/SceneAvailability';
 import { SceneState } from '#core/scene/SceneState';
 import { Signal } from '#core/Signal';
+import { Time } from '#core/units';
 
 const makeVoice = (overrides: Partial<Voice> = {}): Voice =>
   ({
@@ -238,14 +239,14 @@ describe('SceneAudio — Preparing gate', () => {
     const audio = new SceneAudio(app, () => SceneState.Preparing);
 
     const pending = audio.play(fakePlayable, { volume: 0.8 });
-    pending.fade(0.2, 500);
+    pending.fade(0.2, Time.seconds(0.5));
 
     expect(pending.volume).toBe(0.2);
 
     audio._flushPending();
 
     expect(voice.volume).toBe(0.8);
-    expect(voice.fade).toHaveBeenCalledWith(0.2, 500);
+    expect(voice.fade).toHaveBeenCalledWith(0.2, 0.5);
   });
 
   test('a second fade() before flush keeps the original starting volume', () => {
@@ -254,14 +255,14 @@ describe('SceneAudio — Preparing gate', () => {
     const audio = new SceneAudio(app, () => SceneState.Preparing);
 
     const pending = audio.play(fakePlayable, { volume: 0.9 });
-    pending.fade(0.5, 100);
-    pending.fade(0.1, 250);
+    pending.fade(0.5, Time.seconds(0.1));
+    pending.fade(0.1, Time.seconds(0.25));
 
     audio._flushPending();
 
     expect(voice.volume).toBe(0.9);
     expect(voice.fade).toHaveBeenCalledTimes(1);
-    expect(voice.fade).toHaveBeenCalledWith(0.1, 250);
+    expect(voice.fade).toHaveBeenCalledWith(0.1, 0.25);
   });
 
   test('a volume write after fade() before flush supersedes the buffered ramp', () => {
@@ -270,7 +271,7 @@ describe('SceneAudio — Preparing gate', () => {
     const audio = new SceneAudio(app, () => SceneState.Preparing);
 
     const pending = audio.play(fakePlayable, { volume: 0.9 });
-    pending.fade(0.2, 400);
+    pending.fade(0.2, Time.seconds(0.4));
     pending.volume = 0.6;
 
     audio._flushPending();
@@ -521,7 +522,7 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
     });
 
     test('pause() reaches a `when: active` generator voice, and resume() gives it back', () => {
-      const { app, generator, audio } = makeRealSetup(new Envelope({ attackMs: 10, decayMs: 50 }));
+      const { app, generator, audio } = makeRealSetup(new Envelope({ attack: Time.seconds(0.01), decay: Time.seconds(0.05) }));
       const voice = audio.play(generator, { when: SceneAvailability.Active }) as Voice & Pausable;
 
       audio.pause();
