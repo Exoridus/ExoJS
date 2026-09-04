@@ -1,0 +1,155 @@
+{
+  "title": "AssetTypeStats",
+  "description": "Residency totals for one asset type, as reported by AssetStats.byType.",
+  "symbol": "AssetTypeStats",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Residency totals for one asset type, as reported by AssetStats.byType."
+      ],
+      "importLine": "import { AssetTypeStats } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bytes",
+          "signature": "bytes: number",
+          "signatureTokens": [
+            {
+              "text": "bytes",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Estimated resident bytes across this type's ready assets; see AssetStats.bytes."
+        },
+        {
+          "name": "failed",
+          "signature": "failed: number",
+          "signatureTokens": [
+            {
+              "text": "failed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Assets of this type whose last fetch attempt errored."
+        },
+        {
+          "name": "pending",
+          "signature": "pending: number",
+          "signatureTokens": [
+            {
+              "text": "pending",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Assets of this type that are claimed but not settled - idle, queued in the background lane, or fetching."
+        },
+        {
+          "name": "ready",
+          "signature": "ready: number",
+          "signatureTokens": [
+            {
+              "text": "ready",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Assets of this type whose payload is resident and readable."
+        },
+        {
+          "name": "type",
+          "signature": "type: string",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The asset type's id, or the dispatch token's name for a type not installed on this loader."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetResidency.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetResidency.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetResidency.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetResidency.ts"
+}

@@ -36,6 +36,9 @@ class PerformanceOverlayScene extends Scene {
       this.budgetIndex = (this.budgetIndex + 1) % budgets.length;
       debug.layers.performance.frameBudget = budgets[this.budgetIndex]!;
     });
+    this.inputs.onTrigger(Keyboard.A, () => {
+      debug.layers.assetCache.visible = !debug.layers.assetCache.visible;
+    });
   }
 
   override update(delta: Seconds): void {
@@ -70,5 +73,8 @@ const app = new Application({
 
 const debug = new DebugOverlay(app);
 debug.layers.performance.visible = true;
+// Reports what the loader holds: counts per asset type, estimated resident
+// bytes, and the heaviest assets. Snapshots on an interval, not per frame.
+debug.layers.assetCache.visible = true;
 
 await app.start(PerformanceOverlayScene);

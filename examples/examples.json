@@ -320,7 +320,7 @@
       "path": "debug-layer/performance-overlay.js",
       "language": "typescript",
       "title": "Performance Overlay",
-      "description": "Enable the built-in debug overlay to monitor FPS, frame time, draw calls, and node count inside your scene; press B to cycle the frame budget the HUD marks overruns against.",
+      "description": "Enable the built-in debug overlay to monitor FPS, frame time, GPU time, draw calls, and node count inside your scene; press B to cycle the frame budget the HUD marks overruns against, and A to toggle the asset-cache panel.",
       "backend": "core",
       "featured": true,
       "tags": ["debug", "performance"],

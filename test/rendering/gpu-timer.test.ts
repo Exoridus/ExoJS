@@ -8,7 +8,7 @@
  * real device can be asked to produce on demand.
  */
 
-import { createWebGl2GpuTimer } from '#rendering/webgl2/WebGl2GpuTimer';
+import { createWebGl2GpuTimer } from '#rendering/webgl2/createWebGl2GpuTimer';
 import { WebGpuGpuTimer } from '#rendering/webgpu/WebGpuGpuTimer';
 
 // ---------------------------------------------------------------------------

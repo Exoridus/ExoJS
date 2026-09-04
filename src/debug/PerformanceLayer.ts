@@ -14,7 +14,8 @@ import { DebugLayer, type DebugLayerViewMode } from './DebugLayer';
 
 const panelX = 8;
 const panelY = 8;
-const panelW = 200;
+// Stops just short of x=200, where RenderPassInspectorLayer's panel begins.
+const panelW = 190;
 const panelH = 158;
 
 const lineH = 14;

@@ -89,6 +89,11 @@ const makeSceneDirector = () => ({
   scene: null as null | { root: object },
 });
 
+/** Enough of a Loader for AssetCacheLayer's snapshot; the layer's own content is covered in its test. */
+const makeLoader = () => ({
+  stats: vi.fn(() => ({ ready: 0, pending: 0, failed: 0, bytes: 0, byType: [], largest: [] })),
+});
+
 const makeOnFrame = () => new Signal<[import('#core/units').Seconds]>();
 const makeOnResize = () => new Signal<[number, number, unknown]>();
 
@@ -132,6 +137,7 @@ const makeApp = () => {
     canvas: { width: 800, height: 600 },
     backend: makeBackend(),
     scenes: makeSceneDirector(),
+    loader: makeLoader(),
     input: makeInput(),
     onFrame,
     onResize,
@@ -159,6 +165,7 @@ const makeAppWithRealInput = (): { app: import('#core/Application').Application;
     _backingStoreToLogical: (x: number, y: number): { x: number; y: number } => ({ x, y }),
     backend: makeBackend(),
     scenes: makeSceneDirector(),
+    loader: makeLoader(),
     onFrame: makeOnFrame(),
     onResize: makeOnResize(),
   } as unknown as import('#core/Application').Application;
@@ -221,7 +228,7 @@ describe('DebugOverlay — lifecycle', () => {
     // A binding is what marks a key consumed, so the browser's own F1 help
     // window / F3 find bar stay shut while the overlay owns those keys. A
     // plain `onKeyDown` subscription runs a frame late and prevents nothing.
-    expect([...mockInput(app).bound.keys()].sort((a, b) => a - b)).toEqual([Keyboard.F1, Keyboard.F2, Keyboard.F3, Keyboard.F4, Keyboard.F6]);
+    expect([...mockInput(app).bound.keys()].sort((a, b) => a - b)).toEqual([Keyboard.F1, Keyboard.F2, Keyboard.F3, Keyboard.F4, Keyboard.F6, Keyboard.F7]);
 
     debug.destroy();
   });
@@ -284,7 +291,7 @@ describe('DebugOverlay — lifecycle', () => {
     const debug = new DebugOverlay(app);
 
     expect(app.onFrame.count).toBe(1);
-    expect(mockInput(app).bound.size).toBe(5);
+    expect(mockInput(app).bound.size).toBe(6);
 
     debug.destroy();
 

@@ -63,8 +63,8 @@ import { BlendModes, type ColorTextureFormat, TextureFormat } from '#rendering/t
 import type { View } from '#rendering/View';
 
 import { probeWebgl2CompressedFormats, type Webgl2CompressedFormatSupport } from './compressedFormat';
+import { createWebGl2GpuTimer } from './createWebGl2GpuTimer';
 import { WebGl2BackdropBlendCompositor } from './WebGl2BackdropBlendCompositor';
-import { createWebGl2GpuTimer } from './WebGl2GpuTimer';
 import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
 import { WebGl2MeshRenderer } from './WebGl2MeshRenderer';
 import { WebGl2PassCoordinator } from './WebGl2PassCoordinator';
