@@ -125,6 +125,35 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   scales with the nodes it visits. The package depends on `@codexo/exojs` alone:
   a tilemap reaches it through the cost callback `GridSpace.from` takes, not
   through a package edge.
+- **Browser-native shaping for bidirectional and contextual text.**
+  `LayoutOptions.shaping` selects how a glyph's appearance is resolved:
+  `'auto'` (the default) keeps ordinary content on the shared glyph atlas and
+  hands text that needs its surroundings - a right-to-left base direction, an
+  explicit bidi control, or any script outside a proven-safe allow-list - to
+  the browser's canvas text engine one complete line at a time, which resolves
+  the bidirectional order and the contextual forms. `'simple'` and `'browser'`
+  force either path; `Text.shapingMode` reports which one settled. Shaped
+  lines are rasterized into pages the node owns and released with it, so no
+  process-wide cache of whole strings accumulates. No runtime dependency is
+  added: the platform provides the segmentation, the shaping and the raster.
+- **`LayoutOptions.locale`.** The language tag Unicode segmentation runs
+  under - which clusters count as one character, and where a line may break.
+  It selects no font and loads nothing.
+- **`GlyphPlacement.sourceStart` / `sourceEnd` and the same pair on
+  `TextLineMetrics`.** Every laid-out glyph and every laid-out line now carries
+  the UTF-16 range of the string it came from. Nothing in a string marks a soft
+  wrap, so this is what maps a caret, a selection or a hit test onto wrapped
+  text; a glyph that stands for no source character (the ellipsis an overflow
+  appended) reports an empty range at the point it replaced.
+- **`TextArea` wraps and scrolls.** A line too long for the field breaks at a
+  word boundary instead of scrolling sideways, and a vertical scrollbar appears
+  along the right edge once the value outgrows the field and drives the scroll
+  position. `wrap: false` restores horizontal scrolling for content whose own
+  line breaks are what matters; `scrollbar: false` and `scrollbarThickness`
+  control the bar, and `TextArea.verticalScrollbar` exposes it. Caret motion,
+  `Home`/`End`, `PageUp`/`PageDown`, hit testing and selection rectangles
+  follow the laid-out lines, so a wrapped line behaves like the two lines it
+  looks like while the value keeps exactly the line breaks the user typed.
 - **`when` on `SceneInteraction.observe()` and `scope()`.** Interaction
   registrations take the same `SceneAvailability` policy the input, tween and
   audio facades have. The default stays `'always'`, so a pause menu drawn by
@@ -205,6 +234,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Fixed
 
+- **Text no longer splits a grapheme cluster.** Layout counted code points, so
+  a combining sequence, an emoji with a skin-tone modifier, a ZWJ sequence and
+  a regional-indicator flag were each placed as several glyphs, could be broken
+  in half by `breakWords` or `maxWidth`, and could be truncated to a dangling
+  mark or a lone regional indicator by `overflow: 'ellipsis'`. The unit of
+  layout is now the grapheme cluster throughout - placement, wrapping,
+  truncation and the caret granularity of the editing widgets - resolved
+  through `Intl.Segmenter`. Where a browser does not provide it, clusters
+  degrade to code points and word boundaries to blank runs; no polyfill ships.
+- **Word wrapping is locale-aware rather than a split on spaces.** Text in a
+  script written without inter-word spaces used to overflow as one unbreakable
+  token; it now wraps at its own word boundaries. A run of blanks is one break
+  candidate, and a run that stays inside a line is preserved verbatim.
 - **`FadeSceneTransition` no longer leaks a `QuadGeometry` per navigation.**
   Its per-session phase state allocates one, and nothing released it, so every
   faded scene change left a backend vertex/index buffer pair behind for the

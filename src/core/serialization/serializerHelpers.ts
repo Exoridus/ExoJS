@@ -2,7 +2,7 @@ import { Color } from '#core/Color';
 import type { LayoutOptions } from '#rendering/text/LayoutOptions';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 
-import { FONT_WEIGHTS, readBoolean, readEnum, readNumber, TEXT_ALIGNMENTS } from './read';
+import { FONT_WEIGHTS, readBoolean, readEnum, readNumber, readString, TEXT_ALIGNMENTS } from './read';
 
 // ── Options bags ───────────────────────────────────────────────────────────────
 
@@ -172,6 +172,7 @@ export const deserializeStyleOptions = (data: unknown): TextStyleOptions | undef
 
 const OVERFLOWS = ['visible', 'clip', 'ellipsis'] as const satisfies ReadonlyArray<NonNullable<LayoutOptions['overflow']>>;
 const DIRECTIONS = ['ltr', 'rtl'] as const satisfies ReadonlyArray<NonNullable<LayoutOptions['direction']>>;
+const SHAPINGS = ['auto', 'simple', 'browser'] as const satisfies ReadonlyArray<NonNullable<LayoutOptions['shaping']>>;
 const WHITE_SPACES = ['normal', 'pre', 'pre-line'] as const satisfies ReadonlyArray<NonNullable<LayoutOptions['whiteSpace']>>;
 
 /**
@@ -191,6 +192,8 @@ const LAYOUT_READERS: {
   overflow: (source, key) => readEnum(source, key, OVERFLOWS),
   letterSpacing: readNumber,
   direction: (source, key) => readEnum(source, key, DIRECTIONS),
+  locale: readString,
+  shaping: (source, key) => readEnum(source, key, SHAPINGS),
   breakWords: readBoolean,
   whiteSpace: (source, key) => readEnum(source, key, WHITE_SPACES),
 };

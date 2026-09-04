@@ -12,6 +12,9 @@
  * Compatible with `cutoff = 0.5` in the shader's `smoothstep(0.5 − soft, 0.5 + soft, sd)`.
  */
 
+import type { CanvasTextState } from './canvasTextState';
+import { applyCanvasTextState } from './canvasTextState';
+
 const inf = 1e20;
 
 // ── Public types ──────────────────────────────────────────────────────────────
@@ -41,6 +44,19 @@ export interface GlyphSdfOptions {
    * Defaults to 0.5.
    */
   cutoff?: number;
+  /**
+   * Base direction handed to the canvas text engine, which resolves the bidi
+   * order and the contextual forms of whatever string it is given.
+   * Defaults to `'ltr'`.
+   */
+  direction?: 'ltr' | 'rtl';
+  /**
+   * Extra spacing in pixels the canvas inserts between characters. Applies to
+   * the string as one shaping unit, which is the only place it can be applied
+   * without breaking contextual joining. Ignored where the browser does not
+   * support canvas letter spacing. Defaults to 0.
+   */
+  letterSpacing?: number;
 }
 
 /** Result of {@link GlyphSdf.draw}. */
@@ -79,8 +95,8 @@ export class GlyphSdf {
   private readonly _buffer: number;
   private readonly _radius: number;
   private readonly _cutoff: number;
-  private readonly _font: string;
   private readonly _fontSize: number;
+  private readonly _textState: CanvasTextState;
 
   // Font-level ascent/descent - measured once from a reference string so that
   // all glyph tiles share the same height and baseline position. This avoids
@@ -112,7 +128,9 @@ export class GlyphSdf {
 
     const stylePart = options.fontStyle && options.fontStyle !== 'normal' ? `${options.fontStyle} ` : '';
     const weight = options.fontWeight ?? 'normal';
-    this._font = `${stylePart}${weight} ${options.fontSize}px ${options.fontFamily}`;
+    const font = `${stylePart}${weight} ${options.fontSize}px ${options.fontFamily}`;
+
+    this._textState = { font, direction: options.direction ?? 'ltr', letterSpacing: options.letterSpacing ?? 0 };
 
     if (typeof OffscreenCanvas !== 'undefined') {
       const c = new OffscreenCanvas(1, 1);
@@ -144,8 +162,7 @@ export class GlyphSdf {
   private _ensureFontMetrics(): void {
     if (this._metricsReady) return;
     const ctx = this._ctx;
-    ctx.font = this._font;
-    ctx.textBaseline = 'alphabetic';
+    applyCanvasTextState(ctx, this._textState);
     const m = ctx.measureText('HgjpqyÉÅ');
     type M = TextMetrics & {
       fontBoundingBoxAscent?: number;
@@ -165,8 +182,7 @@ export class GlyphSdf {
     const buf = this._buffer;
 
     // ── Measure ──────────────────────────────────────────────────────────
-    ctx.font = this._font;
-    ctx.textBaseline = 'alphabetic';
+    applyCanvasTextState(ctx, this._textState);
 
     const m = ctx.measureText(char);
     const advance = m.width;
@@ -199,13 +215,7 @@ export class GlyphSdf {
 
     // ── Rasterize white glyph on transparent background ───────────────────
     ctx.clearRect(0, 0, tileW, tileH);
-    // Re-apply font + baseline here: assigning canvas.width/height above (on a
-    // tile-size change) resets the 2D context to its defaults, including
-    // `font = "10px sans-serif"`. Since font/baseline are otherwise only set
-    // before measureText (above the resize), every glyph that triggered a resize
-    // would otherwise rasterize at 10px - far too small for the tile.
-    ctx.font = this._font;
-    ctx.textBaseline = 'alphabetic';
+    applyCanvasTextState(ctx, this._textState);
     ctx.fillStyle = '#ffffff';
     // Baseline at buf + _fontAscent - consistent across all glyphs.
     ctx.fillText(char, buf + bbLeft, buf + this._fontAscent);

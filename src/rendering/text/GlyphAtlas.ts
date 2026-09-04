@@ -3,6 +3,8 @@ import { DataTexture } from '#rendering/texture/DataTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes, TextureFormat } from '#rendering/types';
 
+import type { CanvasTextState } from './canvasTextState';
+import { applyCanvasTextState } from './canvasTextState';
 import { cssFontString, GlyphMetrics } from './GlyphMetrics';
 import { GlyphSdf } from './GlyphSdf';
 import type { GlyphInfo, GlyphKey, GlyphProvider } from './types';
@@ -151,6 +153,16 @@ export class AtlasPage {
     }
   }
 
+  /** Page width in atlas texels - the denominator of every `uvLeft`/`uvRight` addressing it. */
+  public get width(): number {
+    return this._width;
+  }
+
+  /** Page height in atlas texels. */
+  public get height(): number {
+    return this._height;
+  }
+
   public insert(w: number, h: number): { x: number; y: number } | null {
     return this._packer.insert(w, h);
   }
@@ -176,10 +188,9 @@ export class AtlasPage {
     this._sdfTexture!.commitRect(slotX, slotY, srcW, srcH);
   }
 
-  public measureGlyph(char: string, font: string): TextMetrics {
+  public measureGlyph(char: string, state: CanvasTextState): TextMetrics {
     if (this._ctx !== null) {
-      this._ctx.font = font;
-      this._ctx.textBaseline = 'alphabetic';
+      applyCanvasTextState(this._ctx, state);
       return this._ctx.measureText(char);
     }
     // SDF pages own no drawing context, so measuring needs a scratch one. Kept
@@ -187,16 +198,14 @@ export class AtlasPage {
     // uncached glyph, and a fresh canvas per measurement is a whole allocation
     // (plus a context) for one `measureText`.
     const ctx = (this._measureCtx ??= makeCtx(1, 1).ctx);
-    ctx.font = font;
-    ctx.textBaseline = 'alphabetic';
+    applyCanvasTextState(ctx, state);
     return ctx.measureText(char);
   }
 
   /** Rasterize a white glyph into the canvas at the given padded slot origin (canvas mode only). */
-  public rasterize(char: string, slotX: number, slotY: number, ascent: number, bbLeft: number, font: string): void {
+  public rasterize(char: string, slotX: number, slotY: number, ascent: number, bbLeft: number, state: CanvasTextState): void {
     const ctx = this._ctx!;
-    ctx.font = font;
-    ctx.textBaseline = 'alphabetic';
+    applyCanvasTextState(ctx, state);
     if (!this._colorGlyphs) {
       (ctx as CanvasRenderingContext2D).fillStyle = '#ffffff';
     }
@@ -220,6 +229,17 @@ export class AtlasPage {
       this._ctx.clearRect(0, 0, this._width, this._height);
       this.texture.updateSource();
     }
+  }
+
+  /**
+   * Release the page's GPU resource.
+   *
+   * Only for pages whose owner is a single node. The pages of a
+   * {@link GlyphAtlas} outlive every node that drew from them and are reset,
+   * never destroyed.
+   */
+  public destroy(): void {
+    this.texture.destroy();
   }
 }
 
@@ -449,9 +469,9 @@ export class GlyphAtlas implements GlyphProvider {
     // Colour glyphs are rasterized by the canvas at the RASTER size, so their
     // tile metrics have to be measured there too - the ratio-1 numbers would
     // size the slot for a glyph a third the size of the one actually drawn.
-    const font = this._cssFont(rasterSize);
+    const state: CanvasTextState = { font: this._cssFont(rasterSize), direction: 'ltr', letterSpacing: 0 };
     // Invariant: a base page is always present (constructor + clear add one).
-    const metrics = this._pages[0]!.measureGlyph(char, font);
+    const metrics = this._pages[0]!.measureGlyph(char, state);
 
     const ascent = Math.ceil(
       (metrics as TextMetrics & { fontBoundingBoxAscent?: number }).fontBoundingBoxAscent ?? metrics.actualBoundingBoxAscent ?? rasterSize * 0.8,
@@ -468,7 +488,7 @@ export class GlyphAtlas implements GlyphProvider {
     const slotH = glyphHeight + glyphPadding * 2;
 
     const { page, slot } = this._allocateSlot(slotW, slotH, char, size);
-    page.rasterize(char, slot.x, slot.y, ascent, bbLeft, font);
+    page.rasterize(char, slot.x, slot.y, ascent, bbLeft, state);
     page.uploadDirtyRegion();
 
     const ps = this._pageSize;

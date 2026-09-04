@@ -309,12 +309,11 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     // which atlas the node rasterizes into.
     node._setSurfacePixelRatio(this.getBackend().surfacePixelRatio);
     node.syncDirty();
-    const { pageQuads, atlas } = node;
-    if (pageQuads.length === 0 || atlas === null) return;
+    const { pageQuads, textPages: pages } = node;
+    if (pageQuads.length === 0 || pages.length === 0) return;
 
     const nodeIndex = this._assignNodeIndex(node);
     const shaderType: ShaderType = node.colorGlyphs ? 'color' : 'sdf';
-    const pages = atlas.pages;
     const blendMode = node.blendMode;
 
     for (const batch of pageQuads) {

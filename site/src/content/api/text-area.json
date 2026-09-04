@@ -1,16 +1,16 @@
 {
   "title": "TextArea",
-  "description": "Multi-line text field. It shares the editing core, the platform transport and the theme roles with TextInput, and differs in what the keys mean and in how much of the value is on screen at once: - `Enter` inserts a line break instead of confirming. - `Up` / `Down` move by line, keeping the column the caret last chose, and `PageUp` / `PageDown` move by as many lines as the field shows. - `Home` / `End` go to the ends of the current line, not of the value. - The content scrolls in both axes to keep the caret visible, and is clipped to the field. Lines are the ones the value states: a long line scrolls horizontally rather than wrapping.",
+  "description": "Multi-line text field. It shares the editing core, the platform transport and the theme roles with TextInput, and differs in what the keys mean and in how much of the value is on screen at once: - `Enter` inserts a line break instead of confirming. - `Up` / `Down` move by line, keeping the column the caret last chose, and `PageUp` / `PageDown` move by as many lines as the field shows. - `Home` / `End` go to the ends of the current line, not of the value. - The content scrolls to keep the caret visible, and is clipped to the field. A scrollbar along the right edge shows and drives the vertical position once the value outgrows the field. A line too long for the field wraps at a word boundary. The lines the caret and `Up` / `Down` move through are the LAID-OUT lines, so a wrapped line behaves like the two lines it looks like. Turn `wrap` off for content whose own line breaks are what matters - log output, code - and the field scrolls horizontally instead.",
   "symbol": "TextArea",
   "kind": "class",
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 136,
+  "memberCount": 140,
   "counts": {
     "constructors": 1,
-    "methods": 64,
-    "properties": 56,
+    "methods": 65,
+    "properties": 59,
     "events": 15
   },
   "sections": [
@@ -20,8 +20,8 @@
       "members": [],
       "paragraphs": [
         "Multi-line text field. It shares the editing core, the platform transport and the theme roles with TextInput, and differs in what the keys mean and in how much of the value is on screen at once:",
-        "- `Enter` inserts a line break instead of confirming. - `Up` / `Down` move by line, keeping the column the caret last chose, and `PageUp` / `PageDown` move by as many lines as the field shows. - `Home` / `End` go to the ends of the current line, not of the value. - The content scrolls in both axes to keep the caret visible, and is clipped to the field.",
-        "Lines are the ones the value states: a long line scrolls horizontally rather than wrapping."
+        "- `Enter` inserts a line break instead of confirming. - `Up` / `Down` move by line, keeping the column the caret last chose, and `PageUp` / `PageDown` move by as many lines as the field shows. - `Home` / `End` go to the ends of the current line, not of the value. - The content scrolls to keep the caret visible, and is clipped to the field. A scrollbar along the right edge shows and drives the vertical position once the value outgrows the field.",
+        "A line too long for the field wraps at a word boundary. The lines the caret and `Up` / `Down` move through are the LAID-OUT lines, so a wrapped line behaves like the two lines it looks like. Turn `wrap` off for content whose own line breaks are what matters - log output, code - and the field scrolls horizontally instead."
       ],
       "importLine": "import { TextArea } from '@codexo/exojs'",
       "sourceLink": null
@@ -486,6 +486,35 @@
           ],
           "returnType": "void",
           "description": "React to a focus change on this widget. Override in subclasses that repaint for it; the default does nothing, so opting into tracking alone does not change how a widget looks."
+        },
+        {
+          "name": "_onScrollUpdated",
+          "signature": "_onScrollUpdated(): void",
+          "signatureTokens": [
+            {
+              "text": "_onScrollUpdated",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Called after the field re-clamped its scroll offsets. A subclass that shows the scroll position - a scrollbar, say - syncs it here."
         },
         {
           "name": "_onThemeChanged",
@@ -3974,7 +4003,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "How many lines the value holds."
+          "description": "How many lines the value holds - the value's own lines, not the laid-out ones. Wrapping does not change the value, so it does not change this."
         },
         {
           "name": "mask",
@@ -4243,6 +4272,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "scrollOffsetY",
+          "signature": "scrollOffsetY: number",
+          "signatureTokens": [
+            {
+              "text": "scrollOffsetY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How far the content is scrolled down, in layout pixels. Assigning scrolls the field without moving the caret, which is what a scrollbar drag does; the next caret move clamps it back into view."
         },
         {
           "name": "selectionEnd",
@@ -4563,6 +4613,35 @@
           "description": "The text held, never masked. Assigning replaces the whole value."
         },
         {
+          "name": "verticalScrollbar",
+          "signature": "verticalScrollbar: Scrollbar | null",
+          "signatureTokens": [
+            {
+              "text": "verticalScrollbar",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scrollbar",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The vertical scrollbar, or null when the field was built without one."
+        },
+        {
           "name": "visible",
           "signature": "visible: boolean",
           "signatureTokens": [
@@ -4603,6 +4682,27 @@
           "params": [],
           "returnType": null,
           "description": "Rendered width of the whole subtree, in the node's global-transform space. Unlike Sprite.width - which scales an unscaled texture frame - a container has no intrinsic local size, so this reads the aggregate bounds directly. Those are already scaled, so multiplying by scale again would count it twice. Writing rescales scale.x to make the subtree render at the requested width."
+        },
+        {
+          "name": "wrap",
+          "signature": "wrap: boolean",
+          "signatureTokens": [
+            {
+              "text": "wrap",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether a line too long for the field wraps at a word boundary. Turning it off makes long lines scroll horizontally instead."
         },
         {
           "name": "x",

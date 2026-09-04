@@ -22,17 +22,43 @@ export interface LayoutOptions {
   /** Additional gap in pixels between glyphs (on top of the font's advance). */
   letterSpacing?: number;
   /**
-   * Text direction. Defaults to `'ltr'`.
+   * Base direction for text layout. Defaults to `'ltr'`.
    *
-   * `'rtl'` reverses each line's glyphs visually after wrapping, which is
-   * correct for uniformly right-to-left text. Full bidi (mixed LTR/RTL runs),
-   * Arabic contextual shaping, and direction-relative alignment are not
-   * implemented - `align` stays literal in both directions.
+   * Direction-relative alignment is not derived from it - `align` stays
+   * literal in both directions.
    */
   direction?: 'ltr' | 'rtl';
   /**
-   * Break individual words that are wider than `maxWidth` at character boundaries.
-   * Only applies when `maxWidth` is set. Defaults to `false`.
+   * Language tag (`'en'`, `'ja'`, `'ar-EG'`) used for Unicode text
+   * segmentation - which clusters count as one character, and where a line may
+   * break. It selects no font and loads nothing; the platform default locale
+   * applies when it is absent.
+   */
+  locale?: string;
+  /**
+   * How glyph appearance is resolved. Defaults to `'auto'`.
+   *
+   * - `'auto'` - use the shared-glyph fast path for content that is safe to
+   *   render one cluster at a time, and hand anything else to the browser's
+   *   text engine as a whole line. The classification is deliberately
+   *   conservative and may admit more content to the fast path over time.
+   * - `'simple'` - always use the shared glyph cache. The cheapest path and
+   *   the right one for controlled content; a right-to-left line is reversed
+   *   cluster by cluster rather than reordered, and contextual scripts render
+   *   in their isolated forms.
+   * - `'browser'` - always shape the whole line through the browser, which
+   *   resolves bidi order and contextual forms. Each line becomes one
+   *   node-owned raster instead of a run of shared glyphs, so a line whose
+   *   text changes is rasterized again.
+   *
+   * A browser-shaped line is one glyph as far as the layout is concerned, so
+   * `align: 'justify'` cannot stretch it and caret geometry resolves to line
+   * granularity.
+   */
+  shaping?: 'auto' | 'simple' | 'browser';
+  /**
+   * Break individual words that are wider than `maxWidth` at grapheme-cluster
+   * boundaries. Only applies when `maxWidth` is set. Defaults to `false`.
    */
   breakWords?: boolean;
   /**

@@ -1,10 +1,37 @@
 import type { LayoutOptions } from './LayoutOptions';
+import { graphemes, graphemeStarts, isTrivialText, textRuns } from './segmentation';
+import type { LineShaper } from './shaping';
+import { resolveShaping } from './shaping';
 import type { GlyphInfo, GlyphPlacement, GlyphProvider, TextLayoutResult, TextLayoutStyle, TextLineMetrics, TextPageQuads } from './types';
 
 interface LinePlacement {
-  placements: Array<{ info: GlyphInfo; x: number; y: number; char: string }>;
+  placements: Array<{ info: GlyphInfo; x: number; y: number; cluster: string; sourceStart: number; sourceEnd: number }>;
   width: number;
   wordCount: number;
+  sourceStart: number;
+  sourceEnd: number;
+}
+
+/**
+ * One line the text broke into, still expressed against the preprocessed
+ * string so its characters can be traced back to the caller's.
+ */
+interface LayoutLine {
+  /** The string this line places. */
+  text: string;
+  /** Offset of `text` in the preprocessed string. */
+  start: number;
+  /**
+   * How many preprocessed units `text` stands for. Shorter than `text.length`
+   * when an ellipsis was appended, which stands for nothing.
+   */
+  contentLength: number;
+}
+
+/** A half-open range of the string being wrapped. */
+interface LineRange {
+  start: number;
+  end: number;
 }
 
 /**
@@ -29,16 +56,26 @@ export const emptyTextLayout = (): TextLayoutResult => ({
  * (`clip` / `ellipsis`), right-to-left flow, and optional kerning (if the
  * provider implements `getKerning`).
  *
- * `direction: 'rtl'` reverses each line visually once wrapping is done, so
- * uniformly right-to-left text reads correctly. Full bidi, Arabic contextual
- * shaping, and ligature shaping are out of scope; Unicode/diacritics are
- * delegated to the browser's canvas engine.
+ * The unit of layout is the grapheme cluster, not the code point: a combining
+ * sequence, a ZWJ emoji and a regional-indicator flag are each placed as one
+ * glyph and are never split by wrapping or by the ellipsis. `locale` selects
+ * the segmentation locale.
+ *
+ * Two representations exist and `shaping` selects between them. On the simple
+ * path each cluster is one glyph from the shared cache, and `direction: 'rtl'`
+ * reverses a line's clusters visually - correct for uniformly right-to-left
+ * text, but neither bidi nor contextual shaping. On the browser-shaped path a
+ * `shaper` receives each laid-out line whole and the browser resolves bidi
+ * order and contextual forms; the line is then one placement, so `justify`
+ * cannot stretch it and `letterSpacing` is applied inside the shaping rather
+ * than between placements. Without a `shaper` the simple path is used
+ * regardless of `shaping`.
  *
  * Returns the placements alongside both extents the callers need - see
  * {@link TextLayoutResult} for why the advance and the ink are different
  * numbers. Text that places no glyph yields zeroes for both.
  */
-export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutOptions, provider: GlyphProvider): TextLayoutResult => {
+export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutOptions, provider: GlyphProvider, shaper?: LineShaper): TextLayoutResult => {
   if (text.length === 0) return emptyTextLayout();
 
   const { fontSize, lineHeight, leading, align } = style;
@@ -50,20 +87,39 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
   const rtl = layout.direction === 'rtl';
   const breakWords = layout.breakWords ?? false;
   const whiteSpace = layout.whiteSpace ?? 'pre-line';
+  const locale = layout.locale;
+  const shaped = shaper !== undefined && resolveShaping(text, layout) === 'browser';
+  // A shaped line carries its spacing inside the raster the browser produced,
+  // so adding it between placements again would double it.
+  const glyphSpacing = shaped ? 0 : letterSpacing;
 
   // ── Whitespace preprocessing ──────────────────────────────────────────────
-  const preprocessed = _applyWhiteSpace(text, whiteSpace);
+  //
+  // Collapsing blanks moves every character after them, so the pass records
+  // where each surviving unit came from. Without that a caret could not be
+  // mapped onto a laid-out glyph at all.
+  const { text: preprocessed, sourceMap } = _applyWhiteSpace(text, whiteSpace);
+  const toSource = (index: number): number => (sourceMap === null ? Math.min(index, text.length) : sourceMap[Math.min(index, sourceMap.length - 1)]!);
 
   // Split into hard lines then optionally word-wrap each.
-  const hardLines = preprocessed.split('\n');
-  const allLines: string[] = [];
+  const allLines: LayoutLine[] = [];
+  let hardStart = 0;
 
-  for (const hard of hardLines) {
+  for (const hard of preprocessed.split('\n')) {
     if (maxWidth === undefined) {
-      allLines.push(hard);
+      allLines.push({ text: hard, start: hardStart, contentLength: hard.length });
     } else {
-      allLines.push(..._wrapLine(hard, fontSize, provider, maxWidth, letterSpacing, breakWords));
+      const ranges = shaped
+        ? _wrapShapedLine(hard, fontSize, shaper, maxWidth, breakWords, locale)
+        : _wrapLine(hard, fontSize, provider, maxWidth, letterSpacing, breakWords, locale);
+
+      for (const range of ranges) {
+        allLines.push({ text: hard.slice(range.start, range.end), start: hardStart + range.start, contentLength: range.end - range.start });
+      }
     }
+
+    // Past the line break the hard split consumed.
+    hardStart += hard.length + 1;
   }
 
   // ── Vertical overflow ─────────────────────────────────────────────────────
@@ -77,7 +133,12 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
 
       if (overflow === 'ellipsis' && maxLines > 0) {
         // In-bounds: maxLines > 0 and allLines.length === maxLines.
-        allLines[maxLines - 1] = _ellipsize(allLines[maxLines - 1]!, fontSize, provider, maxWidth, letterSpacing);
+        const last = allLines[maxLines - 1]!;
+        const truncated = shaped
+          ? _ellipsizeShaped(last.text, fontSize, shaper, maxWidth, locale)
+          : _ellipsize(last.text, fontSize, provider, maxWidth, letterSpacing, locale);
+
+        allLines[maxLines - 1] = { text: truncated.text, start: last.start, contentLength: truncated.contentLength };
       }
     }
   }
@@ -88,40 +149,80 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
 
   for (let lineIndex = 0; lineIndex < allLines.length; lineIndex++) {
     // In-bounds: lineIndex < allLines.length.
-    // RTL reorders each line visually before placement, so the cursor can keep
-    // advancing left-to-right and every downstream step (alignment, justify,
-    // quad building) stays direction-agnostic.
-    const line = rtl ? _reverseGraphemes(allLines[lineIndex]!) : allLines[lineIndex]!;
+    const line = allLines[lineIndex]!;
+    const body = line.text;
     const lineY = lineIndex * computedLineHeight;
+    const lineSourceStart = toSource(line.start);
+    const lineSourceEnd = toSource(line.start + line.contentLength);
     let cursorX = 0;
     let wordCount = 0;
     let inWord = false;
     const placements: LinePlacement['placements'] = [];
-    let prevChar: string | null = null;
 
-    for (const char of line) {
-      // Kerning adjustment before placing this character.
-      if (prevChar !== null && provider.getKerning !== undefined) {
-        cursorX += provider.getKerning(prevChar, char, fontSize);
+    if (shaped) {
+      // The browser receives the complete line, which is the only way it can
+      // resolve bidi order and the contextual form of a letter from what
+      // surrounds it. An empty line still occupies its box and places nothing.
+      if (body.length > 0) {
+        const info = shaper.shapeLine(body, fontSize);
+
+        placements.push({ info, x: 0, y: lineY, cluster: body, sourceStart: lineSourceStart, sourceEnd: lineSourceEnd });
+        cursorX = info.advance;
+        wordCount = 1;
+      }
+    } else {
+      // Trivial text needs no cluster boundary array at all - one code unit is
+      // one cluster - which keeps the hot path allocating exactly what it did
+      // before segmentation became the layout's unit.
+      const starts = isTrivialText(body) ? null : graphemeStarts(body, locale);
+      const clusterCount = starts === null ? body.length : starts.length;
+      let prevCluster: string | null = null;
+
+      for (let i = 0; i < clusterCount; i++) {
+        // RTL walks the same clusters back to front, so the cursor keeps
+        // advancing left-to-right and every downstream step (alignment,
+        // justify, quad building) stays direction-agnostic. Each cluster keeps
+        // the source range it had before the reordering.
+        const index = rtl ? clusterCount - 1 - i : i;
+        const from = starts === null ? index : starts[index]!;
+        const to = starts === null ? index + 1 : (starts[index + 1] ?? body.length);
+        const cluster = starts === null ? body[index]! : body.slice(from, to);
+
+        // Kerning adjustment before placing this cluster.
+        if (prevCluster !== null && provider.getKerning !== undefined) {
+          cursorX += provider.getKerning(prevCluster, cluster, fontSize);
+        }
+
+        const info = provider.getGlyph(cluster, fontSize);
+
+        placements.push({
+          info,
+          x: cursorX,
+          y: lineY,
+          cluster,
+          // An ellipsis stands for nothing in the source, so it collapses to
+          // an empty range at the point it replaced.
+          sourceStart: toSource(line.start + Math.min(from, line.contentLength)),
+          sourceEnd: toSource(line.start + Math.min(to, line.contentLength)),
+        });
+        cursorX += info.advance + letterSpacing;
+
+        if (cluster === ' ') {
+          inWord = false;
+        } else if (!inWord) {
+          inWord = true;
+          wordCount++;
+        }
+
+        prevCluster = cluster;
       }
 
-      const info = provider.getGlyph(char, fontSize);
-      placements.push({ info, x: cursorX, y: lineY, char });
-      cursorX += info.advance + letterSpacing;
-
-      if (char === ' ') {
-        inWord = false;
-      } else if (!inWord) {
-        inWord = true;
-        wordCount++;
-      }
-
-      prevChar = char;
+      cursorX -= placements.length > 0 ? letterSpacing : 0;
     }
 
-    const lineWidth = cursorX - (placements.length > 0 ? letterSpacing : 0);
+    const lineWidth = cursorX;
     if (lineWidth > maxLineWidth) maxLineWidth = lineWidth;
-    linePlacements.push({ placements, width: lineWidth, wordCount });
+    linePlacements.push({ placements, width: lineWidth, wordCount, sourceStart: lineSourceStart, sourceEnd: lineSourceEnd });
   }
 
   // Pass 2: apply alignment offset and build final GlyphPlacement array.
@@ -165,10 +266,10 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
       let prevWasSpace = true;
 
       for (const entry of line.placements) {
-        if (prevWasSpace && entry.char !== ' ') {
+        if (prevWasSpace && entry.cluster !== ' ') {
           wordIdx++;
           prevWasSpace = false;
-        } else if (!prevWasSpace && entry.char === ' ') {
+        } else if (!prevWasSpace && entry.cluster === ' ') {
           prevWasSpace = true;
         }
 
@@ -178,7 +279,9 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
           width: entry.info.width,
           height: entry.info.height,
           penX: entry.x + offsetX + wordIdx * extraPerGap,
-          penAdvance: entry.info.advance + letterSpacing,
+          penAdvance: entry.info.advance + glyphSpacing,
+          sourceStart: entry.sourceStart,
+          sourceEnd: entry.sourceEnd,
           page: entry.info.page,
           uvLeft: entry.info.uvLeft,
           uvTop: entry.info.uvTop,
@@ -191,18 +294,28 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
       // `gaps` inter-word gaps absorbs `extraPerGap`, so the line's actual
       // width after layout is maxLineWidth, not the pre-justify `line.width`
       // a selection rectangle or caret would otherwise fall short of.
-      lines.push({ start: lineStart, count: result.length - lineStart, x: offsetX, y: li * computedLineHeight, width: maxLineWidth });
+      lines.push({
+        start: lineStart,
+        count: result.length - lineStart,
+        x: offsetX,
+        y: li * computedLineHeight,
+        width: maxLineWidth,
+        sourceStart: line.sourceStart,
+        sourceEnd: line.sourceEnd,
+      });
       continue;
     }
 
-    for (const { info, x, y } of line.placements) {
+    for (const { info, x, y, sourceStart, sourceEnd } of line.placements) {
       place({
         x: x + offsetX + (info.xBearing ?? 0),
         y: y + (info.yBearing ?? 0),
         width: info.width,
         height: info.height,
         penX: x + offsetX,
-        penAdvance: info.advance + letterSpacing,
+        penAdvance: info.advance + glyphSpacing,
+        sourceStart,
+        sourceEnd,
         page: info.page,
         uvLeft: info.uvLeft,
         uvTop: info.uvTop,
@@ -211,7 +324,15 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
       });
     }
 
-    lines.push({ start: lineStart, count: result.length - lineStart, x: offsetX, y: li * computedLineHeight, width: line.width });
+    lines.push({
+      start: lineStart,
+      count: result.length - lineStart,
+      x: offsetX,
+      y: li * computedLineHeight,
+      width: line.width,
+      sourceStart: line.sourceStart,
+      sourceEnd: line.sourceEnd,
+    });
   }
 
   // Text that is nothing but line breaks places no glyph yet still occupies
@@ -299,105 +420,388 @@ export const buildTextPageQuads = (placements: readonly GlyphPlacement[]): TextP
 /** Character appended to the last visible line under `overflow: 'ellipsis'`. */
 const ELLIPSIS = '…';
 
-/**
- * Reverse a line by code point, so astral characters survive the round trip.
- * Combining marks and bidi runs are not reordered - see `layoutText`.
- */
-const _reverseGraphemes = (line: string): string => [...line].reverse().join('');
+/** A line an overflow cut short, plus how much of it still stands for source characters. */
+interface TruncatedLine {
+  text: string;
+  contentLength: number;
+}
 
-const _measureChars = (chars: readonly string[], fontSize: number, provider: GlyphProvider, letterSpacing: number): number => {
-  if (chars.length === 0) return 0;
+/** Advance width of a run of grapheme clusters, without the gap after the last one. */
+const _measureClusters = (clusters: readonly string[], fontSize: number, provider: GlyphProvider, letterSpacing: number): number => {
+  if (clusters.length === 0) return 0;
+
   let width = 0;
-  for (const char of chars) {
-    width += provider.getGlyph(char, fontSize).advance + letterSpacing;
+
+  for (const cluster of clusters) {
+    width += provider.getGlyph(cluster, fontSize).advance + letterSpacing;
   }
+
   // The gap after the final glyph is not part of the line's ink extent.
   return width - letterSpacing;
 };
 
 /**
- * Append an ellipsis to `line`, dropping trailing characters until the result
- * fits `maxWidth`. Without a `maxWidth` there is nothing to fit against, so the
- * ellipsis is simply appended.
+ * Append an ellipsis to `line`, dropping trailing grapheme clusters until the
+ * result fits `maxWidth`. Whole clusters go, so truncation never leaves a
+ * dangling combining mark or half a flag behind. Without a `maxWidth` there is
+ * nothing to fit against, so the ellipsis is simply appended.
  */
-const _ellipsize = (line: string, fontSize: number, provider: GlyphProvider, maxWidth: number | undefined, letterSpacing: number): string => {
-  if (maxWidth === undefined) return line + ELLIPSIS;
+const _ellipsize = (
+  line: string,
+  fontSize: number,
+  provider: GlyphProvider,
+  maxWidth: number | undefined,
+  letterSpacing: number,
+  locale: string | undefined,
+): TruncatedLine => {
+  if (maxWidth === undefined) return { text: line + ELLIPSIS, contentLength: line.length };
 
-  const chars = [...line];
-  while (chars.length > 0 && _measureChars([...chars, ELLIPSIS], fontSize, provider, letterSpacing) > maxWidth) {
-    chars.pop();
+  const clusters = graphemes(line, locale);
+
+  while (clusters.length > 0 && _measureClusters([...clusters, ELLIPSIS], fontSize, provider, letterSpacing) > maxWidth) {
+    clusters.pop();
   }
 
-  return chars.join('') + ELLIPSIS;
+  const kept = clusters.join('');
+
+  return { text: kept + ELLIPSIS, contentLength: kept.length };
 };
 
-const _applyWhiteSpace = (text: string, mode: 'normal' | 'pre' | 'pre-line'): string => {
-  if (mode === 'pre') return text;
-  if (mode === 'normal') {
-    return text.replaceAll('\n', ' ').replaceAll(/[ \t]+/g, ' ');
+/**
+ * The shaped counterpart of {@link _ellipsize}. Every candidate is measured
+ * complete, ellipsis included: for contextual text the width of a prefix plus
+ * the width of the ellipsis is not the width of the two together.
+ */
+const _ellipsizeShaped = (line: string, fontSize: number, shaper: LineShaper, maxWidth: number | undefined, locale: string | undefined): TruncatedLine => {
+  if (maxWidth === undefined) return { text: line + ELLIPSIS, contentLength: line.length };
+
+  const clusters = graphemes(line, locale);
+
+  while (clusters.length > 0 && shaper.measureLine(`${clusters.join('')}${ELLIPSIS}`, fontSize) > maxWidth) {
+    clusters.pop();
   }
-  // 'pre-line': collapse spaces per line, preserve newlines (default)
-  return text
-    .split('\n')
-    .map(line => line.replaceAll(/[ \t]+/g, ' '))
-    .join('\n');
+
+  const kept = clusters.join('');
+
+  return { text: kept + ELLIPSIS, contentLength: kept.length };
 };
 
-const _wrapLine = (line: string, fontSize: number, provider: GlyphProvider, maxWidth: number, letterSpacing: number, breakWords: boolean): string[] => {
-  if (line.length === 0) return [''];
+/**
+ * Greedy word wrap for browser-shaped text.
+ *
+ * Structurally the same pass as {@link _wrapLine}, with one difference that
+ * matters: a candidate is measured as one contextual string rather than summed
+ * from the widths of its parts, because for contextual text those are not the
+ * same number.
+ */
+const _wrapShapedLine = (
+  line: string,
+  fontSize: number,
+  shaper: LineShaper,
+  maxWidth: number,
+  breakWords: boolean,
+  locale: string | undefined,
+): LineRange[] => {
+  if (line.length === 0) return [{ start: 0, end: 0 }];
 
-  const words = line.split(' ');
-  const lines: string[] = [];
-  let current = '';
-  let currentWidth = 0;
-  const spaceAdv = provider.getGlyph(' ', fontSize).advance + letterSpacing;
+  const ranges: LineRange[] = [];
+  let start = -1;
+  let end = -1;
+  let gapStart = -1;
+  let gapEnd = -1;
 
-  for (const word of words) {
-    let wordWidth = 0;
-    for (const char of word) {
-      wordWidth += provider.getGlyph(char, fontSize).advance + letterSpacing;
+  for (const run of textRuns(line, locale)) {
+    if (run.whitespace) {
+      if (gapStart === -1) gapStart = run.start;
+      gapEnd = run.end;
+      continue;
     }
-    wordWidth = Math.max(0, wordWidth - letterSpacing);
 
-    if (breakWords && wordWidth > maxWidth) {
-      if (current.length > 0) {
-        lines.push(current);
-        current = '';
-        currentWidth = 0;
-      }
-      let charLine = '';
-      let charLineWidth = 0;
-      for (const char of word) {
-        const cw = provider.getGlyph(char, fontSize).advance + letterSpacing;
-        if (charLine.length > 0 && charLineWidth + cw > maxWidth) {
-          lines.push(charLine);
-          charLine = char;
-          charLineWidth = cw;
-        } else {
-          charLine += char;
-          charLineWidth += cw;
+    if (breakWords && shaper.measureLine(line.slice(run.start, run.end), fontSize) > maxWidth) {
+      if (start !== -1) ranges.push({ start, end });
+
+      gapStart = -1;
+      gapEnd = -1;
+
+      let chunkStart = run.start;
+      let chunkEnd = run.start;
+
+      for (const bounds of _clusterBounds(line, run.start, run.end, locale)) {
+        if (chunkEnd > chunkStart && shaper.measureLine(line.slice(chunkStart, bounds.end), fontSize) > maxWidth) {
+          ranges.push({ start: chunkStart, end: chunkEnd });
+          chunkStart = bounds.start;
         }
+
+        chunkEnd = bounds.end;
       }
-      if (charLine.length > 0) {
-        current = charLine;
-        currentWidth = charLineWidth;
-      }
-    } else if (current.length === 0) {
-      current = word;
-      currentWidth = wordWidth;
-    } else {
-      const withSpace = currentWidth + spaceAdv + wordWidth;
-      if (withSpace <= maxWidth) {
-        current += ` ${word}`;
-        currentWidth = withSpace;
-      } else {
-        lines.push(current);
-        current = word;
-        currentWidth = wordWidth;
-      }
+
+      start = chunkStart;
+      end = chunkEnd;
+      continue;
     }
+
+    if (start === -1) {
+      start = run.start;
+      end = run.end;
+      // The candidate is one contiguous slice, so measuring it also measures
+      // the blanks it swallowed - which is the point: contextual widths do not
+      // add up from parts.
+    } else if (shaper.measureLine(line.slice(start, run.end), fontSize) <= maxWidth) {
+      end = run.end;
+    } else {
+      ranges.push({ start, end });
+      start = run.start;
+      end = run.end;
+    }
+
+    gapStart = -1;
+    gapEnd = -1;
   }
 
-  lines.push(current);
-  return lines;
+  ranges.push(_finalRange(line, start, end, gapStart, gapEnd));
+
+  return ranges;
+};
+
+/**
+ * The last line a wrap emits.
+ *
+ * Trailing blanks ride along with the line they followed - dropping them would
+ * make an editor's caret jump back over spaces the user just typed - and a
+ * line that is nothing but blanks keeps them too.
+ */
+const _finalRange = (line: string, start: number, end: number, gapStart: number, gapEnd: number): LineRange => {
+  if (start !== -1) return { start, end: gapEnd === -1 ? end : gapEnd };
+  if (gapStart !== -1) return { start: gapStart, end: gapEnd };
+
+  return { start: line.length, end: line.length };
+};
+
+/** Cluster boundaries within `[from, to)`, expressed as offsets into `text`. */
+const _clusterBounds = (text: string, from: number, to: number, locale: string | undefined): LineRange[] => {
+  const body = text.slice(from, to);
+  const ranges: LineRange[] = [];
+
+  if (isTrivialText(body)) {
+    for (let i = 0; i < body.length; i++) {
+      ranges.push({ start: from + i, end: from + i + 1 });
+    }
+
+    return ranges;
+  }
+
+  const starts = graphemeStarts(body, locale);
+
+  for (let i = 0; i < starts.length; i++) {
+    ranges.push({ start: from + starts[i]!, end: from + (starts[i + 1] ?? body.length) });
+  }
+
+  return ranges;
+};
+
+/** The preprocessed text plus, when preprocessing moved characters, where each unit came from. */
+interface PreprocessedText {
+  text: string;
+  /**
+   * Source offset of every preprocessed unit, with one extra entry for the end
+   * of the string. `null` when preprocessing was the identity, which is the
+   * common case and the one worth not allocating for.
+   */
+  sourceMap: Int32Array | null;
+}
+
+/** Whether the `whiteSpace` policy would change `text` at all. */
+const _needsWhiteSpaceRewrite = (text: string, collapseBreaks: boolean): boolean => {
+  let previousBlank = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]!;
+
+    // A tab always becomes a space, so its mere presence is a rewrite.
+    if (char === '\t') return true;
+
+    if (char === '\n') {
+      if (collapseBreaks) return true;
+
+      previousBlank = false;
+      continue;
+    }
+
+    const blank = char === ' ';
+
+    if (blank && previousBlank) return true;
+
+    previousBlank = blank;
+  }
+
+  return false;
+};
+
+/**
+ * Apply the `whiteSpace` policy, recording where each surviving unit came
+ * from. Collapsing a run of blanks shifts everything after it, and a caret
+ * mapped onto the result without that record would drift by the number of
+ * blanks the layout removed.
+ */
+const _applyWhiteSpace = (text: string, mode: 'normal' | 'pre' | 'pre-line'): PreprocessedText => {
+  if (mode === 'pre') return { text, sourceMap: null };
+
+  const collapseBreaks = mode === 'normal';
+
+  // Most strings a layout sees carry nothing to collapse, and for those the
+  // rewrite and the map it would need are pure cost - one scan decides.
+  if (!_needsWhiteSpaceRewrite(text, collapseBreaks)) return { text, sourceMap: null };
+
+  let out = '';
+  const map: number[] = [];
+  let pendingBlank = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]!;
+
+    if (char === '\n' && !collapseBreaks) {
+      out += char;
+      map.push(i);
+      // Collapsing is per line, so the next line's leading blank survives.
+      pendingBlank = false;
+      continue;
+    }
+
+    if (char === ' ' || char === '\t' || char === '\n') {
+      if (pendingBlank) continue;
+
+      out += ' ';
+      map.push(i);
+      pendingBlank = true;
+      continue;
+    }
+
+    out += char;
+    map.push(i);
+    pendingBlank = false;
+  }
+
+  map.push(text.length);
+
+  return { text: out, sourceMap: Int32Array.from(map) };
+};
+
+/**
+ * Cursor advance of `text`, INCLUDING the letter-spacing gap after its last
+ * cluster. Widths in this form add up across concatenation, so the wrapper can
+ * compose a candidate from parts it measured separately; a line's reported
+ * width drops the one trailing gap again.
+ */
+const _cursorAdvance = (text: string, fontSize: number, provider: GlyphProvider, letterSpacing: number, locale: string | undefined): number => {
+  let advance = 0;
+
+  if (isTrivialText(text)) {
+    for (let i = 0; i < text.length; i++) {
+      advance += provider.getGlyph(text[i]!, fontSize).advance + letterSpacing;
+    }
+
+    return advance;
+  }
+
+  for (const cluster of graphemes(text, locale)) {
+    advance += provider.getGlyph(cluster, fontSize).advance + letterSpacing;
+  }
+
+  return advance;
+};
+
+/**
+ * Greedy word wrap over locale-aware runs.
+ *
+ * Whitespace runs are candidates in their own right rather than part of a
+ * word: the run a line breaks on is dropped, and a run that stays inside a
+ * line is preserved verbatim, which is what keeps `whiteSpace: 'pre'` columns
+ * intact. `breakWords` splits an oversized word at grapheme-cluster
+ * boundaries, so an emoji sequence or a combining sequence is never cut in
+ * half.
+ */
+const _wrapLine = (
+  line: string,
+  fontSize: number,
+  provider: GlyphProvider,
+  maxWidth: number,
+  letterSpacing: number,
+  breakWords: boolean,
+  locale: string | undefined,
+): LineRange[] => {
+  if (line.length === 0) return [{ start: 0, end: 0 }];
+
+  const ranges: LineRange[] = [];
+  let start = -1;
+  let end = -1;
+  let currentAdvance = 0;
+  let gapStart = -1;
+  let gapEnd = -1;
+  let gapAdvance = 0;
+
+  for (const run of textRuns(line, locale)) {
+    const text = line.slice(run.start, run.end);
+
+    if (run.whitespace) {
+      if (gapStart === -1) gapStart = run.start;
+      gapEnd = run.end;
+      gapAdvance += _cursorAdvance(text, fontSize, provider, letterSpacing, locale);
+      continue;
+    }
+
+    const wordAdvance = _cursorAdvance(text, fontSize, provider, letterSpacing, locale);
+
+    if (breakWords && wordAdvance - letterSpacing > maxWidth) {
+      if (start !== -1) ranges.push({ start, end });
+
+      gapStart = -1;
+      gapEnd = -1;
+      gapAdvance = 0;
+
+      let chunkStart = run.start;
+      let chunkEnd = run.start;
+      let chunkAdvance = 0;
+
+      for (const bounds of _clusterBounds(line, run.start, run.end, locale)) {
+        const clusterAdvance = provider.getGlyph(line.slice(bounds.start, bounds.end), fontSize).advance + letterSpacing;
+
+        if (chunkEnd > chunkStart && chunkAdvance + clusterAdvance - letterSpacing > maxWidth) {
+          ranges.push({ start: chunkStart, end: chunkEnd });
+          chunkStart = bounds.start;
+          chunkAdvance = clusterAdvance;
+        } else {
+          chunkAdvance += clusterAdvance;
+        }
+
+        chunkEnd = bounds.end;
+      }
+
+      start = chunkStart;
+      end = chunkEnd;
+      currentAdvance = chunkAdvance;
+      continue;
+    }
+
+    if (start === -1) {
+      start = run.start;
+      end = run.end;
+      currentAdvance = wordAdvance;
+    } else if (currentAdvance + gapAdvance + wordAdvance - letterSpacing <= maxWidth) {
+      end = run.end;
+      currentAdvance += gapAdvance + wordAdvance;
+    } else {
+      ranges.push({ start, end });
+      start = run.start;
+      end = run.end;
+      currentAdvance = wordAdvance;
+    }
+
+    gapStart = -1;
+    gapEnd = -1;
+    gapAdvance = 0;
+  }
+
+  ranges.push(_finalRange(line, start, end, gapStart, gapEnd));
+
+  return ranges;
 };

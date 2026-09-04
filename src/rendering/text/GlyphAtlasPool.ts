@@ -1,5 +1,6 @@
 import { type AtlasMode, GlyphAtlas, SDF_RADIUS } from './GlyphAtlas';
 import { GlyphMetrics } from './GlyphMetrics';
+import { ShapedTextMetrics } from './ShapedTextMetrics';
 
 /**
  * Manages one {@link GlyphAtlas} per font variant + mode + SDF radius + pixel
@@ -32,6 +33,7 @@ import { GlyphMetrics } from './GlyphMetrics';
 export class GlyphAtlasPool {
   private readonly _atlases = new Map<string, GlyphAtlas>();
   private readonly _metrics = new Map<string, GlyphMetrics>();
+  private readonly _shapedMetrics = new Map<string, ShapedTextMetrics>();
   private readonly _pageSize: number;
 
   public constructor(pageSize = 1024) {
@@ -86,18 +88,50 @@ export class GlyphAtlasPool {
   }
 
   /**
-   * Clear every atlas held for one font variant, across every mode, SDF radius
-   * and pixel ratio. Used when the variant's underlying face changes (e.g. a
-   * previously-fallback `FontFace` finishes loading): a caller that resolved
-   * one specific atlas by mode/radius/ratio would clear only the atlas it
-   * currently expects to draw from, leaving every other combination of the
-   * same variant holding glyph tiles rasterized from the stale face.
+   * Returns (or lazily creates) the shared contextual line measurement for a
+   * font variant at one base direction and letter spacing.
+   *
+   * The counterpart of {@link getMetrics} for text the engine cannot measure
+   * one cluster at a time. Direction and letter spacing are part of the key
+   * because both change what the browser's text engine shapes, and therefore
+   * the width it reports.
+   */
+  public getShapedMetrics(
+    family: string,
+    fontStyle: 'normal' | 'italic',
+    fontWeight: string,
+    direction: 'ltr' | 'rtl' = 'ltr',
+    letterSpacing = 0,
+  ): ShapedTextMetrics {
+    const key = `${family}:${fontStyle}:${fontWeight}:${direction}:${letterSpacing}`;
+    let metrics = this._shapedMetrics.get(key);
+
+    if (metrics === undefined) {
+      metrics = new ShapedTextMetrics(family, fontStyle, fontWeight, direction, letterSpacing);
+      this._shapedMetrics.set(key, metrics);
+    }
+
+    return metrics;
+  }
+
+  /**
+   * Clear every atlas and measurement held for one font variant, across every
+   * mode, SDF radius, pixel ratio, direction and letter spacing. Used when the
+   * variant's underlying face changes (e.g. a previously-fallback `FontFace`
+   * finishes loading): a caller that resolved one specific atlas by
+   * mode/radius/ratio would clear only the atlas it currently expects to draw
+   * from, leaving every other combination of the same variant holding glyph
+   * tiles rasterized from the stale face.
    */
   public clearVariant(family: string, fontStyle: 'normal' | 'italic', fontWeight: string): void {
     const prefix = `${family}:${fontStyle}:${fontWeight}:`;
 
     for (const [key, atlas] of this._atlases) {
       if (key.startsWith(prefix)) atlas.clear();
+    }
+
+    for (const [key, metrics] of this._shapedMetrics) {
+      if (key.startsWith(prefix)) metrics.clear();
     }
   }
 }

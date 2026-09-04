@@ -151,6 +151,79 @@ describe('TextArea', () => {
     expect(field.textNode.y).toBe(unscrolledY);
   });
 
+  test('a line too long for the field wraps without gaining a line break', () => {
+    const harness = createUIApp();
+    // 200px wide, 8px insets on both sides: 18 glyphs at advance 10 fit, the
+    // rest of the sentence has to move down.
+    const field = new TextArea({ width: 200, height: 120, value: 'alpha beta gamma delta epsilon' });
+
+    harness.scene.ui.addChild(field);
+
+    expect(field.wrap).toBe(true);
+    expect(field.lineCount).toBe(1);
+    expect(field.textNode.currentLayout.lines.length).toBeGreaterThan(1);
+    expect(field.value).not.toContain('\n');
+  });
+
+  test('turning wrapping off puts the whole line back on one row', () => {
+    const harness = createUIApp();
+    const field = new TextArea({ width: 200, height: 120, value: 'alpha beta gamma delta epsilon', wrap: false });
+
+    harness.scene.ui.addChild(field);
+
+    expect(field.textNode.currentLayout.lines).toHaveLength(1);
+  });
+
+  test('the caret follows a wrapped line rather than the value line', () => {
+    const harness = createUIApp();
+    const field = new TextArea({ width: 200, height: 120, value: 'alpha beta gamma delta epsilon' });
+
+    harness.scene.ui.addChild(field);
+    press(harness, 5, 10);
+
+    const layout = field.textNode.currentLayout;
+    const secondLine = layout.lines[1]!;
+
+    // Clicking the second visual row must select an offset from the second
+    // row's own source range, which only exists because the layout carries it.
+    press(harness, field.textNode.x + 5, field.textNode.y + lineBox(field) * 1.5);
+
+    expect(field.selectionStart).toBeGreaterThanOrEqual(secondLine.sourceStart);
+    expect(field.selectionStart).toBeLessThanOrEqual(secondLine.sourceEnd);
+  });
+
+  test('the scrollbar appears once the value outgrows the field and drives the scroll', () => {
+    const { harness, field } = createField();
+    const bar = field.verticalScrollbar!;
+    const unscrolledY = field.textNode.y;
+
+    expect(bar.visible).toBe(false);
+
+    for (let line = 0; line < 12; line++) {
+      type('x');
+      keyDown(harness, Keyboard.Enter);
+    }
+
+    expect(bar.visible).toBe(true);
+    expect(bar.offset).toBeGreaterThan(0);
+    expect(field.textNode.y).toBeLessThan(unscrolledY);
+
+    // What a thumb drag back to the top reports.
+    bar.onScroll.dispatch(0, bar);
+
+    expect(bar.offset).toBe(0);
+    expect(field.textNode.y).toBe(unscrolledY);
+  });
+
+  test('a field built without a scrollbar has none', () => {
+    const harness = createUIApp();
+    const field = new TextArea({ width: 200, height: 120, scrollbar: false });
+
+    harness.scene.ui.addChild(field);
+
+    expect(field.verticalScrollbar).toBeNull();
+  });
+
   test('maxLength and filter gate the value the same way they do in a single-line field', () => {
     const harness = createUIApp();
     const field = new TextArea({ width: 200, height: 120, maxLength: 4, filter: candidate => !candidate.includes('!') });

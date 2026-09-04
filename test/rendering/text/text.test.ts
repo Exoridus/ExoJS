@@ -112,9 +112,21 @@ const mockMetrics = {
   clear: vi.fn(),
 };
 
+/**
+ * Contextual measurement is a separate authority from the per-cluster one -
+ * it answers for a whole line. The mock reports the same advance per cluster
+ * so a shaped measurement and a simple one stay comparable.
+ */
+const mockShapedMetrics = {
+  measureLine: vi.fn((line: string) => line.length * fixedGlyphInfo.advance),
+  shapeLine: vi.fn((line: string) => ({ ...fixedGlyphInfo, advance: line.length * fixedGlyphInfo.advance })),
+  clear: vi.fn(),
+};
+
 const mockPool = {
   getAtlas: vi.fn(() => mockAtlas),
   getMetrics: vi.fn(() => mockMetrics),
+  getShapedMetrics: vi.fn(() => mockShapedMetrics),
   clearVariant: vi.fn(),
 };
 

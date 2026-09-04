@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 28,
+  "memberCount": 30,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 28,
+    "properties": 30,
     "events": 0
   },
   "sections": [
@@ -77,7 +77,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Break individual words that are wider than maxWidth at character boundaries. Only applies when maxWidth is set. Defaults to false."
+          "description": "Break individual words that are wider than maxWidth at grapheme-cluster boundaries. Only applies when maxWidth is set. Defaults to false."
         },
         {
           "name": "colorGlyphs",
@@ -135,7 +135,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Text direction. Defaults to 'ltr'. 'rtl' reverses each line's glyphs visually after wrapping, which is correct for uniformly right-to-left text. Full bidi (mixed LTR/RTL runs), Arabic contextual shaping, and direction-relative alignment are not implemented - align stays literal in both directions."
+          "description": "Base direction for text layout. Defaults to 'ltr'. Direction-relative alignment is not derived from it - align stays literal in both directions."
         },
         {
           "name": "fillColor",
@@ -443,6 +443,31 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "locale",
+          "signature": "locale?: string",
+          "signatureTokens": [
+            {
+              "text": "locale",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Language tag ('en', 'ja', 'ar-EG') used for Unicode text segmentation - which clusters count as one character, and where a line may break. It selects no font and loads nothing; the platform default locale applies when it is absent."
         },
         {
           "name": "maxHeight",
@@ -759,6 +784,47 @@
           "params": [],
           "returnType": null,
           "description": "Vertical shadow offset in pixels."
+        },
+        {
+          "name": "shaping",
+          "signature": "shaping?: \"auto\" | \"browser\" | \"simple\"",
+          "signatureTokens": [
+            {
+              "text": "shaping",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"auto\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"browser\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"simple\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How glyph appearance is resolved. Defaults to 'auto'. - 'auto' - use the shared-glyph fast path for content that is safe to render one cluster at a time, and hand anything else to the browser's text engine as a whole line. The classification is deliberately conservative and may admit more content to the fast path over time. - 'simple' - always use the shared glyph cache. The cheapest path and the right one for controlled content; a right-to-left line is reversed cluster by cluster rather than reordered, and contextual scripts render in their isolated forms. - 'browser' - always shape the whole line through the browser, which resolves bidi order and contextual forms. Each line becomes one node-owned raster instead of a run of shared glyphs, so a line whose text changes is rasterized again. A browser-shaped line is one glyph as far as the layout is concerned, so align: 'justify' cannot stretch it and caret geometry resolves to line granularity."
         },
         {
           "name": "whiteSpace",
