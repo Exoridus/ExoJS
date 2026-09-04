@@ -1,5 +1,6 @@
 import { clamp } from '#math/utils';
 
+import { resolveCssColor } from './cssColor';
 import { assert } from './dev';
 import type { Cloneable } from './types';
 
@@ -115,6 +116,27 @@ export class Color implements Cloneable<Color> {
    */
   public static fromHex(value: string | number, alpha?: number): Color {
     return new Color().setHex(value, alpha);
+  }
+
+  /**
+   * Build from any CSS color the runtime's own parser understands: the four hex
+   * forms, `rgb()`/`rgba()`, `hsl()`/`hsla()`, `hwb()`, the CSS named colors,
+   * and anything else the engine resolves into sRGB. `alpha` overrides an alpha
+   * the value carried.
+   *
+   * The parsing is the platform's, not this package's, so the set of accepted
+   * syntaxes is the host engine's and the call needs a document - it throws in
+   * a worker and in any non-DOM host. It also throws on a value the engine
+   * rejects, and on one it accepts but keeps in a wider color space than sRGB
+   * (`lab()`, `oklch()`, `color-mix()` on some engines).
+   *
+   * Reach for {@link Color.fromHex} when the value is already hex: that path is
+   * self-contained, needs no document, and cannot be affected by the host.
+   */
+  public static fromCss(value: string, alpha?: number): Color {
+    const { r, g, b, a } = resolveCssColor(value);
+
+    return new Color(r, g, b, alpha ?? a);
   }
 
   public get r(): number {
