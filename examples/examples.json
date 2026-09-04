@@ -411,6 +411,16 @@
       "level": "intermediate"
     },
     {
+      "slug": "displacement-filter",
+      "path": "filters/displacement-filter.js",
+      "language": "typescript",
+      "title": "Displacement Filter",
+      "description": "Warp a sprite by a direction stored in a map texture — a scrolling ripple map with a live scale slider.",
+      "backend": "core",
+      "tags": ["fx", "filter", "shader"],
+      "level": "intermediate"
+    },
+    {
       "slug": "filter-stack",
       "path": "filters/filter-stack.js",
       "language": "typescript",

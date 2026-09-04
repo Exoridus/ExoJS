@@ -203,6 +203,8 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "DeserializeContext: interface",
   "DestroyScope: class",
   "Destroyable: interface",
+  "DisplacementFilter: class",
+  "DisplacementFilterOptions: interface",
   "DistanceModel: type alias",
   "DockContainer: class",
   "DockContainerOptions: interface",

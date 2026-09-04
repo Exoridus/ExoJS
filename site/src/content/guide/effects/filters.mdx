@@ -110,6 +110,26 @@ filter.setLut(differentLutTexture);
 
 `LutFilter.fromImage(image)` wraps an `HTMLImageElement` or `HTMLCanvasElement` as a texture with LUT-appropriate defaults (linear filtering, clamp-to-edge, no mipmaps). `identityLut1D()` and `identityLut3D()` create no-op identity textures for testing. The `setLut()` method swaps textures at runtime — instant, no shader recompilation.
 
+## DisplacementFilter
+
+Warps the filtered node by a direction read out of a texture — heat haze, water refraction, glass, shockwaves. The map's red channel drives the horizontal direction and its green channel the vertical, both decoded from `[0, 1]` to `[-1, 1]`, so a flat `(0.5, 0.5)` grey displaces nothing:
+
+```ts no-check -- the ripple map is the reader's own texture
+import { DisplacementFilter, Sprite, Texture } from '@codexo/exojs';
+
+declare const water: Sprite;
+declare const rippleMap: Texture;
+
+const haze = new DisplacementFilter({ map: rippleMap, scale: 24 });
+
+water.filters = [haze];
+
+// From the scene's update: scroll the map to animate the distortion.
+haze.offsetV += delta * 0.1;
+```
+
+`scale` is the maximum displacement in logical units (one number for both axes, or `[x, y]`), so the distortion keeps its on-screen size at every pixel ratio. `offsetU`/`offsetV` move where the map is sampled, in the map's own UV units — give the map `WrapModes.Repeat` for a scroll that never runs off its edge. The filter reports the reach through `getOutputBounds`, so a subject at rest keeps the room its distortion needs; a fragment displaced past the edge of that domain comes out transparent rather than smearing the border texel.
+
 ## Custom shader filters
 
 `ShaderFilter` takes a fragment shader source per language and an optional uniforms map. It renders a fullscreen quad and executes the shader against the filter input texture, picking the source the active backend speaks:
@@ -247,6 +267,11 @@ A single `BlurFilter` with an interactive radius slider — the basic filter pat
 <ExamplePreview chapter="filters" slug="filter-stack" />
 
 Three filters chained on one sprite — blur, tint, and a custom shader — demonstrating filter ordering and composition.
+
+<a id="displacement-filter"></a>
+<ExamplePreview chapter="filters" slug="displacement-filter" />
+
+A procedural ripple map warping a sprite, with a live scale slider and a scrolling sampling offset.
 
 ## Where to go next
 

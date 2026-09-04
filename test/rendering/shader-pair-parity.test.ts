@@ -15,6 +15,7 @@
  * where silent drift produces a wrong-looking or outright broken second backend.
  */
 import { colorMatrixShaderSource } from '#rendering/filters/ColorMatrixFilter';
+import { displacementShaderSource } from '#rendering/filters/DisplacementFilter';
 import { dropShadowShaderSource } from '#rendering/filters/DropShadowFilter';
 import { lut3dShaderSource, lutRgb1dShaderSource } from '#rendering/filters/LutFilter';
 import type { ShaderSource } from '#rendering/material/ShaderSource';
@@ -28,6 +29,7 @@ const pairs: ReadonlyArray<{ readonly name: string; readonly source: ShaderSourc
   { name: "LutFilter 'rgb1d'", source: lutRgb1dShaderSource },
   { name: "LutFilter '3d'", source: lut3dShaderSource },
   { name: 'DropShadowFilter', source: dropShadowShaderSource },
+  { name: 'DisplacementFilter', source: displacementShaderSource },
 ];
 
 /**
