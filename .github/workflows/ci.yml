@@ -10,9 +10,11 @@ name: CI
 #                    └─► site ─► smoke
 #                                       all ─► verdict   (the required check)
 #
-# A pull request runs the lanes its changed files require; a push, a tag or a
-# dispatch runs every lane. Coverage is collected on pushes to the long-lived
-# branches only, so a pull request's unit lane runs uninstrumented.
+# A pull request runs the lanes its changed files require; a branch push to
+# main/next narrows the same way from its before..after diff. An unresolved
+# push diff, a tag or a manual dispatch runs every lane. Coverage is
+# collected on pushes to the long-lived branches only, so a pull request's
+# unit lane runs uninstrumented.
 
 on:
   push:
@@ -64,6 +66,26 @@ jobs:
             all:
               - '**'
 
+      # `before` is unresolvable for a new branch or a force-push with no
+      # shared history, and the fetch below can fail for the same reason -
+      # both leave `files` empty, which `planCi` treats as fail-closed (full
+      # validation), not as "nothing changed".
+      - if: github.event_name == 'push'
+        id: push-diff
+        run: |
+          before="${{ github.event.before }}"
+          files=""
+          if [ -n "$before" ] && [ "$before" != "0000000000000000000000000000000000000000" ]; then
+            if git fetch --no-tags --depth=1 origin "$before" 2>/dev/null; then
+              files="$(git diff --name-only "$before" "${{ github.sha }}" 2>/dev/null || true)"
+            fi
+          fi
+          {
+            echo "files<<PUSH_DIFF_EOF"
+            echo "$files"
+            echo "PUSH_DIFF_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       # No install: the planner is dependency-free TypeScript that node strips.
       - uses: actions/setup-node@v6
         with:
@@ -72,7 +94,7 @@ jobs:
       - id: plan
         env:
           EVENT_NAME: ${{ github.event_name }}
-          CHANGED_FILES: ${{ steps.changed.outputs.all_files }}
+          CHANGED_FILES: ${{ github.event_name == 'pull_request' && steps.changed.outputs.all_files || steps.push-diff.outputs.files }}
           REF_NAME: ${{ github.ref_name }}
         run: node scripts/ci/lanes.ts >> "$GITHUB_OUTPUT"
 
