@@ -1,0 +1,71 @@
+{
+  "title": "LdtkFieldEnumType",
+  "description": "The `__type` LDtk writes for an enum-valued field: the enum's identifier qualified by where it is defined. The `__value` is the selected entry's identifier as a plain string, so an enum field reaches the runtime as the string LDtk shows in the editor.",
+  "symbol": "LdtkFieldEnumType",
+  "kind": "type",
+  "subsystem": "ldtk",
+  "importPath": "@codexo/exojs-ldtk",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The `__type` LDtk writes for an enum-valued field: the enum's identifier qualified by where it is defined. The `__value` is the selected entry's identifier as a plain string, so an enum field reaches the runtime as the string LDtk shows in the editor."
+      ],
+      "importLine": "import { LdtkFieldEnumType } from '@codexo/exojs-ldtk'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "LdtkFieldEnumType",
+          "signature": "templateLiteral | templateLiteral",
+          "signatureTokens": [
+            {
+              "text": "templateLiteral",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "templateLiteral",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-ldtk/src/LdtkData.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkData.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-ldtk/src/LdtkData.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkData.ts"
+}

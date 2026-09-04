@@ -1491,14 +1491,48 @@ describe('ldtkToTileMap — unrecognised field types (exhaustiveness guard)', ()
     expect(() => convertSingleField(bogusField)).toThrow(/unrecognised LDtk field type "FutureType"/);
   });
 
-  it('drops an Array<T> element whose element type is unrecognised, yielding an empty array', () => {
+  it('throws on an Array<T> whose element type is unrecognised rather than yielding an empty array', () => {
+    expect(() =>
+      convertSingleField({
+        __identifier: 'mystery',
+        __type: 'Array<FutureType>',
+        __value: [1, 2, 3],
+      }),
+    ).toThrow(/unrecognised LDtk field type "FutureType"/);
+  });
+});
+
+describe('ldtkToTileMap — enum field conversion', () => {
+  it.each(['LocalEnum.HeroKind', 'ExternEnum.Faction'] as const)('maps a %s field to its entry identifier', __type => {
+    const props = convertSingleField({ __identifier: 'kind', __type, __value: 'Ranger' });
+
+    expect(props['kind']).toBe('Ranger');
+  });
+
+  it('omits a null-valued enum field', () => {
+    const props = convertSingleField({ __identifier: 'kind', __type: 'LocalEnum.HeroKind', __value: null });
+
+    expect('kind' in props).toBe(false);
+  });
+
+  it('maps an Array<LocalEnum.T> field to an array of entry identifiers', () => {
     const props = convertSingleField({
-      __identifier: 'mystery',
-      __type: 'Array<FutureType>',
-      __value: [1, 2, 3],
+      __identifier: 'resistances',
+      __type: 'Array<LocalEnum.Element>',
+      __value: ['Fire', 'Ice'],
     });
 
-    expect(props['mystery']).toEqual([]);
+    expect(props['resistances']).toEqual(['Fire', 'Ice']);
+  });
+
+  it('maps an Array<ExternEnum.T> field to an array of entry identifiers', () => {
+    const props = convertSingleField({
+      __identifier: 'factions',
+      __type: 'Array<ExternEnum.Faction>',
+      __value: ['Rebels', 'Empire'],
+    });
+
+    expect(props['factions']).toEqual(['Rebels', 'Empire']);
   });
 });
 

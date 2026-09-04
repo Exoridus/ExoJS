@@ -44,6 +44,20 @@ export interface LdtkTileData {
 export type LdtkFieldScalarType = 'Int' | 'Float' | 'Bool' | 'String' | 'Multilines' | 'Color' | 'FilePath' | 'Enum';
 
 /**
+ * The `__type` LDtk writes for an enum-valued field: the enum's identifier
+ * qualified by where it is defined. The `__value` is the selected entry's
+ * identifier as a plain string, so an enum field reaches the runtime as the
+ * string LDtk shows in the editor.
+ */
+export type LdtkFieldEnumType = `LocalEnum.${string}` | `ExternEnum.${string}`;
+
+/**
+ * Whether a raw LDtk `__type` names an enum. Applies to an `Array<T>` element
+ * type as well - LDtk spells a list of enum values `Array<LocalEnum.Name>`.
+ */
+export const isLdtkFieldEnumType = (typeName: string): typeName is LdtkFieldEnumType => typeName.startsWith('LocalEnum.') || typeName.startsWith('ExternEnum.');
+
+/**
  * Raw `__value` shape for a `Point`-typed field. Structurally identical to
  * {@link TilePropertyPoint} minus its `kind` tag, so the canonical shape is
  * reused directly rather than duplicated.
@@ -98,6 +112,11 @@ export type LdtkFieldInstance =
       readonly __identifier: string;
       readonly __type: 'Tile';
       readonly __value: LdtkFieldTileValue | null;
+    }
+  | {
+      readonly __identifier: string;
+      readonly __type: LdtkFieldEnumType;
+      readonly __value: string | null;
     }
   | {
       readonly __identifier: string;
