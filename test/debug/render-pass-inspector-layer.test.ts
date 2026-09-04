@@ -240,7 +240,7 @@ describe('RenderPassInspectorLayer', () => {
 
   test('a leaf node with no children property is not recursed into', () => {
     // Plain leaf (no `children` key at all, as opposed to an empty array) -
-    // exercises the Array.isArray(container.children) false branch in _collect.
+    // exercises the Array.isArray(container.children) false branch in collect.
     const leaf = { visible: true, filters: [], mask: null, cacheAsTexture: false, getBounds: vi.fn(), constructor: { name: 'Leaf' } };
     const layer = new RenderPassInspectorLayer(makeApp(leaf as unknown as FakeNode));
 

@@ -361,7 +361,7 @@ describe('WebGPU renderer matrix: Mesh retained instruction replay cells', () =>
   test('cell 5 — deliberate break: a neutered node-index rebase fetches the wrong storage rows and diverges', async ctx => {
     const backend = await setupBackend();
     const scene = buildScene();
-    const original = WebGpuMeshRenderer.prototype._rebaseRetainedNodeIndices;
+    const original = WebGpuMeshRenderer.prototype.rebaseRetainedNodeIndices;
 
     try {
       // A live sprite before the group means the group's storage rows start at a
@@ -369,7 +369,7 @@ describe('WebGPU renderer matrix: Mesh retained instruction replay cells', () =>
       // [0, N). Skipping the rebase leaves the cached node indices frame-global,
       // so replay fetches the wrong / out-of-range rows -> the frame diverges.
 
-      WebGpuMeshRenderer.prototype._rebaseRetainedNodeIndices = function (): void {};
+      WebGpuMeshRenderer.prototype.rebaseRetainedNodeIndices = function (): void {};
 
       if (!(await renderScene(ctx, backend, scene.root))) {
         return;
@@ -392,7 +392,7 @@ describe('WebGPU renderer matrix: Mesh retained instruction replay cells', () =>
       // moved / dropped its instance.
       expect(replay(16, 32)).not.toEqual(recordRed);
     } finally {
-      WebGpuMeshRenderer.prototype._rebaseRetainedNodeIndices = original;
+      WebGpuMeshRenderer.prototype.rebaseRetainedNodeIndices = original;
       scene.destroy();
       backend.destroy();
     }

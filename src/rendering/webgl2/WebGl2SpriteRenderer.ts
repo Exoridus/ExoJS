@@ -203,7 +203,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     // A direct, non-plan `backend.draw(sprite)` has no command - push the
     // sprite's transform into the buffer and use the freshly-allocated slot.
     const command = backend.activeDrawCommand;
-    const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(sprite);
+    const nodeIndex = command !== null ? command.nodeIndex : backend.pushTransform(sprite);
 
     this._activeBounds = this._resolveBounds(sprite);
 
@@ -300,7 +300,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
       shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
     }
 
-    backend._stageViewportUniform(shader);
+    backend.stageViewportUniform(shader);
     backend.bindTexture(store.attributeTexture, slotAttributeTextureUnit);
     backend.bindTexture(store.transformTexture, transformTextureUnit);
     backend.bindTexture(store.tintTexture, transformTintTextureUnit);
@@ -367,7 +367,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
         shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
       }
 
-      backend._stageViewportUniform(shader);
+      backend.stageViewportUniform(shader);
 
       // Base textures are already bound to their slot units by _renderCustom;
       // the sampler uniforms are pinned once when the program is compiled.
@@ -408,7 +408,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     // Retained recording: cache byte-identical instance data and retain only a
     // live descriptor for custom material state.
     if (backend._isRetainedCapturing) {
-      backend._recordRetainedBatch(
+      backend.recordRetainedBatch(
         this,
         this._instanceUint32.subarray(0, this._instanceCount * wordsPerInstance),
         this._instanceCount,
@@ -453,7 +453,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
       }
     }
 
-    backend._stageViewportUniform(this._shader);
+    backend.stageViewportUniform(this._shader);
   }
 
   // ── Retained-batch record/replay ──────────────────────────────────────────
@@ -461,8 +461,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   // layout, so the layout-aware finalize steps (node-index scan/rebase, VAO
   // attribute wiring) and the replay dispatch live here.
 
-  /** @internal See {@link WebGl2RetainedBatchReplayer._scanRetainedNodeIndexRange}. */
-  public _scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void {
+  /** @internal See {@link WebGl2RetainedBatchReplayer.scanRetainedNodeIndexRange}. */
+  public scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void {
     const words = payload.bundle.instanceWords;
     const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
 
@@ -481,8 +481,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     }
   }
 
-  /** @internal See {@link WebGl2RetainedBatchReplayer._rebaseRetainedNodeIndices} (rebases to group-local indices). */
-  public _rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void {
+  /** @internal See {@link WebGl2RetainedBatchReplayer.rebaseRetainedNodeIndices} (rebases to group-local indices). */
+  public rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void {
     const words = payload.bundle.instanceWords;
     const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
 
@@ -501,7 +501,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
    * set/locations as the live VAO in {@link onConnect}.
    * @internal
    */
-  public _configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
+  public configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
     const gl = this.getBackend().context;
     const buffer = payload.bundle.instanceBuffer;
     const vao = payload.vao;
@@ -530,7 +530,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
    * dispatching here and bumps the stats from the instruction descriptor.
    * @internal
    */
-  public _replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
+  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
     const backend = this.getBackendOrNull();
     const vao = payload.vao;
     const transformTexture = payload.bundle.transformTexture;
@@ -560,7 +560,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
         shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
       }
 
-      backend._stageViewportUniform(shader);
+      backend.stageViewportUniform(shader);
 
       if (this._retainedPreparedEpoch.get(material) !== backend.renderPlanEpoch) {
         this._stageCustomUniforms(shader, material);
@@ -622,7 +622,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   }
 
   /** Structural preflight called for every batch before the set is spliced. @internal */
-  public _validateRetainedBatch(payload: WebGl2RetainedBatchPayload): boolean {
+  public validateRetainedBatch(payload: WebGl2RetainedBatchPayload): boolean {
     const state = this._retainedMaterialState(payload);
 
     return state === null || isRetainedMaterialStateValid(state);
@@ -864,7 +864,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
     this._customShaders.set(material, shader);
 
-    material._onDispose(() => {
+    material.onDispose(() => {
       const stored = this._customShaders.get(material);
 
       if (stored !== undefined) {

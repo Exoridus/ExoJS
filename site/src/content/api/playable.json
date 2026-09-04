@@ -1,6 +1,6 @@
 {
   "title": "Playable",
-  "description": "Implemented by audio assets (Sound, AudioStream, AudioGenerator) to support system-driven playback via AudioSystem.play. Assets are **data descriptors** - they hold the audio data and default playback parameters. The playback machinery lives in the Voice returned by `_createVoice`; the system is injected at play time, so assets never reach for a global. `_createVoice` is a low-level hook meant for asset implementations; consumers should call `audioSystem.play(asset)` instead of invoking it directly.",
+  "description": "Implemented by audio assets (Sound, AudioStream, AudioGenerator) to support system-driven playback via AudioSystem.play. Assets are **data descriptors** - they hold the audio data and default playback parameters. The playback machinery lives in the Voice returned by `createVoice`; the system is injected at play time, so assets never reach for a global. `createVoice` is a low-level hook meant for asset implementations; consumers should call `audioSystem.play(asset)` instead of invoking it directly.",
   "symbol": "Playable",
   "kind": "interface",
   "subsystem": "audio",
@@ -20,8 +20,8 @@
       "members": [],
       "paragraphs": [
         "Implemented by audio assets (Sound, AudioStream, AudioGenerator) to support system-driven playback via AudioSystem.play.",
-        "Assets are **data descriptors** - they hold the audio data and default playback parameters. The playback machinery lives in the Voice returned by `_createVoice`; the system is injected at play time, so assets never reach for a global.",
-        "`_createVoice` is a low-level hook meant for asset implementations; consumers should call `audioSystem.play(asset)` instead of invoking it directly."
+        "Assets are **data descriptors** - they hold the audio data and default playback parameters. The playback machinery lives in the Voice returned by `createVoice`; the system is injected at play time, so assets never reach for a global.",
+        "`createVoice` is a low-level hook meant for asset implementations; consumers should call `audioSystem.play(asset)` instead of invoking it directly."
       ],
       "importLine": "import { Playable } from '@codexo/exojs'",
       "sourceLink": null
@@ -31,11 +31,11 @@
       "title": "Methods",
       "members": [
         {
-          "name": "_createVoice",
-          "signature": "_createVoice(system: AudioSystem, options: PlayOptions): Voice",
+          "name": "createVoice",
+          "signature": "createVoice(system: AudioSystem, options: PlayOptions): Voice",
           "signatureTokens": [
             {
-              "text": "_createVoice",
+              "text": "createVoice",
               "kind": "name"
             },
             {

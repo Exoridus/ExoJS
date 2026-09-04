@@ -155,7 +155,7 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
       render(backend, group);
       expectPixelNear(readWebGl2Pixel(backend, 31, 24), [255, 0, 0, 255]);
 
-      const replay = vi.spyOn(backend, '_replayRetainedBatch');
+      const replay = vi.spyOn(backend, 'replayRetainedBatch');
 
       material.sampler.scaleMode = ScaleModes.Linear;
       render(backend, group);
@@ -192,7 +192,7 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
       render(backend, group); // fragment capture
       render(backend, group); // instruction recording
 
-      let replay = vi.spyOn(backend, '_replayRetainedBatch');
+      let replay = vi.spyOn(backend, 'replayRetainedBatch');
 
       render(backend, group);
       expect(replay).toHaveBeenCalledTimes(1);
@@ -223,7 +223,7 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
       expect(replay).not.toHaveBeenCalled();
 
       replay.mockRestore();
-      replay = vi.spyOn(backend, '_replayRetainedBatch');
+      replay = vi.spyOn(backend, 'replayRetainedBatch');
       render(backend, group);
       expect(replay).toHaveBeenCalledTimes(1);
       replay.mockRestore();
@@ -257,7 +257,7 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
       render(backend, group);
       expectPixelNear(readWebGl2Pixel(backend, 24, 24), [255, 0, 0, 255]);
 
-      const replay = vi.spyOn(backend, '_replayRetainedBatch');
+      const replay = vi.spyOn(backend, 'replayRetainedBatch');
 
       material.setTexture('u_pattern', secondPattern);
       render(backend, group);

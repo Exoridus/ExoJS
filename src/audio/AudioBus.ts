@@ -267,13 +267,27 @@ export class AudioBus {
     }
   }
 
-  /** Internal: returns the input GainNode where children should connect. */
-  public _getInputNode(): GainNode | null {
+  /**
+   * The `GainNode` a source connects to in order to feed this bus. `null` until
+   * the `AudioContext` is unlocked and the bus has built its node chain, and
+   * again after {@link destroy}, so callers must re-read it rather than cache
+   * it - the chain is rebuilt on context recovery.
+   *
+   * Part of the audio extension contract for custom effects and analysers.
+   */
+  public getInputNode(): GainNode | null {
     return this._setup?.inputNode ?? null;
   }
 
-  /** Internal: returns the output GainNode that connects upstream. */
-  public _getOutputNode(): GainNode | null {
+  /**
+   * The `GainNode` carrying this bus's post-effect, post-pan signal, for taps
+   * that read the bus without altering it (analysers, sidechain sources).
+   * `null` under the same conditions as {@link getInputNode}, and subject to the
+   * same no-caching rule.
+   *
+   * Part of the audio extension contract for custom effects and analysers.
+   */
+  public getOutputNode(): GainNode | null {
     return this._setup?.outputNode ?? null;
   }
 
@@ -295,7 +309,7 @@ export class AudioBus {
   private _connectUpstream(): void {
     if (!this._setup) return;
     if (this._parent) {
-      const parentInput = this._parent._getInputNode();
+      const parentInput = this._parent.getInputNode();
       if (parentInput) {
         this._setup.outputNode.connect(parentInput);
       } else {
@@ -304,7 +318,7 @@ export class AudioBus {
         this._parentSetupDispose = this._parent.onceSetup(() => {
           this._parentSetupDispose = null;
           if (this._setup && this._parent) {
-            const node = this._parent._getInputNode();
+            const node = this._parent.getInputNode();
             if (node) this._setup.outputNode.connect(node);
           }
         });

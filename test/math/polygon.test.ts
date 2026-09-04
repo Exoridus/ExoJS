@@ -423,7 +423,7 @@ describe('Polygon.intersectsWith()', () => {
   test('SceneNode target dispatches to intersectionRectPoly via getBounds()', () => {
     const node = new SceneNode();
 
-    node._setLocalBounds(0, 0, 10, 10);
+    node.setLocalBounds(0, 0, 10, 10);
     node.updateParentTransform();
 
     const polygon = square(5, 5, 10);
@@ -500,7 +500,7 @@ describe('Polygon.collidesWith()', () => {
   test('SceneNode target resolves via getCollisionSat', () => {
     const node = new SceneNode();
 
-    node._setLocalBounds(0, 0, 10, 10);
+    node.setLocalBounds(0, 0, 10, 10);
     node.updateParentTransform();
 
     const polygon = square(5, 5, 10);

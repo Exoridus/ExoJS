@@ -36,7 +36,7 @@ describe('WebGL2: a live text flush past the old 16384-quad index ceiling still 
     // Filler nodes: same glyph/style as the marker, so they share one atlas
     // page and batch - positioned far off-canvas so their own (correctly
     // indexed) geometry never paints a visible pixel. `cullable = false`
-    // keeps the view-frustum cull (`RenderNode._collect` / `SceneNode.inView`)
+    // keeps the view-frustum cull (`RenderNode.collect` / `SceneNode.inView`)
     // from dropping them before they ever reach the renderer - an off-canvas
     // node is exactly what that cull exists to skip, which would otherwise
     // silently defeat this test (the fillers never accumulate onto the

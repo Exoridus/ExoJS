@@ -14,7 +14,7 @@ import { Drawable } from '#rendering/Drawable';
 describe('SceneNode oriented bounds (rotated SAT)', () => {
   it('getNormals() returns oriented (non-axis-aligned) axes for a rotated node', () => {
     const node = new SceneNode();
-    node._setLocalBounds(0, 0, 100, 40);
+    node.setLocalBounds(0, 0, 100, 40);
     node.setRotation(45);
     node.updateParentTransform();
 
@@ -30,7 +30,7 @@ describe('SceneNode oriented bounds (rotated SAT)', () => {
     // An 80×80 square rotated 45° about its centre at world (100, 100): its AABB is
     // ~[43, 157]² but the oriented diamond does not reach the AABB corners.
     const node = new SceneNode();
-    node._setLocalBounds(0, 0, 80, 80);
+    node.setLocalBounds(0, 0, 80, 80);
     node.setOrigin(40, 40);
     node.setPosition(100, 100);
     node.setRotation(45);
@@ -52,7 +52,7 @@ describe('SceneNode oriented bounds (rotated SAT)', () => {
     parent.setRotation(45);
 
     const child = new Drawable();
-    child._setLocalBounds(-40, -40, 80, 80); // centred on the parent's pivot
+    child.setLocalBounds(-40, -40, 80, 80); // centred on the parent's pivot
     parent.addChild(child);
     child.updateParentTransform();
 

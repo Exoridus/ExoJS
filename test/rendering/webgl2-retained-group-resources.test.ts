@@ -129,7 +129,7 @@ describe('WebGl2RetainedGroupResources: in-place transform-row patch', () => {
 
     patched[4] = 80; // new tx for the moved child
 
-    bundle._patchTransformRow(1, patched);
+    bundle.patchTransformRow(1, patched);
 
     // The CPU store reflects the new row without touching its neighbour.
     expect(bundle.transformTexture!.buffer[1 * 8 + 4]).toBe(80);
@@ -157,7 +157,7 @@ describe('WebGl2RetainedGroupResources: in-place transform-row patch', () => {
 
     const generation = bundle.generation;
 
-    bundle._patchTransformRow(2, new Float32Array(8));
+    bundle.patchTransformRow(2, new Float32Array(8));
 
     expect(bundle.generation).toBe(generation);
   });
@@ -169,8 +169,8 @@ describe('WebGl2RetainedGroupResources: in-place transform-row patch', () => {
     bundle._storeTransformRows(new Float32Array(8 * 8), new Uint8Array(8 * 4), 0, 8);
     bundle.transformTexture!._consumeDirtyRegion();
 
-    bundle._patchTransformRow(2, new Float32Array(8));
-    bundle._patchTransformRow(5, new Float32Array(8));
+    bundle.patchTransformRow(2, new Float32Array(8));
+    bundle.patchTransformRow(5, new Float32Array(8));
 
     const region = bundle.transformTexture!._consumeDirtyRegion();
 

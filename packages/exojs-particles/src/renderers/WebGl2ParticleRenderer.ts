@@ -298,7 +298,7 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
 
       // A destroyed mode takes its GPU resources with it: `ParticleSystem.destroy`
       // destroys a mode it owns, which destroys the material.
-      material._onDispose(() => {
+      material.onDispose(() => {
         // `Material.destroy` drops its callbacks after firing them, so this
         // registration is gone - forget it, and the next creation re-registers.
         this._disposeListenerRegistered.delete(material);

@@ -23,7 +23,7 @@ interface DrawPlanDepthHooks {
  * - TARGET / VIEW / CLEAR - the enclosing `BackendTargetPass` bound them. A
  *   single-sprite plan's pass carries `target: null` and the backend's own
  *   view, so playing it changes neither.
- * - TRANSFORM SLOT - the renderers already fall back to `_pushTransform` when
+ * - TRANSFORM SLOT - the renderers already fall back to `pushTransform` when
  *   no plan draw command is active (`WebGl2SpriteRenderer`), which is the same
  *   row the plan would have written at its group upload boundary.
  * - FLUSH ORDER - the plan-depth bracket below keeps it. Ending a NESTED plan

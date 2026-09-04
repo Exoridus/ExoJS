@@ -137,15 +137,15 @@ export interface WebGl2RetainedBatchPayload {
  */
 export interface WebGl2RetainedBatchReplayer {
   /** Widen `range` to cover every shared-transform row this batch's instances reference. */
-  _scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void;
+  scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void;
   /** Rewrite this batch's instance node indices to group-local (`index - base`). */
-  _rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void;
+  rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void;
   /** Point `payload.vao`'s attributes at the bundle instance buffer, based at `payload.byteOffset`. */
-  _configureRetainedVao(payload: WebGl2RetainedBatchPayload): void;
+  configureRetainedVao(payload: WebGl2RetainedBatchPayload): void;
   /** Preflight structural live state before any instruction in the set draws. */
-  _validateRetainedBatch?(payload: WebGl2RetainedBatchPayload): boolean;
+  validateRetainedBatch?(payload: WebGl2RetainedBatchPayload): boolean;
   /** Replay the batch: live state (blend, uniforms, textures), cached data (bytes, transforms). */
-  _replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void;
+  replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void;
 }
 
 /**
@@ -360,7 +360,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
    * moved node per frame, and a view per patch was the single largest per-node
    * allocation on the transform-patch path.
    */
-  public _patchTransformRow(localRow: number, floats: Float32Array): void {
+  public patchTransformRow(localRow: number, floats: Float32Array): void {
     if (
       this._transformTexture === null ||
       this._transformFloats === null ||
@@ -382,12 +382,12 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
 
   /**
    * Fast patch: overwrite one group-local tint row in place and mark ONLY that
-   * row's texel for upload. Same contract as {@link _patchTransformRow} on the
+   * row's texel for upload. Same contract as {@link patchTransformRow} on the
    * parallel store - no generation bump, out-of-range rows ignored - and the
    * reason the two stores are separate: a tint change and a move touch
    * different bytes, so neither pays for the other's upload.
    */
-  public _patchTintRow(localRow: number, bytes: Uint8Array): void {
+  public patchTintRow(localRow: number, bytes: Uint8Array): void {
     if (this._tintTexture === null || this._tintBytes === null || this._transformLayout === null || localRow < 0 || localRow >= this._transformRowCount) {
       return;
     }

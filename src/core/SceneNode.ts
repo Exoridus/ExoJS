@@ -253,9 +253,9 @@ export class SceneNode implements Collidable {
    * pattern the invalidating writers below cannot serve: a subclass that
    * recomputes its extent lazily from inside its own {@link getLocalBounds}
    * override. Such an override must write this rectangle directly - routing it
-   * through {@link _setLocalBounds} would cascade an invalidation on every
+   * through {@link setLocalBounds} would cascade an invalidation on every
    * read, which re-dirties the node once per frame and defeats the retained
-   * static-subtree skip. Every other writer belongs in {@link _setLocalBounds}.
+   * static-subtree skip. Every other writer belongs in {@link setLocalBounds}.
    */
   protected readonly _localBounds = new Rectangle();
   private _parentNode: Container | null = null;
@@ -548,7 +548,7 @@ export class SceneNode implements Collidable {
    * Writing to it directly would skip the bounds/content invalidation the
    * engine needs, leaving culling, hit-testing and retained render fragments on
    * a stale extent. A custom {@link Drawable} that owns its own size sets it
-   * through {@link _setLocalBounds}, which writes and invalidates in one step.
+   * through {@link setLocalBounds}, which writes and invalidates in one step.
    */
   public getLocalBounds(): ReadonlyRectangle {
     return this._localBounds;
@@ -567,7 +567,7 @@ export class SceneNode implements Collidable {
    *
    * Part of the renderer SDK contract for extension renderers.
    */
-  public _setLocalBounds(x: number, y: number, width: number, height: number): this {
+  public setLocalBounds(x: number, y: number, width: number, height: number): this {
     this._localBounds.set(x, y, width, height);
     this._invalidateBoundsCascade();
 
@@ -1080,7 +1080,7 @@ export class SceneNode implements Collidable {
 
   /**
    * Write the local extent and refresh the bounds flags WITHOUT a revision
-   * stamp - the {@link _setLocalBounds} counterpart for a node that already
+   * stamp - the {@link setLocalBounds} counterpart for a node that already
    * stamped itself content-dirty when the change was requested.
    *
    * A node that lays its content out lazily has to stamp at mutation time,

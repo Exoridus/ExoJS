@@ -204,78 +204,6 @@
           "description": "Push a theme refresh into every themed descendant."
         },
         {
-          "name": "_collect",
-          "signature": "_collect(builder: RenderPlanBuilder, seq?: number): void",
-          "signatureTokens": [
-            {
-              "text": "_collect",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "builder",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "RenderPlanBuilder",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "seq",
-              "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "builder",
-              "type": "RenderPlanBuilder",
-              "optional": false
-            },
-            {
-              "name": "seq",
-              "type": "number",
-              "optional": true
-            }
-          ],
-          "returnType": "void",
-          "description": "Part of the renderer SDK contract for extension renderers."
-        },
-        {
           "name": "_collectContent",
           "signature": "_collectContent(builder: RenderPlanBuilder): void",
           "signatureTokens": [
@@ -647,116 +575,6 @@
           "params": [],
           "returnType": "UITheme",
           "description": "The nearest themed ancestor's theme, or the built-in default when this node has none."
-        },
-        {
-          "name": "_setLocalBounds",
-          "signature": "_setLocalBounds(x: number, y: number, width: number, height: number): this",
-          "signatureTokens": [
-            {
-              "text": "_setLocalBounds",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "x",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "y",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "width",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "height",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "x",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "y",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "width",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "height",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Write this node's local extent and run the bounds invalidation the change implies - the node's own bounds flag, the ancestor bounds cascade, and the content-dirty stamp that keeps retained fragments from replaying the old extent. This is the only supported way to resize a node from outside getLocalBounds; the rectangle itself is handed out read-only so the invalidation cannot be forgotten. Built-in drawables (Sprite, Text, BitmapText, Mesh, ...) and custom ones alike go through here. Part of the renderer SDK contract for extension renderers."
         },
         {
           "name": "_setSkinState",
@@ -1257,6 +1075,78 @@
           "description": ""
         },
         {
+          "name": "collect",
+          "signature": "collect(builder: RenderPlanBuilder, seq?: number): void",
+          "signatureTokens": [
+            {
+              "text": "collect",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "builder",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderPlanBuilder",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "seq",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "builder",
+              "type": "RenderPlanBuilder",
+              "optional": false
+            },
+            {
+              "name": "seq",
+              "type": "number",
+              "optional": true
+            }
+          ],
+          "returnType": "void",
+          "description": "Contribute this node to the render plan under construction: skip it when it is destroyed, invisible, or outside the builder's cull rect, otherwise emit it as one plan entry. Custom node types override this to add their own admission rules and must call super.collect(builder, seq) to keep the skip semantics. seq orders the entry within its parent; omit it to append. Part of the renderer SDK contract for extension renderers."
+        },
+        {
           "name": "collidesWith",
           "signature": "collidesWith(target: Collidable): CollisionResponse | null",
           "signatureTokens": [
@@ -1638,7 +1528,7 @@
           ],
           "params": [],
           "returnType": "ReadonlyRectangle",
-          "description": "This node's untransformed extent in its own local coordinate space. Returns the LIVE internal rectangle, not a copy: it is read on hot paths (updateBounds re-reads it on every transform-dirty recompute, i.e. potentially every frame for a moving node), so copying it here would add a per-frame allocation. It is therefore typed as a ReadonlyRectangle - reads are unchanged, writes are rejected at compile time. Writing to it directly would skip the bounds/content invalidation the engine needs, leaving culling, hit-testing and retained render fragments on a stale extent. A custom Drawable that owns its own size sets it through _setLocalBounds, which writes and invalidates in one step."
+          "description": "This node's untransformed extent in its own local coordinate space. Returns the LIVE internal rectangle, not a copy: it is read on hot paths (updateBounds re-reads it on every transform-dirty recompute, i.e. potentially every frame for a moving node), so copying it here would add a per-frame allocation. It is therefore typed as a ReadonlyRectangle - reads are unchanged, writes are rejected at compile time. Writing to it directly would skip the bounds/content invalidation the engine needs, leaving culling, hit-testing and retained render fragments on a stale extent. A custom Drawable that owns its own size sets it through setLocalBounds, which writes and invalidates in one step."
         },
         {
           "name": "getNormals",
@@ -2389,6 +2279,116 @@
           ],
           "returnType": "this",
           "description": ""
+        },
+        {
+          "name": "setLocalBounds",
+          "signature": "setLocalBounds(x: number, y: number, width: number, height: number): this",
+          "signatureTokens": [
+            {
+              "text": "setLocalBounds",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Write this node's local extent and run the bounds invalidation the change implies - the node's own bounds flag, the ancestor bounds cascade, and the content-dirty stamp that keeps retained fragments from replaying the old extent. This is the only supported way to resize a node from outside getLocalBounds; the rectangle itself is handed out read-only so the invalidation cannot be forgotten. Built-in drawables (Sprite, Text, BitmapText, Mesh, ...) and custom ones alike go through here. Part of the renderer SDK contract for extension renderers."
         },
         {
           "name": "setOrigin",

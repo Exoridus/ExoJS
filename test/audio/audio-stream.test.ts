@@ -458,13 +458,13 @@ describe('AudioStream', () => {
     stream.destroy();
   });
 
-  // `_createVoice` always stops the previous voice (removing its 'ended'
+  // `createVoice` always stops the previous voice (removing its 'ended'
   // listener) before creating a new one, so through the public API the voice
   // whose onEnd fires is always the one `_activeVoice` still points to. To
   // observe the guard's *other* arm - where a stale voice's end must NOT clear
   // a newer, already-superseding `_activeVoice` - this test bypasses that
   // built-in "stop the previous voice" step by resetting the private
-  // `_activeVoice` slot directly between two `_createVoice` calls, leaving the
+  // `_activeVoice` slot directly between two `createVoice` calls, leaving the
   // first voice's listener attached to the (shared) element alongside the
   // second's.
   test("a stale voice's own end does not clear a newer, already-active voice", () => {
@@ -472,9 +472,9 @@ describe('AudioStream', () => {
     const el = createAudioElementStub();
     const stream = new AudioStream(el);
 
-    const first = stream._createVoice(system, {}) as AudioStreamVoice;
+    const first = stream.createVoice(system, {}) as AudioStreamVoice;
     (stream as unknown as { _activeVoice: unknown })._activeVoice = null;
-    const second = stream._createVoice(system, {}) as AudioStreamVoice;
+    const second = stream.createVoice(system, {}) as AudioStreamVoice;
 
     // Both voices' 'ended' listeners are still attached to the shared element.
     el.dispatchEvent(new Event('ended'));

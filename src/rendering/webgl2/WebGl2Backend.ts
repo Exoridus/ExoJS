@@ -791,7 +791,7 @@ export class WebGl2Backend implements RenderBackend {
    *
    * Part of the renderer SDK contract for extension renderers.
    */
-  public _stageViewportUniform(shader: Shader): void {
+  public stageViewportUniform(shader: Shader): void {
     if (!shader.uniforms.has('u_viewport')) {
       return;
     }
@@ -818,7 +818,7 @@ export class WebGl2Backend implements RenderBackend {
    *
    * Part of the renderer SDK contract for extension renderers.
    */
-  public _pushTransform(drawable: Drawable): number {
+  public pushTransform(drawable: Drawable): number {
     // Raw global transform - the vertex shaders snap the origin (see
     // {@link _writeTransformCommand}).
     return this._transformBuffer.push(drawable.getGlobalTransform(), drawable.tint, drawable.pixelSnapMode);
@@ -1588,7 +1588,7 @@ export class WebGl2Backend implements RenderBackend {
   /**
    * Whether at least one retained-capture window is open. Read by capable
    * renderers at flush time to hand their packed batch to
-   * {@link _recordRetainedBatch}, and at render time for the belt-and-braces
+   * {@link recordRetainedBatch}, and at render time for the belt-and-braces
    * poison checks.
    *
    * Part of the renderer SDK contract for extension renderers.
@@ -1683,7 +1683,7 @@ export class WebGl2Backend implements RenderBackend {
     range.max = -1;
 
     for (const payload of frame.payloads) {
-      payload.replayer._scanRetainedNodeIndexRange(payload, range);
+      payload.replayer.scanRetainedNodeIndexRange(payload, range);
     }
 
     // A group whose every recorded batch opts out of the shared transform
@@ -1697,7 +1697,7 @@ export class WebGl2Backend implements RenderBackend {
 
     if (range.max >= range.min) {
       for (const payload of frame.payloads) {
-        payload.replayer._rebaseRetainedNodeIndices(payload, range.min);
+        payload.replayer.rebaseRetainedNodeIndices(payload, range.min);
       }
 
       frame.bundle._storeTransformRows(this._transformBuffer.data, this._transformBuffer.tintData, range.min, range.max - range.min + 1);
@@ -1710,7 +1710,7 @@ export class WebGl2Backend implements RenderBackend {
       const payload = frame.payloads[i]!;
 
       payload.vao = frame.bundle._acquireVao(i);
-      payload.replayer._configureRetainedVao(payload);
+      payload.replayer.configureRetainedVao(payload);
     }
 
     // Resources are final: stamp this frame's instructions with the bundle's
@@ -1738,7 +1738,7 @@ export class WebGl2Backend implements RenderBackend {
    *
    * Part of the renderer SDK contract for extension renderers.
    */
-  public _recordRetainedBatch(
+  public recordRetainedBatch(
     replayer: WebGl2RetainedBatchReplayer,
     words: Uint32Array,
     instanceCount: number,
@@ -1889,7 +1889,7 @@ export class WebGl2Backend implements RenderBackend {
         return false;
       }
 
-      if (payload.replayer._validateRetainedBatch?.(payload) === false) {
+      if (payload.replayer.validateRetainedBatch?.(payload) === false) {
         set.invalidate();
 
         return false;
@@ -1923,7 +1923,7 @@ export class WebGl2Backend implements RenderBackend {
    * submittedNodes parity).
    * @internal
    */
-  public _replayRetainedBatch(batch: RetainedBatchInstruction): void {
+  public replayRetainedBatch(batch: RetainedBatchInstruction): void {
     this._flushActiveRenderer();
 
     if (this._contextLost) {
@@ -1937,7 +1937,7 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     this._bindRenderTarget(this._renderTarget);
-    payload.replayer._replayRetainedBatch(payload);
+    payload.replayer.replayRetainedBatch(payload);
     this._stats.batches++;
     this._stats.drawCalls += batch.drawCalls;
     // Nodes, not instances: a batch whose renderer expands one node into many

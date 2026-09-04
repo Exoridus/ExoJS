@@ -18,7 +18,7 @@
  * - the `WebGpuBackend._finalizeRetainedCapture` guard: a Text-only capture
  *   never issues a bogus shared-transform-row copy (the bug this task's
  *   investigation found and fixed upstream of the renderer work),
- * - deliberate-break mutation proofs on `_replayRetainedBatch` and
+ * - deliberate-break mutation proofs on `replayRetainedBatch` and
  *   `_patchOwnTransformRow` (both interface-required, public hooks).
  */
 
@@ -589,9 +589,9 @@ describe('WebGPU Text retained-batch record/replay', () => {
   });
 
   describe('deliberate-break mutation proofs', () => {
-    test('a neutered _replayRetainedBatch stops issuing the retained draw', async () => {
+    test('a neutered replayRetainedBatch stops issuing the retained draw', async () => {
       const environment = createMockWebGpuEnvironment();
-      const original = WebGpuTextRenderer.prototype._replayRetainedBatch;
+      const original = WebGpuTextRenderer.prototype.replayRetainedBatch;
 
       try {
         const backend = await createBackend(environment);
@@ -602,7 +602,7 @@ describe('WebGPU Text retained-batch record/replay', () => {
 
         expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
 
-        WebGpuTextRenderer.prototype._replayRetainedBatch = function (): void {};
+        WebGpuTextRenderer.prototype.replayRetainedBatch = function (): void {};
 
         const drawsBefore = environment.draws().length;
 
@@ -610,7 +610,7 @@ describe('WebGPU Text retained-batch record/replay', () => {
 
         expect(environment.draws().slice(drawsBefore)).toEqual([]);
 
-        WebGpuTextRenderer.prototype._replayRetainedBatch = original;
+        WebGpuTextRenderer.prototype.replayRetainedBatch = original;
 
         const drawsAfterRestore = environment.draws().length;
 
@@ -621,7 +621,7 @@ describe('WebGPU Text retained-batch record/replay', () => {
         root.destroy();
         backend.destroy();
       } finally {
-        WebGpuTextRenderer.prototype._replayRetainedBatch = original;
+        WebGpuTextRenderer.prototype.replayRetainedBatch = original;
         environment.restore();
       }
     });

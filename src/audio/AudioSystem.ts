@@ -383,7 +383,7 @@ export class AudioSystem {
   public play(source: Playable, options?: PlayOptions): Voice;
   public play(source: Playable, options?: PlayOptions): Voice {
     this._assertLive('play');
-    return source._createVoice(this, options ?? {});
+    return source.createVoice(this, options ?? {});
   }
 
   /**

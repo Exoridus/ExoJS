@@ -4,7 +4,7 @@
  *
  * The nine-slice counterpart of `webgl2-retained-instruction-replay.test.ts`:
  * a retained group whose playback was recorded replays through
- * `_replayRetainedBatch` from group-owned resources (persistent instance
+ * `replayRetainedBatch` from group-owned resources (persistent instance
  * buffer + group transform texture) and must produce BYTE-IDENTICAL frames to
  * the entry-replay slow path. A nine-slice node expands to MANY quad-instances
  * that all share one transform-buffer row, so the group-local node-index
@@ -172,7 +172,7 @@ describe('WebGL2 renderer matrix: NineSlice retained instruction-set replay cell
     const backend = await createBackend();
     const scene = buildScene();
     const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
-    const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+    const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
     try {
       // F1 - full collect + fragment capture (slow tier).
@@ -225,7 +225,7 @@ describe('WebGL2 renderer matrix: NineSlice retained instruction-set replay cell
       render(backend, scene.root); // F3 splice
 
       const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       // Pan the camera 16px right: everything must appear 16px further left.
       backend.view.setCenter(backend.view.center.x + 16, backend.view.center.y);
@@ -253,7 +253,7 @@ describe('WebGL2 renderer matrix: NineSlice retained instruction-set replay cell
       render(backend, scene.root); // F3 splice
 
       const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       // Move the WHOLE group: content revisions untouched (a group move is
       // decoupled by design), so the set keeps replaying - via live u_group.
@@ -282,7 +282,7 @@ describe('WebGL2 renderer matrix: NineSlice retained instruction-set replay cell
       render(backend, scene.root); // F3 splice
 
       const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       // A pure transform move on a direct child stays content-clean, so the
       // group keeps its recording and patches just this child's shared

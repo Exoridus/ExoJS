@@ -238,7 +238,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
    * Fast patch: overwrite one group-local transform row in place with
    * `floats` (8 = one `TransformSlot`, the {@link TransformBuffer} row layout)
    * via a single `queue.writeBuffer` of that row's 32-byte sub-range. Mirrors
-   * {@link WebGl2RetainedGroupResources._patchTransformRow}: deliberately does
+   * {@link WebGl2RetainedGroupResources.patchTransformRow}: deliberately does
    * NOT bump the generation - the recorded instance bytes reference this row by
    * index and stay valid; only the transform behind the index moved. Tint is
    * not touched (a moved node's tint doesn't change).
@@ -247,7 +247,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
    * the store), as is any patch before a range is recorded or after device loss
    * (`_transformBuffer`/`_patchDevice` null).
    */
-  public _patchTransformRow(localRow: number, floats: Float32Array): void {
+  public patchTransformRow(localRow: number, floats: Float32Array): void {
     if (this._transformBuffer === null || this._patchDevice === null || localRow < 0 || localRow >= this._transformRowCount) {
       return;
     }
@@ -263,12 +263,12 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
 
   /**
    * Fast patch: overwrite one group-local tint slot in place. Same contract as
-   * {@link _patchTransformRow} on the parallel store - no generation bump,
+   * {@link patchTransformRow} on the parallel store - no generation bump,
    * out-of-range slots and a lost device ignored - and the reason the two
    * stores are separate: a tint change and a move touch different bytes, so
    * neither pays for the other's upload.
    */
-  public _patchTintRow(localRow: number, bytes: Uint8Array): void {
+  public patchTintRow(localRow: number, bytes: Uint8Array): void {
     if (this._tintBuffer === null || this._patchDevice === null || localRow < 0 || localRow >= this._transformRowCount) {
       return;
     }

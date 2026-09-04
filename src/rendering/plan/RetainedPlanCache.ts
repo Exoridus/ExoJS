@@ -51,7 +51,7 @@ const createSlot = (): MutableRetainedDrawSlot => ({
  * `updateId`, and the active `RenderBackend` identity.
  *
  * Direct container/effect-bearing children are never represented here - they
- * are always re-dispatched through a normal `_collect` call by the owning
+ * are always re-dispatched through a normal `collect` call by the owning
  * `Container`, which recurses into their own independent `RetainedPlanCache`.
  * This keeps every reused scope shape byte-for-byte identical to a full
  * collect (nested containers keep their own material-grouping/z-sort

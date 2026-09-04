@@ -116,7 +116,7 @@ export class TileChunkNode extends Drawable {
 
   /**
    * Recomputed lazily on read, so it writes `_localBounds` directly rather than
-   * going through `_setLocalBounds`: an invalidating write inside a getter
+   * going through `setLocalBounds`: an invalidating write inside a getter
    * would re-dirty the node on every read.
    */
   public override getLocalBounds(): ReadonlyRectangle {

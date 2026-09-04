@@ -101,8 +101,8 @@ describe('NoopVoice', () => {
 
 // ---------------------------------------------------------------------------
 // Real trigger paths in the engine (see `grep -r "new NoopVoice"` under src/audio):
-// AudioGenerator._createVoice() when the AudioContext is still locked, and
-// Sound._createVoice() for a seek offset past the asset's duration.
+// AudioGenerator.createVoice() when the AudioContext is still locked, and
+// Sound.createVoice() for a seek offset past the asset's duration.
 // ---------------------------------------------------------------------------
 
 describe('NoopVoice — real trigger paths', () => {

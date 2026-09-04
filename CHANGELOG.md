@@ -14,6 +14,24 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   non-empty string, so callers passed a dummy. `glsl: { fragment }` is now
   enough for both; `ShaderSource.glsl.vertex` reads `null` in that case, and a
   mesh or particle material without a vertex stage fails with a named error.
+- **The extension seams that survived the `@internal` strip lost their
+  underscore prefix.** A member an official package (or any extension author)
+  has to call is API, and now reads like it: `SceneNode._setLocalBounds` is
+  `setLocalBounds`, `RenderNode._collect` is `collect`, `Material._onDispose` is
+  `onDispose`, `AudioBus._getInputNode`/`_getOutputNode` are
+  `getInputNode`/`getOutputNode`, and `Playable._createVoice` is `createVoice`
+  (with `Sound`, `AudioStream` and `AudioGenerator` following). On the renderer
+  SDK, `WebGl2Backend._stageViewportUniform` is `stageViewportUniform`,
+  `_pushTransform` and `_recordRetainedBatch` are `pushTransform` and
+  `recordRetainedBatch` on both backends, `WebGpuBackend._transformStorageWouldGrow`
+  and `_textureUploadWouldMutate` are `transformStorageWouldGrow` and
+  `textureUploadWouldMutate`, the retained replayer contracts
+  (`_scanRetainedNodeIndexRange`, `_rebaseRetainedNodeIndices`,
+  `_configureRetainedVao`, `_validateRetainedBatch`, `_replayRetainedBatch`) and
+  `RetainedGroupBundle`'s `_patchTransformRow`/`_patchTintRow` drop the prefix
+  the same way. Rename the call sites; there are no compatibility aliases. Every
+  remaining underscore member is engine-private and no longer reaches the
+  published `.d.ts` at all.
 - **Punctuation keys are named after their `code` on both input surfaces.**
   `Keyboard.Colon`, `Equals`, `Dash`, `QuestionMark`, `Tilde`, `OpenBracket`,
   `BackwardSlash`, `ClosedBracket` and `Quotes` are now `Semicolon`, `Equal`,

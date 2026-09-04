@@ -156,7 +156,7 @@ interface GeometryCacheEntry {
 
 /**
  * Per-material resources cached against the material instance reference.
- * Disposed when the material's `_onDispose` callback fires.
+ * Disposed when the material's `onDispose` callback fires.
  */
 interface CustomShaderResources {
   shaderModule: GPUShaderModule;
@@ -524,7 +524,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // slices. With no earlier draw in the pass there is nothing to protect, so
     // the common single-batch case never splits.
     if (
-      (coordinator.passHasDraws && (backend._textureUploadWouldMutate(texture) || backend._transformStorageWouldGrow(maxNodeIndex + 1))) ||
+      (coordinator.passHasDraws && (backend.textureUploadWouldMutate(texture) || backend.transformStorageWouldGrow(maxNodeIndex + 1))) ||
       (ownDraws &&
         (geometryWouldRewrite ||
           this._instancedNodeIndexWouldGrow(targetNodeIndexBytes) ||
@@ -889,7 +889,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // already written at base offsets, and its draws (recorded below into the
     // freshly opened pass) still read them there. Rewinding would let a later
     // append overwrite bytes those draws read.
-    if (coordinator.passHasDraws && (this._flushWouldMutateTexture(backend) || backend._transformStorageWouldGrow(this._maxInstancedNodeIndex() + 1))) {
+    if (coordinator.passHasDraws && (this._flushWouldMutateTexture(backend) || backend.transformStorageWouldGrow(this._maxInstancedNodeIndex() + 1))) {
       coordinator.endPass();
     }
 
@@ -974,7 +974,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
           // WebGpuRetainedGeometryRef (vertexBuffer/indexBuffer/indexCount).
           if (backend._retainedCaptureActive) {
             this._retainedTextureScratch[0] = dc.texture;
-            backend._recordRetainedBatch(
+            backend.recordRetainedBatch(
               this,
               // Real ArrayBuffer: `_instancedNodeIndexData` is a plain Uint32Array.
               this._instancedNodeIndexData.buffer as ArrayBuffer,
@@ -1271,7 +1271,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     this._instancedShaderModule = null;
     // Custom materials are owned by user code (one MeshMaterial can be shared
     // across multiple Mesh instances). Their resources are released when the
-    // user calls material.destroy(), which fires our _onDispose callback. On
+    // user calls material.destroy(), which fires our onDispose callback. On
     // backend disconnect we eagerly release everything to avoid GPU leaks
     // even if the user keeps the material reference around.
     for (const resources of this._customShaders.values()) {
@@ -1506,7 +1506,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   /** Whether any texture this flush binds would be re-uploaded or resized when synced. */
   private _flushWouldMutateTexture(backend: WebGpuBackend): boolean {
     for (let i = 0; i < this._drawCallCount; i++) {
-      if (backend._textureUploadWouldMutate(this._drawCalls[i]!.texture)) {
+      if (backend.textureUploadWouldMutate(this._drawCalls[i]!.texture)) {
         return true;
       }
     }
@@ -1769,8 +1769,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   // u32/instance in the bundle instance buffer). The node index is the entire
   // per-instance record, so scan/rebase walk the whole u32 stream.
 
-  /** @internal See {@link WebGpuRetainedBatchReplayer._scanRetainedNodeIndexRange}. */
-  public _scanRetainedNodeIndexRange(bytes: Uint8Array, range: WebGpuRetainedNodeIndexRange): void {
+  /** @internal See {@link WebGpuRetainedBatchReplayer.scanRetainedNodeIndexRange}. */
+  public scanRetainedNodeIndexRange(bytes: Uint8Array, range: WebGpuRetainedNodeIndexRange): void {
     const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
 
     for (let i = 0; i < words.length; i++) {
@@ -1786,8 +1786,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     }
   }
 
-  /** @internal See {@link WebGpuRetainedBatchReplayer._rebaseRetainedNodeIndices} (rebases to group-local indices). */
-  public _rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void {
+  /** @internal See {@link WebGpuRetainedBatchReplayer.rebaseRetainedNodeIndices} (rebases to group-local indices). */
+  public rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void {
     const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
 
     for (let i = 0; i < words.length; i++) {
@@ -1805,7 +1805,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
    * (bind group(0) binding 1). Drawn indexed (`drawIndexed`).
    * @internal
    */
-  public _replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void {
+  public replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void {
     const backend = this._backend;
     const device = this._device;
     const bundle = payload.bundle;
@@ -1854,7 +1854,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // may re-upload mutated content on the queue timeline before the deferred
     // submit, retroactively changing draws already in the open pass. End it
     // first so those draws keep their pre-mutation content.
-    if (coordinator.passHasDraws && backend._textureUploadWouldMutate(texture)) {
+    if (coordinator.passHasDraws && backend.textureUploadWouldMutate(texture)) {
       coordinator.endPass();
       state.drawsInPass = null;
     }
@@ -2421,7 +2421,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     this._customShaders.set(material, resources);
 
     // When the user calls material.destroy(), evict and release.
-    material._onDispose(() => {
+    material.onDispose(() => {
       const r = this._customShaders.get(material);
       if (r !== undefined) {
         this._releaseCustomShaderResources(r);

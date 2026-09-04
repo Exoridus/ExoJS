@@ -237,7 +237,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     const tintRgba = node.tint.toRgba8();
 
     const command = backend.activeDrawCommand;
-    const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(node);
+    const nodeIndex = command !== null ? command.nodeIndex : backend.pushTransform(node);
 
     for (const page of pages) {
       this._renderPage(backend, page.texture, page.quads, blendMode, tintRgba, nodeIndex);
@@ -393,7 +393,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     // ending (submitting) the pass first.
     if (
       (ownDrawsInPass && (projectionChanged || (willDraw && targetInstanceBytes > this._instanceBufferCapacity))) ||
-      (willDraw && coordinator.passHasDraws && (backend._textureUploadWouldMutate(texture) || backend._transformStorageWouldGrow(this._maxNodeIndex + 1)))
+      (willDraw && coordinator.passHasDraws && (backend.textureUploadWouldMutate(texture) || backend.transformStorageWouldGrow(this._maxNodeIndex + 1)))
     ) {
       coordinator.endPass();
     }
@@ -465,7 +465,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     // already poisoned the capture in render().
     if (this._quadIndex > 0 && backend._retainedCaptureActive && blendMode !== null && texture !== null) {
       this._recordTextures[0] = texture;
-      backend._recordRetainedBatch(this, this._instanceData, flushBytes, this._quadIndex, blendMode, this._recordTextures, 1, null, null, this._batchNodeCount);
+      backend.recordRetainedBatch(this, this._instanceData, flushBytes, this._quadIndex, blendMode, this._recordTextures, 1, null, null, this._batchNodeCount);
     }
 
     // The pass is deliberately left OPEN. It ends at genuine boundaries only
@@ -550,8 +550,8 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
   // (node-index scan/rebase) and the replay dispatch live here - mirroring
   // WebGpuNineSliceSpriteRenderer's seam.
 
-  /** @internal See {@link WebGpuRetainedBatchReplayer._scanRetainedNodeIndexRange}. */
-  public _scanRetainedNodeIndexRange(bytes: Uint8Array, range: WebGpuRetainedNodeIndexRange): void {
+  /** @internal See {@link WebGpuRetainedBatchReplayer.scanRetainedNodeIndexRange}. */
+  public scanRetainedNodeIndexRange(bytes: Uint8Array, range: WebGpuRetainedNodeIndexRange): void {
     const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
 
     for (let i = 7; i < words.length; i += 8) {
@@ -570,8 +570,8 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     }
   }
 
-  /** @internal See {@link WebGpuRetainedBatchReplayer._rebaseRetainedNodeIndices} (group-local indices). */
-  public _rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void {
+  /** @internal See {@link WebGpuRetainedBatchReplayer.rebaseRetainedNodeIndices} (group-local indices). */
+  public rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void {
     const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
 
     for (let i = 7; i < words.length; i += 8) {
@@ -598,7 +598,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
    * already holds this bundle's draws) ends the pass first.
    * @internal
    */
-  public _replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void {
+  public replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void {
     const backend = this._backend;
     const device = this._device;
     const bundle = payload.bundle;
@@ -629,7 +629,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     // a renderer switch, so any recorded draw is at risk, not just one of ours.
     if (coordinator.passHasDraws) {
       for (const texture of payload.textures) {
-        if (backend._textureUploadWouldMutate(texture)) {
+        if (backend.textureUploadWouldMutate(texture)) {
           coordinator.endPass();
           break;
         }

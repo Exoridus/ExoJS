@@ -14,14 +14,14 @@ import { collectRenderGroups } from './helpers/collectRenderGroups';
 class BoxDrawable extends Drawable {
   public constructor() {
     super();
-    this._setLocalBounds(0, 0, 16, 16);
+    this.setLocalBounds(0, 0, 16, 16);
   }
 }
 
 class OtherDrawable extends Drawable {
   public constructor() {
     super();
-    this._setLocalBounds(0, 0, 20, 20);
+    this.setLocalBounds(0, 0, 20, 20);
   }
 }
 

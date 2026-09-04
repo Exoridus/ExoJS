@@ -379,7 +379,7 @@ describe('Rectangle', () => {
     test('SceneNode target, axis-aligned: delegates to intersectionRectRect via getBounds()', () => {
       const node = new SceneNode();
 
-      node._setLocalBounds(0, 0, 10, 10);
+      node.setLocalBounds(0, 0, 10, 10);
       node.setPosition(5, 5);
       node.updateParentTransform();
 
@@ -390,7 +390,7 @@ describe('Rectangle', () => {
     test('SceneNode target, rotated: delegates to full SAT', () => {
       const node = new SceneNode();
 
-      node._setLocalBounds(0, 0, 10, 10);
+      node.setLocalBounds(0, 0, 10, 10);
       node.setPosition(5, 5);
       node.setRotation(45);
       node.updateParentTransform();
@@ -439,7 +439,7 @@ describe('Rectangle', () => {
     test('SceneNode target, axis-aligned: delegates to getCollisionRectangleRectangle', () => {
       const node = new SceneNode();
 
-      node._setLocalBounds(0, 0, 10, 10);
+      node.setLocalBounds(0, 0, 10, 10);
       node.setPosition(5, 5);
       node.updateParentTransform();
 
@@ -450,7 +450,7 @@ describe('Rectangle', () => {
     test('SceneNode target, rotated: delegates to getCollisionSat', () => {
       const node = new SceneNode();
 
-      node._setLocalBounds(0, 0, 10, 10);
+      node.setLocalBounds(0, 0, 10, 10);
       node.setPosition(5, 5);
       node.setRotation(45);
       node.updateParentTransform();

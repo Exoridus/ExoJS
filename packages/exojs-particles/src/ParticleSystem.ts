@@ -517,7 +517,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     this._updateTexCoords = true;
     this._updateVertices = true;
 
-    this._setLocalBounds(0, 0, frame.width, frame.height);
+    this.setLocalBounds(0, 0, frame.width, frame.height);
     // Every public path that changes the texture or the frame - including
     // `setTexture`, which resets the frame - funnels through here, and the
     // device's copy of the UVs is only written when something asks for it.
@@ -742,7 +742,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
    * reference changes (e.g. after device-loss recovery).
    */
   /** @internal */
-  public override _collect(builder: RenderPlanBuilder, seq?: number): void {
+  public override collect(builder: RenderPlanBuilder, seq?: number): void {
     const backend = builder.backend;
 
     if (this._backend !== backend) {
@@ -758,7 +758,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
       this._compiled = false;
     }
 
-    super._collect(builder, seq);
+    super.collect(builder, seq);
   }
 
   /** Per-frame entry point. Routes to CPU or GPU pipeline based on auto-detection at first call. */

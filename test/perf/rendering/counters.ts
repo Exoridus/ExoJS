@@ -10,7 +10,7 @@
  *
  * The wrapped methods mirror the four sub-phases the collect-phase benchmark
  * (`test/perf/collect-phase-benchmark.ts`) attributes build() time to:
- *   - `RenderNode._collect`               - node visits entering the cull/emit gate
+ *   - `RenderNode.collect`               - node visits entering the cull/emit gate
  *   - `SceneNode._inCullRectUsingBounds`  - view-frustum cull checks
  *   - `SceneNode.getGlobalTransform`   - world-transform resolutions (build + play)
  *   - `Drawable._getOrComputeMaterialKey` - per-draw material-key resolutions
@@ -29,7 +29,7 @@ import type { WebGl2Harness } from './harness';
 
 /** Exact per-frame algorithmic counts for the collect/play pipeline. */
 export interface CollectCounters {
-  /** `RenderNode._collect` calls - nodes visited by the collect walk. */
+  /** `RenderNode.collect` calls - nodes visited by the collect walk. */
   collect: number;
   /**
    * `SceneNode._inCullRectUsingBounds` calls - view-frustum cull checks
@@ -84,10 +84,10 @@ const installCounters = (): Installed => {
     });
   };
 
-  // `_collect` is defined on RenderNode; RetainedContainer/Video override it but
-  // call `super._collect`, which resolves to this wrapped implementation - so a
+  // `collect` is defined on RenderNode; RetainedContainer/Video override it but
+  // call `super.collect`, which resolves to this wrapped implementation - so a
   // single wrap here counts every node visit regardless of subclass.
-  wrap(RenderNode.prototype, '_collect', 'collect');
+  wrap(RenderNode.prototype, 'collect', 'collect');
   wrap(SceneNode.prototype, '_inCullRectUsingBounds', 'inView');
   wrap(SceneNode.prototype, 'getGlobalTransform', 'globalTransform');
   wrap(Drawable.prototype, '_getOrComputeMaterialKey', 'materialKey');

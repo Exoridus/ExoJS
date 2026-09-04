@@ -109,7 +109,7 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     const tintRgba = sprite.tint.toRgba8();
 
     const command = backend.activeDrawCommand;
-    const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(sprite);
+    const nodeIndex = command !== null ? command.nodeIndex : backend.pushTransform(sprite);
 
     const textureChanged = this._currentTexture !== null && texture !== this._currentTexture;
     const blendModeChanged = this._currentBlendMode !== null && blendMode !== this._currentBlendMode;
@@ -232,7 +232,7 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     // poisoned the capture in render().
     if (backend._isRetainedCapturing && this._currentTexture !== null) {
       this._recordTextures[0] = this._currentTexture;
-      backend._recordRetainedBatch(
+      backend.recordRetainedBatch(
         this,
         this._instanceUint32.subarray(0, this._quadIndex * wordsPerInstance),
         this._quadIndex,
@@ -288,7 +288,7 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
       }
     }
 
-    backend._stageViewportUniform(this._shader);
+    backend.stageViewportUniform(this._shader);
   }
 
   // ── Retained-batch record/replay ──────────────────────────────────────────
@@ -298,8 +298,8 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
   // live here - mirroring WebGl2SpriteRenderer's seam, adapted to nine-slice's
   // single-texture, per-instance-tint attribute set.
 
-  /** @internal See {@link WebGl2RetainedBatchReplayer._scanRetainedNodeIndexRange}. */
-  public _scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void {
+  /** @internal See {@link WebGl2RetainedBatchReplayer.scanRetainedNodeIndexRange}. */
+  public scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void {
     const words = payload.bundle.instanceWords;
     const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
 
@@ -318,8 +318,8 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     }
   }
 
-  /** @internal See {@link WebGl2RetainedBatchReplayer._rebaseRetainedNodeIndices} (rebases to group-local indices). */
-  public _rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void {
+  /** @internal See {@link WebGl2RetainedBatchReplayer.rebaseRetainedNodeIndices} (rebases to group-local indices). */
+  public rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void {
     const words = payload.bundle.instanceWords;
     const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
 
@@ -338,7 +338,7 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
    * set/locations as the live VAO in {@link onConnect}.
    * @internal
    */
-  public _configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
+  public configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
     const gl = this.getBackend().context;
     const buffer = payload.bundle.instanceBuffer;
     const vao = payload.vao;
@@ -367,7 +367,7 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
    * stats from the instruction descriptor.
    * @internal
    */
-  public _replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
+  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
     const backend = this.getBackendOrNull();
     const vao = payload.vao;
     const transformTexture = payload.bundle.transformTexture;

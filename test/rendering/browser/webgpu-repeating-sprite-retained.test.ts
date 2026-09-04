@@ -162,7 +162,7 @@ describe('WebGPU renderer matrix: RepeatingSprite retained instruction-set repla
       expectPixelNear(readPixel(12, 28), [255, 0, 0, 255]); // red half
       expectPixelNear(readPixel(20, 28), [0, 255, 0, 255]); // green half
 
-      const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       if (!(await renderScene(ctx, backend, root))) return; // F3 instruction splice
 
@@ -199,7 +199,7 @@ describe('WebGPU renderer matrix: RepeatingSprite retained instruction-set repla
       if (!(await renderScene(ctx, backend, root))) return; // F2 record
       if (!(await renderScene(ctx, backend, root))) return; // F3 splice — fast tier
 
-      let replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      let replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       if (!(await renderScene(ctx, backend, root))) return; // steady replay before mutation
 
@@ -221,7 +221,7 @@ describe('WebGPU renderer matrix: RepeatingSprite retained instruction-set repla
       if (!(await renderScene(ctx, backend, root))) return; // recapture with the new bytes
       if (!(await renderScene(ctx, backend, root))) return; // splice of the fresh recording
 
-      replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       if (!(await renderScene(ctx, backend, root))) return; // steady replay AFTER the mutation
 
@@ -255,7 +255,7 @@ describe('WebGPU renderer matrix: RepeatingSprite retained instruction-set repla
     group.setPosition(8, 24);
     root.addChild(group);
 
-    const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+    const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
     try {
       // Several frames, including a scroll mutation - the shader path never

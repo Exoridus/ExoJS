@@ -481,7 +481,7 @@ describe('Container paint-order cache', () => {
 // extent to aggregate.
 class SizedDrawable extends Drawable {
   public override updateBounds(): this {
-    this._setLocalBounds(0, 0, 100, 100);
+    this.setLocalBounds(0, 0, 100, 100);
 
     return super.updateBounds();
   }

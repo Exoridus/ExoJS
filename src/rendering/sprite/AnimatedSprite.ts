@@ -628,7 +628,7 @@ export class AnimatedSprite extends Sprite {
       // after it: {@link _updateOrigin} measures a trimmed clip against the
       // clip-wide source canvas, which this write cannot change, and the
       // origin pass inside `setTextureFrame` above already ran against it.
-      this._setLocalBounds(offset.x, offset.y, width, height);
+      this.setLocalBounds(offset.x, offset.y, width, height);
     }
   }
 }

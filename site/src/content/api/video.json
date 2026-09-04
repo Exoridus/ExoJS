@@ -160,116 +160,6 @@
       "title": "Methods",
       "members": [
         {
-          "name": "_setLocalBounds",
-          "signature": "_setLocalBounds(x: number, y: number, width: number, height: number): this",
-          "signatureTokens": [
-            {
-              "text": "_setLocalBounds",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "x",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "y",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "width",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "height",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "x",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "y",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "width",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "height",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Write this node's local extent and run the bounds invalidation the change implies - the node's own bounds flag, the ancestor bounds cascade, and the content-dirty stamp that keeps retained fragments from replaying the old extent. This is the only supported way to resize a node from outside getLocalBounds; the rectangle itself is handed out read-only so the invalidation cannot be forgotten. Built-in drawables (Sprite, Text, BitmapText, Mesh, ...) and custom ones alike go through here. Part of the renderer SDK contract for extension renderers."
-        },
-        {
           "name": "_updateOrigin",
           "signature": "_updateOrigin(): void",
           "signatureTokens": [
@@ -750,7 +640,7 @@
           ],
           "params": [],
           "returnType": "ReadonlyRectangle",
-          "description": "This node's untransformed extent in its own local coordinate space. Returns the LIVE internal rectangle, not a copy: it is read on hot paths (updateBounds re-reads it on every transform-dirty recompute, i.e. potentially every frame for a moving node), so copying it here would add a per-frame allocation. It is therefore typed as a ReadonlyRectangle - reads are unchanged, writes are rejected at compile time. Writing to it directly would skip the bounds/content invalidation the engine needs, leaving culling, hit-testing and retained render fragments on a stale extent. A custom Drawable that owns its own size sets it through _setLocalBounds, which writes and invalidates in one step."
+          "description": "This node's untransformed extent in its own local coordinate space. Returns the LIVE internal rectangle, not a copy: it is read on hot paths (updateBounds re-reads it on every transform-dirty recompute, i.e. potentially every frame for a moving node), so copying it here would add a per-frame allocation. It is therefore typed as a ReadonlyRectangle - reads are unchanged, writes are rejected at compile time. Writing to it directly would skip the bounds/content invalidation the engine needs, leaving culling, hit-testing and retained render fragments on a stale extent. A custom Drawable that owns its own size sets it through setLocalBounds, which writes and invalidates in one step."
         },
         {
           "name": "getNormals",
@@ -1570,6 +1460,116 @@
           ],
           "returnType": "this",
           "description": "Change the blend mode. No-ops if the value is unchanged. Invalidates the render cache when the blend mode actually changes."
+        },
+        {
+          "name": "setLocalBounds",
+          "signature": "setLocalBounds(x: number, y: number, width: number, height: number): this",
+          "signatureTokens": [
+            {
+              "text": "setLocalBounds",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Write this node's local extent and run the bounds invalidation the change implies - the node's own bounds flag, the ancestor bounds cascade, and the content-dirty stamp that keeps retained fragments from replaying the old extent. This is the only supported way to resize a node from outside getLocalBounds; the rectangle itself is handed out read-only so the invalidation cannot be forgotten. Built-in drawables (Sprite, Text, BitmapText, Mesh, ...) and custom ones alike go through here. Part of the renderer SDK contract for extension renderers."
         },
         {
           "name": "setLoop",

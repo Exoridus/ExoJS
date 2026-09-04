@@ -140,7 +140,7 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
   test('cell 1 — Text opts in and the instruction-replay tier is byte-identical to the record frame', async () => {
     const backend = await createBackend();
     const scene = buildScene();
-    const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+    const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
     try {
       expect(new WebGl2TextRenderer()._supportsRetainedBatches).toBe(true);
@@ -250,7 +250,7 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
 
       const recordedInstruction = fragmentOf(scene.group).instructions!.instructions[0];
       const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       scene.text.setPosition(24, 4); // was (4,4): +20px right within the group
 
@@ -305,10 +305,10 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
     }
   });
 
-  test('cell 6 — deliberate break: a neutered _replayRetainedBatch drops the retained draw and diverges', async () => {
+  test('cell 6 — deliberate break: a neutered replayRetainedBatch drops the retained draw and diverges', async () => {
     const backend = await createBackend();
     const scene = buildScene();
-    const original = WebGl2TextRenderer.prototype._replayRetainedBatch;
+    const original = WebGl2TextRenderer.prototype.replayRetainedBatch;
 
     try {
       render(backend, scene.root); // F1 capture
@@ -321,14 +321,14 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
       // F3 static frame: the fast/instruction-replay tier is the only path that
       // can draw the group's glyphs. A neutered replay that never issues its
       // drawElements leaves the canvas empty where the record frame had ink.
-      WebGl2TextRenderer.prototype._replayRetainedBatch = function (): void {};
+      WebGl2TextRenderer.prototype.replayRetainedBatch = function (): void {};
 
       render(backend, scene.root);
 
       expect(totalInk(readCanvas(backend))).toBe(0);
       expect(totalInk(readCanvas(backend))).not.toBe(recordInk);
     } finally {
-      WebGl2TextRenderer.prototype._replayRetainedBatch = original;
+      WebGl2TextRenderer.prototype.replayRetainedBatch = original;
       scene.root.destroy();
       backend.destroy();
     }
@@ -373,10 +373,10 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
     }
   });
 
-  test('cell 8 — deliberate break: a neutered _configureRetainedVao leaves the batch unrenderable and diverges', async () => {
+  test('cell 8 — deliberate break: a neutered configureRetainedVao leaves the batch unrenderable and diverges', async () => {
     const backend = await createBackend();
     const scene = buildScene();
-    const original = WebGl2TextRenderer.prototype._configureRetainedVao;
+    const original = WebGl2TextRenderer.prototype.configureRetainedVao;
 
     try {
       // F1 capture, then neuter the finalize hook BEFORE the record frame's
@@ -384,7 +384,7 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
       // neither configured, the replay guard bails and nothing draws.
       render(backend, scene.root);
 
-      WebGl2TextRenderer.prototype._configureRetainedVao = function (): void {};
+      WebGl2TextRenderer.prototype.configureRetainedVao = function (): void {};
 
       render(backend, scene.root); // F2 record (finalize neutered)
       render(backend, scene.root); // F3 replay attempt
@@ -392,13 +392,13 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
       expect(totalInk(readCanvas(backend))).toBe(0);
 
       // Restore + re-record: the group recovers to visible ink.
-      WebGl2TextRenderer.prototype._configureRetainedVao = original;
+      WebGl2TextRenderer.prototype.configureRetainedVao = original;
       scene.text.text = 'MW '; // content change forces a fresh capture/record
       for (let f = 0; f < 3; f++) render(backend, scene.root);
 
       expect(totalInk(readCanvas(backend))).toBeGreaterThan(0);
     } finally {
-      WebGl2TextRenderer.prototype._configureRetainedVao = original;
+      WebGl2TextRenderer.prototype.configureRetainedVao = original;
       scene.root.destroy();
       backend.destroy();
     }

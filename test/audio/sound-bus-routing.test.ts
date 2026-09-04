@@ -87,7 +87,7 @@ describe('Bus routing (Sound / AudioStream / Video)', () => {
     system.play(sound);
 
     // The voice's output gain should connect to the sound bus input.
-    const soundBusInput = system.sound._getInputNode();
+    const soundBusInput = system.sound.getInputNode();
     expect(spy.gainNode.connect).toHaveBeenCalledWith(soundBusInput);
 
     spy.restore();
@@ -135,7 +135,7 @@ describe('Bus routing (Sound / AudioStream / Video)', () => {
 
     const voice = system.play(stream);
 
-    const musicBusInput = system.music._getInputNode();
+    const musicBusInput = system.music.getInputNode();
     expect(spy.gainNode.connect).toHaveBeenCalledWith(musicBusInput);
     expect(voice.bus).toBe(system.music);
 
@@ -154,7 +154,7 @@ describe('Bus routing (Sound / AudioStream / Video)', () => {
     voice.bus = customBus;
 
     expect(spy.gainNode.disconnect).toHaveBeenCalled();
-    expect(spy.gainNode.connect).toHaveBeenCalledWith(customBus._getInputNode());
+    expect(spy.gainNode.connect).toHaveBeenCalledWith(customBus.getInputNode());
 
     spy.restore();
     stream.destroy();
@@ -210,7 +210,7 @@ describe('Bus routing (Sound / AudioStream / Video)', () => {
 
     video.bus = system.master;
 
-    expect(spy.gainNode.connect).toHaveBeenCalledWith(system.master._getInputNode());
+    expect(spy.gainNode.connect).toHaveBeenCalledWith(system.master.getInputNode());
 
     spy.restore();
     video.destroy();

@@ -224,7 +224,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     this._currentPath = strategy;
 
     const command = backend.activeDrawCommand;
-    const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(sprite);
+    const nodeIndex = command !== null ? command.nodeIndex : backend.pushTransform(sprite);
 
     if (nodeIndex > this._maxNodeIndex) {
       this._maxNodeIndex = nodeIndex;
@@ -391,8 +391,8 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
     // Staged unconditionally per flush (cheap vec4) so a viewport change without
     // a group change still refreshes the snap projection on both path shaders.
-    backend._stageViewportUniform(this._shaderPathShader);
-    backend._stageViewportUniform(this._geoPathShader);
+    backend.stageViewportUniform(this._shaderPathShader);
+    backend.stageViewportUniform(this._geoPathShader);
 
     if (this._shaderQuadCount > 0) {
       this._flushShaderBatch(backend);
@@ -466,7 +466,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     // recorded (render() poisoned the window if one appeared).
     if (backend._isRetainedCapturing && this._currentTexture !== null) {
       this._recordTextureScratch[0] = this._currentTexture;
-      backend._recordRetainedBatch(
+      backend.recordRetainedBatch(
         this,
         this._geoU32.subarray(0, this._geoQuadCount * geoWordsPerInstance),
         this._geoQuadCount,
@@ -488,8 +488,8 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
   // 32-byte layout puts the node index at word 7 of the 8-word instance - the
   // same position the sprite renderer uses - so scan/rebase mirror it exactly.
 
-  /** @internal See {@link WebGl2RetainedBatchReplayer._scanRetainedNodeIndexRange}. */
-  public _scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void {
+  /** @internal See {@link WebGl2RetainedBatchReplayer.scanRetainedNodeIndexRange}. */
+  public scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void {
     const words = payload.bundle.instanceWords;
     const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
 
@@ -507,8 +507,8 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     }
   }
 
-  /** @internal See {@link WebGl2RetainedBatchReplayer._rebaseRetainedNodeIndices} (rebases to group-local indices). */
-  public _rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void {
+  /** @internal See {@link WebGl2RetainedBatchReplayer.rebaseRetainedNodeIndices} (rebases to group-local indices). */
+  public rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void {
     const words = payload.bundle.instanceWords;
     const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
 
@@ -526,7 +526,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
    * the live `_geoVao` in {@link onConnect}), based at the batch's byte offset.
    * @internal
    */
-  public _configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
+  public configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
     const gl = this.getBackend().context;
     const buffer = payload.bundle.instanceBuffer;
     const vao = payload.vao;
@@ -549,10 +549,10 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
    * `u_projection` from the live view, `u_group` from the live composed group
    * matrix, the single base texture on unit 0) and only DATA cached (instance
    * bytes via the per-batch VAO, group-owned transform texture on the shared
-   * transform unit). Mirrors {@link WebGl2SpriteRenderer._replayRetainedBatch}.
+   * transform unit). Mirrors {@link WebGl2SpriteRenderer.replayRetainedBatch}.
    * @internal
    */
-  public _replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
+  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
     const backend = this.getBackendOrNull();
     const vao = payload.vao;
     const transformTexture = payload.bundle.transformTexture;
@@ -612,7 +612,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
       }
     }
 
-    backend._stageViewportUniform(this._geoPathShader);
+    backend.stageViewportUniform(this._geoPathShader);
   }
 
   private _resetBatchState(): void {

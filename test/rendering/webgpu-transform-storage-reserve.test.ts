@@ -77,7 +77,7 @@ const material = (): MaterialKey => ({
 class TestDrawable extends Drawable {
   public constructor() {
     super();
-    this._setLocalBounds(0, 0, 8, 8);
+    this.setLocalBounds(0, 0, 8, 8);
   }
 }
 

@@ -251,7 +251,7 @@ export class RepeatingSprite extends Drawable {
 
   /**
    * Recomputed lazily on read from the current logical size, so it writes
-   * `_localBounds` directly instead of going through `_setLocalBounds`: an
+   * `_localBounds` directly instead of going through `setLocalBounds`: an
    * invalidating write inside a getter would re-dirty the node on every read.
    * The size setters own the invalidation for this node.
    */

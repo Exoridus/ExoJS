@@ -303,7 +303,7 @@ export class RetainedContainer extends Container {
 
     for (let index = 0; index < this._children.length; index++) {
       // In-bounds: index < length.
-      this._children[index]!._collect(builder, index);
+      this._children[index]!.collect(builder, index);
     }
 
     if (__DEV__) {
@@ -436,12 +436,12 @@ export class RetainedContainer extends Container {
   private readonly _escapedBranches = new Set<RenderNode>();
 
   /** @internal */
-  public override _collect(builder: RenderPlanBuilder, seq?: number): void {
+  public override collect(builder: RenderPlanBuilder, seq?: number): void {
     // Re-evaluate branch escapes BEFORE culling/bounds run, so an escape
     // flip never mixes spaces within one frame. Skipped entirely
     // while the subtree revisions are unchanged.
     this._refreshBranchEscapes();
-    super._collect(builder, seq);
+    super.collect(builder, seq);
   }
 
   /**

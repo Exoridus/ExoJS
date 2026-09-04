@@ -463,10 +463,10 @@ export class AudioAnalyser {
       return msNode;
     }
 
-    // AudioBus - has _getOutputNode (checked first since bus nodes also have connect/disconnect)
-    const asBus = source as Partial<{ _getOutputNode: () => AudioNode | null }>;
-    if (typeof asBus._getOutputNode === 'function') {
-      return asBus._getOutputNode();
+    // AudioBus - has getOutputNode (checked first since bus nodes also have connect/disconnect)
+    const asBus = source as Partial<{ getOutputNode: () => AudioNode | null }>;
+    if (typeof asBus.getOutputNode === 'function') {
+      return asBus.getOutputNode();
     }
 
     // Voice - tap its output node

@@ -11,13 +11,13 @@ class TestDrawable extends Drawable {
     super();
     this._localWidth = w;
     this._localHeight = h;
-    this._setLocalBounds(0, 0, w, h);
+    this.setLocalBounds(0, 0, w, h);
   }
 
   public setLocalSize(w: number, h: number): void {
     this._localWidth = w;
     this._localHeight = h;
-    this._setLocalBounds(0, 0, w, h);
+    this.setLocalBounds(0, 0, w, h);
     this._invalidateBoundsCascade();
   }
 

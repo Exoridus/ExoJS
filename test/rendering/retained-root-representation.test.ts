@@ -23,7 +23,7 @@ import { View } from '#rendering/View';
 class RecordableLeaf extends Drawable {
   public constructor(public readonly id = '') {
     super();
-    this._setLocalBounds(0, 0, 16, 16);
+    this.setLocalBounds(0, 0, 16, 16);
   }
 }
 
@@ -155,7 +155,7 @@ const createRecordingBackend = (): { backend: RenderBackend; events: string[]; r
         activeCaptures.splice(index, 1);
       }
     },
-    _replayRetainedBatch(batch: RetainedBatchInstruction): void {
+    replayRetainedBatch(batch: RetainedBatchInstruction): void {
       flushPending();
       events.push(`replay:${(batch.payload as FakeBatchPayload).ids.join(',')}`);
     },

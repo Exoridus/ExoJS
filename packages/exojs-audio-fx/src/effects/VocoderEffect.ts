@@ -81,12 +81,12 @@ export class VocoderEffect extends WorkletEffect {
 
     // Wire modulator bus output to input 1 of the worklet
     const modulator = this._modulator;
-    const modOutput = modulator._getOutputNode();
+    const modOutput = modulator.getOutputNode();
     if (modOutput && this._workletNode) {
       modOutput.connect(this._workletNode, 0, 1);
     } else {
       modulator.onceSetup(() => {
-        const node = modulator._getOutputNode();
+        const node = modulator.getOutputNode();
         if (node && this._workletNode) {
           node.connect(this._workletNode, 0, 1);
         }

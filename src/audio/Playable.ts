@@ -296,10 +296,10 @@ export interface PlayOptions {
  *
  * Assets are **data descriptors** - they hold the audio data and default
  * playback parameters. The playback machinery lives in the {@link Voice}
- * returned by `_createVoice`; the system is injected at play time, so assets
+ * returned by `createVoice`; the system is injected at play time, so assets
  * never reach for a global.
  *
- * `_createVoice` is a low-level hook meant for asset implementations;
+ * `createVoice` is a low-level hook meant for asset implementations;
  * consumers should call `audioSystem.play(asset)` instead of invoking it
  * directly.
  * @advanced
@@ -313,5 +313,5 @@ export interface Playable {
    * @param options - Per-play overrides.
    * @returns A {@link Voice} handle for the new instance.
    */
-  _createVoice(system: AudioSystem, options: PlayOptions): Voice;
+  createVoice(system: AudioSystem, options: PlayOptions): Voice;
 }
