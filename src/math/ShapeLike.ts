@@ -8,10 +8,9 @@ import type { Collidable } from './collisionTypes';
  * {@link Vector}): a {@link Collidable} that can also be cloned, destroyed and
  * queried for its axis-aligned bounding box.
  *
- * Internal on purpose - no public API accepts one, and two implementers
- * ({@link Vector}, {@link Line}) do not produce a SAT collision response.
- * {@link Collidable} is the public collision vocabulary.
- *
- * @internal
+ * Two implementers ({@link Vector}, {@link Line}) satisfy {@link Collidable}
+ * structurally but produce no SAT collision response, so an API that needs a
+ * resolvable overlap should take {@link Collidable} and check the response it
+ * gets back rather than accepting any `ShapeLike`.
  */
 export interface ShapeLike extends Collidable, Cloneable<ShapeLike>, Destroyable, HasBoundingBox {}

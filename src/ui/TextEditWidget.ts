@@ -67,11 +67,10 @@ const _deleteGranularity = (word: boolean, line: boolean): TextEditGranularity =
 };
 
 /**
- * Shared machinery of the text-editing widgets ({@link TextInput}, and the
- * multi-line field to come): the {@link TextEditingModel}, the platform
- * transport binding, caret blink, selection and caret painting, placeholder
- * rendering, horizontal scroll-to-caret, and the keyboard/pointer editing
- * gestures.
+ * Base class of the text-editing widgets ({@link TextInput},
+ * {@link TextArea}): the editing model, the platform text-input transport,
+ * caret blink, selection and caret painting, placeholder rendering,
+ * scroll-to-caret, and the keyboard/pointer editing gestures.
  *
  * The platform transport is created lazily on first focus and may be `null`
  * - the field then renders and takes focus but rejects edits. Key handling
@@ -80,8 +79,6 @@ const _deleteGranularity = (word: boolean, line: boolean): TextEditGranularity =
  * consumed. The caret blink rides the app's frame signal like a
  * {@link Tooltip}'s show delay - it pauses with the scene and runs no timer
  * while the field is unfocused.
- *
- * @internal
  */
 export abstract class TextEditWidget extends Widget {
   /** Fires whenever the value changed, however it changed. */

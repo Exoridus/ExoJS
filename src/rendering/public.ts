@@ -47,7 +47,7 @@ export {
   WrapModes,
 } from './types';
 export type { ViewFollowOptions, ViewFollowTarget, ViewOptions, ViewShakeOptions } from './View';
-export { View, ViewFlags } from './View';
+export { View } from './View';
 export type { BlurFilterOptions } from '#rendering/filters/BlurFilter';
 export { BlurFilter } from '#rendering/filters/BlurFilter';
 export type { ColorMatrixEntries } from '#rendering/filters/ColorMatrixFilter';
@@ -88,7 +88,7 @@ export type { NineSliceInsets, NineSliceModes, NineSliceOptions } from '#renderi
 export { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 export type { RepeatingSpriteOptions } from '#rendering/sprite/repeatingPlan';
 export { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
-export { Sprite, SpriteFlags } from '#rendering/sprite/Sprite';
+export { Sprite } from '#rendering/sprite/Sprite';
 export type { SpritesheetData, SpritesheetFrame } from '#rendering/sprite/Spritesheet';
 export { Spritesheet } from '#rendering/sprite/Spritesheet';
 export { AbstractText } from '#rendering/text/AbstractText';

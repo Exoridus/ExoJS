@@ -171,6 +171,7 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
     return this._step / this._steps.length;
   }
 
+  /** @internal */
   public override _update(sample: ActionSample): void {
     this._triggered = false;
 

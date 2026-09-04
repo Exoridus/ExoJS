@@ -6,6 +6,7 @@ import {
   type SceneTransitionPhaseRequirements,
 } from '#core/scene/PhasedSceneTransition';
 import { Matrix } from '#math/Matrix';
+import type { Geometry } from '#rendering/geometry/Geometry';
 import { QuadGeometry } from '#rendering/geometry/QuadGeometry';
 
 /** Options for {@link FadeSceneTransition}. */
@@ -16,7 +17,7 @@ export interface FadeSceneTransitionOptions extends PhasedSceneTransitionOptions
 
 /** Per-session scratch state for {@link FadeSceneTransition} - never shared with the (immutable, reusable-across-navigations) definition instance. */
 interface FadePhaseState {
-  readonly quad: QuadGeometry;
+  readonly quad: Geometry;
   readonly transform: Matrix;
   readonly tint: Color;
 }

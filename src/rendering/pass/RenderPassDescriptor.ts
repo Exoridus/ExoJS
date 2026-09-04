@@ -8,14 +8,13 @@ import type { View } from '#rendering/View';
  * WebGL2 stencil is ambient per-target GL state, so this flag is largely
  * informational there; the WebGPU backend uses it to
  * decide whether a pass descriptor needs a `depthStencilAttachment`.
- * @internal
  */
 export enum StencilAttachmentMode {
   None = 0,
   Enabled = 1,
 }
 
-/** Load behaviour for a pass's colour attachment. @internal */
+/** Load behaviour for a pass's colour attachment. */
 export type RenderPassLoad = 'clear' | 'load';
 
 /**
@@ -25,7 +24,6 @@ export type RenderPassLoad = 'clear' | 'load';
  *
  * WebGL2 maps this onto ambient framebuffer / viewport / scissor / stencil
  * state; WebGPU maps it onto a `GPURenderPassEncoder`.
- * @internal
  */
 export interface RenderPassDescriptor {
   /** Target to draw into. `null` selects the backend's root (canvas) target. */

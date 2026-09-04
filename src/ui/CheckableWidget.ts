@@ -21,15 +21,13 @@ export interface CheckableOptions {
 }
 
 /**
- * Shared machinery of the two-state controls: an interaction state machine like
- * {@link Button}'s, an orthogonal `checked` value, keyboard activation and an
- * optional label.
+ * Base class of the two-state controls ({@link Checkbox}, {@link Toggle}): an
+ * interaction state machine like {@link Button}'s, an orthogonal `checked`
+ * value, keyboard activation and an optional label.
  *
  * The widget sizes itself to its control plus its label. Calling
  * {@link Widget.setSize} takes that over; the control keeps its own extent and
  * the label its measured one.
- *
- * @internal
  */
 export abstract class CheckableWidget extends Widget {
   /** Fires whenever {@link checked} changes, however it changed. */

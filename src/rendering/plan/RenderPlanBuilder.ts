@@ -148,7 +148,16 @@ const appendScopeEntry = (scope: MutableGroupScope, entry: ScopeEntry): void => 
   }
 };
 
-/** @internal */
+/**
+ * Collector a scene hands its draw submissions to while a render plan is being
+ * built. A custom {@link RenderNode} receives one in `_collectContent` and
+ * submits through {@link emitDraw} (for its own drawables) and
+ * {@link emitNode} (for children it owns); the builder decides ordering,
+ * culling and batching from there.
+ *
+ * Instances are pooled and reused across frames. Never retain one past the
+ * `_collectContent` call it arrived in.
+ */
 export class RenderPlanBuilder {
   /**
    * Free list of released builders, held with an explicit logical length: the
@@ -316,6 +325,7 @@ export class RenderPlanBuilder {
     return this._captureCullActive ? this._captureCullRect : this._viewUnobserved().getBounds();
   }
 
+  /** @internal */
   public build(root: RenderNode, backend: RenderBackend): RenderPlan {
     this.backend = backend;
     this._view = null;

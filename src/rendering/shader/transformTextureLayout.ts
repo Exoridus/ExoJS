@@ -206,7 +206,6 @@ export const tintTextureRect = (
  * logical `nodeIndex` against the store as it currently exists. The store's
  * dimensions and packing are not part of that promise and have changed before -
  * a row index was the texture's y coordinate until it stopped fitting.
- * @internal
  */
 export const TRANSFORM_TEXTURE_GLSL_INCLUDE = '// #exo-include transform-texture';
 

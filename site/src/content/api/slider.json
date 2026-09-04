@@ -3523,7 +3523,7 @@
         },
         {
           "name": "fillNode",
-          "signature": "fillNode: BackgroundNode | null",
+          "signature": "fillNode: UIBackgroundNode | null",
           "signatureTokens": [
             {
               "text": "fillNode",
@@ -3534,7 +3534,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "BackgroundNode",
+              "text": "UIBackgroundNode",
               "kind": "type"
             },
             {
@@ -4163,7 +4163,7 @@
         },
         {
           "name": "thumbNode",
-          "signature": "thumbNode: BackgroundNode | null",
+          "signature": "thumbNode: UIBackgroundNode | null",
           "signatureTokens": [
             {
               "text": "thumbNode",
@@ -4174,7 +4174,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "BackgroundNode",
+              "text": "UIBackgroundNode",
               "kind": "type"
             },
             {
@@ -4213,7 +4213,7 @@
         },
         {
           "name": "trackNode",
-          "signature": "trackNode: BackgroundNode | null",
+          "signature": "trackNode: UIBackgroundNode | null",
           "signatureTokens": [
             {
               "text": "trackNode",
@@ -4224,7 +4224,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "BackgroundNode",
+              "text": "UIBackgroundNode",
               "kind": "type"
             },
             {

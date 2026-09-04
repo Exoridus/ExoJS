@@ -3404,7 +3404,7 @@
         },
         {
           "name": "backgroundNode",
-          "signature": "backgroundNode: BackgroundNode | null",
+          "signature": "backgroundNode: UIBackgroundNode | null",
           "signatureTokens": [
             {
               "text": "backgroundNode",
@@ -3415,7 +3415,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "BackgroundNode",
+              "text": "UIBackgroundNode",
               "kind": "type"
             },
             {

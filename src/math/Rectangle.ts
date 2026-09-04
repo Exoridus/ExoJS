@@ -19,7 +19,7 @@ import { Interval } from './Interval';
 import type { Line } from './Line';
 import type { Matrix } from './Matrix';
 import { ObservableSize } from './ObservableSize';
-import { ObservableVector, type ObservableVectorOwner } from './ObservableVector';
+import { ObservableVector } from './ObservableVector';
 import type { Polygon } from './Polygon';
 import type { RectangleLike } from './RectangleLike';
 import type { ShapeLike } from './ShapeLike';
@@ -86,7 +86,7 @@ export interface ReadonlyRectangle extends Collidable {
  * See {@link ReadonlyRectangle} for the read-only view engine APIs hand out
  * when they return a live internal rectangle.
  */
-export class Rectangle implements ShapeLike, ObservableVectorOwner, ReadonlyRectangle {
+export class Rectangle implements ShapeLike, ReadonlyRectangle {
   public readonly collisionType: CollisionType = CollisionType.Rectangle;
 
   private readonly _position: ObservableVector;

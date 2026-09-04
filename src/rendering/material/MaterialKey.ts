@@ -122,7 +122,6 @@ export const deriveBindKey = (
 };
 
 /**
- * @internal
  *
  * Stable material identity used for safe draw-command grouping and
  * eventual instanced batching.

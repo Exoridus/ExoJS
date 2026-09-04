@@ -15,7 +15,7 @@ export const readBrowserNetworkHint = (): NetworkHint => {
   return navigator.onLine ? 'online' : 'offline';
 };
 
-/** A hint source that also owns the listeners it installed. @internal */
+/** A hint source that also owns the listeners it installed. */
 export interface OwnedNetworkHintSource extends NetworkHintSource {
   /** Removes the window listeners this source installed. */
   destroy(): void;

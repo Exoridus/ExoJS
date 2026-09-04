@@ -5,7 +5,7 @@ import type { UIBackground, UIBackgroundInput, UIBackgroundOptions, UIFillPatch 
 import { applyUIFillPatch, backgroundOptionsFrom, createUIBackground } from './theme';
 import { UIClipBox } from './UIClipBox';
 import { Widget } from './Widget';
-import { WidgetBackground } from './WidgetBackground';
+import { type UIBackgroundNode, WidgetBackground } from './WidgetBackground';
 
 /**
  * How the bar follows the value: `'scale'` paints the background at the value's
@@ -110,12 +110,12 @@ export class ProgressBar extends Widget {
   }
 
   /** The node painting the groove, or `null` while it paints nothing. */
-  public get trackNode(): WidgetBackground['node'] {
+  public get trackNode(): UIBackgroundNode | null {
     return this._track.node;
   }
 
   /** The node painting the bar, or `null` while it paints nothing. */
-  public get barNode(): WidgetBackground['node'] {
+  public get barNode(): UIBackgroundNode | null {
     return this._bar.node;
   }
 

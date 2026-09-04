@@ -1,7 +1,7 @@
 import type { CheckableOptions } from './CheckableWidget';
 import { CheckableWidget } from './CheckableWidget';
 import type { UIThemeRole } from './theme';
-import { WidgetBackground } from './WidgetBackground';
+import { type UIBackgroundNode, WidgetBackground } from './WidgetBackground';
 
 /** Options for {@link Checkbox}. */
 export interface CheckboxOptions extends CheckableOptions {
@@ -46,12 +46,12 @@ export class Checkbox extends CheckableWidget {
   }
 
   /** The node painting the box, or `null` while it paints nothing. */
-  public get boxNode(): WidgetBackground['node'] {
+  public get boxNode(): UIBackgroundNode | null {
     return this._box.node;
   }
 
   /** The node painting the tick, or `null` while the box is unticked. */
-  public get markNode(): WidgetBackground['node'] {
+  public get markNode(): UIBackgroundNode | null {
     return this._mark.node;
   }
 

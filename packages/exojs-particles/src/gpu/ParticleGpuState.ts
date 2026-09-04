@@ -469,6 +469,7 @@ export class ParticleGpuState {
    * into other slots while one is in flight. A device that goes away mid-map
    * resolves to nothing rather than throwing: the deaths are lost with the
    * simulation that produced them.
+   * @internal
    */
   public readDeaths(receive: (records: readonly ParticleDeathRecord[]) => void): Promise<void> {
     const batch = this._stagedDeaths.shift();

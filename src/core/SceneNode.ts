@@ -17,7 +17,7 @@ import { Flags } from '#math/Flags';
 import { Interval } from '#math/Interval';
 import type { Line } from '#math/Line';
 import { Matrix } from '#math/Matrix';
-import { ObservableVector, type ObservableVectorOwner } from '#math/ObservableVector';
+import { ObservableVector } from '#math/ObservableVector';
 import { Polygon } from '#math/Polygon';
 import type { ReadonlyRectangle } from '#math/Rectangle';
 import { Rectangle } from '#math/Rectangle';
@@ -177,7 +177,7 @@ const NO_PARENT_VERSION = 0;
  * Subclasses: {@link Container} (carries children), {@link RenderNode}
  * (carries draw payloads).
  */
-export class SceneNode implements Collidable, ObservableVectorOwner {
+export class SceneNode implements Collidable {
   public readonly collisionType: CollisionType = CollisionType.SceneNode;
 
   public readonly flags: Flags<SceneNodeTransformFlags> = new Flags<SceneNodeTransformFlags>(

@@ -24,7 +24,6 @@ interface ScissorRect {
 /**
  * The active GPU render pass owned by the coordinator: the command encoder, the
  * open pass encoder, and the target/view/stencil state it was opened for.
- * @internal
  */
 export interface WebGpuActiveRenderPass {
   readonly encoder: GPUCommandEncoder;
@@ -112,7 +111,6 @@ export interface WebGpuPassBackend {
  * shared across the multiple submits of a clip scope (via `stencilLoadOp:'load'`)
  * plus a position-only stencil-write pipeline. Renderers select stencil-enabled
  * content pipelines while {@link stencilActive} is true.
- * @internal
  */
 export class WebGpuPassCoordinator implements RenderPassCoordinator {
   private readonly _backend: WebGpuPassBackend;
@@ -147,6 +145,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
    */
   public gpuTimer: WebGpuTimestampSink | null = null;
 
+  /** @internal */
   public constructor(backend: WebGpuPassBackend) {
     this._backend = backend;
   }
@@ -163,7 +162,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     return this._active !== null;
   }
 
-  /** The open GPU pass, or `null` when none is open. @internal */
+  /** The open GPU pass, or `null` when none is open. */
   public get activePass(): WebGpuActiveRenderPass | null {
     return this._active;
   }
@@ -180,7 +179,6 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
    * managed texture content) need only "does this pass hold any draw" - never
    * "whose". Every "is it mine" question is answered locally, by comparing
    * against {@link activePass} by identity.
-   * @internal
    */
   public get passHasDraws(): boolean {
     return this._passHasDraws;
@@ -189,7 +187,6 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   /**
    * Record that a draw was encoded into the open pass. Called by every renderer
    * at the site that bumps `stats.drawCalls`. A no-op with no pass open.
-   * @internal
    */
   public markPassDraws(): void {
     if (this._active !== null) {
@@ -201,7 +198,6 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
    * Whether a geometric stencil clip is currently in effect on the active
    * target. Renderers read this to select a stencil-enabled content pipeline
    * (matching the depth/stencil attachment {@link acquirePass} adds).
-   * @internal
    */
   public get stencilActive(): boolean {
     return this._stencilWriteInProgress || this._activeTargetDepth() > 0;

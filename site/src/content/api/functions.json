@@ -3733,7 +3733,7 @@
         },
         {
           "name": "onAudioContextReady",
-          "signature": "onAudioContextReady: AudioContextReadySignal",
+          "signature": "onAudioContextReady: Signal<[AudioContext]>",
           "signatureTokens": [
             {
               "text": "onAudioContextReady",
@@ -3744,8 +3744,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "AudioContextReadySignal",
+              "text": "Signal",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioContext",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],

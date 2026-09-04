@@ -21,8 +21,6 @@ import type { RenderStats } from './RenderStats';
  *
  * One accountant per backend instance (never module-global) so that multiple
  * concurrent {@link Application}s keep independent tallies.
- *
- * @internal
  */
 export class GpuResourceAccountant {
   private readonly _stats: RenderStats;

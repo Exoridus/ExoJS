@@ -1,0 +1,87 @@
+{
+  "title": "UIBackgroundNode",
+  "description": "The node a widget's painted surface currently uses: a Graphics for a vector fill, a NineSliceSprite or RepeatingSprite for a texture, an AnimatedSprite for a clip. Widgets expose theirs so a caller can reach the live node for effects or measurements; the widget owns it and swaps it whenever the skin's background kind changes.",
+  "symbol": "UIBackgroundNode",
+  "kind": "type",
+  "subsystem": "ui",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The node a widget's painted surface currently uses: a Graphics for a vector fill, a NineSliceSprite or RepeatingSprite for a texture, an AnimatedSprite for a clip. Widgets expose theirs so a caller can reach the live node for effects or measurements; the widget owns it and swaps it whenever the skin's background kind changes."
+      ],
+      "importLine": "import { UIBackgroundNode } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "UIBackgroundNode",
+          "signature": "AnimatedSprite | Graphics | NineSliceSprite | RepeatingSprite",
+          "signatureTokens": [
+            {
+              "text": "AnimatedSprite",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Graphics",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NineSliceSprite",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RepeatingSprite",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/ui/WidgetBackground.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/WidgetBackground.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/ui/WidgetBackground.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/WidgetBackground.ts"
+}

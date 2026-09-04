@@ -16,8 +16,6 @@ declare const pointerChannelBrand: unique symbol;
  *
  * User code reads channel constants from the {@link Pointer} namespace
  * (`Pointer.X`, `Pointer.Active`, `Pointer.Slot1X`, ...).
- *
- * @internal
  */
 export type PointerChannel = number & { readonly [pointerChannelBrand]: void };
 

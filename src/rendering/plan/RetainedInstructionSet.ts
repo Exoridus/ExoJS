@@ -27,7 +27,6 @@ export const enum RetainedInstructionKind {
  * generation counter - bumped whenever the backend recreates or destroys the
  * bundle's resources (device restore, growth reallocation, destroy) - to
  * reject instruction sets that reference stale GPU state.
- * @internal
  */
 export interface RetainedGroupBundle {
   /** Monotonic resource generation; a mismatch invalidates referencing sets. */
@@ -178,6 +177,7 @@ export class RetainedInstructionSet {
    */
   public ownedBundle: RetainedGroupBundle | null = null;
 
+  /** @internal */
   public get instructions(): readonly RetainedInstruction[] {
     return this._instructions;
   }
@@ -203,6 +203,7 @@ export class RetainedInstructionSet {
    * the backend at flush time; group markers by the plan player; replayed
    * inner-set instructions verbatim by the player. Ignored when no
    * recording is active (a backend flush outside any capture window).
+   * @internal
    */
   public append(instruction: RetainedInstruction): void {
     if (!this._recording) {

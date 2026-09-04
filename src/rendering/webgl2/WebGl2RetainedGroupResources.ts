@@ -28,7 +28,6 @@ const initialTransformRowCapacity = 16;
  * scans every recorded batch for the smallest/largest shared-transform row it
  * references, then rebases all instance node indices to `min` so the cached
  * bytes address the group-owned transform store at rows `0..max-min`.
- * @internal
  */
 export interface WebGl2RetainedNodeIndexRange {
   min: number;
@@ -44,7 +43,6 @@ export interface WebGl2RetainedNodeIndexRange {
  * VERSION - never a node revision - so the fragment stays clean and only
  * `_validateRetainedInstructionSet` can force the recapture. Same-size
  * content updates stay replayable (textures are re-bound live at replay).
- * @internal
  */
 export interface WebGl2RecordedTextureState {
   readonly width: number;
@@ -62,7 +60,6 @@ export interface WebGl2RecordedTextureState {
  * `null`) for the self-contained instance-stream renderers (sprite / nine-
  * slice / repeating), whose batch VAO carries no index buffer and draws with
  * `drawArraysInstanced` - the existing path, unchanged.
- * @internal
  */
 export interface WebGl2RetainedGeometryRef {
   readonly vertexBuffer: WebGl2RenderBuffer;
@@ -79,7 +76,6 @@ export interface WebGl2RetainedGeometryRef {
  * store the generic bundle machinery never touches, so the renderer attaches
  * it here and the bundle only has to release it on destroy. Mirrors the WebGPU
  * bundle's `rendererReplayState` slot.
- * @internal
  */
 export interface WebGl2RetainedRendererReplayState {
   /** Release any GPU resources this state owns (called from the bundle). */
@@ -92,7 +88,6 @@ export interface WebGl2RetainedRendererReplayState {
  * everything the owning renderer needs to re-issue the batch from group-owned
  * resources with all STATE (pipeline/blend, projection/group uniforms,
  * texture bindings) resolved live at replay time.
- * @internal
  */
 export interface WebGl2RetainedBatchPayload {
   /** The group bundle whose instance buffer / transform store this batch references. */
@@ -139,7 +134,6 @@ export interface WebGl2RetainedBatchPayload {
  * bundle stores raw instance bytes; only the renderer that packed them knows
  * the layout (where the node index lives, which attributes the VAO needs), so
  * the backend delegates the layout-aware steps here per batch.
- * @internal
  */
 export interface WebGl2RetainedBatchReplayer {
   /** Widen `range` to cover every shared-transform row this batch's instances reference. */
@@ -172,7 +166,6 @@ export interface WebGl2RetainedBatchReplayer {
  * GPU memory is booked with the backend's {@link GpuResourceAccountant}: the
  * instance buffer books through {@link WebGl2RenderBuffer}'s own accounting,
  * the transform texture through the backend's managed-texture sync.
- * @internal
  */
 export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   private _generation = 1;
@@ -424,7 +417,10 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
     this._instanceBuffer.upload(floats, wordOffset * Float32Array.BYTES_PER_ELEMENT);
   }
 
-  /** Attach the GL context + accountant the device resources are created against. */
+  /**
+   * Attach the GL context + accountant the device resources are created against.
+   * @internal
+   */
   public _connectDevice(gl: WebGL2RenderingContext, accountant: GpuResourceAccountant): void {
     this._gl = gl;
     this._accountant = accountant;

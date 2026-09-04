@@ -178,7 +178,7 @@ const isSelfOrDescendant = (node: RenderNode, root: RenderNode): boolean => {
  * Constructed automatically by {@link Application}; you do not instantiate
  * this class yourself.
  */
-export class InteractionSystem implements InteractionHooks {
+export class InteractionSystem {
   private readonly _app: Application;
 
   // Persistent spatial index (dynamic AABB tree) - null when no interactive

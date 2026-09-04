@@ -3,7 +3,7 @@ import { Color } from '#core/Color';
 import type { UIBackground, UIBackgroundInput, UIBackgroundOptions, UIFillPatch } from './theme';
 import { applyUIFillPatch, backgroundOptionsFrom, createUIBackground } from './theme';
 import { Widget } from './Widget';
-import { WidgetBackground } from './WidgetBackground';
+import { type UIBackgroundNode, WidgetBackground } from './WidgetBackground';
 
 export interface PanelOptions {
   width?: number;
@@ -56,7 +56,7 @@ export class Panel extends Widget {
   }
 
   /** The node painting the background, or `null` while it paints nothing. */
-  public get backgroundNode(): WidgetBackground['node'] {
+  public get backgroundNode(): UIBackgroundNode | null {
     return this._surface.node;
   }
 
