@@ -554,4 +554,38 @@ void main() {
       backend.destroy();
     }
   });
+  test('a fragment-only GLSL ShaderSource is enough for a sprite material', async () => {
+    const backend = await createBackend();
+    const texture = createSplitTexture();
+    const material = new SpriteMaterial({
+      shader: new ShaderSource({
+        glsl: {
+          fragment: `#version 300 es
+precision mediump float;
+in vec2 v_texcoord;
+out vec4 fragColor;
+void main() {
+  fragColor = vec4(sampleBase(v_textureSlot, v_texcoord).rgb, 1.0);
+}`,
+        },
+      }),
+    });
+    const group = new Container();
+    const sprite = new Sprite(texture);
+
+    try {
+      material.sampler = { scaleMode: ScaleModes.Nearest, wrapMode: WrapModes.ClampToEdge };
+      sprite.material = material;
+      sprite.setPosition(16, 16).setScale(16, 16);
+      group.addChild(sprite);
+
+      render(backend, group);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [255, 0, 0, 255]);
+    } finally {
+      group.destroy();
+      material.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
 });

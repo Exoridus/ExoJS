@@ -157,7 +157,7 @@ describe.each(pairs)('$name shader pair', ({ source }) => {
   });
 
   test('declares the same fullscreen-quad attributes on both sides', () => {
-    const glslAttributes = glslStageVariables(source.glsl!.vertex, 'in');
+    const glslAttributes = glslStageVariables(source.glsl!.vertex ?? '', 'in');
     const wgslAttributes = wgslEntryPoint(source.wgsl!, 'vertex')!.parameters;
 
     expect(glslAttributes.map(a => a.name)).toEqual(['aPosition', 'aUv']);

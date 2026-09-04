@@ -1258,6 +1258,10 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       throw new Error('Mesh material shader has no `glsl` source; cannot render through the WebGL2 backend.');
     }
 
+    if (glsl.vertex === null) {
+      throw new Error('Mesh material shader has no GLSL vertex stage; only sprite materials and shader filters may omit it.');
+    }
+
     const shader = new Shader(glsl.vertex, glsl.fragment);
     shader.connect(createWebGl2ShaderProgram(gl));
     // Force first finalize so getUniform()/uniforms.has() are usable below.

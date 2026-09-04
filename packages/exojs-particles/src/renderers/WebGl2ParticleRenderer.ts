@@ -336,6 +336,10 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
 
     assertVertexGeometryCompatible(layout, meshGeometry, mode.instanced, mode.constructor.name);
 
+    if (glsl.vertex === null) {
+      throw new Error('Particle render mode shader has no GLSL vertex stage; particle materials need both stages.');
+    }
+
     const shader = new Shader(glsl.vertex, glsl.fragment);
 
     shader.connect(createWebGl2ShaderProgram(gl));
