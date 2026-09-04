@@ -121,6 +121,7 @@ export class WheelJoint extends Joint {
     this.upperTranslation = options.upperTranslation ?? 0;
   }
 
+  /** @internal */
   public override _prepare(h: number): void {
     const bodyA = this.bodyA;
     const bodyB = this.bodyB;
@@ -202,6 +203,7 @@ export class WheelJoint extends Joint {
     }
   }
 
+  /** @internal */
   public override _warmStart(): void {
     if (!this._active) {
       return;
@@ -218,6 +220,7 @@ export class WheelJoint extends Joint {
     this._applyPerp(this._perpImpulse);
   }
 
+  /** @internal */
   public override _solve(useBias: boolean): void {
     if (!this._active) {
       return;

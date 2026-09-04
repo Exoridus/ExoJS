@@ -111,6 +111,7 @@ export class PrismaticJoint extends Joint {
     this.upperTranslation = options.upperTranslation ?? 0;
   }
 
+  /** @internal */
   public override _prepare(h: number): void {
     const bodyA = this.bodyA;
     const bodyB = this.bodyB;
@@ -186,6 +187,7 @@ export class PrismaticJoint extends Joint {
     }
   }
 
+  /** @internal */
   public override _warmStart(): void {
     if (!this._active) {
       return;
@@ -196,6 +198,7 @@ export class PrismaticJoint extends Joint {
     this._applyAxial(axial);
   }
 
+  /** @internal */
   public override _solve(useBias: boolean): void {
     if (!this._active) {
       return;

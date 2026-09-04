@@ -917,10 +917,12 @@ export class PhysicsWorld implements BodyOwner {
 
   // ── BodyOwner ──────────────────────────────────────────────────────────
 
+  /** @internal */
   public _allocateColliderId(): number {
     return this._nextColliderId++;
   }
 
+  /** @internal */
   public _registerCollider(collider: Collider): void {
     this._defer(() => {
       if (collider.destroyed) {

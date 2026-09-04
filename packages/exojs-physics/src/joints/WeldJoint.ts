@@ -106,6 +106,7 @@ export class WeldJoint extends Joint {
     this.dampingRatio = options.dampingRatio ?? 1;
   }
 
+  /** @internal */
   public override _prepare(h: number): void {
     const bodyA = this.bodyA;
     const bodyB = this.bodyB;
@@ -153,6 +154,7 @@ export class WeldJoint extends Joint {
     computeSoftFactors(this.angularHertz, this.dampingRatio, h, this._angular);
   }
 
+  /** @internal */
   public override _warmStart(): void {
     if (!this._active) {
       return;
@@ -166,6 +168,7 @@ export class WeldJoint extends Joint {
     this._applyLinearImpulse(this._impulseX, this._impulseY);
   }
 
+  /** @internal */
   public override _solve(useBias: boolean): void {
     if (!this._active) {
       return;

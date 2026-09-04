@@ -6,10 +6,10 @@
   "subsystem": "physics",
   "importPath": "@codexo/exojs-physics",
   "tier": "stable",
-  "memberCount": 42,
+  "memberCount": 40,
   "counts": {
     "constructors": 1,
-    "methods": 9,
+    "methods": 7,
     "properties": 32,
     "events": 0
   },
@@ -84,82 +84,6 @@
       "id": "methods",
       "title": "Methods",
       "members": [
-        {
-          "name": "_markDestroyed",
-          "signature": "_markDestroyed(): void",
-          "signatureTokens": [
-            {
-              "text": "_markDestroyed",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": "Internal: mark destroyed (called by the world)."
-        },
-        {
-          "name": "_removeCollider",
-          "signature": "_removeCollider(collider: Collider): void",
-          "signatureTokens": [
-            {
-              "text": "_removeCollider",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "collider",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Collider",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "collider",
-              "type": "Collider",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
-          "description": "Internal: detach a collider (called by the world during destruction)."
-        },
         {
           "name": "addCollider",
           "signature": "addCollider(collider: Collider | ColliderOptions): Collider",
