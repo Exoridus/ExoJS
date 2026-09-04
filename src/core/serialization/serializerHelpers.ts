@@ -172,6 +172,7 @@ export const deserializeStyleOptions = (data: unknown): TextStyleOptions | undef
 
 const OVERFLOWS = ['visible', 'clip', 'ellipsis'] as const satisfies ReadonlyArray<NonNullable<LayoutOptions['overflow']>>;
 const DIRECTIONS = ['ltr', 'rtl'] as const satisfies ReadonlyArray<NonNullable<LayoutOptions['direction']>>;
+const SHAPINGS = ['auto', 'simple', 'browser'] as const satisfies ReadonlyArray<NonNullable<LayoutOptions['shaping']>>;
 const WHITE_SPACES = ['normal', 'pre', 'pre-line'] as const satisfies ReadonlyArray<NonNullable<LayoutOptions['whiteSpace']>>;
 
 /**
@@ -192,6 +193,7 @@ const LAYOUT_READERS: {
   letterSpacing: readNumber,
   direction: (source, key) => readEnum(source, key, DIRECTIONS),
   locale: readString,
+  shaping: (source, key) => readEnum(source, key, SHAPINGS),
   breakWords: readBoolean,
   whiteSpace: (source, key) => readEnum(source, key, WHITE_SPACES),
 };

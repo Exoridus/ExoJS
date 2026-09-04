@@ -1,5 +1,7 @@
 import type { LayoutOptions } from './LayoutOptions';
-import { graphemes, reverseGraphemes, textRuns } from './segmentation';
+import { graphemes, isTrivialText, reverseGraphemes, textRuns } from './segmentation';
+import type { LineShaper } from './shaping';
+import { resolveShaping } from './shaping';
 import type { GlyphInfo, GlyphPlacement, GlyphProvider, TextLayoutResult, TextLayoutStyle, TextLineMetrics, TextPageQuads } from './types';
 
 interface LinePlacement {
@@ -35,15 +37,21 @@ export const emptyTextLayout = (): TextLayoutResult => ({
  * glyph and are never split by wrapping or by the ellipsis. `locale` selects
  * the segmentation locale.
  *
- * `direction: 'rtl'` reverses each line's clusters visually once wrapping is
- * done, so uniformly right-to-left text reads correctly. Full bidi and
- * contextual shaping are out of scope here.
+ * Two representations exist and `shaping` selects between them. On the simple
+ * path each cluster is one glyph from the shared cache, and `direction: 'rtl'`
+ * reverses a line's clusters visually - correct for uniformly right-to-left
+ * text, but neither bidi nor contextual shaping. On the browser-shaped path a
+ * `shaper` receives each laid-out line whole and the browser resolves bidi
+ * order and contextual forms; the line is then one placement, so `justify`
+ * cannot stretch it and `letterSpacing` is applied inside the shaping rather
+ * than between placements. Without a `shaper` the simple path is used
+ * regardless of `shaping`.
  *
  * Returns the placements alongside both extents the callers need - see
  * {@link TextLayoutResult} for why the advance and the ink are different
  * numbers. Text that places no glyph yields zeroes for both.
  */
-export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutOptions, provider: GlyphProvider): TextLayoutResult => {
+export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutOptions, provider: GlyphProvider, shaper?: LineShaper): TextLayoutResult => {
   if (text.length === 0) return emptyTextLayout();
 
   const { fontSize, lineHeight, leading, align } = style;
@@ -56,6 +64,10 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
   const breakWords = layout.breakWords ?? false;
   const whiteSpace = layout.whiteSpace ?? 'pre-line';
   const locale = layout.locale;
+  const shaped = shaper !== undefined && resolveShaping(text, layout) === 'browser';
+  // A shaped line carries its spacing inside the raster the browser produced,
+  // so adding it between placements again would double it.
+  const glyphSpacing = shaped ? 0 : letterSpacing;
 
   // ── Whitespace preprocessing ──────────────────────────────────────────────
   const preprocessed = _applyWhiteSpace(text, whiteSpace);
@@ -67,6 +79,8 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
   for (const hard of hardLines) {
     if (maxWidth === undefined) {
       allLines.push(hard);
+    } else if (shaped) {
+      allLines.push(..._wrapShapedLine(hard, fontSize, shaper, maxWidth, breakWords, locale));
     } else {
       allLines.push(..._wrapLine(hard, fontSize, provider, maxWidth, letterSpacing, breakWords, locale));
     }
@@ -83,7 +97,11 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
 
       if (overflow === 'ellipsis' && maxLines > 0) {
         // In-bounds: maxLines > 0 and allLines.length === maxLines.
-        allLines[maxLines - 1] = _ellipsize(allLines[maxLines - 1]!, fontSize, provider, maxWidth, letterSpacing, locale);
+        const last = allLines[maxLines - 1]!;
+
+        allLines[maxLines - 1] = shaped
+          ? _ellipsizeShaped(last, fontSize, shaper, maxWidth, locale)
+          : _ellipsize(last, fontSize, provider, maxWidth, letterSpacing, locale);
       }
     }
   }
@@ -94,38 +112,63 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
 
   for (let lineIndex = 0; lineIndex < allLines.length; lineIndex++) {
     // In-bounds: lineIndex < allLines.length.
-    // RTL reorders each line visually before placement, so the cursor can keep
-    // advancing left-to-right and every downstream step (alignment, justify,
-    // quad building) stays direction-agnostic.
-    const line = rtl ? reverseGraphemes(allLines[lineIndex]!, locale) : allLines[lineIndex]!;
     const lineY = lineIndex * computedLineHeight;
     let cursorX = 0;
     let wordCount = 0;
     let inWord = false;
     const placements: LinePlacement['placements'] = [];
-    let prevCluster: string | null = null;
 
-    for (const cluster of graphemes(line, locale)) {
-      // Kerning adjustment before placing this cluster.
-      if (prevCluster !== null && provider.getKerning !== undefined) {
-        cursorX += provider.getKerning(prevCluster, cluster, fontSize);
+    if (shaped) {
+      // The browser receives the complete line, which is the only way it can
+      // resolve bidi order and the contextual form of a letter from what
+      // surrounds it. An empty line still occupies its box and places nothing.
+      const line = allLines[lineIndex]!;
+
+      if (line.length > 0) {
+        const info = shaper.shapeLine(line, fontSize);
+
+        placements.push({ info, x: 0, y: lineY, cluster: line });
+        cursorX = info.advance;
+        wordCount = 1;
+      }
+    } else {
+      // RTL reorders each line visually before placement, so the cursor can keep
+      // advancing left-to-right and every downstream step (alignment, justify,
+      // quad building) stays direction-agnostic.
+      const line = rtl ? reverseGraphemes(allLines[lineIndex]!, locale) : allLines[lineIndex]!;
+      // Trivial text needs no cluster array at all - one code unit is one
+      // cluster - which keeps the hot path allocating exactly what it did
+      // before segmentation became the layout's unit.
+      const clusters = isTrivialText(line) ? null : graphemes(line, locale);
+      const clusterCount = clusters === null ? line.length : clusters.length;
+      let prevCluster: string | null = null;
+
+      for (let index = 0; index < clusterCount; index++) {
+        const cluster = clusters === null ? line[index]! : clusters[index]!;
+
+        // Kerning adjustment before placing this cluster.
+        if (prevCluster !== null && provider.getKerning !== undefined) {
+          cursorX += provider.getKerning(prevCluster, cluster, fontSize);
+        }
+
+        const info = provider.getGlyph(cluster, fontSize);
+        placements.push({ info, x: cursorX, y: lineY, cluster });
+        cursorX += info.advance + letterSpacing;
+
+        if (cluster === ' ') {
+          inWord = false;
+        } else if (!inWord) {
+          inWord = true;
+          wordCount++;
+        }
+
+        prevCluster = cluster;
       }
 
-      const info = provider.getGlyph(cluster, fontSize);
-      placements.push({ info, x: cursorX, y: lineY, cluster });
-      cursorX += info.advance + letterSpacing;
-
-      if (cluster === ' ') {
-        inWord = false;
-      } else if (!inWord) {
-        inWord = true;
-        wordCount++;
-      }
-
-      prevCluster = cluster;
+      cursorX -= placements.length > 0 ? letterSpacing : 0;
     }
 
-    const lineWidth = cursorX - (placements.length > 0 ? letterSpacing : 0);
+    const lineWidth = cursorX;
     if (lineWidth > maxLineWidth) maxLineWidth = lineWidth;
     linePlacements.push({ placements, width: lineWidth, wordCount });
   }
@@ -184,7 +227,7 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
           width: entry.info.width,
           height: entry.info.height,
           penX: entry.x + offsetX + wordIdx * extraPerGap,
-          penAdvance: entry.info.advance + letterSpacing,
+          penAdvance: entry.info.advance + glyphSpacing,
           page: entry.info.page,
           uvLeft: entry.info.uvLeft,
           uvTop: entry.info.uvTop,
@@ -208,7 +251,7 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
         width: info.width,
         height: info.height,
         penX: x + offsetX,
-        penAdvance: info.advance + letterSpacing,
+        penAdvance: info.advance + glyphSpacing,
         page: info.page,
         uvLeft: info.uvLeft,
         uvTop: info.uvTop,
@@ -344,6 +387,85 @@ const _ellipsize = (
   return clusters.join('') + ELLIPSIS;
 };
 
+/**
+ * The shaped counterpart of {@link _ellipsize}. Every candidate is measured
+ * complete, ellipsis included: for contextual text the width of a prefix plus
+ * the width of the ellipsis is not the width of the two together.
+ */
+const _ellipsizeShaped = (line: string, fontSize: number, shaper: LineShaper, maxWidth: number | undefined, locale: string | undefined): string => {
+  if (maxWidth === undefined) return line + ELLIPSIS;
+
+  const clusters = graphemes(line, locale);
+
+  while (clusters.length > 0 && shaper.measureLine(`${clusters.join('')}${ELLIPSIS}`, fontSize) > maxWidth) {
+    clusters.pop();
+  }
+
+  return clusters.join('') + ELLIPSIS;
+};
+
+/**
+ * Greedy word wrap for browser-shaped text.
+ *
+ * Structurally the same pass as {@link _wrapLine}, with one difference that
+ * matters: a candidate is measured as one contextual string rather than summed
+ * from the widths of its parts, because for contextual text those are not the
+ * same number.
+ */
+const _wrapShapedLine = (line: string, fontSize: number, shaper: LineShaper, maxWidth: number, breakWords: boolean, locale: string | undefined): string[] => {
+  if (line.length === 0) return [''];
+
+  const lines: string[] = [];
+  let current = '';
+  let gap = '';
+
+  for (const run of textRuns(line, locale)) {
+    const text = line.slice(run.start, run.end);
+
+    if (run.whitespace) {
+      gap += text;
+      continue;
+    }
+
+    if (breakWords && shaper.measureLine(text, fontSize) > maxWidth) {
+      if (current.length > 0) lines.push(current);
+
+      gap = '';
+
+      let chunk = '';
+
+      for (const cluster of graphemes(text, locale)) {
+        if (chunk.length > 0 && shaper.measureLine(chunk + cluster, fontSize) > maxWidth) {
+          lines.push(chunk);
+          chunk = cluster;
+        } else {
+          chunk += cluster;
+        }
+      }
+
+      current = chunk;
+      continue;
+    }
+
+    if (current.length === 0) {
+      current = text;
+    } else if (shaper.measureLine(current + gap + text, fontSize) <= maxWidth) {
+      current += gap + text;
+    } else {
+      lines.push(current);
+      current = text;
+    }
+
+    gap = '';
+  }
+
+  if (current.length > 0) current += gap;
+
+  lines.push(current);
+
+  return lines;
+};
+
 const _applyWhiteSpace = (text: string, mode: 'normal' | 'pre' | 'pre-line'): string => {
   if (mode === 'pre') return text;
   if (mode === 'normal') {
@@ -364,6 +486,14 @@ const _applyWhiteSpace = (text: string, mode: 'normal' | 'pre' | 'pre-line'): st
  */
 const _cursorAdvance = (text: string, fontSize: number, provider: GlyphProvider, letterSpacing: number, locale: string | undefined): number => {
   let advance = 0;
+
+  if (isTrivialText(text)) {
+    for (let i = 0; i < text.length; i++) {
+      advance += provider.getGlyph(text[i]!, fontSize).advance + letterSpacing;
+    }
+
+    return advance;
+  }
 
   for (const cluster of graphemes(text, locale)) {
     advance += provider.getGlyph(cluster, fontSize).advance + letterSpacing;

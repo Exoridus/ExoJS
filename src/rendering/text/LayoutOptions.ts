@@ -36,8 +36,29 @@ export interface LayoutOptions {
    */
   locale?: string;
   /**
-   * Break individual words that are wider than `maxWidth` at character boundaries.
-   * Only applies when `maxWidth` is set. Defaults to `false`.
+   * How glyph appearance is resolved. Defaults to `'auto'`.
+   *
+   * - `'auto'` - use the shared-glyph fast path for content that is safe to
+   *   render one cluster at a time, and hand anything else to the browser's
+   *   text engine as a whole line. The classification is deliberately
+   *   conservative and may admit more content to the fast path over time.
+   * - `'simple'` - always use the shared glyph cache. The cheapest path and
+   *   the right one for controlled content; a right-to-left line is reversed
+   *   cluster by cluster rather than reordered, and contextual scripts render
+   *   in their isolated forms.
+   * - `'browser'` - always shape the whole line through the browser, which
+   *   resolves bidi order and contextual forms. Each line becomes one
+   *   node-owned raster instead of a run of shared glyphs, so a line whose
+   *   text changes is rasterized again.
+   *
+   * A browser-shaped line is one glyph as far as the layout is concerned, so
+   * `align: 'justify'` cannot stretch it and caret geometry resolves to line
+   * granularity.
+   */
+  shaping?: 'auto' | 'simple' | 'browser';
+  /**
+   * Break individual words that are wider than `maxWidth` at grapheme-cluster
+   * boundaries. Only applies when `maxWidth` is set. Defaults to `false`.
    */
   breakWords?: boolean;
   /**

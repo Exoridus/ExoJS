@@ -12,10 +12,16 @@
  * Segmentation is delegated to `Intl.Segmenter`. No Unicode tables ship with
  * the engine and no polyfill is loaded.
  *
+ * **Cost.** Consulting the platform segmenter is expensive enough to show up
+ * in a layout pass, so text that provably cannot contain a multi-unit cluster
+ * or a non-obvious word boundary is segmented arithmetically instead - see
+ * {@link isTrivialText}. The two paths agree by construction on the strings
+ * the fast one accepts.
+ *
  * **Degradation.** Where `Intl.Segmenter` is unavailable the helpers fall back
  * to code-point boundaries: surrogate pairs still survive, but combining
- * sequences, ZWJ sequences and flags may be split. {@link hasIntlSegmenter}
- * reports which of the two is in force.
+ * sequences, ZWJ sequences and flags may be split, and word boundaries degrade
+ * to whitespace runs. {@link hasIntlSegmenter} reports which is in force.
  */
 
 /** Whether the platform provides `Intl.Segmenter`, and therefore real grapheme clusters. */
@@ -44,6 +50,58 @@ const _segmenter = (granularity: Granularity, locale: string | undefined): Intl.
   return segmenter;
 };
 
+const TAB = 0x09;
+const SPACE = 0x20;
+/** First combining mark in Unicode; below it no character can extend the one before it. */
+const COMBINING_START = 0x0300;
+
+/**
+ * Whether `text` can be segmented without consulting the platform segmenter.
+ *
+ * True when every code unit sits below the first combining mark and above the
+ * control range, with the tab the one exception layout hands through. Such a
+ * string contains no surrogate (so no astral character), no combining mark, no
+ * joiner and no CR, which between them are the only ways a grapheme cluster
+ * can span more than one unit; its word boundaries are its blank runs. One
+ * unit is therefore one cluster, and a scan answers everything the segmenter
+ * would have.
+ */
+export const isTrivialText = (text: string): boolean => {
+  for (let i = 0; i < text.length; i++) {
+    const unit = text.charCodeAt(i);
+
+    if (unit !== TAB && (unit < SPACE || unit >= COMBINING_START)) return false;
+  }
+
+  return true;
+};
+
+/**
+ * Whether `code` is whitespace a line may break on.
+ *
+ * The no-break space and its relatives are deliberately excluded: they are
+ * whitespace to `String.trim` and word separators to the segmenter, and they
+ * exist precisely to prevent the break that would follow from either.
+ */
+const _isBreakingSpace = (code: number): boolean =>
+  code === SPACE ||
+  code === TAB ||
+  (code >= 0x0a && code <= 0x0d) ||
+  code === 0x1680 ||
+  (code >= 0x2000 && code <= 0x200a) ||
+  code === 0x2028 ||
+  code === 0x2029 ||
+  code === 0x205f ||
+  code === 0x3000;
+
+const _isBlankRun = (text: string): boolean => {
+  for (let i = 0; i < text.length; i++) {
+    if (!_isBreakingSpace(text.charCodeAt(i))) return false;
+  }
+
+  return text.length > 0;
+};
+
 const _isHighSurrogate = (unit: number): boolean => unit >= 0xd800 && unit <= 0xdbff;
 
 /** Code-point starts - the fallback boundary set, and the floor every path stays above. */
@@ -65,6 +123,14 @@ const _codePointStarts = (text: string): number[] => {
  * result has exactly one entry per cluster.
  */
 export const graphemeStarts = (text: string, locale?: string): number[] => {
+  if (isTrivialText(text)) {
+    const starts: number[] = new Array<number>(text.length);
+
+    for (let i = 0; i < text.length; i++) starts[i] = i;
+
+    return starts;
+  }
+
   const segmenter = _segmenter('grapheme', locale);
 
   if (segmenter === null) return _codePointStarts(text);
@@ -83,6 +149,14 @@ export const graphemeStarts = (text: string, locale?: string): number[] => {
  * the caller also needs to map a cluster back to an offset in the source.
  */
 export const graphemes = (text: string, locale?: string): string[] => {
+  if (isTrivialText(text)) {
+    const result: string[] = new Array<string>(text.length);
+
+    for (let i = 0; i < text.length; i++) result[i] = text[i]!;
+
+    return result;
+  }
+
   const segmenter = _segmenter('grapheme', locale);
 
   if (segmenter === null) {
@@ -102,6 +176,8 @@ export const graphemes = (text: string, locale?: string): string[] => {
 
 /** How many grapheme clusters `text` holds. */
 export const graphemeCount = (text: string, locale?: string): number => {
+  if (isTrivialText(text)) return text.length;
+
   const segmenter = _segmenter('grapheme', locale);
 
   if (segmenter === null) return _codePointStarts(text).length;
@@ -116,10 +192,10 @@ export const graphemeCount = (text: string, locale?: string): number => {
 /**
  * Reverse `text` by grapheme cluster.
  *
- * This is what the legacy right-to-left approximation needs: reversing by code
- * point moves a combining mark in front of its base and tears a ZWJ sequence
- * apart. It is still only a reversal - see {@link LayoutOptions.direction} for
- * what that does and does not buy.
+ * This is what the right-to-left approximation of the simple path needs:
+ * reversing by code point moves a combining mark in front of its base and
+ * tears a ZWJ sequence apart. It is still only a reversal - see
+ * {@link LayoutOptions.direction} for what that does and does not buy.
  */
 export const reverseGraphemes = (text: string, locale?: string): string => graphemes(text, locale).reverse().join('');
 
@@ -136,14 +212,12 @@ export interface WordSegment {
   readonly wordLike: boolean;
 }
 
-const _isWhitespace = (text: string): boolean => text.trim().length === 0;
-
 /**
  * Split `text` into locale-aware word segments - what a word-granularity caret
  * step, a double-click selection and the line wrapper all reason about.
  *
- * Without `Intl.Segmenter` the split degrades to whitespace-versus-non-whitespace
- * runs, which is correct for space-separated scripts and coarse elsewhere.
+ * Without `Intl.Segmenter` the split degrades to blank-versus-non-blank runs,
+ * which is correct for space-separated scripts and coarse elsewhere.
  */
 export const wordSegments = (text: string, locale?: string): WordSegment[] => {
   const segments: WordSegment[] = [];
@@ -161,7 +235,7 @@ export const wordSegments = (text: string, locale?: string): WordSegment[] => {
   }
 
   let start = 0;
-  let wordLike = !_isWhitespace(text[0]!);
+  let wordLike = !_isBreakingSpace(text.charCodeAt(0));
 
   for (let i = 1; i <= text.length; i++) {
     const previous = wordLike;
@@ -172,7 +246,7 @@ export const wordSegments = (text: string, locale?: string): WordSegment[] => {
       break;
     }
 
-    wordLike = !_isWhitespace(text[i]!);
+    wordLike = !_isBreakingSpace(text.charCodeAt(i));
 
     if (wordLike !== previous) {
       segments.push({ start, end: i, wordLike: previous });
@@ -198,8 +272,34 @@ export interface TextRun {
   readonly whitespace: boolean;
 }
 
-/** Scripts whose text carries no inter-word spaces, so a line may break between any two clusters. */
+/** Scripts whose text carries no inter-word spaces, so a line may break between any two words. */
 const _unspacedScript = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u;
+
+/** Blank-versus-non-blank runs, which is the whole answer for trivial text. */
+const _blankRuns = (text: string): TextRun[] => {
+  const runs: TextRun[] = [];
+  let start = 0;
+  let whitespace = _isBreakingSpace(text.charCodeAt(0));
+
+  for (let i = 1; i <= text.length; i++) {
+    const previous = whitespace;
+
+    if (i === text.length) {
+      runs.push({ start, end: i, whitespace: previous });
+
+      break;
+    }
+
+    whitespace = _isBreakingSpace(text.charCodeAt(i));
+
+    if (whitespace !== previous) {
+      runs.push({ start, end: i, whitespace: previous });
+      start = i;
+    }
+  }
+
+  return runs;
+};
 
 /**
  * Split `text` into alternating whitespace and non-whitespace runs, using
@@ -215,10 +315,10 @@ const _unspacedScript = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/
  * one it does not, which is what makes `whiteSpace: 'pre'` keep its columns.
  */
 export const textRuns = (text: string, locale?: string): TextRun[] => {
+  if (text.length === 0) return [];
+  if (isTrivialText(text)) return _blankRuns(text);
+
   const runs: TextRun[] = [];
-
-  if (text.length === 0) return runs;
-
   let pending: { start: number; end: number; whitespace: boolean } | null = null;
 
   const flush = (): void => {
@@ -228,7 +328,7 @@ export const textRuns = (text: string, locale?: string): TextRun[] => {
 
   for (const segment of wordSegments(text, locale)) {
     const body = text.slice(segment.start, segment.end);
-    const whitespace = _isWhitespace(body);
+    const whitespace = _isBlankRun(body);
     // A word in an unspaced script must not merge with the word next to it, or
     // the whole run becomes one unbreakable token.
     const standalone = !whitespace && _unspacedScript.test(body);

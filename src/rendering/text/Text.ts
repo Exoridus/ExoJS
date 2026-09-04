@@ -1,11 +1,14 @@
 import { assert } from '#core/dev';
 
 import { AbstractText } from './AbstractText';
-import type { AtlasMode } from './GlyphAtlas';
+import type { AtlasMode, AtlasPage } from './GlyphAtlas';
 import type { GlyphAtlas } from './GlyphAtlas';
 import { SDF_RADIUS } from './GlyphAtlas';
 import { getDefaultGlyphAtlasPool } from './GlyphAtlasPool';
 import type { LayoutOptions } from './LayoutOptions';
+import { ShapedTextSource } from './ShapedTextSource';
+import type { ShapingMode } from './shaping';
+import { resolveShaping } from './shaping';
 import { emptyTextLayout, layoutText } from './textLayout';
 import type { StyleChangeHint, TextStyleOptions } from './TextStyle';
 import { TextStyle } from './TextStyle';
@@ -121,6 +124,13 @@ export class Text extends AbstractText {
   private _destroyed = false;
   private _faceLoadVersion = 0;
 
+  /** Node-owned raster of the browser-shaped lines, or `null` while this node draws shared glyphs. */
+  private _shapedSource: ShapedTextSource | null = null;
+  /** Everything the shaped raster is keyed on; a change to any of it invalidates the resource. */
+  private _shapedKey = '';
+  /** Which representation the settled layout used - what {@link textPages} has to answer for. */
+  private _shapingMode: ShapingMode = 'simple';
+
   /**
    * Re-lays out when the atlas this node currently draws from is cleared -
    * its cached `GlyphInfo` UVs would otherwise keep addressing glyphs that
@@ -179,8 +189,14 @@ export class Text extends AbstractText {
     if (text.length === 0) return { width: 0, height: 0 };
 
     const style = new TextStyle(options);
+    const pool = getDefaultGlyphAtlasPool();
+    const metrics = pool.getMetrics(style.fontFamily, style.fontStyle, style.fontWeight);
+    // Measurement-only, so contextual text is measured through the browser
+    // without a raster ever being produced - the shaped node answers the same
+    // width from the same cache.
+    const shaper = pool.getShapedMetrics(style.fontFamily, style.fontStyle, style.fontWeight, options.direction ?? 'ltr', options.letterSpacing ?? 0);
 
-    return layoutText(text, style, options, getDefaultGlyphAtlasPool().getMetrics(style.fontFamily, style.fontStyle, style.fontWeight)).advance;
+    return layoutText(text, style, options, metrics, shaper).advance;
   }
 
   /** The one place a Text resolves its atlas, so two passes cannot pick different ones. */
@@ -289,11 +305,40 @@ export class Text extends AbstractText {
     return this._atlas;
   }
 
+  /**
+   * Which representation the settled layout used - `'simple'` for shared atlas
+   * glyphs, `'browser'` for lines the browser shaped. Follows from the content
+   * and from `shaping`; useful for diagnostics and benchmarks.
+   */
+  public get shapingMode(): ShapingMode {
+    this.syncDirty();
+
+    return this._shapingMode;
+  }
+
+  /**
+   * The pages `pageQuads` addresses by index: the shared atlas pages on the
+   * simple path, this node's own shaped-line pages on the browser-shaped one.
+   *
+   * This is what a text renderer resolves a quad batch's texture through, so it
+   * never has to know which of the two produced the raster. Resolves a pending
+   * layout pass first.
+   * @internal
+   */
+  public get textPages(): readonly AtlasPage[] {
+    this.syncDirty();
+
+    if (this._shapingMode === 'browser' && this._shapedSource !== null) return this._shapedSource.pages;
+
+    return this._atlas?.pages ?? [];
+  }
+
   public override destroy(): void {
     this._destroyed = true;
     this._faceLoadVersion++;
     this._atlas?.onCleared.remove(this._onAtlasCleared);
     this._atlas = null;
+    this._releaseShapedSource();
     super.destroy();
   }
 
@@ -343,7 +388,12 @@ export class Text extends AbstractText {
   protected override _runLayout(hint: StyleChangeHint): TextLayoutResult {
     // Empty text needs no glyph source at all, and acquiring one would create
     // an atlas for a variant this node may never actually rasterize.
-    if (this._text.length === 0) return emptyTextLayout();
+    if (this._text.length === 0) {
+      this._shapingMode = 'simple';
+      this._releaseShapedSource();
+
+      return emptyTextLayout();
+    }
 
     // Only a 'font' change can invalidate which atlas this node draws from;
     // a re-flow reuses the one already resolved.
@@ -356,8 +406,63 @@ export class Text extends AbstractText {
     }
 
     this._atlas = atlas;
+    this._shapingMode = resolveShaping(this._text, this._layout);
 
-    return layoutText(this._text, this._style, this._layout, atlas);
+    if (this._shapingMode === 'simple') {
+      this._releaseShapedSource();
+
+      return layoutText(this._text, this._style, this._layout, atlas);
+    }
+
+    const source = this._acquireShapedSource();
+
+    source.beginLayout();
+
+    const result = layoutText(this._text, this._style, this._layout, atlas, source);
+
+    source.endLayout();
+
+    return result;
+  }
+
+  /**
+   * The shaped resource for the current state, rebuilt when anything the
+   * raster depends on has changed.
+   */
+  private _acquireShapedSource(): ShapedTextSource {
+    const style = this._style;
+    const direction = this._layout.direction ?? 'ltr';
+    const letterSpacing = this._layout.letterSpacing ?? 0;
+    const mode = this.atlasMode;
+    const pixelRatio = this.rasterPixelRatio;
+    const key = `${style.fontFamily}:${style.fontStyle}:${style.fontWeight}:${mode}:${this._sdfRadius}:${pixelRatio}:${direction}:${letterSpacing}`;
+
+    if (this._shapedSource !== null && this._shapedKey === key) return this._shapedSource;
+
+    this._releaseShapedSource();
+
+    const source = new ShapedTextSource({
+      family: style.fontFamily,
+      fontStyle: style.fontStyle,
+      fontWeight: style.fontWeight,
+      metrics: getDefaultGlyphAtlasPool().getShapedMetrics(style.fontFamily, style.fontStyle, style.fontWeight, direction, letterSpacing),
+      mode,
+      sdfRadius: this._sdfRadius,
+      pixelRatio,
+      direction,
+      letterSpacing,
+    });
+
+    this._shapedSource = source;
+    this._shapedKey = key;
+
+    return source;
+  }
+
+  private _releaseShapedSource(): void {
+    this._shapedSource?.destroy();
+    this._shapedSource = null;
+    this._shapedKey = '';
   }
 }
 
