@@ -625,6 +625,7 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "TweenUpdateCallback: type alias",
   "TypedArray: type alias",
   "TypedEnum: type alias",
+  "UIAnimatedBackground: interface",
   "UIBackground: type alias",
   "UIBackgroundInput: type alias",
   "UIBackgroundOptions: interface",
