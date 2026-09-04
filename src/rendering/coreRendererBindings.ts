@@ -1,4 +1,5 @@
 import type { RenderingApplicationOptions } from '#core/Application';
+import { defineRendererBinding } from '#extensions/defineRendererBinding';
 import type { RendererBinding } from '#extensions/Extension';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
@@ -19,6 +20,8 @@ import { WebGpuSpriteRenderer } from '#rendering/webgpu/WebGpuSpriteRenderer';
 import { WebGpuTextRenderer } from '#rendering/webgpu/WebGpuTextRenderer';
 import { WebGpuVideoRenderer } from '#rendering/webgpu/WebGpuVideoRenderer';
 
+import type { Drawable } from './Drawable';
+import type { RenderBackend } from './RenderBackend';
 import { RenderBackendType } from './RenderBackendType';
 import type { Renderer } from './Renderer';
 
@@ -31,57 +34,39 @@ import type { Renderer } from './Renderer';
 export const buildCoreRendererBindings = (options: RenderingApplicationOptions): RendererBinding[] => {
   const spriteRendererBatchSize = options.spriteRendererBatchSize ?? 4096;
 
-  type BackendRendererMap = Partial<Record<RenderBackendType, () => Renderer>>;
+  type BackendRendererMap<Target extends Drawable> = Partial<Record<RenderBackendType, () => Renderer<RenderBackend, Target>>>;
 
-  const spriteRenderers: BackendRendererMap = {
+  const spriteRenderers: BackendRendererMap<Sprite> = {
     [RenderBackendType.WebGl2]: () => new WebGl2SpriteRenderer(spriteRendererBatchSize),
     [RenderBackendType.WebGpu]: () => new WebGpuSpriteRenderer(),
   };
-  const meshRenderers: BackendRendererMap = {
+  const meshRenderers: BackendRendererMap<Mesh> = {
     [RenderBackendType.WebGl2]: () => new WebGl2MeshRenderer(),
     [RenderBackendType.WebGpu]: () => new WebGpuMeshRenderer(),
   };
-  const textRenderers: BackendRendererMap = {
+  const textRenderers: BackendRendererMap<Text | BitmapText> = {
     [RenderBackendType.WebGl2]: () => new WebGl2TextRenderer(),
     [RenderBackendType.WebGpu]: () => new WebGpuTextRenderer(),
   };
-  const nineSliceRenderers: BackendRendererMap = {
+  const nineSliceRenderers: BackendRendererMap<NineSliceSprite> = {
     [RenderBackendType.WebGl2]: () => new WebGl2NineSliceSpriteRenderer(spriteRendererBatchSize),
     [RenderBackendType.WebGpu]: () => new WebGpuNineSliceSpriteRenderer(),
   };
-  const repeatingSpriteRenderers: BackendRendererMap = {
+  const repeatingSpriteRenderers: BackendRendererMap<RepeatingSprite> = {
     [RenderBackendType.WebGl2]: () => new WebGl2RepeatingSpriteRenderer(spriteRendererBatchSize),
     [RenderBackendType.WebGpu]: () => new WebGpuRepeatingSpriteRenderer(),
   };
-  const videoRenderers: BackendRendererMap = {
+  const videoRenderers: BackendRendererMap<Video> = {
     [RenderBackendType.WebGpu]: () => new WebGpuVideoRenderer(),
   };
 
   return [
-    {
-      targets: [Sprite],
-      create: backend => spriteRenderers[backend.backendType]?.(),
-    },
-    {
-      targets: [Video],
-      create: backend => videoRenderers[backend.backendType]?.(),
-    },
-    {
-      targets: [Mesh],
-      create: backend => meshRenderers[backend.backendType]?.(),
-    },
-    {
-      // Text and BitmapText share the same renderer class - one multi-target binding.
-      targets: [Text, BitmapText],
-      create: backend => textRenderers[backend.backendType]?.(),
-    },
-    {
-      targets: [NineSliceSprite],
-      create: backend => nineSliceRenderers[backend.backendType]?.(),
-    },
-    {
-      targets: [RepeatingSprite],
-      create: backend => repeatingSpriteRenderers[backend.backendType]?.(),
-    },
+    defineRendererBinding([Sprite], backend => spriteRenderers[backend.backendType]?.()),
+    defineRendererBinding([Video], backend => videoRenderers[backend.backendType]?.()),
+    defineRendererBinding([Mesh], backend => meshRenderers[backend.backendType]?.()),
+    // Text and BitmapText share the same renderer class - one multi-target binding.
+    defineRendererBinding([Text, BitmapText], backend => textRenderers[backend.backendType]?.()),
+    defineRendererBinding([NineSliceSprite], backend => nineSliceRenderers[backend.backendType]?.()),
+    defineRendererBinding([RepeatingSprite], backend => repeatingSpriteRenderers[backend.backendType]?.()),
   ];
 };

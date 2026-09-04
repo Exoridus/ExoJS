@@ -11,6 +11,7 @@
 // internal and intentionally NOT exported here: they are coupled to internal
 // sprite/mesh data paths and are not a stable subclassing surface pre-1.0.
 
+export { defineRendererBinding } from '#extensions/defineRendererBinding';
 export { packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
 export { Drawable } from '#rendering/Drawable';
 export { PixelSnapMode } from '#rendering/pixelSnap';
