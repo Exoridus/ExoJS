@@ -6,11 +6,11 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 101,
+  "memberCount": 102,
   "counts": {
     "constructors": 1,
     "methods": 7,
-    "properties": 32,
+    "properties": 33,
     "events": 0
   },
   "sections": [
@@ -584,6 +584,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "movement",
+          "signature": "movement: Vector",
+          "signatureTokens": [
+            {
+              "text": "movement",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Relative motion the host reported for this frame, in design pixels. Normally the same journey as delta, summed over the individual platform events instead of measured between two frame boundaries. The two part company while the pointer is locked (InputSystem.lockPointer): a locked pointer has no position on screen, so position and delta stand still and this is the only thing that still moves. It is what a first-person camera or an infinite drag reads. Zero on a host that reports no relative motion."
         },
         {
           "name": "movePosition",

@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 14,
+  "memberCount": 16,
   "counts": {
     "constructors": 0,
     "methods": 2,
-    "properties": 12,
+    "properties": 14,
     "events": 0
   },
   "sections": [
@@ -193,6 +193,56 @@
             },
             {
               "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "movementX",
+          "signature": "movementX?: number",
+          "signatureTokens": [
+            {
+              "text": "movementX",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Movement since the previous event of the same pointer, in the same units as clientX/clientY. Absent where the host reports no relative motion. The only motion there is while the pointer is locked: a locked pointer has no position on screen, so clientX/clientY stop moving and this is what carries the gesture."
+        },
+        {
+          "name": "movementY",
+          "signature": "movementY?: number",
+          "signatureTokens": [
+            {
+              "text": "movementY",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
               "kind": "keyword"
             }
           ],

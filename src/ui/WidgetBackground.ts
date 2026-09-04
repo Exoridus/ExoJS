@@ -1,23 +1,27 @@
 import type { Container } from '#rendering/Container';
 import { Graphics } from '#rendering/primitives/Graphics';
+import { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
 import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 
-import type { UIBackground, UINineSliceBackground, UISpriteBackground } from './theme';
+import type { UIAnimatedBackground, UIBackground, UIFillBackground, UINineSliceBackground, UISpriteBackground } from './theme';
 
-type BackgroundNode = Graphics | NineSliceSprite | RepeatingSprite;
+type BackgroundNode = Graphics | NineSliceSprite | RepeatingSprite | AnimatedSprite;
 
 const sameNineSlice = (a: UINineSliceBackground, b: UINineSliceBackground): boolean =>
   a.texture === b.texture && a.slices === b.slices && a.border === b.border && a.modes === b.modes;
 
 const sameSprite = (a: UISpriteBackground, b: UISpriteBackground): boolean => a.texture === b.texture && a.fit === b.fit;
 
+const sameAnimated = (a: UIAnimatedBackground, b: UIAnimatedBackground): boolean => a.texture === b.texture && a.clips === b.clips;
+
 /**
  * One painted widget surface. Owns whichever node the current
  * {@link UIBackground} needs - a {@link Graphics} for a vector fill, a
- * {@link NineSliceSprite} for a texture - and swaps it in place when the
- * descriptor's kind changes, keeping the node at its declared child index so a
- * widget's own content stays on top of its background.
+ * {@link NineSliceSprite} for a texture, an {@link AnimatedSprite} for a clip -
+ * and swaps it in place when the descriptor's kind changes, keeping the node at
+ * its declared child index so a widget's own content stays on top of its
+ * background.
  *
  * @internal
  */
@@ -47,51 +51,14 @@ export class WidgetBackground {
   public apply(background: UIBackground, width: number, height: number): void {
     if (background.kind === 'none' || width <= 0 || height <= 0) {
       this._replaceNode(null);
-      this._painted = background;
-
-      return;
-    }
-
-    if (background.kind === 'fill') {
-      const graphics = this._node instanceof Graphics ? this._node : this._replaceNode(new Graphics());
-
-      graphics.clear();
-
-      if (background.borderWidth > 0) {
-        graphics.lineWidth = background.borderWidth;
-        graphics.lineColor = background.borderColor;
-      }
-
-      graphics.fillColor = background.color;
-      graphics.drawRoundedRectangle(0, 0, width, height, background.cornerRadius);
+    } else if (background.kind === 'fill') {
+      this._paintFill(background, width, height);
+    } else if (background.kind === 'animated') {
+      this._paintAnimated(background, width, height);
     } else if (background.kind === 'sprite') {
-      const reusable =
-        this._node instanceof RepeatingSprite && this._painted !== null && this._painted.kind === 'sprite' && sameSprite(this._painted, background);
-      const mode = background.fit === 'tile' ? 'repeat' : 'stretch';
-      const sprite = reusable
-        ? (this._node as RepeatingSprite)
-        : this._replaceNode(new RepeatingSprite(background.texture, { width, height, modeX: mode, modeY: mode }));
-
-      sprite.setSize(width, height);
+      this._paintSprite(background, width, height);
     } else {
-      // The sampled region, slice widths and fill modes are constructor-only on
-      // `NineSliceSprite`, so a descriptor that changes any of them needs a new
-      // sprite rather than an in-place update.
-      const reusable =
-        this._node instanceof NineSliceSprite && this._painted !== null && this._painted.kind === 'nineSlice' && sameNineSlice(this._painted, background);
-      const sprite = reusable
-        ? (this._node as NineSliceSprite)
-        : this._replaceNode(
-            new NineSliceSprite(background.texture, {
-              slices: background.slices,
-              width,
-              height,
-              ...(background.border !== undefined && { border: background.border }),
-              ...(background.modes !== undefined && { modes: background.modes }),
-            }),
-          );
-
-      sprite.setSize(width, height);
+      this._paintNineSlice(background, width, height);
     }
 
     this._painted = background;
@@ -100,6 +67,66 @@ export class WidgetBackground {
   public destroy(): void {
     this._replaceNode(null);
     this._painted = null;
+  }
+
+  private _paintFill(background: UIFillBackground, width: number, height: number): void {
+    const graphics = this._node instanceof Graphics ? this._node : this._replaceNode(new Graphics());
+
+    graphics.clear();
+
+    if (background.borderWidth > 0) {
+      graphics.lineWidth = background.borderWidth;
+      graphics.lineColor = background.borderColor;
+    }
+
+    graphics.fillColor = background.color;
+    graphics.drawRoundedRectangle(0, 0, width, height, background.cornerRadius);
+  }
+
+  private _paintAnimated(background: UIAnimatedBackground, width: number, height: number): void {
+    const reusable =
+      this._node instanceof AnimatedSprite && this._painted !== null && this._painted.kind === 'animated' && sameAnimated(this._painted, background);
+    const sprite = reusable ? (this._node as AnimatedSprite) : this._replaceNode(new AnimatedSprite(background.texture, background.clips));
+
+    // `play` restarts the clip by default, which would rewind the animation on
+    // every repaint - a hover or a value change is not a reason to start over.
+    sprite.play(background.clip, { restart: !reusable || sprite.currentClip !== background.clip });
+    // A sprite's width/height are scale setters, so the frame is stretched over
+    // the widget box rather than laid out inside it.
+    sprite.width = width;
+    sprite.height = height;
+  }
+
+  private _paintSprite(background: UISpriteBackground, width: number, height: number): void {
+    const reusable =
+      this._node instanceof RepeatingSprite && this._painted !== null && this._painted.kind === 'sprite' && sameSprite(this._painted, background);
+    const mode = background.fit === 'tile' ? 'repeat' : 'stretch';
+    const sprite = reusable
+      ? (this._node as RepeatingSprite)
+      : this._replaceNode(new RepeatingSprite(background.texture, { width, height, modeX: mode, modeY: mode }));
+
+    sprite.setSize(width, height);
+  }
+
+  private _paintNineSlice(background: UINineSliceBackground, width: number, height: number): void {
+    // The sampled region, slice widths and fill modes are constructor-only on
+    // `NineSliceSprite`, so a descriptor that changes any of them needs a new
+    // sprite rather than an in-place update.
+    const reusable =
+      this._node instanceof NineSliceSprite && this._painted !== null && this._painted.kind === 'nineSlice' && sameNineSlice(this._painted, background);
+    const sprite = reusable
+      ? (this._node as NineSliceSprite)
+      : this._replaceNode(
+          new NineSliceSprite(background.texture, {
+            slices: background.slices,
+            width,
+            height,
+            ...(background.border !== undefined && { border: background.border }),
+            ...(background.modes !== undefined && { modes: background.modes }),
+          }),
+        );
+
+    sprite.setSize(width, height);
   }
 
   /** Swap the painted node, re-inserting the replacement at the declared slot. */

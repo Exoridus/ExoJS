@@ -173,7 +173,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Device/render pixel ratio applied to the backing buffer. Default: the host devicePixelRatio clamped to 2 (crisp on Retina/HiDPI out of the box, capped so DPR-3 phones don't pay a 9× fill-rate cost). Pass an explicit value to override - e.g. window.devicePixelRatio for full native density, or 1 to force logical-pixel rendering."
+          "description": "Device/render pixel ratio applied to the backing buffer. Default: the host devicePixelRatio clamped to 2 (crisp on Retina/HiDPI out of the box, capped so DPR-3 phones don't pay a 9× fill-rate cost), followed for the application's lifetime as the host's ratio changes. Pass an explicit value to override - e.g. window.devicePixelRatio for full native density, or 1 to force logical-pixel rendering - which also pins it, so a later host change is ignored."
         },
         {
           "name": "sizing",

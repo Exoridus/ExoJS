@@ -133,6 +133,16 @@ export interface PlatformPointerEvent extends PlatformEvent {
   readonly pressure: number;
   readonly buttons: number;
   readonly isPrimary: boolean;
+  /**
+   * Movement since the previous event of the same pointer, in the same units as
+   * `clientX`/`clientY`. Absent where the host reports no relative motion.
+   *
+   * The only motion there is while the pointer is locked: a locked pointer has
+   * no position on screen, so `clientX`/`clientY` stop moving and this is what
+   * carries the gesture.
+   */
+  readonly movementX?: number;
+  readonly movementY?: number;
 }
 
 /**
@@ -237,6 +247,24 @@ export interface PlatformAdapter extends TimeSource, FrameScheduler {
    */
   getSurfaceMetrics(): PlatformSurfaceMetrics;
 
+  /**
+   * Device pixels the host currently packs into one CSS pixel. `1` where the
+   * host reports nothing.
+   *
+   * A property of the display the surface is shown on, not of the surface: it
+   * changes when the window moves to a different monitor or the page is
+   * zoomed, which is what {@link PlatformAdapter.onPixelRatioChange} reports.
+   */
+  readonly devicePixelRatio: number;
+
+  /**
+   * Subscribe to {@link PlatformAdapter.devicePixelRatio} changes.
+   *
+   * Optional: a host that cannot observe the ratio omits it, and everything
+   * derived from the ratio then keeps the value it was first resolved at.
+   */
+  onPixelRatioChange?(listener: (ratio: number) => void): PlatformSubscription;
+
   /** Set the cursor shown over the surface. Empty string restores the default. */
   setCursor(value: string): void;
 
@@ -248,6 +276,30 @@ export interface PlatformAdapter extends TimeSource, FrameScheduler {
 
   /** Undo {@link PlatformAdapter.capturePointer}. Best-effort. */
   releasePointer(pointerId: number): void;
+
+  /**
+   * Whether the host currently routes pointer input to the surface
+   * exclusively - no cursor, no position, motion reported as relative deltas
+   * only.
+   */
+  readonly pointerLocked: boolean;
+
+  /**
+   * Ask the host for a pointer lock on the surface. Best-effort and
+   * asynchronous: hosts grant it only from a user gesture, may deny it
+   * outright, and never report the outcome here -
+   * {@link PlatformAdapter.onPointerLockChange} does.
+   */
+  lockPointer(): void;
+
+  /** Release a pointer lock this surface holds. No-op while it holds none. */
+  unlockPointer(): void;
+
+  /**
+   * Subscribe to {@link PlatformAdapter.pointerLocked} changes. Also the only
+   * report of a lock the user ended themselves, which every host allows.
+   */
+  onPointerLockChange(listener: (locked: boolean) => void): PlatformSubscription;
 
   /** Sample every connected gamepad. Entries may be `null` for vacated slots. */
   pollGamepads(): ReadonlyArray<BrowserGamepad | null>;

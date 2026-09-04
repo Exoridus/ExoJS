@@ -30,8 +30,16 @@
       "members": [
         {
           "name": "UIBackground",
-          "signature": "UIFillBackground | UINineSliceBackground | UINoBackground | UISpriteBackground",
+          "signature": "UIAnimatedBackground | UIFillBackground | UINineSliceBackground | UINoBackground | UISpriteBackground",
           "signatureTokens": [
+            {
+              "text": "UIAnimatedBackground",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
             {
               "text": "UIFillBackground",
               "kind": "type"

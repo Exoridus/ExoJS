@@ -25,6 +25,7 @@ export { TextArea } from './TextArea';
 export type { TextInputOptions } from './TextInput';
 export { TextInput } from './TextInput';
 export type {
+  UIAnimatedBackground,
   UIBackground,
   UIBackgroundInput,
   UIBackgroundOptions,

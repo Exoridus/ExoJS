@@ -1448,7 +1448,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Device pixels per CSS pixel the backing store is scaled by. Defaults to the host devicePixelRatio clamped to 2 - crisp on HiDPI out of the box, without the fill-rate cost a DPR-3 phone would otherwise pay - unless an explicit canvas.pixelRatio option was given. It converts a requested render resolution into backing-store pixels and nothing else. Which render resolution is requested is the sizing policy's decision, so app.canvas.width is pixelRatio times that resolution, not times Application.width: the two coincide only while the logical view and the render resolution are the same size."
+          "description": "Device pixels per CSS pixel the backing store is scaled by. Defaults to the host devicePixelRatio clamped to 2 - crisp on HiDPI out of the box, without the fill-rate cost a DPR-3 phone would otherwise pay - unless an explicit canvas.pixelRatio option was given. On that default it follows the host: moving the window to a display of a different density, or zooming the page, re-derives the backing store at the new ratio wherever the host can report the change. An explicit canvas.pixelRatio never tracks anything. It converts a requested render resolution into backing-store pixels and nothing else. Which render resolution is requested is the sizing policy's decision, so app.canvas.width is pixelRatio times that resolution, not times Application.width: the two coincide only while the logical view and the render resolution are the same size."
         },
         {
           "name": "recentErrors",
