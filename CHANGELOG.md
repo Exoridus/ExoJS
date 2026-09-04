@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Changed
+
+- **`BurstSpawn`'s `loop: boolean` is replaced by `interval: number`, the
+  period in seconds between two runs of the schedule.** `loop: true` restarted
+  the schedule in the same `apply()` call that exhausted it and zeroed the
+  clock, so a schedule with nothing after its final burst re-fired every frame
+  and the emitted count followed the frame rate rather than elapsed time. The
+  period is now declared, the clock wraps by subtracting it so overshoot
+  carries into the next cycle, and a long frame fires every period it covered.
+  Replace `loop: true` with `interval: <seconds>`; a schedule that used a
+  trailing `{ time: period, count: 0 }` entry to fake a period can drop it.
+
 ### Added
 
 - **`Scene.animations`, a scene-bound animation facade with the same `when`
@@ -17,6 +29,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   scene: frozen while it is paused, frozen while it is retained, stopped when
   it ends. `when` takes the same `SceneAvailability` values with the same
   `'always'` default, so an untracked sprite behaves exactly as before.
+- **`TrailParticles`, a particle render mode that draws a motion trail behind
+  every particle.** Where `RibbonParticles` connects the particles of one
+  system into a single band, this gives each particle its own strip through the
+  positions it recently occupied, kept in a per-particle ring buffer and drawn
+  in one non-instanced draw. Positions are recorded on each particle's own
+  clock (`interval`), so a trail covers the same travel at any frame rate;
+  `points` sets how far back it reaches, `width` its thickness and `fade` how
+  its alpha falls off towards the tail. CPU-only, like `RibbonParticles`.
 - **`Spritesheet.removeFrame(name)` and `Stack.removeItem(item)`.** Both
   mirror their existing `add`-side methods, completing the add/remove pair
   every other mutator on these classes already has.

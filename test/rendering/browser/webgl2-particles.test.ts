@@ -25,7 +25,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
-import { MeshParticles, particlesExtension, ParticleSystem, RibbonParticles } from '../../../packages/exojs-particles/src/index';
+import { MeshParticles, particlesExtension, ParticleSystem, RibbonParticles, TrailParticles } from '../../../packages/exojs-particles/src/index';
 import { readWebGl2Pixel } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
@@ -322,6 +322,65 @@ describe('WebGL2 ParticleSystem — ribbon', () => {
       // Narrow end: the same offset is outside it, while the centre is not.
       expectPixelNear(readWebGl2Pixel(backend, 47, 25), [0, 0, 0, 255]);
       expectPixelNear(readWebGl2Pixel(backend, 47, 32), [0, 255, 0, 255]);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+describe('WebGL2 ParticleSystem — trail', () => {
+  test('one particle renders as a band through the positions it passed', async () => {
+    const backend = await createBackend();
+    const texture = createSolidTexture('#ffffff', 16, 16);
+    const root = new Container();
+    // The trail mode ships its own shader pair, which only a real backend ever
+    // compiles - a broken one draws nothing and fails the interior assertions
+    // below rather than passing silently in the node lanes.
+    const mode = new TrailParticles({ width: 12, interval: 0.1, points: 4, fade: 1 });
+    const system = new ParticleSystem(texture, { capacity: 4, render: mode });
+
+    try {
+      const particle = system.emit()!;
+
+      particle.position.x = -16;
+      particle.color = new Color(0, 255, 0).toRgba8();
+
+      // Trails are built from what the mode recorded on previous frames, so the
+      // path is walked here: the particle moves and its own clock passes the
+      // sample interval, one build per recorded position. The final position is
+      // recorded by the build the render below performs.
+      for (const [x, elapsed] of [
+        [-16, 0],
+        [0, 0.1],
+      ] as const) {
+        system._storage.posX[0] = x;
+        system._storage.elapsed[0] = elapsed;
+        mode.build(system, system._storage);
+      }
+
+      system._storage.posX[0] = 16;
+      system._storage.elapsed[0] = 0.2;
+
+      // The trail now spans system-local x -16..16 and expands +/-6px around
+      // it, so at (32, 32) it covers x 16..48, y 26..38.
+      system.setPosition(32, 32);
+      root.addChild(system);
+
+      render(backend, root);
+
+      // Along the band: both ends and the middle are filled, which a trail that
+      // kept only the live position would not satisfy.
+      expectPixelNear(readWebGl2Pixel(backend, 20, 32), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 32), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 44, 32), [0, 255, 0, 255]);
+      // Across it: the band is a band, not the whole column.
+      expectPixelNear(readWebGl2Pixel(backend, 32, 12), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 32, 52), [0, 0, 0, 255]);
+      // Past the ends of the path, and a safely empty corner.
+      expectPixelNear(readWebGl2Pixel(backend, 58, 32), [0, 0, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 4, 4), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
