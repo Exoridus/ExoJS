@@ -199,7 +199,13 @@ export interface CiPlan {
 
 export interface PlanInput {
   eventName: string;
-  /** Files a pull request changed; ignored on every other event. */
+  /**
+   * Files the triggering event changed: a pull request's full diff, or a
+   * branch push's `before..after` range. Empty means the diff is unknown (a
+   * new branch, a force-push with no shared history) or genuinely touched
+   * nothing; either way `planCi` falls back to full validation for a push.
+   * Ignored for every other event, which always validates everything.
+   */
   changedFiles: readonly string[];
   /** Branch the event ran on; coverage is collected on the long-lived ones. */
   refName: string;
@@ -235,13 +241,16 @@ export const selectLanes = (effective: EffectiveLanes, isPullRequest: boolean): 
   LANES.filter(lane => lane.when === 'always' || effective[lane.when]).filter(lane => !lane.pullRequestOnly || isPullRequest);
 
 /**
- * Everything `ci.yml` needs to know, from the event alone. A push, a tag or a
- * dispatch validates every area; only a pull request narrows to what it
- * changed.
+ * Everything `ci.yml` needs to know, from the event alone. A pull request
+ * always narrows to what it changed; a branch push to `main`/`next` narrows
+ * the same way whenever its diff resolved to at least one file. Anything
+ * else - an unresolved push diff, `merge_group`, a tag/release or a manual
+ * dispatch - validates every area, fail closed.
  */
 export const planCi = ({ eventName, changedFiles, refName }: PlanInput): CiPlan => {
   const isPullRequest = eventName === 'pull_request';
-  const areas = isPullRequest ? selectAreas(changedFiles) : ALL_AREAS;
+  const isSelectivePush = eventName === 'push' && changedFiles.length > 0;
+  const areas = isPullRequest || isSelectivePush ? selectAreas(changedFiles) : ALL_AREAS;
   const effective = effectiveLanes(areas);
   const coverage = eventName === 'push' && COVERAGE_BRANCHES.has(refName);
   const lanes = selectLanes(effective, isPullRequest);
