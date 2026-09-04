@@ -470,7 +470,7 @@
         },
         {
           "name": "fade",
-          "signature": "fade(to: number, ms: number): void",
+          "signature": "fade(to: number, duration: Seconds): void",
           "signatureTokens": [
             {
               "text": "fade",
@@ -497,7 +497,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "ms",
+              "text": "duration",
               "kind": "param"
             },
             {
@@ -505,8 +505,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Seconds",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -528,13 +528,13 @@
               "optional": false
             },
             {
-              "name": "ms",
-              "type": "number",
+              "name": "duration",
+              "type": "Seconds",
               "optional": false
             }
           ],
           "returnType": "void",
-          "description": "Ramp the volume to to (clamped to [0, 1]) over ms milliseconds without stopping. Use Voice.stop with a fade argument to fade out and stop."
+          "description": "Ramp the volume to to (clamped to [0, 1]) over duration without stopping. Use Voice.stop with a fade argument to fade out and stop."
         },
         {
           "name": "follow",
@@ -593,7 +593,7 @@
         },
         {
           "name": "record",
-          "signature": "record(durationMs: number): Promise<Sound>",
+          "signature": "record(duration: Seconds): Promise<Sound>",
           "signatureTokens": [
             {
               "text": "record",
@@ -604,7 +604,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "durationMs",
+              "text": "duration",
               "kind": "param"
             },
             {
@@ -612,8 +612,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Seconds",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -642,13 +642,13 @@
           ],
           "params": [
             {
-              "name": "durationMs",
-              "type": "number",
+              "name": "duration",
+              "type": "Seconds",
               "optional": false
             }
           ],
           "returnType": "Promise<Sound>",
-          "description": "Record durationMs (in milliseconds) of the live input and resolve with a playable Sound. Uses MediaRecorder under the hood, then decodes the captured blob into an AudioBuffer."
+          "description": "Record duration of the live input and resolve with a playable Sound. Uses MediaRecorder under the hood, then decodes the captured blob into an AudioBuffer."
         },
         {
           "name": "removeEffect",
@@ -793,7 +793,7 @@
         },
         {
           "name": "stop",
-          "signature": "stop(fadeMs?: number): void",
+          "signature": "stop(fade?: Seconds): void",
           "signatureTokens": [
             {
               "text": "stop",
@@ -804,7 +804,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "fadeMs",
+              "text": "fade",
               "kind": "param"
             },
             {
@@ -816,8 +816,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Seconds",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -834,13 +834,13 @@
           ],
           "params": [
             {
-              "name": "fadeMs",
-              "type": "number",
+              "name": "fade",
+              "type": "Seconds",
               "optional": true
             }
           ],
           "returnType": "void",
-          "description": "Stop playback and release this voice's resources. Pass fadeMs to ramp the volume to zero over that many milliseconds before stopping; omit (or pass 0) to stop immediately. Idempotent - calling again is a no-op."
+          "description": "Stop playback and release this voice's resources. Pass fade to ramp the volume to zero over that duration before stopping; omit (or pass 0) to stop immediately. Idempotent - calling again is a no-op."
         }
       ],
       "paragraphs": [],
