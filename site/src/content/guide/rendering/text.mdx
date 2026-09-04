@@ -3,6 +3,7 @@ title: 'Text'
 description: 'Control layout, styling, and visual effects for runtime text.'
 ---
 
+import Callout from '../../../components/Callout.astro';
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 import SourceSnippet from '../../../components/SourceSnippet.astro';
 
@@ -140,6 +141,80 @@ const wrapped = new Text(longString, {
 });
 ```
 
+## International text
+
+Four separate concerns decide how a string ends up on screen. They are easy to confuse, and only the first two are about typography:
+
+- **Segmentation** — where the text may safely be split.
+- **Shaping** — whether a glyph's appearance depends on the glyphs around it.
+- **Raster density** — how much glyph information is stored ([`pixelRatio`](#hidpi-glyph-raster-density)).
+- **Reconstruction** — how that information is turned back into an edge on screen.
+
+### Segmentation: the unit is a cluster, not a character
+
+Layout counts **grapheme clusters**, not code points. A combining sequence (`e` + acute), an emoji with a skin-tone modifier, a ZWJ sequence like 👨‍👩‍👧 and a regional-indicator flag pair are each one cluster made of several code points, and each is placed as one glyph. Wrapping, `breakWords` and the `'ellipsis'` overflow all cut between clusters, so truncation never leaves a dangling mark or half a flag behind.
+
+Word boundaries come from the platform's own segmentation rather than from splitting on spaces, so a language written without inter-word spaces wraps at its own boundaries instead of overflowing as one token:
+
+```ts
+import { Text } from '@codexo/exojs';
+
+const jp = new Text('日本語のテキストは自動的に折り返されます', {
+    fontSize: 18,
+    maxWidth: 200,
+    locale: 'ja',
+});
+```
+
+`locale` selects the segmentation locale. It picks no font and loads nothing; leave it out and the platform default applies.
+
+### Shaping: when a glyph needs its neighbours
+
+Most text renders one glyph at a time out of a shared atlas — the same `S` serves every label on screen, which is what makes thousands of them cheap. Some scripts cannot work that way. An Arabic letter changes shape depending on what it joins to, and a line mixing Latin and Hebrew has a visual order that follows from the whole line, not from any character in it.
+
+For those, ExoJS hands the complete laid-out line to the browser's own text engine, which resolves the bidirectional order and the contextual forms, and renders the result. `shaping` selects between the two:
+
+```ts
+import { Color, Text } from '@codexo/exojs';
+
+// 'auto' (the default): plain Latin takes the shared-glyph path.
+const score = new Text('Score: 1234', { fillColor: Color.white, fontSize: 20 });
+
+// 'auto' again: Arabic needs its neighbours, so the browser shapes the line.
+const heading = new Text('الإصدار 12', { fillColor: Color.white, fontSize: 20 });
+
+// Forced, for controlled content and for benchmarks.
+const forced = new Text('Score: 1234', { fillColor: Color.white, fontSize: 20, shaping: 'simple' });
+```
+
+`text.shapingMode` reports which one settled, `'simple'` or `'browser'`.
+
+`direction` sets the base direction a mixed line is resolved against. It is explicit — the engine does not guess it from the text or from the locale, because neither implies the other:
+
+```ts
+import { Text } from '@codexo/exojs';
+
+const rtl = new Text('Build 42 — الإصدار 12 (Beta)', { fontSize: 20, direction: 'rtl' });
+```
+
+### What this costs, and what it does not
+
+The shared-glyph path is unchanged. A HUD counter going from `1234` to `1235` still reuses every glyph it already has and rasterizes only what is new, and static text does no segmentation, no measurement and no rasterization on a frame where nothing changed.
+
+Browser-shaped text has a different cost model on purpose. Its unit is a line, so a line whose text changes is rasterized again, and the raster belongs to the node rather than to the shared atlas — which is why it is worth forcing `shaping: 'simple'` for content you know is simple, and worth not putting contextual text in a per-frame readout.
+
+<Callout type="note">
+A browser-shaped line is one glyph as far as layout is concerned. `align: 'justify'` therefore cannot stretch it, `letterSpacing` is applied inside the shaping rather than between placements, and caret geometry resolves to line granularity. The editing widgets ([`TextInput`](/ExoJS/en/api/text-input/), [`TextArea`](/ExoJS/en/api/text-area/)) pin `shaping: 'simple'` for that reason.
+</Callout>
+
+### Limits worth knowing
+
+- Segmentation uses the platform's `Intl.Segmenter`. Where a browser does not provide it, clusters degrade to code points: surrogate pairs still survive, but a combining sequence, a ZWJ sequence or a flag may be split by wrapping or truncation, and word boundaries fall back to blank runs. No polyfill and no Unicode tables ship with the engine.
+- ExoJS does not implement the Unicode bidirectional algorithm itself. It supplies the base direction and lets the browser resolve the line, which is enough to render mixed text correctly but not to own a logical-to-visual mapping — so caret navigation, selection and hit testing inside contextual text are not supported yet.
+- Word segmentation is not full Unicode line breaking. Hyphenation points and the finer break rules of some scripts are not modelled.
+- Font fallback for a character the chosen family lacks is the browser's, not the engine's. There is no engine-owned fallback ordering.
+- [`BitmapText`](/ExoJS/en/api/bitmap-text/) is unaffected: a prebuilt font holds pre-generated glyphs and usually no contextual data, so it stays on the per-glyph path.
+
 ## Alignment
 
 The `align` property controls horizontal positioning relative to the `Text` node's local origin:
@@ -236,6 +311,7 @@ Antialiasing is not part of this decision. The shader derives its edge width fro
 ## Text constraints
 
 - One glyph atlas is shared per font variant (family, style, weight, colour mode, SDF radius, raster pixel ratio), so nodes that differ only in size or colour reuse the same atlas — and nodes that differ in family, weight or pixel ratio do not. The atlas grows by adding 1024×1024 pages as needed; large sets of unique glyph/size combinations cost VRAM rather than failing, but a single glyph larger than one page throws.
+- Browser-shaped lines are owned by the node that laid them out rather than pooled, so identical contextual strings in different nodes each hold their own raster. There is no shared shaped-line cache.
 - `Text` does not expose per-character styling. Use separate `Text` instances for mixed-style strings.
 - `Text` is a leaf drawable, not a container — it takes no children.
 - Loader-based `FontAsset` loading is the built-in path for custom fonts; any font family available to the browser's canvas text engine can be used once loaded.

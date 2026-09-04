@@ -6,11 +6,11 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 133,
+  "memberCount": 135,
   "counts": {
     "constructors": 1,
-    "methods": 64,
-    "properties": 53,
+    "methods": 65,
+    "properties": 54,
     "events": 15
   },
   "sections": [
@@ -485,6 +485,35 @@
           ],
           "returnType": "void",
           "description": "React to a focus change on this widget. Override in subclasses that repaint for it; the default does nothing, so opting into tracking alone does not change how a widget looks."
+        },
+        {
+          "name": "_onScrollUpdated",
+          "signature": "_onScrollUpdated(): void",
+          "signatureTokens": [
+            {
+              "text": "_onScrollUpdated",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Called after the field re-clamped its scroll offsets. A subclass that shows the scroll position - a scrollbar, say - syncs it here."
         },
         {
           "name": "_onThemeChanged",
@@ -4143,6 +4172,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "scrollOffsetY",
+          "signature": "scrollOffsetY: number",
+          "signatureTokens": [
+            {
+              "text": "scrollOffsetY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How far the content is scrolled down, in layout pixels. Assigning scrolls the field without moving the caret, which is what a scrollbar drag does; the next caret move clamps it back into view."
         },
         {
           "name": "selectionEnd",

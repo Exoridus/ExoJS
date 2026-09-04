@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 103,
+  "memberCount": 104,
   "counts": {
     "constructors": 1,
     "methods": 43,
-    "properties": 45,
+    "properties": 46,
     "events": 14
   },
   "sections": [
@@ -2983,6 +2983,27 @@
           "params": [],
           "returnType": null,
           "description": "SDF buffer radius (pixels) used when rasterizing glyphs for this node. Determines the maximum usable outline/shadow reach. Nodes with different radii use separate atlas instances."
+        },
+        {
+          "name": "shapingMode",
+          "signature": "shapingMode: ShapingMode",
+          "signatureTokens": [
+            {
+              "text": "shapingMode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShapingMode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Which representation the settled layout used - 'simple' for shared atlas glyphs, 'browser' for lines the browser shaped. Follows from the content and from shaping; useful for diagnostics and benchmarks."
         },
         {
           "name": "skewX",
