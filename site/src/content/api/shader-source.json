@@ -378,7 +378,7 @@
       "members": [
         {
           "name": "glsl",
-          "signature": "glsl: null | { fragment: string; vertex: string }",
+          "signature": "glsl: null | { fragment: string; vertex: null | string }",
           "signatureTokens": [
             {
               "text": "glsl",
@@ -425,6 +425,14 @@
               "kind": "punctuation"
             },
             {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
               "text": "string",
               "kind": "keyword"
             },
@@ -435,7 +443,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "GLSL source pair for the WebGL2 backend, or null if not provided."
+          "description": "GLSL sources for the WebGL2 backend, or null if not provided. vertex is null when the author left the vertex stage to the consumer."
         },
         {
           "name": "wgsl",

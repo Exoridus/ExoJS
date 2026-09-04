@@ -3,7 +3,6 @@ import { ShaderSource, SpriteMaterial } from '@codexo/exojs';
 
 import type { LightingSystem } from './LightingSystem';
 import fragmentGlsl from './shaders/lit-sprite.frag';
-import vertexGlsl from './shaders/lit-sprite.vert';
 import fragmentWgsl from './shaders/lit-sprite.wgsl';
 
 /**
@@ -12,7 +11,7 @@ import fragmentWgsl from './shaders/lit-sprite.wgsl';
  * materials cost one compile per backend rather than N.
  */
 const litSpriteShader = new ShaderSource({
-  glsl: { vertex: vertexGlsl, fragment: fragmentGlsl },
+  glsl: { fragment: fragmentGlsl },
   wgsl: fragmentWgsl,
 });
 

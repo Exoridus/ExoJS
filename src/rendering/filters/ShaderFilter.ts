@@ -357,6 +357,6 @@ export class ShaderFilter extends Filter {
       throw new ShaderFilterBackendError(backend.backendType, 'glsl');
     }
 
-    return (this._glslPass ??= new WebGl2ShaderFilterPass(this._shader.glsl.vertex, this._shader.glsl.fragment, this._uniforms));
+    return (this._glslPass ??= new WebGl2ShaderFilterPass(this._shader.glsl.vertex ?? defaultGlslVertexSource, this._shader.glsl.fragment, this._uniforms));
   }
 }

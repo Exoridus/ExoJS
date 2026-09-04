@@ -8,11 +8,14 @@
  */
 export interface ShaderSourceOptions {
   /**
-   * GLSL ES 3.00 sources for the WebGL2 backend. Both `vertex` and
-   * `fragment` are required when `glsl` is supplied.
+   * GLSL ES 3.00 sources for the WebGL2 backend. `fragment` is required;
+   * `vertex` may be omitted where the consumer owns the vertex stage - a
+   * {@link SpriteMaterial} (the sprite vertex program is engine-owned) or a
+   * {@link ShaderFilter} (the fullscreen quad). A mesh or particle material
+   * needs both.
    */
   readonly glsl?: {
-    readonly vertex: string;
+    readonly vertex?: string;
     readonly fragment: string;
   };
 
@@ -105,8 +108,11 @@ let nextShaderSourceId = 1;
  * @advanced
  */
 export class ShaderSource {
-  /** GLSL source pair for the WebGL2 backend, or `null` if not provided. */
-  public readonly glsl: { readonly vertex: string; readonly fragment: string } | null;
+  /**
+   * GLSL sources for the WebGL2 backend, or `null` if not provided. `vertex`
+   * is `null` when the author left the vertex stage to the consumer.
+   */
+  public readonly glsl: { readonly vertex: string | null; readonly fragment: string } | null;
 
   /** WGSL source for the WebGPU backend, or `null` if not provided. */
   public readonly wgsl: string | null;
@@ -119,8 +125,8 @@ export class ShaderSource {
     }
 
     if (options.glsl !== undefined) {
-      if (typeof options.glsl.vertex !== 'string' || options.glsl.vertex.length === 0) {
-        throw new Error('ShaderSource.glsl.vertex must be a non-empty string.');
+      if (options.glsl.vertex !== undefined && (typeof options.glsl.vertex !== 'string' || options.glsl.vertex.length === 0)) {
+        throw new Error('ShaderSource.glsl.vertex must be a non-empty string when provided.');
       }
       if (typeof options.glsl.fragment !== 'string' || options.glsl.fragment.length === 0) {
         throw new Error('ShaderSource.glsl.fragment must be a non-empty string.');
@@ -131,7 +137,7 @@ export class ShaderSource {
       throw new Error('ShaderSource.wgsl must be a non-empty string.');
     }
 
-    this.glsl = options.glsl ?? null;
+    this.glsl = options.glsl !== undefined ? { vertex: options.glsl.vertex ?? null, fragment: options.glsl.fragment } : null;
     this.wgsl = options.wgsl ?? null;
     this._id = nextShaderSourceId++;
   }
@@ -159,7 +165,7 @@ export class ShaderSource {
    */
   public getDeclaredUniforms(): { glsl: Record<string, string>; wgsl: Record<string, string> } {
     return {
-      glsl: this.glsl !== null ? parseGlslUniforms(this.glsl.vertex, this.glsl.fragment) : {},
+      glsl: this.glsl !== null ? parseGlslUniforms(this.glsl.vertex ?? '', this.glsl.fragment) : {},
       wgsl: this.wgsl !== null ? parseWgslUniforms(this.wgsl) : {},
     };
   }

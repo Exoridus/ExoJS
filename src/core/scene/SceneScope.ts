@@ -70,7 +70,11 @@ export class SceneScope<Data = unknown> {
       () => this._state,
       () => this._paused,
     );
-    this.interaction = new SceneInteraction(app, () => this._state);
+    this.interaction = new SceneInteraction(
+      app,
+      () => this._state,
+      () => this._paused,
+    );
     this.tweens = new SceneTweens(app, () => this._state);
     this.audio = new SceneAudio(app, () => this._state);
     this.animations = new SceneAnimations();
@@ -165,6 +169,7 @@ export class SceneScope<Data = unknown> {
     this._guard(errors, () => this.tweens.pause());
     this._guard(errors, () => this.audio.pause());
     this._guard(errors, () => this.animations.pause());
+    this._guard(errors, () => this.interaction.resume());
     this._guard(errors, () => this.scene.onPause.dispatchIsolated(error => this._reportError(error)));
 
     this._reportErrors(errors);
@@ -191,6 +196,7 @@ export class SceneScope<Data = unknown> {
     this._guard(errors, () => this.tweens.resume());
     this._guard(errors, () => this.audio.resume());
     this._guard(errors, () => this.animations.resume());
+    this._guard(errors, () => this.interaction.resume());
     this._guard(errors, () => this.scene.onResume.dispatchIsolated(error => this._reportError(error)));
 
     this._reportErrors(errors);
