@@ -8,6 +8,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Changed
 
+- **Punctuation keys are named after their `code` on both input surfaces.**
+  `Keyboard.Colon`, `Equals`, `Dash`, `QuestionMark`, `Tilde`, `OpenBracket`,
+  `BackwardSlash`, `ClosedBracket` and `Quotes` are now `Semicolon`, `Equal`,
+  `Minus`, `Slash`, `Backquote`, `BracketLeft`, `Backslash`, `BracketRight` and
+  `Quote`, matching the pattern tokens (`keyboard.semicolon`, ...) and
+  `KeyboardEvent.code`. Channel values, bindings and actions are unchanged.
 - **Every remaining public duration input takes branded `Seconds` instead of a
   plain millisecond `number`.** `AudioBus.fadeIn`/`fadeOut`, `Voice.fade`/`stop`
   (and `crossFade`'s duration), `InputVoice.record`, `Envelope`'s

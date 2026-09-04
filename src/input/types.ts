@@ -87,7 +87,7 @@ export enum PointerButton {
  * Every member therefore names a POSITION, described by the glyph a US-QWERTY
  * keyboard prints there, and NOT the character the key actually produces:
  * {@link Keyboard.Z} is the key a German QWERTZ keyboard prints "Y" on, and
- * {@link Keyboard.Colon} the key it prints "ö" on. Use DOM text input for
+ * {@link Keyboard.Semicolon} the key it prints "ö" on. Use DOM text input for
  * anything that needs the typed character, dead keys, or IME composition.
  *
  * The values are opaque channel indices inside the keyboard category - do not
@@ -225,15 +225,15 @@ export enum Keyboard {
   IntlRo = ChannelOffset.Keyboard + 148,
   /** The extra key right of `Backspace` on Japanese keyboards. */
   IntlYen = ChannelOffset.Keyboard + 149,
-  Colon = ChannelOffset.Keyboard + 186,
-  Equals = ChannelOffset.Keyboard + 187,
+  Semicolon = ChannelOffset.Keyboard + 186,
+  Equal = ChannelOffset.Keyboard + 187,
   Comma = ChannelOffset.Keyboard + 188,
-  Dash = ChannelOffset.Keyboard + 189,
+  Minus = ChannelOffset.Keyboard + 189,
   Period = ChannelOffset.Keyboard + 190,
-  QuestionMark = ChannelOffset.Keyboard + 191,
-  Tilde = ChannelOffset.Keyboard + 192,
-  OpenBracket = ChannelOffset.Keyboard + 219,
-  BackwardSlash = ChannelOffset.Keyboard + 220,
-  ClosedBracket = ChannelOffset.Keyboard + 221,
-  Quotes = ChannelOffset.Keyboard + 222,
+  Slash = ChannelOffset.Keyboard + 191,
+  Backquote = ChannelOffset.Keyboard + 192,
+  BracketLeft = ChannelOffset.Keyboard + 219,
+  Backslash = ChannelOffset.Keyboard + 220,
+  BracketRight = ChannelOffset.Keyboard + 221,
+  Quote = ChannelOffset.Keyboard + 222,
 }

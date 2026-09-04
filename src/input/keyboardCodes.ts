@@ -11,10 +11,9 @@ import { Keyboard } from './types';
  * own character mapping, so the same physical key yields a different number
  * per layout.
  *
- * The `code` spelling lives in this table only. {@link Keyboard} member names
- * stay as they are, so a punctuation key is listed under the glyph a US-QWERTY
- * keyboard prints on it (`'Semicolon'` → {@link Keyboard.Colon}) rather than
- * under a matching name.
+ * {@link Keyboard} member names follow the `code` spelling, so a punctuation
+ * key is listed under the same name on both surfaces (`'Semicolon'` →
+ * {@link Keyboard.Semicolon}, pattern token `keyboard.semicolon`).
  *
  * A modifier resolves to its SIDE-SPECIFIC channel here (`'ShiftLeft'` →
  * {@link Keyboard.ShiftLeft}, not the aggregate {@link Keyboard.Shift}) -
@@ -66,17 +65,17 @@ const channelsByCode = new Map<string, Keyboard>([
 
   // Punctuation. The channel name is the US-QWERTY glyph; the key itself is
   // the position, whatever the player's layout prints on it.
-  ['Backquote', Keyboard.Tilde],
-  ['Minus', Keyboard.Dash],
-  ['Equal', Keyboard.Equals],
-  ['BracketLeft', Keyboard.OpenBracket],
-  ['BracketRight', Keyboard.ClosedBracket],
-  ['Backslash', Keyboard.BackwardSlash],
-  ['Semicolon', Keyboard.Colon],
-  ['Quote', Keyboard.Quotes],
+  ['Backquote', Keyboard.Backquote],
+  ['Minus', Keyboard.Minus],
+  ['Equal', Keyboard.Equal],
+  ['BracketLeft', Keyboard.BracketLeft],
+  ['BracketRight', Keyboard.BracketRight],
+  ['Backslash', Keyboard.Backslash],
+  ['Semicolon', Keyboard.Semicolon],
+  ['Quote', Keyboard.Quote],
   ['Comma', Keyboard.Comma],
   ['Period', Keyboard.Period],
-  ['Slash', Keyboard.QuestionMark],
+  ['Slash', Keyboard.Slash],
   ['IntlBackslash', Keyboard.IntlBackslash],
   ['IntlRo', Keyboard.IntlRo],
   ['IntlYen', Keyboard.IntlYen],

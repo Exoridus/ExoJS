@@ -103,7 +103,7 @@ describe('ActionMap browser-default capture', () => {
       new ActionMap({
         up: new ButtonAction(Keyboard.Up),
         down: new ButtonAction(Keyboard.Down),
-        find: new ButtonAction(Keyboard.QuestionMark),
+        find: new ButtonAction(Keyboard.Slash),
       }),
     );
 
