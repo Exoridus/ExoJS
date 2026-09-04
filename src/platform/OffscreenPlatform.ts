@@ -66,6 +66,7 @@ export class OffscreenPlatform implements PlatformAdapter {
   private readonly _windowListeners = new Map<string, Set<Listener>>();
   private readonly _visibilityListeners = new Set<(visible: boolean) => void>();
   private readonly _networkListeners = new Set<(hint: NetworkHint) => void>();
+  private readonly _pixelRatioListeners = new Set<(ratio: number) => void>();
   private readonly _timerHandles = new Map<number, ReturnType<typeof setTimeout>>();
   private readonly _requestFrame: ((callback: (timestamp: number) => void) => number) | null;
   private readonly _cancelFrame: ((handle: number) => void) | null;
@@ -82,12 +83,18 @@ export class OffscreenPlatform implements PlatformAdapter {
    * host forwards. `'unknown'` until it does, because nothing here knows.
    */
   private _networkHint: NetworkHint = 'unknown';
+  private _pixelRatio: number;
   private _nextTimerHandle = 1;
 
   public constructor(surface: RenderSurface) {
     const scope = globalThis as typeof globalThis &
       Partial<{ requestAnimationFrame: typeof requestAnimationFrame; cancelAnimationFrame: typeof cancelAnimationFrame }>;
+    const ratio = (globalThis as { devicePixelRatio?: number }).devicePixelRatio;
 
+    // An `OffscreenCanvas` kept on the main thread still sits in a realm that
+    // knows its display; a worker's does not, and reports `1` until the host
+    // forwards the real ratio.
+    this._pixelRatio = typeof ratio === 'number' && ratio > 0 ? ratio : 1;
     this._surface = surface;
     this._rect = { left: 0, top: 0, width: surface.width, height: surface.height };
     this._requestFrame = typeof scope.requestAnimationFrame === 'function' ? scope.requestAnimationFrame.bind(scope) : null;
@@ -109,6 +116,28 @@ export class OffscreenPlatform implements PlatformAdapter {
 
   public get networkHint(): NetworkHint {
     return this._networkHint;
+  }
+
+  public get devicePixelRatio(): number {
+    return this._pixelRatio;
+  }
+
+  /**
+   * Record the display's device-pixel ratio. Drives
+   * {@link PlatformAdapter.devicePixelRatio} and its subscribers, so a host
+   * that wants the backing store to follow a monitor or zoom change has to
+   * forward it - a worker realm sees no display of its own.
+   */
+  public setPixelRatio(ratio: number): void {
+    if (ratio <= 0 || ratio === this._pixelRatio) {
+      return;
+    }
+
+    this._pixelRatio = ratio;
+
+    for (const listener of [...this._pixelRatioListeners]) {
+      listener(ratio);
+    }
   }
 
   /**
@@ -244,6 +273,12 @@ export class OffscreenPlatform implements PlatformAdapter {
     return once(() => this._networkListeners.delete(listener));
   }
 
+  public onPixelRatioChange(listener: (ratio: number) => void): PlatformSubscription {
+    this._pixelRatioListeners.add(listener);
+
+    return once(() => this._pixelRatioListeners.delete(listener));
+  }
+
   public now(): number {
     return performance.now();
   }
@@ -297,6 +332,7 @@ export class OffscreenPlatform implements PlatformAdapter {
     this._windowListeners.clear();
     this._visibilityListeners.clear();
     this._networkListeners.clear();
+    this._pixelRatioListeners.clear();
     this._gamepads = noGamepads;
   }
 

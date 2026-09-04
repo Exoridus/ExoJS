@@ -237,6 +237,24 @@ export interface PlatformAdapter extends TimeSource, FrameScheduler {
    */
   getSurfaceMetrics(): PlatformSurfaceMetrics;
 
+  /**
+   * Device pixels the host currently packs into one CSS pixel. `1` where the
+   * host reports nothing.
+   *
+   * A property of the display the surface is shown on, not of the surface: it
+   * changes when the window moves to a different monitor or the page is
+   * zoomed, which is what {@link PlatformAdapter.onPixelRatioChange} reports.
+   */
+  readonly devicePixelRatio: number;
+
+  /**
+   * Subscribe to {@link PlatformAdapter.devicePixelRatio} changes.
+   *
+   * Optional: a host that cannot observe the ratio omits it, and everything
+   * derived from the ratio then keeps the value it was first resolved at.
+   */
+  onPixelRatioChange?(listener: (ratio: number) => void): PlatformSubscription;
+
   /** Set the cursor shown over the surface. Empty string restores the default. */
   setCursor(value: string): void;
 

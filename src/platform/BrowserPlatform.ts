@@ -48,8 +48,29 @@ export class BrowserPlatform implements PlatformAdapter {
     }
   };
 
+  private readonly _pixelRatioListeners = new Set<(ratio: number) => void>();
+  private readonly _pixelRatioHandler = (): void => {
+    const ratio = this.devicePixelRatio;
+
+    // Each query only answers one exact ratio, so the watch has to be re-armed
+    // against the new one before anything else can change again.
+    this._armPixelRatioQuery();
+
+    if (ratio === this._lastPixelRatio) {
+      return;
+    }
+
+    this._lastPixelRatio = ratio;
+
+    for (const listener of [...this._pixelRatioListeners]) {
+      listener(ratio);
+    }
+  };
+
   private _lastVisible: boolean;
   private _visibilityBound = false;
+  private _pixelRatioQuery: MediaQueryList | null = null;
+  private _lastPixelRatio: number;
   /**
    * Bound on first subscription rather than in the constructor: an application
    * that never asks about connectivity should install no window listeners for
@@ -60,6 +81,7 @@ export class BrowserPlatform implements PlatformAdapter {
   public constructor(canvas: HTMLCanvasElement) {
     this._canvas = canvas;
     this._lastVisible = this.documentVisible;
+    this._lastPixelRatio = this.devicePixelRatio;
   }
 
   /** The canvas this adapter drives. */
@@ -108,6 +130,30 @@ export class BrowserPlatform implements PlatformAdapter {
       backingWidth: this._canvas.width,
       backingHeight: this._canvas.height,
     };
+  }
+
+  public get devicePixelRatio(): number {
+    const ratio = (globalThis as { devicePixelRatio?: number }).devicePixelRatio;
+
+    return typeof ratio === 'number' && ratio > 0 ? ratio : 1;
+  }
+
+  /**
+   * Watches the ratio through a `(resolution: Ndppx)` media query rather than a
+   * `resize` listener: a ratio change caused by dragging the window to another
+   * display, or by an OS scaling change, raises no `resize` event at all.
+   */
+  public onPixelRatioChange(listener: (ratio: number) => void): PlatformSubscription {
+    this._pixelRatioListeners.add(listener);
+    this._armPixelRatioQuery();
+
+    return this._track(() => {
+      this._pixelRatioListeners.delete(listener);
+
+      if (this._pixelRatioListeners.size === 0) {
+        this._disarmPixelRatioQuery();
+      }
+    });
   }
 
   public setCursor(value: string): void {
@@ -222,7 +268,9 @@ export class BrowserPlatform implements PlatformAdapter {
     this._subscriptions.clear();
     this._textInputs.clear();
     this._visibilityListeners.clear();
+    this._pixelRatioListeners.clear();
     this._unbindVisibility();
+    this._disarmPixelRatioQuery();
     this._networkHints?.destroy();
     this._networkHints = null;
   }
@@ -262,6 +310,29 @@ export class BrowserPlatform implements PlatformAdapter {
     this._subscriptions.add(subscription);
 
     return subscription;
+  }
+
+  /**
+   * Point the watch at the ratio that is current now. A media query matches one
+   * exact ratio, so the previous one is dropped first - keeping it would leave a
+   * listener on a query that can never match again.
+   */
+  private _armPixelRatioQuery(): void {
+    if (this._pixelRatioListeners.size === 0 || typeof matchMedia !== 'function') {
+      return;
+    }
+
+    this._disarmPixelRatioQuery();
+
+    const query = matchMedia(`(resolution: ${this.devicePixelRatio}dppx)`);
+
+    this._pixelRatioQuery = query;
+    query.addEventListener('change', this._pixelRatioHandler);
+  }
+
+  private _disarmPixelRatioQuery(): void {
+    this._pixelRatioQuery?.removeEventListener('change', this._pixelRatioHandler);
+    this._pixelRatioQuery = null;
   }
 
   private _bindVisibility(): void {

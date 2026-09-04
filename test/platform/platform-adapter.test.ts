@@ -49,20 +49,36 @@ const createRecordingPlatform = (): PlatformAdapter & {
   readonly calls: string[];
   visible: boolean;
   networkHint: NetworkHint;
+  devicePixelRatio: number;
   emitVisibility: (visible: boolean) => void;
   emitNetworkHint: (hint: NetworkHint) => void;
+  emitPixelRatio: (ratio: number) => void;
 } => {
   const calls: string[] = [];
   const visibilityListeners = new Set<(visible: boolean) => void>();
   const networkListeners = new Set<(hint: NetworkHint) => void>();
+  const pixelRatioListeners = new Set<(ratio: number) => void>();
 
   return {
     calls,
     visible: true,
     networkHint: 'online' as NetworkHint,
+    devicePixelRatio: 1,
 
     surfaceFocused: false,
     textInputFocused: false,
+    onPixelRatioChange(listener: (ratio: number) => void): PlatformSubscription {
+      pixelRatioListeners.add(listener);
+
+      return () => void pixelRatioListeners.delete(listener);
+    },
+    emitPixelRatio(ratio: number): void {
+      this.devicePixelRatio = ratio;
+
+      for (const listener of pixelRatioListeners) {
+        listener(ratio);
+      }
+    },
     get documentVisible(): boolean {
       return this.visible;
     },
@@ -169,6 +185,52 @@ describe('platform injection', () => {
     void app.destroy();
   });
 
+  it('re-derives the backing store when the adapter reports a new device-pixel ratio', async () => {
+    const Application = await loadApplication();
+    const platform = createRecordingPlatform();
+    const app = new Application({ platform, canvas: { width: 800, height: 600 } });
+
+    expect(app.pixelRatio).toBe(1);
+    expect(app.canvas.width).toBe(800);
+
+    platform.emitPixelRatio(2);
+
+    expect(app.pixelRatio).toBe(2);
+    expect(app.canvas.width).toBe(1600);
+    expect(app.canvas.height).toBe(1200);
+    // The logical view is unaffected - only how many device pixels it is
+    // rendered into changed.
+    expect(app.width).toBe(800);
+
+    void app.destroy();
+  });
+
+  it('clamps a tracked ratio to the auto ceiling', async () => {
+    const Application = await loadApplication();
+    const platform = createRecordingPlatform();
+    const app = new Application({ platform, canvas: { width: 400, height: 400 } });
+
+    platform.emitPixelRatio(3);
+
+    expect(app.pixelRatio).toBe(2);
+    expect(app.canvas.width).toBe(800);
+
+    void app.destroy();
+  });
+
+  it('pins the ratio an explicit canvas.pixelRatio asked for', async () => {
+    const Application = await loadApplication();
+    const platform = createRecordingPlatform();
+    const app = new Application({ platform, canvas: { width: 800, height: 600, pixelRatio: 1 } });
+
+    platform.emitPixelRatio(2);
+
+    expect(app.pixelRatio).toBe(1);
+    expect(app.canvas.width).toBe(800);
+
+    void app.destroy();
+  });
+
   it('leaves an injected adapter for its owner to dispose', async () => {
     const Application = await loadApplication();
     const platform = createRecordingPlatform();
@@ -264,5 +326,90 @@ describe('BrowserPlatform', () => {
   it('survives a pointer capture the host rejects', () => {
     expect(() => platform.capturePointer(1)).not.toThrow();
     expect(() => platform.releasePointer(1)).not.toThrow();
+  });
+
+  describe('device-pixel ratio', () => {
+    /**
+     * A `matchMedia` whose queries can be fired by hand. Each query records the
+     * media string it was built with, so a test can assert that the watch was
+     * re-armed against the ratio that is now current.
+     */
+    const stubMatchMedia = (): { queries: Array<{ media: string; fire: () => void }> } => {
+      const queries: Array<{ media: string; fire: () => void }> = [];
+
+      vi.stubGlobal('matchMedia', (media: string) => {
+        const listeners = new Set<() => void>();
+        const entry = {
+          media,
+          fire: (): void => {
+            for (const listener of [...listeners]) {
+              listener();
+            }
+          },
+        };
+
+        queries.push(entry);
+
+        return {
+          media,
+          matches: true,
+          addEventListener: (_type: string, listener: () => void) => void listeners.add(listener),
+          removeEventListener: (_type: string, listener: () => void) => void listeners.delete(listener),
+        };
+      });
+
+      return { queries };
+    };
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('reports the host ratio, falling back to 1', () => {
+      vi.stubGlobal('devicePixelRatio', 2.5);
+      expect(platform.devicePixelRatio).toBe(2.5);
+
+      vi.stubGlobal('devicePixelRatio', undefined);
+      expect(platform.devicePixelRatio).toBe(1);
+    });
+
+    it('notifies on a ratio change and re-arms the watch at the new ratio', () => {
+      vi.stubGlobal('devicePixelRatio', 1);
+
+      const { queries } = stubMatchMedia();
+      const seen = vi.fn();
+
+      platform.onPixelRatioChange(seen);
+
+      expect(queries).toHaveLength(1);
+      expect(queries[0]?.media).toBe('(resolution: 1dppx)');
+
+      vi.stubGlobal('devicePixelRatio', 2);
+      queries[0]?.fire();
+
+      expect(seen).toHaveBeenCalledExactlyOnceWith(2);
+      expect(queries[1]?.media).toBe('(resolution: 2dppx)');
+    });
+
+    it('stops notifying once the subscription is undone', () => {
+      vi.stubGlobal('devicePixelRatio', 1);
+
+      const { queries } = stubMatchMedia();
+      const seen = vi.fn();
+      const unsubscribe = platform.onPixelRatioChange(seen);
+
+      unsubscribe();
+
+      vi.stubGlobal('devicePixelRatio', 2);
+      queries[0]?.fire();
+
+      expect(seen).not.toHaveBeenCalled();
+    });
+
+    it('subscribes inertly on a host without matchMedia', () => {
+      vi.stubGlobal('matchMedia', undefined);
+
+      expect(() => platform.onPixelRatioChange(vi.fn())()).not.toThrow();
+    });
   });
 });

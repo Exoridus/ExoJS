@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 22,
+  "memberCount": 24,
   "counts": {
     "constructors": 1,
-    "methods": 16,
-    "properties": 5,
+    "methods": 17,
+    "properties": 6,
     "events": 0
   },
   "sections": [
@@ -398,6 +398,73 @@
           ],
           "returnType": "PlatformSubscription",
           "description": "Subscribe to PlatformAdapter.networkHint changes."
+        },
+        {
+          "name": "onPixelRatioChange",
+          "signature": "onPixelRatioChange(listener: (ratio: number) => void): PlatformSubscription",
+          "signatureTokens": [
+            {
+              "text": "onPixelRatioChange",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "listener",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ratio",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlatformSubscription",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "listener",
+              "type": "(ratio: number) => void",
+              "optional": false
+            }
+          ],
+          "returnType": "PlatformSubscription",
+          "description": "Watches the ratio through a (resolution: Ndppx) media query rather than a resize listener: a ratio change caused by dragging the window to another display, or by an OS scaling change, raises no resize event at all."
         },
         {
           "name": "onSurfaceEvent",
@@ -982,6 +1049,27 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "devicePixelRatio",
+          "signature": "devicePixelRatio: number",
+          "signatureTokens": [
+            {
+              "text": "devicePixelRatio",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Device pixels the host currently packs into one CSS pixel. 1 where the host reports nothing. A property of the display the surface is shown on, not of the surface: it changes when the window moves to a different monitor or the page is zoomed, which is what PlatformAdapter.onPixelRatioChange reports."
+        },
         {
           "name": "documentVisible",
           "signature": "documentVisible: boolean",

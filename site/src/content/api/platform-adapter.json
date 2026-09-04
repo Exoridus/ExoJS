@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 20,
+  "memberCount": 22,
   "counts": {
     "constructors": 0,
-    "methods": 16,
-    "properties": 4,
+    "methods": 17,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -344,6 +344,77 @@
           ],
           "returnType": "PlatformSubscription",
           "description": "Subscribe to PlatformAdapter.networkHint changes."
+        },
+        {
+          "name": "onPixelRatioChange",
+          "signature": "onPixelRatioChange?(listener: (ratio: number) => void): PlatformSubscription",
+          "signatureTokens": [
+            {
+              "text": "onPixelRatioChange",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "listener",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ratio",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlatformSubscription",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "listener",
+              "type": "(ratio: number) => void",
+              "optional": false
+            }
+          ],
+          "returnType": "PlatformSubscription",
+          "description": "Subscribe to PlatformAdapter.devicePixelRatio changes. Optional: a host that cannot observe the ratio omits it, and everything derived from the ratio then keeps the value it was first resolved at."
         },
         {
           "name": "onSurfaceEvent",
@@ -928,6 +999,27 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "devicePixelRatio",
+          "signature": "devicePixelRatio: number",
+          "signatureTokens": [
+            {
+              "text": "devicePixelRatio",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Device pixels the host currently packs into one CSS pixel. 1 where the host reports nothing. A property of the display the surface is shown on, not of the surface: it changes when the window moves to a different monitor or the page is zoomed, which is what PlatformAdapter.onPixelRatioChange reports."
+        },
         {
           "name": "documentVisible",
           "signature": "documentVisible: boolean",
