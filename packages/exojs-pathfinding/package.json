@@ -1,6 +1,6 @@
 {
   "name": "@codexo/exojs-pathfinding",
-  "version": "0.16.2",
+  "version": "0.16.1",
   "description": "Deterministic, allocation-free 2D pathfinding for ExoJS: A*, jump-point search, weighted grids and waypoint graphs.",
   "repository": {
     "type": "git",
