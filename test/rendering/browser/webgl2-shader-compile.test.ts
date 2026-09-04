@@ -122,9 +122,10 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['stencil-clip.vert', 'stencil-clip.frag'],
   ['mask-compose.vert', 'mask-compose.frag'],
   ['backdrop-blend.vert', 'backdrop-blend.frag'],
-  // The built-in filters: one pass-through fullscreen-quad vertex stage, three
-  // fragment stages, exactly as `ShaderFilter` assembles them.
+  // The built-in filters: one pass-through fullscreen-quad vertex stage, one
+  // fragment stage each, exactly as `ShaderFilter` assembles them.
   ['default-vertex.vert', 'color-matrix.frag'],
+  ['default-vertex.vert', 'displacement.frag'],
   ['default-vertex.vert', 'drop-shadow.frag'],
   ['default-vertex.vert', 'lut-3d.frag'],
   ['default-vertex.vert', 'lut-rgb1d.frag'],

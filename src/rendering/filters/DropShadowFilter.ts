@@ -3,7 +3,6 @@ import type { ReadonlyRectangle, Rectangle } from '#math/Rectangle';
 import { BackendTargetPass } from '#rendering/BackendTargetPass';
 import { drawDrawableDirect } from '#rendering/plan/drawDrawableDirect';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import { RenderBackendType } from '#rendering/RenderBackendType';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { BlendModes } from '#rendering/types';
@@ -200,14 +199,11 @@ export class DropShadowFilter extends Filter {
 
     try {
       // The offset is applied while the silhouette is read, so every later
-      // draw covers its whole target and none has to hang over an edge. The
-      // pass samples in texel space, and a WebGL2 render texture stores the
-      // effect domain bottom-up where a WebGPU one stores it top-down, so a
-      // downward offset is a negative v shift on one and a positive on the other.
-      const down = backend.backendType === RenderBackendType.WebGl2 ? -1 : 1;
-
+      // draw covers its whole target and none has to hang over an edge. It
+      // stays a DOWNWARD offset here: the shader turns it into the right v
+      // direction for the running backend through `uOrientation`.
       this._shift[0] = (this._offsetX * resolution) / output.width;
-      this._shift[1] = (down * this._offsetY * resolution) / output.height;
+      this._shift[1] = (this._offsetY * resolution) / output.height;
       this._silhouette.apply(backend, input, silhouette, resolution);
       this._blur.apply(backend, silhouette, shadow, resolution);
 

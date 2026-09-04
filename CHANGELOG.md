@@ -14,6 +14,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   `Minus`, `Slash`, `Backquote`, `BracketLeft`, `Backslash`, `BracketRight` and
   `Quote`, matching the pattern tokens (`keyboard.semicolon`, ...) and
   `KeyboardEvent.code`. Channel values, bindings and actions are unchanged.
+- **`ShaderFilter` sources get a `uOrientation` auto-bind, so one shader offsets
+  along `v` the same way on both backends.** A WebGL2 render texture stores the
+  effect domain bottom-up and a WebGPU one top-down, which used to make a
+  directional `v` offset move the image up on one backend and down on the other.
+  `uOrientation` is `+1` where `v` grows along the domain's y axis and `-1`
+  where it grows against it (GLSL `uniform float uOrientation`, WGSL
+  `@group(0) @binding(3) var<uniform> uOrientation: f32`); multiply the v
+  component of a directional offset by it. Existing sources that only sample
+  their own texel need no change.
+
 - **Every remaining public duration input takes branded `Seconds` instead of a
   plain millisecond `number`.** `AudioBus.fadeIn`/`fadeOut`, `Voice.fade`/`stop`
   (and `crossFade`'s duration), `InputVoice.record`, `Envelope`'s
@@ -67,6 +77,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Added
 
+- **`DisplacementFilter`.** Warps the filtered node by a direction read out of a
+  map texture - heat haze, water refraction, glass, shockwaves. `map`'s red and
+  green channels are decoded to `[-1, 1]` and scaled by `scale` (one number or
+  `[x, y]`, logical units, default `20`); `offsetU`/`offsetV` move where the map
+  is sampled, so animating them scrolls the distortion. The reach is declared
+  through `getOutputBounds`, and a fragment displaced past the effect domain
+  comes out transparent rather than smearing the border.
 - **`DropShadowFilter`.** A soft, offset silhouette of the filtered node drawn
   behind it: `offsetX`/`offsetY`, `blur`, `quality`, `color` (alpha is the
   shadow opacity) and `shadowOnly` for glows and detached shadows. Composed from

@@ -775,8 +775,8 @@ describe('ShaderFilter on WebGPU', () => {
     output.destroy();
   });
 
-  // 22. Auto bind group layout has 3 entries: UBO, texture, sampler
-  test('auto bind group layout has 3 entries (resolution UBO, texture, sampler)', () => {
+  // 22. Auto bind group layout has 4 entries: UBO, texture, sampler, orientation UBO
+  test('auto bind group layout has 4 entries (resolution UBO, texture, sampler, orientation UBO)', () => {
     const backend = makeWebGpuBackend(env);
     const filter = new ShaderFilter({ wgsl: minimalFragSrc });
     const input = new RenderTexture(32, 32);
@@ -787,7 +787,7 @@ describe('ShaderFilter on WebGPU', () => {
     // First createBindGroupLayout call is for the auto group
     const autoLayoutDesc = env.createBindGroupLayout.mock.calls[0][0] as GPUBindGroupLayoutDescriptor;
 
-    expect(autoLayoutDesc.entries).toHaveLength(3);
+    expect(autoLayoutDesc.entries).toHaveLength(4);
 
     filter.destroy();
     input.destroy();
