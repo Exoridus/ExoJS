@@ -62,6 +62,7 @@ import {
 import mipmapWgslModule from './shaders/mipmap.wgsl';
 import { WEBGPU_DEFAULT_MAX_TEXTURE_DIMENSION_2D } from './storageLimits';
 import { WebGpuBackdropBlendCompositor } from './WebGpuBackdropBlendCompositor';
+import { WebGpuGpuTimer } from './WebGpuGpuTimer';
 import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
 import { WebGpuMeshRenderer } from './WebGpuMeshRenderer';
 import { WebGpuPassCoordinator } from './WebGpuPassCoordinator';
@@ -290,6 +291,10 @@ export class WebGpuBackend implements RenderBackend {
   private _transformStorage: WebGpuTransformStorage | null = new WebGpuTransformStorage();
   private _activeDrawCommand: DrawCommand | null = null;
   private _passCoordinatorInstance: WebGpuPassCoordinator | null = null;
+  /** Non-null only while GPU timing is enabled; its query set belongs to the current device. */
+  private _gpuTimer: WebGpuGpuTimer | null = null;
+  /** Kept separately from `_gpuTimer` so a device recovery can re-arm timing that was asked for. */
+  private _gpuTimingRequested = false;
   private _drawPlanDepth = 0;
   private readonly _planBaseStack: number[] = [];
   private readonly _planHashStack: number[] = [];
@@ -533,7 +538,14 @@ export class WebGpuBackend implements RenderBackend {
    * Part of the renderer SDK contract for extension renderers.
    */
   public get _passCoordinator(): WebGpuPassCoordinator {
-    return (this._passCoordinatorInstance ??= new WebGpuPassCoordinator(this));
+    if (this._passCoordinatorInstance === null) {
+      this._passCoordinatorInstance = new WebGpuPassCoordinator(this);
+      // A coordinator first reached after timing was enabled has to inherit the
+      // timer, or the frame's passes go unbracketed and the frame reads as 0.
+      this._passCoordinatorInstance.gpuTimer = this._gpuTimer;
+    }
+
+    return this._passCoordinatorInstance;
   }
 
   public get clearColor(): Color {
@@ -566,8 +578,27 @@ export class WebGpuBackend implements RenderBackend {
     // The transform buffer is frame-scoped: reset it once per frame here (was
     // previously reset per render() call in _beginDrawPlan).
     this._getTransformStorage().buffer.begin();
+    this._gpuTimer?.beginFrame();
 
     return this;
+  }
+
+  public setGpuTimingEnabled(enabled: boolean): boolean {
+    this._gpuTimingRequested = enabled;
+
+    if (!enabled) {
+      this._gpuTimer?.destroy();
+      this._setGpuTimer(null);
+      this._stats.gpuFrameTimeMs = null;
+
+      return false;
+    }
+
+    if (this._gpuTimer === null && this._device !== null && !this._deviceLost) {
+      this._setGpuTimer(WebGpuGpuTimer.create(this._device));
+    }
+
+    return this._gpuTimer !== null;
   }
 
   /** Frame-global slot base the plan builder indexes from. @internal */
@@ -1144,6 +1175,13 @@ export class WebGpuBackend implements RenderBackend {
       this._passCoordinator.endPass();
     }
 
+    if (this._gpuTimer !== null) {
+      // After the passes above have been submitted, so the resolve this queues
+      // lands behind every pass it reads timestamps from.
+      this._gpuTimer.endFrame();
+      this._stats.gpuFrameTimeMs = this._gpuTimer.lastFrameMs;
+    }
+
     return this;
   }
 
@@ -1157,6 +1195,9 @@ export class WebGpuBackend implements RenderBackend {
     const device = this._device;
 
     this._destroyed = true;
+    this._gpuTimingRequested = false;
+    this._gpuTimer?.destroy();
+    this._setGpuTimer(null);
     this._removeUncapturedErrorListener();
     this.onDeviceLost.destroy();
     this.onDeviceRestored.destroy();
@@ -2113,10 +2154,16 @@ export class WebGpuBackend implements RenderBackend {
         }
       }
 
+      // A device's feature set is fixed at creation, so `timestamp-query` has to
+      // be requested here or `setGpuTimingEnabled` can never succeed on this
+      // device. Requesting a feature nothing uses changes no rendering behaviour
+      // and costs nothing until a timer actually allocates a query set.
+      const timestampFeatures = (['timestamp-query'] as const).filter(feature => adapter.features?.has(feature) ?? false);
+
       const descriptor: GPUDeviceDescriptor = {};
 
-      if (floatFeatures.length > 0 || compressedFeatures.length > 0) {
-        descriptor.requiredFeatures = [...floatFeatures, ...compressedFeatures];
+      if (floatFeatures.length > 0 || compressedFeatures.length > 0 || timestampFeatures.length > 0) {
+        descriptor.requiredFeatures = [...floatFeatures, ...compressedFeatures, ...timestampFeatures];
       }
 
       if (Object.keys(requiredLimits).length > 0) {
@@ -2264,6 +2311,11 @@ export class WebGpuBackend implements RenderBackend {
 
           this._deviceLost = false;
           this._recoveryAttempt = 0;
+
+          if (this._gpuTimingRequested) {
+            this.setGpuTimingEnabled(true);
+          }
+
           // Re-cache the resolved init promise so a subsequent external
           // initialize() call returns the live state instead of running
           // a second initialization (which would tear the working
@@ -2316,6 +2368,15 @@ export class WebGpuBackend implements RenderBackend {
     );
   }
 
+  /** Keep the timer and the coordinator that feeds it timestamp slots in step. */
+  private _setGpuTimer(timer: WebGpuGpuTimer | null): void {
+    this._gpuTimer = timer;
+
+    if (this._passCoordinatorInstance !== null) {
+      this._passCoordinatorInstance.gpuTimer = timer;
+    }
+  }
+
   /**
    * Tear down all device-bound state in preparation for re-initialization.
    * User-facing handles (Texture, RenderTexture, RenderTarget) keep their
@@ -2326,6 +2387,12 @@ export class WebGpuBackend implements RenderBackend {
     // The uncapturederror listener belongs to the dead device; _initialize
     // installs a fresh one on the replacement device.
     this._removeUncapturedErrorListener();
+
+    // The query set and its buffers belonged to the dead device. Recovery
+    // re-arms a fresh timer if timing is still wanted.
+    this._gpuTimer?.destroy();
+    this._setGpuTimer(null);
+    this._stats.gpuFrameTimeMs = null;
 
     // Detach destroy listeners from cached textures, then drop the cache.
     // The underlying GPUTexture objects belonged to the dead device, so we

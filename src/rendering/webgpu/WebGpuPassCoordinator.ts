@@ -10,6 +10,7 @@ import type { RenderStats } from '#rendering/RenderStats';
 import type { RenderTarget } from '#rendering/RenderTarget';
 import type { View } from '#rendering/View';
 
+import type { WebGpuTimestampSink } from './WebGpuGpuTimer';
 import { stencilAttachmentFormat, WebGpuStencilClipper } from './WebGpuStencilClipper';
 
 /** Pixel-space scissor rectangle, as returned by the backend. @internal */
@@ -48,8 +49,9 @@ export interface WebGpuActiveRenderPass {
  * `undefined` (a pass without a stencil clip clears it), which the generated
  * WebGPU types do not allow under `exactOptionalPropertyTypes`.
  */
-type ReusablePassDescriptor = Omit<GPURenderPassDescriptor, 'depthStencilAttachment'> & {
+type ReusablePassDescriptor = Omit<GPURenderPassDescriptor, 'depthStencilAttachment' | 'timestampWrites'> & {
   depthStencilAttachment?: GPURenderPassDepthStencilAttachment | undefined;
+  timestampWrites?: GPURenderPassTimestampWrites | undefined;
 };
 
 /** Hoisted: the encoder descriptor is a constant, and `acquirePass` runs per pass. */
@@ -136,6 +138,14 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     label: 'pass-coordinator:render-pass',
     colorAttachments: this._colorAttachments,
   };
+
+  /**
+   * Set by the backend while GPU timing is on, so each pass this coordinator
+   * opens is bracketed by a hardware timestamp pair. `null` costs one null check
+   * per pass and nothing else.
+   * @internal
+   */
+  public gpuTimer: WebGpuTimestampSink | null = null;
 
   public constructor(backend: WebGpuPassBackend) {
     this._backend = backend;
@@ -235,6 +245,11 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
       this._colorAttachments[index] = backend.createColorAttachment(index);
     }
     descriptor.depthStencilAttachment = stencilEnabled ? this._createStencilAttachment(backend.renderTarget) : undefined;
+    // Written unconditionally for the same reason as the attachment above: the
+    // descriptor is reused, so a `timestampWrites` left on it by the last timed
+    // pass would follow it into untimed passes and overwrite query slots whose
+    // values have already been recorded.
+    descriptor.timestampWrites = this.gpuTimer?.acquirePassWrites();
 
     const encoder = backend.device.createCommandEncoder(commandEncoderDescriptor);
     // Cast, not `delete`: an absent optional dictionary member and one set to

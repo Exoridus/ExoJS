@@ -18,7 +18,7 @@ export type { AssetDependencyScope, AssetFactory, AssetFactoryContext } from './
 export type { AssetNetworkErrorOptions } from './AssetNetworkError';
 export { AssetNetworkError } from './AssetNetworkError';
 export { AssetRef } from './AssetRef';
-export type { AssetInspection, AssetOwnerInspection } from './AssetResidency';
+export type { AssetInspection, AssetOwnerInspection, AssetSizeStats, AssetStats, AssetTypeStats } from './AssetResidency';
 export type { AnyAssets, InferAssetsEntries } from './Assets';
 export { Assets } from './Assets';
 export type { AssetSourceCodec, SourceCodecContext } from './AssetSourceCodec';

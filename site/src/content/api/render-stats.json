@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 14,
+  "memberCount": 15,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 14,
+    "properties": 15,
     "events": 0
   },
   "sections": [
@@ -195,6 +195,35 @@
           "params": [],
           "returnType": null,
           "description": "Wall-clock duration of the frame in milliseconds."
+        },
+        {
+          "name": "gpuFrameTimeMs",
+          "signature": "gpuFrameTimeMs: null | number",
+          "signatureTokens": [
+            {
+              "text": "gpuFrameTimeMs",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "GPU-side duration in milliseconds of the last frame whose hardware timer results have come back, or null when no such result exists yet. Reads null unless RenderBackend.setGpuTimingEnabled has been called and reported a hardware clock; there is no software substitute, so a device without one leaves this null for the whole session. GPU results resolve asynchronously, so this is **not** the frame the other counters describe - it trails them by at least one frame. It is likewise **not** zeroed by resetRenderStats, since the frame it belongs to has already ended by the time the value arrives. What the number covers differs by backend, and the two are not directly comparable: WebGL2 brackets the frame's whole GL command stream (uploads included), while WebGPU sums the execution of the frame's render passes and therefore excludes queue-side uploads."
         },
         {
           "name": "gpuMemoryBytes",

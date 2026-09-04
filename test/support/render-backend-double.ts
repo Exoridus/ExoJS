@@ -70,6 +70,10 @@ export const createRenderBackendDouble = (options: RenderBackendDoubleOptions = 
     resetStats() {
       return this;
     },
+    // The double has no device, so it has no hardware GPU clock to offer.
+    setGpuTimingEnabled() {
+      return false;
+    },
     clear() {
       return this;
     },

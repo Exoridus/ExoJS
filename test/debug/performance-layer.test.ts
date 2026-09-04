@@ -59,9 +59,11 @@ const makeFakeView = () => ({
   getBounds: () => ({ intersectsWith: () => true }),
 });
 
-const makeBackend = () => ({
+const makeBackend = ({ gpuTiming = false }: { gpuTiming?: boolean } = {}) => ({
+  setGpuTimingEnabled: vi.fn((enabled: boolean) => enabled && gpuTiming),
   stats: {
     frameTimeMs: 0,
+    gpuFrameTimeMs: null as number | null,
     drawCalls: 7,
     culledNodes: 0,
     submittedNodes: 0,
@@ -87,11 +89,14 @@ const makeSceneRoot = (): FakeNode => {
   return { children: [branch] };
 };
 
-const makeApp = (opts: { root?: FakeNode | null } = {}) =>
+const makeApp = (opts: { root?: FakeNode | null; gpuTiming?: boolean } = {}) =>
   ({
-    backend: makeBackend(),
+    backend: makeBackend({ gpuTiming: opts.gpuTiming ?? false }),
     scenes: { currentScene: opts.root !== undefined && opts.root !== null ? { root: opts.root } : null },
   }) as unknown as import('#core/Application').Application;
+
+/** The fake backend behind an app built by {@link makeApp}. */
+const backendOf = (app: import('#core/Application').Application): ReturnType<typeof makeBackend> => app.backend as unknown as ReturnType<typeof makeBackend>;
 
 const time = (ms: number): Seconds => Time.toSeconds(Time.milliseconds(ms));
 
@@ -101,8 +106,10 @@ const internals = (
 ): {
   _textFps: Text | null;
   _textFrame: Text | null;
+  _textGpu: Text | null;
   _textDraws: Text | null;
   _textNodes: Text | null;
+  _textBudget: Text | null;
   _sparkline: { moveTo: unknown } | null;
   _root: unknown;
 } => layer as unknown as ReturnType<typeof internals>;
@@ -231,12 +238,125 @@ describe('PerformanceLayer', () => {
     expect(int._root).toBeNull();
     expect(int._textFps).toBeNull();
     expect(int._textFrame).toBeNull();
+    expect(int._textGpu).toBeNull();
     expect(int._textDraws).toBeNull();
     expect(int._textNodes).toBeNull();
+    expect(int._textBudget).toBeNull();
     expect(int._sparkline).toBeNull();
 
     // Double-destroy (and destroy before any update()) must also be safe.
     expect(() => layer.destroy()).not.toThrow();
     expect(() => new PerformanceLayer(makeApp()).destroy()).not.toThrow();
+  });
+
+  describe('GPU timing', () => {
+    test('timing is requested once, when the panel is first shown', () => {
+      const app = makeApp({ gpuTiming: true });
+      const layer = new PerformanceLayer(app);
+
+      expect(backendOf(app).setGpuTimingEnabled).not.toHaveBeenCalled();
+
+      layer.update(time(16));
+      layer.update(time(16));
+
+      expect(backendOf(app).setGpuTimingEnabled).toHaveBeenCalledTimes(1);
+      expect(backendOf(app).setGpuTimingEnabled).toHaveBeenCalledWith(true);
+    });
+
+    test('a device without a hardware clock reports "n/a" rather than a zero frame', () => {
+      const layer = new PerformanceLayer(makeApp({ gpuTiming: false }));
+
+      layer.update(time(16));
+
+      expect(internals(layer)._textGpu?.text).toBe('GPU: n/a');
+    });
+
+    test('a resolved sample is labelled as the last completed frame, not the current one', () => {
+      const app = makeApp({ gpuTiming: true });
+      const layer = new PerformanceLayer(app);
+
+      layer.update(time(16));
+      expect(internals(layer)._textGpu?.text).toBe('GPU: pending');
+
+      backendOf(app).stats.gpuFrameTimeMs = 3.5;
+      layer.update(time(16));
+
+      expect(internals(layer)._textGpu?.text).toBe('GPU: 3.50ms last');
+    });
+
+    test('destroy() hands GPU timing back to the backend', () => {
+      const app = makeApp({ gpuTiming: true });
+      const layer = new PerformanceLayer(app);
+
+      layer.update(time(16));
+      layer.destroy();
+
+      expect(backendOf(app).setGpuTimingEnabled).toHaveBeenLastCalledWith(false);
+    });
+
+    test('destroy() before the panel exists asks the backend for nothing', () => {
+      const app = makeApp({ gpuTiming: true });
+
+      new PerformanceLayer(app).destroy();
+
+      expect(backendOf(app).setGpuTimingEnabled).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('frame budget', () => {
+    test('defaults to one 60 Hz frame', () => {
+      expect(new PerformanceLayer(makeApp()).frameBudget).toBeCloseTo(1 / 60, 10);
+    });
+
+    test('a frame inside the budget leaves the overrun count at zero', () => {
+      const layer = new PerformanceLayer(makeApp());
+
+      layer.update(time(10));
+
+      expect(internals(layer)._textBudget?.text).toBe('Over: 0/120 (16.7ms)');
+    });
+
+    test('the Over row counts only the frames longer than the budget', () => {
+      const layer = new PerformanceLayer(makeApp());
+
+      layer.update(time(10));
+      layer.update(time(40));
+      layer.update(time(50));
+
+      expect(internals(layer)._textBudget?.text).toBe('Over: 2/120 (16.7ms)');
+    });
+
+    test('a reassigned budget re-decides which retained samples count as overruns', () => {
+      const layer = new PerformanceLayer(makeApp());
+
+      layer.update(time(20));
+      expect(internals(layer)._textBudget?.text).toBe('Over: 1/120 (16.7ms)');
+
+      layer.frameBudget = Time.seconds(1 / 30);
+      layer.update(time(20));
+
+      // Both retained 20ms samples now sit inside the 33.3ms budget.
+      expect(internals(layer)._textBudget?.text).toBe('Over: 0/120 (33.3ms)');
+    });
+
+    test('the frame-time and budget rows turn red while the window holds an overrun and revert once it ages out', () => {
+      const layer = new PerformanceLayer(makeApp());
+
+      layer.update(time(10));
+
+      const int = internals(layer);
+      const inBudgetColor = int._textFrame?.style.fillColor.clone();
+
+      layer.update(time(40));
+
+      expect(int._textFrame?.style.fillColor.equals(inBudgetColor!)).toBe(false);
+      expect(int._textBudget?.style.fillColor.equals(inBudgetColor!)).toBe(false);
+
+      // Push the 40ms sample out of the 120-entry ring.
+      for (let i = 0; i < 120; i++) layer.update(time(10));
+
+      expect(int._textFrame?.style.fillColor.equals(inBudgetColor!)).toBe(true);
+      expect(int._textBudget?.style.fillColor.equals(inBudgetColor!)).toBe(true);
+    });
   });
 });

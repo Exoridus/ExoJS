@@ -1,9 +1,14 @@
-import { Application, Color, Container, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, type Seconds, Sprite } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, type Seconds, Sprite, Time } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
+
+// The HUD counts every frame longer than this budget, paints those rows red,
+// and plots the budget as the guide line halfway up the sparkline.
+const budgets = [Time.seconds(1 / 60), Time.seconds(1 / 30), Time.seconds(1 / 144)];
 
 class PerformanceOverlayScene extends Scene {
   private sprites!: { sprite: Sprite; vx: number; vy: number }[];
   private layer!: Container;
+  private budgetIndex = 0;
 
   override init(): void {
     const app = this.app;
@@ -26,6 +31,13 @@ class PerformanceOverlayScene extends Scene {
     });
     this.inputs.onTrigger(Keyboard.P, () => {
       debug.layers.performance.visible = !debug.layers.performance.visible;
+    });
+    this.inputs.onTrigger(Keyboard.B, () => {
+      this.budgetIndex = (this.budgetIndex + 1) % budgets.length;
+      debug.layers.performance.frameBudget = budgets[this.budgetIndex]!;
+    });
+    this.inputs.onTrigger(Keyboard.A, () => {
+      debug.layers.assetCache.visible = !debug.layers.assetCache.visible;
     });
   }
 
@@ -61,5 +73,8 @@ const app = new Application({
 
 const debug = new DebugOverlay(app);
 debug.layers.performance.visible = true;
+// Reports what the loader holds: counts per asset type, estimated resident
+// bytes, and the heaviest assets. Snapshots on an interval, not per frame.
+debug.layers.assetCache.visible = true;
 
 await app.start(PerformanceOverlayScene);

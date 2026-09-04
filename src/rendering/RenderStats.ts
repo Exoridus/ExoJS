@@ -43,6 +43,25 @@ export interface RenderStats {
   /** Wall-clock duration of the frame in milliseconds. */
   frameTimeMs: number;
   /**
+   * GPU-side duration in milliseconds of the last frame whose hardware timer
+   * results have come back, or `null` when no such result exists yet.
+   *
+   * Reads `null` unless {@link RenderBackend.setGpuTimingEnabled} has been
+   * called and reported a hardware clock; there is no software substitute, so a
+   * device without one leaves this `null` for the whole session.
+   *
+   * GPU results resolve asynchronously, so this is **not** the frame the other
+   * counters describe - it trails them by at least one frame. It is likewise
+   * **not** zeroed by {@link resetRenderStats}, since the frame it belongs to
+   * has already ended by the time the value arrives.
+   *
+   * What the number covers differs by backend, and the two are not directly
+   * comparable: WebGL2 brackets the frame's whole GL command stream (uploads
+   * included), while WebGPU sums the execution of the frame's render passes and
+   * therefore excludes queue-side uploads.
+   */
+  gpuFrameTimeMs: number | null;
+  /**
    * Raw wall-clock delta between this frame and the previous one, in
    * milliseconds. May exceed the clamped simulation delta when the engine's
    * internal `MAX_DELTA_MS` guard activates (e.g. after a debugger pause or
@@ -98,6 +117,7 @@ export const createRenderStats = (): RenderStats => ({
   renderPasses: 0,
   renderTargetChanges: 0,
   frameTimeMs: 0,
+  gpuFrameTimeMs: null,
   rawFrameDeltaMs: 0,
   gpuMemoryBytes: 0,
   textureUploadBytes: 0,
@@ -113,7 +133,9 @@ export const createRenderStats = (): RenderStats => ({
  * Note: {@link RenderStats.gpuMemoryBytes} is intentionally **not** reset here.
  * It is a running total of live GPU resources owned by the backend's resource
  * accountant, which persists across frames; zeroing it each tick would make it
- * read 0 after the first frame.
+ * read 0 after the first frame. {@link RenderStats.gpuFrameTimeMs} is likewise
+ * left alone: it describes an already-finished frame whose results resolved
+ * late, so zeroing it per tick would blank it on every frame it is read on.
  */
 export const resetRenderStats = (stats: RenderStats): RenderStats => {
   // The dirty index counts in frames, and this is where a frame begins. Opening

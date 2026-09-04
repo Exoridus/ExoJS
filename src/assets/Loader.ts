@@ -12,7 +12,7 @@ import { AssetDecoder } from './AssetDecoder';
 import type { AssetDefinitions, AssetInput, AssetTypeName, CatalogEntry, InferLoadedEntry, KindByPath, LeafForPath, ResourceForKind } from './AssetDefinitions';
 import { _readMeta, type CatalogResourceLeaf, type CatalogValueLeaf } from './assetMeta';
 import type { AssetRef } from './AssetRef';
-import { type AssetInspection, AssetResidency, type AssetResidencySignals } from './AssetResidency';
+import { type AssetInspection, AssetResidency, type AssetResidencySignals, type AssetStats } from './AssetResidency';
 import { _normalizeEntry, type Assets, AssetsImpl, type InferAssetsProperties } from './Assets';
 import type { AnyAssetType } from './AssetType';
 import { AssetTypeRegistry } from './AssetTypeRegistry';
@@ -1157,6 +1157,23 @@ export class Loader {
    */
   public inspect(): readonly AssetInspection[] {
     return this._residency._inspect();
+  }
+
+  /**
+   * Read-only, detached summary of what this loader holds: ready / pending /
+   * failed counts, estimated resident bytes, the same split per asset type, and
+   * the `topCount` heaviest resident assets.
+   *
+   * The counterpart to {@link inspect} for callers that want totals rather than
+   * one row per asset - a debug HUD polling every frame, a memory dashboard, a
+   * regression check on how much a scene keeps resident. Aggregating here rather
+   * than over an `inspect()` result keeps a per-frame reader from rebuilding the
+   * whole row snapshot itself.
+   *
+   * @see {@link AssetStats.bytes} for what the byte figures do and do not cover.
+   */
+  public stats(topCount = 5): AssetStats {
+    return this._residency._stats(topCount);
   }
 
   /**

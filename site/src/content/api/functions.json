@@ -2985,7 +2985,7 @@
             }
           ],
           "returnType": "RenderStats",
-          "description": "Advance the frame counter and zero all per-frame accumulators in place. Call once at the start of each render tick before recording new data. Note: RenderStats.gpuMemoryBytes is intentionally **not** reset here. It is a running total of live GPU resources owned by the backend's resource accountant, which persists across frames; zeroing it each tick would make it read 0 after the first frame."
+          "description": "Advance the frame counter and zero all per-frame accumulators in place. Call once at the start of each render tick before recording new data. Note: RenderStats.gpuMemoryBytes is intentionally **not** reset here. It is a running total of live GPU resources owned by the backend's resource accountant, which persists across frames; zeroing it each tick would make it read 0 after the first frame. RenderStats.gpuFrameTimeMs is likewise left alone: it describes an already-finished frame whose results resolved late, so zeroing it per tick would blank it on every frame it is read on."
         },
         {
           "name": "resolveUISkin",

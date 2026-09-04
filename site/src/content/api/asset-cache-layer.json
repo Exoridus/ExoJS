@@ -1,16 +1,16 @@
 {
-  "title": "PerformanceLayer",
-  "description": "Debug layer that renders a compact screen-space HUD (top-left) showing rolling-average FPS, per-frame time in milliseconds, GPU frame time, draw-call count, scene-node count, and how many of the last 120 frames ran over frameBudget, alongside a 120-sample frame-time sparkline. The layer asks the backend for hardware GPU timing when it first becomes visible and turns it off again in destroy. Devices that expose no GPU timer report `GPU: n/a`; where one exists, the value is the last frame whose results have come back, which trails the frame on screen. Enable via DebugOverlay or by pressing F1 while the canvas has focus.",
-  "symbol": "PerformanceLayer",
+  "title": "AssetCacheLayer",
+  "description": "Debug layer that reports what the application's Loader currently holds: ready / pending / failed counts, estimated resident bytes broken down by asset type, and the heaviest resident assets. The snapshot walks the whole residency, so it is taken on an interval (refreshInterval) rather than every frame. Byte figures are the loader's own estimate and count CPU-side payloads only - see `AssetStats.bytes` for what they do and do not cover. Enable via DebugOverlay or by pressing F7 while the canvas has focus.",
+  "symbol": "AssetCacheLayer",
   "kind": "class",
   "subsystem": "debug",
   "importPath": "@codexo/exojs/debug",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 8,
   "counts": {
     "constructors": 1,
     "methods": 3,
-    "properties": 3,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -19,11 +19,11 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Debug layer that renders a compact screen-space HUD (top-left) showing rolling-average FPS, per-frame time in milliseconds, GPU frame time, draw-call count, scene-node count, and how many of the last 120 frames ran over frameBudget, alongside a 120-sample frame-time sparkline.",
-        "The layer asks the backend for hardware GPU timing when it first becomes visible and turns it off again in destroy. Devices that expose no GPU timer report `GPU: n/a`; where one exists, the value is the last frame whose results have come back, which trails the frame on screen.",
-        "Enable via DebugOverlay or by pressing F1 while the canvas has focus."
+        "Debug layer that reports what the application's Loader currently holds: ready / pending / failed counts, estimated resident bytes broken down by asset type, and the heaviest resident assets.",
+        "The snapshot walks the whole residency, so it is taken on an interval (refreshInterval) rather than every frame. Byte figures are the loader's own estimate and count CPU-side payloads only - see `AssetStats.bytes` for what they do and do not cover.",
+        "Enable via DebugOverlay or by pressing F7 while the canvas has focus."
       ],
-      "importLine": "import { PerformanceLayer } from '@codexo/exojs/debug'",
+      "importLine": "import { AssetCacheLayer } from '@codexo/exojs/debug'",
       "sourceLink": null
     },
     {
@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(app: Application): PerformanceLayer",
+          "signature": "new(app: Application): AssetCacheLayer",
           "signatureTokens": [
             {
               "text": "new",
@@ -63,7 +63,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "PerformanceLayer",
+              "text": "AssetCacheLayer",
               "kind": "type"
             }
           ],
@@ -74,7 +74,7 @@
               "optional": false
             }
           ],
-          "returnType": "PerformanceLayer",
+          "returnType": "AssetCacheLayer",
           "description": ""
         }
       ],
@@ -113,7 +113,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Destroy the panel's subtree, release all child references, and hand GPU timing back to the backend."
+          "description": "Destroy the panel's subtree and release all child references."
         },
         {
           "name": "render",
@@ -207,7 +207,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Sample the current frame time, recompute the rolling FPS average, update stat text nodes, and rebuild the sparkline geometry. Lazily initializes the panel scene graph on first call to avoid touching the glyph atlas until the layer is actually shown."
+          "description": "Take a fresh residency snapshot when the refresh interval has elapsed, and repaint the panel."
         }
       ],
       "paragraphs": [],
@@ -219,11 +219,11 @@
       "title": "Properties",
       "members": [
         {
-          "name": "frameBudget",
-          "signature": "frameBudget: Seconds",
+          "name": "refreshInterval",
+          "signature": "refreshInterval: Seconds",
           "signatureTokens": [
             {
-              "text": "frameBudget",
+              "text": "refreshInterval",
               "kind": "name"
             },
             {
@@ -237,7 +237,28 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Frame duration treated as the target budget. A frame longer than this turns the frame-time row red and is counted by the Over row, which reports the overruns among the 120 frames the sparkline plots. The sparkline's vertical range is twice the budget, so the guide line drawn across it always marks the budget and a reassigned budget rescales the plot with it. Defaults to one 60 Hz frame."
+          "description": "How long a snapshot is kept before the panel takes a new one. Lower it to watch a load land in real time; the cost is a full residency walk per refresh."
+        },
+        {
+          "name": "topCount",
+          "signature": "topCount: number",
+          "signatureTokens": [
+            {
+              "text": "topCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How many of the heaviest resident assets the panel lists."
         },
         {
           "name": "visible",
@@ -293,11 +314,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/debug/PerformanceLayer.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/debug/PerformanceLayer.ts"
+        "label": "src/debug/AssetCacheLayer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/debug/AssetCacheLayer.ts"
       }
     }
   ],
-  "sourcePath": "src/debug/PerformanceLayer.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/debug/PerformanceLayer.ts"
+  "sourcePath": "src/debug/AssetCacheLayer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/debug/AssetCacheLayer.ts"
 }

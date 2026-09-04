@@ -1,0 +1,113 @@
+{
+  "title": "AssetSizeStats",
+  "description": "One resident asset, sized, as reported by AssetStats.largest.",
+  "symbol": "AssetSizeStats",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One resident asset, sized, as reported by AssetStats.largest."
+      ],
+      "importLine": "import { AssetSizeStats } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bytes",
+          "signature": "bytes: number",
+          "signatureTokens": [
+            {
+              "text": "bytes",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Estimated resident bytes; see AssetStats.bytes."
+        },
+        {
+          "name": "canonicalKey",
+          "signature": "canonicalKey: string",
+          "signatureTokens": [
+            {
+              "text": "canonicalKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "type",
+          "signature": "type: string",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The asset type's id, or the dispatch token's name for a type not installed on this loader."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetResidency.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetResidency.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetResidency.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetResidency.ts"
+}

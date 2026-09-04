@@ -1,3 +1,4 @@
+export { AssetCacheLayer } from './AssetCacheLayer';
 export { BoundingBoxesLayer } from './BoundingBoxesLayer';
 export { DebugLayer, type DebugLayerViewMode } from './DebugLayer';
 export { DebugOverlay } from './DebugOverlay';
