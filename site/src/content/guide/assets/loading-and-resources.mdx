@@ -37,6 +37,23 @@ When in doubt, start with a bare path string. Reach for `Assets.from` when asset
   unrelated resource types fetch concurrently.
 </Callout>
 
+## Which call when
+
+The forms above say how to name an asset; these are the calls that fetch, look up and let go of one. Every fetching call claims the asset for its owner (the application, the scene, or a scope you created), and a claim is what keeps it resident.
+
+| You want to…                                                                    | Call                                          | You get                                                                                   | Claim                                   |
+| ------------------------------------------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------- |
+| Use a seamless asset now and let it fill in when it arrives                     | `loader.get('hero.png')`                      | The handle immediately (`'loading'` until ready), the same instance for the same source   | Yes                                     |
+| Read a value asset (`json`, `txt`, `csv`, …) as it becomes available            | `loader.get('level.json')`                    | A stable `AssetRef` whose `.value` fills in                                               | Yes                                     |
+| Wait for one asset, or for a type without a placeholder (`music`, `bmFont`, …)  | `await loader.load(Asset.type('music', path))` | The resolved resource                                                                     | Yes                                     |
+| Wait for a whole catalog at once                                                | `await loader.load(catalog)`                  | The catalog, its leaves healed in place                                                   | Yes, one per entry                      |
+| Unpack a packed `.exoa` container in one request                                | `await loader.loadContainer('pack.exoa')`     | A new scope owning every entry; entries resolve to the same identities as network loads   | Yes, one per entry, held by that scope  |
+| Check whether something is already resident without fetching                   | `loader.peek('hero.png')`                     | The resource, or `undefined`                                                              | No                                      |
+| Let one asset go before its owner ends                                          | `scope.release(handle)`                       | Nothing; the handle stays valid and heals again on the next `get()`                       | Drops this scope's claim                |
+| Let everything an owner holds go                                                | `scope.destroy()` / the scene ending          | Nothing; assets other owners still hold stay resident                                     | Drops all of that owner's claims        |
+
+Two rules make the table predictable. First, `get()` never returns `undefined` for a seamless type: it hands back a placeholder and starts the fetch, so a wrong path fails at the fetch, not at the call - use `peek()` when "not loaded" is an answer you want. Second, `release()` and `destroy()` only ever drop the caller's own claims; there is no call that evicts an asset another owner is using, and no way to release an application-lifetime claim except destroying the application. Read on for the forms and their examples, and see [Ownership and scopes](#ownership-and-scopes) for what an owner is.
+
 ## Loading a single asset
 
 The path _is_ the identity — a bare string resolves directly to the finished asset, with its type inferred from the extension:
