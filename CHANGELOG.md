@@ -8,6 +8,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Changed
 
+- **`AnimatedSprite.defineClip` is now `addClip`, `Sound.defineSprite` is now
+  `addSprite`, and `Spritesheet.addFrame`/`removeFrame` return `this`.** One
+  verb pair, `add`/`remove`, for every named-registration mutator, and every
+  one of them chainable. Rename the calls; the `clips`/`sprites` constructor
+  options and `setClips`/`setSprites` are unchanged.
+- **`Assets.from` rejects a bare path whose suffix no asset type claims, at the
+  literal.** `'hero.pgn'` used to type-check and hand back `unknown`; it now
+  fails to compile with a message naming the path and the way out. Paths that
+  only exist at runtime (`string`, not a literal) are unaffected.
 - **`BurstSpawn`'s `loop: boolean` is replaced by `interval: number`, the
   period in seconds between two runs of the schedule.** `loop: true` restarted
   the schedule in the same `apply()` call that exhausted it and zeroed the

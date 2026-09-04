@@ -1,6 +1,6 @@
 {
   "title": "AnimatedSprite",
-  "description": "A Sprite that advances through a sequence of texture-frame Rectangles over time to produce frame-based animation. Multiple named clips can be registered via defineClip or the constructor. Call play to start a clip. Playback then advances by itself: a playing sprite attached to an Application's scene tree registers with that application's AnimationSystem and is ticked once per frame, with no `update()` call of your own. A sprite that is never attached to a tree - one drawn immediate-mode via `context.render(sprite)`, say - has no owning application to reach, so drive it by calling update with the frame delta in **seconds** yourself. The `onFrame` signal fires on every frame advance and `onComplete` fires when a clip completes its final AnimatedSpriteClipDefinition.repeat cycle. Use AnimatedSprite.fromSpritesheet to create an instance directly from a Spritesheet's named animations.",
+  "description": "A Sprite that advances through a sequence of texture-frame Rectangles over time to produce frame-based animation. Multiple named clips can be registered via addClip or the constructor. Call play to start a clip. Playback then advances by itself: a playing sprite attached to an Application's scene tree registers with that application's AnimationSystem and is ticked once per frame, with no `update()` call of your own. A sprite that is never attached to a tree - one drawn immediate-mode via `context.render(sprite)`, say - has no owning application to reach, so drive it by calling update with the frame delta in **seconds** yourself. The `onFrame` signal fires on every frame advance and `onComplete` fires when a clip completes its final AnimatedSpriteClipDefinition.repeat cycle. Use AnimatedSprite.fromSpritesheet to create an instance directly from a Spritesheet's named animations.",
   "symbol": "AnimatedSprite",
   "kind": "class",
   "subsystem": "rendering",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "A Sprite that advances through a sequence of texture-frame Rectangles over time to produce frame-based animation.",
-        "Multiple named clips can be registered via defineClip or the constructor. Call play to start a clip. Playback then advances by itself: a playing sprite attached to an Application's scene tree registers with that application's AnimationSystem and is ticked once per frame, with no `update()` call of your own. A sprite that is never attached to a tree - one drawn immediate-mode via `context.render(sprite)`, say - has no owning application to reach, so drive it by calling update with the frame delta in **seconds** yourself.",
+        "Multiple named clips can be registered via addClip or the constructor. Call play to start a clip. Playback then advances by itself: a playing sprite attached to an Application's scene tree registers with that application's AnimationSystem and is ticked once per frame, with no `update()` call of your own. A sprite that is never attached to a tree - one drawn immediate-mode via `context.render(sprite)`, say - has no owning application to reach, so drive it by calling update with the frame delta in **seconds** yourself.",
         "The `onFrame` signal fires on every frame advance and `onComplete` fires when a clip completes its final AnimatedSpriteClipDefinition.repeat cycle.",
         "Use AnimatedSprite.fromSpritesheet to create an instance directly from a Spritesheet's named animations."
       ],
@@ -369,7 +369,75 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Anchor against the untrimmed SOURCE canvas, not against the per-frame trimmed rectangle. A trimmed atlas gives every frame its own size and its own AnimatedSpriteClipDefinition.frameOffsets entry. Measuring the anchor against that rectangle would move the pivot on every frame advance, so an anchored character would wobble around its own feet for the length of the animation. The pivot has to stand still, which means measuring against a box that is constant for the whole clip. A clip carries no explicit untrimmed size, so the box is derived from the frames themselves: width = max(offset.x + frame.width) and height = max(offset.y + frame.height) over every frame, anchored at the local origin (0, 0) - the point the offsets are expressed relative to. That is the smallest canvas every frame of the clip fits on, it is computed once per clip in defineClip, and it is identical for every frame index. It can under-report an authored canvas whose right or bottom edge is empty in every single frame; nothing in the frame data can distinguish that case, and the pivot stays stable either way. A clip WITHOUT frameOffsets is not trimmed, so its frame rectangle is its layout box and the base implementation already measures the right thing. It is used unchanged there - deriving a clip-wide box would be actively wrong for it, because such a clip keeps its rendered pixel size across differently-sized frames (see _applyFrame) and the per-frame extent is what maps onto that constant rendered box."
+          "description": "Anchor against the untrimmed SOURCE canvas, not against the per-frame trimmed rectangle. A trimmed atlas gives every frame its own size and its own AnimatedSpriteClipDefinition.frameOffsets entry. Measuring the anchor against that rectangle would move the pivot on every frame advance, so an anchored character would wobble around its own feet for the length of the animation. The pivot has to stand still, which means measuring against a box that is constant for the whole clip. A clip carries no explicit untrimmed size, so the box is derived from the frames themselves: width = max(offset.x + frame.width) and height = max(offset.y + frame.height) over every frame, anchored at the local origin (0, 0) - the point the offsets are expressed relative to. That is the smallest canvas every frame of the clip fits on, it is computed once per clip in addClip, and it is identical for every frame index. It can under-report an authored canvas whose right or bottom edge is empty in every single frame; nothing in the frame data can distinguish that case, and the pivot stays stable either way. A clip WITHOUT frameOffsets is not trimmed, so its frame rectangle is its layout box and the base implementation already measures the right thing. It is used unchanged there - deriving a clip-wide box would be actively wrong for it, because such a clip keeps its rendered pixel size across differently-sized frames (see _applyFrame) and the per-frame extent is what maps onto that constant rendered box."
+        },
+        {
+          "name": "addClip",
+          "signature": "addClip(name: string, clip: AnimatedSpriteClipDefinition): this",
+          "signatureTokens": [
+            {
+              "text": "addClip",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "clip",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AnimatedSpriteClipDefinition",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "clip",
+              "type": "AnimatedSpriteClipDefinition",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Register a named clip. Frame rectangles are cloned so the caller may mutate the originals."
         },
         {
           "name": "addFilter",
@@ -598,74 +666,6 @@
           ],
           "returnType": "boolean",
           "description": "Return true if the world-space point (x, y) lies inside the quad. Uses a fast AABB check for axis-aligned quads, and a cross-product sign test for rotated or skewed quads."
-        },
-        {
-          "name": "defineClip",
-          "signature": "defineClip(name: string, clip: AnimatedSpriteClipDefinition): this",
-          "signatureTokens": [
-            {
-              "text": "defineClip",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "name",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "clip",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AnimatedSpriteClipDefinition",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "name",
-              "type": "string",
-              "optional": false
-            },
-            {
-              "name": "clip",
-              "type": "AnimatedSpriteClipDefinition",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Register a named clip. Frame rectangles are cloned so the caller may mutate the originals."
         },
         {
           "name": "destroy",

@@ -214,6 +214,74 @@
           "description": "Stop all currently active voices (e.g. for replace mode)."
         },
         {
+          "name": "addSprite",
+          "signature": "addSprite(name: string, clip: AudioSpriteClip): this",
+          "signatureTokens": [
+            {
+              "text": "addSprite",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "clip",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioSpriteClip",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "clip",
+              "type": "AudioSpriteClip",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Define (or redefine) a named sub-region of the buffer. Redefining a name discards the sub-Sound Sound.sprite memoized for it, so the next lookup reflects the new window."
+        },
+        {
           "name": "clip",
           "signature": "clip(offset: number, duration: number): Sound",
           "signatureTokens": [
@@ -280,74 +348,6 @@
           ],
           "returnType": "Sound",
           "description": "Return a new Sound that plays only the [offset, offset + duration] sub-range (seconds) of this sound - an audio atlas / sprite-sheet clip. The clip does not copy anything: it reads the decoded AudioBuffer from the sound it was cut from at playback time, so it follows that sound through eviction and reload. It inherits this sound's playback defaults (volume, loop, playbackRate, muted) and pool configuration, and gets its own independent voice pool. Spatialization is not among them: a Sound carries none - it is set per play via PlayOptions and lives on the returned Voice. Available before the sound has loaded, and on a clip of a clip (the nested window is capped by the outer one)."
-        },
-        {
-          "name": "defineSprite",
-          "signature": "defineSprite(name: string, clip: AudioSpriteClip): this",
-          "signatureTokens": [
-            {
-              "text": "defineSprite",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "name",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "clip",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AudioSpriteClip",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "name",
-              "type": "string",
-              "optional": false
-            },
-            {
-              "name": "clip",
-              "type": "AudioSpriteClip",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Define (or redefine) a named sub-region of the buffer. Redefining a name discards the sub-Sound Sound.sprite memoized for it, so the next lookup reflects the new window."
         },
         {
           "name": "destroy",
@@ -643,7 +643,7 @@
             }
           ],
           "returnType": "Sound",
-          "description": "The Sound for a named sprite - the playback side of Sound.defineSprite. Same concept as Sound.clip, addressed by name instead of by offset: a sub-Sound over the same decoded buffer, with the clip's own loop flag and its own voice pool. The result is memoized per name, so the pool is shared across every play of that sprite and repeated lookups are free. It stays valid until the name is redefined, removed, or this sound is destroyed."
+          "description": "The Sound for a named sprite - the playback side of Sound.addSprite. Same concept as Sound.clip, addressed by name instead of by offset: a sub-Sound over the same decoded buffer, with the clip's own loop flag and its own voice pool. The result is memoized per name, so the pool is shared across every play of that sprite and repeated lookups are free. It stays valid until the name is redefined, removed, or this sound is destroyed."
         }
       ],
       "paragraphs": [],

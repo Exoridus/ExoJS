@@ -307,7 +307,7 @@ export class Sound implements Playable {
     this._destroySpriteSounds();
 
     for (const [name, clip] of Object.entries(sprites)) {
-      this.defineSprite(name, clip);
+      this.addSprite(name, clip);
     }
 
     return this;
@@ -318,7 +318,7 @@ export class Sound implements Playable {
    * discards the sub-{@link Sound} {@link Sound.sprite} memoized for it, so the
    * next lookup reflects the new window.
    */
-  public defineSprite(name: string, clip: AudioSpriteClip): this {
+  public addSprite(name: string, clip: AudioSpriteClip): this {
     if (name.trim().length === 0) {
       throw new Error('Sound sprite names must be non-empty strings.');
     }
@@ -366,7 +366,7 @@ export class Sound implements Playable {
 
   /**
    * The {@link Sound} for a named sprite - the playback side of
-   * {@link Sound.defineSprite}. Same concept as {@link Sound.clip}, addressed
+   * {@link Sound.addSprite}. Same concept as {@link Sound.clip}, addressed
    * by name instead of by offset: a sub-Sound over the same decoded buffer,
    * with the clip's own `loop` flag and its own voice pool.
    *
@@ -378,7 +378,7 @@ export class Sound implements Playable {
    *
    * @example
    * ```ts
-   * sound.defineSprite('impact', { start: 0.5, end: 0.8 });
+   * sound.addSprite('impact', { start: 0.5, end: 0.8 });
    * app.audio.play(sound.sprite('impact'));
    * ```
    */
