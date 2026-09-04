@@ -1,0 +1,100 @@
+{
+  "title": "LightingSystemOptions",
+  "description": "Construction options for LightingSystem.",
+  "symbol": "LightingSystemOptions",
+  "kind": "interface",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for LightingSystem."
+      ],
+      "importLine": "import { LightingSystemOptions } from '@codexo/exojs-lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "ambient",
+          "signature": "ambient?: Color",
+          "signatureTokens": [
+            {
+              "text": "ambient",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Baseline colour every lit fragment receives regardless of any light, as a multiplier on the albedo (255 per channel means \"unlit areas keep their full albedo\"). Stored by reference and re-read on every commit. Defaults to a dim neutral blue-grey."
+        },
+        {
+          "name": "maxLights",
+          "signature": "maxLights?: number",
+          "signatureTokens": [
+            {
+              "text": "maxLights",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Lights the light texture is sized for. Fixed at construction; lights registered beyond it are ignored by LightingSystem.commit until a registered one is removed. Defaults to 64."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/LightingSystem.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/LightingSystem.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/LightingSystem.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/LightingSystem.ts"
+}

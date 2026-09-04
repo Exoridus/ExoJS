@@ -1,0 +1,909 @@
+{
+  "title": "LitSpriteMaterial",
+  "description": "A SpriteMaterial that shades sprites with a tangent-space normal map against the point lights of a LightingSystem. Lighting happens in the sprite's own fragment stage, so a lit sprite costs no extra pass and no extra draw call: every sprite sharing this material and a base-texture slot stays in one batch. The shaded result is `albedo * (ambient + sum over lights)`, with each light falling off quadratically to nothing at its radius. # One normal map per material The normal map is a material binding, not a per-sprite one, so all sprites drawn with a given `LitSpriteMaterial` must share its layout - in practice one material per atlas. Sprites from a second atlas need a second material, which breaks the batch at the material boundary. Both materials can shade against the same `LightingSystem`. # Ownership The material owns neither the lighting system nor the textures. SpriteMaterial.destroy releases only the GPU resources cached against this material. ```ts const lighting = new LightingSystem(); const material = new LitSpriteMaterial({ lighting, normalMap }); scene.systems.add(lighting); lighting.add(new PointLight({ x: 400, y: 300, radius: 320 })); sprite.material = material; ```",
+  "symbol": "LitSpriteMaterial",
+  "kind": "class",
+  "subsystem": "lighting",
+  "importPath": "@codexo/exojs-lighting",
+  "tier": "stable",
+  "memberCount": 17,
+  "counts": {
+    "constructors": 1,
+    "methods": 6,
+    "properties": 10,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A SpriteMaterial that shades sprites with a tangent-space normal map against the point lights of a LightingSystem.",
+        "Lighting happens in the sprite's own fragment stage, so a lit sprite costs no extra pass and no extra draw call: every sprite sharing this material and a base-texture slot stays in one batch. The shaded result is `albedo * (ambient + sum over lights)`, with each light falling off quadratically to nothing at its radius.",
+        "# One normal map per material",
+        "The normal map is a material binding, not a per-sprite one, so all sprites drawn with a given `LitSpriteMaterial` must share its layout - in practice one material per atlas. Sprites from a second atlas need a second material, which breaks the batch at the material boundary. Both materials can shade against the same `LightingSystem`.",
+        "# Ownership",
+        "The material owns neither the lighting system nor the textures. SpriteMaterial.destroy releases only the GPU resources cached against this material.",
+        "```ts const lighting = new LightingSystem(); const material = new LitSpriteMaterial({ lighting, normalMap });",
+        "scene.systems.add(lighting); lighting.add(new PointLight({ x: 400, y: 300, radius: 320 })); sprite.material = material; ```"
+      ],
+      "importLine": "import { LitSpriteMaterial } from '@codexo/exojs-lighting'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: LitSpriteMaterialOptions): LitSpriteMaterial",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LitSpriteMaterialOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LitSpriteMaterial",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "LitSpriteMaterialOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "LitSpriteMaterial",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "_onDispose",
+          "signature": "_onDispose(callback: () => void): void",
+          "signatureTokens": [
+            {
+              "text": "_onDispose",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "callback",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "callback",
+              "type": "() => void",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Hook for renderers to register a per-material-instance cleanup callback (release compiled program, pipeline, or bind groups). The callback fires on destroy; renderers MUST also tolerate the material being garbage-collected without destroy ever being called. Part of the renderer SDK contract for extension renderers."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Release GPU resources cached against this material on every backend that has compiled it. Safe to call multiple times. After destroy, the material can still be re-used - renderers recompile on next draw - but typical usage is to drop the reference."
+        },
+        {
+          "name": "setTexture",
+          "signature": "setTexture(name: string, texture: RenderTexture | Texture): this",
+          "signatureTokens": [
+            {
+              "text": "setTexture",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "texture",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "texture",
+              "type": "RenderTexture | Texture",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Replace the texture behind a declared slot, returning this for chaining."
+        },
+        {
+          "name": "setUniform",
+          "signature": "setUniform(name: string, value: UniformValue): this",
+          "signatureTokens": [
+            {
+              "text": "setUniform",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformValue",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "value",
+              "type": "UniformValue",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Replace a declared uniform value, returning this for chaining. Unknown names and scalar↔texture kind changes are rejected."
+        },
+        {
+          "name": "from",
+          "signature": "from(source: ShaderSource, options?: Omit<MaterialOptions, \"shader\">): SpriteMaterial",
+          "signatureTokens": [
+            {
+              "text": "from",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderSource",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Omit",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MaterialOptions",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"shader\"",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SpriteMaterial",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "ShaderSource",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "Omit<MaterialOptions, \"shader\">",
+              "optional": true
+            }
+          ],
+          "returnType": "SpriteMaterial",
+          "description": "Build a SpriteMaterial from an existing ShaderSource. Equivalent to new SpriteMaterial({ shader, ...options })."
+        },
+        {
+          "name": "from",
+          "signature": "from(glslVertex: string, glslFragment: string, options?: { blendMode?: BlendModes; sampler?: SamplerOptions | null; uniforms?: Record<string, UniformValue>; wgsl?: string }): SpriteMaterial",
+          "signatureTokens": [
+            {
+              "text": "from",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "glslVertex",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "glslFragment",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "blendMode",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BlendModes",
+              "kind": "type"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "sampler",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SamplerOptions",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "uniforms",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformValue",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "wgsl",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SpriteMaterial",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "glslVertex",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "glslFragment",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "{ blendMode?: BlendModes; sampler?: SamplerOptions | null; uniforms?: Record<string, UniformValue>; wgsl?: string }",
+              "optional": true
+            }
+          ],
+          "returnType": "SpriteMaterial",
+          "description": "Build a SpriteMaterial from raw GLSL vertex and fragment source strings. Wraps them in a new ShaderSource; pass options.wgsl to also cover the WebGPU backend."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "blendMode",
+          "signature": "blendMode: BlendModes",
+          "signatureTokens": [
+            {
+              "text": "blendMode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BlendModes",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Compositing blend mode applied when drawing with this material."
+        },
+        {
+          "name": "lighting",
+          "signature": "lighting: LightingSystem",
+          "signatureTokens": [
+            {
+              "text": "lighting",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LightingSystem",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The system this material shades against."
+        },
+        {
+          "name": "sampler",
+          "signature": "sampler: SamplerOptions | null",
+          "signatureTokens": [
+            {
+              "text": "sampler",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SamplerOptions",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Filter/wrap override for the drawable's base texture, or null to inherit it."
+        },
+        {
+          "name": "shader",
+          "signature": "shader: ShaderSource",
+          "signatureTokens": [
+            {
+              "text": "shader",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderSource",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "GLSL/WGSL source pair backing this material."
+        },
+        {
+          "name": "target",
+          "signature": "target: \"sprite\"",
+          "signatureTokens": [
+            {
+              "text": "target",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"sprite\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Which drawable class this material can serve; renderers check compatibility."
+        },
+        {
+          "name": "bindKey",
+          "signature": "bindKey: number",
+          "signatureTokens": [
+            {
+              "text": "bindKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Stable bind key: identical ⇒ same bindings (textures unchanged). Derived from this material's identity, base-texture sampler override, and the identities of its bound textures. Changes when a texture is swapped or sampler state changes; drives bind-group/slot reuse."
+        },
+        {
+          "name": "normalMap",
+          "signature": "normalMap: Texture",
+          "signatureTokens": [
+            {
+              "text": "normalMap",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The bound normal map. Assigning a replacement takes effect on the next draw."
+        },
+        {
+          "name": "pipelineKey",
+          "signature": "pipelineKey: number",
+          "signatureTokens": [
+            {
+              "text": "pipelineKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Stable pipeline key: identical ⇒ same GPU pipeline/program can be used. Derived from shader identity and blend mode, and is independent of the owning material instance so identically configured materials share a pipeline. Drives grouping and the pipeline cache."
+        },
+        {
+          "name": "textures",
+          "signature": "textures: Record<string, RenderTexture | Texture>",
+          "signatureTokens": [
+            {
+              "text": "textures",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Live identities behind the fixed named texture slots."
+        },
+        {
+          "name": "uniforms",
+          "signature": "uniforms: Record<string, UniformValue>",
+          "signatureTokens": [
+            {
+              "text": "uniforms",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformValue",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Live user uniform values. Construction declares the fixed set of names and each name's scalar/texture kind; existing values can be replaced between frames and typed arrays can be mutated in place. material.uniforms.u_time = performance.now() / 1000; material.uniforms.u_color = [1, 0.5, 0, 1];"
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-lighting/src/LitSpriteMaterial.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/LitSpriteMaterial.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-lighting/src/LitSpriteMaterial.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-lighting/src/LitSpriteMaterial.ts"
+}

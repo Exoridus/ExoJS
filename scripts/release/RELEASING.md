@@ -156,17 +156,18 @@ followed by its Trusted Publisher config on npmjs.com.
 
 ### Open at the time of writing (checked against the registry 2026-08-29)
 
-- `@codexo/exojs-tilemap-physics` is in `LOCKSTEP_PACKAGES` and therefore in
-  `PUBLISH_ORDER`, but has never been published (npm answers E404). The next
-  coordinated release would reach it and abort the chain there.
+- `@codexo/exojs-tilemap-physics` and `@codexo/exojs-lighting` are in
+  `LOCKSTEP_PACKAGES` and therefore in `PUBLISH_ORDER`, but neither has ever
+  been published (npm answers E404). The next coordinated release would reach
+  them and abort the chain there.
 
-  **Bootstrap it as part of that release, not before it:** run `release:cut`
+  **Bootstrap each as part of that release, not before it:** run `release:cut`
   first so the package carries the release version, then
-  `pnpm release:bootstrap @codexo/exojs-tilemap-physics --execute`, then
-  register its trusted publisher, and only then run the coordinated publish -
-  which skips it as already-published and publishes everything else with
-  provenance. Bootstrapping it earlier publishes a version (today `0.15.2`)
-  that no release will ever correspond to.
+  `pnpm release:bootstrap <name> --execute`, then register its trusted
+  publisher, and only then run the coordinated publish - which skips it as
+  already-published and publishes everything else with provenance.
+  Bootstrapping earlier publishes a version that no release will ever
+  correspond to.
 
 - `create-exo-app` and `@codexo/exojs-build` **are** published, both at `0.1.0`,
   which is what their `package.json` says. They need no bootstrap; their next
