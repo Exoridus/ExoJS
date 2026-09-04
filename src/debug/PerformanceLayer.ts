@@ -15,11 +15,11 @@ import { DebugLayer, type DebugLayerViewMode } from './DebugLayer';
 const panelX = 8;
 const panelY = 8;
 const panelW = 200;
-const panelH = 144;
+const panelH = 158;
 
 const lineH = 14;
 const textSize = 11;
-const textRowCount = 5;
+const textRowCount = 6;
 const sparklineY = panelY + 8 + textRowCount * lineH + 4;
 const sparklineH = panelH - (sparklineY - panelY) - 4;
 const sparklineW = panelW - 16;
@@ -44,6 +44,12 @@ const budgetLineColor = new Color(255, 96, 96, 0.4);
 
 // -----------------------------------------------------------------------------
 
+/**
+ * GPU results resolve a frame or more after the frame they describe, so the row
+ * is labelled `last` rather than presented as this frame's cost.
+ */
+const formatGpuFrameTime = (gpuFrameTimeMs: number | null): string => (gpuFrameTimeMs === null ? 'pending' : `${gpuFrameTimeMs.toFixed(2)}ms last`);
+
 /** Recursively count nodes under a RenderNode. */
 const countNodes = (node: RenderNode): number => {
   let count = 1;
@@ -60,9 +66,14 @@ const countNodes = (node: RenderNode): number => {
 
 /**
  * Debug layer that renders a compact screen-space HUD (top-left) showing
- * rolling-average FPS, per-frame time in milliseconds, draw-call count,
- * scene-node count, and how many of the last 120 frames ran over
- * {@link frameBudget}, alongside a 120-sample frame-time sparkline.
+ * rolling-average FPS, per-frame time in milliseconds, GPU frame time,
+ * draw-call count, scene-node count, and how many of the last 120 frames ran
+ * over {@link frameBudget}, alongside a 120-sample frame-time sparkline.
+ *
+ * The layer asks the backend for hardware GPU timing when it first becomes
+ * visible and turns it off again in {@link destroy}. Devices that expose no GPU
+ * timer report `GPU: n/a`; where one exists, the value is the last frame whose
+ * results have come back, which trails the frame on screen.
  *
  * Enable via {@link DebugOverlay} or by pressing F1 while the canvas has focus.
  */
@@ -90,11 +101,17 @@ export class PerformanceLayer extends DebugLayer {
   // only reassigned on a change - every assignment dispatches TextStyle.onChange.
   private _overBudgetPainted = false;
 
+  // Whether the backend reported a hardware GPU clock when timing was switched
+  // on. A device without one never produces a sample, so the row says so once
+  // instead of reading as a frame that took no GPU time.
+  private _gpuTimingAvailable = false;
+
   // Root container - lazily initialized on first update() call so the
   // glyph atlas is not touched in environments where canvas 2D is absent.
   private _root: Container | null = null;
   private _textFps: Text | null = null;
   private _textFrame: Text | null = null;
+  private _textGpu: Text | null = null;
   private _textDraws: Text | null = null;
   private _textNodes: Text | null = null;
   private _textBudget: Text | null = null;
@@ -120,6 +137,9 @@ export class PerformanceLayer extends DebugLayer {
     // layer is first made visible - not at DebugOverlay construction time.
     if (this._root === null) {
       this._build();
+      // Deferred to here for the same reason: nothing is allocated on the GPU
+      // until the panel is actually shown.
+      this._gpuTimingAvailable = this._app.backend.setGpuTimingEnabled(true);
     }
 
     // --- FPS rolling average ---
@@ -162,6 +182,10 @@ export class PerformanceLayer extends DebugLayer {
       this._textFrame.text = `Frame: ${frameMs.toFixed(1)}ms`;
     }
 
+    if (this._textGpu !== null) {
+      this._textGpu.text = this._gpuTimingAvailable ? `GPU: ${formatGpuFrameTime(stats.gpuFrameTimeMs)}` : 'GPU: n/a';
+    }
+
     if (this._textDraws !== null) {
       this._textDraws.text = `Draws: ${stats.drawCalls}`;
     }
@@ -184,15 +208,18 @@ export class PerformanceLayer extends DebugLayer {
     this._root?.render(backend);
   }
 
-  /** Destroy the panel's {@link Container} subtree and release all child references. */
+  /** Destroy the panel's subtree, release all child references, and hand GPU timing back to the backend. */
   public override destroy(): void {
     if (this._root !== null) {
       this._root.destroy();
       this._root = null;
+      this._app.backend.setGpuTimingEnabled(false);
+      this._gpuTimingAvailable = false;
     }
 
     this._textFps = null;
     this._textFrame = null;
+    this._textGpu = null;
     this._textDraws = null;
     this._textNodes = null;
     this._textBudget = null;
@@ -291,11 +318,12 @@ export class PerformanceLayer extends DebugLayer {
 
     this._textFps = new Text('FPS: -', style);
     this._textFrame = new Text('Frame: -', style);
+    this._textGpu = new Text('GPU: -', style);
     this._textDraws = new Text('Draws: -', style);
     this._textNodes = new Text('Nodes: -', style);
     this._textBudget = new Text('Over: -', style);
 
-    const rows = [this._textFps, this._textFrame, this._textDraws, this._textNodes, this._textBudget];
+    const rows = [this._textFps, this._textFrame, this._textGpu, this._textDraws, this._textNodes, this._textBudget];
 
     for (const [index, row] of rows.entries()) {
       row.x = panelX + 8;

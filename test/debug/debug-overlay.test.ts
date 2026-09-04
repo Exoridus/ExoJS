@@ -66,8 +66,10 @@ const makeBackend = () => {
   const view = makeFakeView();
 
   return {
+    setGpuTimingEnabled: vi.fn(() => false),
     stats: {
       frameTimeMs: 0,
+      gpuFrameTimeMs: null as number | null,
       drawCalls: 5,
       culledNodes: 2,
       submittedNodes: 10,

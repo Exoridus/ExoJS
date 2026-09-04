@@ -1,16 +1,16 @@
 {
   "title": "PerformanceLayer",
-  "description": "Debug layer that renders a compact screen-space HUD (top-left) showing rolling-average FPS, per-frame time in milliseconds, draw-call count, and scene-node count, alongside a 120-sample frame-time sparkline. Enable via DebugOverlay or by pressing F1 while the canvas has focus.",
+  "description": "Debug layer that renders a compact screen-space HUD (top-left) showing rolling-average FPS, per-frame time in milliseconds, GPU frame time, draw-call count, scene-node count, and how many of the last 120 frames ran over frameBudget, alongside a 120-sample frame-time sparkline. The layer asks the backend for hardware GPU timing when it first becomes visible and turns it off again in destroy. Devices that expose no GPU timer report `GPU: n/a`; where one exists, the value is the last frame whose results have come back, which trails the frame on screen. Enable via DebugOverlay or by pressing F1 while the canvas has focus.",
   "symbol": "PerformanceLayer",
   "kind": "class",
   "subsystem": "debug",
   "importPath": "@codexo/exojs/debug",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 7,
   "counts": {
     "constructors": 1,
     "methods": 3,
-    "properties": 2,
+    "properties": 3,
     "events": 0
   },
   "sections": [
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Debug layer that renders a compact screen-space HUD (top-left) showing rolling-average FPS, per-frame time in milliseconds, draw-call count, and scene-node count, alongside a 120-sample frame-time sparkline.",
+        "Debug layer that renders a compact screen-space HUD (top-left) showing rolling-average FPS, per-frame time in milliseconds, GPU frame time, draw-call count, scene-node count, and how many of the last 120 frames ran over frameBudget, alongside a 120-sample frame-time sparkline.",
+        "The layer asks the backend for hardware GPU timing when it first becomes visible and turns it off again in destroy. Devices that expose no GPU timer report `GPU: n/a`; where one exists, the value is the last frame whose results have come back, which trails the frame on screen.",
         "Enable via DebugOverlay or by pressing F1 while the canvas has focus."
       ],
       "importLine": "import { PerformanceLayer } from '@codexo/exojs/debug'",
@@ -112,7 +113,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Destroy the panel's Container subtree and release all child references."
+          "description": "Destroy the panel's subtree, release all child references, and hand GPU timing back to the backend."
         },
         {
           "name": "render",
@@ -217,6 +218,27 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "frameBudget",
+          "signature": "frameBudget: Seconds",
+          "signatureTokens": [
+            {
+              "text": "frameBudget",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Frame duration treated as the target budget. A frame longer than this turns the frame-time row red and is counted by the Over row, which reports the overruns among the 120 frames the sparkline plots. The sparkline's vertical range is twice the budget, so the guide line drawn across it always marks the budget and a reassigned budget rescales the plot with it. Defaults to one 60 Hz frame."
+        },
         {
           "name": "visible",
           "signature": "visible: boolean",
