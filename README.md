@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="https://raw.githubusercontent.com/Exoridus/ExoJS/main/site/public/brand/mark-e-dot-dark.svg" alt="" width="88" height="88">
+
 # ExoJS
 
 [![Latest](https://img.shields.io/github/v/release/Exoridus/ExoJS?style=for-the-badge&label=Latest&logo=github&color=44cc11)](https://github.com/Exoridus/ExoJS/releases/latest)
@@ -13,6 +15,8 @@ A TypeScript-first 2D engine for games and interactive apps. Explicit scene grap
 **[Guide](https://exoridus.github.io/ExoJS/en/guide/)** · **[API Reference](https://exoridus.github.io/ExoJS/en/api/)** · **[Playground](https://exoridus.github.io/ExoJS/en/playground/)**
 
 </div>
+
+<img src="https://raw.githubusercontent.com/Exoridus/ExoJS/main/site/public/brand/companion-hero.webp" alt="The ExoJS companion, a small waving robot" width="150" align="right">
 
 > **Pre-1.0.** The public API is under active design — minor versions may include breaking changes. Pin exact versions in downstream projects. `1.0.0` marks the first stable API contract.
 
