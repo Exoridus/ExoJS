@@ -391,6 +391,16 @@
       "level": "intro"
     },
     {
+      "slug": "drop-shadow-filter",
+      "path": "filters/drop-shadow-filter.js",
+      "language": "typescript",
+      "title": "Drop Shadow Filter",
+      "description": "Give a Sprite a soft, offset drop shadow with DropShadowFilter; sliders drive offset, blur and opacity, and a toggle shows the shadow on its own.",
+      "backend": "core",
+      "tags": ["fx", "shadow", "filter"],
+      "level": "intro"
+    },
+    {
       "slug": "chromatic-aberration",
       "path": "filters/chromatic-aberration.js",
       "language": "typescript",

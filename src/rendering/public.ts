@@ -52,6 +52,8 @@ export type { BlurFilterOptions } from '#rendering/filters/BlurFilter';
 export { BlurFilter } from '#rendering/filters/BlurFilter';
 export type { ColorMatrixEntries } from '#rendering/filters/ColorMatrixFilter';
 export { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
+export type { DropShadowFilterOptions } from '#rendering/filters/DropShadowFilter';
+export { DropShadowFilter } from '#rendering/filters/DropShadowFilter';
 export { Filter } from '#rendering/filters/Filter';
 export type { LutFilterOptions, LutMode } from '#rendering/filters/LutFilter';
 export { LutFilter } from '#rendering/filters/LutFilter';

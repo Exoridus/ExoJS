@@ -20,6 +20,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Added
 
+- **`DropShadowFilter`.** A soft, offset silhouette of the filtered node drawn
+  behind it: `offsetX`/`offsetY`, `blur`, `quality`, `color` (alpha is the
+  shadow opacity) and `shadowOnly` for glows and detached shadows. Composed from
+  the stock colour-matrix and blur passes, so it runs on both backends and
+  declares the extra reach it needs through `getOutputBounds`.
 - **`Scene.animations`, a scene-bound animation facade with the same `when`
   policy the tween and audio facades already have.** An `AnimatedSprite`
   attached to a scene tree kept advancing through `SceneDirector.pause()` and
@@ -43,6 +48,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Fixed
 
+- **WebGPU shader filters no longer mirror their input vertically.** The
+  fullscreen pass sampled v = 0 at the bottom of the quad, which is texel row
+  0 on WebGL2 but the last row on WebGPU, so every `ShaderFilter` pass on
+  WebGPU wrote its input upside down. Invisible while the effect domain equals
+  the content bounds; wrong for a filter with asymmetric reach or one that
+  samples away from its own texel.
 - **`Application.destroy()` now aborts the lifecycle signal of a navigation
   still inside `load()`.** Teardown already waited for an in-flight navigation
   to settle, but nothing told the incoming scene to stop: a `load()` awaiting
