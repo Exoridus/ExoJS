@@ -6,10 +6,10 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 8,
+  "memberCount": 7,
   "counts": {
     "constructors": 1,
-    "methods": 2,
+    "methods": 1,
     "properties": 5,
     "events": 0
   },
@@ -87,35 +87,6 @@
       "id": "methods",
       "title": "Methods",
       "members": [
-        {
-          "name": "_tick",
-          "signature": "_tick(): void",
-          "signatureTokens": [
-            {
-              "text": "_tick",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": "Internal: called by AudioSystem.update() once per frame. Refreshes AudioListener.position (and the derived velocity) from AudioListener.target. Deliberately writes nothing to the WebAudio listener - that one is global and stays pinned at the origin; the voices pan relative to this position instead. See the class docs."
-        },
         {
           "name": "destroy",
           "signature": "destroy(): void",

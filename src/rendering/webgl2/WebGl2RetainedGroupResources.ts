@@ -265,6 +265,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
    * the contents recorded by any previous capture are about to be replaced,
    * so instructions referencing them (including an OUTER group's set holding
    * this bundle's batches verbatim) must stop validating.
+   * @internal
    */
   public _beginCapture(): void {
     this._generation++;
@@ -275,6 +276,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   /**
    * Append one recorded batch's instance words (copied) and return the byte
    * offset the batch starts at inside the instance buffer.
+   * @internal
    */
   public _appendInstanceWords(words: Uint32Array): number {
     this._ensureInstanceCapacity(this._usedWords + words.length);
@@ -293,6 +295,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
    * 0) and mark them for upload. Growth recreates both DataTextures (their
    * buffer references are fixed); the generation was already bumped by
    * {@link _beginCapture}, so growth needs no extra invalidation.
+   * @internal
    */
   public _storeTransformRows(source: Float32Array, tintSource: Uint8Array, firstRow: number, rowCount: number): void {
     if (rowCount <= 0) {
@@ -407,6 +410,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
    * the generation - the recorded byte LAYOUT is unchanged, only the baked
    * position values move. Out-of-range writes are ignored (a stale patch after
    * a recapture shrank the store).
+   * @internal
    */
   public _patchInstanceWords(wordOffset: number, floats: Float32Array): void {
     if (this._instanceBuffer === null || wordOffset < 0 || wordOffset + floats.length > this._usedWords) {
@@ -427,7 +431,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
     this._maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
   }
 
-  /** Upload the used instance range into the group's persistent GPU buffer. */
+  /** @internal - upload the used instance range into the group's persistent GPU buffer. */
   public _uploadInstances(): void {
     if (this._gl === null) {
       throw new Error('WebGl2RetainedGroupResources: device not connected before instance upload.');
@@ -453,6 +457,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
    * Pooled per-batch VAO for batch `index` (grow-only pool, reused across
    * recaptures). A reused VAO is cleared; the renderer re-adds its attribute
    * pointers for the new byte offset.
+   * @internal
    */
   public _acquireVao(index: number): WebGl2VertexArrayObject {
     let vao = this._vaos[index];
@@ -476,6 +481,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
    * context restore (the old handles died with the lost context) - every
    * instruction set referencing this bundle stops validating and re-records,
    * recreating the resources against the restored context.
+   * @internal
    */
   public _invalidateDeviceResources(): void {
     this._generation++;

@@ -6,10 +6,10 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 25,
+  "memberCount": 24,
   "counts": {
     "constructors": 1,
-    "methods": 10,
+    "methods": 9,
     "properties": 14,
     "events": 0
   },
@@ -116,35 +116,6 @@
       "id": "methods",
       "title": "Methods",
       "members": [
-        {
-          "name": "_stopAllVoices",
-          "signature": "_stopAllVoices(): void",
-          "signatureTokens": [
-            {
-              "text": "_stopAllVoices",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": "Stop all currently active voices (e.g. for replace mode)."
-        },
         {
           "name": "addSprite",
           "signature": "addSprite(name: string, clip: AudioSpriteClip): this",

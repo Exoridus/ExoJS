@@ -635,7 +635,7 @@ export class Sound implements Playable {
     return voice;
   }
 
-  /** Stop all currently active voices (e.g. for replace mode). */
+  /** @internal - stop all currently active voices (e.g. for replace mode). */
   public _stopAllVoices(): void {
     const voices = [...this._activeVoices];
     this._activeVoices.length = 0;

@@ -111,6 +111,7 @@ export class RetainedPlanCache {
   /**
    * Start a new capture: drops the previous one (it is being replaced) and
    * rewinds the record pool. A freshly constructed cache is already "begun".
+   * @internal
    */
   public _beginCapture(): void {
     this._hasCapture = false;
@@ -121,6 +122,7 @@ export class RetainedPlanCache {
    * Record one direct-drawable draw into the capture, copying the command's
    * placement/material/bounds into a pooled record (no allocation once the
    * pool has grown to the child count).
+   * @internal
    */
   public _appendSlot(childIndex: number, command: DrawCommand): void {
     const slot = this._slotPool.acquire();
@@ -129,7 +131,7 @@ export class RetainedPlanCache {
     copyRetainedDrawData(slot, command);
   }
 
-  /** Key the capture; only after this does {@link isClean} consider it. */
+  /** @internal - key the capture; only after this does {@link isClean} consider it. */
   public _commitCapture(contentRevision: number, structureRevision: number, transformRevision: number, viewUpdateId: number, backend: RenderBackend): void {
     this._contentRevision = contentRevision;
     this._structureRevision = structureRevision;

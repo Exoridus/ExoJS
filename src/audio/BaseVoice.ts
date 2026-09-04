@@ -60,6 +60,7 @@ export interface BaseVoiceInit {
 
 /** A voice the {@link AudioSystem} ticks each frame for spatial updates. */
 export interface SpatialVoice extends Voice {
+  /** @internal - called once per frame by {@link AudioSystem.update}. */
   _tickSpatial(): void;
 }
 

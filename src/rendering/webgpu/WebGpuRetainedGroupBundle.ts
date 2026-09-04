@@ -222,11 +222,12 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   }
 
   /**
-   * Record the group-local transform range this capture just uploaded (Slice
-   * 4c): the shared-buffer rebase `base`, the `rowCount` now living in the
-   * storage buffer, and the `device` whose queue a later in-place patch writes
-   * through. Called by the backend right after it copies the rows into the
-   * group-owned storage buffer.
+   * Record the group-local transform range this capture just uploaded: the
+   * shared-buffer rebase `base`, the `rowCount` now living in the storage
+   * buffer, and the `device` whose queue a later in-place patch writes through.
+   * Called by the backend right after it copies the rows into the group-owned
+   * storage buffer.
+   * @internal
    */
   public _recordTransformRowRange(device: GPUDevice, base: number, rowCount: number): void {
     this._patchDevice = device;

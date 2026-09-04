@@ -439,12 +439,13 @@ export class AudioSystem {
   /**
    * Internal: register a spatial voice for per-frame position updates. Called by
    * a {@link Voice} the first time it is spatialized (position set or follow).
+   * @internal
    */
   public _registerSpatial(voice: SpatialVoice): void {
     this._spatial.add(voice);
   }
 
-  /** Internal: stop ticking a voice that returned to a direct graph. */
+  /** @internal - stop ticking a voice that returned to a direct graph. */
   public _unregisterSpatial(voice: SpatialVoice): void {
     this._spatial.delete(voice);
     // The zone layer only reconciles spatial voices, so a voice leaving that
@@ -456,12 +457,13 @@ export class AudioSystem {
    * Internal: track a live voice so {@link AudioSystem.destroy} can stop it.
    * Called from the voice's own constructor, which covers every creation path -
    * `play()`, `open()`, sprite playback, and pooled replays alike.
+   * @internal
    */
   public _registerVoice(voice: Voice): void {
     this._voices.add(voice);
   }
 
-  /** Internal: drop a voice that has ended. Called from the voice's own teardown. */
+  /** @internal - drop a voice that has ended. Called from the voice's own teardown. */
   public _unregisterVoice(voice: Voice): void {
     this._voices.delete(voice);
     // The voice destroys its own sends; this only drops the zone layer's map
@@ -500,7 +502,7 @@ export class AudioSystem {
     this._unlockSignal._unlock();
   }
 
-  /** Internal: called by Application when visibility changes. */
+  /** @internal - called by Application when visibility changes. */
   public _applyVisibility(visible: boolean): void {
     if (this._muteOnHidden) {
       this.master.muted = !visible;
