@@ -761,6 +761,19 @@ export default defineConfig([
     },
   },
 
+  // The pathfinding search reads its own typed-array state by an index it just
+  // derived - a heap slot, a node id, a cell offset it bounds-checked one line
+  // earlier. `noUncheckedIndexedAccess` widens every one of those reads to
+  // `| undefined`, and the alternatives are a branch per read in the hottest
+  // loop in the package or a `?? 0` that would turn a real out-of-range bug
+  // into a silently wrong path.
+  {
+    files: ['packages/exojs-pathfinding/src/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-non-null-assertion': 'off',
+    },
+  },
+
   // A package's Rolldown config belongs to no package's TypeScript program:
   // each package tsconfig covers `src/**` only, so the ProjectService has no
   // type information to serve for these files and every type-aware rule throws

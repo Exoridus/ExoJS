@@ -146,7 +146,7 @@ export const LANES: readonly Lane[] = [
     run:
       'pnpm size && pnpm size:summary && pnpm verify:exports && pnpm verify:declaration-imports && pnpm verify:lockstep && pnpm verify:release-matrix ' +
       '&& pnpm pack --dry-run && pnpm --filter "@codexo/exojs-build" --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" ' +
-      '--filter "@codexo/exojs-tiled" --filter "@codexo/exojs-physics" --filter "@codexo/exojs-tilemap-physics" --filter "@codexo/exojs-lighting" --filter "@codexo/exojs-audio-fx" ' +
+      '--filter "@codexo/exojs-tiled" --filter "@codexo/exojs-physics" --filter "@codexo/exojs-tilemap-physics" --filter "@codexo/exojs-lighting" --filter "@codexo/exojs-pathfinding" --filter "@codexo/exojs-audio-fx" ' +
       '--filter "@codexo/exojs-aseprite" --filter "@codexo/exojs-ldtk" --filter "@codexo/exojs-react" pack --dry-run && pnpm verify:publint',
     dist: true,
   },
