@@ -25,6 +25,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   shadow opacity) and `shadowOnly` for glows and detached shadows. Composed from
   the stock colour-matrix and blur passes, so it runs on both backends and
   declares the extra reach it needs through `getOutputBounds`.
+- **Custom sprite materials receive the fragment's world position and the
+  instance's local-to-world basis.** `v_worldPosition` / `v_basis` (GLSL) and
+  `worldPosition` / `basis` on `VertexOutput` (WGSL) let a fragment shade
+  against world-space lights and rotate a tangent-space normal with the
+  sprite, which is what a lighting effect needs and what the varyings did not
+  carry before. The new `lighting/normal-mapped-sprites` example lights a batch
+  of spinning and mirrored sprites through one material and four point lights.
 - **`Scene.animations`, a scene-bound animation facade with the same `when`
   policy the tween and audio facades already have.** An `AnimatedSprite`
   attached to a scene tree kept advancing through `SceneDirector.pause()` and

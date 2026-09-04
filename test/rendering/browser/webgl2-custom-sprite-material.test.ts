@@ -514,4 +514,44 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
       backend.destroy();
     }
   });
+  test('exposes the world position and the local-to-world basis to a custom fragment', async () => {
+    const backend = await createBackend();
+    const texture = createSplitTexture();
+    const material = new SpriteMaterial({
+      shader: new ShaderSource({
+        glsl: {
+          vertex: spriteVertexGlsl,
+          fragment: `#version 300 es
+precision mediump float;
+in vec2 v_worldPosition;
+flat in vec4 v_basis;
+out vec4 fragColor;
+void main() {
+  fragColor = vec4(v_worldPosition / 64.0, v_basis.x > 0.0 ? 1.0 : 0.0, 1.0);
+}`,
+        },
+      }),
+    });
+    const group = new Container();
+    const sprite = new Sprite(texture);
+
+    try {
+      sprite.material = material;
+      sprite.setPosition(16, 16).setScale(16, 16);
+      group.addChild(sprite);
+
+      render(backend, group);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 24), [161, 98, 255, 255], 6);
+
+      // Mirroring flips the basis x column; the quad now extends to the left.
+      sprite.setScale(-16, 16);
+      render(backend, group);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 24), [34, 98, 0, 255], 6);
+    } finally {
+      group.destroy();
+      material.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
 });

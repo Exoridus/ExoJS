@@ -682,6 +682,20 @@
       "level": "advanced"
     }
   ],
+  "lighting": [
+    {
+      "slug": "normal-mapped-sprites",
+      "path": "lighting/normal-mapped-sprites.js",
+      "language": "typescript",
+      "title": "Normal-Mapped Sprites",
+      "description": "Forward normal mapping on plain sprites: a custom SpriteMaterial samples a tangent-space normal map and shades every sprite against four moving point lights in a single batch, with spinning and mirrored tiles proving the basis rotation.",
+      "backend": "core",
+      "featured": false,
+      "tags": ["lighting", "material", "shader"],
+      "capabilities": [],
+      "level": "advanced"
+    }
+  ],
   "particles": [
     {
       "slug": "emitter-basics",

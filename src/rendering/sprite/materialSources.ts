@@ -20,7 +20,11 @@
  * the `tints` packed-rgba8 storage buffer (group(0) binding(2)).
  *
  * A custom fragment receives the interpolated `v_texcoord`, the premultiplied
- * `v_color` and the flat per-instance base-texture slot. The base texture is
+ * `v_color`, the flat per-instance base-texture slot, the interpolated
+ * world-space position `v_worldPosition` and the flat local-to-world basis
+ * `v_basis` = (a, b, c, d) of the instance's transform (WGSL: `worldPosition`,
+ * `basis` on `VertexOutput`). The basis is what a lighting effect needs to
+ * rotate a tangent-space normal into world space. The base texture is
  * NOT bound as a single sampler: like the default path, a custom batch rotates
  * up to {@link spriteMaterialTextureSlots} base textures through the group(1)
  * (WGSL) / unit 0..N-1 (WebGL2) slot table, and the fragment reads its own
