@@ -35,6 +35,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { CHANGELOG_PATH, dateChangelogFile, hasCuttableChangelog, UNRELEASED_HEADING } from './changelog.ts';
+import { generateChangelog } from './generate-changelog.ts';
 import { LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
 import {
   EVIDENCE_PATH,
@@ -245,6 +246,21 @@ log('');
 
 log('  checking pre-conditions…');
 assertCleanTree();
+
+log('\n→ filling the changelog from the squash commits since the last release…');
+
+const generated = generateChangelog(repoRoot, { write: true });
+
+log(
+  generated.rendered.length > 0
+    ? `  ✓ ${generated.entries} entr${generated.entries === 1 ? 'y' : 'ies'} since ${generated.since} added to ${CHANGELOG_PATH} - review the wording, then re-run the cut`
+    : `  ✓ every entry since ${generated.since} is already in ${CHANGELOG_PATH}`,
+);
+
+if (generated.rendered.length > 0) {
+  die('CHANGELOG.md was updated from the squash commits. Review and commit it, then run the cut again.');
+}
+
 assertChangelogSection(version);
 assertTagAbsent(version);
 

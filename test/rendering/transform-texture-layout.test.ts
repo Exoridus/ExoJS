@@ -36,7 +36,9 @@ const walkSources = function* (directory: string): Generator<string> {
     const path = join(directory, entry.name);
 
     if (entry.isDirectory()) {
-      if (entry.name !== 'node_modules' && entry.name !== 'dist') {
+      // Fixture directories (`__name__`) appear and vanish while other test
+      // files run in parallel workers; descending into one races its removal.
+      if (entry.name !== 'node_modules' && entry.name !== 'dist' && !entry.name.startsWith('__')) {
         yield* walkSources(path);
       }
     } else if (/\.(ts|vert|frag|glsl)$/.test(entry.name)) {
