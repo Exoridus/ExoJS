@@ -7,7 +7,9 @@ import { resolveShaping } from './shaping';
 import type { GlyphInfo, GlyphPlacement, GlyphProvider, TextLayoutResult, TextLayoutStyle, TextLineMetrics, TextPageQuads, TextTransform } from './types';
 
 interface LinePlacement {
-  placements: Array<{ info: GlyphInfo; x: number; y: number; cluster: string; sourceStart: number; sourceEnd: number }>;
+  // `advance` is the entry's own pen step rather than `info.advance`: a tab's
+  // step depends on where the pen already is, so it cannot come from the glyph.
+  placements: Array<{ info: GlyphInfo; advance: number; x: number; y: number; cluster: string; sourceStart: number; sourceEnd: number }>;
   width: number;
   wordCount: number;
   sourceStart: number;
@@ -58,6 +60,10 @@ export const emptyTextLayout = (): TextLayoutResult => ({
  * overflow (`clip` / `ellipsis`), right-to-left flow, and optional kerning (if
  * the provider implements `getKerning`).
  *
+ * A tab that survives `whiteSpace: 'pre'` advances the pen to the next
+ * `tabSize` stop rather than by its own glyph advance, so columns line up. The
+ * browser-shaped path leaves tabs to the platform's text engine.
+ *
  * `textTransform` maps the string's case before anything else runs, per
  * grapheme cluster and under `locale`, and the result is traced back to the
  * caller's string so a caret still lands on the character it was aimed at.
@@ -95,6 +101,9 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
   const whiteSpace = layout.whiteSpace ?? 'pre-line';
   const locale = layout.locale;
   const shaped = shaper !== undefined && resolveShaping(text, layout) === 'browser';
+  // Resolved on the first tab only: asking for the space glyph would rasterize
+  // one into the atlas for every string, tab or no tab.
+  const tabWidth = _tabWidthResolver(layout.tabSize, fontSize, provider);
   // A shaped line carries its spacing inside the raster the browser produced,
   // so adding it between placements again would double it.
   const glyphSpacing = shaped ? 0 : letterSpacing;
@@ -121,7 +130,7 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
     } else {
       const ranges = shaped
         ? _wrapShapedLine(hard, fontSize, shaper, maxWidth, breakWords, locale)
-        : _wrapLine(hard, fontSize, provider, maxWidth, letterSpacing, breakWords, locale);
+        : _wrapLine(hard, fontSize, provider, maxWidth, letterSpacing, breakWords, locale, tabWidth);
 
       for (const range of ranges) {
         allLines.push({ text: hard.slice(range.start, range.end), start: hardStart + range.start, contentLength: range.end - range.start });
@@ -149,7 +158,7 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
     // for the marker to cover, and dropping no line at all is how it presents.
     const tooWide =
       maxWidth !== undefined &&
-      (shaped ? shaper.measureLine(last.text, fontSize) : _lineAdvance(last.text, fontSize, provider, letterSpacing, locale)) > maxWidth;
+      (shaped ? shaper.measureLine(last.text, fontSize) : _lineAdvance(last.text, fontSize, provider, letterSpacing, locale, tabWidth)) > maxWidth;
 
     if (dropped || tooWide) {
       const ellipsis = layout.ellipsis ?? defaultEllipsis;
@@ -184,7 +193,7 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
       if (body.length > 0) {
         const info = shaper.shapeLine(body, fontSize);
 
-        placements.push({ info, x: 0, y: lineY, cluster: body, sourceStart: lineSourceStart, sourceEnd: lineSourceEnd });
+        placements.push({ info, advance: info.advance, x: 0, y: lineY, cluster: body, sourceStart: lineSourceStart, sourceEnd: lineSourceEnd });
         cursorX = info.advance;
         wordCount = 1;
       }
@@ -212,9 +221,11 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
         }
 
         const info = provider.getGlyph(cluster, fontSize);
+        const advance = cluster === '	' ? _tabAdvance(cursorX, tabWidth(), info.advance) : info.advance;
 
         placements.push({
           info,
+          advance,
           x: cursorX,
           y: lineY,
           cluster,
@@ -223,7 +234,7 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
           sourceStart: toSource(line.start + Math.min(from, line.contentLength)),
           sourceEnd: toSource(line.start + Math.min(to, line.contentLength)),
         });
-        cursorX += info.advance + letterSpacing;
+        cursorX += advance + letterSpacing;
 
         if (cluster === ' ') {
           inWord = false;
@@ -297,7 +308,7 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
           width: entry.info.width,
           height: entry.info.height,
           penX: entry.x + offsetX + wordIdx * extraPerGap,
-          penAdvance: entry.info.advance + glyphSpacing,
+          penAdvance: entry.advance + glyphSpacing,
           sourceStart: entry.sourceStart,
           sourceEnd: entry.sourceEnd,
           page: entry.info.page,
@@ -324,14 +335,14 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
       continue;
     }
 
-    for (const { info, x, y, sourceStart, sourceEnd } of line.placements) {
+    for (const { info, advance, x, y, sourceStart, sourceEnd } of line.placements) {
       place({
         x: x + offsetX + (info.xBearing ?? 0),
         y: y + (info.yBearing ?? 0),
         width: info.width,
         height: info.height,
         penX: x + offsetX,
-        penAdvance: info.advance + glyphSpacing,
+        penAdvance: advance + glyphSpacing,
         sourceStart,
         sourceEnd,
         page: info.page,
@@ -473,9 +484,56 @@ const _resolveLineCap = (
   return cap;
 };
 
+/** CSS `tab-size` initial value: a tab stop every eight space widths. */
+const defaultTabSize = 8;
+
+/**
+ * A memoized tab stop width in pixels.
+ *
+ * Deferred rather than computed up front: resolving it asks the provider for
+ * the space glyph, which on a runtime atlas rasterizes one - a cost every
+ * string would pay for a feature only preserved tabs can reach.
+ */
+const _tabWidthResolver = (tabSize: number | undefined, fontSize: number, provider: GlyphProvider): (() => number) => {
+  let resolved = -1;
+
+  return (): number => {
+    if (resolved < 0) {
+      const size = tabSize ?? defaultTabSize;
+
+      assert(Number.isFinite(size) && size > 0, 'LayoutOptions.tabSize must be a positive finite number.');
+      resolved = Math.max(0, size) * provider.getGlyph(' ', fontSize).advance;
+    }
+
+    return resolved;
+  };
+};
+
+/**
+ * Pen step from `cursorX` to the next tab stop.
+ *
+ * Falls back to the glyph's own advance where the stops carry no width - a
+ * font whose space measures zero, or a `tabSize` that rounds to nothing -
+ * because a step of zero would stack every following glyph on one spot.
+ */
+const _tabAdvance = (cursorX: number, tabWidth: number, glyphAdvance: number): number => {
+  if (!(tabWidth > 0)) return glyphAdvance;
+
+  const step = tabWidth - (cursorX % tabWidth);
+
+  // A pen already sitting exactly on a stop moves to the next one, never zero.
+  return step === 0 ? tabWidth : step;
+};
+
 /** Advance width of a laid-out line, without the letter-spacing gap after its last cluster. */
-const _lineAdvance = (line: string, fontSize: number, provider: GlyphProvider, letterSpacing: number, locale: string | undefined): number =>
-  line.length === 0 ? 0 : _cursorAdvance(line, fontSize, provider, letterSpacing, locale) - letterSpacing;
+const _lineAdvance = (
+  line: string,
+  fontSize: number,
+  provider: GlyphProvider,
+  letterSpacing: number,
+  locale: string | undefined,
+  tabWidth: () => number,
+): number => (line.length === 0 ? 0 : _cursorAdvance(line, fontSize, provider, letterSpacing, locale, tabWidth, 0) - letterSpacing);
 
 /** Advance width of a run of grapheme clusters, without the gap after the last one. */
 const _measureClusters = (clusters: readonly string[], fontSize: number, provider: GlyphProvider, letterSpacing: number): number => {
@@ -840,20 +898,37 @@ const _applyWhiteSpace = (text: string, mode: 'normal' | 'pre' | 'pre-line'): Pr
  * cluster. Widths in this form add up across concatenation, so the wrapper can
  * compose a candidate from parts it measured separately; a line's reported
  * width drops the one trailing gap again.
+ *
+ * `startX` is where on its line the run begins, which only a tab reads: a tab
+ * stop is measured from the line origin, so the same run of tabs is a different
+ * width depending on what precedes it.
  */
-const _cursorAdvance = (text: string, fontSize: number, provider: GlyphProvider, letterSpacing: number, locale: string | undefined): number => {
+const _cursorAdvance = (
+  text: string,
+  fontSize: number,
+  provider: GlyphProvider,
+  letterSpacing: number,
+  locale: string | undefined,
+  tabWidth: () => number,
+  startX: number,
+): number => {
   let advance = 0;
 
   if (isTrivialText(text)) {
     for (let i = 0; i < text.length; i++) {
-      advance += provider.getGlyph(text[i]!, fontSize).advance + letterSpacing;
+      const cluster = text[i]!;
+      const info = provider.getGlyph(cluster, fontSize);
+
+      advance += (cluster === '	' ? _tabAdvance(startX + advance, tabWidth(), info.advance) : info.advance) + letterSpacing;
     }
 
     return advance;
   }
 
   for (const cluster of graphemes(text, locale)) {
-    advance += provider.getGlyph(cluster, fontSize).advance + letterSpacing;
+    const info = provider.getGlyph(cluster, fontSize);
+
+    advance += (cluster === '	' ? _tabAdvance(startX + advance, tabWidth(), info.advance) : info.advance) + letterSpacing;
   }
 
   return advance;
@@ -877,6 +952,7 @@ const _wrapLine = (
   letterSpacing: number,
   breakWords: boolean,
   locale: string | undefined,
+  tabWidth: () => number,
 ): LineRange[] => {
   if (line.length === 0) return [{ start: 0, end: 0 }];
 
@@ -894,11 +970,11 @@ const _wrapLine = (
     if (run.whitespace) {
       if (gapStart === -1) gapStart = run.start;
       gapEnd = run.end;
-      gapAdvance += _cursorAdvance(text, fontSize, provider, letterSpacing, locale);
+      gapAdvance += _cursorAdvance(text, fontSize, provider, letterSpacing, locale, tabWidth, currentAdvance + gapAdvance);
       continue;
     }
 
-    const wordAdvance = _cursorAdvance(text, fontSize, provider, letterSpacing, locale);
+    const wordAdvance = _cursorAdvance(text, fontSize, provider, letterSpacing, locale, tabWidth, currentAdvance + gapAdvance);
 
     if (breakWords && wordAdvance - letterSpacing > maxWidth) {
       if (start !== -1) ranges.push({ start, end });

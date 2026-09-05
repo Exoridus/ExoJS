@@ -1048,6 +1048,57 @@ describe('layoutText grapheme safety', () => {
 });
 
 // ---------------------------------------------------------------------------
+// tabSize
+// ---------------------------------------------------------------------------
+
+describe('layoutText tabSize', () => {
+  // Every glyph, the space included, advances 10px in the fake provider, so a
+  // tabSize of 4 puts stops at 40, 80, 120 ...
+  const tabStyle = (): TextStyle => new TextStyle({ fontSize: 16, align: 'left' });
+  const penOf = (text: string, layout: Parameters<typeof layoutText>[2]): number[] =>
+    layoutText(text, tabStyle(), { whiteSpace: 'pre', ...layout }, makeProvider()).placements.map(placement => placement.penX);
+
+  test('a tab advances to the next stop rather than by one glyph', () => {
+    expect(penOf('A\tB', { tabSize: 4 })).toEqual([0, 10, 40]);
+  });
+
+  test('stops are measured from the line origin, so a column lines up', () => {
+    // 'A' and 'ABC' both reach the same stop, which is the whole point.
+    expect(penOf('A\tX', { tabSize: 4 }).at(-1)).toBe(40);
+    expect(penOf('ABC\tX', { tabSize: 4 }).at(-1)).toBe(40);
+  });
+
+  test('a pen already sitting on a stop moves to the next one', () => {
+    expect(penOf('ABCD\tX', { tabSize: 4 }).at(-1)).toBe(80);
+  });
+
+  test('consecutive tabs each claim their own stop', () => {
+    expect(penOf('A\t\tX', { tabSize: 4 })).toEqual([0, 10, 40, 80]);
+  });
+
+  test('defaults to the CSS tab-size of eight spaces', () => {
+    expect(penOf('A\tX', {}).at(-1)).toBe(80);
+  });
+
+  test('the collapsing whitespace modes never see a tab', () => {
+    const collapsed = layoutText('A\tB', tabStyle(), { whiteSpace: 'pre-line', tabSize: 4 }, makeProvider()).placements;
+
+    expect(collapsed.map(placement => placement.penX)).toEqual([0, 10, 20]);
+  });
+
+  test('tab stops move the wrap boundary with them', () => {
+    // maxWidth 45: 'A' plus a tab already reaches 40, so 'BC' no longer fits.
+    const { lines } = layoutText('A\tBC', tabStyle(), { whiteSpace: 'pre', tabSize: 4, maxWidth: 45 }, makeProvider());
+
+    expect(lines.length).toBeGreaterThan(1);
+  });
+
+  test('rejects a tabSize of zero', () => {
+    expect(() => layoutText('A\tB', tabStyle(), { whiteSpace: 'pre', tabSize: 0 }, makeProvider())).toThrow(/tabSize/);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // textTransform
 // ---------------------------------------------------------------------------
 

@@ -198,6 +198,7 @@ const LAYOUT_READERS: {
   overflow: (source, key) => readEnum(source, key, OVERFLOWS),
   ellipsis: readString,
   letterSpacing: readNumber,
+  tabSize: readNumber,
   direction: (source, key) => readEnum(source, key, DIRECTIONS),
   locale: readString,
   shaping: (source, key) => readEnum(source, key, SHAPINGS),

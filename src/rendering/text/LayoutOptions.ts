@@ -48,6 +48,19 @@ export interface LayoutOptions {
   /** Additional gap in pixels between glyphs (on top of the font's advance). */
   letterSpacing?: number;
   /**
+   * Tab stop spacing, counted in space characters. Defaults to `8`, the CSS
+   * `tab-size` initial value.
+   *
+   * A tab advances the pen to the next multiple of `tabSize` space widths from
+   * the start of its line, so a run of tabs lines columns up instead of adding
+   * a fixed gap each. Only reachable under `whiteSpace: 'pre'`; the collapsing
+   * modes turn a tab into a single space before layout runs, as CSS does.
+   *
+   * Must be a positive finite number. Ignored for browser-shaped lines, which
+   * the platform's text engine lays out whole.
+   */
+  tabSize?: number;
+  /**
    * Base direction for text layout. Defaults to `'ltr'`.
    *
    * Direction-relative alignment is not derived from it - `align` stays

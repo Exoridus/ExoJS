@@ -107,9 +107,12 @@ Text flow and overflow come from [`LayoutOptions`](/ExoJS/en/api/layout-options/
 | `overflow` | `'visible' \| 'clip' \| 'ellipsis'` | `'visible'` | What happens to lines that do not fit `maxHeight` or `maxLines`: keep them all, drop them, or drop them and mark the last visible line |
 | `ellipsis` | `string` | `'…'` | Marker appended under `overflow: 'ellipsis'`. `'...'` for the three-period spelling, `''` to truncate silently |
 | `letterSpacing` | `number` | `0` | Extra pixel gap between glyphs |
+| `tabSize` | `number` | `8` | Tab stop spacing in space widths, matching the CSS `tab-size` initial value. Only preserved tabs reach it — see `whiteSpace` |
 | `direction` | `'ltr' \| 'rtl'` | `'ltr'` | `'rtl'` reverses each line's glyphs after wrapping; no full bidi or Arabic shaping, and `align` stays literal |
 | `breakWords` | `boolean` | `false` | Break words wider than `maxWidth` at character boundaries |
 | `whiteSpace` | `'normal' \| 'pre' \| 'pre-line'` | `'pre-line'` | Whitespace handling |
+
+Under `whiteSpace: 'pre'` a tab advances the pen to the next `tabSize` stop measured from the start of its line, so a run of tab-separated values lines up as columns instead of drifting. The collapsing modes turn a tab into a single space before layout runs, exactly as CSS does, so `tabSize` has nothing to act on there. A browser-shaped line is laid out whole by the platform's text engine and ignores the setting.
 
 Layout options stay reachable as `text.layout`. Unlike `style`, this is a plain options object with no change tracking, and the node holds its own copy of it: assign a new one to re-flow the text — mutating the object you passed in, or the one the getter hands back, changes nothing.
 
