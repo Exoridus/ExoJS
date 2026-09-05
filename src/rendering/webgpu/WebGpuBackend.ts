@@ -2013,6 +2013,10 @@ export class WebGpuBackend implements RenderBackend {
       stampRetainedBatchGeneration(batch.instruction);
     }
 
+    // Record the rebase base + row count so a later child move can
+    // patch its one row in place (O(k)) instead of dropping the recording.
+    bundle._recordTransformRowRange(device, hasSharedTransformRange ? base : 0, rowCount);
+
     if (hasSharedTransformRange) {
       // Copy the group's transform + tint rows [base, base + rowCount) -
       // written by this playback's Phase-1 pre-pass into the frame-scoped CPU
@@ -2020,19 +2024,12 @@ export class WebGpuBackend implements RenderBackend {
       // lives in its own buffer (see TransformBuffer's class doc), copied
       // separately from the same frame-scoped source.
       const transformStorage = this._getTransformStorage().buffer;
-      const transformData = transformStorage.data;
-      const tintData = transformStorage.tintData;
 
-      device.queue.writeBuffer(bundle.transformBuffer!, 0, transformData.buffer, transformData.byteOffset + base * retainedTransformSlotBytes, transformBytes);
-      device.queue.writeBuffer(bundle.tintBuffer!, 0, tintData.buffer, tintData.byteOffset + base * retainedTintSlotBytes, tintBytes);
+      bundle._uploadTransformRows(transformStorage.data, transformStorage.tintData);
       this._accountant.recordBufferUpload(frame.totalBytes + transformBytes + tintBytes);
     } else {
       this._accountant.recordBufferUpload(frame.totalBytes);
     }
-
-    // Record the rebase base + row count so a later child move can
-    // patch its one row in place (O(k)) instead of dropping the recording.
-    bundle._recordTransformRowRange(device, hasSharedTransformRange ? base : 0, rowCount);
   }
 
   /**

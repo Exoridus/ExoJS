@@ -23,7 +23,7 @@ export type { RenderErrorCode, RenderErrorOptions } from './RenderError';
 export { formatShaderError, RenderError } from './RenderError';
 export type { CaptureOptions, DrawBatchOptions, DrawGeometryOptions, RenderOptions } from './RenderingContext';
 export { RenderingContext } from './RenderingContext';
-export type { MaskSource } from './RenderNode';
+export type { HitArea, MaskSource } from './RenderNode';
 export { RenderNode } from './RenderNode';
 export type { RenderNodePassOptions } from './RenderNodePass';
 export { RenderNodePass } from './RenderNodePass';

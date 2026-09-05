@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 95,
+  "memberCount": 96,
   "counts": {
     "constructors": 1,
     "methods": 43,
-    "properties": 37,
+    "properties": 38,
     "events": 14
   },
   "sections": [
@@ -513,7 +513,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Hit-test the world-space point (x, y) against this node. For world-axis-aligned nodes (own and inherited rotation a multiple of 90° and no skew) the AABB equals the oriented box, so the cheap getBounds test is exact. For rotated or skewed nodes the point is mapped back into local space with the inverse of the global transform and tested against the untransformed getLocalBounds - i.e. a true oriented-box test. This is the exact inverse of the forward map that getBounds and the renderer use to place the node's corners, so picking matches the rendered quad instead of over-reporting hits in the empty AABB corners of a rotated node."
+          "description": "A container has no geometry of its own, so a point hits it when it hits any child. A RenderNode.hitArea replaces that union with the shape, which is how a bare layout container becomes clickable in its own right."
         },
         {
           "name": "destroy",
@@ -2243,6 +2243,27 @@
           "params": [],
           "returnType": null,
           "description": "When true, this node can receive keyboard focus - via focus, Tab traversal, or app.interaction.focus(node) - and is delivered key events through onKeyDown / onKeyUp while focused, or while any of its descendants holds focus (key events bubble up the parent chain like pointer InteractionEvents do). A Widget additionally has to be enabled: disabling one takes it out of the Tab order and rejects programmatic focus, without touching this flag."
+        },
+        {
+          "name": "hitArea",
+          "signature": "hitArea: HitArea",
+          "signatureTokens": [
+            {
+              "text": "hitArea",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HitArea",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Optional pick shape in this node's LOCAL space, replacing the bounds test contains would otherwise perform. Defaults to null. The world-space point is mapped through the inverse of the node's global transform before the shape is tested, so the region follows the node's position, rotation, scale and skew like the rendered output does - the shape itself is never re-transformed and never needs updating when the node moves. Affects picking only. Bounds, culling and rendering ignore it entirely, and because the interaction system finds candidates by their bounds, a hit area reaching outside the node's bounds is only reliably picked where the two overlap. Use it to shrink or reshape a pick region, not to grow one. The shape is the caller's: it is read live on every hit test, so mutating it in place takes effect immediately, and the node never destroys it."
         },
         {
           "name": "name",
