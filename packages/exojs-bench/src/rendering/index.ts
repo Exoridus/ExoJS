@@ -11,13 +11,17 @@
 
 export {
   applySelection,
+  DEFAULT_RENDERING_BROWSER,
   type LibraryProvenance,
   type MatrixOutcome,
   type MatrixSelection,
+  parseRenderingBrowser,
   profileCell,
   type ProfileOutcome,
   type ProfileRow,
   type Provenance,
+  RENDERING_BROWSERS,
+  type RenderingBrowser,
   runMatrix,
 } from './driver';
 export type { ArchetypeId, Backend, CellResult, CellSpec } from './EngineAdapter';

@@ -23,6 +23,7 @@ export const ExoHeader = ({ baseUrl, currentPath, locale }: ExoHeaderProps): JSX
   const guideHref = `${baseUrl}${normalizedLocale}/guide/`;
   const playgroundHref = `${baseUrl}${normalizedLocale}/playground/`;
   const apiHref = `${baseUrl}${normalizedLocale}/api/`;
+  const benchmarksHref = `${baseUrl}${normalizedLocale}/benchmarks/`;
   const npmUrl = appInfo.packageName ? `https://www.npmjs.com/package/${appInfo.packageName}` : '';
 
   const openMenu = (event: MouseEvent<HTMLButtonElement>): void => {
@@ -67,6 +68,9 @@ export const ExoHeader = ({ baseUrl, currentPath, locale }: ExoHeaderProps): JSX
           </a>
           <a href={apiHref} data-active={currentPath.startsWith(apiHref) ? 'true' : 'false'}>
             API
+          </a>
+          <a href={benchmarksHref} data-active={currentPath.startsWith(benchmarksHref) ? 'true' : 'false'}>
+            Benchmarks
           </a>
         </nav>
         <div className={css(styles, 'spacer')} />
@@ -130,6 +134,9 @@ export const ExoHeader = ({ baseUrl, currentPath, locale }: ExoHeaderProps): JSX
               </a>
               <a href={playgroundHref} onClick={dismissSheets}>
                 Playground
+              </a>
+              <a href={benchmarksHref} onClick={dismissSheets}>
+                Benchmarks
               </a>
             </div>
           </section>
