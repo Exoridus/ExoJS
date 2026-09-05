@@ -204,8 +204,40 @@ Once an application exists, its subsystems are accessible as properties:
 - `app.audio` — the [`AudioSystem`](/ExoJS/en/api/audio-system/) for playback, busses, and the spatial listener.
 - `app.systems` — the [`SystemRegistry`](/ExoJS/en/api/system-registry/) for app-scoped `System` instances.
 - `app.tweens` — the global `TweenSystem`.
+- `app.jobs` — the [`JobScheduler`](/ExoJS/en/api/job-scheduler/) that spreads heavy work over frames.
 
 Most code reaches these through the active scene (`this.app.input`, `this.app.tweens`) rather than holding a top-level reference, but both work.
+
+## Spreading work over frames
+
+`update` and `draw` are synchronous on purpose: a frame has a fixed budget, and an `async` update would resume in a later microtask, after the frame that started it. Work that does not fit into one frame (building a world, computing hundreds of paths, rebuilding a visibility index) goes through `app.jobs` instead. A job is a generator; every `yield` hands control back, and the scheduler resumes it on the next frame until its 2 ms budget is spent.
+
+```ts
+import type { Application, Job } from '@codexo/exojs';
+
+declare const application: Application;
+declare const chunks: readonly { place(): void }[];
+
+function* buildWorld(): Generator<void, number> {
+    let placed = 0;
+    for (const chunk of chunks) {
+        chunk.place();
+        placed++;
+        yield;
+    }
+    return placed;
+}
+
+const job: Job<number> = application.jobs.run(buildWorld());
+
+job.done.then(placed => {
+    console.log(`placed ${placed} chunks`);
+});
+```
+
+The handle works from both worlds. Frame code polls `job.status` and `job.result`; async code awaits `job.done`, which rejects when the job throws or is cancelled. Higher `priority` jobs run first, equal priorities take turns, and `cancel()` stops a generator at its current `yield` and runs its `finally` blocks. Pass `{ scope }` with a `DestroyScope` so a screen that closes mid-job cancels it, or give a scene its own `JobScheduler` via `scene.systems.add(new JobScheduler())` when the jobs should not outlive the scene.
+
+Yield often enough that a single step stays well inside the budget: the scheduler cannot interrupt a step, only decline to start the next one.
 
 ## Per-frame signals
 

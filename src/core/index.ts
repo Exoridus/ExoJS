@@ -22,6 +22,8 @@ export { Color } from './Color';
 export type { ConnectivityState, NetworkMode } from './Connectivity';
 export { Connectivity } from './Connectivity';
 export { DestroyScope } from './DestroyScope';
+export type { JobOptions, JobSchedulerOptions, JobStatus, JobWork } from './JobScheduler';
+export { Job, JobScheduler } from './JobScheduler';
 export type { LoadStateValue } from './LoadState';
 export type { LogEntry, LogOptions, LogSink } from './Logger';
 export { Logger, logger, LogSeverity } from './Logger';

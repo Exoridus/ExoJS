@@ -18,6 +18,8 @@ export enum SystemOrder {
   CoreInteraction = -400,
   /** Voice and bus bookkeeping. */
   CoreAudio = -300,
+  /** Frame-budgeted job slices ({@link Application.jobs}), before tweens read their results. */
+  CoreJobs = -250,
   /** Tween and sequencer advance. */
   CoreTweens = -200,
   /**
