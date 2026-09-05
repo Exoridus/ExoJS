@@ -8,7 +8,7 @@
  * themselves.
  */
 
-import type { FontStyle, FontVariant } from './types';
+import type { FontStyle, FontVariant, FontVariantKey } from './types';
 
 type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
@@ -20,11 +20,13 @@ type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
  * font they mean. The shorthand carries the caps variant too, in the order CSS
  * requires (style, variant, weight, size, family).
  */
-export const cssFontString = (family: string, fontStyle: FontStyle, fontVariant: FontVariant, fontWeight: string, size: number): string => {
+export const cssFontString = (font: FontVariantKey, size: number): string => {
+  const fontStyle: FontStyle = font.fontStyle ?? 'normal';
+  const fontVariant: FontVariant = font.fontVariant ?? 'normal';
   const style = fontStyle !== 'normal' ? `${fontStyle} ` : '';
   const variant = fontVariant !== 'normal' ? `${fontVariant} ` : '';
 
-  return `${style}${variant}${fontWeight} ${size}px ${family}`;
+  return `${style}${variant}${font.fontWeight ?? 'normal'} ${size}px ${font.family}`;
 };
 
 /** The complete text state a canvas needs to measure or draw one string. */

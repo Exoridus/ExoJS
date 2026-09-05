@@ -54,7 +54,7 @@ afterEach(() => {
 describe('SDF rasterization at a pixel ratio', () => {
   test('rasterizes a bigger tile as the ratio rises', () => {
     const pool = new GlyphAtlasPool();
-    const tiles = RATIOS.map(ratio => rasterTile(pool.getAtlas(FAMILY, 'normal', 'normal', '400', 'sdf', 8, ratio).getGlyph('M', 16)));
+    const tiles = RATIOS.map(ratio => rasterTile(pool.getAtlas({ family: FAMILY, fontWeight: '400' }, 'sdf', 8, ratio).getGlyph('M', 16)));
 
     expect(tiles[1]!.width).toBeGreaterThan(tiles[0]!.width);
     expect(tiles[2]!.width).toBeGreaterThan(tiles[1]!.width);
@@ -74,7 +74,7 @@ describe('SDF rasterization at a pixel ratio', () => {
     const pool = new GlyphAtlasPool();
 
     for (const ratio of [1, 1.5, 2, 3]) {
-      const info = pool.getAtlas(FAMILY, 'normal', 'normal', '400', 'sdf', 8, ratio).getGlyph('M', 16);
+      const info = pool.getAtlas({ family: FAMILY, fontWeight: '400' }, 'sdf', 8, ratio).getGlyph('M', 16);
 
       expect(info.xBearing, `ratio ${ratio}`).toBeCloseTo(-8, 6);
       expect(info.yBearing, `ratio ${ratio}`).toBeCloseTo(-8, 6);
@@ -87,7 +87,7 @@ describe('SDF rasterization at a pixel ratio', () => {
   // the ink extent - and therefore culling and hit testing - stable.
   test('reports the tile in logical pixels, within a pixel of the ratio-1 tile', () => {
     const pool = new GlyphAtlasPool();
-    const infos = RATIOS.map(ratio => pool.getAtlas(FAMILY, 'normal', 'normal', '400', 'sdf', 8, ratio).getGlyph('M', 16));
+    const infos = RATIOS.map(ratio => pool.getAtlas({ family: FAMILY, fontWeight: '400' }, 'sdf', 8, ratio).getGlyph('M', 16));
 
     for (const info of infos) {
       expect(Math.abs(info.width - infos[0]!.width)).toBeLessThanOrEqual(1);
@@ -99,7 +99,7 @@ describe('SDF rasterization at a pixel ratio', () => {
     const pool = new GlyphAtlasPool();
 
     for (const fontSize of FONT_SIZES) {
-      const advances = RATIOS.map(ratio => pool.getAtlas(FAMILY, 'normal', 'normal', '400', 'sdf', 8, ratio).getGlyph('M', fontSize).advance);
+      const advances = RATIOS.map(ratio => pool.getAtlas({ family: FAMILY, fontWeight: '400' }, 'sdf', 8, ratio).getGlyph('M', fontSize).advance);
 
       expect(new Set(advances).size, `font size ${fontSize}: ${advances.join(', ')}`).toBe(1);
     }
@@ -160,8 +160,8 @@ describe('the SDF atlas is sampled as a continuous field', () => {
 
   test('pins the page sampler to linear filtering', () => {
     const pool = new GlyphAtlasPool();
-    const sdf = pool.getAtlas(FAMILY, 'normal', 'normal', '400', 'sdf');
-    const color = pool.getAtlas(FAMILY, 'normal', 'normal', '400', 'color');
+    const sdf = pool.getAtlas({ family: FAMILY, fontWeight: '400' }, 'sdf');
+    const color = pool.getAtlas({ family: FAMILY, fontWeight: '400' }, 'color');
 
     // ScaleModes.Linear === GL_LINEAR. A DataTexture defaults to NEAREST, which
     // is right for a lookup table and wrong for a distance field.
@@ -333,7 +333,7 @@ describe('memory cost of a raised raster density', () => {
   test('is measured rather than assumed to be the square of the ratio', () => {
     const rows = RATIOS.map(ratio => {
       const pool = new GlyphAtlasPool();
-      const atlas = pool.getAtlas(FAMILY, 'normal', 'normal', '400', 'sdf', 8, ratio);
+      const atlas = pool.getAtlas({ family: FAMILY, fontWeight: '400' }, 'sdf', 8, ratio);
       let tileTexels = 0;
       let largestTile = 0;
 
@@ -380,8 +380,8 @@ describe('memory cost of a raised raster density', () => {
   test('diagnoses a glyph that no longer fits a page, naming the ratio', () => {
     const pool = new GlyphAtlasPool();
 
-    expect(() => pool.getAtlas(FAMILY, 'normal', 'normal', '400', 'sdf', 8, 1).getGlyph('M', 400)).not.toThrow();
-    expect(() => pool.getAtlas(FAMILY, 'normal', 'normal', '400', 'sdf', 8, 3).getGlyph('M', 400)).toThrow(/pixelRatio 3/);
+    expect(() => pool.getAtlas({ family: FAMILY, fontWeight: '400' }, 'sdf', 8, 1).getGlyph('M', 400)).not.toThrow();
+    expect(() => pool.getAtlas({ family: FAMILY, fontWeight: '400' }, 'sdf', 8, 3).getGlyph('M', 400)).toThrow(/pixelRatio 3/);
   });
 });
 

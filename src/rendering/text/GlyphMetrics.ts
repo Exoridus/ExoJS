@@ -1,5 +1,5 @@
 import { applyCanvasTextState, cssFontString } from './canvasTextState';
-import type { FontStyle, FontVariant, GlyphInfo, GlyphProvider, TextFontMetrics } from './types';
+import type { FontVariantKey, GlyphInfo, GlyphProvider, TextFontMetrics } from './types';
 
 type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
@@ -44,10 +44,7 @@ const makeMeasureCtx = (): Ctx2D => {
  * @advanced
  */
 export class GlyphMetrics implements GlyphProvider {
-  private readonly _family: string;
-  private readonly _fontStyle: FontStyle;
-  private readonly _fontVariant: FontVariant;
-  private readonly _fontWeight: string;
+  private readonly _font: FontVariantKey;
 
   private readonly _infos = new Map<string, GlyphInfo>();
   private readonly _kerning = new Map<string, number>();
@@ -56,16 +53,13 @@ export class GlyphMetrics implements GlyphProvider {
   /** Created on first use - a font variant that is never measured allocates no canvas. */
   private _ctx: Ctx2D | null = null;
 
-  public constructor(family: string, fontStyle: FontStyle, fontVariant: FontVariant, fontWeight: string) {
-    this._family = family;
-    this._fontStyle = fontStyle;
-    this._fontVariant = fontVariant;
-    this._fontWeight = fontWeight;
+  public constructor(font: FontVariantKey) {
+    this._font = font;
   }
 
   /** The CSS `font` shorthand for this variant at `size` logical pixels. */
   public cssFont(size: number): string {
-    return cssFontString(this._family, this._fontStyle, this._fontVariant, this._fontWeight, size);
+    return cssFontString(this._font, size);
   }
 
   /** Horizontal advance of `char` at `fontSize` logical pixels. */
@@ -165,7 +159,7 @@ export class GlyphMetrics implements GlyphProvider {
     // Through the shared applier rather than by hand: a small-cap advance only
     // comes out right when the caps attribute is set alongside the shorthand,
     // and a measurement that skipped it would disagree with the raster.
-    applyCanvasTextState(ctx, { font: this.cssFont(fontSize), direction: 'ltr', letterSpacing: 0, variantCaps: this._fontVariant });
+    applyCanvasTextState(ctx, { font: this.cssFont(fontSize), direction: 'ltr', letterSpacing: 0, variantCaps: this._font.fontVariant ?? 'normal' });
 
     return ctx.measureText(text);
   }

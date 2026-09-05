@@ -190,33 +190,18 @@ export class Text extends AbstractText {
 
     const style = new TextStyle(options);
     const pool = getDefaultGlyphAtlasPool();
-    const metrics = pool.getMetrics(style.fontFamily, style.fontStyle, style.fontVariant, style.fontWeight);
+    const metrics = pool.getMetrics(style.fontKey);
     // Measurement-only, so contextual text is measured through the browser
     // without a raster ever being produced - the shaped node answers the same
     // width from the same cache.
-    const shaper = pool.getShapedMetrics(
-      style.fontFamily,
-      style.fontStyle,
-      style.fontVariant,
-      style.fontWeight,
-      options.direction ?? 'ltr',
-      options.letterSpacing ?? 0,
-    );
+    const shaper = pool.getShapedMetrics(style.fontKey, options.direction ?? 'ltr', options.letterSpacing ?? 0);
 
     return layoutText(text, style, options, metrics, shaper).advance;
   }
 
   /** The one place a Text resolves its atlas, so two passes cannot pick different ones. */
   private static _acquireAtlas(style: TextStyle, colorGlyphs: boolean, sdfRadius: number, pixelRatio: number): GlyphAtlas {
-    return getDefaultGlyphAtlasPool().getAtlas(
-      style.fontFamily,
-      style.fontStyle,
-      style.fontVariant,
-      style.fontWeight,
-      colorGlyphs ? 'color' : 'sdf',
-      sdfRadius,
-      pixelRatio,
-    );
+    return getDefaultGlyphAtlasPool().getAtlas(style.fontKey, colorGlyphs ? 'color' : 'sdf', sdfRadius, pixelRatio);
   }
 
   public get style(): TextStyle {
@@ -396,7 +381,7 @@ export class Text extends AbstractText {
     // actually rasterize at once it is drawn. Clearing by ratio would clear
     // the wrong atlas and leave the one this node uses holding fallback-font
     // tiles indefinitely; clearing the whole variant reaches every ratio.
-    getDefaultGlyphAtlasPool().clearVariant(this._style.fontFamily, this._style.fontStyle, this._style.fontWeight);
+    getDefaultGlyphAtlasPool().clearVariant({ family: this._style.fontFamily, fontStyle: this._style.fontStyle, fontWeight: this._style.fontWeight });
     this._markDirty('font');
   }
 
@@ -450,18 +435,19 @@ export class Text extends AbstractText {
     const letterSpacing = this._layout.letterSpacing ?? 0;
     const mode = this.atlasMode;
     const pixelRatio = this.rasterPixelRatio;
-    const key = `${style.fontFamily}:${style.fontStyle}:${style.fontVariant}:${style.fontWeight}:${mode}:${this._sdfRadius}:${pixelRatio}:${direction}:${letterSpacing}`;
+    const font = style.fontKey;
+    // Built from the style's own fields rather than from `font`, whose members
+    // are optional and would stringify a resolved default as "undefined".
+    const variant = `${style.fontFamily}:${style.fontStyle}:${style.fontVariant}:${style.fontWeight}`;
+    const key = `${variant}:${mode}:${this._sdfRadius}:${pixelRatio}:${direction}:${letterSpacing}`;
 
     if (this._shapedSource !== null && this._shapedKey === key) return this._shapedSource;
 
     this._releaseShapedSource();
 
     const source = new ShapedTextSource({
-      family: style.fontFamily,
-      fontStyle: style.fontStyle,
-      fontVariant: style.fontVariant,
-      fontWeight: style.fontWeight,
-      metrics: getDefaultGlyphAtlasPool().getShapedMetrics(style.fontFamily, style.fontStyle, style.fontVariant, style.fontWeight, direction, letterSpacing),
+      font,
+      metrics: getDefaultGlyphAtlasPool().getShapedMetrics(font, direction, letterSpacing),
       mode,
       sdfRadius: this._sdfRadius,
       pixelRatio,

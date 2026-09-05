@@ -111,7 +111,9 @@ export type { FontFamily, FontRegistry, FontWeight, ResolvedTextGradient, StyleC
 export { textGradientMaxStops, TextStyle } from '#rendering/text/TextStyle';
 export type {
   FontStyle,
+  FontTypefaceKey,
   FontVariant,
+  FontVariantKey,
   GlyphInfo,
   GlyphKey,
   GlyphPlacement,

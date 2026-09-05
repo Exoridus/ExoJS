@@ -4,7 +4,7 @@ import { AtlasPage, claimSolidTexel, SDF_RADIUS } from './GlyphAtlas';
 import { GlyphSdf } from './GlyphSdf';
 import type { ShapedTextMetrics } from './ShapedTextMetrics';
 import type { LineShaper } from './shaping';
-import type { FontStyle, FontVariant, GlyphInfo, SolidTexel } from './types';
+import type { FontVariantKey, GlyphInfo, SolidTexel } from './types';
 
 type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
@@ -35,10 +35,7 @@ const defaultPageHeight = 256;
 
 /** Construction options for {@link ShapedTextSource}. */
 export interface ShapedTextSourceOptions {
-  family: string;
-  fontStyle: FontStyle;
-  fontVariant: FontVariant;
-  fontWeight: string;
+  font: FontVariantKey;
   /** Logical measurement for this variant, so raster and layout cannot disagree about a width. */
   metrics: ShapedTextMetrics;
   mode?: AtlasMode;
@@ -71,10 +68,7 @@ export interface ShapedTextSourceOptions {
  * @advanced
  */
 export class ShapedTextSource implements LineShaper {
-  private readonly _family: string;
-  private readonly _fontStyle: FontStyle;
-  private readonly _fontVariant: FontVariant;
-  private readonly _fontWeight: string;
+  private readonly _font: FontVariantKey;
   private readonly _metrics: ShapedTextMetrics;
   private readonly _mode: AtlasMode;
   private readonly _sdfRadius: number;
@@ -97,10 +91,7 @@ export class ShapedTextSource implements LineShaper {
   private _measureCtx: Ctx2D | null = null;
 
   public constructor(options: ShapedTextSourceOptions) {
-    this._family = options.family;
-    this._fontStyle = options.fontStyle;
-    this._fontVariant = options.fontVariant;
-    this._fontWeight = options.fontWeight;
+    this._font = options.font;
     this._metrics = options.metrics;
     this._mode = options.mode ?? 'sdf';
     this._sdfRadius = options.sdfRadius ?? SDF_RADIUS;
@@ -200,10 +191,10 @@ export class ShapedTextSource implements LineShaper {
     if (instance === undefined) {
       instance = new GlyphSdf({
         fontSize: rasterFontSize,
-        fontFamily: this._family,
-        fontWeight: this._fontWeight,
-        fontStyle: this._fontStyle,
-        fontVariant: this._fontVariant,
+        fontFamily: this._font.family,
+        fontWeight: this._font.fontWeight ?? 'normal',
+        fontStyle: this._font.fontStyle ?? 'normal',
+        fontVariant: this._font.fontVariant ?? 'normal',
         buffer: this._rasterSdfRadius,
         radius: this._rasterSdfRadius,
         cutoff: 0.5,

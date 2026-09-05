@@ -130,7 +130,10 @@ export class GlyphSdf {
     this._fontSize = options.fontSize;
 
     const fontVariant = options.fontVariant ?? 'normal';
-    const font = cssFontString(options.fontFamily, options.fontStyle ?? 'normal', fontVariant, options.fontWeight ?? 'normal', options.fontSize);
+    const font = cssFontString(
+      { family: options.fontFamily, fontStyle: options.fontStyle ?? 'normal', fontWeight: options.fontWeight ?? 'normal', fontVariant },
+      options.fontSize,
+    );
 
     this._textState = { font, direction: options.direction ?? 'ltr', letterSpacing: options.letterSpacing ?? 0, variantCaps: fontVariant };
 

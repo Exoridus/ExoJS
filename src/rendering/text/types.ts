@@ -18,6 +18,34 @@ export type FontStyle = 'normal' | 'italic' | 'oblique';
  */
 export type FontVariant = 'normal' | 'small-caps';
 
+/**
+ * The typeface a glyph source draws from: a family, and the slant and weight
+ * selected within it.
+ *
+ * A loaded {@link FontFace} replaces every caps variant of the typeface at
+ * once, which is why the cache-clearing side of the text stack is expressed in
+ * these terms rather than in {@link FontVariantKey}.
+ */
+export interface FontTypefaceKey {
+  readonly family: string;
+  /** Defaults to `'normal'`. */
+  readonly fontStyle?: FontStyle;
+  /** Defaults to `'normal'`. */
+  readonly fontWeight?: string;
+}
+
+/**
+ * Everything that decides which glyphs a text run is drawn from.
+ *
+ * Named rather than positional because the four values are all strings and
+ * three of them default to `'normal'`: `{ family: 'Roboto', fontWeight: '700' }`
+ * says what a run of four bare strings could not.
+ */
+export interface FontVariantKey extends FontTypefaceKey {
+  /** Defaults to `'normal'`. */
+  readonly fontVariant?: FontVariant;
+}
+
 /** Horizontal alignment mode for multi-line text layout. */
 export type TextAlignment = 'left' | 'center' | 'right' | 'justify';
 

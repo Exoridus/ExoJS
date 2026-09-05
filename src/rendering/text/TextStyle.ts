@@ -4,7 +4,7 @@ import { Signal } from '#core/Signal';
 import type { GradientStop } from '#rendering/gradient/Gradient';
 
 import { cssFontString } from './canvasTextState';
-import type { FontStyle, FontVariant, TextAlignment, TextTransform } from './types';
+import type { FontStyle, FontVariant, FontVariantKey, TextAlignment, TextTransform } from './types';
 
 /**
  * How many stops one text gradient may carry.
@@ -593,7 +593,15 @@ export class TextStyle {
    * rasterization.
    */
   public get font(): string {
-    return cssFontString(this._fontFamily, this._fontStyle, this._fontVariant, this._fontWeight, this._fontSize);
+    return cssFontString(this.fontKey, this._fontSize);
+  }
+
+  /**
+   * The typeface, slant, weight and caps variant this style selects, as the
+   * key a glyph atlas, a metrics cache or a line shaper is resolved by.
+   */
+  public get fontKey(): FontVariantKey {
+    return { family: this._fontFamily, fontStyle: this._fontStyle, fontWeight: this._fontWeight, fontVariant: this._fontVariant };
   }
 
   // ── Clone / copy ────────────────────────────────────────────────────────
