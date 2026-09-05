@@ -58,18 +58,23 @@ const physicsCell = (options: {
   status: 'ok',
 });
 
-const stamp = (engineVersion = '0.17.0'): Provenance => ({
+const stamp = (engineVersion = '0.17.0', overrides: Partial<Provenance> = {}): Provenance => ({
   adapter: 'Test GPU',
   backend: 'webgl2',
+  browser: 'chromium',
+  browserVersion: '151.0.7922.34',
+  os: 'win32 10.0.26200',
+  prerelease: { value: false, source: 'assumed-stable', evidence: 'no marker, none declared' },
   flags: ['--force-device-scale-factor=1'],
   headless: true,
   software: false,
   engineVersion,
   timestamp: '2026-01-01T00:00:00.000Z',
+  ...overrides,
 });
 
-const physicsStamp = (engineVersion = '0.17.0'): PhysicsProvenance => ({
-  host: { node: 'v24.14.1', cpu: 'Test CPU', cpuCount: 16, os: 'linux 6.1.0', arch: 'x64' },
+const physicsStamp = (engineVersion = '0.17.0', host: Partial<PhysicsProvenance['host']> = {}): PhysicsProvenance => ({
+  host: { node: 'v24.14.1', cpu: 'Test CPU', cpuCount: 16, os: 'linux 6.1.0', arch: 'x64', ...host },
   fixedDelta: 1 / 60,
   caveats: [],
   engineVersion,
@@ -77,15 +82,18 @@ const physicsStamp = (engineVersion = '0.17.0'): PhysicsProvenance => ({
 });
 
 /** One rendering run's artifact, as `bench:compare` reads it off disk. */
-const renderingRun = (results: readonly CellResult[], options: { engineVersion?: string; libraries?: ReportData['libraries'] } = {}): ReportData => ({
-  provenance: [stamp(options.engineVersion)],
+const renderingRun = (
+  results: readonly CellResult[],
+  options: { engineVersion?: string; libraries?: ReportData['libraries']; stamp?: Partial<Provenance> } = {},
+): ReportData => ({
+  provenance: [stamp(options.engineVersion, options.stamp ?? {})],
   libraries: options.libraries ?? [{ name: 'pixi.js', version: '8.19.0', resolvedFrom: '' }],
   results,
 });
 
 /** One physics run's artifact. */
-const physicsRun = (results: readonly PhysicsCellResult[]): PhysicsReportData => ({
-  provenance: physicsStamp(),
+const physicsRun = (results: readonly PhysicsCellResult[], host: Partial<PhysicsProvenance['host']> = {}): PhysicsReportData => ({
+  provenance: physicsStamp('0.17.0', host),
   libraries: [{ name: 'matter-js', version: '0.20.0', resolvedFrom: '' }],
   results,
 });
@@ -394,6 +402,39 @@ describe('aggregateRenderingRuns', () => {
 
     expect(() => aggregateRenderingRuns([run(2), wider])).toThrow(/does not measure the same cells/);
   });
+
+  test('rejects runs measured on different GPUs', () => {
+    const elsewhere = renderingRun(run(2).results, { stamp: { adapter: 'ANGLE (Apple, ANGLE Metal Renderer: Apple M3 Max, Unspecified Version)' } });
+
+    expect(() => aggregateRenderingRuns([run(2), run(2), elsewhere])).toThrow(/different machine or browser/);
+  });
+
+  test('rejects runs measured in different browsers, whose numbers are not repetitions of one another', () => {
+    const inWebkit = renderingRun(run(2).results, { stamp: { browser: 'webkit', browserVersion: '26.5' } });
+
+    expect(() => aggregateRenderingRuns([run(2), inWebkit])).toThrow(IncomparableRunsError);
+  });
+
+  test('rejects a pre-release run pooled with a shipping one, so half a number cannot pass as stable', () => {
+    const onBeta = renderingRun(run(2).results, { stamp: { prerelease: { value: true, source: 'declared', evidence: 'macOS 26.0 beta' } } });
+
+    expect(() => aggregateRenderingRuns([run(2), onBeta])).toThrow(/different machine or browser/);
+  });
+
+  test('tolerates the driver detail of an adapter string and the operating system patch level', () => {
+    // A driver update rewrites the device-id and shader-model tail, and a
+    // Windows build number moves under a machine between runs. Neither is a
+    // different computer, and rejecting them would make a repetition
+    // unrepeatable for reasons that have nothing to do with what was measured.
+    const before = renderingRun(run(2).results, {
+      stamp: { adapter: 'ANGLE (NVIDIA, NVIDIA GeForce RTX 5070 Ti (0x00002C05) Direct3D11 vs_5_0 ps_5_0, D3D11)', os: 'win32 10.0.26200' },
+    });
+    const after = renderingRun(run(2).results, {
+      stamp: { adapter: 'ANGLE (NVIDIA, NVIDIA GeForce RTX 5070 Ti (0x00002D11) Direct3D11 vs_5_1 ps_5_1, D3D11)', os: 'win32 10.0.26220' },
+    });
+
+    expect(() => aggregateRenderingRuns([before, after, before])).not.toThrow();
+  });
 });
 
 describe('aggregatePhysicsRuns', () => {
@@ -412,6 +453,10 @@ describe('aggregatePhysicsRuns', () => {
     expect(pooled.aggregate.competitor).toEqual({ minMs: 1.1, maxMs: 3, ratio: 3 / 1.1 });
     expect(pooled.aggregate.stable).toBe(false);
     expect(pooled.verdict.label).toBe('unstable across runs');
+  });
+
+  test('rejects runs measured on different CPUs, which is the physics domain of a different machine', () => {
+    expect(() => aggregatePhysicsRuns([run(2), physicsRun(run(2).results, { cpu: 'Apple M3 Max' })])).toThrow(/different machine/);
   });
 });
 
@@ -470,19 +515,7 @@ describe('renderComparison', () => {
   test('marks a software-rasterizer run as not reportable', () => {
     const document = renderComparison({
       rendering: {
-        runs: [
-          [
-            {
-              adapter: 'SwiftShader',
-              backend: 'webgl2',
-              flags: [],
-              headless: true,
-              software: true,
-              engineVersion: '0.15.2',
-              timestamp: '2026-08-29T00:00:00.000Z',
-            },
-          ],
-        ],
+        runs: [[stamp('0.15.2', { adapter: 'SwiftShader', flags: [], software: true, timestamp: '2026-08-29T00:00:00.000Z' })]],
         libraries: [],
         backends: [],
       },

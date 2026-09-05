@@ -18,9 +18,11 @@ import { computeProfileSignature } from '../../packages/exojs-bench/src/profile/
  * why each defect below is introduced into a real file and run through the real
  * script rather than asserted against the validation logic in isolation.
  *
- * Two of the defects are about evidence rather than integrity: a profile that
- * pools too few runs, and a schema version 1 file, which described a single run
- * and therefore a ratio no repetition ever confirmed.
+ * Some of the defects are about evidence rather than integrity: a profile that
+ * pools too few runs; a schema version 1 file, which described a single run and
+ * therefore a ratio no repetition ever confirmed; a version 2 file, whose
+ * stamps named no browser; and a pre-release status that does not say how it
+ * was established.
  */
 
 const REPO_ROOT = resolve(import.meta.dirname!, '../..');
@@ -35,6 +37,10 @@ const REQUIRED_RUNS = 3;
 const renderingStamp = (run: number) => ({
   backend: 'webgl2',
   adapter: 'Test Adapter',
+  browser: 'chromium',
+  browserVersion: '151.0.7922.34',
+  os: 'linux 6.1.0',
+  prerelease: { value: false, source: 'assumed-stable', evidence: 'no pre-release marker, and none declared' },
   flags: ['--force-device-scale-factor=1'],
   headless: true,
   software: false,
@@ -55,7 +61,7 @@ const physicsStamp = (run: number) => ({
  * `bench:compare --profile` writes, pooling `runs` separate harness runs.
  */
 const validProfile = (runs = REQUIRED_RUNS): Record<string, unknown> => ({
-  schemaVersion: 2,
+  schemaVersion: 3,
   profile: {
     slug: SLUG,
     gpu: 'test-gpu',
@@ -188,6 +194,48 @@ describe('verify-bench-results', () => {
     write(version1Profile());
 
     expect(check()).toContain('which this repository does not understand');
+  });
+
+  it('rejects a schema version 2 file outright: its stamps named no browser', () => {
+    write({ ...validProfile(), schemaVersion: 2 });
+
+    expect(check()).toContain('which this repository does not understand');
+  });
+
+  it('rejects a stamp that claims a pre-release status without saying how it was established', () => {
+    const document = validProfile();
+    const rendering = document['rendering'] as { runs: Array<{ provenance: Array<{ prerelease: Record<string, unknown> }> }> };
+
+    rendering.runs[0]!.provenance[0]!.prerelease.source = 'because I said so';
+
+    write(document);
+
+    expect(check()).toContain('rendering.runs[0].provenance[0].prerelease.source');
+  });
+
+  it('accepts a stamp whose launch flags are empty, which is what a browser taking no arguments records', () => {
+    const document = validProfile();
+    const rendering = document['rendering'] as { runs: Array<{ provenance: Array<{ flags: string[]; browser: string }> }> };
+
+    for (const run of rendering.runs) {
+      run.provenance[0]!.flags = [];
+      run.provenance[0]!.browser = 'webkit';
+    }
+
+    write(document);
+
+    expect(check()).toBeNull();
+  });
+
+  it('rejects a stamp with no launch-flag list at all, which records nothing about how it was launched', () => {
+    const document = validProfile();
+    const rendering = document['rendering'] as { runs: Array<{ provenance: Array<Record<string, unknown>> }> };
+
+    delete rendering.runs[2]!.provenance[0]!['flags'];
+
+    write(document);
+
+    expect(check()).toContain('rendering.runs[2].provenance[0].flags is missing');
   });
 
   it('rejects a run count the domains do not actually carry', () => {

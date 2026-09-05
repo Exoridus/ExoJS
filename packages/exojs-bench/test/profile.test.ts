@@ -11,14 +11,19 @@ import { deriveProfileParts, normalizeCpuModel, normalizeGpuAdapter } from '../s
  * profile relies on.
  */
 
-const renderingStamp = (adapter: string, backend: RenderingStamp['backend'] = 'webgl2'): RenderingStamp => ({
+const renderingStamp = (adapter: string, backend: RenderingStamp['backend'] = 'webgl2', overrides: Partial<RenderingStamp> = {}): RenderingStamp => ({
   backend,
   adapter,
+  browser: 'chromium',
+  browserVersion: '151.0.7922.34',
+  os: '',
+  prerelease: { value: false, source: 'assumed-stable', evidence: 'no marker, none declared' },
   flags: [],
   headless: true,
   software: false,
   engineVersion: '0.17.0',
   timestamp: '2026-01-01T00:00:00.000Z',
+  ...overrides,
 });
 
 const physicsStamp = (cpu: string, os: string): PhysicsStamp => ({
@@ -72,6 +77,22 @@ describe('deriveProfileParts', () => {
 
   it('refuses to guess an operating system a rendering-only run does not evidence', () => {
     expect(() => deriveProfileParts({ rendering: [renderingStamp('nvidia blackwell', 'webgpu')] })).toThrow(/operating system/);
+  });
+
+  it('names the browser the run selected, so two engines on one machine get two files', () => {
+    const parts = deriveProfileParts({
+      rendering: [renderingStamp('Apple GPU', 'webgl2', { browser: 'webkit', browserVersion: '26.5', os: 'darwin 25.0.0' })],
+    });
+
+    expect(parts).toEqual({ slug: 'apple-gpu-macos-webkit', gpu: 'apple-gpu', os: 'macos', browser: 'webkit' });
+  });
+
+  it('reads the operating system the rendering run recorded rather than inferring it from a graphics API', () => {
+    // A browser that masks the adapter names no graphics API to infer from, so
+    // without the recorded platform this profile could not be named at all.
+    expect(deriveProfileParts({ rendering: [renderingStamp('Apple GPU', 'webgl2', { browser: 'webkit', os: 'win32 10.0.26200' })] }).slug).toBe(
+      'apple-gpu-windows-webkit',
+    );
   });
 });
 

@@ -20,7 +20,7 @@
  */
 
 /** Schema version this reader understands; anything else is refused. */
-const SUPPORTED_SCHEMA_VERSION = 2;
+const SUPPORTED_SCHEMA_VERSION = 3;
 
 /**
  * Arms that stand as a reference ceiling rather than as a peer.
@@ -122,10 +122,34 @@ export interface ProfileLibrary {
   readonly version: string;
 }
 
+/** How a run's pre-release status was established. */
+export type PrereleaseSource = 'detected' | 'declared' | 'assumed-stable';
+
+/**
+ * Whether a run was taken on a pre-release platform.
+ *
+ * `assumed-stable` records that nothing established the platform's status and
+ * is a weaker statement than a stable platform, not the same one.
+ */
+export interface PrereleaseStamp {
+  readonly value: boolean;
+  readonly source: PrereleaseSource;
+  readonly evidence: string;
+}
+
 /** Rendering provenance for one backend. */
 export interface RenderingStamp {
   readonly backend: ProfileBackendName;
   readonly adapter: string;
+  /** Browser engine the run was measured in. */
+  readonly browser: string;
+  /** Browser build the run was measured in. */
+  readonly browserVersion: string;
+  /** Operating system of the host that drove the browser. */
+  readonly os: string;
+  /** Whether the platform is a pre-release build, and what established that. */
+  readonly prerelease: PrereleaseStamp;
+  /** Launch flags the run used; empty under a browser that takes none. */
   readonly flags: readonly string[];
   readonly headless: boolean;
   readonly software: boolean;

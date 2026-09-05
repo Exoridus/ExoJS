@@ -4,8 +4,8 @@ import { resolve } from 'node:path';
 // graph - the `@codexo/exojs-physics` source arm - is loaded lazily via a
 // dynamic `import()` inside `runPhysicsDomain`, so a rendering run never pays for it.
 import type { PhysicsAdapter, PhysicsCellResult, PhysicsCellSpec } from './physics';
-import type { ArchetypeId, Backend, CellResult, MatrixSelection } from './rendering';
-import { isHitching, profileCell, runMatrix, writeReport } from './rendering';
+import type { ArchetypeId, Backend, CellResult, MatrixSelection, RenderingBrowser } from './rendering';
+import { isHitching, parseRenderingBrowser, profileCell, runMatrix, writeReport } from './rendering';
 import { parseArgs } from './shared/args';
 import { createCheckpointWriter } from './shared/checkpoint';
 
@@ -64,6 +64,7 @@ const runProfileMode = async (
   args: Map<string, string>,
   selection: { engines?: string[]; configs?: string[]; archetypes?: ArchetypeId[]; nodeCounts?: number[] },
   backends: readonly Backend[],
+  browser: RenderingBrowser,
 ): Promise<void> => {
   const frames = Number.parseInt(args.get('profile-frames') ?? '200', 10);
   const topRows = Number.parseInt(args.get('profile-top') ?? '25', 10);
@@ -80,6 +81,7 @@ const runProfileMode = async (
             const outcome = await profileCell({
               spec: { engine, config, backend, archetype, nodeCount, timedFrames: frames, warmupFrames: 30 },
               frames,
+              browser,
             });
 
             console.log(
@@ -116,6 +118,14 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
   const framesArg = args.get('frames');
   const engineArg = args.get('engine');
   const outDir = resolve(args.get('out') ?? DEFAULT_OUT_DIR);
+
+  // `--browser` selects the engine the run is measured in and is stamped into
+  // every provenance block, so a WebKit number can never be read as a Chromium
+  // one. `--prerelease` declares a beta operating system, which nothing at
+  // runtime can observe; a preview BROWSER build is detected from its own
+  // version string and needs no flag.
+  const browser = parseRenderingBrowser(args.get('browser'));
+  const declaredPrerelease = args.get('prerelease');
 
   const backends: readonly Backend[] = backendArg ? (backendArg.split(',').map(value => value.trim()) as Backend[]) : DEFAULT_BACKENDS;
 
@@ -176,6 +186,7 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
         ...(nodeCounts !== undefined && { nodeCounts }),
       },
       backends,
+      browser,
     );
 
     return;
@@ -188,7 +199,7 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
   }
 
   console.log(
-    `Running rendering benchmark: backends=[${backends.join(', ')}]${engines ? `, engine=[${engines.join(', ')}]` : ''}${configs ? `, config=[${configs.join(', ')}]` : ''}${archetypes ? `, archetype=[${archetypes.join(', ')}]` : ''}${nodeCounts ? `, nodes=[${nodeCounts.join(', ')}]` : ''}${timedFramesOverride !== undefined ? `, frames=${timedFramesOverride} (OVERRIDE — thin sampling, not reportable)` : ''}`,
+    `Running rendering benchmark: browser=${browser}, backends=[${backends.join(', ')}]${engines ? `, engine=[${engines.join(', ')}]` : ''}${configs ? `, config=[${configs.join(', ')}]` : ''}${archetypes ? `, archetype=[${archetypes.join(', ')}]` : ''}${nodeCounts ? `, nodes=[${nodeCounts.join(', ')}]` : ''}${timedFramesOverride !== undefined ? `, frames=${timedFramesOverride} (OVERRIDE — thin sampling, not reportable)` : ''}`,
   );
 
   // Incremental, crash-safe checkpoint: each cell is persisted the instant it
@@ -198,6 +209,8 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
 
   const data = await runMatrix({
     backends,
+    browser,
+    ...(declaredPrerelease !== undefined && { declaredPrerelease }),
     ...(hasSelection && { selection }),
     ...(timedFramesOverride !== undefined && { timedFramesOverride }),
     onCellResult: result => checkpoint.append(result),
@@ -218,8 +231,12 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
 
   for (const entry of data.provenance) {
     console.log(
-      `  backend=${entry.backend} adapter="${entry.adapter}" software=${String(entry.software)} headless=${String(entry.headless)} flags=[${entry.flags.join(' ')}] engine=${entry.engineVersion}`,
+      `  backend=${entry.backend} browser=${entry.browser}/${entry.browserVersion} os=${entry.os} prerelease=${String(entry.prerelease.value)} (${entry.prerelease.source}) adapter="${entry.adapter}" software=${String(entry.software)} headless=${String(entry.headless)} flags=[${entry.flags.join(' ')}] engine=${entry.engineVersion}`,
     );
+  }
+
+  if (data.provenance.some(entry => entry.prerelease.value)) {
+    console.warn('\nPRE-RELEASE PLATFORM — this profile does not describe a shipping platform. The stamp records how that was established.');
   }
 
   if (data.provenance.some(entry => entry.software)) {

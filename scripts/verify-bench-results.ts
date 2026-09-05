@@ -75,7 +75,62 @@ const missingFields = (subject: unknown, fields: readonly string[], where: strin
   return fields.filter(field => !isFilled(subject[field])).map(field => `${where}.${field} is missing or empty`);
 };
 
-const RENDERING_STAMP_FIELDS = ['backend', 'adapter', 'flags', 'headless', 'software', 'engineVersion', 'timestamp'] as const;
+// `flags` is deliberately absent: a browser that takes no launch arguments
+// records an empty set, and demanding content there would push a run into
+// claiming flags it never passed.
+const RENDERING_STAMP_FIELDS = [
+  'backend',
+  'adapter',
+  'browser',
+  'browserVersion',
+  'os',
+  'prerelease',
+  'headless',
+  'software',
+  'engineVersion',
+  'timestamp',
+] as const;
+
+/** How a stamp may say its pre-release status was established. */
+const PRERELEASE_SOURCES = new Set(['detected', 'declared', 'assumed-stable']);
+
+/**
+ * The two rendering-stamp fields a presence check cannot express.
+ *
+ * `flags` is legitimately empty under a browser that takes no launch
+ * arguments, so it is checked for being a list rather than for content, and
+ * `prerelease` is only worth anything if it says how it was arrived at - a bare
+ * boolean would let an unestablished status read as a stable platform.
+ */
+const checkRenderingStampShape = (stamp: unknown, where: string, problems: string[]): void => {
+  if (!isRecord(stamp)) {
+    return;
+  }
+
+  if (!Array.isArray(stamp['flags'])) {
+    problems.push(`${where}.flags is missing or is not a list of launch flags`);
+  }
+
+  const prerelease = stamp['prerelease'];
+
+  if (!isRecord(prerelease)) {
+    return;
+  }
+
+  if (typeof prerelease['value'] !== 'boolean') {
+    problems.push(`${where}.prerelease.value is missing or is not a boolean`);
+  }
+
+  if (typeof prerelease['source'] !== 'string' || !PRERELEASE_SOURCES.has(prerelease['source'])) {
+    problems.push(
+      `${where}.prerelease.source is ${JSON.stringify(prerelease['source'])}, which does not say how the status was established (expected one of ${[...PRERELEASE_SOURCES].join(', ')})`,
+    );
+  }
+
+  if (typeof prerelease['evidence'] !== 'string' || prerelease['evidence'].trim().length === 0) {
+    problems.push(`${where}.prerelease.evidence is missing or empty, so the status rests on nothing a reader can check`);
+  }
+};
 const PHYSICS_STAMP_FIELDS = ['host', 'fixedDelta', 'caveats', 'engineVersion', 'timestamp'] as const;
 const HOST_FIELDS = ['node', 'cpu', 'cpuCount', 'os', 'arch'] as const;
 const PROFILE_FIELDS = ['slug', 'gpu', 'os', 'browser', 'engineVersion', 'measuredAt', 'runs'] as const;
@@ -190,7 +245,10 @@ const checkProfile = (path: string): string[] => {
         }
 
         for (const [index, stamp] of stamps.entries()) {
-          problems.push(...missingFields(stamp, [...RENDERING_STAMP_FIELDS], `rendering.runs[${String(run)}].provenance[${String(index)}]`));
+          const where = `rendering.runs[${String(run)}].provenance[${String(index)}]`;
+
+          problems.push(...missingFields(stamp, [...RENDERING_STAMP_FIELDS], where));
+          checkRenderingStampShape(stamp, where, problems);
 
           if (isRecord(stamp) && typeof stamp['engineVersion'] === 'string') {
             engineVersions.add(stamp['engineVersion']);

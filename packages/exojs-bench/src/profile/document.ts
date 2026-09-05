@@ -8,7 +8,7 @@ import type { LibraryProvenance } from '../shared/provenance';
 import type { BenchProfileDocument, PhysicsStamp, ProfileLibrary, RenderingStamp } from './schema';
 import { BENCH_PROFILE_SCHEMA_VERSION } from './schema';
 import { computeProfileSignature } from './signature';
-import { deriveProfileParts } from './slug';
+import { deriveProfileParts, normalizeOsName } from './slug';
 
 /**
  * Assembly of the published machine-profile document from a pooled comparison.
@@ -36,6 +36,10 @@ const toProfileLibrary = (library: LibraryProvenance): ProfileLibrary => ({ name
 const toRenderingStamp = (provenance: Provenance): RenderingStamp => ({
   backend: provenance.backend,
   adapter: provenance.adapter,
+  browser: provenance.browser,
+  browserVersion: provenance.browserVersion,
+  os: provenance.os,
+  prerelease: { ...provenance.prerelease },
   flags: [...provenance.flags],
   headless: provenance.headless,
   software: provenance.software,
@@ -98,6 +102,27 @@ const agreedRunCount = (counts: readonly number[]): number => {
 };
 
 /**
+ * The two domains have to describe one machine.
+ *
+ * Each domain's own pooling already rejects runs from different machines, but
+ * nothing before this point compares the domains against each other - and the
+ * slug is assembled from both, taking its GPU from the rendering stamps and,
+ * historically, its operating system from the physics host. A rendering
+ * measurement from one machine written alongside a physics measurement from
+ * another would publish a file naming a machine that does not exist.
+ */
+const requireOneMachine = (renderingStamps: readonly RenderingStamp[], physicsStamp: PhysicsStamp | undefined): void => {
+  const rendering = renderingStamps.map(stamp => normalizeOsName(stamp.os)).find(name => name.length > 0);
+  const physics = physicsStamp === undefined ? undefined : normalizeOsName(physicsStamp.host.os);
+
+  if (rendering !== undefined && physics !== undefined && rendering !== physics) {
+    throw new Error(
+      `Cannot write one profile from a rendering measurement on ${rendering} and a physics measurement on ${physics}. A profile describes one machine; measure both domains on the same one.`,
+    );
+  }
+};
+
+/**
  * Build the document for one machine profile.
  *
  * Throws when no domain is present, when the domains disagree on the engine
@@ -124,6 +149,8 @@ export const buildProfileDocument = (sources: ProfileSources): BenchProfileDocum
       `Cannot write a profile from a run with unresolved arms (${missing.map(library => library.name).join(', ')}). Run bench:setup and re-measure, so every published cell has a version behind it.`,
     );
   }
+
+  requireOneMachine(renderingStamps, physicsStamp);
 
   const parts = deriveProfileParts({
     ...(renderingStamps.length > 0 && { rendering: renderingStamps }),
