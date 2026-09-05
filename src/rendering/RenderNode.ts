@@ -4,7 +4,10 @@ import { registerRetainedRenderRoot, SceneNode, unregisterRetainedRenderRoot } f
 import { Signal } from '#core/Signal';
 import type { InteractionEvent, InteractionEventType } from '#input/InteractionEvent';
 import type { KeyEvent } from '#input/KeyEvent';
+import type { Circle } from '#math/Circle';
 import { intersectionRectRect } from '#math/collisionPrimitives';
+import type { Ellipse } from '#math/Ellipse';
+import type { Polygon } from '#math/Polygon';
 import type { ReadonlyRectangle } from '#math/Rectangle';
 import { Rectangle } from '#math/Rectangle';
 import type { RectangleLike } from '#math/RectangleLike';
@@ -80,6 +83,16 @@ const NO_FILTERS: readonly Filter[] = [];
 export type MaskSource = Rectangle | Texture | RenderTexture | RenderNode | null;
 
 /**
+ * Acceptable shapes for {@link RenderNode.hitArea}, expressed in the node's own
+ * local space: a {@link Rectangle}, {@link Circle}, {@link Ellipse} or
+ * {@link Polygon}, or `null` for no override.
+ *
+ * A `Polygon` may be concave - containment is an even-odd ray cast, not a
+ * convex test - so an L-shaped or ring-like pick region behaves as drawn.
+ */
+export type HitArea = Rectangle | Circle | Ellipse | Polygon | null;
+
+/**
  * {@link SceneNode} that can produce visual output. Adds the rendering
  * pipeline features on top of the structural transform/bounds carried by
  * SceneNode: post-process `filters`, an optional `mask` (via
@@ -128,6 +141,28 @@ export abstract class RenderNode extends SceneNode {
    * node will never receive `pointerdown` and therefore cannot start a drag.
    */
   public draggable = false;
+
+  /**
+   * Optional pick shape in this node's LOCAL space, replacing the bounds test
+   * {@link contains} would otherwise perform. Defaults to `null`.
+   *
+   * The world-space point is mapped through the inverse of the node's global
+   * transform before the shape is tested, so the region follows the node's
+   * position, rotation, scale and skew like the rendered output does - the
+   * shape itself is never re-transformed and never needs updating when the node
+   * moves.
+   *
+   * Affects picking only. Bounds, culling and rendering ignore it entirely, and
+   * because the interaction system finds candidates by their bounds, a hit area
+   * reaching outside the node's bounds is only reliably picked where the two
+   * overlap. Use it to shrink or reshape a pick region, not to grow one.
+   *
+   * The shape is the caller's: it is read live on every hit test, so mutating
+   * it in place takes effect immediately, and the node never destroys it.
+   *
+   * @default null
+   */
+  public hitArea: HitArea = null;
 
   private _preserveDrawOrder = false;
 
@@ -507,6 +542,28 @@ export abstract class RenderNode extends SceneNode {
     playRenderTree(this, backend);
 
     return this;
+  }
+
+  /**
+   * Hit-test the world-space point `(x, y)` against this node, honouring
+   * {@link hitArea}: with one set, the point is mapped into local space and
+   * tested against the shape; without one, the inherited bounds/oriented-box
+   * test applies.
+   *
+   * A subclass that overrides this with its own geometry test must forward to
+   * `super.contains` while `hitArea` is set, or the override silently defeats
+   * the caller's pick shape.
+   */
+  public override contains(x: number, y: number): boolean {
+    const hitArea = this.hitArea;
+
+    if (hitArea === null) {
+      return super.contains(x, y);
+    }
+
+    const local = this._toLocalPoint(x, y);
+
+    return local !== null && hitArea.contains(local.x, local.y);
   }
 
   public inView(view: View): boolean {

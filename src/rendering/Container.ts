@@ -611,7 +611,16 @@ export class Container extends RenderNode {
     }
   }
 
+  /**
+   * A container has no geometry of its own, so a point hits it when it hits any
+   * child. A {@link RenderNode.hitArea} replaces that union with the shape,
+   * which is how a bare layout container becomes clickable in its own right.
+   */
   public override contains(x: number, y: number): boolean {
+    if (this.hitArea !== null) {
+      return super.contains(x, y);
+    }
+
     const children = this._childList;
 
     for (let i = 0; i < children.length; i++) {

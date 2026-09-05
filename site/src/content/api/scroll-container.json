@@ -6,11 +6,11 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 133,
+  "memberCount": 134,
   "counts": {
     "constructors": 1,
     "methods": 65,
-    "properties": 53,
+    "properties": 54,
     "events": 14
   },
   "sections": [
@@ -1249,7 +1249,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "A point only hits this widget when it both falls within the viewport AND lands on a visible child (Container.contains's child-union check) - a scrolled-out child's own geometry no longer makes the ScrollContainer itself claim a point far outside what is actually rendered."
+          "description": "A point only hits this widget when it both falls within the viewport AND lands on a visible child (Container.contains's child-union check) - a scrolled-out child's own geometry no longer makes the ScrollContainer itself claim a point far outside what is actually rendered. A RenderNode.hitArea replaces both halves of that rule with the shape."
         },
         {
           "name": "destroy",
@@ -3464,6 +3464,27 @@
           "params": [],
           "returnType": null,
           "description": "When true, this node can receive keyboard focus - via focus, Tab traversal, or app.interaction.focus(node) - and is delivered key events through onKeyDown / onKeyUp while focused, or while any of its descendants holds focus (key events bubble up the parent chain like pointer InteractionEvents do). A Widget additionally has to be enabled: disabling one takes it out of the Tab order and rejects programmatic focus, without touching this flag."
+        },
+        {
+          "name": "hitArea",
+          "signature": "hitArea: HitArea",
+          "signatureTokens": [
+            {
+              "text": "hitArea",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HitArea",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Optional pick shape in this node's LOCAL space, replacing the bounds test contains would otherwise perform. Defaults to null. The world-space point is mapped through the inverse of the node's global transform before the shape is tested, so the region follows the node's position, rotation, scale and skew like the rendered output does - the shape itself is never re-transformed and never needs updating when the node moves. Affects picking only. Bounds, culling and rendering ignore it entirely, and because the interaction system finds candidates by their bounds, a hit area reaching outside the node's bounds is only reliably picked where the two overlap. Use it to shrink or reshape a pick region, not to grow one. The shape is the caller's: it is read live on every hit test, so mutating it in place takes effect immediately, and the node never destroys it."
         },
         {
           "name": "name",

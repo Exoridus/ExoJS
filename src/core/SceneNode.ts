@@ -68,6 +68,9 @@ export enum SceneNodeVectorChannel {
 /** Shared scratch for the four oriented corners - written then copied into a node's polygon (single-threaded). */
 const orientedCorners = [new Vector(), new Vector(), new Vector(), new Vector()];
 
+/** Shared scratch for the world-to-local point map; read immediately, never retained. */
+const localPoint = new Vector();
+
 /**
  * Process-wide dirty-walk epoch. Advanced by EVERY consumer read of a
  * node revision ({@link SceneNode._contentRevision}/`_structureRevision` -
@@ -848,22 +851,37 @@ export class SceneNode implements Collidable {
       return this.getBounds().contains(x, y);
     }
 
+    const local = this._toLocalPoint(x, y);
+
+    return local !== null && this.getLocalBounds().contains(local.x, local.y);
+  }
+
+  /**
+   * Map the world-space point `(x, y)` back into this node's own local space -
+   * the space {@link getLocalBounds} and every local-space shape are expressed
+   * in - or `null` when the node's global transform is singular (a zero scale
+   * collapses it, so no world point maps back).
+   *
+   * The result is a shared scratch vector overwritten by the next call on any
+   * node: read the two components immediately and never retain the instance.
+   * Returning scratch is what keeps hit-testing allocation-free on a path that
+   * runs once per interactive node per pointer event.
+   * @internal
+   */
+  protected _toLocalPoint(x: number, y: number): Vector | null {
     const matrix = this.getGlobalTransform();
     const determinant = matrix.a * matrix.d - matrix.b * matrix.c;
 
     if (determinant === 0) {
-      return false;
+      return null;
     }
 
-    // Inverse of the forward map `world = [[a, b], [c, d]] · local + (x, y)`
+    // Inverse of the forward map `world = [[a, b], [c, d]] * local + (x, y)`
     // (AbstractVector.transform - the same map getBounds()/Sprite vertices use).
-    // Recovers the local-space coordinate, then tests the untransformed bounds.
     const deltaX = x - matrix.x;
     const deltaY = y - matrix.y;
-    const localX = (matrix.d * deltaX - matrix.b * deltaY) / determinant;
-    const localY = (matrix.a * deltaY - matrix.c * deltaX) / determinant;
 
-    return this.getLocalBounds().contains(localX, localY);
+    return localPoint.set((matrix.d * deltaX - matrix.b * deltaY) / determinant, (matrix.a * deltaY - matrix.c * deltaX) / determinant);
   }
 
   /**

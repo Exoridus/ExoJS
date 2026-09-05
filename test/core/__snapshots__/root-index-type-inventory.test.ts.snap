@@ -289,6 +289,7 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "HasBoundingBox: interface",
   "HighpassFilter: class",
   "HighpassFilterOptions: interface",
+  "HitArea: type alias",
   "HostRealm: type alias",
   "INSTANCE_TRANSFORM_GLSL: variable",
   "INSTANCE_TRANSFORM_WGSL: variable",

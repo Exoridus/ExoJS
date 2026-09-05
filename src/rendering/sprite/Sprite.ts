@@ -506,8 +506,14 @@ export class Sprite extends Drawable {
    * Return `true` if the world-space point (`x`, `y`) lies inside the quad.
    * Uses a fast AABB check for axis-aligned quads, and a cross-product sign
    * test for rotated or skewed quads.
+   *
+   * A {@link RenderNode.hitArea} replaces the quad test entirely.
    */
   public override contains(x: number, y: number): boolean {
+    if (this.hitArea !== null) {
+      return super.contains(x, y);
+    }
+
     if (this.isAlignedBox) {
       return this.getBounds().contains(x, y);
     }
