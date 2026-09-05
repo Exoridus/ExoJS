@@ -46,6 +46,17 @@ const orientationBufferBytes = 16;
  */
 const orientationValue = new Float32Array([1, 0, 0, 0]);
 
+/** Whether the first `count` floats of two arrays are identical. */
+const floatsEqual = (left: Float32Array, right: Float32Array, count: number): boolean => {
+  for (let index = 0; index < count; index++) {
+    if (left[index] !== right[index]) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
 /** Returns true when the value is a texture (goes into a bind group, not a UBO). */
 const isTextureValue = (value: ShaderFilterUniformValue): value is Texture | RenderTexture =>
   value instanceof Texture ||
@@ -94,6 +105,21 @@ export class WebGpuShaderFilterPass {
   /** The textures the running pass reads from and writes to, staged by {@link apply}. */
   private _passInput: RenderTexture | null = null;
   private _passOutput: RenderTexture | null = null;
+  /**
+   * Whether the two per-pass uniform buffers already hold what this pass would
+   * write, and the packed bytes the user buffer was last given.
+   *
+   * A filter pass runs at least once per filtered node per frame, and its
+   * uniforms are constant across almost all of them - a colour matrix, a blur
+   * radius, a LUT strength are set when the filter is configured and then left
+   * alone - so writing them every pass put one `queue.writeBuffer` per uniform
+   * block on every frame for bytes the GPU already had. WebGL2 never paid it:
+   * its uniforms go through `gl.uniform*` against the program's own state.
+   */
+  private _resolutionWritten = false;
+  private _userUniformWritten = false;
+  private _userUniformStaging = new Float32Array(0);
+  private _userUniformMirror = new Float32Array(0);
 
   public constructor(source: string, uniforms: Readonly<Record<string, ShaderFilterUniformValue>>) {
     this._source = source;
@@ -126,6 +152,9 @@ export class WebGpuShaderFilterPass {
       this._connection.userUniformBuffer?.destroy();
       this._connection = null;
     }
+
+    this._resolutionWritten = false;
+    this._userUniformWritten = false;
   }
 
   /** The pass body - see {@link _pass}. */
@@ -137,10 +166,17 @@ export class WebGpuShaderFilterPass {
     const output = this._passOutput!;
 
     // ---- Update auto-bound resolution uniform ----
-    this._resolutionScratch[0] = output.width;
-    this._resolutionScratch[1] = output.height;
+    // Only when the target extent actually differs: a chain re-applying the same
+    // filter into equally sized targets would otherwise re-upload the same two
+    // floats once per pass per frame.
+    if (!this._resolutionWritten || this._resolutionScratch[0] !== output.width || this._resolutionScratch[1] !== output.height) {
+      this._resolutionScratch[0] = output.width;
+      this._resolutionScratch[1] = output.height;
 
-    device.queue.writeBuffer(conn.resolutionBuffer, 0, this._resolutionScratch);
+      device.queue.writeBuffer(conn.resolutionBuffer, 0, this._resolutionScratch);
+
+      this._resolutionWritten = true;
+    }
 
     // ---- Build auto-bind group (group 0) ----
     const inputBinding = gpu.getTextureBinding(input);
@@ -294,6 +330,11 @@ export class WebGpuShaderFilterPass {
       sampler,
       userUniformBuffer: null,
     };
+
+    // Fresh buffers hold nothing this pass wrote, whatever it wrote to the
+    // previous connection's (a device restore replaces every one of them).
+    this._resolutionWritten = false;
+    this._userUniformWritten = false;
   }
 
   /**
@@ -361,7 +402,20 @@ export class WebGpuShaderFilterPass {
     if (scalarEntries.length > 0) {
       // Each uniform gets a 16-byte aligned slot (conservative WGSL alignment)
       const bufferSize = scalarEntries.length * 16;
-      const data = new Float32Array(bufferSize / 4);
+      const floatCount = bufferSize / 4;
+
+      if (this._userUniformStaging.length < floatCount) {
+        this._userUniformStaging = new Float32Array(floatCount);
+        this._userUniformMirror = new Float32Array(floatCount);
+        this._userUniformWritten = false;
+      }
+
+      const data = this._userUniformStaging;
+
+      // Reused across passes, so the slots the loop below leaves untouched (a
+      // vec2 in a 16-byte slot, a uniform removed from the record) must not keep
+      // the previous pass's floats.
+      data.fill(0, 0, floatCount);
 
       let slot = 0;
 
@@ -398,9 +452,14 @@ export class WebGpuShaderFilterPass {
           size: bufferSize,
           usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
+        this._userUniformWritten = false;
       }
 
-      device.queue.writeBuffer(conn.userUniformBuffer, 0, data);
+      if (!this._userUniformWritten || !floatsEqual(data, this._userUniformMirror, floatCount)) {
+        device.queue.writeBuffer(conn.userUniformBuffer, 0, data, 0, floatCount);
+        this._userUniformMirror.set(data.subarray(0, floatCount));
+        this._userUniformWritten = true;
+      }
 
       entries.push({
         binding: 0,
