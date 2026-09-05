@@ -22,17 +22,20 @@ A TypeScript-first 2D engine for games and interactive apps. Explicit scene grap
 
 ## Packages
 
-| Package                   | Description                                                            |
-| ------------------------- | ---------------------------------------------------------------------- |
-| `@codexo/exojs`           | Core runtime — scene graph, rendering, audio, UI, serialization        |
-| `@codexo/exojs-physics`   | Native 2D physics — shapes, constraints, TGS-Soft solver               |
-| `@codexo/exojs-particles` | GPU-driven particles (WebGPU compute) with CPU fallback                |
-| `@codexo/exojs-tilemap`   | Format-independent tilemap runtime and object layers                   |
-| `@codexo/exojs-tiled`     | Tiled JSON adapter and scene-graph conversion                          |
-| `@codexo/exojs-aseprite`  | Aseprite adapter — sprite sheets, tags, frame direction/repeat, slices |
-| `@codexo/exojs-ldtk`      | LDtk adapter — multi-world levels, entities, structured field values   |
-| `@codexo/exojs-audio-fx`  | Audio effects — biquad filters, analyser, beat detection, worklets     |
-| `@codexo/exojs-react`     | React bindings — run an ExoJS `Application` inside React components    |
+| Package                         | Description                                                            |
+| ------------------------------- | ---------------------------------------------------------------------- |
+| `@codexo/exojs`                 | Core runtime — scene graph, rendering, audio, UI, serialization        |
+| `@codexo/exojs-physics`         | Native 2D physics — shapes, constraints, TGS-Soft solver               |
+| `@codexo/exojs-particles`       | GPU-driven particles (WebGPU compute) with CPU fallback                |
+| `@codexo/exojs-tilemap`         | Format-independent tilemap runtime and object layers                   |
+| `@codexo/exojs-tiled`           | Tiled JSON adapter and scene-graph conversion                          |
+| `@codexo/exojs-tilemap-physics` | Static physics colliders from tilemap collision geometry               |
+| `@codexo/exojs-aseprite`        | Aseprite adapter — sprite sheets, tags, frame direction/repeat, slices |
+| `@codexo/exojs-ldtk`            | LDtk adapter — multi-world levels, entities, structured field values   |
+| `@codexo/exojs-lighting`        | Forward, normal-mapped 2D point lighting inside the sprite batch       |
+| `@codexo/exojs-pathfinding`     | A\* with jump-point search over weighted grids and waypoint graphs     |
+| `@codexo/exojs-audio-fx`        | Audio effects — biquad filters, analyser, beat detection, worklets     |
+| `@codexo/exojs-react`           | React bindings — run an ExoJS `Application` inside React components    |
 
 ## Features
 
@@ -43,20 +46,37 @@ A TypeScript-first 2D engine for games and interactive apps. Explicit scene grap
 - Rendering composition: `RenderTexture`, `RenderPipeline`, filter chains, visual masks, cache-as-bitmap
 - Immediate-mode rendering: one-off `drawGeometry` and instanced `RenderBatch` collapsing to a single draw call
 - Linear and radial gradients, pixel snapping, view/camera helpers (`follow`, shake, zoom, bounds clamp)
+- Custom sprite materials (`SpriteMaterial`) with your own GLSL/WGSL fragment stage, plus built-in `DropShadowFilter`, `DisplacementFilter`, colour matrix and blur filters
+- `@codexo/exojs-lighting`: normal-mapped point lights shaded in the sprite fragment stage — no extra pass, no extra draw call
 - Render stats with GPU memory accounting (`gpuMemoryBytes`, texture/buffer upload bytes)
+
+**Text**
+
+- SDF text with Unicode-safe layout (`Intl.Segmenter` graphemes, bidi runs, soft wrapping) and browser-native shaping for complex scripts
+- Multi-stop gradients with an angle, `oblique`/`small-caps` variants, underline and strikethrough, `maxLines` with a configurable ellipsis, `textTransform`, `tabSize`
+- `BitmapText` for prebuilt atlases; both text kinds batch with sprites
 
 **Scene & UI**
 
 - `Application`, `Scene`, `SceneDirector` — one active scene with `change`/`restore`/`preload`/`unload` navigation, `pause`/`resume`, and fade, slide, or cross-fade transitions (or your own `SceneTransition`)
 - `scene.ui` — screen-fixed widget layer with `Label`, `Panel`, `Button`, `ProgressBar`, `Stack`, `ScrollContainer`, `Tooltip`, and anchoring
 - Keyboard focus through `app.interaction` — `focus`, `blur`, `focusNext`/`focusPrevious` Tab traversal, and scoped focus traps for modals
+- Exact picking: rotated nodes hit-test as oriented boxes, or set a local `hitArea` (`Circle`, `Ellipse`, `Polygon`, `Rectangle`) for round buttons and irregular shapes
+- `app.jobs` — a frame-budgeted `JobScheduler` that runs generator jobs a slice per frame, so world generation or batch pathfinding never blocks a frame and never needs an `async` update
+- Write your own `SceneTransition` against the same conformance harness the built-in fade, slide and cross-fade use
 
 **Physics** (`@codexo/exojs-physics`)
 
 - Circles, boxes, capsules, and convex polygons; static, kinematic, and dynamic bodies
 - SAP broadphase, manifold narrow-phase, warm-started TGS-Soft solver (sub-stepped, stable to 20+ box stacks)
 - Contact graph, collision events, spatial queries; allocation-free per step (V8-sampler verified)
+- Sleeping islands, contact modifiers, joints; measured against matter.js, planck.js and Rapier in `packages/exojs-bench`
 - Scene-graph binding and a `/debug` draw subpath
+
+**Pathfinding** (`@codexo/exojs-pathfinding`)
+
+- One search core — A\* with jump-point pruning — over weighted grids (top-down worlds) and waypoint graphs (platformers, abstract graphs)
+- Deterministic and allocation-free per query; plain logic with no scene node, renderer or registration step
 
 **Audio**
 
@@ -117,8 +137,9 @@ Optional packages install independently — add only what your project needs:
 ```bash
 npm install @codexo/exojs-physics
 npm install @codexo/exojs-particles
-npm install @codexo/exojs-tilemap @codexo/exojs-tiled
+npm install @codexo/exojs-tilemap @codexo/exojs-tiled @codexo/exojs-tilemap-physics
 npm install @codexo/exojs-aseprite @codexo/exojs-ldtk
+npm install @codexo/exojs-lighting @codexo/exojs-pathfinding
 npm install @codexo/exojs-audio-fx
 npm install @codexo/exojs-react
 ```
@@ -126,32 +147,31 @@ npm install @codexo/exojs-react
 ## Quickstart
 
 ```ts
-import { Application, Scene, Graphics, Color, type RenderingContext, type Time } from '@codexo/exojs';
+import { Application, Color, Graphics, type RenderingContext, Scene, type Seconds } from '@codexo/exojs';
 
 class HelloScene extends Scene {
   private readonly box = new Graphics();
 
-  public override init(): void {
+  override init(): void {
     this.box.fillColor = Color.white;
     this.box.drawRectangle(-32, -32, 64, 64);
-    this.box.setPosition(400, 300);
-
+    this.box.setPosition(this.app.width / 2, this.app.height / 2);
     this.addChild(this.box);
   }
 
-  public override update(delta: Time): void {
-    this.box.rotation += delta.seconds * 45;
+  override update(delta: Seconds): void {
+    this.box.rotate(delta * 45);
   }
 
-  public override draw(context: RenderingContext): void {
+  override draw(context: RenderingContext): void {
     context.render(this.root);
   }
 }
 
 const app = new Application({
   scenes: { HelloScene },
-  canvas: { element: document.querySelector('canvas')!, width: 800, height: 600 },
-  clearColor: Color.cornflowerBlue,
+  canvas: { width: 800, height: 600, mount: document.body },
+  clearColor: Color.black,
 });
 
 await app.start(HelloScene);
@@ -163,11 +183,13 @@ See the [Guide](https://exoridus.github.io/ExoJS/en/guide/) for physics, audio, 
 
 Directional work toward the `1.0.0` API freeze. Priorities may shift — nothing here is a release commitment.
 
-- Platform adapters for DOM, Worker, and headless runtimes
-- Screen-level post-processing (bloom, CRT, vignette, chromatic aberration)
-- Path following with Bézier and Catmull-Rom splines
-- Coroutine helpers
-- Localization primitive
+- Backend selection by class (`backends: [WebGl2Backend]`) and compile-time defines for single-backend builds
+- Typed shader uniform blocks shared between GLSL and WGSL
+- `@codexo/exojs-cli` — `exo serve`, `exo create`, `exo doctor`, asset packing
+- Rich text with style spans and inline icons
+- Worker-backed jobs on the same `Job` handle as `app.jobs`
+- Post-processing passes (bloom, tone mapping, grading) on `RenderPipeline`
+- Platform adapters for Worker and headless runtimes
 - Final pre-1.0 API audit and stabilization pass
 
 ## WebGPU and WebGL2
