@@ -44,8 +44,8 @@ const installMockCtx = (ctx: CanvasRenderingContext2D): void => {
 // ---------------------------------------------------------------------------
 
 // These tests use 'color' mode so the atlas uses the canvas-2D rasterization
-// path, which is mockable in jsdom. SDF mode uses tiny-sdf which requires a
-// real canvas getImageData implementation not available in jsdom.
+// path, which is mockable in jsdom. SDF mode reads the rasterized glyph back
+// through getImageData, which jsdom does not implement.
 describe('GlyphAtlas', () => {
   let mockCtx: CanvasRenderingContext2D;
 

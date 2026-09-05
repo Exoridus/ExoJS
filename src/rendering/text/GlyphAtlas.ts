@@ -94,9 +94,9 @@ const makeCtx = (width: number, height: number): { canvas: HTMLCanvasElement | O
  * A single texture page within a {@link GlyphAtlas}. Glyphs are packed into
  * the page using a shelf-bin algorithm.
  *
- * In `'sdf'` mode the page owns a `DataTexture` (`r8`) populated by tiny-sdf
- * output. In `'color'` mode a Canvas 2D context preserves full glyph colours
- * for emoji.
+ * In `'sdf'` mode the page owns a `DataTexture` (`r8`) filled with the
+ * single-channel distance field {@link GlyphSdf} computes. In `'color'` mode a
+ * Canvas 2D context preserves full glyph colours for emoji.
  * @advanced
  */
 export class AtlasPage {

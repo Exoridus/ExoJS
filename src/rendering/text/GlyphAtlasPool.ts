@@ -43,7 +43,8 @@ export class GlyphAtlasPool {
   /**
    * Returns (or lazily creates) the atlas for the given font variant, mode, SDF
    * radius and raster pixel ratio. Defaults to `'sdf'` mode (R8 DataTexture,
-   * tiny-sdf rasterization) at ratio 1.
+   * Canvas 2D rasterization followed by a Euclidean distance transform) at
+   * ratio 1.
    *
    * Nodes with different `sdfRadius` values get separate atlas instances so
    * each can encode a different outline/shadow reach without conflict; nodes at
