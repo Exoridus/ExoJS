@@ -1,8 +1,8 @@
 import { Color } from '#core/Color';
 import type { LayoutOptions } from '#rendering/text/LayoutOptions';
-import type { TextStyleOptions } from '#rendering/text/TextStyle';
+import type { ResolvedTextGradient, TextGradient, TextStyleOptions } from '#rendering/text/TextStyle';
 
-import { FONT_WEIGHTS, readBoolean, readEnum, readNumber, readString, TEXT_ALIGNMENTS } from './read';
+import { FONT_STYLES, FONT_VARIANTS, FONT_WEIGHTS, readBoolean, readEnum, readNumber, readString, TEXT_ALIGNMENTS, TEXT_TRANSFORMS } from './read';
 
 // ── Options bags ───────────────────────────────────────────────────────────────
 
@@ -41,11 +41,13 @@ export const serializeStyle = (style: {
   fontFamily: string;
   fontWeight: string;
   fontStyle: string;
+  fontVariant: string;
   fontSize: number;
   fillColor: Color;
   outlineColor: Color;
   outlineWidth: number;
   align: string;
+  textTransform: string;
   lineHeight: number;
   leading: number;
   shadowColor: Color;
@@ -53,19 +55,25 @@ export const serializeStyle = (style: {
   shadowOffsetY: number;
   shadowAlpha: number;
   shadowBlur: number;
-  gradientColors: [Color, Color] | null;
-  gradientAxis: string;
+  underline: boolean;
+  strikethrough: boolean;
+  decorationColor: Color | null;
+  decorationThickness: number;
+  decorationOffset: number;
+  gradient: ResolvedTextGradient | null;
 }): Record<string, unknown> | undefined => {
   const out: Record<string, unknown> = {};
 
   if (style.fontFamily !== 'Arial') out.fontFamily = style.fontFamily;
   if (style.fontWeight !== 'normal') out.fontWeight = style.fontWeight;
   if (style.fontStyle !== 'normal') out.fontStyle = style.fontStyle;
+  if (style.fontVariant !== 'normal') out.fontVariant = style.fontVariant;
   if (style.fontSize !== 20) out.fontSize = style.fontSize;
   if (!colorEquals(style.fillColor, 255, 255, 255, 1)) out.fillColor = colorToArray(style.fillColor);
   if (!colorEquals(style.outlineColor, 0, 0, 0, 1)) out.outlineColor = colorToArray(style.outlineColor);
   if (style.outlineWidth !== 0) out.outlineWidth = style.outlineWidth;
   if (style.align !== 'left') out.align = style.align;
+  if (style.textTransform !== 'none') out.textTransform = style.textTransform;
   if (style.lineHeight !== 1.2) out.lineHeight = style.lineHeight;
   if (style.leading !== 0) out.leading = style.leading;
   if (!colorEquals(style.shadowColor, 0, 0, 0, 1)) out.shadowColor = colorToArray(style.shadowColor);
@@ -74,11 +82,13 @@ export const serializeStyle = (style: {
   if (style.shadowAlpha !== 0) out.shadowAlpha = style.shadowAlpha;
   if (style.shadowBlur !== 0) out.shadowBlur = style.shadowBlur;
 
-  if (style.gradientColors !== null) {
-    out.gradientColors = [colorToArray(style.gradientColors[0]), colorToArray(style.gradientColors[1])];
-  }
+  if (style.underline) out.underline = true;
+  if (style.strikethrough) out.strikethrough = true;
+  if (style.decorationColor !== null) out.decorationColor = colorToArray(style.decorationColor);
+  if (style.decorationThickness !== 0) out.decorationThickness = style.decorationThickness;
+  if (style.decorationOffset !== 0) out.decorationOffset = style.decorationOffset;
 
-  if (style.gradientAxis !== 'vertical') out.gradientAxis = style.gradientAxis;
+  if (style.gradient !== null) out.gradient = gradientToJson(style.gradient);
 
   return Object.keys(out).length > 0 ? out : undefined;
 };
@@ -127,7 +137,12 @@ export const deserializeStyleOptions = (data: unknown): TextStyleOptions | undef
   const fontWeight = readEnum(source, 'fontWeight', FONT_WEIGHTS);
   if (fontWeight !== undefined) options.fontWeight = fontWeight;
 
-  if (source.fontStyle === 'italic' || source.fontStyle === 'normal') options.fontStyle = source.fontStyle;
+  const fontStyle = readEnum(source, 'fontStyle', FONT_STYLES);
+  if (fontStyle !== undefined) options.fontStyle = fontStyle;
+
+  const fontVariant = readEnum(source, 'fontVariant', FONT_VARIANTS);
+  if (fontVariant !== undefined) options.fontVariant = fontVariant;
+
   if (typeof source.fontSize === 'number') options.fontSize = source.fontSize;
 
   const fillColor = arrayToColor(source.fillColor);
@@ -141,6 +156,9 @@ export const deserializeStyleOptions = (data: unknown): TextStyleOptions | undef
   const align = readEnum(source, 'align', TEXT_ALIGNMENTS);
   if (align !== undefined) options.align = align;
 
+  const textTransform = readEnum(source, 'textTransform', TEXT_TRANSFORMS);
+  if (textTransform !== undefined) options.textTransform = textTransform;
+
   if (typeof source.lineHeight === 'number') options.lineHeight = source.lineHeight;
   if (typeof source.leading === 'number') options.leading = source.leading;
 
@@ -152,20 +170,54 @@ export const deserializeStyleOptions = (data: unknown): TextStyleOptions | undef
   if (typeof source.shadowAlpha === 'number') options.shadowAlpha = source.shadowAlpha;
   if (typeof source.shadowBlur === 'number') options.shadowBlur = source.shadowBlur;
 
-  if (Array.isArray(source.gradientColors) && source.gradientColors.length === 2) {
-    const top = arrayToColor(source.gradientColors[0]);
-    const bottom = arrayToColor(source.gradientColors[1]);
+  if (typeof source.underline === 'boolean') options.underline = source.underline;
+  if (typeof source.strikethrough === 'boolean') options.strikethrough = source.strikethrough;
 
-    if (top !== undefined && bottom !== undefined) {
-      options.gradientColors = [top, bottom];
-    }
-  }
+  const decorationColor = arrayToColor(source.decorationColor);
+  if (decorationColor !== undefined) options.decorationColor = decorationColor;
 
-  if (source.gradientAxis === 'horizontal' || source.gradientAxis === 'vertical') {
-    options.gradientAxis = source.gradientAxis;
-  }
+  if (typeof source.decorationThickness === 'number') options.decorationThickness = source.decorationThickness;
+  if (typeof source.decorationOffset === 'number') options.decorationOffset = source.decorationOffset;
+
+  const gradient = jsonToGradient(source.gradient);
+  if (gradient !== undefined) options.gradient = gradient;
 
   return options;
+};
+
+/** Serialize a text gradient as `{ stops: [{ offset, color }], angle }`. */
+export const gradientToJson = (gradient: ResolvedTextGradient): Record<string, unknown> => ({
+  stops: gradient.stops.map(stop => ({ offset: stop.offset, color: colorToArray(stop.color) })),
+  angle: gradient.angle,
+});
+
+/**
+ * Rebuild a text gradient from serialized data, or `undefined` when the value
+ * carries fewer than the two stops a ramp needs. A malformed gradient degrades
+ * to no gradient rather than to a half-built one the style would then reject.
+ */
+export const jsonToGradient = (value: unknown): TextGradient | undefined => {
+  if (typeof value !== 'object' || value === null) return undefined;
+
+  const source = value as Record<string, unknown>;
+  if (!Array.isArray(source.stops)) return undefined;
+
+  const stops: Array<{ offset: number; color: Color }> = [];
+
+  for (const entry of source.stops) {
+    if (typeof entry !== 'object' || entry === null) continue;
+
+    const stop = entry as Record<string, unknown>;
+    const color = arrayToColor(stop.color);
+
+    if (color === undefined || typeof stop.offset !== 'number') continue;
+
+    stops.push({ offset: stop.offset, color });
+  }
+
+  if (stops.length < 2) return undefined;
+
+  return typeof source.angle === 'number' ? { stops, angle: source.angle } : { stops };
 };
 
 // ── LayoutOptions ─────────────────────────────────────────────────────────────
@@ -189,8 +241,11 @@ const LAYOUT_READERS: {
 } = {
   maxWidth: readNumber,
   maxHeight: readNumber,
+  maxLines: readNumber,
   overflow: (source, key) => readEnum(source, key, OVERFLOWS),
+  ellipsis: readString,
   letterSpacing: readNumber,
+  tabSize: readNumber,
   direction: (source, key) => readEnum(source, key, DIRECTIONS),
   locale: readString,
   shaping: (source, key) => readEnum(source, key, SHAPINGS),

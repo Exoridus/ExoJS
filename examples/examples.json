@@ -1395,6 +1395,16 @@
       "level": "intermediate"
     },
     {
+      "slug": "typographic-styling",
+      "path": "text-fonts/typographic-styling.js",
+      "language": "typescript",
+      "title": "Typographic Styling",
+      "description": "Multi-stop gradients with an angle, small caps and oblique, underline and strikethrough, textTransform, line clamping with an ellipsis, and tab stops - the TextStyle sweep in one scene.",
+      "backend": "core",
+      "tags": ["text", "typography"],
+      "level": "intermediate"
+    },
+    {
       "slug": "text-glitch",
       "path": "text-fonts/text-glitch.js",
       "language": "typescript",

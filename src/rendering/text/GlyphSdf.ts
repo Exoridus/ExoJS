@@ -13,7 +13,8 @@
  */
 
 import type { CanvasTextState } from './canvasTextState';
-import { applyCanvasTextState } from './canvasTextState';
+import { applyCanvasTextState, cssFontString } from './canvasTextState';
+import type { FontStyle, FontVariant } from './types';
 
 const inf = 1e20;
 
@@ -25,7 +26,9 @@ export interface GlyphSdfOptions {
   /** CSS font-family string. */
   fontFamily: string;
   fontWeight?: string;
-  fontStyle?: string;
+  fontStyle?: FontStyle;
+  /** CSS font-variant-caps. Defaults to `'normal'`. */
+  fontVariant?: FontVariant;
   /**
    * Pixels of SDF padding added around the glyph bounding box on each side.
    * Determines the maximum reach of outline and shadow effects.
@@ -126,11 +129,13 @@ export class GlyphSdf {
     this._cutoff = options.cutoff ?? 0.5;
     this._fontSize = options.fontSize;
 
-    const stylePart = options.fontStyle && options.fontStyle !== 'normal' ? `${options.fontStyle} ` : '';
-    const weight = options.fontWeight ?? 'normal';
-    const font = `${stylePart}${weight} ${options.fontSize}px ${options.fontFamily}`;
+    const fontVariant = options.fontVariant ?? 'normal';
+    const font = cssFontString(
+      { family: options.fontFamily, fontStyle: options.fontStyle ?? 'normal', fontWeight: options.fontWeight ?? 'normal', fontVariant },
+      options.fontSize,
+    );
 
-    this._textState = { font, direction: options.direction ?? 'ltr', letterSpacing: options.letterSpacing ?? 0 };
+    this._textState = { font, direction: options.direction ?? 'ltr', letterSpacing: options.letterSpacing ?? 0, variantCaps: fontVariant };
 
     if (typeof OffscreenCanvas !== 'undefined') {
       const c = new OffscreenCanvas(1, 1);

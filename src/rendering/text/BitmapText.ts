@@ -202,6 +202,11 @@ export class BitmapText extends AbstractText {
       lineHeight: style.lineHeight,
       leading: style.leading,
       align: style.align,
+      textTransform: style.textTransform,
+      underline: style.underline,
+      strikethrough: style.strikethrough,
+      decorationThickness: style.decorationThickness,
+      decorationOffset: style.decorationOffset,
     };
   }
 

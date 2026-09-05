@@ -1,0 +1,114 @@
+{
+  "title": "SolidTexel",
+  "description": "A fully opaque point in a glyph source's texture, addressed as a single texel rather than a rectangle. Text decorations are plain filled quads and need somewhere in the atlas that reads as solid ink at every sample. A degenerate UV is what makes that hold under linear filtering: every sample of the quad reads the same texel, so no neighbouring glyph can bleed into a rule's edge.",
+  "symbol": "SolidTexel",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A fully opaque point in a glyph source's texture, addressed as a single texel rather than a rectangle.",
+        "Text decorations are plain filled quads and need somewhere in the atlas that reads as solid ink at every sample. A degenerate UV is what makes that hold under linear filtering: every sample of the quad reads the same texel, so no neighbouring glyph can bleed into a rule's edge."
+      ],
+      "importLine": "import { SolidTexel } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "page",
+          "signature": "page: number",
+          "signatureTokens": [
+            {
+              "text": "page",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Which AtlasPage within the source holds the texel."
+        },
+        {
+          "name": "u",
+          "signature": "u: number",
+          "signatureTokens": [
+            {
+              "text": "u",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "v",
+          "signature": "v: number",
+          "signatureTokens": [
+            {
+              "text": "v",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/text/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/text/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/types.ts"
+}

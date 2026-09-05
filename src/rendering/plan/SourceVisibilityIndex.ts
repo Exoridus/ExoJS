@@ -79,7 +79,7 @@ export class MembershipBits {
 /**
  * Per-scope classification of the items a spatial query has to answer for.
  *
- * The split exists because `SceneNode._inCullRect` has three genuinely different
+ * The split exists because `RenderNode._inCullRect` has three genuinely different
  * inputs and only one of them is indexable:
  *
  * - `cullable === false` - the answer is "always", so the item must never cost a

@@ -39,7 +39,7 @@ const TEXT_GLYPHS_PER_NODE = 12;
 // adapters), so a viewport cull check never actually removes a node there -
 // it can only ever be a no-op. Left on, it was pure asymmetric overhead: the
 // exojs adapter's `cullable` flag drives a REAL per-node bounds+intersection
-// check in the render walk (`SceneNode.inView`, called from every
+// check in the render walk (`RenderNode.inView`, called from every
 // `RenderNode.build`), while Pixi's `cullable` flag is inert data unless the
 // app registers `CullerPlugin` (or something calls `Culler.shared.cull(...)`
 // explicitly) - neither adapter does, so the Pixi arm paid nothing for the

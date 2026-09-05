@@ -9,7 +9,7 @@
 import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 import { buildTextPageQuads, layoutText } from '#rendering/text/textLayout';
 import { TextStyle } from '#rendering/text/TextStyle';
-import type { GlyphInfo, GlyphPlacement, GlyphProvider } from '#rendering/text/types';
+import type { GlyphInfo, GlyphPlacement, GlyphProvider, SolidTexel, TextTransform } from '#rendering/text/types';
 
 // ---------------------------------------------------------------------------
 // Mock atlas
@@ -457,6 +457,89 @@ describe('layoutText vertical overflow', () => {
     expect(placements).toHaveLength(3);
     for (const p of placements) expect(p.y).toBe(0);
     expect(placements[2].x).toBe(20);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Line cap - maxLines + ellipsis marker
+// ---------------------------------------------------------------------------
+
+describe('layoutText maxLines', () => {
+  const capStyle = (): TextStyle => new TextStyle({ fontSize: 16, lineHeight: 1.2, align: 'left' });
+
+  test('clips the line count on its own, with no overflow policy', () => {
+    const { placements, lines } = layoutText('A\nB\nC', capStyle(), { maxLines: 2 }, makeAtlas());
+
+    expect(lines).toHaveLength(2);
+    expect(placements).toHaveLength(2);
+  });
+
+  test('reports the advance height of the kept lines only', () => {
+    const { advance } = layoutText('A\nB\nC\nD', capStyle(), { maxLines: 2 }, makeAtlas());
+
+    expect(advance.height).toBeCloseTo(38.4);
+  });
+
+  test('counts wrapped lines, not hard breaks', () => {
+    // advance 10, maxWidth 30 → 'AAA' per line, so 'AAA AAA AAA' wraps to three.
+    const { lines } = layoutText('AAA AAA AAA', capStyle(), { maxWidth: 30, maxLines: 2 }, makeAtlas());
+
+    expect(lines).toHaveLength(2);
+  });
+
+  test('marks the last kept line when overflow is "ellipsis"', () => {
+    const { placements } = layoutText('A\nB\nC', capStyle(), { maxLines: 2, overflow: 'ellipsis' }, makeAtlas());
+
+    // 'A', then 'B' plus the marker on the second line.
+    expect(placements).toHaveLength(3);
+    expect(placements[2].y).toBeCloseTo(19.2);
+  });
+
+  test('takes the tighter of maxLines and maxHeight', () => {
+    const threeLines = { maxHeight: 60, overflow: 'clip' } as const;
+
+    expect(layoutText('A\nB\nC\nD', capStyle(), threeLines, makeAtlas()).lines).toHaveLength(3);
+    expect(layoutText('A\nB\nC\nD', capStyle(), { ...threeLines, maxLines: 2 }, makeAtlas()).lines).toHaveLength(2);
+    expect(layoutText('A\nB\nC\nD', capStyle(), { ...threeLines, maxLines: 9 }, makeAtlas()).lines).toHaveLength(3);
+  });
+
+  test('rejects a maxLines below one', () => {
+    expect(() => layoutText('A', capStyle(), { maxLines: 0 }, makeAtlas())).toThrow(/maxLines/);
+  });
+});
+
+describe('layoutText ellipsis marker', () => {
+  const markerStyle = (): TextStyle => new TextStyle({ fontSize: 16, lineHeight: 1.2, align: 'left' });
+
+  test('a multi-cluster marker is measured cluster by cluster', () => {
+    // advance 10, maxWidth 50 → five slots. '...' claims three of them, so only
+    // two source characters survive.
+    const { lines } = layoutText('ABCDEFG', markerStyle(), { maxWidth: 50, maxLines: 1, overflow: 'ellipsis', ellipsis: '...' }, makeAtlas());
+
+    expect(lines[0].count).toBe(5);
+    expect(lines[0].sourceEnd).toBe(2);
+  });
+
+  test('an empty marker truncates without appending anything', () => {
+    const { placements } = layoutText('A\nB\nC', markerStyle(), { maxLines: 1, overflow: 'ellipsis', ellipsis: '' }, makeAtlas());
+
+    expect(placements).toHaveLength(1);
+  });
+
+  test('marks a capped line that overflows maxWidth even when no line was dropped', () => {
+    // One unbreakable word: nothing to wrap and nothing to drop, so only the
+    // width check can reach it.
+    const { placements } = layoutText('ABCDEFG', markerStyle(), { maxWidth: 50, maxLines: 1, overflow: 'ellipsis', ellipsis: '*' }, makeAtlas());
+
+    expect(placements).toHaveLength(5);
+    expect(placements.at(-1)!.sourceStart).toBe(4);
+  });
+
+  test('the marker stands for nothing in the source', () => {
+    const { placements } = layoutText('ABCD\nE', markerStyle(), { maxWidth: 30, maxLines: 1, overflow: 'ellipsis', ellipsis: '*' }, makeAtlas());
+    const marker = placements.at(-1)!;
+
+    expect(marker.sourceStart).toBe(marker.sourceEnd);
   });
 });
 
@@ -961,5 +1044,276 @@ describe('layoutText grapheme safety', () => {
     const placements = layoutText('日本語のテキスト', style, { maxWidth: 45 }, provider).placements;
 
     expect([...new Set(placements.map(placement => placement.y))].length).toBeGreaterThan(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Underline and strikethrough
+// ---------------------------------------------------------------------------
+
+describe('layoutText decorations', () => {
+  const solid: SolidTexel = { page: 3, u: 0.25, v: 0.75 };
+
+  const decoratingProvider = (): GlyphProvider => ({
+    ...makeProvider(),
+    getFontMetrics: () => ({ ascent: 12, descent: 4, xHeight: 8 }),
+    getSolidTexel: () => solid,
+  });
+
+  const rulesOf = (result: ReturnType<typeof layoutText>): GlyphPlacement[] => result.placements.filter(placement => placement.decoration === true);
+
+  test('places no rule unless one is asked for', () => {
+    const style = new TextStyle({ fontSize: 16 });
+
+    expect(rulesOf(layoutText('Hi', style, {}, decoratingProvider()))).toHaveLength(0);
+  });
+
+  test('an underline spans its line and samples the solid texel', () => {
+    const style = new TextStyle({ fontSize: 16, underline: true });
+
+    const { placements, lines } = layoutText('Hi', style, {}, decoratingProvider());
+    const rule = rulesOf({ placements, lines } as ReturnType<typeof layoutText>)[0]!;
+
+    expect(rule.x).toBe(lines[0].x);
+    expect(rule.width).toBe(lines[0].width);
+    expect(rule.page).toBe(solid.page);
+    // A degenerate UV: every sample of the rule reads the same texel, so no
+    // neighbouring glyph can bleed into its edge.
+    expect([rule.uvLeft, rule.uvRight]).toEqual([solid.u, solid.u]);
+    expect([rule.uvTop, rule.uvBottom]).toEqual([solid.v, solid.v]);
+  });
+
+  test('the underline sits below the baseline and the strikethrough above it', () => {
+    const style = new TextStyle({ fontSize: 16, underline: true, strikethrough: true });
+
+    const rules = rulesOf(layoutText('Hi', style, {}, decoratingProvider()));
+
+    expect(rules).toHaveLength(2);
+    // ascent 12 is the baseline; the strike is centred on half the x-height.
+    expect(rules[0]!.y).toBeGreaterThan(12);
+    expect(rules[1]!.y).toBeLessThan(12);
+  });
+
+  test('one rule per laid-out line, aligned with each', () => {
+    const style = new TextStyle({ fontSize: 16, align: 'right', underline: true });
+
+    const { placements, lines } = layoutText('A\nBBB', style, {}, decoratingProvider());
+    const rules = placements.filter(placement => placement.decoration === true);
+
+    expect(rules).toHaveLength(2);
+    expect(rules.map(rule => rule.x)).toEqual([lines[0].x, lines[1].x]);
+    expect(rules.map(rule => rule.width)).toEqual([lines[0].width, lines[1].width]);
+  });
+
+  test('an empty line carries no rule', () => {
+    const style = new TextStyle({ fontSize: 16, underline: true });
+
+    const { lines, placements } = layoutText('A\n\nB', style, {}, decoratingProvider());
+
+    expect(lines).toHaveLength(3);
+    expect(placements.filter(placement => placement.decoration === true)).toHaveLength(2);
+  });
+
+  test('a source with no solid texel renders no rule at all', () => {
+    const style = new TextStyle({ fontSize: 16, underline: true, strikethrough: true });
+
+    expect(rulesOf(layoutText('Hi', style, {}, makeProvider()))).toHaveLength(0);
+  });
+
+  test('an explicit thickness overrides the metric-derived one', () => {
+    const style = new TextStyle({ fontSize: 16, underline: true, decorationThickness: 7 });
+
+    expect(rulesOf(layoutText('Hi', style, {}, decoratingProvider()))[0]!.height).toBe(7);
+  });
+
+  test('decorationOffset pushes both rules down together', () => {
+    const provider = decoratingProvider();
+    const plain = rulesOf(layoutText('Hi', new TextStyle({ fontSize: 16, underline: true, strikethrough: true }), {}, provider));
+    const shifted = rulesOf(layoutText('Hi', new TextStyle({ fontSize: 16, underline: true, strikethrough: true, decorationOffset: 5 }), {}, provider));
+
+    expect(shifted.map(rule => rule.y)).toEqual(plain.map(rule => rule.y + 5));
+  });
+
+  test('rules stand outside every line placement range, so a caret never walks one', () => {
+    const style = new TextStyle({ fontSize: 16, underline: true });
+
+    const { placements, lines } = layoutText('Hi', style, {}, decoratingProvider());
+    const lineGlyphs = placements.slice(lines[0].start, lines[0].start + lines[0].count);
+
+    expect(lineGlyphs.every(placement => placement.decoration !== true)).toBe(true);
+  });
+
+  test('the quad builder flags a rule for the renderers', () => {
+    const style = new TextStyle({ fontSize: 16, underline: true });
+
+    const { placements } = layoutText('Hi', style, {}, decoratingProvider());
+    const pages = buildTextPageQuads(placements);
+    const rulePage = pages.find(page => page.pageIndex === solid.page)!;
+
+    expect(Array.from(rulePage.decorations)).toEqual([1]);
+    expect(pages.find(page => page.pageIndex === 0)!.decorations.every(flag => flag === 0)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// tabSize
+// ---------------------------------------------------------------------------
+
+describe('layoutText tabSize', () => {
+  // Every glyph, the space included, advances 10px in the fake provider, so a
+  // tabSize of 4 puts stops at 40, 80, 120 ...
+  const tabStyle = (): TextStyle => new TextStyle({ fontSize: 16, align: 'left' });
+  const penOf = (text: string, layout: Parameters<typeof layoutText>[2]): number[] =>
+    layoutText(text, tabStyle(), { whiteSpace: 'pre', ...layout }, makeProvider()).placements.map(placement => placement.penX);
+
+  test('a tab advances to the next stop rather than by one glyph', () => {
+    expect(penOf('A\tB', { tabSize: 4 })).toEqual([0, 10, 40]);
+  });
+
+  test('stops are measured from the line origin, so a column lines up', () => {
+    // 'A' and 'ABC' both reach the same stop, which is the whole point.
+    expect(penOf('A\tX', { tabSize: 4 }).at(-1)).toBe(40);
+    expect(penOf('ABC\tX', { tabSize: 4 }).at(-1)).toBe(40);
+  });
+
+  test('a pen already sitting on a stop moves to the next one', () => {
+    expect(penOf('ABCD\tX', { tabSize: 4 }).at(-1)).toBe(80);
+  });
+
+  test('consecutive tabs each claim their own stop', () => {
+    expect(penOf('A\t\tX', { tabSize: 4 })).toEqual([0, 10, 40, 80]);
+  });
+
+  test('defaults to the CSS tab-size of eight spaces', () => {
+    expect(penOf('A\tX', {}).at(-1)).toBe(80);
+  });
+
+  test('the collapsing whitespace modes never see a tab', () => {
+    const collapsed = layoutText('A\tB', tabStyle(), { whiteSpace: 'pre-line', tabSize: 4 }, makeProvider()).placements;
+
+    expect(collapsed.map(placement => placement.penX)).toEqual([0, 10, 20]);
+  });
+
+  test('tab stops move the wrap boundary with them', () => {
+    // maxWidth 45: 'A' plus a tab already reaches 40, so 'BC' no longer fits.
+    const { lines } = layoutText('A\tBC', tabStyle(), { whiteSpace: 'pre', tabSize: 4, maxWidth: 45 }, makeProvider());
+
+    expect(lines.length).toBeGreaterThan(1);
+  });
+
+  test('rejects a tabSize of zero', () => {
+    expect(() => layoutText('A\tB', tabStyle(), { whiteSpace: 'pre', tabSize: 0 }, makeProvider())).toThrow(/tabSize/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// textTransform
+// ---------------------------------------------------------------------------
+
+describe('layoutText textTransform', () => {
+  const recordingProvider = (): { provider: GlyphProvider; units: string[] } => {
+    const units: string[] = [];
+
+    return {
+      units,
+      provider: {
+        getGlyph: (char: string, fontSize: number): GlyphInfo => {
+          units.push(char);
+
+          return { x: 0, y: 0, width: 10, height: fontSize, advance: 10, ascent: fontSize, page: 0, uvLeft: 0, uvTop: 0, uvRight: 1, uvBottom: 1 };
+        },
+      },
+    };
+  };
+
+  const transformStyle = (textTransform: TextTransform): TextStyle => new TextStyle({ fontSize: 16, align: 'left', textTransform });
+
+  test('"none" hands the string through untouched', () => {
+    const { provider, units } = recordingProvider();
+
+    layoutText('aB c', transformStyle('none'), {}, provider);
+
+    expect(units.join('')).toBe('aB c');
+  });
+
+  test('"uppercase" raises every cluster', () => {
+    const { provider, units } = recordingProvider();
+
+    layoutText('aB c', transformStyle('uppercase'), {}, provider);
+
+    expect(units.join('')).toBe('AB C');
+  });
+
+  test('"lowercase" lowers every cluster', () => {
+    const { provider, units } = recordingProvider();
+
+    layoutText('aB C', transformStyle('lowercase'), {}, provider);
+
+    expect(units.join('')).toBe('ab c');
+  });
+
+  test('"capitalize" raises the first cluster of each word and leaves the rest alone', () => {
+    const { provider, units } = recordingProvider();
+
+    layoutText('hello wIDE world', transformStyle('capitalize'), {}, provider);
+
+    expect(units.join('')).toBe('Hello WIDE World');
+  });
+
+  test('the transform never changes the string the caller assigned', () => {
+    const { provider } = recordingProvider();
+    const text = 'shout';
+
+    layoutText(text, transformStyle('uppercase'), {}, provider);
+
+    expect(text).toBe('shout');
+  });
+
+  test('a cluster that grows under the mapping still traces back to its source character', () => {
+    const { provider, units } = recordingProvider();
+
+    // The German sharp s uppercases to two letters, so every source offset
+    // after it would drift without the transform's own source map.
+    const { placements } = layoutText('aßb', transformStyle('uppercase'), {}, provider);
+
+    expect(units.join('')).toBe('ASSB');
+    // One source character became two glyphs, so the pair covers [1, 2)
+    // between them and only the last of them carries the range - the same
+    // convention a glyph that stands for nothing already follows.
+    expect(placements.map(placement => [placement.sourceStart, placement.sourceEnd])).toEqual([
+      [0, 1],
+      [1, 1],
+      [1, 2],
+      [2, 3],
+    ]);
+  });
+
+  test('a locale-sensitive mapping follows the layout locale', () => {
+    const { provider, units } = recordingProvider();
+
+    // Turkish maps a capital I to a dotless lowercase one; the default mapping
+    // produces the dotted 'i'.
+    layoutText('I', transformStyle('lowercase'), { locale: 'tr' }, provider);
+
+    expect(units.join('')).toBe('ı');
+  });
+
+  test('a transform composes with whitespace collapsing without losing the source mapping', () => {
+    const { provider } = recordingProvider();
+
+    const { placements } = layoutText('a  ß', transformStyle('uppercase'), { whiteSpace: 'normal' }, provider);
+
+    // 'A', the collapsed blank, then the two letters the sharp s became.
+    expect(placements.map(placement => placement.sourceStart)).toEqual([0, 1, 3, 3]);
+  });
+
+  test('a transform re-measures the wrap, so a wider mapping breaks earlier', () => {
+    const { provider } = recordingProvider();
+
+    // advance 10, maxWidth 30: the sharp s doubles the first word's width and
+    // pushes the second word onto its own line.
+    const wrapped = layoutText('aß cd', transformStyle('uppercase'), { maxWidth: 30 }, provider);
+
+    expect(wrapped.lines).toHaveLength(2);
   });
 });

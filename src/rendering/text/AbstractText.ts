@@ -201,16 +201,6 @@ export abstract class AbstractText extends Drawable {
     this._updateOrigin();
   }
 
-  /**
-   * Advance the node by `dt` milliseconds.
-   *
-   * Delegates to {@link syncDirty} - kept for manual game-loop patterns,
-   * but no longer required; the renderer applies pending changes automatically.
-   */
-  public update(_dt: number): void {
-    this.syncDirty();
-  }
-
   public override destroy(): void {
     this._style.onChange.remove(this._onStyleChange);
     this._pageQuads = [];

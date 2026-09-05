@@ -282,8 +282,15 @@ export class ScrollContainer extends Widget {
    * check) - a scrolled-out child's own geometry no longer makes the
    * `ScrollContainer` itself claim a point far outside what is actually
    * rendered.
+   *
+   * A {@link RenderNode.hitArea} replaces both halves of that rule with the
+   * shape.
    */
   public override contains(x: number, y: number): boolean {
+    if (this.hitArea !== null) {
+      return super.contains(x, y);
+    }
+
     return this.getBounds().contains(x, y) && super.contains(x, y);
   }
 

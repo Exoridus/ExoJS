@@ -2,8 +2,8 @@
  * WebGPU counterpart to `webgl2-text-gradient.test.ts` - the ORIENTATION of the
  * two-stop text gradient.
  *
- * Both backends upload `gradientColors[0]` into node texel 7 and `[1]` into
- * texel 8, and both derive the ramp fraction from a `gradUV` that is 0 at the
+ * Both backends pack the stop colours into node texels 10 onwards and derive
+ * the ramp fraction from a `gradUV` that is 0 at the
  * top/left edge of the ink box. The two fragment stages therefore have to mix
  * in the same direction; they are separate sources (GLSL files vs inline WGSL),
  * so nothing but a test per backend keeps them from drifting apart. The
@@ -53,7 +53,7 @@ const rowRedShares = (frame: ArrayLike<number>): ReadonlyArray<{ y: number; shar
   return rows;
 };
 
-describe('WebGPU: the text gradient runs from gradientColors[0] at the top', () => {
+describe('WebGPU: the text gradient runs from its first stop at the top', () => {
   beforeEach(() => resetDefaultGlyphAtlasPool());
   afterEach(() => resetDefaultGlyphAtlasPool());
 
@@ -64,8 +64,12 @@ describe('WebGPU: the text gradient runs from gradientColors[0] at the top', () 
     const text = new Text('M', {
       fontSize: 56,
       fillColor: Color.white,
-      gradientColors: [Color.red, Color.blue],
-      gradientAxis: 'vertical',
+      gradient: {
+        stops: [
+          { offset: 0, color: Color.red },
+          { offset: 1, color: Color.blue },
+        ],
+      },
     });
 
     text.setPosition(8, textY);
@@ -83,7 +87,7 @@ describe('WebGPU: the text gradient runs from gradientColors[0] at the top', () 
       for (const { y, share } of rows) {
         // The shader interpolates at the pixel centre.
         const t = Math.min(1, Math.max(0, (y + 0.5 - textY - ink.y) / ink.height));
-        // Red is gradientColors[0] - the TOP stop - so its share is 1 at the
+        // Red is the first stop - the TOP one - so its share is 1 at the
         // top of the ink box and falls to 0 at the bottom. A flipped mix would
         // produce `t` here instead, missing by |2t - 1| on every row but the
         // midpoint.

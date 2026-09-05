@@ -23,7 +23,7 @@ export type { RenderErrorCode, RenderErrorOptions } from './RenderError';
 export { formatShaderError, RenderError } from './RenderError';
 export type { CaptureOptions, DrawBatchOptions, DrawGeometryOptions, RenderOptions } from './RenderingContext';
 export { RenderingContext } from './RenderingContext';
-export type { MaskSource } from './RenderNode';
+export type { HitArea, MaskSource } from './RenderNode';
 export { RenderNode } from './RenderNode';
 export type { RenderNodePassOptions } from './RenderNodePass';
 export { RenderNodePass } from './RenderNodePass';
@@ -107,19 +107,26 @@ export type { LayoutOptions } from '#rendering/text/LayoutOptions';
 export type { LineShaper, ShapingMode } from '#rendering/text/shaping';
 export type { TextOptions } from '#rendering/text/Text';
 export { Text } from '#rendering/text/Text';
-export type { FontFamily, FontRegistry, FontWeight, GradientAxis, StyleChangeHint, TextStyleOptions } from '#rendering/text/TextStyle';
-export { TextStyle } from '#rendering/text/TextStyle';
+export type { FontFamily, FontRegistry, FontWeight, ResolvedTextGradient, StyleChangeHint, TextGradient, TextStyleOptions } from '#rendering/text/TextStyle';
+export { textGradientMaxStops, TextStyle } from '#rendering/text/TextStyle';
 export type {
+  FontStyle,
+  FontTypefaceKey,
+  FontVariant,
+  FontVariantKey,
   GlyphInfo,
   GlyphKey,
   GlyphPlacement,
   GlyphProvider,
+  SolidTexel,
   TextAlignment,
+  TextFontMetrics,
   TextLayoutResult,
   TextLayoutStyle,
   TextLineMetrics,
   TextPageQuads,
   TextSize,
+  TextTransform,
 } from '#rendering/text/types';
 export type { CompressedTextureLevel, CompressedTexturePayload } from '#rendering/texture/compressedPayload';
 export type { CompressedTextureOptions } from '#rendering/texture/CompressedTexture';

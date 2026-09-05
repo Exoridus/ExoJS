@@ -1,0 +1,72 @@
+{
+  "title": "FontVariant",
+  "description": "CSS font-variant-caps values the glyph rasterizer honours. `'small-caps'` renders lowercase letters as reduced capitals - from the family's own small-cap glyphs where it has them, otherwise from the browser's synthesis. The variant is part of a glyph atlas's identity, so small-cap glyphs never share cache entries with the ordinary ones.",
+  "symbol": "FontVariant",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "CSS font-variant-caps values the glyph rasterizer honours.",
+        "`'small-caps'` renders lowercase letters as reduced capitals - from the family's own small-cap glyphs where it has them, otherwise from the browser's synthesis. The variant is part of a glyph atlas's identity, so small-cap glyphs never share cache entries with the ordinary ones."
+      ],
+      "importLine": "import { FontVariant } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "FontVariant",
+          "signature": "\"normal\" | \"small-caps\"",
+          "signatureTokens": [
+            {
+              "text": "\"normal\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"small-caps\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/text/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/text/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/types.ts"
+}

@@ -1,10 +1,10 @@
 import { applyCanvasTextState } from './canvasTextState';
 import type { AtlasMode } from './GlyphAtlas';
-import { AtlasPage, SDF_RADIUS } from './GlyphAtlas';
+import { AtlasPage, claimSolidTexel, SDF_RADIUS } from './GlyphAtlas';
 import { GlyphSdf } from './GlyphSdf';
 import type { ShapedTextMetrics } from './ShapedTextMetrics';
 import type { LineShaper } from './shaping';
-import type { GlyphInfo } from './types';
+import type { FontVariantKey, GlyphInfo, SolidTexel } from './types';
 
 type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
@@ -35,9 +35,7 @@ const defaultPageHeight = 256;
 
 /** Construction options for {@link ShapedTextSource}. */
 export interface ShapedTextSourceOptions {
-  family: string;
-  fontStyle: 'normal' | 'italic';
-  fontWeight: string;
+  font: FontVariantKey;
   /** Logical measurement for this variant, so raster and layout cannot disagree about a width. */
   metrics: ShapedTextMetrics;
   mode?: AtlasMode;
@@ -70,9 +68,7 @@ export interface ShapedTextSourceOptions {
  * @advanced
  */
 export class ShapedTextSource implements LineShaper {
-  private readonly _family: string;
-  private readonly _fontStyle: 'normal' | 'italic';
-  private readonly _fontWeight: string;
+  private readonly _font: FontVariantKey;
   private readonly _metrics: ShapedTextMetrics;
   private readonly _mode: AtlasMode;
   private readonly _sdfRadius: number;
@@ -88,13 +84,14 @@ export class ShapedTextSource implements LineShaper {
   private _generation = 0;
   private _repackPending = false;
 
+  /** Solid block for decoration quads, claimed on first use and dropped by a repack. */
+  private _solidTexel: SolidTexel | null = null;
+
   /** Scratch context for colour-mode line metrics, created on first use. */
   private _measureCtx: Ctx2D | null = null;
 
   public constructor(options: ShapedTextSourceOptions) {
-    this._family = options.family;
-    this._fontStyle = options.fontStyle;
-    this._fontWeight = options.fontWeight;
+    this._font = options.font;
     this._metrics = options.metrics;
     this._mode = options.mode ?? 'sdf';
     this._sdfRadius = options.sdfRadius ?? SDF_RADIUS;
@@ -142,6 +139,17 @@ export class ShapedTextSource implements LineShaper {
     return this._metrics.measureLine(line, fontSize);
   }
 
+  /**
+   * A solid texel on this source's own pages.
+   *
+   * It cannot come from the shared glyph atlas: a browser-shaped node's quads
+   * address the pages this source owns, so an atlas UV would point into a
+   * different texture entirely.
+   */
+  public getSolidTexel(): SolidTexel {
+    return (this._solidTexel ??= claimSolidTexel((w, h) => this._allocateSlot(w, h, 'solid', 0)));
+  }
+
   public shapeLine(line: string, fontSize: number): GlyphInfo {
     const key = `${fontSize}:${line}`;
     const cached = this._cache.get(key);
@@ -168,6 +176,7 @@ export class ShapedTextSource implements LineShaper {
     this._pages = [];
     this._cache.clear();
     this._sdfInstances.clear();
+    this._solidTexel = null;
   }
 
   // ── Private ──────────────────────────────────────────────────────────────
@@ -182,9 +191,10 @@ export class ShapedTextSource implements LineShaper {
     if (instance === undefined) {
       instance = new GlyphSdf({
         fontSize: rasterFontSize,
-        fontFamily: this._family,
-        fontWeight: this._fontWeight,
-        fontStyle: this._fontStyle,
+        fontFamily: this._font.family,
+        fontWeight: this._font.fontWeight ?? 'normal',
+        fontStyle: this._font.fontStyle ?? 'normal',
+        fontVariant: this._font.fontVariant ?? 'normal',
         buffer: this._rasterSdfRadius,
         radius: this._rasterSdfRadius,
         cutoff: 0.5,
@@ -312,5 +322,6 @@ export class ShapedTextSource implements LineShaper {
     this._pages = [];
     this._cache.clear();
     this._repackPending = false;
+    this._solidTexel = null;
   }
 }
