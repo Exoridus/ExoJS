@@ -1,9 +1,14 @@
+import { aggregatePhysicsRuns, aggregateRenderingRuns, IncomparableRunsError } from '../src/comparison/aggregate';
 import { buildPhysicsComparison, buildRenderingComparison, chooseHeadlineCount } from '../src/comparison/build';
 import { physicsMechanism, renderingMechanism } from '../src/comparison/mechanism';
 import { renderComparison } from '../src/comparison/render';
 import { compareMedians, NOISE_HIGH, NOISE_LOW, STRUCTURAL_FACTOR } from '../src/comparison/verdict';
+import type { PhysicsProvenance } from '../src/physics/driver';
 import type { PhysicsCellResult } from '../src/physics/PhysicsAdapter';
+import type { PhysicsReportData } from '../src/physics/report';
+import type { Provenance } from '../src/rendering/driver';
 import type { ArchetypeId, Backend, CellResult } from '../src/rendering/EngineAdapter';
+import type { ReportData } from '../src/rendering/report';
 
 /** A measured rendering cell, with everything the comparison does not read left at a neutral value. */
 const cell = (options: {
@@ -51,6 +56,38 @@ const physicsCell = (options: {
   stepMsP95: options.stepMsMedian * 1.2,
   structural: { bodyCount: 100, contactCount: options.contactCount ?? 50, jointCount: 0, rayHits: options.rayHits ?? 0 },
   status: 'ok',
+});
+
+const stamp = (engineVersion = '0.17.0'): Provenance => ({
+  adapter: 'Test GPU',
+  backend: 'webgl2',
+  flags: ['--force-device-scale-factor=1'],
+  headless: true,
+  software: false,
+  engineVersion,
+  timestamp: '2026-01-01T00:00:00.000Z',
+});
+
+const physicsStamp = (engineVersion = '0.17.0'): PhysicsProvenance => ({
+  host: { node: 'v24.14.1', cpu: 'Test CPU', cpuCount: 16, os: 'linux 6.1.0', arch: 'x64' },
+  fixedDelta: 1 / 60,
+  caveats: [],
+  engineVersion,
+  timestamp: '2026-01-01T00:00:00.000Z',
+});
+
+/** One rendering run's artifact, as `bench:compare` reads it off disk. */
+const renderingRun = (results: readonly CellResult[], options: { engineVersion?: string; libraries?: ReportData['libraries'] } = {}): ReportData => ({
+  provenance: [stamp(options.engineVersion)],
+  libraries: options.libraries ?? [{ name: 'pixi.js', version: '8.19.0', resolvedFrom: '' }],
+  results,
+});
+
+/** One physics run's artifact. */
+const physicsRun = (results: readonly PhysicsCellResult[]): PhysicsReportData => ({
+  provenance: physicsStamp(),
+  libraries: [{ name: 'matter-js', version: '0.20.0', resolvedFrom: '' }],
+  results,
 });
 
 describe('compareMedians', () => {
@@ -290,28 +327,103 @@ describe('buildPhysicsComparison', () => {
   });
 });
 
+/**
+ * The aggregation stage is what makes a published ratio survive being
+ * re-measured: it pools separate runs of one matrix, publishes the median of
+ * their per-run medians, carries the range they observed, and refuses to print
+ * a verdict the runs did not all reach.
+ */
+describe('aggregateRenderingRuns', () => {
+  /** One run of a two-arm matrix where only the competitor's median moves. */
+  const run = (competitorMs: number): ReportData =>
+    renderingRun([
+      cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
+      cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: competitorMs, drawCalls: 40 }),
+    ]);
+
+  const onlyCell = (runs: readonly ReportData[]) => aggregateRenderingRuns(runs).backends[0]!.sections[0]!.rows[0]!.cells[0]!;
+
+  test('publishes the median of the per-run medians, not the first or the worst run', () => {
+    const pooled = onlyCell([run(2), run(3), run(10)]);
+
+    expect(pooled.competitorMs).toBe(3);
+    expect(pooled.referenceMs).toBe(1);
+  });
+
+  test('carries the range the runs observed and its ratio', () => {
+    const pooled = onlyCell([run(2), run(3), run(10)]);
+
+    expect(pooled.aggregate.competitor).toEqual({ minMs: 2, maxMs: 10, ratio: 5 });
+    expect(pooled.aggregate.reference).toEqual({ minMs: 1, maxMs: 1, ratio: 1 });
+    expect(pooled.aggregate.runs).toBe(3);
+  });
+
+  test('calls a cell stable when every run reached the same verdict, and publishes that verdict', () => {
+    const pooled = onlyCell([run(2), run(2.1), run(1.9)]);
+
+    expect(pooled.aggregate.stable).toBe(true);
+    expect(pooled.aggregate.rungs).toEqual(['exojs-leads', 'exojs-leads', 'exojs-leads']);
+    expect(pooled.verdict.side).toBe('exojs');
+  });
+
+  test('publishes no verdict for a cell the runs disagreed on, and keeps the row', () => {
+    // 1.0 vs 1.05 is level; 1.0 vs 2.0 is an ExoJS lead. One published ratio
+    // cannot be drawn from runs that disagree about which arm the cell favours.
+    const pooled = onlyCell([run(1.05), run(2), run(2)]);
+
+    expect(pooled.aggregate.stable).toBe(false);
+    expect(pooled.aggregate.rungs).toEqual(['level', 'exojs-leads', 'exojs-leads']);
+    expect(pooled.verdict.label).toBe('unstable across runs');
+    expect(pooled.verdict.side).toBe('neither');
+    expect(Number.isNaN(pooled.verdict.ratio)).toBe(true);
+    expect(pooled.competitorMs).toBe(2);
+  });
+
+  test('rejects runs measured at different engine versions', () => {
+    expect(() => aggregateRenderingRuns([run(2), renderingRun(run(2).results, { engineVersion: '0.16.0' })])).toThrow(IncomparableRunsError);
+  });
+
+  test('rejects runs measured against different library versions', () => {
+    expect(() =>
+      aggregateRenderingRuns([run(2), renderingRun(run(2).results, { libraries: [{ name: 'pixi.js', version: '8.20.0', resolvedFrom: '' }] })]),
+    ).toThrow(/library arms/);
+  });
+
+  test('rejects runs that measured different cells', () => {
+    const wider = renderingRun([...run(2).results, cell({ engine: 'exojs', archetype: 'text-static', nodeCount: 1_000, cpuMsMedian: 3 })]);
+
+    expect(() => aggregateRenderingRuns([run(2), wider])).toThrow(/does not measure the same cells/);
+  });
+});
+
+describe('aggregatePhysicsRuns', () => {
+  const run = (competitorMs: number): PhysicsReportData =>
+    physicsRun(
+      [200, 1_000, 4_000].flatMap(bodyCount => [
+        physicsCell({ engine: 'exojs-physics', archetype: 'box-stack', bodyCount, stepMsMedian: 1 }),
+        physicsCell({ engine: 'matter-js', archetype: 'box-stack', bodyCount, stepMsMedian: competitorMs, contactCount: 50 }),
+      ]),
+    );
+
+  test('pools the section the same way the rendering blocks are pooled', () => {
+    const pooled = aggregatePhysicsRuns([run(1.1), run(3), run(3)]).section.rows[0]!.cells[0]!;
+
+    expect(pooled.competitorMs).toBe(3);
+    expect(pooled.aggregate.competitor).toEqual({ minMs: 1.1, maxMs: 3, ratio: 3 / 1.1 });
+    expect(pooled.aggregate.stable).toBe(false);
+    expect(pooled.verdict.label).toBe('unstable across runs');
+  });
+});
+
 describe('renderComparison', () => {
   test('states the ladder, the count and the omissions in the document itself', () => {
-    const blocks = buildRenderingComparison([
-      cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
-      cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 2, drawCalls: 40 }),
-    ]);
     const document = renderComparison({
-      rendering: {
-        provenance: [
-          {
-            adapter: 'Test GPU',
-            backend: 'webgl2',
-            flags: ['--force-device-scale-factor=1'],
-            headless: true,
-            software: false,
-            engineVersion: '0.15.2',
-            timestamp: '2026-08-29T00:00:00.000Z',
-          },
-        ],
-        libraries: [{ name: 'pixi.js', version: '8.19.0', resolvedFrom: '' }],
-        backends: blocks,
-      },
+      rendering: aggregateRenderingRuns([
+        renderingRun([
+          cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
+          cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 2, drawCalls: 40 }),
+        ]),
+      ]),
     });
 
     expect(document).toContain('Test GPU');
@@ -321,19 +433,55 @@ describe('renderComparison', () => {
     expect(document).toContain('Omissions');
   });
 
+  test('prints the observed range beside every pooled median', () => {
+    const document = renderComparison({
+      rendering: aggregateRenderingRuns(
+        [2, 3, 10].map(competitorMs =>
+          renderingRun([
+            cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
+            cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: competitorMs, drawCalls: 40 }),
+          ]),
+        ),
+      ),
+    });
+
+    expect(document).toContain('3 separate rendering runs');
+    expect(document).toContain('3.000 ms [2.000-10.000]');
+  });
+
+  test('prints no verdict for an unstable cell, but keeps its row and its range', () => {
+    const document = renderComparison({
+      rendering: aggregateRenderingRuns(
+        [1.05, 2, 2].map(competitorMs =>
+          renderingRun([
+            cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
+            cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: competitorMs, drawCalls: 40 }),
+          ]),
+        ),
+      ),
+    });
+    const row = document.split('\n').find(line => line.startsWith('| `static-heavy`'))!;
+
+    expect(row).toContain('2.000 ms [1.050-2.000]');
+    expect(row).toContain('unstable across runs: level, exojs-leads, exojs-leads');
+    expect(row).not.toContain('ExoJS leads');
+  });
+
   test('marks a software-rasterizer run as not reportable', () => {
     const document = renderComparison({
       rendering: {
-        provenance: [
-          {
-            adapter: 'SwiftShader',
-            backend: 'webgl2',
-            flags: [],
-            headless: true,
-            software: true,
-            engineVersion: '0.15.2',
-            timestamp: '2026-08-29T00:00:00.000Z',
-          },
+        runs: [
+          [
+            {
+              adapter: 'SwiftShader',
+              backend: 'webgl2',
+              flags: [],
+              headless: true,
+              software: true,
+              engineVersion: '0.15.2',
+              timestamp: '2026-08-29T00:00:00.000Z',
+            },
+          ],
         ],
         libraries: [],
         backends: [],
