@@ -6,10 +6,11 @@
  * one of them is a public claim about how ExoJS performs against other
  * libraries. The only thing standing between that claim and a plausible-looking
  * number somebody typed is this gate: a profile has to carry a schema version
- * this repository understands, a provenance block complete enough that a reader
- * could reproduce the run, arms that were actually installed, one engine
- * version across every stamp, and a signature that recomputes from the file's
- * own contents.
+ * this repository understands, enough separate runs behind every number to
+ * support a ratio, a provenance block per run complete enough that a reader
+ * could reproduce it, arms that were actually installed, one engine version
+ * across every stamp, and a signature that recomputes from the file's own
+ * contents.
  *
  * The signature is what makes a hand-edited value fail. It is not an
  * authenticity proof - anyone holding the repository can recompute it - but it
@@ -40,6 +41,17 @@ const NOT_INSTALLED = 'not-installed';
 /** Packages released in lockstep with the engine, whose arm version must equal the profile's. */
 const LOCKSTEP_ARMS = new Set(['@codexo/exojs', '@codexo/exojs-physics']);
 
+/**
+ * Separate harness runs a published profile must pool.
+ *
+ * Two runs of identical code on one idle machine move a cell's median far
+ * enough to reverse which arm it favours, so a ratio drawn from one run is not
+ * a measurement of the libraries. Three is the smallest number that yields a
+ * median rather than a midpoint and lets a cell's verdict be confirmed against
+ * every run independently.
+ */
+const MINIMUM_RUNS = 3;
+
 /** A record with unknown field types, the shape every check reads its subject as. */
 type Fields = Record<string, unknown>;
 
@@ -66,7 +78,7 @@ const missingFields = (subject: unknown, fields: readonly string[], where: strin
 const RENDERING_STAMP_FIELDS = ['backend', 'adapter', 'flags', 'headless', 'software', 'engineVersion', 'timestamp'] as const;
 const PHYSICS_STAMP_FIELDS = ['host', 'fixedDelta', 'caveats', 'engineVersion', 'timestamp'] as const;
 const HOST_FIELDS = ['node', 'cpu', 'cpuCount', 'os', 'arch'] as const;
-const PROFILE_FIELDS = ['slug', 'gpu', 'os', 'browser', 'engineVersion', 'measuredAt'] as const;
+const PROFILE_FIELDS = ['slug', 'gpu', 'os', 'browser', 'engineVersion', 'measuredAt', 'runs'] as const;
 
 /** Collect the arm entries of one domain, reporting any that has no usable version behind it. */
 const checkLibraries = (domain: Fields, where: string, problems: string[]): Fields[] => {
@@ -131,6 +143,29 @@ const checkProfile = (path: string): string[] => {
     problems.push(`profile.slug '${slug}' does not match the file name, so a re-measurement of that machine would not overwrite this file`);
   }
 
+  const declaredRuns = isRecord(profile) ? profile['runs'] : undefined;
+
+  if (typeof declaredRuns === 'number' && (!Number.isInteger(declaredRuns) || declaredRuns < MINIMUM_RUNS)) {
+    problems.push(
+      `pools ${String(declaredRuns)} run(s), but a published profile needs at least ${String(MINIMUM_RUNS)}: a ratio drawn from fewer cannot be told apart from the harness's own run-to-run noise`,
+    );
+  }
+
+  /** Every domain declares the same run count as the profile, or its numbers speak for a different amount of evidence. */
+  const checkRunCount = (runs: unknown, where: string): unknown[] => {
+    if (!Array.isArray(runs) || runs.length === 0) {
+      problems.push(`${where} is missing or empty`);
+
+      return [];
+    }
+
+    if (typeof declaredRuns === 'number' && runs.length !== declaredRuns) {
+      problems.push(`${where} holds ${String(runs.length)} run(s) but profile.runs declares ${String(declaredRuns)}`);
+    }
+
+    return runs;
+  };
+
   const rendering = document['rendering'];
   const physics = document['physics'];
 
@@ -145,13 +180,17 @@ const checkProfile = (path: string): string[] => {
     if (!isRecord(rendering)) {
       problems.push('rendering is not an object');
     } else {
-      const stamps = rendering['provenance'];
+      for (const [run, entry] of checkRunCount(rendering['runs'], 'rendering.runs').entries()) {
+        const stamps = isRecord(entry) ? entry['provenance'] : undefined;
 
-      if (!Array.isArray(stamps) || stamps.length === 0) {
-        problems.push('rendering.provenance is missing or empty');
-      } else {
+        if (!Array.isArray(stamps) || stamps.length === 0) {
+          problems.push(`rendering.runs[${String(run)}].provenance is missing or empty`);
+
+          continue;
+        }
+
         for (const [index, stamp] of stamps.entries()) {
-          problems.push(...missingFields(stamp, [...RENDERING_STAMP_FIELDS], `rendering.provenance[${String(index)}]`));
+          problems.push(...missingFields(stamp, [...RENDERING_STAMP_FIELDS], `rendering.runs[${String(run)}].provenance[${String(index)}]`));
 
           if (isRecord(stamp) && typeof stamp['engineVersion'] === 'string') {
             engineVersions.add(stamp['engineVersion']);
@@ -171,15 +210,15 @@ const checkProfile = (path: string): string[] => {
     if (!isRecord(physics)) {
       problems.push('physics is not an object');
     } else {
-      const stamp = physics['provenance'];
+      for (const [run, stamp] of checkRunCount(physics['runs'], 'physics.runs').entries()) {
+        problems.push(...missingFields(stamp, [...PHYSICS_STAMP_FIELDS], `physics.runs[${String(run)}]`));
 
-      problems.push(...missingFields(stamp, [...PHYSICS_STAMP_FIELDS], 'physics.provenance'));
+        if (isRecord(stamp)) {
+          problems.push(...missingFields(stamp['host'], [...HOST_FIELDS], `physics.runs[${String(run)}].host`));
 
-      if (isRecord(stamp)) {
-        problems.push(...missingFields(stamp['host'], [...HOST_FIELDS], 'physics.provenance.host'));
-
-        if (typeof stamp['engineVersion'] === 'string') {
-          engineVersions.add(stamp['engineVersion']);
+          if (typeof stamp['engineVersion'] === 'string') {
+            engineVersions.add(stamp['engineVersion']);
+          }
         }
       }
 
