@@ -6,10 +6,23 @@ import { contactSlop } from './tolerances';
 const restitutionThreshold = 1;
 /**
  * Cap on the soft-constraint push-out velocity (px/s). Bounds how fast the bias
- * resolves deep penetration so a large overlap cannot fling bodies apart; the
- * Box2D-v3 analogue is `contactSpeed = 3·lengthUnit`, retuned for ExoJS pixels.
+ * resolves deep penetration so a large overlap cannot fling bodies apart.
+ *
+ * The Box2D-v3 analogue is `contactSpeed = 3·lengthUnit`, i.e. 3 m/s in SI. The
+ * conversion to pixels is the whole content of this constant: 2D games in this
+ * engine's envelope put a metre at roughly 20-100 px (equivalently, the gravity
+ * range the solver is tuned for, a few hundred to a few thousand px/s²), so the
+ * same physical speed is 60-300 px/s. The low end of that band is taken - it is
+ * already past the point where a settling scene stops fighting the cap, and
+ * anything higher only widens the speed at which a deep overlap may be undone.
+ *
+ * A single-digit cap is enough for one body resting on a floor and badly short
+ * everywhere else: a gravity-driven pile rearranges faster than such a push-out
+ * can work, so overlap accumulates instead of resolving, the pile settles
+ * several px deep with far more touching pairs than its geometry has, and the
+ * permanently unresolved contacts keep every island awake.
  */
-const maxBiasVelocity = 4;
+const maxBiasVelocity = 60;
 /** Reject the 2-point block solve when the contact matrix is worse-conditioned than this (fall back to sequential). */
 const maxConditionNumber = 1000;
 

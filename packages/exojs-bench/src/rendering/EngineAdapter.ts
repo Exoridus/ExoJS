@@ -25,7 +25,8 @@ export type ArchetypeId =
   | 'filter-chain-1'
   | 'filter-chain-2'
   | 'filter-chain-4'
-  | 'mask-clip';
+  | 'mask-clip'
+  | 'composite';
 
 /**
  * Workload category an archetype belongs to. Categories are SECTION HEADINGS in
@@ -262,6 +263,25 @@ export interface ArchetypeSpec {
    * WebGL2/WebGPU arms only - see the Phaser exclusion in `archetypes.ts`.
    */
   readonly maskDepth?: number;
+  /**
+   * Blur extent, in logical px, of the bloom-shaped multipass composite, or
+   * `undefined` for the single-pass scene every other archetype renders.
+   *
+   * The archetype captures the scene into an off-screen target, blurs that
+   * capture down into a {@link '../rendering/world'.BLOOM_DOWNSCALE}-scale
+   * target, draws the scene again directly, and composites the blurred capture
+   * over it additively. It is the multipass shape a real post-processing stack
+   * has and that no single `filterChainDepth` row reaches: a second full scene
+   * walk, a resolution change, and a full-screen additive blend on top of the
+   * target ping-pong the filter rows already measure.
+   *
+   * The radius is what makes the blur a real separable sweep rather than a blit;
+   * it is deliberately modest, because the archetype measures the pass structure
+   * and not fragment ALU.
+   *
+   * WebGL2/WebGPU arms only - see the Phaser exclusion in `archetypes.ts`.
+   */
+  readonly compositeBlurRadius?: number;
 }
 
 /** One matrix cell: a single (engine, config, backend, archetype, node count) combination to measure. */

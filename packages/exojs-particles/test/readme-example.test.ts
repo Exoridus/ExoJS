@@ -40,7 +40,8 @@ const extractMinimalExample = (): string => {
 };
 
 describe('README "Minimal working example"', () => {
-  it('typechecks against the real Scene/ParticleSystem API', () => {
+  // Spawns a full tsc program; under a loaded machine that takes longer than the default budget.
+  it('typechecks against the real Scene/ParticleSystem API', { timeout: 60_000 }, () => {
     const source = extractMinimalExample();
     const tmpDir = mkdtempSync(join(tmpdir(), 'exojs-particles-readme-'));
     const filePath = join(tmpDir, 'readme-minimal-example.ts');

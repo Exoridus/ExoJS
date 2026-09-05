@@ -673,6 +673,8 @@ describe('ContactSolver internals', () => {
       normalImpulse: [0, 0],
       tangentImpulse: [0, 0],
       pointIds: [0, 0],
+      previousPenetration: [-1, -1],
+      pointPenetration: [-1, -1],
     };
 
     const solver = new ContactSolver();

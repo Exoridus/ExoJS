@@ -60,6 +60,8 @@ describe('resting contact push-out', () => {
   it.each([
     [1000, 0.2781],
     [10000, 0.5314],
+    [20000, 0.8129],
+    [100000, 3.0645],
   ])('a single-point contact rests one soft deflection below the slop at g = %i', (gravity, expected) => {
     const world = worldWithFloor(gravity);
     const body = restingBody(world, new CircleShape(RADIUS), RADIUS);
@@ -79,7 +81,7 @@ describe('resting contact push-out', () => {
     expect(penetration(body, RADIUS)).toBeCloseTo(CONTACT_SLOP, 4);
   });
 
-  it.each([20000, 100000])('a single-point contact still holds a fixpoint at g = %i, where the push-out cap binds', gravity => {
+  it.each([1000000, 4000000])('a single-point contact still holds a fixpoint at g = %i, where the push-out cap binds', gravity => {
     const world = worldWithFloor(gravity);
     const body = restingBody(world, new CircleShape(RADIUS), RADIUS);
 
@@ -97,12 +99,14 @@ describe('resting contact push-out', () => {
       shallowest = Math.min(shallowest, depth);
     }
 
-    // Deeper than the uncapped law predicts - the cap is doing the work - and no
-    // longer an exact fixpoint but a narrow limit cycle around the depth at
-    // which the cap starts to bind. Bounded, stationary in the mean, and still
-    // an overlap the narrow phase keeps reporting.
-    expect(deepest).toBeLessThan(1);
-    expect(deepest - shallowest).toBeLessThan(0.1);
+    // Far SHALLOWER than the uncapped law predicts (28 px at 1e6, 113 px at
+    // 4e6) - the cap is doing the work - and no longer an exact fixpoint but a
+    // limit cycle around the depth at which the cap starts to bind. Bounded,
+    // stationary in the mean, and still an overlap the narrow phase keeps
+    // reporting, rather than a contact sinking without end.
+    expect(deepest).toBeLessThan(CONTACT_SLOP + softDeflection(gravity) / 2);
+    expect(deepest).toBeLessThan(12);
+    expect(deepest - shallowest).toBeLessThan(5);
     expect(world.backend.contactGraph.solidContacts.length).toBe(1);
   });
 
