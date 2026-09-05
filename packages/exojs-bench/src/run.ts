@@ -253,7 +253,8 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
  * step count for a fast spot-check (never a reportable run).
  */
 const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
-  const { createExoJsPhysicsAdapter, createMatterJsAdapter, createRapierAdapter, runPhysicsMatrix, writePhysicsReport } = await import('./physics');
+  const { createExoJsPhysicsAdapter, createMatterJsAdapter, createPlanckAdapter, createRapierAdapter, runPhysicsMatrix, writePhysicsReport } =
+    await import('./physics');
 
   const archetypeArg = args.get('archetype');
   const bodiesArg = args.get('bodies');
@@ -302,10 +303,11 @@ const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
     `Running physics benchmark: ${archetypeArg ? `archetype=${archetypeArg}` : 'all archetypes'}${bodiesArg ? `, bodies=${bodiesArg}` : ''}${timedStepsOverride !== undefined ? `, frames=${timedStepsOverride} (OVERRIDE — thin sampling, not reportable)` : ''}`,
   );
 
-  // Resolve the arms: the native exojs-physics arm is always present; the matter
-  // and rapier competitor arms are loaded lazily and degrade to a skipped arm
-  // (resolver returns null) when their library was never linked via bench:setup,
-  // so a checkout without the competitor deps still runs the native domain.
+  // Resolve the arms: the native exojs-physics arm is always present; the
+  // matter, planck and rapier competitor arms are loaded lazily and degrade to a
+  // skipped arm (resolver returns null) when their library was never linked via
+  // bench:setup, so a checkout without the competitor deps still runs the native
+  // domain.
   const adapters: PhysicsAdapter[] = [createExoJsPhysicsAdapter()];
   const libraries: string[] = ['@codexo/exojs-physics'];
 
@@ -314,6 +316,13 @@ const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
   if (matter !== null) {
     adapters.push(matter);
     libraries.push('matter-js');
+  }
+
+  const planck = await createPlanckAdapter();
+
+  if (planck !== null) {
+    adapters.push(planck);
+    libraries.push('planck');
   }
 
   const rapier = await createRapierAdapter();

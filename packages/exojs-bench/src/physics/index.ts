@@ -9,7 +9,7 @@
 // incremental checkpoint writer, provenance/report skeletons, CLI arg parsing)
 // live under `../shared` and are shared with the rendering domain.
 //
-// The matter.js + rapier adapter arms live under `adapters/` alongside the
+// The matter.js, planck.js and rapier adapter arms live under `adapters/` alongside the
 // native arm: each implements the `PhysicsAdapter` interface, builds the shared
 // deterministic scene from `adapters/scene.ts`, and is passed into
 // `runPhysicsMatrix({ adapters })`. Their competitor libraries are loaded lazily
@@ -18,6 +18,7 @@
 
 export { createExoJsPhysicsAdapter } from './adapters/exojs-physics';
 export { createMatterJsAdapter } from './adapters/matter-js';
+export { createPlanckAdapter } from './adapters/planck';
 export { createRapierAdapter } from './adapters/rapier';
 export { buildPhysicsMatrix, PHYSICS_ARCHETYPES, STEP_DELTA } from './archetypes';
 export { type PhysicsMatrixOutcome, type PhysicsProvenance, runPhysicsMatrix } from './driver';

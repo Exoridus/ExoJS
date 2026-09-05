@@ -16,14 +16,24 @@ const NATIVE_PHYSICS_PACKAGE = '@codexo/exojs-physics';
  * comparison surfaces, so they are stated per arm rather than silently smoothed
  * over. Only the disclosures for arms actually present in a run are
  * stamped into that run's provenance caveats.
+ *
+ * Each disclosure opens with the arm's ROLE, because the arms are not one flat
+ * field of competitors: matter.js and planck.js are the pure-JS PEERS, the
+ * libraries an ExoJS app would realistically attach instead of the native
+ * runtime, and they are what `exojs-physics` is compared against. rapier is a
+ * Rust engine compiled to WASM and stands as the REFERENCE CEILING - the
+ * ambient cost of leaving JavaScript - not as a peer a JS solver is expected to
+ * match.
  */
 const ARM_DISCLOSURES: Readonly<Record<string, string>> = {
   'exojs-physics':
-    'exojs-physics arm: TGS-Soft solver, 4 sub-steps per fixed step, sleeping ON by default (resting bodies deactivate). Contact count = solid contacts in the world contact graph.',
+    'exojs-physics arm (native runtime, pure JS): TGS-Soft solver, 4 sub-steps per fixed step, sleeping ON by default (resting bodies deactivate). Contact count = solid contacts in the world contact graph.',
   'matter-js':
-    "matter-js arm: constraint solver at matter defaults (6 position / 4 velocity / 2 constraint iterations), sleeping OFF by default (a settled stack keeps paying full solve cost); matter's default per-step air drag (frictionAir) is zeroed so all arms integrate the same pure-gravity field; gravity (px/s²) and perturbation velocity (px/s) are mapped into matter's px-per-step unit model. Contact count = active colliding pairs (engine.pairs.collisionActive), a pair-level proxy, not identical in semantics to the exojs solid-contact count.",
+    "matter-js arm (pure-JS peer): constraint solver at matter defaults (6 position / 4 velocity / 2 constraint iterations), sleeping OFF by default (a settled stack keeps paying full solve cost); matter's default per-step air drag (frictionAir) is zeroed so all arms integrate the same pure-gravity field; gravity (px/s²) and perturbation velocity (px/s) are mapped into matter's px-per-step unit model. Contact count = active colliding pairs (engine.pairs.collisionActive), a pair-level proxy, not identical in semantics to the exojs solid-contact count.",
+  planck:
+    "planck arm (pure-JS peer): Box2D port at planck defaults (8 velocity / 3 position iterations per step), sleeping ON by default; Settings.lengthUnitsPerMeter is set to 30 so planck's absolute MKS tolerances are interpreted at the scene's pixel scale, which is the knob planck gives a pixel-coordinate game - positions, gravity (px/s²) and velocity (px/s) then carry over unconverted. Contact count = the world contact list filtered by isTouching(), a touching collider-pair count. Rays are answered from planck's dynamic tree, but World.rayCast is Box2D's non-solid ray (an origin inside a fixture is not a hit). Continuous collision runs for every body (planck's default), where exojs and rapier restrict it to bullets and matter has none.",
   rapier:
-    'rapier arm: TGS-Soft solver at rapier defaults (4 solver / 1 internal PGS iterations), auto-sleeping ON; default lengthUnit=1 is fed a px-scale world (tuned for ~1-unit objects), exactly what attaching rapier with pixel coordinates yields. Contact count = collider pairs with a solid narrow-phase manifold (numContacts > 0), deduped.',
+    'rapier arm (WASM reference ceiling, not a pure-JS peer): TGS-Soft solver at rapier defaults (4 solver / 1 internal PGS iterations), auto-sleeping ON; default lengthUnit=1 is fed a px-scale world (tuned for ~1-unit objects), exactly what attaching rapier with pixel coordinates yields. Contact count = collider pairs with a solid narrow-phase manifold (numContacts > 0), deduped.',
 };
 
 /**
@@ -215,6 +225,7 @@ export const runPhysicsMatrix = (
       'Scenes are warmed to steady state before timing; the per-cell warmupSteps/timedSteps counts are recorded for honesty.',
       'All arms build the byte-identical scene (bodies, positions, shapes, sizes, static/dynamic split, gravity, perturbed-body set) from the shared deterministic RNG, and the perturbed-body selection is asserted equal across arms before each cell is timed.',
       'Each arm runs at its own engine defaults for solver iterations, contact model and sleeping — those engine differences are the measured quantity in a native-vs-adapter comparison, disclosed per arm below.',
+      'Arm roles: matter-js and planck are the PURE-JS PEERS exojs-physics is compared against; rapier is a Rust/WASM engine and stands as the REFERENCE CEILING for what leaving JavaScript buys, not as a peer a JS solver is expected to match.',
       ...armCaveats,
     ],
   };

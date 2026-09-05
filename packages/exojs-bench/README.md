@@ -2,7 +2,7 @@
 
 Private, reproducible cross-library rendering/physics benchmark harness for ExoJS.
 Not published. Compares ExoJS against competitor libraries (Pixi, Phaser,
-Excalibur, matter-js, rapier2d-compat) kept in an isolated `competitors/`
+Excalibur, matter-js, planck, rapier2d-compat) kept in an isolated `competitors/`
 manifest — see `competitors/package.json` and `competitors/link.ts` for why
 they're excluded from the workspace install.
 
@@ -74,6 +74,14 @@ carries one cause. Every arm builds the identical scene from the
 identical seed; the harness asserts that by comparing each arm's mutation-index
 signature against a canonical selection and failing the cell loudly on any
 divergence.
+
+The physics arms are not one flat field of competitors. **matter-js** and
+**planck** are the pure-JS **peers** — the libraries an ExoJS app would
+realistically attach instead of the native runtime, and what `exojs-physics` is
+compared against. **rapier** is a Rust engine compiled to WASM and is read as the
+**reference ceiling**: it measures what leaving JavaScript buys, not a bar a JS
+solver is expected to reach. Each arm's solver iterations, sleeping default and
+contact-count semantics are disclosed per arm in every report's caveats block.
 
 What is **not** measured: game-loop update, input, physics (in the rendering
 domain), asset loading, GC headroom — everything outside `mutate` +
