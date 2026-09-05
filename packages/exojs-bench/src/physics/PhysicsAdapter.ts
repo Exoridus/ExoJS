@@ -76,6 +76,20 @@ export interface PhysicsArchetypeSpec {
    * place.
    */
   readonly dynamicMaterial?: { readonly friction: number; readonly restitution: number };
+  /**
+   * Per-body-count warmup override, in fixed `1/60 s` steps, keyed by the
+   * exact values in {@link bodyCounts}. Replaces the shared `warmupStepsFor`
+   * schedule for this archetype's cells only; every other archetype keeps
+   * that schedule unchanged.
+   *
+   * `warmupStepsFor` is sized for a scene that reaches ITS steady state well
+   * inside the shared budget - a settled stack, a bouncing field, a resting
+   * mix. An archetype whose steady state takes longer needs its own number:
+   * a warmup that stops mid-transition times a mix of still-active and
+   * already-steady bodies, which is neither cost regime and not a number
+   * worth reporting.
+   */
+  readonly warmupStepsOverride?: Readonly<Record<number, number>>;
 }
 
 /** One physics matrix cell: an (engine, config, archetype, body count) combination to measure. */

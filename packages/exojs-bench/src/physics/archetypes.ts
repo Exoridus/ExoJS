@@ -79,6 +79,23 @@ export const PHYSICS_ARCHETYPES: readonly PhysicsArchetypeSpec[] = [
   // to rest, which is the one condition under which sleeping is observable at
   // all: falling contact counts and falling step time on an arm that sleeps,
   // and neither on one that does not.
+  //
+  // It also needs materially more warmup than the shared `warmupStepsFor`
+  // schedule gives every other archetype. Every dynamic body starts with a
+  // random impulse across the WHOLE field (not one settling stack), so the
+  // pile has to absorb that energy through friction before it can sleep, and
+  // measured directly (an exojs world instrumented with `PhysicsBody.isSleeping`)
+  // that takes materially longer than the shared schedule budgets: at n=200
+  // the field is still fully awake at step 240 and only finishes settling
+  // around step 300; at n=4000 it is still awake past step 480 and only
+  // finishes around step 540; at n=1000 it settles by step 360 but a late
+  // arrival re-triggers a brief wake across the whole pile around step
+  // 690-730 before it goes back to sleep for good by step 750. Warming only
+  // to the shared schedule would time that unsettled transition - neither
+  // this archetype's steady state nor `many-dynamic`'s - so `warmupStepsOverride`
+  // gives each body count its own budget, set with headroom past the last
+  // observed wake: 360 (n=200), 900 (n=1000, clearing the ~730 re-wake), 720
+  // (n=4000).
   {
     id: 'settling-pile',
     scene: 'many-dynamic',
@@ -86,6 +103,7 @@ export const PHYSICS_ARCHETYPES: readonly PhysicsArchetypeSpec[] = [
     gravity: { x: 0, y: 300 },
     perturbFraction: 1,
     dynamicMaterial: { friction: 0.5, restitution: 0 },
+    warmupStepsOverride: { 200: 360, 1_000: 900, 4_000: 720 },
   },
 ];
 
@@ -107,12 +125,24 @@ export const timedStepsFor = (bodyCount: number): number => {
  * before timing, so the measured median reflects the steady-state solver cost
  * rather than the transient settling spike. A settling stack needs a few seconds
  * of simulated time; 240 steps at `1/60` is 4 s.
+ *
+ * This is the DEFAULT every archetype gets unless it names a
+ * {@link PhysicsArchetypeSpec.warmupStepsOverride} for the body count in
+ * question; see {@link warmupStepsForArchetype}.
  */
 export const warmupStepsFor = (bodyCount: number): number => {
   if (bodyCount >= 4_000) return 180;
 
   return 240;
 };
+
+/**
+ * Warmup-step count for one archetype's cell at `bodyCount`: the archetype's
+ * own {@link PhysicsArchetypeSpec.warmupStepsOverride} for that exact body
+ * count if it names one, else the shared {@link warmupStepsFor} schedule.
+ */
+export const warmupStepsForArchetype = (archetype: PhysicsArchetypeSpec, bodyCount: number): number =>
+  archetype.warmupStepsOverride?.[bodyCount] ?? warmupStepsFor(bodyCount);
 
 /** Scene shapes, in a fixed order that gives each one a stable seed ordinal. */
 const SCENE_SHAPES: readonly PhysicsSceneShape[] = ['box-stack', 'many-dynamic', 'mixed-static-dynamic', 'joint-chains'];
@@ -143,7 +173,7 @@ export const buildPhysicsMatrix = (adapters: readonly PhysicsAdapter[]): Physics
           config: adapter.config,
           archetype: archetype.id,
           bodyCount,
-          warmupSteps: warmupStepsFor(bodyCount),
+          warmupSteps: warmupStepsForArchetype(archetype, bodyCount),
           timedSteps: timedStepsFor(bodyCount),
         });
       }

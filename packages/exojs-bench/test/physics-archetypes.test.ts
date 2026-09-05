@@ -1,5 +1,5 @@
 import { describePhysicsScene, rayForStep } from '../src/physics/adapters/scene';
-import { PHYSICS_ARCHETYPES, seedFor } from '../src/physics/archetypes';
+import { PHYSICS_ARCHETYPES, seedFor, warmupStepsFor, warmupStepsForArchetype } from '../src/physics/archetypes';
 import type { PhysicsArchetypeId, PhysicsArchetypeSpec } from '../src/physics/PhysicsAdapter';
 
 const byId = Object.fromEntries(PHYSICS_ARCHETYPES.map(archetype => [archetype.id, archetype])) as Record<PhysicsArchetypeId, PhysicsArchetypeSpec>;
@@ -172,6 +172,48 @@ describe('settling-pile', () => {
     for (const body of dynamicBodies) {
       expect(body.friction).toBe(0.5);
       expect(body.restitution).toBe(0);
+    }
+  });
+
+  test('names a warmup override for every one of its body counts, each larger than the shared schedule', () => {
+    const settling = byId['settling-pile'];
+
+    expect(settling.warmupStepsOverride).toBeDefined();
+
+    for (const bodyCount of settling.bodyCounts) {
+      expect(settling.warmupStepsOverride![bodyCount]).toBeGreaterThan(warmupStepsFor(bodyCount));
+    }
+  });
+
+  test('warmupStepsForArchetype resolves the override for the settling pile', () => {
+    const settling = byId['settling-pile'];
+
+    for (const bodyCount of settling.bodyCounts) {
+      expect(warmupStepsForArchetype(settling, bodyCount)).toBe(settling.warmupStepsOverride![bodyCount]);
+    }
+  });
+});
+
+describe('warmupStepsForArchetype', () => {
+  test('falls back to the shared schedule for every archetype that names no override', () => {
+    for (const archetype of PHYSICS_ARCHETYPES) {
+      if (archetype.warmupStepsOverride !== undefined) continue;
+
+      for (const bodyCount of archetype.bodyCounts) {
+        expect(warmupStepsForArchetype(archetype, bodyCount)).toBe(warmupStepsFor(bodyCount));
+      }
+    }
+  });
+
+  test('leaves every pre-existing archetype on the shared schedule, unaffected by the settling-pile override', () => {
+    for (const id of ['box-stack', 'many-dynamic', 'mixed-static-dynamic', 'raycast', 'body-churn', 'joints'] as const) {
+      const archetype = byId[id];
+
+      expect(archetype.warmupStepsOverride).toBeUndefined();
+
+      for (const bodyCount of archetype.bodyCounts) {
+        expect(warmupStepsForArchetype(archetype, bodyCount)).toBe(warmupStepsFor(bodyCount));
+      }
     }
   });
 });
