@@ -189,7 +189,9 @@ const LAYOUT_READERS: {
 } = {
   maxWidth: readNumber,
   maxHeight: readNumber,
+  maxLines: readNumber,
   overflow: (source, key) => readEnum(source, key, OVERFLOWS),
+  ellipsis: readString,
   letterSpacing: readNumber,
   direction: (source, key) => readEnum(source, key, DIRECTIONS),
   locale: readString,

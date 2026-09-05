@@ -102,7 +102,9 @@ Text flow and overflow come from [`LayoutOptions`](/ExoJS/en/api/layout-options/
 |----------|------|---------|-------------|
 | `maxWidth` | `number` | — | Word-wrap boundary in pixels; longer lines break at word boundaries |
 | `maxHeight` | `number` | — | Vertical boundary in pixels; only whole lines that fit are kept. No effect on its own — pair it with `overflow` |
-| `overflow` | `'visible' \| 'clip' \| 'ellipsis'` | `'visible'` | What happens to lines that do not fit `maxHeight`: keep them all, drop them, or drop them and mark the last visible line with `…` |
+| `maxLines` | `number` | — | Hard cap on the laid-out line count, applied after wrapping. Clips on its own; pair with `overflow: 'ellipsis'` for a marker |
+| `overflow` | `'visible' \| 'clip' \| 'ellipsis'` | `'visible'` | What happens to lines that do not fit `maxHeight` or `maxLines`: keep them all, drop them, or drop them and mark the last visible line |
+| `ellipsis` | `string` | `'…'` | Marker appended under `overflow: 'ellipsis'`. `'...'` for the three-period spelling, `''` to truncate silently |
 | `letterSpacing` | `number` | `0` | Extra pixel gap between glyphs |
 | `direction` | `'ltr' \| 'rtl'` | `'ltr'` | `'rtl'` reverses each line's glyphs after wrapping; no full bidi or Arabic shaping, and `align` stays literal |
 | `breakWords` | `boolean` | `false` | Break words wider than `maxWidth` at character boundaries |
@@ -140,6 +142,37 @@ const wrapped = new Text(longString, {
     breakWords: true,
 });
 ```
+
+### Clamping to a line count
+
+`maxLines` caps how many lines survive, counted after wrapping. It clips on its own, so it needs no `overflow` policy; add `overflow: 'ellipsis'` when the truncation should be visible:
+
+```ts
+import { Text } from '@codexo/exojs';
+
+const body = 'A long article body that runs well past three lines of the layout width.';
+
+const summary = new Text(body, {
+    fontSize: 16,
+    maxWidth: 320,
+    maxLines: 3,
+    overflow: 'ellipsis',
+});
+```
+
+The marker defaults to `'…'` and `ellipsis` replaces it — `'...'` for the three-period spelling, `''` to truncate with no marker at all. Whatever it is, it is measured in the same font as the text, and the line gives up whole grapheme clusters until the two fit `maxWidth` together.
+
+Under a line cap the marker also reaches a line that no wrap could shorten. `maxLines: 1` on a single unbreakable word drops no line at all, yet the word still overflows `maxWidth` — and that is the case a one-line label wanted the marker for:
+
+```ts
+const label = new Text('Supercalifragilistic', {
+    maxWidth: 120,
+    maxLines: 1,
+    overflow: 'ellipsis',
+});
+```
+
+`maxHeight` expresses the same clamp in pixels and still requires an `overflow` policy. Set both and the tighter one wins.
 
 ## International text
 

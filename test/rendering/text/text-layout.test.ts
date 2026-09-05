@@ -461,6 +461,89 @@ describe('layoutText vertical overflow', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Line cap - maxLines + ellipsis marker
+// ---------------------------------------------------------------------------
+
+describe('layoutText maxLines', () => {
+  const capStyle = (): TextStyle => new TextStyle({ fontSize: 16, lineHeight: 1.2, align: 'left' });
+
+  test('clips the line count on its own, with no overflow policy', () => {
+    const { placements, lines } = layoutText('A\nB\nC', capStyle(), { maxLines: 2 }, makeAtlas());
+
+    expect(lines).toHaveLength(2);
+    expect(placements).toHaveLength(2);
+  });
+
+  test('reports the advance height of the kept lines only', () => {
+    const { advance } = layoutText('A\nB\nC\nD', capStyle(), { maxLines: 2 }, makeAtlas());
+
+    expect(advance.height).toBeCloseTo(38.4);
+  });
+
+  test('counts wrapped lines, not hard breaks', () => {
+    // advance 10, maxWidth 30 → 'AAA' per line, so 'AAA AAA AAA' wraps to three.
+    const { lines } = layoutText('AAA AAA AAA', capStyle(), { maxWidth: 30, maxLines: 2 }, makeAtlas());
+
+    expect(lines).toHaveLength(2);
+  });
+
+  test('marks the last kept line when overflow is "ellipsis"', () => {
+    const { placements } = layoutText('A\nB\nC', capStyle(), { maxLines: 2, overflow: 'ellipsis' }, makeAtlas());
+
+    // 'A', then 'B' plus the marker on the second line.
+    expect(placements).toHaveLength(3);
+    expect(placements[2].y).toBeCloseTo(19.2);
+  });
+
+  test('takes the tighter of maxLines and maxHeight', () => {
+    const threeLines = { maxHeight: 60, overflow: 'clip' } as const;
+
+    expect(layoutText('A\nB\nC\nD', capStyle(), threeLines, makeAtlas()).lines).toHaveLength(3);
+    expect(layoutText('A\nB\nC\nD', capStyle(), { ...threeLines, maxLines: 2 }, makeAtlas()).lines).toHaveLength(2);
+    expect(layoutText('A\nB\nC\nD', capStyle(), { ...threeLines, maxLines: 9 }, makeAtlas()).lines).toHaveLength(3);
+  });
+
+  test('rejects a maxLines below one', () => {
+    expect(() => layoutText('A', capStyle(), { maxLines: 0 }, makeAtlas())).toThrow(/maxLines/);
+  });
+});
+
+describe('layoutText ellipsis marker', () => {
+  const markerStyle = (): TextStyle => new TextStyle({ fontSize: 16, lineHeight: 1.2, align: 'left' });
+
+  test('a multi-cluster marker is measured cluster by cluster', () => {
+    // advance 10, maxWidth 50 → five slots. '...' claims three of them, so only
+    // two source characters survive.
+    const { lines } = layoutText('ABCDEFG', markerStyle(), { maxWidth: 50, maxLines: 1, overflow: 'ellipsis', ellipsis: '...' }, makeAtlas());
+
+    expect(lines[0].count).toBe(5);
+    expect(lines[0].sourceEnd).toBe(2);
+  });
+
+  test('an empty marker truncates without appending anything', () => {
+    const { placements } = layoutText('A\nB\nC', markerStyle(), { maxLines: 1, overflow: 'ellipsis', ellipsis: '' }, makeAtlas());
+
+    expect(placements).toHaveLength(1);
+  });
+
+  test('marks a capped line that overflows maxWidth even when no line was dropped', () => {
+    // One unbreakable word: nothing to wrap and nothing to drop, so only the
+    // width check can reach it.
+    const { placements } = layoutText('ABCDEFG', markerStyle(), { maxWidth: 50, maxLines: 1, overflow: 'ellipsis', ellipsis: '*' }, makeAtlas());
+
+    expect(placements).toHaveLength(5);
+    expect(placements.at(-1)!.sourceStart).toBe(4);
+  });
+
+  test('the marker stands for nothing in the source', () => {
+    const { placements } = layoutText('ABCD\nE', markerStyle(), { maxWidth: 30, maxLines: 1, overflow: 'ellipsis', ellipsis: '*' }, makeAtlas());
+    const marker = placements.at(-1)!;
+
+    expect(marker.sourceStart).toBe(marker.sourceEnd);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Text direction
 // ---------------------------------------------------------------------------
 

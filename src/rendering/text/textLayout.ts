@@ -1,3 +1,5 @@
+import { assert } from '#core/dev';
+
 import type { LayoutOptions } from './LayoutOptions';
 import { graphemes, graphemeStarts, isTrivialText, textRuns } from './segmentation';
 import type { LineShaper } from './shaping';
@@ -52,9 +54,9 @@ export const emptyTextLayout = (): TextLayoutResult => ({
  * options.
  *
  * Handles `\n` line breaks, left/center/right/justify alignment, `letterSpacing`,
- * `leading`, `breakWords`, `whiteSpace` preprocessing, `maxHeight` overflow
- * (`clip` / `ellipsis`), right-to-left flow, and optional kerning (if the
- * provider implements `getKerning`).
+ * `leading`, `breakWords`, `whiteSpace` preprocessing, `maxHeight` / `maxLines`
+ * overflow (`clip` / `ellipsis`), right-to-left flow, and optional kerning (if
+ * the provider implements `getKerning`).
  *
  * The unit of layout is the grapheme cluster, not the code point: a combining
  * sequence, a ZWJ emoji and a regional-indicator flag are each placed as one
@@ -122,24 +124,32 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
     hardStart += hard.length + 1;
   }
 
-  // ── Vertical overflow ─────────────────────────────────────────────────────
+  // ── Overflow ──────────────────────────────────────────────────────────────
   // Only whole line boxes count as fitting: a line whose baseline row would
   // extend past maxHeight is dropped rather than rendered half-cut.
-  if (maxHeight !== undefined && overflow !== 'visible' && computedLineHeight > 0) {
-    const maxLines = Math.max(0, Math.floor(maxHeight / computedLineHeight));
+  const lineCap = _resolveLineCap(layout.maxLines, maxHeight, overflow, computedLineHeight);
+  const dropped = lineCap !== null && allLines.length > lineCap;
 
-    if (allLines.length > maxLines) {
-      allLines.length = maxLines;
+  if (dropped) allLines.length = lineCap;
 
-      if (overflow === 'ellipsis' && maxLines > 0) {
-        // In-bounds: maxLines > 0 and allLines.length === maxLines.
-        const last = allLines[maxLines - 1]!;
-        const truncated = shaped
-          ? _ellipsizeShaped(last.text, fontSize, shaper, maxWidth, locale)
-          : _ellipsize(last.text, fontSize, provider, maxWidth, letterSpacing, locale);
+  if (lineCap !== null && overflow === 'ellipsis' && allLines.length > 0) {
+    const lastIndex = allLines.length - 1;
+    // In-bounds: allLines.length > 0.
+    const last = allLines[lastIndex]!;
+    // A capped run also marks a line that no wrap could shorten - a single
+    // unbreakable word under `maxLines: 1` is exactly the case a caller reaches
+    // for the marker to cover, and dropping no line at all is how it presents.
+    const tooWide =
+      maxWidth !== undefined &&
+      (shaped ? shaper.measureLine(last.text, fontSize) : _lineAdvance(last.text, fontSize, provider, letterSpacing, locale)) > maxWidth;
 
-        allLines[maxLines - 1] = { text: truncated.text, start: last.start, contentLength: truncated.contentLength };
-      }
+    if (dropped || tooWide) {
+      const ellipsis = layout.ellipsis ?? defaultEllipsis;
+      const truncated = shaped
+        ? _ellipsizeShaped(last.text, ellipsis, fontSize, shaper, maxWidth, locale)
+        : _ellipsize(last.text, ellipsis, fontSize, provider, maxWidth, letterSpacing, locale);
+
+      allLines[lastIndex] = { text: truncated.text, start: last.start, contentLength: truncated.contentLength };
     }
   }
 
@@ -417,14 +427,47 @@ export const buildTextPageQuads = (placements: readonly GlyphPlacement[]): TextP
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
-/** Character appended to the last visible line under `overflow: 'ellipsis'`. */
-const ELLIPSIS = '…';
+/** Marker appended to the last kept line under `overflow: 'ellipsis'`. */
+const defaultEllipsis = '…';
 
 /** A line an overflow cut short, plus how much of it still stands for source characters. */
 interface TruncatedLine {
   text: string;
   contentLength: number;
 }
+
+/**
+ * How many lines survive, or `null` when nothing caps them.
+ *
+ * `maxLines` clips on its own because that is what asking for a line count
+ * means; `maxHeight` only clips once an `overflow` policy opts in. Where both
+ * apply the tighter one wins.
+ */
+const _resolveLineCap = (
+  maxLines: number | undefined,
+  maxHeight: number | undefined,
+  overflow: 'visible' | 'clip' | 'ellipsis',
+  computedLineHeight: number,
+): number | null => {
+  let cap: number | null = null;
+
+  if (maxLines !== undefined) {
+    assert(Number.isFinite(maxLines) && maxLines >= 1, 'LayoutOptions.maxLines must be a positive integer.');
+    cap = Math.max(0, Math.floor(maxLines));
+  }
+
+  if (maxHeight !== undefined && overflow !== 'visible' && computedLineHeight > 0) {
+    const fitting = Math.max(0, Math.floor(maxHeight / computedLineHeight));
+
+    cap = cap === null ? fitting : Math.min(cap, fitting);
+  }
+
+  return cap;
+};
+
+/** Advance width of a laid-out line, without the letter-spacing gap after its last cluster. */
+const _lineAdvance = (line: string, fontSize: number, provider: GlyphProvider, letterSpacing: number, locale: string | undefined): number =>
+  line.length === 0 ? 0 : _cursorAdvance(line, fontSize, provider, letterSpacing, locale) - letterSpacing;
 
 /** Advance width of a run of grapheme clusters, without the gap after the last one. */
 const _measureClusters = (clusters: readonly string[], fontSize: number, provider: GlyphProvider, letterSpacing: number): number => {
@@ -441,49 +484,61 @@ const _measureClusters = (clusters: readonly string[], fontSize: number, provide
 };
 
 /**
- * Append an ellipsis to `line`, dropping trailing grapheme clusters until the
+ * Append `ellipsis` to `line`, dropping trailing grapheme clusters until the
  * result fits `maxWidth`. Whole clusters go, so truncation never leaves a
  * dangling combining mark or half a flag behind. Without a `maxWidth` there is
- * nothing to fit against, so the ellipsis is simply appended.
+ * nothing to fit against, so the marker is simply appended.
  */
 const _ellipsize = (
   line: string,
+  ellipsis: string,
   fontSize: number,
   provider: GlyphProvider,
   maxWidth: number | undefined,
   letterSpacing: number,
   locale: string | undefined,
 ): TruncatedLine => {
-  if (maxWidth === undefined) return { text: line + ELLIPSIS, contentLength: line.length };
+  if (maxWidth === undefined) return { text: line + ellipsis, contentLength: line.length };
 
   const clusters = graphemes(line, locale);
+  // The marker is laid out cluster by cluster like any other text, so it has to
+  // be measured that way too - handing it to the provider whole would ask the
+  // atlas for one glyph standing for the entire string.
+  const markerClusters = ellipsis.length === 0 ? [] : graphemes(ellipsis, locale);
 
-  while (clusters.length > 0 && _measureClusters([...clusters, ELLIPSIS], fontSize, provider, letterSpacing) > maxWidth) {
+  while (clusters.length > 0 && _measureClusters([...clusters, ...markerClusters], fontSize, provider, letterSpacing) > maxWidth) {
     clusters.pop();
   }
 
   const kept = clusters.join('');
 
-  return { text: kept + ELLIPSIS, contentLength: kept.length };
+  return { text: kept + ellipsis, contentLength: kept.length };
 };
 
 /**
  * The shaped counterpart of {@link _ellipsize}. Every candidate is measured
- * complete, ellipsis included: for contextual text the width of a prefix plus
- * the width of the ellipsis is not the width of the two together.
+ * complete, marker included: for contextual text the width of a prefix plus
+ * the width of the marker is not the width of the two together.
  */
-const _ellipsizeShaped = (line: string, fontSize: number, shaper: LineShaper, maxWidth: number | undefined, locale: string | undefined): TruncatedLine => {
-  if (maxWidth === undefined) return { text: line + ELLIPSIS, contentLength: line.length };
+const _ellipsizeShaped = (
+  line: string,
+  ellipsis: string,
+  fontSize: number,
+  shaper: LineShaper,
+  maxWidth: number | undefined,
+  locale: string | undefined,
+): TruncatedLine => {
+  if (maxWidth === undefined) return { text: line + ellipsis, contentLength: line.length };
 
   const clusters = graphemes(line, locale);
 
-  while (clusters.length > 0 && shaper.measureLine(`${clusters.join('')}${ELLIPSIS}`, fontSize) > maxWidth) {
+  while (clusters.length > 0 && shaper.measureLine(`${clusters.join('')}${ellipsis}`, fontSize) > maxWidth) {
     clusters.pop();
   }
 
   const kept = clusters.join('');
 
-  return { text: kept + ELLIPSIS, contentLength: kept.length };
+  return { text: kept + ellipsis, contentLength: kept.length };
 };
 
 /**
