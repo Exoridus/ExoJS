@@ -21,7 +21,7 @@
  */
 
 /** Schema version this reader understands; anything else is refused. */
-const SUPPORTED_SCHEMA_VERSION = 3;
+const SUPPORTED_SCHEMA_VERSION = 4;
 
 /**
  * Arms that stand as a reference ceiling rather than as a peer.
@@ -138,6 +138,22 @@ export interface PrereleaseStamp {
   readonly evidence: string;
 }
 
+/** How a platform's major version was arrived at. */
+export type PlatformVersionSource = 'detected' | 'declared' | 'undetermined';
+
+/**
+ * The operating system's major version, and what that value rests on.
+ *
+ * `declared` marks a version the runner stated rather than one the host
+ * reported, which is the only source available where the kernel version does
+ * not name the product version.
+ */
+export interface PlatformVersionStamp {
+  readonly major: number;
+  readonly source: PlatformVersionSource;
+  readonly evidence: string;
+}
+
 /** Rendering provenance for one backend. */
 export interface RenderingStamp {
   readonly backend: ProfileBackendName;
@@ -148,6 +164,8 @@ export interface RenderingStamp {
   readonly browserVersion: string;
   /** Operating system of the host that drove the browser. */
   readonly os: string;
+  /** The operating system's major version, and what established it. */
+  readonly platformVersion: PlatformVersionStamp;
   /** Whether the platform is a pre-release build, and what established that. */
   readonly prerelease: PrereleaseStamp;
   /** Launch flags the run used; empty under a browser that takes none. */
@@ -165,12 +183,15 @@ export interface ProfileHost {
   readonly cpu: string;
   readonly cpuCount: number;
   readonly os: string;
+  readonly platformVersion: PlatformVersionStamp;
   readonly arch: string;
 }
 
 /** Physics provenance; physics has no backend axis, so there is one stamp. */
 export interface PhysicsStamp {
   readonly host: ProfileHost;
+  /** Whether the platform is a pre-release build; a physics run drives no browser, so nothing here is detected. */
+  readonly prerelease: PrereleaseStamp;
   readonly fixedDelta: number;
   readonly caveats: readonly string[];
   readonly engineVersion: string;
@@ -198,12 +219,28 @@ export interface PhysicsProfile {
   readonly section: ProfileSection;
 }
 
+/** The operating system a profile was measured on, spelled out behind the slug's OS part. */
+export interface ProfilePlatform {
+  /** Normalized name, e.g. `windows`, `macos`, `linux`. */
+  readonly name: string;
+  /** Major version, e.g. 11 for Windows 11 or 27 for macOS 27. */
+  readonly version: number;
+  /** Whether the version was read from the host or stated by the runner. */
+  readonly versionSource: 'detected' | 'declared';
+  /** True when the platform is a pre-release build. */
+  readonly prerelease: boolean;
+}
+
 /** The machine a document describes. */
 export interface BenchProfile {
   readonly slug: string;
+  /** The GPU the adapter string names, or the CPU model when no adapter names a machine. */
   readonly gpu: string;
+  /** The slug's operating-system part: name, major version, and `-beta` for a pre-release build. */
   readonly os: string;
   readonly browser: string;
+  /** The operating system behind `os`, in parts. */
+  readonly platform: ProfilePlatform;
   readonly engineVersion: string;
   readonly measuredAt: string;
   /** How many separate harness runs every measured domain pools. */

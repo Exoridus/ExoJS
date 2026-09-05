@@ -84,6 +84,7 @@ const RENDERING_STAMP_FIELDS = [
   'browser',
   'browserVersion',
   'os',
+  'platformVersion',
   'prerelease',
   'headless',
   'software',
@@ -95,12 +96,80 @@ const RENDERING_STAMP_FIELDS = [
 const PRERELEASE_SOURCES = new Set(['detected', 'declared', 'assumed-stable']);
 
 /**
- * The two rendering-stamp fields a presence check cannot express.
+ * How a stamp may say its platform version was established.
  *
- * `flags` is legitimately empty under a browser that takes no launch
- * arguments, so it is checked for being a list rather than for content, and
- * `prerelease` is only worth anything if it says how it was arrived at - a bare
- * boolean would let an unestablished status read as a stable platform.
+ * `undetermined` is deliberately absent. It is a legitimate state for a run
+ * artifact, but a published profile's file name carries the version, so a file
+ * whose stamps establish none is claiming a version nothing behind it supports.
+ */
+const PLATFORM_VERSION_SOURCES = new Set(['detected', 'declared']);
+
+/** Major versions a stamp or profile may claim; wider than any shipping platform, narrow enough to catch a typo or a whole version string. */
+const PLATFORM_MAJOR_RANGE = { minimum: 1, maximum: 99 };
+
+const isPlausibleMajor = (value: unknown): boolean =>
+  typeof value === 'number' && Number.isInteger(value) && value >= PLATFORM_MAJOR_RANGE.minimum && value <= PLATFORM_MAJOR_RANGE.maximum;
+
+/**
+ * The platform version behind the file name has to name a version, say how it
+ * was arrived at, and rest on something a reader can check.
+ */
+const checkPlatformVersion = (stamp: unknown, where: string, problems: string[]): void => {
+  if (!isRecord(stamp)) {
+    return;
+  }
+
+  const version = stamp['platformVersion'];
+
+  if (!isRecord(version)) {
+    return;
+  }
+
+  if (!isPlausibleMajor(version['major'])) {
+    problems.push(
+      `${where}.platformVersion.major is ${JSON.stringify(version['major'])}, which is not a plausible operating-system major version (${String(PLATFORM_MAJOR_RANGE.minimum)} to ${String(PLATFORM_MAJOR_RANGE.maximum)})`,
+    );
+  }
+
+  if (typeof version['source'] !== 'string' || !PLATFORM_VERSION_SOURCES.has(version['source'])) {
+    problems.push(
+      `${where}.platformVersion.source is ${JSON.stringify(version['source'])}, which does not say how the version was established (expected one of ${[...PLATFORM_VERSION_SOURCES].join(', ')})`,
+    );
+  }
+
+  if (typeof version['evidence'] !== 'string' || version['evidence'].trim().length === 0) {
+    problems.push(`${where}.platformVersion.evidence is missing or empty, so the version in the file name rests on nothing a reader can check`);
+  }
+};
+
+/** A pre-release stamp is only worth anything if it says how it was arrived at; a bare boolean would let an unestablished status read as a stable platform. */
+const checkPrereleaseShape = (prerelease: unknown, where: string, problems: string[]): void => {
+  if (!isRecord(prerelease)) {
+    return;
+  }
+
+  if (typeof prerelease['value'] !== 'boolean') {
+    problems.push(`${where}.value is missing or is not a boolean`);
+  }
+
+  if (typeof prerelease['source'] !== 'string' || !PRERELEASE_SOURCES.has(prerelease['source'])) {
+    problems.push(
+      `${where}.source is ${JSON.stringify(prerelease['source'])}, which does not say how the status was established (expected one of ${[...PRERELEASE_SOURCES].join(', ')})`,
+    );
+  }
+
+  if (typeof prerelease['evidence'] !== 'string' || prerelease['evidence'].trim().length === 0) {
+    problems.push(`${where}.evidence is missing or empty, so the status rests on nothing a reader can check`);
+  }
+};
+
+/**
+ * The rendering-stamp fields a presence check cannot express.
+ *
+ * `flags` is legitimately empty under a browser that takes no launch arguments,
+ * so it is checked for being a list rather than for content; `prerelease` and
+ * `platformVersion` each carry a value that only means something together with
+ * the source and evidence beside it.
  */
 const checkRenderingStampShape = (stamp: unknown, where: string, problems: string[]): void => {
   if (!isRecord(stamp)) {
@@ -111,29 +180,51 @@ const checkRenderingStampShape = (stamp: unknown, where: string, problems: strin
     problems.push(`${where}.flags is missing or is not a list of launch flags`);
   }
 
-  const prerelease = stamp['prerelease'];
+  checkPrereleaseShape(stamp['prerelease'], `${where}.prerelease`, problems);
+  checkPlatformVersion(stamp, where, problems);
+};
+const PHYSICS_STAMP_FIELDS = ['host', 'prerelease', 'fixedDelta', 'caveats', 'engineVersion', 'timestamp'] as const;
+const HOST_FIELDS = ['node', 'cpu', 'cpuCount', 'os', 'platformVersion', 'arch'] as const;
+const PROFILE_FIELDS = ['slug', 'gpu', 'os', 'browser', 'platform', 'engineVersion', 'measuredAt', 'runs'] as const;
+const PLATFORM_FIELDS = ['name', 'version', 'versionSource', 'prerelease'] as const;
 
-  if (!isRecord(prerelease)) {
+/**
+ * The operating system the file name claims.
+ *
+ * The slug is checked against it rather than merely alongside it: the name is
+ * the only thing that decides which file a re-measurement overwrites, so a
+ * profile whose declared platform and file name disagree would publish one
+ * machine's numbers under another platform's heading.
+ */
+const checkProfilePlatform = (platform: unknown, os: unknown, problems: string[]): void => {
+  if (!isRecord(platform)) {
     return;
   }
 
-  if (typeof prerelease['value'] !== 'boolean') {
-    problems.push(`${where}.prerelease.value is missing or is not a boolean`);
-  }
+  problems.push(...missingFields(platform, [...PLATFORM_FIELDS], 'profile.platform'));
 
-  if (typeof prerelease['source'] !== 'string' || !PRERELEASE_SOURCES.has(prerelease['source'])) {
+  if (!isPlausibleMajor(platform['version'])) {
     problems.push(
-      `${where}.prerelease.source is ${JSON.stringify(prerelease['source'])}, which does not say how the status was established (expected one of ${[...PRERELEASE_SOURCES].join(', ')})`,
+      `profile.platform.version is ${JSON.stringify(platform['version'])}, which is not a plausible operating-system major version (${String(PLATFORM_MAJOR_RANGE.minimum)} to ${String(PLATFORM_MAJOR_RANGE.maximum)})`,
     );
   }
 
-  if (typeof prerelease['evidence'] !== 'string' || prerelease['evidence'].trim().length === 0) {
-    problems.push(`${where}.prerelease.evidence is missing or empty, so the status rests on nothing a reader can check`);
+  if (typeof platform['versionSource'] !== 'string' || !PLATFORM_VERSION_SOURCES.has(platform['versionSource'])) {
+    problems.push(
+      `profile.platform.versionSource is ${JSON.stringify(platform['versionSource'])}, which does not say how the version was established (expected one of ${[...PLATFORM_VERSION_SOURCES].join(', ')})`,
+    );
+  }
+
+  if (typeof platform['prerelease'] !== 'boolean') {
+    problems.push('profile.platform.prerelease is missing or is not a boolean');
+  }
+
+  const expected = `${String(platform['name'])}-${String(platform['version'])}${platform['prerelease'] === true ? '-beta' : ''}`;
+
+  if (typeof os === 'string' && os !== expected) {
+    problems.push(`profile.os '${os}' does not spell out profile.platform ('${expected}'), so the file name claims a platform the document does not describe`);
   }
 };
-const PHYSICS_STAMP_FIELDS = ['host', 'fixedDelta', 'caveats', 'engineVersion', 'timestamp'] as const;
-const HOST_FIELDS = ['node', 'cpu', 'cpuCount', 'os', 'arch'] as const;
-const PROFILE_FIELDS = ['slug', 'gpu', 'os', 'browser', 'engineVersion', 'measuredAt', 'runs'] as const;
 
 /** Collect the arm entries of one domain, reporting any that has no usable version behind it. */
 const checkLibraries = (domain: Fields, where: string, problems: string[]): Fields[] => {
@@ -187,6 +278,8 @@ const checkProfile = (path: string): string[] => {
   const profile = document['profile'];
 
   problems.push(...missingFields(profile, [...PROFILE_FIELDS], 'profile'));
+
+  checkProfilePlatform(isRecord(profile) ? profile['platform'] : undefined, isRecord(profile) ? profile['os'] : undefined, problems);
 
   const slug = isRecord(profile) ? profile['slug'] : undefined;
 
@@ -273,6 +366,8 @@ const checkProfile = (path: string): string[] => {
 
         if (isRecord(stamp)) {
           problems.push(...missingFields(stamp['host'], [...HOST_FIELDS], `physics.runs[${String(run)}].host`));
+          checkPlatformVersion(stamp['host'], `physics.runs[${String(run)}].host`, problems);
+          checkPrereleaseShape(stamp['prerelease'], `physics.runs[${String(run)}].prerelease`, problems);
 
           if (typeof stamp['engineVersion'] === 'string') {
             engineVersions.add(stamp['engineVersion']);

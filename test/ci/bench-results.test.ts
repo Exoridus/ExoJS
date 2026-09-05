@@ -29,7 +29,7 @@ const REPO_ROOT = resolve(import.meta.dirname!, '../..');
 const GATE = 'scripts/verify-bench-results.ts';
 const TSX_CLI = join('node_modules', 'tsx', 'dist', 'cli.mjs');
 
-const SLUG = 'test-gpu-linux-chromium';
+const SLUG = 'test-gpu-linux-26-chromium';
 
 /** How many separate runs a published profile has to pool. */
 const REQUIRED_RUNS = 3;
@@ -40,6 +40,7 @@ const renderingStamp = (run: number) => ({
   browser: 'chromium',
   browserVersion: '151.0.7922.34',
   os: 'linux 6.1.0',
+  platformVersion: { major: 26, source: 'declared', evidence: "the runner declared '26'" },
   prerelease: { value: false, source: 'assumed-stable', evidence: 'no pre-release marker, and none declared' },
   flags: ['--force-device-scale-factor=1'],
   headless: true,
@@ -49,7 +50,15 @@ const renderingStamp = (run: number) => ({
 });
 
 const physicsStamp = (run: number) => ({
-  host: { node: 'v24.14.1', cpu: 'Test CPU', cpuCount: 16, os: 'linux 6.1.0', arch: 'x64' },
+  host: {
+    node: 'v24.14.1',
+    cpu: 'Test CPU',
+    cpuCount: 16,
+    os: 'linux 6.1.0',
+    platformVersion: { major: 26, source: 'declared', evidence: "the runner declared '26'" },
+    arch: 'x64',
+  },
+  prerelease: { value: false, source: 'assumed-stable', evidence: 'no pre-release marker, and none declared' },
   fixedDelta: 0.016666666666666666,
   caveats: ['Measured in one Node process.'],
   engineVersion: '0.17.0',
@@ -61,12 +70,13 @@ const physicsStamp = (run: number) => ({
  * `bench:compare --profile` writes, pooling `runs` separate harness runs.
  */
 const validProfile = (runs = REQUIRED_RUNS): Record<string, unknown> => ({
-  schemaVersion: 3,
+  schemaVersion: 4,
   profile: {
     slug: SLUG,
     gpu: 'test-gpu',
-    os: 'linux',
+    os: 'linux-26',
     browser: 'chromium',
+    platform: { name: 'linux', version: 26, versionSource: 'declared', prerelease: false },
     engineVersion: '0.17.0',
     measuredAt: '2026-01-01T00:00:00.000Z',
     runs,
@@ -202,6 +212,12 @@ describe('verify-bench-results', () => {
     expect(check()).toContain('which this repository does not understand');
   });
 
+  it('rejects a schema version 3 file outright: its file name carried no platform version', () => {
+    write({ ...validProfile(), schemaVersion: 3 });
+
+    expect(check()).toContain('which this repository does not understand');
+  });
+
   it('rejects a stamp that claims a pre-release status without saying how it was established', () => {
     const document = validProfile();
     const rendering = document['rendering'] as { runs: Array<{ provenance: Array<{ prerelease: Record<string, unknown> }> }> };
@@ -310,10 +326,43 @@ describe('verify-bench-results', () => {
     const document = validProfile();
     const profile = document['profile'] as { slug: string };
 
-    profile.slug = 'other-gpu-linux-chromium';
+    profile.slug = 'other-gpu-linux-26-chromium';
 
     write(document);
 
     expect(check()).toContain('does not match the file name');
+  });
+
+  it('rejects a platform version no operating system carries, which would be a typo in the file name', () => {
+    const document = validProfile();
+    const profile = document['profile'] as { platform: { version: number } };
+
+    profile.platform.version = 260;
+
+    write(document);
+
+    expect(check()).toContain('profile.platform.version is 260, which is not a plausible operating-system major version');
+  });
+
+  it('rejects a stamp whose platform version nothing established, which the file name would still claim', () => {
+    const document = validProfile();
+    const rendering = document['rendering'] as { runs: Array<{ provenance: Array<{ platformVersion: Record<string, unknown> }> }> };
+
+    rendering.runs[1]!.provenance[0]!.platformVersion.source = 'undetermined';
+
+    write(document);
+
+    expect(check()).toContain('rendering.runs[1].provenance[0].platformVersion.source');
+  });
+
+  it('rejects a file name that does not spell out the platform the document describes', () => {
+    const document = validProfile();
+    const profile = document['profile'] as { platform: { prerelease: boolean } };
+
+    profile.platform.prerelease = true;
+
+    write(document);
+
+    expect(check()).toContain(`profile.os 'linux-26' does not spell out profile.platform ('linux-26-beta')`);
   });
 });
