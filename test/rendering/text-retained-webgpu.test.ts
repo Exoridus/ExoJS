@@ -471,7 +471,15 @@ describe('WebGPU Text retained-batch record/replay', () => {
       const backend = await createBackend(environment);
       const root = new Container();
       const group = new RetainedContainer();
-      const text = new Text('Hi', { fontSize: 16, gradientColors: [Color.red, Color.blue] });
+      const text = new Text('Hi', {
+        fontSize: 16,
+        gradient: {
+          stops: [
+            { offset: 0, color: Color.red },
+            { offset: 1, color: Color.blue },
+          ],
+        },
+      });
 
       group.addChild(text);
       root.addChild(group);

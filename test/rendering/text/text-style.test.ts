@@ -5,7 +5,7 @@
  */
 
 import { Color } from '#core/Color';
-import { TextStyle } from '#rendering/text/TextStyle';
+import { textGradientMaxStops,TextStyle } from '#rendering/text/TextStyle';
 
 // ---------------------------------------------------------------------------
 // Constructor defaults
@@ -31,8 +31,7 @@ describe('TextStyle constructor defaults', () => {
     expect(style.shadowOffsetY).toBe(0);
     expect(style.shadowAlpha).toBe(0);
     expect(style.shadowBlur).toBe(0);
-    expect(style.gradientColors).toBeNull();
-    expect(style.gradientAxis).toBe('vertical');
+    expect(style.gradient).toBeNull();
   });
 
   test('overrides every default when options are provided', () => {
@@ -53,8 +52,13 @@ describe('TextStyle constructor defaults', () => {
       shadowOffsetY: 3,
       shadowAlpha: 0.5,
       shadowBlur: 0.4,
-      gradientColors: [Color.white, Color.black],
-      gradientAxis: 'horizontal',
+      gradient: {
+        stops: [
+          { offset: 0, color: Color.white },
+          { offset: 1, color: Color.black },
+        ],
+        angle: 90,
+      },
     });
 
     expect(style.fontFamily).toBe('Georgia');
@@ -73,8 +77,8 @@ describe('TextStyle constructor defaults', () => {
     expect(style.shadowOffsetY).toBe(3);
     expect(style.shadowAlpha).toBe(0.5);
     expect(style.shadowBlur).toBe(0.4);
-    expect(style.gradientColors).not.toBeNull();
-    expect(style.gradientAxis).toBe('horizontal');
+    expect(style.gradient?.stops).toHaveLength(2);
+    expect(style.gradient?.angle).toBe(90);
   });
 
   test('clones color options so mutating the caller-owned instance does not affect the style', () => {
@@ -361,28 +365,66 @@ describe('setters', () => {
     expect(style.consumeDirty()).toBe('tint');
   });
 
-  test('gradientColors: setting and clearing both clone and mark tint-dirty', () => {
+  test('gradient: setting and clearing both clone and mark tint-dirty', () => {
     const style = freshStyle();
-    const stops: [Color, Color] = [Color.white, Color.black];
+    const first = Color.white;
 
-    style.gradientColors = stops;
-    expect(style.gradientColors).not.toBeNull();
-    expect(style.gradientColors?.[0]).not.toBe(stops[0]);
-    expect(style.gradientColors?.[1]).not.toBe(stops[1]);
+    style.gradient = {
+      stops: [
+        { offset: 0, color: first },
+        { offset: 1, color: Color.black },
+      ],
+    };
+    expect(style.gradient?.stops[0].color).not.toBe(first);
     expect(style.consumeDirty()).toBe('tint');
 
-    style.gradientColors = null;
-    expect(style.gradientColors).toBeNull();
+    style.gradient = null;
+    expect(style.gradient).toBeNull();
     expect(style.consumeDirty()).toBe('tint');
   });
 
-  test('gradientAxis: same value is a no-op; different value marks tint-dirty', () => {
+  test('gradient: stops are clamped and ordered on the way in', () => {
     const style = freshStyle();
-    style.gradientAxis = 'vertical';
-    expect(style.consumeDirty()).toBeNull();
 
-    style.gradientAxis = 'horizontal';
-    expect(style.consumeDirty()).toBe('tint');
+    style.gradient = {
+      stops: [
+        { offset: 2, color: Color.black },
+        { offset: -1, color: Color.white },
+        { offset: 0.5, color: Color.red },
+      ],
+    };
+
+    expect(style.gradient?.stops.map(stop => stop.offset)).toEqual([0, 0.5, 1]);
+  });
+
+  test('gradient: the angle defaults to a top-to-bottom ramp', () => {
+    const style = freshStyle();
+
+    style.gradient = {
+      stops: [
+        { offset: 0, color: Color.white },
+        { offset: 1, color: Color.black },
+      ],
+    };
+
+    expect(style.gradient?.angle).toBe(180);
+  });
+
+  test('gradient: rejects a single stop', () => {
+    const style = freshStyle();
+
+    expect(() => {
+      style.gradient = { stops: [{ offset: 0, color: Color.white }] };
+    }).toThrow(/2 colour stops/);
+  });
+
+  test('gradient: rejects more stops than the packed row can carry', () => {
+    const style = freshStyle();
+    const stops = Array.from({ length: textGradientMaxStops + 1 }, (_, i) => ({ offset: i / textGradientMaxStops, color: Color.white }));
+
+    expect(() => {
+      style.gradient = { stops };
+    }).toThrow(/at most/);
   });
 });
 
@@ -431,7 +473,12 @@ describe('copy', () => {
       lineHeight: 1.8,
       leading: 2,
       fillColor: Color.black,
-      gradientColors: [Color.white, Color.black],
+      gradient: {
+        stops: [
+          { offset: 0, color: Color.white },
+          { offset: 1, color: Color.black },
+        ],
+      },
     });
     const target = new TextStyle();
     target.consumeDirty();
@@ -445,7 +492,7 @@ describe('copy', () => {
     expect(target.lineHeight).toBe(1.8);
     expect(target.leading).toBe(2);
     expect(target.fillColor.equals(Color.black)).toBe(true);
-    expect(target.gradientColors).not.toBeNull();
+    expect(target.gradient).not.toBeNull();
     // Colors must be independently cloned, not shared references.
     expect(target.fillColor).not.toBe(source.fillColor);
     expect(target.consumeDirty()).toBe('font');
@@ -462,14 +509,21 @@ describe('copy', () => {
     expect(style.consumeDirty()).toBeNull(); // no self-inflicted dirty flag
   });
 
-  test('copy with null gradientColors on the source clears the target gradient', () => {
-    const source = new TextStyle({ gradientColors: null });
-    const target = new TextStyle({ gradientColors: [Color.white, Color.black] });
+  test('copy with a null gradient on the source clears the target gradient', () => {
+    const source = new TextStyle({ gradient: null });
+    const target = new TextStyle({
+      gradient: {
+        stops: [
+          { offset: 0, color: Color.white },
+          { offset: 1, color: Color.black },
+        ],
+      },
+    });
     target.consumeDirty();
 
     target.copy(source);
 
-    expect(target.gradientColors).toBeNull();
+    expect(target.gradient).toBeNull();
   });
 });
 
@@ -481,7 +535,12 @@ describe('clone', () => {
       align: 'right',
       textTransform: 'capitalize',
       fillColor: Color.black,
-      gradientColors: [Color.white, Color.black],
+      gradient: {
+        stops: [
+          { offset: 0, color: Color.white },
+          { offset: 1, color: Color.black },
+        ],
+      },
     });
 
     const cloned = source.clone();
@@ -493,8 +552,8 @@ describe('clone', () => {
     expect(cloned.textTransform).toBe('capitalize');
     expect(cloned.fillColor.equals(Color.black)).toBe(true);
     expect(cloned.fillColor).not.toBe(source.fillColor);
-    expect(cloned.gradientColors).not.toBeNull();
-    expect(cloned.gradientColors).not.toBe(source.gradientColors);
+    expect(cloned.gradient).not.toBeNull();
+    expect(cloned.gradient?.stops[0].color).not.toBe(source.gradient?.stops[0].color);
   });
 
   test('mutating the clone does not affect the source', () => {
@@ -511,7 +570,7 @@ describe('clone', () => {
     const source = new TextStyle();
     const cloned = source.clone();
 
-    expect(cloned.gradientColors).toBeNull();
+    expect(cloned.gradient).toBeNull();
   });
 
   test('is dirty with hint "font" immediately after cloning', () => {

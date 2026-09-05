@@ -14,7 +14,7 @@ import {
   textNodeIndexMask,
 } from '#rendering/text/atlasTextureSlots';
 import { type BitmapText } from '#rendering/text/BitmapText';
-import { packTextNodeData, packTextNodeTransform, textNodeDataFloats } from '#rendering/text/nodeDataPacker';
+import { packTextNodeData, packTextNodeTransform, textNodeDataFloats, textNodeDataTexels } from '#rendering/text/nodeDataPacker';
 import type { TextPageQuads } from '#rendering/text/Text';
 import { Text } from '#rendering/text/Text';
 import type { Texture } from '#rendering/texture/Texture';
@@ -186,6 +186,7 @@ export const textShaderSource = fillShaderSource(textShaderTemplate, {
   atlasTextureSlots: textAtlasTextureSlotWgsl,
   nodeIndexMask: textNodeIndexMask,
   atlasSlotShift: textAtlasSlotShift,
+  nodeDataTexels: textNodeDataTexels,
 });
 
 /**

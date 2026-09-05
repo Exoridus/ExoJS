@@ -339,6 +339,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "soundType",
   "subtitleType",
   "svgType",
+  "textGradientMaxStops",
   "textSourceCodec",
   "textType",
   "textureType",

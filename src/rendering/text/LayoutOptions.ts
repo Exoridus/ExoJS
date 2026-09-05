@@ -36,8 +36,8 @@ export interface LayoutOptions {
   overflow?: 'visible' | 'clip' | 'ellipsis';
   /**
    * Marker appended to the last kept line under `overflow: 'ellipsis'`.
-   * Defaults to `'…'` (U+2026). Set `'...'` for the three-period spelling, or
-   * `''` to truncate without a marker.
+   * Defaults to the horizontal ellipsis, U+2026. Set `'...'` for the
+   * three-period spelling, or `''` to truncate without a marker.
    *
    * The marker is measured as text in the same font, so a long one eats
    * proportionally more of the line it terminates. Truncation stops at

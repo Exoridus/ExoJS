@@ -1,6 +1,6 @@
 import { Color } from '#core/Color';
 import type { LayoutOptions } from '#rendering/text/LayoutOptions';
-import type { TextStyleOptions } from '#rendering/text/TextStyle';
+import type { ResolvedTextGradient, TextGradient, TextStyleOptions } from '#rendering/text/TextStyle';
 
 import { FONT_STYLES, FONT_VARIANTS, FONT_WEIGHTS, readBoolean, readEnum, readNumber, readString, TEXT_ALIGNMENTS, TEXT_TRANSFORMS } from './read';
 
@@ -55,8 +55,7 @@ export const serializeStyle = (style: {
   shadowOffsetY: number;
   shadowAlpha: number;
   shadowBlur: number;
-  gradientColors: [Color, Color] | null;
-  gradientAxis: string;
+  gradient: ResolvedTextGradient | null;
 }): Record<string, unknown> | undefined => {
   const out: Record<string, unknown> = {};
 
@@ -78,11 +77,7 @@ export const serializeStyle = (style: {
   if (style.shadowAlpha !== 0) out.shadowAlpha = style.shadowAlpha;
   if (style.shadowBlur !== 0) out.shadowBlur = style.shadowBlur;
 
-  if (style.gradientColors !== null) {
-    out.gradientColors = [colorToArray(style.gradientColors[0]), colorToArray(style.gradientColors[1])];
-  }
-
-  if (style.gradientAxis !== 'vertical') out.gradientAxis = style.gradientAxis;
+  if (style.gradient !== null) out.gradient = gradientToJson(style.gradient);
 
   return Object.keys(out).length > 0 ? out : undefined;
 };
@@ -164,20 +159,45 @@ export const deserializeStyleOptions = (data: unknown): TextStyleOptions | undef
   if (typeof source.shadowAlpha === 'number') options.shadowAlpha = source.shadowAlpha;
   if (typeof source.shadowBlur === 'number') options.shadowBlur = source.shadowBlur;
 
-  if (Array.isArray(source.gradientColors) && source.gradientColors.length === 2) {
-    const top = arrayToColor(source.gradientColors[0]);
-    const bottom = arrayToColor(source.gradientColors[1]);
-
-    if (top !== undefined && bottom !== undefined) {
-      options.gradientColors = [top, bottom];
-    }
-  }
-
-  if (source.gradientAxis === 'horizontal' || source.gradientAxis === 'vertical') {
-    options.gradientAxis = source.gradientAxis;
-  }
+  const gradient = jsonToGradient(source.gradient);
+  if (gradient !== undefined) options.gradient = gradient;
 
   return options;
+};
+
+/** Serialize a text gradient as `{ stops: [{ offset, color }], angle }`. */
+export const gradientToJson = (gradient: ResolvedTextGradient): Record<string, unknown> => ({
+  stops: gradient.stops.map(stop => ({ offset: stop.offset, color: colorToArray(stop.color) })),
+  angle: gradient.angle,
+});
+
+/**
+ * Rebuild a text gradient from serialized data, or `undefined` when the value
+ * carries fewer than the two stops a ramp needs. A malformed gradient degrades
+ * to no gradient rather than to a half-built one the style would then reject.
+ */
+export const jsonToGradient = (value: unknown): TextGradient | undefined => {
+  if (typeof value !== 'object' || value === null) return undefined;
+
+  const source = value as Record<string, unknown>;
+  if (!Array.isArray(source.stops)) return undefined;
+
+  const stops: Array<{ offset: number; color: Color }> = [];
+
+  for (const entry of source.stops) {
+    if (typeof entry !== 'object' || entry === null) continue;
+
+    const stop = entry as Record<string, unknown>;
+    const color = arrayToColor(stop.color);
+
+    if (color === undefined || typeof stop.offset !== 'number') continue;
+
+    stops.push({ offset: stop.offset, color });
+  }
+
+  if (stops.length < 2) return undefined;
+
+  return typeof source.angle === 'number' ? { stops, angle: source.angle } : { stops };
 };
 
 // ── LayoutOptions ─────────────────────────────────────────────────────────────

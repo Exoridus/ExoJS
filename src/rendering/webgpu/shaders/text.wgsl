@@ -31,7 +31,7 @@ struct VertexOutput {
 @vertex
 fn vertexMain(input: VertexInput) -> VertexOutput {
     let ni   = input.packedNodeSlot & {{nodeIndexMask}}u;
-    let base = ni * 10u;
+    let base = ni * {{nodeDataTexels}}u;
 
     let t0 = nodes[base + 0u];
     let t1 = nodes[base + 1u];
@@ -97,28 +97,68 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     return out;
 }
 
+
+// ── Gradient ramp ────────────────────────────────────────────────────────────
+//
+// Mirrors evalTextGradient in text-sdf.frag exactly: colours in texels 10..17
+// of the node row, offsets packed four to a texel in 18 and 19, walked in order
+// and interpolated pairwise.
+
+fn gradientStopOffset(base: u32, index: u32) -> f32 {
+    let packed = nodes[base + 18u + (index / 4u)];
+    let lane = index % 4u;
+
+    if (lane == 0u) { return packed.x; }
+    if (lane == 1u) { return packed.y; }
+    if (lane == 2u) { return packed.z; }
+    return packed.w;
+}
+
+fn evalTextGradient(base: u32, stopCount: u32, t: f32) -> vec4<f32> {
+    let position = clamp(t, 0.0, 1.0);
+    var prevOffset = gradientStopOffset(base, 0u);
+    var prevColor = nodes[base + 10u];
+
+    for (var i = 1u; i < 8u; i = i + 1u) {
+        if (i >= stopCount) { break; }
+
+        let offset = gradientStopOffset(base, i);
+        let color = nodes[base + 10u + i];
+
+        if (position <= offset) {
+            // Coincident stops are a hard colour break, not a division by zero.
+            let span = max(offset - prevOffset, 1e-6);
+
+            return mix(prevColor, color, clamp((position - prevOffset) / span, 0.0, 1.0));
+        }
+
+        prevOffset = offset;
+        prevColor = color;
+    }
+
+    return prevColor;
+}
+
 // ── SDF (R8 atlas) ────────────────────────────────────────────────────────────
 
 @fragment
 fn fragmentSdf(in: VertexOutput) -> @location(0) vec4<f32> {
     let ni   = in.nodeIdx;
-    let base = ni * 10u;
+    let base = ni * {{nodeDataTexels}}u;
 
-    let tFill    = nodes[base + 2u];
-    let tOutline = nodes[base + 3u];
-    let tParams  = nodes[base + 4u];
-    let tShadow  = nodes[base + 5u];
-    let tShadow2 = nodes[base + 6u];
-    let tGradTop = nodes[base + 7u];
-    let tGradBot = nodes[base + 8u];
+    let tFill     = nodes[base + 2u];
+    let tOutline  = nodes[base + 3u];
+    let tParams   = nodes[base + 4u];
+    let tShadow   = nodes[base + 5u];
+    let tShadow2  = nodes[base + 6u];
+    let tGradAxis = nodes[base + 7u];
 
     let outlineMin   = tParams.x;
     let shadowAlpha  = tParams.y;
     let blur         = tParams.z;
-    let gradEnabled  = tParams.w;
+    let gradStops    = u32(tParams.w + 0.5);
     let pageSize     = f32(atlasTextureDimensions(in.textureSlot).x);
     let shadowOffset = tShadow2.xy / pageSize;
-    let gradVertical = tShadow2.z;
 
     let uvDx = dpdx(in.texcoord);
     let uvDy = dpdy(in.texcoord);
@@ -172,11 +212,10 @@ fn fragmentSdf(in: VertexOutput) -> @location(0) vec4<f32> {
                  * shadowAlpha * (1.0 - fill) * (1.0 - outline);
 
     var fillColor : vec4<f32>;
-    if (gradEnabled > 0.5) {
-        // gradUV is 0 at the top/left edge of the ink box and 1 at the
-        // bottom/right, so texel 7 (gradientColors[0]) belongs at t = 0.
-        let t = select(in.gradUV.x, in.gradUV.y, gradVertical > 0.5);
-        fillColor = mix(tGradTop, tGradBot, t);
+    if (gradStops > 0u) {
+        // gradUV runs 0..1 across the ink box; the packed axis and bias turn
+        // that into the ramp position for whatever angle the style asked for.
+        fillColor = evalTextGradient(base, gradStops, dot(in.gradUV, tGradAxis.xy) + tGradAxis.z);
     } else {
         fillColor = tFill;
     }
@@ -193,23 +232,21 @@ fn median3(r: f32, g: f32, b: f32) -> f32 {
 @fragment
 fn fragmentMsdf(in: VertexOutput) -> @location(0) vec4<f32> {
     let ni   = in.nodeIdx;
-    let base = ni * 10u;
+    let base = ni * {{nodeDataTexels}}u;
 
-    let tFill    = nodes[base + 2u];
-    let tOutline = nodes[base + 3u];
-    let tParams  = nodes[base + 4u];
-    let tShadow  = nodes[base + 5u];
-    let tShadow2 = nodes[base + 6u];
-    let tGradTop = nodes[base + 7u];
-    let tGradBot = nodes[base + 8u];
+    let tFill     = nodes[base + 2u];
+    let tOutline  = nodes[base + 3u];
+    let tParams   = nodes[base + 4u];
+    let tShadow   = nodes[base + 5u];
+    let tShadow2  = nodes[base + 6u];
+    let tGradAxis = nodes[base + 7u];
 
     let outlineMin   = tParams.x;
     let shadowAlpha  = tParams.y;
     let blur         = tParams.z;
-    let gradEnabled  = tParams.w;
+    let gradStops    = u32(tParams.w + 0.5);
     let pageSize     = f32(atlasTextureDimensions(in.textureSlot).x);
     let shadowOffset = tShadow2.xy / pageSize;
-    let gradVertical = tShadow2.z;
 
     let uvDx = dpdx(in.texcoord);
     let uvDy = dpdy(in.texcoord);
@@ -234,11 +271,10 @@ fn fragmentMsdf(in: VertexOutput) -> @location(0) vec4<f32> {
                  * shadowAlpha * (1.0 - fill) * (1.0 - outline);
 
     var fillColor : vec4<f32>;
-    if (gradEnabled > 0.5) {
-        // gradUV is 0 at the top/left edge of the ink box and 1 at the
-        // bottom/right, so texel 7 (gradientColors[0]) belongs at t = 0.
-        let t = select(in.gradUV.x, in.gradUV.y, gradVertical > 0.5);
-        fillColor = mix(tGradTop, tGradBot, t);
+    if (gradStops > 0u) {
+        // gradUV runs 0..1 across the ink box; the packed axis and bias turn
+        // that into the ramp position for whatever angle the style asked for.
+        fillColor = evalTextGradient(base, gradStops, dot(in.gradUV, tGradAxis.xy) + tGradAxis.z);
     } else {
         fillColor = tFill;
     }
@@ -251,7 +287,7 @@ fn fragmentMsdf(in: VertexOutput) -> @location(0) vec4<f32> {
 @fragment
 fn fragmentColor(in: VertexOutput) -> @location(0) vec4<f32> {
     let ni     = in.nodeIdx;
-    let base   = ni * 10u;
+    let base   = ni * {{nodeDataTexels}}u;
     let tint   = nodes[base + 2u];
     let sample = sampleTexture(in.textureSlot, in.texcoord, dpdx(in.texcoord), dpdy(in.texcoord));
     return sample * tint;

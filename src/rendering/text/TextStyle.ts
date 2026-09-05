@@ -1,10 +1,78 @@
 import { Color } from '#core/Color';
+import { assert } from '#core/dev';
 import { Signal } from '#core/Signal';
+import type { GradientStop } from '#rendering/gradient/Gradient';
 
 import { cssFontString } from './canvasTextState';
 import type { FontStyle, FontVariant, TextAlignment, TextTransform } from './types';
 
-export type GradientAxis = 'vertical' | 'horizontal';
+/**
+ * How many stops one text gradient may carry.
+ *
+ * The ramp is evaluated per fragment from the node's own packed style row, so
+ * the stop list has to be a fixed-size part of it rather than a texture of its
+ * own. Eight covers the gradients display type actually uses; more of them
+ * would cost every text node the space whether it gradients or not.
+ */
+export const textGradientMaxStops = 8;
+
+/**
+ * A multi-stop fill gradient for text.
+ *
+ * The ramp is a shader-side function of the node's ink box, not a rasterized
+ * texture, so it costs no atlas work and follows the text as it re-flows.
+ */
+export interface TextGradient {
+  /**
+   * Colour stops, at most {@link textGradientMaxStops} of them. Offsets are
+   * clamped to `0..1` and sorted on the way in, so the order they are written
+   * in does not matter. At least two are required.
+   */
+  readonly stops: readonly GradientStop[];
+  /**
+   * Direction of the ramp in degrees, following the CSS `linear-gradient`
+   * convention: `0` runs towards the top, `90` towards the right, and the
+   * angle increases clockwise. Defaults to `180` - top to bottom.
+   *
+   * The ramp spans the ink box corner to corner along that direction, so the
+   * first stop lands on the box's leading edge and the last on its trailing
+   * one whatever the angle.
+   */
+  readonly angle?: number;
+}
+
+/** A text gradient with every optional field resolved and its stops normalized. */
+export interface ResolvedTextGradient {
+  readonly stops: readonly GradientStop[];
+  readonly angle: number;
+}
+
+const byOffset = (left: GradientStop, right: GradientStop): number => left.offset - right.offset;
+
+/**
+ * Clone, clamp and order a gradient's stops.
+ *
+ * Cloned because a `Color` is mutable and a style that aliased the caller's
+ * would change colour behind its back; sorted because the shader walks the
+ * stops in order and cannot re-order them per fragment.
+ */
+const _normalizeGradient = (gradient: TextGradient): ResolvedTextGradient => {
+  assert(gradient.stops.length >= 2, 'TextStyle gradient requires at least 2 colour stops.');
+  assert(gradient.stops.length <= textGradientMaxStops, `TextStyle gradient accepts at most ${textGradientMaxStops} colour stops.`);
+
+  const stops = gradient.stops
+    .map(stop => {
+      assert(Number.isFinite(stop.offset), 'TextStyle gradient stop offset must be a finite number.');
+
+      return { offset: Math.min(1, Math.max(0, stop.offset)), color: stop.color.clone() };
+    })
+    .sort(byOffset);
+
+  return { stops, angle: gradient.angle ?? 180 };
+};
+
+const _cloneGradient = (gradient: ResolvedTextGradient | null): ResolvedTextGradient | null =>
+  gradient === null ? null : { stops: gradient.stops.map(stop => ({ offset: stop.offset, color: stop.color.clone() })), angle: gradient.angle };
 
 /**
  * Describes how costly a style change is to incorporate.
@@ -120,16 +188,12 @@ export interface TextStyleOptions {
 
   // ── Gradient ──────────────────────────────────────────────────────────────
   /**
-   * Two-stop fill gradient. When set, overrides `fillColor` for the glyph
-   * interior. `null` disables the gradient.
+   * Multi-stop fill gradient. When set it overrides `fillColor` for the glyph
+   * interior; `null` disables it.
    *
-   * The first colour is the START of the ramp and the second its END, read
-   * along `gradientAxis`: `[top, bottom]` for `'vertical'`, `[left, right]`
-   * for `'horizontal'`.
+   * The ramp spans the ink extent (`getLocalBounds()`), not the advance box.
    */
-  gradientColors?: [Color, Color] | null;
-  /** Gradient orientation. Defaults to `'vertical'`. */
-  gradientAxis?: GradientAxis;
+  gradient?: TextGradient | null;
 }
 
 /**
@@ -172,8 +236,7 @@ export class TextStyle {
   private _shadowBlur: number;
 
   // Gradient
-  private _gradientColors: [Color, Color] | null;
-  private _gradientAxis: GradientAxis;
+  private _gradient: ResolvedTextGradient | null;
 
   public constructor(options: TextStyleOptions = {}) {
     const explicitFace = typeof FontFace !== 'undefined' && options.font instanceof FontFace ? options.font : null;
@@ -198,8 +261,7 @@ export class TextStyle {
     this._shadowAlpha = options.shadowAlpha ?? 0;
     this._shadowBlur = options.shadowBlur ?? 0;
 
-    this._gradientColors = options.gradientColors ? [options.gradientColors[0].clone(), options.gradientColors[1].clone()] : null;
-    this._gradientAxis = options.gradientAxis ?? 'vertical';
+    this._gradient = options.gradient ? _normalizeGradient(options.gradient) : null;
 
     // Mark dirty immediately so the first update() triggers a full rebuild.
     this._dirty = true;
@@ -419,29 +481,19 @@ export class TextStyle {
   // ── Gradient properties (hint: 'tint') ──────────────────────────────────
 
   /**
-   * Two-stop fill gradient. When set, overrides `fillColor` for the glyph
-   * interior. Assign `null` to disable.
+   * Multi-stop fill gradient, or `null` when the glyph interior takes
+   * `fillColor`.
    *
-   * The first colour is the START of the ramp and the second its END, read
-   * along `gradientAxis`: `[top, bottom]` for `'vertical'`, `[left, right]`
-   * for `'horizontal'`.
+   * Read back normalized: stops cloned, offsets clamped to `0..1` and sorted,
+   * `angle` resolved. Assigning re-normalizes, so the object handed in is
+   * never aliased and mutating it afterwards changes nothing.
    */
-  public get gradientColors(): [Color, Color] | null {
-    return this._gradientColors;
+  public get gradient(): ResolvedTextGradient | null {
+    return this._gradient;
   }
 
-  public set gradientColors(v: [Color, Color] | null) {
-    this._gradientColors = v ? [v[0].clone(), v[1].clone()] : null;
-    this._markDirty('tint');
-  }
-
-  public get gradientAxis(): GradientAxis {
-    return this._gradientAxis;
-  }
-
-  public set gradientAxis(v: GradientAxis) {
-    if (this._gradientAxis === v) return;
-    this._gradientAxis = v;
+  public set gradient(v: TextGradient | null) {
+    this._gradient = v ? _normalizeGradient(v) : null;
     this._markDirty('tint');
   }
 
@@ -477,8 +529,7 @@ export class TextStyle {
       this._shadowOffsetY = style._shadowOffsetY;
       this._shadowAlpha = style._shadowAlpha;
       this._shadowBlur = style._shadowBlur;
-      this._gradientColors = style._gradientColors ? [style._gradientColors[0].clone(), style._gradientColors[1].clone()] : null;
-      this._gradientAxis = style._gradientAxis;
+      this._gradient = _cloneGradient(style._gradient);
       this._markDirty('font');
     }
     return this;
@@ -504,8 +555,7 @@ export class TextStyle {
     s._shadowOffsetY = this._shadowOffsetY;
     s._shadowAlpha = this._shadowAlpha;
     s._shadowBlur = this._shadowBlur;
-    s._gradientColors = this._gradientColors ? [this._gradientColors[0].clone(), this._gradientColors[1].clone()] : null;
-    s._gradientAxis = this._gradientAxis;
+    s._gradient = _cloneGradient(this._gradient);
     s._dirty = true;
     s._pendingHint = 'font';
     return s;

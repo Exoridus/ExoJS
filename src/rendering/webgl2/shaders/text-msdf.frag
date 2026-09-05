@@ -23,24 +23,72 @@ float median(float r, float g, float b) {
   return max(min(r, g), min(max(r, g), b));
 }
 
+// ── Gradient ramp ────────────────────────────────────────────────────────────
+//
+// The stops live in the node's own packed row: colours in texels 10..17, their
+// offsets packed four to a texel in 18 and 19. Walked in order and interpolated
+// pairwise, which is the same evaluation the CPU-side `Gradient` performs, so a
+// baked ramp and a text one cannot disagree about a colour.
+
+float gradientStopOffset(int ni, int index) {
+  vec4 packed = texelFetch(u_nodeData, ivec2(18 + (index >> 2), ni), 0);
+  int lane = index & 3;
+
+  if (lane == 0) return packed.x;
+  if (lane == 1) return packed.y;
+  if (lane == 2) return packed.z;
+  return packed.w;
+}
+
+vec4 evalTextGradient(int ni, int stopCount, float t) {
+  float position   = clamp(t, 0.0, 1.0);
+  float prevOffset = gradientStopOffset(ni, 0);
+  vec4  prevColor  = texelFetch(u_nodeData, ivec2(10, ni), 0);
+
+  for (int i = 1; i < 8; i++) {
+    if (i >= stopCount) break;
+
+    float offset = gradientStopOffset(ni, i);
+    vec4  color  = texelFetch(u_nodeData, ivec2(10 + i, ni), 0);
+
+    if (position <= offset) {
+      // Coincident stops are a hard colour break, not a division by zero.
+      float span = max(offset - prevOffset, 1e-6);
+
+      return mix(prevColor, color, clamp((position - prevOffset) / span, 0.0, 1.0));
+    }
+
+    prevOffset = offset;
+    prevColor  = color;
+  }
+
+  return prevColor;
+}
+
 void main(void) {
   int ni = v_nodeIndex;
 
   // Same node data layout as text-sdf.frag
+  // texel 2: fillColor
+  // texel 3: outlineColor
+  // texel 4: (outlineMin, shadowAlpha, shadowBlur, gradientStopCount)
+  //          outlineMin = 0.5 → disabled; outlineMin < 0.5 → enabled
+  // texel 5: shadowColor
+  // texel 6: (shadowOffX_px, shadowOffY_px, 0, sdfRadius_logical)
+  // texel 7: (gradAxisX, gradAxisY, gradBias, 0)
+  // texels 10-19: gradient stop colours and offsets
   vec4 tFill    = texelFetch(u_nodeData, ivec2(2, ni), 0);
   vec4 tOutline = texelFetch(u_nodeData, ivec2(3, ni), 0);
-  vec4 tParams  = texelFetch(u_nodeData, ivec2(4, ni), 0); // (outlineMin, shadowAlpha, shadowBlur, gradientEnabled)
+  vec4 tParams  = texelFetch(u_nodeData, ivec2(4, ni), 0);
   vec4 tShadow  = texelFetch(u_nodeData, ivec2(5, ni), 0);
-  vec4 tShadow2 = texelFetch(u_nodeData, ivec2(6, ni), 0); // (shadowOffX_px, shadowOffY_px, gradientVertical, 0)
-  vec4 tGradTop = texelFetch(u_nodeData, ivec2(7, ni), 0);
-  vec4 tGradBot = texelFetch(u_nodeData, ivec2(8, ni), 0);
+  vec4 tShadow2 = texelFetch(u_nodeData, ivec2(6, ni), 0);
+  vec4 tGradAxis = texelFetch(u_nodeData, ivec2(7, ni), 0);
 
   float outlineMin   = tParams.x;
   float shadowAlpha  = tParams.y;
   float blur         = tParams.z;
-  float gradEnabled  = tParams.w;
+  int   gradStops    = int(tParams.w + 0.5);
   vec2  shadowOffset = tShadow2.xy / u_pageSize;
-  float gradVertical = tShadow2.z;
 
   vec3  msd  = sampleBase(v_textureSlot, v_texcoord).rgb;
   float sd   = median(msd.r, msd.g, msd.b);
@@ -63,11 +111,10 @@ void main(void) {
                      * shadowAlpha * (1.0 - fill) * (1.0 - outline);
 
   vec4 fillColor;
-  if (gradEnabled > 0.5) {
-    // v_gradUV is 0 at the top/left edge of the ink box and 1 at the
-    // bottom/right, so texel 7 (gradientColors[0]) belongs at t = 0.
-    float t = gradVertical > 0.5 ? v_gradUV.y : v_gradUV.x;
-    fillColor = mix(tGradTop, tGradBot, t);
+  if (gradStops > 0) {
+    // gradUV runs 0..1 across the ink box; the packed axis and bias turn that
+    // into the ramp position for whatever angle the style asked for.
+    fillColor = evalTextGradient(ni, gradStops, dot(v_gradUV, tGradAxis.xy) + tGradAxis.z);
   } else {
     fillColor = tFill;
   }

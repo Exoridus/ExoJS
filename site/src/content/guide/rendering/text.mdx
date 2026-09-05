@@ -84,19 +84,27 @@ The visual appearance comes from [`TextStyleOptions`](/ExoJS/en/api/text-style-o
 | `shadowOffsetY` | `number` | `0` | Vertical shadow offset in pixels |
 | `shadowAlpha` | `number` | `0` | Shadow opacity (`0`–`1`); `0` disables the shadow |
 | `shadowBlur` | `number` | `0` | Shadow blur softness (`0`–`1`) |
-| `gradientColors` | `[Color, Color] \| null` | `null` | Two-stop fill gradient; overrides `fillColor`. First colour starts the ramp, second ends it |
-| `gradientAxis` | `'vertical' \| 'horizontal'` | `'vertical'` | Gradient orientation |
+| `gradient` | `TextGradient \| null` | `null` | Multi-stop fill gradient; overrides `fillColor` |
 
-`gradientColors` is ordered along `gradientAxis` and always runs start → end: `[top, bottom]` for the default `'vertical'` axis, `[left, right]` for `'horizontal'`. The ramp spans the ink extent (`getLocalBounds()`), not the advance.
+A `gradient` takes up to eight colour stops and an `angle` in degrees. The angle follows the CSS `linear-gradient` convention — `0` runs towards the top, `90` towards the right, increasing clockwise — and defaults to `180`, top to bottom. The ramp spans the ink extent (`getLocalBounds()`) corner to corner along that direction, not the advance box, so the first and last stops always land on the box edges:
 
 ```ts
 import { Color, Text } from '@codexo/exojs';
 
 const banner = new Text('Level Up', {
     fontSize: 48,
-    gradientColors: [Color.white, new Color(0xff6347)], // white on top, tomato at the bottom
+    gradient: {
+        stops: [
+            { offset: 0, color: Color.white },
+            { offset: 0.6, color: new Color(0xffd700) },
+            { offset: 1, color: new Color(0xff6347) },
+        ],
+        angle: 200,
+    },
 });
 ```
+
+Stop offsets are clamped to `0`–`1` and sorted on the way in, and the colours are cloned, so the object you pass is never aliased. Reading `style.gradient` back gives the normalized form. The ramp is evaluated in the fragment shader from the node's own packed style, so changing it costs no atlas work — it is a `'tint'` change like `fillColor`.
 
 ### Style and caps variants
 
