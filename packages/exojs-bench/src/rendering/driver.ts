@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
 import type { BaseProvenance, LibraryProvenance } from '../shared/provenance';
-import { readLibraryProvenance } from '../shared/provenance';
+import { readLibraryProvenance, RENDERING_BROWSER } from '../shared/provenance';
 import type { ViteDevServer } from '../shared/viteServer';
 import { LIBRARY_ARMS, readEngineVersion, startViteServer as startPageServer } from '../shared/viteServer';
 import { buildMatrix } from './archetypes';
@@ -504,7 +504,7 @@ const runBackend = async (options: {
     // One browser per pass; a mid-arm wedge breaks out, closes it, and the outer
     // loop relaunches a fresh one for whatever cells are left.
     while (remaining.length > 0) {
-      const browser = await chromium.launch({ channel: 'chromium', headless: true, args: [...flags] });
+      const browser = await chromium.launch({ channel: RENDERING_BROWSER, headless: true, args: [...flags] });
       let relaunch = false;
 
       try {
@@ -698,7 +698,7 @@ export const profileCell = async (options: {
     }
 
     const flags = spec.backend === 'webgpu' ? WEBGPU_LAUNCH_FLAGS : LAUNCH_FLAGS;
-    const browser = await chromium.launch({ channel: 'chromium', headless: true, args: [...flags] });
+    const browser = await chromium.launch({ channel: RENDERING_BROWSER, headless: true, args: [...flags] });
 
     try {
       const page = await browser.newPage();
