@@ -22,20 +22,20 @@ A TypeScript-first 2D engine for games and interactive apps. Explicit scene grap
 
 ## Packages
 
-| Package                         | Description                                                            |
-| ------------------------------- | ---------------------------------------------------------------------- |
-| `@codexo/exojs`                 | Core runtime — scene graph, rendering, audio, UI, serialization        |
-| `@codexo/exojs-physics`         | Native 2D physics — shapes, constraints, TGS-Soft solver               |
-| `@codexo/exojs-particles`       | GPU-driven particles (WebGPU compute) with CPU fallback                |
-| `@codexo/exojs-tilemap`         | Format-independent tilemap runtime and object layers                   |
-| `@codexo/exojs-tiled`           | Tiled JSON adapter and scene-graph conversion                          |
-| `@codexo/exojs-tilemap-physics` | Static physics colliders from tilemap collision geometry               |
-| `@codexo/exojs-aseprite`        | Aseprite adapter — sprite sheets, tags, frame direction/repeat, slices |
-| `@codexo/exojs-ldtk`            | LDtk adapter — multi-world levels, entities, structured field values   |
-| `@codexo/exojs-lighting`        | Forward, normal-mapped 2D point lighting inside the sprite batch       |
-| `@codexo/exojs-pathfinding`     | A\* with jump-point search over weighted grids and waypoint graphs     |
-| `@codexo/exojs-audio-fx`        | Audio effects — biquad filters, analyser, beat detection, worklets     |
-| `@codexo/exojs-react`           | React bindings — run an ExoJS `Application` inside React components    |
+| Package                                                                                                       | Description                                                            |
+| ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| [`@codexo/exojs`](https://www.npmjs.com/package/@codexo/exojs)                                                | Core runtime — scene graph, rendering, audio, UI, serialization        |
+| [`@codexo/exojs-physics`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-physics)                 | Native 2D physics — shapes, constraints, TGS-Soft solver               |
+| [`@codexo/exojs-particles`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-particles)             | GPU-driven particles (WebGPU compute) with CPU fallback                |
+| [`@codexo/exojs-tilemap`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-tilemap)                 | Format-independent tilemap runtime and object layers                   |
+| [`@codexo/exojs-tiled`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-tiled)                     | Tiled JSON adapter and scene-graph conversion                          |
+| [`@codexo/exojs-tilemap-physics`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-tilemap-physics) | Static physics colliders from tilemap collision geometry               |
+| [`@codexo/exojs-aseprite`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-aseprite)               | Aseprite adapter — sprite sheets, tags, frame direction/repeat, slices |
+| [`@codexo/exojs-ldtk`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-ldtk)                       | LDtk adapter — multi-world levels, entities, structured field values   |
+| [`@codexo/exojs-lighting`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-lighting)               | Forward, normal-mapped 2D point lighting inside the sprite batch       |
+| [`@codexo/exojs-pathfinding`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-pathfinding)         | A\* with jump-point search over weighted grids and waypoint graphs     |
+| [`@codexo/exojs-audio-fx`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-audio-fx)               | Audio effects — biquad filters, analyser, beat detection, worklets     |
+| [`@codexo/exojs-react`](https://github.com/Exoridus/ExoJS/tree/main/packages/exojs-react)                     | React bindings — run an ExoJS `Application` inside React components    |
 
 ## Features
 
