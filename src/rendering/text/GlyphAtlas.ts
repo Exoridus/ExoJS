@@ -4,10 +4,10 @@ import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes, TextureFormat } from '#rendering/types';
 
 import type { CanvasTextState } from './canvasTextState';
-import { applyCanvasTextState } from './canvasTextState';
-import { cssFontString, GlyphMetrics } from './GlyphMetrics';
+import { applyCanvasTextState, cssFontString } from './canvasTextState';
+import { GlyphMetrics } from './GlyphMetrics';
 import { GlyphSdf } from './GlyphSdf';
-import type { GlyphInfo, GlyphKey, GlyphProvider } from './types';
+import type { FontStyle, FontVariant, GlyphInfo, GlyphKey, GlyphProvider } from './types';
 
 /**
  * Atlas rendering mode. Determines texture format and rasterization strategy.
@@ -272,7 +272,8 @@ export class GlyphAtlas implements GlyphProvider {
   private readonly _pageSize: number;
 
   private readonly _family: string;
-  private readonly _fontStyle: 'normal' | 'italic';
+  private readonly _fontStyle: FontStyle;
+  private readonly _fontVariant: FontVariant;
   private readonly _fontWeight: string;
   private readonly _mode: AtlasMode;
   private readonly _sdfRadius: number;
@@ -287,7 +288,7 @@ export class GlyphAtlas implements GlyphProvider {
    * or an oversized font size). The payload is the zero-based page index.
    *
    * ```ts
-   * const atlas = pool.getAtlas('Roboto', 'normal', '400');
+   * const atlas = pool.getAtlas('Roboto', 'normal', 'normal', '400');
    * atlas.onPageAdded.on(idx => console.warn(`Atlas page ${idx} added`));
    * ```
    */
@@ -308,7 +309,8 @@ export class GlyphAtlas implements GlyphProvider {
 
   public constructor(
     family: string,
-    fontStyle: 'normal' | 'italic',
+    fontStyle: FontStyle,
+    fontVariant: FontVariant,
     fontWeight: string,
     pageSize = 1024,
     mode: AtlasMode = 'sdf',
@@ -318,6 +320,7 @@ export class GlyphAtlas implements GlyphProvider {
   ) {
     this._family = family;
     this._fontStyle = fontStyle;
+    this._fontVariant = fontVariant;
     this._fontWeight = fontWeight;
     this._pageSize = pageSize;
     this._mode = mode;
@@ -330,7 +333,7 @@ export class GlyphAtlas implements GlyphProvider {
     // A variant measured elsewhere hands its metrics in so every atlas of the
     // same typeface answers with the same advances; a standalone atlas measures
     // for itself.
-    this._metrics = metrics ?? new GlyphMetrics(family, fontStyle, fontWeight);
+    this._metrics = metrics ?? new GlyphMetrics(family, fontStyle, fontVariant, fontWeight);
 
     this._addPage();
   }
@@ -402,7 +405,7 @@ export class GlyphAtlas implements GlyphProvider {
   }
 
   private _cssFont(size: number): string {
-    return cssFontString(this._family, this._fontStyle, this._fontWeight, size);
+    return cssFontString(this._family, this._fontStyle, this._fontVariant, this._fontWeight, size);
   }
 
   /** Raster font size, in device pixels, for a glyph asked for at `size` logical pixels. */
@@ -418,6 +421,7 @@ export class GlyphAtlas implements GlyphProvider {
         fontFamily: this._family,
         fontWeight: this._fontWeight,
         fontStyle: this._fontStyle,
+        fontVariant: this._fontVariant,
         buffer: this._rasterSdfRadius,
         radius: this._rasterSdfRadius,
         cutoff: 0.5,
@@ -469,7 +473,7 @@ export class GlyphAtlas implements GlyphProvider {
     // Colour glyphs are rasterized by the canvas at the RASTER size, so their
     // tile metrics have to be measured there too - the ratio-1 numbers would
     // size the slot for a glyph a third the size of the one actually drawn.
-    const state: CanvasTextState = { font: this._cssFont(rasterSize), direction: 'ltr', letterSpacing: 0 };
+    const state: CanvasTextState = { font: this._cssFont(rasterSize), direction: 'ltr', letterSpacing: 0, variantCaps: this._fontVariant };
     // Invariant: a base page is always present (constructor + clear add one).
     const metrics = this._pages[0]!.measureGlyph(char, state);
 

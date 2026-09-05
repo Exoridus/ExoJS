@@ -1,17 +1,19 @@
 import { type AtlasMode, GlyphAtlas, SDF_RADIUS } from './GlyphAtlas';
 import { GlyphMetrics } from './GlyphMetrics';
 import { ShapedTextMetrics } from './ShapedTextMetrics';
+import type { FontStyle, FontVariant } from './types';
 
 /**
  * Manages one {@link GlyphAtlas} per font variant + mode + SDF radius + pixel
  * ratio combination, and one {@link GlyphMetrics} per font variant.
  *
- * The pool key is `"${family}:${fontStyle}:${fontWeight}:${mode}:${sdfRadius}:${pixelRatio}"`.
+ * The pool key is
+ * `"${family}:${fontStyle}:${fontWeight}:${mode}:${sdfRadius}:${pixelRatio}:${fontVariant}"`.
  * All text nodes sharing that combination draw from the same atlas pages, so
  * identical glyphs are rasterized only once regardless of which node first
  * requests them.
  *
- * The metrics key is only `"${family}:${fontStyle}:${fontWeight}"`: an advance
+ * The metrics key is only `"${family}:${fontStyle}:${fontWeight}:${fontVariant}"`: an advance
  * is a property of the typeface, not of the raster grid it happens to be drawn
  * on, so every atlas of one variant shares a single measurement cache and no two
  * of them can disagree about where a line breaks.
@@ -53,17 +55,28 @@ export class GlyphAtlasPool {
    */
   public getAtlas(
     family: string,
-    fontStyle: 'normal' | 'italic',
+    fontStyle: FontStyle,
+    fontVariant: FontVariant,
     fontWeight: string,
     mode: AtlasMode = 'sdf',
     sdfRadius = SDF_RADIUS,
     pixelRatio = 1,
   ): GlyphAtlas {
-    const key = `${family}:${fontStyle}:${fontWeight}:${mode}:${sdfRadius}:${pixelRatio}`;
+    const key = `${family}:${fontStyle}:${fontWeight}:${mode}:${sdfRadius}:${pixelRatio}:${fontVariant}`;
     let atlas = this._atlases.get(key);
 
     if (atlas === undefined) {
-      atlas = new GlyphAtlas(family, fontStyle, fontWeight, this._pageSize, mode, sdfRadius, pixelRatio, this.getMetrics(family, fontStyle, fontWeight));
+      atlas = new GlyphAtlas(
+        family,
+        fontStyle,
+        fontVariant,
+        fontWeight,
+        this._pageSize,
+        mode,
+        sdfRadius,
+        pixelRatio,
+        this.getMetrics(family, fontStyle, fontVariant, fontWeight),
+      );
       this._atlases.set(key, atlas);
     }
 
@@ -76,12 +89,12 @@ export class GlyphAtlasPool {
    * This is what a measurement wants: it answers advances and kerning without
    * rasterizing a glyph, allocating a page, or having to know a pixel ratio.
    */
-  public getMetrics(family: string, fontStyle: 'normal' | 'italic', fontWeight: string): GlyphMetrics {
-    const key = `${family}:${fontStyle}:${fontWeight}`;
+  public getMetrics(family: string, fontStyle: FontStyle, fontVariant: FontVariant, fontWeight: string): GlyphMetrics {
+    const key = `${family}:${fontStyle}:${fontWeight}:${fontVariant}`;
     let metrics = this._metrics.get(key);
 
     if (metrics === undefined) {
-      metrics = new GlyphMetrics(family, fontStyle, fontWeight);
+      metrics = new GlyphMetrics(family, fontStyle, fontVariant, fontWeight);
       this._metrics.set(key, metrics);
     }
 
@@ -99,16 +112,17 @@ export class GlyphAtlasPool {
    */
   public getShapedMetrics(
     family: string,
-    fontStyle: 'normal' | 'italic',
+    fontStyle: FontStyle,
+    fontVariant: FontVariant,
     fontWeight: string,
     direction: 'ltr' | 'rtl' = 'ltr',
     letterSpacing = 0,
   ): ShapedTextMetrics {
-    const key = `${family}:${fontStyle}:${fontWeight}:${direction}:${letterSpacing}`;
+    const key = `${family}:${fontStyle}:${fontWeight}:${direction}:${letterSpacing}:${fontVariant}`;
     let metrics = this._shapedMetrics.get(key);
 
     if (metrics === undefined) {
-      metrics = new ShapedTextMetrics(family, fontStyle, fontWeight, direction, letterSpacing);
+      metrics = new ShapedTextMetrics(family, fontStyle, fontVariant, fontWeight, direction, letterSpacing);
       this._shapedMetrics.set(key, metrics);
     }
 
@@ -116,15 +130,18 @@ export class GlyphAtlasPool {
   }
 
   /**
-   * Clear every atlas and measurement held for one font variant, across every
-   * mode, SDF radius, pixel ratio, direction and letter spacing. Used when the
+   * Clear every atlas and measurement held for one typeface, across every caps
+   * variant, mode, SDF radius, pixel ratio, direction and letter spacing. Used when the
    * variant's underlying face changes (e.g. a previously-fallback `FontFace`
    * finishes loading): a caller that resolved one specific atlas by
    * mode/radius/ratio would clear only the atlas it currently expects to draw
    * from, leaving every other combination of the same variant holding glyph
    * tiles rasterized from the stale face.
    */
-  public clearVariant(family: string, fontStyle: 'normal' | 'italic', fontWeight: string): void {
+  public clearVariant(family: string, fontStyle: FontStyle, fontWeight: string): void {
+    // The caps variant sits at the TAIL of every key precisely so this prefix
+    // reaches all of them: a face that finishes loading replaces the glyphs of
+    // its small-cap rendering as surely as those of its ordinary one.
     const prefix = `${family}:${fontStyle}:${fontWeight}:`;
 
     for (const [key, atlas] of this._atlases) {

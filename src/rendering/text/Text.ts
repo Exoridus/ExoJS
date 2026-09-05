@@ -190,18 +190,33 @@ export class Text extends AbstractText {
 
     const style = new TextStyle(options);
     const pool = getDefaultGlyphAtlasPool();
-    const metrics = pool.getMetrics(style.fontFamily, style.fontStyle, style.fontWeight);
+    const metrics = pool.getMetrics(style.fontFamily, style.fontStyle, style.fontVariant, style.fontWeight);
     // Measurement-only, so contextual text is measured through the browser
     // without a raster ever being produced - the shaped node answers the same
     // width from the same cache.
-    const shaper = pool.getShapedMetrics(style.fontFamily, style.fontStyle, style.fontWeight, options.direction ?? 'ltr', options.letterSpacing ?? 0);
+    const shaper = pool.getShapedMetrics(
+      style.fontFamily,
+      style.fontStyle,
+      style.fontVariant,
+      style.fontWeight,
+      options.direction ?? 'ltr',
+      options.letterSpacing ?? 0,
+    );
 
     return layoutText(text, style, options, metrics, shaper).advance;
   }
 
   /** The one place a Text resolves its atlas, so two passes cannot pick different ones. */
   private static _acquireAtlas(style: TextStyle, colorGlyphs: boolean, sdfRadius: number, pixelRatio: number): GlyphAtlas {
-    return getDefaultGlyphAtlasPool().getAtlas(style.fontFamily, style.fontStyle, style.fontWeight, colorGlyphs ? 'color' : 'sdf', sdfRadius, pixelRatio);
+    return getDefaultGlyphAtlasPool().getAtlas(
+      style.fontFamily,
+      style.fontStyle,
+      style.fontVariant,
+      style.fontWeight,
+      colorGlyphs ? 'color' : 'sdf',
+      sdfRadius,
+      pixelRatio,
+    );
   }
 
   public get style(): TextStyle {
@@ -435,7 +450,7 @@ export class Text extends AbstractText {
     const letterSpacing = this._layout.letterSpacing ?? 0;
     const mode = this.atlasMode;
     const pixelRatio = this.rasterPixelRatio;
-    const key = `${style.fontFamily}:${style.fontStyle}:${style.fontWeight}:${mode}:${this._sdfRadius}:${pixelRatio}:${direction}:${letterSpacing}`;
+    const key = `${style.fontFamily}:${style.fontStyle}:${style.fontVariant}:${style.fontWeight}:${mode}:${this._sdfRadius}:${pixelRatio}:${direction}:${letterSpacing}`;
 
     if (this._shapedSource !== null && this._shapedKey === key) return this._shapedSource;
 
@@ -444,8 +459,9 @@ export class Text extends AbstractText {
     const source = new ShapedTextSource({
       family: style.fontFamily,
       fontStyle: style.fontStyle,
+      fontVariant: style.fontVariant,
       fontWeight: style.fontWeight,
-      metrics: getDefaultGlyphAtlasPool().getShapedMetrics(style.fontFamily, style.fontStyle, style.fontWeight, direction, letterSpacing),
+      metrics: getDefaultGlyphAtlasPool().getShapedMetrics(style.fontFamily, style.fontStyle, style.fontVariant, style.fontWeight, direction, letterSpacing),
       mode,
       sdfRadius: this._sdfRadius,
       pixelRatio,

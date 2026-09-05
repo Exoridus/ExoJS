@@ -69,7 +69,8 @@ The visual appearance comes from [`TextStyleOptions`](/ExoJS/en/api/text-style-o
 | `font` | `FontFace` | — | Pre-loaded font face; takes precedence over `fontFamily` |
 | `fontFamily` | `string` | `'Arial'` | CSS font family name |
 | `fontWeight` | `FontWeight` | `'normal'` | CSS font weight (`'normal'`, `'bold'`, or `'100'`–`'900'`) |
-| `fontStyle` | `'normal' \| 'italic'` | `'normal'` | Font style |
+| `fontStyle` | `'normal' \| 'italic' \| 'oblique'` | `'normal'` | Font style. `'oblique'` asks for a fixed slant rather than the family's own italic |
+| `fontVariant` | `'normal' \| 'small-caps'` | `'normal'` | Caps variant. Small caps come from the family's own glyphs where it has them, otherwise from the browser's synthesis |
 | `fontSize` | `number` | `20` | Font size in pixels |
 | `fillColor` | `Color` | `Color.white` | Glyph fill colour |
 | `outlineColor` | `Color` | `Color.black` | SDF outline colour |
@@ -96,6 +97,21 @@ const banner = new Text('Level Up', {
     gradientColors: [Color.white, new Color(0xff6347)], // white on top, tomato at the bottom
 });
 ```
+
+### Style and caps variants
+
+`fontStyle` and `fontVariant` go into the CSS `font` shorthand the glyph rasterizer hands to Canvas 2D, so what you get is whatever the browser gets: a family's real italic or small-cap glyphs where it ships them, and the browser's synthesis where it does not.
+
+```ts
+import { Text } from '@codexo/exojs';
+
+const chapter = new Text('Chapter One', { fontSize: 28, fontVariant: 'small-caps' });
+const aside = new Text('a passing thought', { fontSize: 16, fontStyle: 'oblique' });
+```
+
+Both are part of a glyph atlas's identity, so a small-cap `a` and an ordinary `a` never share a cache entry, and `'oblique'` gets its own atlas rather than borrowing the italic one. That costs a second set of pages for a node that mixes variants — worth knowing before styling every label differently.
+
+A [`BitmapText`](/ExoJS/en/api/bitmap-text/) draws from an atlas somebody else baked, which contains exactly the glyphs it contains. Neither property has anything to act on there.
 
 Text flow and overflow come from [`LayoutOptions`](/ExoJS/en/api/layout-options/), merged into the same options object:
 

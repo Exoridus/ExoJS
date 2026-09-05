@@ -1,7 +1,8 @@
 import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
 
-import type { TextAlignment, TextTransform } from './types';
+import { cssFontString } from './canvasTextState';
+import type { FontStyle, FontVariant, TextAlignment, TextTransform } from './types';
 
 export type GradientAxis = 'vertical' | 'horizontal';
 
@@ -79,7 +80,9 @@ export interface TextStyleOptions {
    * `'bold'` for display / title text that intentionally requires bold.
    */
   fontWeight?: FontWeight;
-  fontStyle?: 'normal' | 'italic';
+  fontStyle?: FontStyle;
+  /** CSS font-variant-caps. Defaults to `'normal'`. */
+  fontVariant?: FontVariant;
   fontSize?: number;
   fillColor?: Color;
   outlineColor?: Color;
@@ -150,7 +153,8 @@ export class TextStyle {
 
   private _fontFamily: FontFamily;
   private _fontWeight: FontWeight;
-  private _fontStyle: 'normal' | 'italic';
+  private _fontStyle: FontStyle;
+  private _fontVariant: FontVariant;
   private _fontSize: number;
   private _fillColor: Color;
   private _outlineColor: Color;
@@ -178,6 +182,7 @@ export class TextStyle {
 
     this._fontWeight = options.fontWeight ?? 'normal';
     this._fontStyle = options.fontStyle ?? 'normal';
+    this._fontVariant = options.fontVariant ?? 'normal';
     this._fontSize = options.fontSize ?? 20;
     this._fillColor = options.fillColor ? options.fillColor.clone() : Color.white.clone();
     this._outlineColor = options.outlineColor ? options.outlineColor.clone() : Color.black.clone();
@@ -246,13 +251,23 @@ export class TextStyle {
     this._markDirty('font');
   }
 
-  public get fontStyle(): 'normal' | 'italic' {
+  public get fontStyle(): FontStyle {
     return this._fontStyle;
   }
 
-  public set fontStyle(v: 'normal' | 'italic') {
+  public set fontStyle(v: FontStyle) {
     if (this._fontStyle === v) return;
     this._fontStyle = v;
+    this._markDirty('font');
+  }
+
+  public get fontVariant(): FontVariant {
+    return this._fontVariant;
+  }
+
+  public set fontVariant(v: FontVariant) {
+    if (this._fontVariant === v) return;
+    this._fontVariant = v;
     this._markDirty('font');
   }
 
@@ -433,12 +448,11 @@ export class TextStyle {
   // ── Derived properties ──────────────────────────────────────────────────
 
   /**
-   * CSS font string used as `CanvasRenderingContext2D.font` during glyph
-   * rasterization. Includes `fontStyle` so italic fonts render correctly.
+   * CSS `font` shorthand used as `CanvasRenderingContext2D.font` during glyph
+   * rasterization.
    */
   public get font(): string {
-    const style = this._fontStyle !== 'normal' ? `${this._fontStyle} ` : '';
-    return `${style}${this._fontWeight} ${this._fontSize}px ${this._fontFamily}`;
+    return cssFontString(this._fontFamily, this._fontStyle, this._fontVariant, this._fontWeight, this._fontSize);
   }
 
   // ── Clone / copy ────────────────────────────────────────────────────────
@@ -449,6 +463,7 @@ export class TextStyle {
       this._fontFamily = style._fontFamily;
       this._fontWeight = style._fontWeight;
       this._fontStyle = style._fontStyle;
+      this._fontVariant = style._fontVariant;
       this._fontSize = style._fontSize;
       this._fillColor = style._fillColor.clone();
       this._outlineColor = style._outlineColor.clone();
@@ -475,6 +490,7 @@ export class TextStyle {
     s._fontFamily = this._fontFamily;
     s._fontWeight = this._fontWeight;
     s._fontStyle = this._fontStyle;
+    s._fontVariant = this._fontVariant;
     s._fontSize = this._fontSize;
     s._fillColor = this._fillColor.clone();
     s._outlineColor = this._outlineColor.clone();

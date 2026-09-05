@@ -8,7 +8,24 @@
  * themselves.
  */
 
+import type { FontStyle, FontVariant } from './types';
+
 type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+
+/**
+ * Build the CSS `font` shorthand for one font variant at one size.
+ *
+ * Shared by every part of the text stack that touches a canvas, so a
+ * measurement and the rasterization it describes can never disagree about the
+ * font they mean. The shorthand carries the caps variant too, in the order CSS
+ * requires (style, variant, weight, size, family).
+ */
+export const cssFontString = (family: string, fontStyle: FontStyle, fontVariant: FontVariant, fontWeight: string, size: number): string => {
+  const style = fontStyle !== 'normal' ? `${fontStyle} ` : '';
+  const variant = fontVariant !== 'normal' ? `${fontVariant} ` : '';
+
+  return `${style}${variant}${fontWeight} ${size}px ${family}`;
+};
 
 /** The complete text state a canvas needs to measure or draw one string. */
 export interface CanvasTextState {
@@ -18,6 +35,16 @@ export interface CanvasTextState {
   readonly direction: 'ltr' | 'rtl';
   /** Extra spacing in pixels between characters; `0` leaves the font's own advances alone. */
   readonly letterSpacing: number;
+  /**
+   * Caps variant, restated outside the `font` shorthand. Defaults to
+   * `'normal'`.
+   *
+   * The shorthand already names it, but not every engine has always honoured
+   * `small-caps` there, while `fontVariantCaps` is the attribute the current
+   * specification puts it on. Setting both is what makes a small-cap glyph
+   * rasterize the same way everywhere it is supported at all.
+   */
+  readonly variantCaps?: FontVariant;
 }
 
 /**
@@ -39,7 +66,14 @@ export const canvasSupportsLetterSpacing = (ctx: Ctx2D): boolean => 'letterSpaci
  * `canvas.height` resets the 2D context to its defaults.
  */
 export const applyCanvasTextState = (ctx: Ctx2D, state: CanvasTextState): void => {
+  // Assigning `font` resets the caps attribute to whatever the shorthand said,
+  // so the explicit restatement has to come after it, never before.
   ctx.font = state.font;
+
+  if ('fontVariantCaps' in ctx) {
+    (ctx as CanvasRenderingContext2D).fontVariantCaps = state.variantCaps ?? 'normal';
+  }
+
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'left';
   ctx.direction = state.direction;

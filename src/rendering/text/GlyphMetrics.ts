@@ -1,18 +1,7 @@
-import type { GlyphInfo, GlyphProvider } from './types';
+import { applyCanvasTextState, cssFontString } from './canvasTextState';
+import type { FontStyle, FontVariant, GlyphInfo, GlyphProvider } from './types';
 
 type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
-
-/**
- * Build the CSS `font` shorthand for one font variant at one size.
- *
- * Shared by {@link GlyphMetrics} and {@link GlyphAtlas} so a measurement and the
- * rasterization it describes can never disagree about the font they mean.
- */
-export const cssFontString = (family: string, fontStyle: 'normal' | 'italic', fontWeight: string, size: number): string => {
-  const style = fontStyle !== 'normal' ? `${fontStyle} ` : '';
-
-  return `${style}${fontWeight} ${size}px ${family}`;
-};
 
 const makeMeasureCtx = (): Ctx2D => {
   if (typeof OffscreenCanvas !== 'undefined') {
@@ -44,8 +33,8 @@ const makeMeasureCtx = (): Ctx2D => {
  *   cannot allocate an atlas, cannot claim atlas space, and cannot depend on
  *   which {@link Application} happens to exist.
  *
- * One instance per `family` × `fontStyle` × `fontWeight`, shared by every atlas
- * of that variant regardless of mode, SDF radius or pixel ratio - see
+ * One instance per `family` x `fontStyle` x `fontVariant` x `fontWeight`, shared
+ * by every atlas of that variant regardless of mode, SDF radius or pixel ratio - see
  * {@link GlyphAtlasPool.getMetrics}.
  *
  * Satisfies {@link GlyphProvider} so it can drive a measurement-only layout
@@ -56,7 +45,8 @@ const makeMeasureCtx = (): Ctx2D => {
  */
 export class GlyphMetrics implements GlyphProvider {
   private readonly _family: string;
-  private readonly _fontStyle: 'normal' | 'italic';
+  private readonly _fontStyle: FontStyle;
+  private readonly _fontVariant: FontVariant;
   private readonly _fontWeight: string;
 
   private readonly _infos = new Map<string, GlyphInfo>();
@@ -65,15 +55,16 @@ export class GlyphMetrics implements GlyphProvider {
   /** Created on first use - a font variant that is never measured allocates no canvas. */
   private _ctx: Ctx2D | null = null;
 
-  public constructor(family: string, fontStyle: 'normal' | 'italic', fontWeight: string) {
+  public constructor(family: string, fontStyle: FontStyle, fontVariant: FontVariant, fontWeight: string) {
     this._family = family;
     this._fontStyle = fontStyle;
+    this._fontVariant = fontVariant;
     this._fontWeight = fontWeight;
   }
 
   /** The CSS `font` shorthand for this variant at `size` logical pixels. */
   public cssFont(size: number): string {
-    return cssFontString(this._family, this._fontStyle, this._fontWeight, size);
+    return cssFontString(this._family, this._fontStyle, this._fontVariant, this._fontWeight, size);
   }
 
   /** Horizontal advance of `char` at `fontSize` logical pixels. */
@@ -136,8 +127,10 @@ export class GlyphMetrics implements GlyphProvider {
   private _measure(text: string, fontSize: number): TextMetrics {
     const ctx = (this._ctx ??= makeMeasureCtx());
 
-    ctx.font = this.cssFont(fontSize);
-    ctx.textBaseline = 'alphabetic';
+    // Through the shared applier rather than by hand: a small-cap advance only
+    // comes out right when the caps attribute is set alongside the shorthand,
+    // and a measurement that skipped it would disagree with the raster.
+    applyCanvasTextState(ctx, { font: this.cssFont(fontSize), direction: 'ltr', letterSpacing: 0, variantCaps: this._fontVariant });
 
     return ctx.measureText(text);
   }

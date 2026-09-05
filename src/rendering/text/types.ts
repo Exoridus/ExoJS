@@ -1,3 +1,23 @@
+/**
+ * CSS font-style values accepted by Canvas 2D.
+ *
+ * `'oblique'` slants an upright face by a fixed angle. Where a family ships a
+ * real italic the browser resolves `'italic'` to it and `'oblique'` to the
+ * synthesised slant; where it does not, both end up synthesised and look the
+ * same.
+ */
+export type FontStyle = 'normal' | 'italic' | 'oblique';
+
+/**
+ * CSS font-variant-caps values the glyph rasterizer honours.
+ *
+ * `'small-caps'` renders lowercase letters as reduced capitals - from the
+ * family's own small-cap glyphs where it has them, otherwise from the
+ * browser's synthesis. The variant is part of a glyph atlas's identity, so
+ * small-cap glyphs never share cache entries with the ordinary ones.
+ */
+export type FontVariant = 'normal' | 'small-caps';
+
 /** Horizontal alignment mode for multi-line text layout. */
 export type TextAlignment = 'left' | 'center' | 'right' | 'justify';
 
@@ -16,7 +36,8 @@ export interface TextLayoutStyle {
   readonly lineHeight: number;
   readonly leading: number;
   readonly align: TextAlignment;
-  readonly textTransform: TextTransform;
+  /** Defaults to `'none'` when the style omits it. */
+  readonly textTransform?: TextTransform;
 }
 
 /**

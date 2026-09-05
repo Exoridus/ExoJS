@@ -62,7 +62,7 @@ describe('GlyphAtlas', () => {
   });
 
   test('constructs with one initial AtlasPage of the given size', () => {
-    const atlas = new GlyphAtlas('Arial', 'normal', 'bold', 1024, 'color');
+    const atlas = new GlyphAtlas('Arial', 'normal', 'normal', 'bold', 1024, 'color');
 
     expect(atlas.pages).toHaveLength(1);
     expect(atlas.pages[0].texture.width).toBe(1024);
@@ -70,7 +70,7 @@ describe('GlyphAtlas', () => {
   });
 
   test('getGlyph returns GlyphInfo with sane bounds and advance > 0', () => {
-    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 1024, 'color');
+    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 'normal', 1024, 'color');
     const info = atlas.getGlyph('A', 16);
 
     expect(info.advance).toBeGreaterThan(0);
@@ -86,7 +86,7 @@ describe('GlyphAtlas', () => {
   });
 
   test('color-glyph UVs span the unpadded ink, matching the quad size, not the padded slot', () => {
-    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 1024, 'color');
+    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 'normal', 1024, 'color');
     const info = atlas.getGlyph('A', 16);
     const pageSize = atlas.pages[0].texture.width;
 
@@ -101,7 +101,7 @@ describe('GlyphAtlas', () => {
   });
 
   test('same call twice returns the same cached instance', () => {
-    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 1024, 'color');
+    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 'normal', 1024, 'color');
     const a = atlas.getGlyph('A', 16);
     const b = atlas.getGlyph('A', 16);
 
@@ -109,7 +109,7 @@ describe('GlyphAtlas', () => {
   });
 
   test('different char or size keys produce different entries', () => {
-    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 1024, 'color');
+    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 'normal', 1024, 'color');
     const infoA = atlas.getGlyph('A', 16);
     const infoB = atlas.getGlyph('B', 16);
     const infoC = atlas.getGlyph('A', 32);
@@ -133,7 +133,7 @@ describe('GlyphAtlas', () => {
     });
     installMockCtx(wideCtx);
 
-    const atlas = new GlyphAtlas('serif', 'normal', 'normal', 64, 'color');
+    const atlas = new GlyphAtlas('serif', 'normal', 'normal', 'normal', 64, 'color');
 
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     expect(() => {
@@ -146,7 +146,7 @@ describe('GlyphAtlas', () => {
   });
 
   test('clear() empties the cache and resets pages to one', () => {
-    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 1024, 'color');
+    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 'normal', 1024, 'color');
     const info1 = atlas.getGlyph('A', 16);
 
     atlas.clear();
@@ -175,7 +175,7 @@ describe('GlyphAtlas', () => {
     });
     installMockCtx(wideCtx);
 
-    const atlas = new GlyphAtlas('serif', 'normal', 'normal', 64, 'color');
+    const atlas = new GlyphAtlas('serif', 'normal', 'normal', 'normal', 64, 'color');
 
     for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
       atlas.getGlyph(ch, 28);
@@ -195,7 +195,7 @@ describe('GlyphAtlas', () => {
   });
 
   test('clear() dispatches onCleared so nodes holding stale GlyphInfo can re-layout', () => {
-    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 1024, 'color');
+    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 'normal', 1024, 'color');
     const listener = vi.fn();
 
     atlas.onCleared.add(listener);
@@ -205,7 +205,7 @@ describe('GlyphAtlas', () => {
   });
 
   test('texture version increments on each new glyph insertion', () => {
-    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 1024, 'color');
+    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 'normal', 1024, 'color');
     const v0 = atlas.pages[0].texture.version;
 
     atlas.getGlyph('A', 16);
@@ -223,8 +223,8 @@ describe('GlyphAtlas', () => {
   });
 
   test('mode property reflects the atlas rendering mode', () => {
-    const sdfAtlas = new GlyphAtlas('Arial', 'normal', 'bold', 1024, 'sdf');
-    const colorAtlas = new GlyphAtlas('Arial', 'normal', 'bold', 1024, 'color');
+    const sdfAtlas = new GlyphAtlas('Arial', 'normal', 'normal', 'bold', 1024, 'sdf');
+    const colorAtlas = new GlyphAtlas('Arial', 'normal', 'normal', 'bold', 1024, 'color');
 
     expect(sdfAtlas.mode).toBe('sdf');
     expect(colorAtlas.mode).toBe('color');
@@ -238,7 +238,7 @@ describe('GlyphAtlas', () => {
     });
     installMockCtx(kerningCtx);
 
-    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 1024, 'color');
+    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 'normal', 1024, 'color');
 
     // AV pair: 18 - 10 - 10 = -2 (negative = tighter)
     expect(atlas.getKerning('A', 'V', 16)).toBeCloseTo(-2);
@@ -254,7 +254,7 @@ describe('GlyphAtlas', () => {
     });
     installMockCtx(cachingCtx);
 
-    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 1024, 'color');
+    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 'normal', 1024, 'color');
 
     atlas.getKerning('A', 'B', 16);
     const after1 = callCount;
@@ -273,7 +273,7 @@ describe('GlyphAtlas', () => {
     });
     installMockCtx(cachingCtx);
 
-    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 1024, 'color');
+    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 'normal', 1024, 'color');
 
     atlas.getKerning('A', 'B', 16);
     const after1 = callCount;

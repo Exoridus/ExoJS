@@ -110,6 +110,8 @@ export { Text } from '#rendering/text/Text';
 export type { FontFamily, FontRegistry, FontWeight, GradientAxis, StyleChangeHint, TextStyleOptions } from '#rendering/text/TextStyle';
 export { TextStyle } from '#rendering/text/TextStyle';
 export type {
+  FontStyle,
+  FontVariant,
   GlyphInfo,
   GlyphKey,
   GlyphPlacement,
@@ -120,6 +122,7 @@ export type {
   TextLineMetrics,
   TextPageQuads,
   TextSize,
+  TextTransform,
 } from '#rendering/text/types';
 export type { CompressedTextureLevel, CompressedTexturePayload } from '#rendering/texture/compressedPayload';
 export type { CompressedTextureOptions } from '#rendering/texture/CompressedTexture';

@@ -267,6 +267,15 @@ describe('setters', () => {
     expect(style.consumeDirty()).toBe('layout');
   });
 
+  test('fontVariant: same value is a no-op; different value marks font-dirty', () => {
+    const style = freshStyle();
+    style.fontVariant = 'normal';
+    expect(style.consumeDirty()).toBeNull();
+
+    style.fontVariant = 'small-caps';
+    expect(style.consumeDirty()).toBe('font');
+  });
+
   test('textTransform: same value is a no-op; different value marks layout-dirty', () => {
     const style = freshStyle();
     style.textTransform = 'none';
@@ -395,6 +404,16 @@ describe('font (derived CSS string)', () => {
   test('italic style prepends "italic " before the weight', () => {
     const style = new TextStyle({ fontFamily: 'Georgia', fontSize: 24, fontStyle: 'italic', fontWeight: 'bold' });
     expect(style.font).toBe('italic bold 24px Georgia');
+  });
+
+  test('oblique style prepends "oblique " before the weight', () => {
+    const style = new TextStyle({ fontFamily: 'Georgia', fontSize: 24, fontStyle: 'oblique' });
+    expect(style.font).toBe('oblique normal 24px Georgia');
+  });
+
+  test('small caps sit between the style and the weight, as the CSS shorthand requires', () => {
+    const style = new TextStyle({ fontFamily: 'Georgia', fontSize: 24, fontStyle: 'italic', fontVariant: 'small-caps', fontWeight: 'bold' });
+    expect(style.font).toBe('italic small-caps bold 24px Georgia');
   });
 });
 

@@ -2,7 +2,7 @@ import { Color } from '#core/Color';
 import type { LayoutOptions } from '#rendering/text/LayoutOptions';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 
-import { FONT_WEIGHTS, readBoolean, readEnum, readNumber, readString, TEXT_ALIGNMENTS, TEXT_TRANSFORMS } from './read';
+import { FONT_STYLES, FONT_VARIANTS, FONT_WEIGHTS, readBoolean, readEnum, readNumber, readString, TEXT_ALIGNMENTS, TEXT_TRANSFORMS } from './read';
 
 // ── Options bags ───────────────────────────────────────────────────────────────
 
@@ -41,6 +41,7 @@ export const serializeStyle = (style: {
   fontFamily: string;
   fontWeight: string;
   fontStyle: string;
+  fontVariant: string;
   fontSize: number;
   fillColor: Color;
   outlineColor: Color;
@@ -62,6 +63,7 @@ export const serializeStyle = (style: {
   if (style.fontFamily !== 'Arial') out.fontFamily = style.fontFamily;
   if (style.fontWeight !== 'normal') out.fontWeight = style.fontWeight;
   if (style.fontStyle !== 'normal') out.fontStyle = style.fontStyle;
+  if (style.fontVariant !== 'normal') out.fontVariant = style.fontVariant;
   if (style.fontSize !== 20) out.fontSize = style.fontSize;
   if (!colorEquals(style.fillColor, 255, 255, 255, 1)) out.fillColor = colorToArray(style.fillColor);
   if (!colorEquals(style.outlineColor, 0, 0, 0, 1)) out.outlineColor = colorToArray(style.outlineColor);
@@ -129,7 +131,12 @@ export const deserializeStyleOptions = (data: unknown): TextStyleOptions | undef
   const fontWeight = readEnum(source, 'fontWeight', FONT_WEIGHTS);
   if (fontWeight !== undefined) options.fontWeight = fontWeight;
 
-  if (source.fontStyle === 'italic' || source.fontStyle === 'normal') options.fontStyle = source.fontStyle;
+  const fontStyle = readEnum(source, 'fontStyle', FONT_STYLES);
+  if (fontStyle !== undefined) options.fontStyle = fontStyle;
+
+  const fontVariant = readEnum(source, 'fontVariant', FONT_VARIANTS);
+  if (fontVariant !== undefined) options.fontVariant = fontVariant;
+
   if (typeof source.fontSize === 'number') options.fontSize = source.fontSize;
 
   const fillColor = arrayToColor(source.fillColor);

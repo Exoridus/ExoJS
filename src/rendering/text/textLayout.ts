@@ -90,7 +90,8 @@ export const emptyTextLayout = (): TextLayoutResult => ({
 export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutOptions, provider: GlyphProvider, shaper?: LineShaper): TextLayoutResult => {
   if (text.length === 0) return emptyTextLayout();
 
-  const { fontSize, lineHeight, leading, align, textTransform } = style;
+  const { fontSize, lineHeight, leading, align } = style;
+  const textTransform = style.textTransform ?? 'none';
   const computedLineHeight = fontSize * lineHeight + leading;
   const letterSpacing = layout.letterSpacing ?? 0;
   const maxWidth = layout.maxWidth;

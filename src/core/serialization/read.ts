@@ -1,5 +1,5 @@
 import type { FontWeight } from '#rendering/text/TextStyle';
-import type { TextAlignment, TextTransform } from '#rendering/text/types';
+import type { FontStyle, FontVariant, TextAlignment, TextTransform } from '#rendering/text/types';
 import type { RepeatFit, RepeatMode } from '#rendering/texture/repeat';
 
 import type { SerializedNode } from './types';
@@ -98,6 +98,12 @@ export const asNumberArray = (value: unknown): number[] | null =>
 
 /** Allowed {@link FontWeight} values for {@link readEnum}. */
 export const FONT_WEIGHTS = ['normal', 'bold', '100', '200', '300', '400', '500', '600', '700', '800', '900'] as const satisfies readonly FontWeight[];
+
+/** Allowed {@link FontStyle} values for {@link readEnum}. */
+export const FONT_STYLES = ['normal', 'italic', 'oblique'] as const satisfies readonly FontStyle[];
+
+/** Allowed {@link FontVariant} values for {@link readEnum}. */
+export const FONT_VARIANTS = ['normal', 'small-caps'] as const satisfies readonly FontVariant[];
 
 /** Allowed {@link TextAlignment} values for {@link readEnum}. */
 export const TEXT_ALIGNMENTS = ['left', 'center', 'right', 'justify'] as const satisfies readonly TextAlignment[];

@@ -4,7 +4,7 @@ import { AtlasPage, SDF_RADIUS } from './GlyphAtlas';
 import { GlyphSdf } from './GlyphSdf';
 import type { ShapedTextMetrics } from './ShapedTextMetrics';
 import type { LineShaper } from './shaping';
-import type { GlyphInfo } from './types';
+import type { FontStyle, FontVariant, GlyphInfo } from './types';
 
 type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
@@ -36,7 +36,8 @@ const defaultPageHeight = 256;
 /** Construction options for {@link ShapedTextSource}. */
 export interface ShapedTextSourceOptions {
   family: string;
-  fontStyle: 'normal' | 'italic';
+  fontStyle: FontStyle;
+  fontVariant: FontVariant;
   fontWeight: string;
   /** Logical measurement for this variant, so raster and layout cannot disagree about a width. */
   metrics: ShapedTextMetrics;
@@ -71,7 +72,8 @@ export interface ShapedTextSourceOptions {
  */
 export class ShapedTextSource implements LineShaper {
   private readonly _family: string;
-  private readonly _fontStyle: 'normal' | 'italic';
+  private readonly _fontStyle: FontStyle;
+  private readonly _fontVariant: FontVariant;
   private readonly _fontWeight: string;
   private readonly _metrics: ShapedTextMetrics;
   private readonly _mode: AtlasMode;
@@ -94,6 +96,7 @@ export class ShapedTextSource implements LineShaper {
   public constructor(options: ShapedTextSourceOptions) {
     this._family = options.family;
     this._fontStyle = options.fontStyle;
+    this._fontVariant = options.fontVariant;
     this._fontWeight = options.fontWeight;
     this._metrics = options.metrics;
     this._mode = options.mode ?? 'sdf';
@@ -185,6 +188,7 @@ export class ShapedTextSource implements LineShaper {
         fontFamily: this._family,
         fontWeight: this._fontWeight,
         fontStyle: this._fontStyle,
+        fontVariant: this._fontVariant,
         buffer: this._rasterSdfRadius,
         radius: this._rasterSdfRadius,
         cutoff: 0.5,
