@@ -16,10 +16,14 @@ import type { AnyShape } from '../src/shapes/AnyShape';
 
 /**
  * Sleeping must not freeze a body while its contact still carries penetration
- * the solver has not worked off. Left running, the solver settles a resting
- * contact within a fraction of a px of its slop, so a body that comes to rest
- * visibly embedded in the floor is a sleep decision taken too early - not a
- * solver limit. Default solver config unless stated, +Y down.
+ * the solver is working off. A body that comes to rest visibly embedded in the
+ * floor is a sleep decision taken too early - not a solver limit.
+ *
+ * The converse matters just as much: a contact that has reached the depth its
+ * own load holds it at is finished, however deep that is, and holding its island
+ * awake for an overlap that is never going to shrink keeps a settled scene being
+ * solved forever. Both directions are pinned below. Default solver config unless
+ * stated, +Y down.
  */
 
 const GRAVITY = 1000; // px/s²
@@ -153,13 +157,21 @@ describe('sleeping with unresolved contact penetration', () => {
 
     const body = addDynamic(world, new CircleShape(8), FLOOR_TOP + 5); // 13px deep
 
-    // Well past timeToSleep, but the push-out is speed-capped, so it is still
-    // climbing out and must not be frozen where it is.
-    advance(world, 1);
-    expect(body.isSleeping).toBe(false);
-    expect(sink(body, 8)).toBeGreaterThan(MAX_SLEEPING_PENETRATION);
+    // Asserted every frame rather than at one point in time: how long the
+    // push-out needs is a solver tuning detail, but "never asleep while still
+    // embedded" is the contract, and it has to hold at every frame of the climb.
+    let sawEmbedded = false;
 
-    advance(world, 6);
+    for (let frame = 0; frame < 7 * 60; frame++) {
+      world.step(FRAME);
+
+      if (sink(body, 8) > MAX_SLEEPING_PENETRATION) {
+        sawEmbedded = true;
+        expect(body.isSleeping).toBe(false);
+      }
+    }
+
+    expect(sawEmbedded).toBe(true);
     expect(body.isSleeping).toBe(true);
     expect(sink(body, 8)).toBeLessThanOrEqual(MAX_SLEEPING_PENETRATION);
   });
@@ -175,11 +187,23 @@ describe('sleeping with unresolved contact penetration', () => {
     const middle = addDynamic(world, new BoxShape(32, 32), FLOOR_TOP - 48 + 6);
     const top = addDynamic(world, new BoxShape(32, 32), FLOOR_TOP - 80 + 6);
 
-    advance(world, 1);
+    // The two upper boxes are at rest from the first frame, so only the island
+    // coupling can hold them awake - and it has to do so for as long as the
+    // bottom box is still climbing out, whichever frame that ends on.
+    let sawEmbedded = false;
 
-    expect(bottom.isSleeping).toBe(false);
-    expect(middle.isSleeping).toBe(false);
-    expect(top.isSleeping).toBe(false);
+    for (let frame = 0; frame < 60; frame++) {
+      world.step(FRAME);
+
+      if (sink(bottom, 16) > MAX_SLEEPING_PENETRATION) {
+        sawEmbedded = true;
+        expect(bottom.isSleeping).toBe(false);
+        expect(middle.isSleeping).toBe(false);
+        expect(top.isSleeping).toBe(false);
+      }
+    }
+
+    expect(sawEmbedded).toBe(true);
 
     advance(world, 6);
 
@@ -307,6 +331,23 @@ describe('sleeping with unresolved contact penetration', () => {
     expect(sleptAt).toBeGreaterThan(0);
     expect(sink(body, 8)).toBeGreaterThan(CONTACT_SLOP);
     expect(sink(body, 8)).toBeLessThanOrEqual(MAX_SLEEPING_PENETRATION);
+  });
+
+  it('a contact resting deeper than the tolerance still sleeps once its push-out has stalled', () => {
+    // At this acceleration a single-point contact converges to ~0.81px, past
+    // the tolerance above. That depth is the solver's fixpoint, not an overlap
+    // anything is still working off, so waiting for it to shrink would keep the
+    // body awake forever - the gate has to read progress, not depth alone.
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 20000 } });
+
+    addBoxFloor(world);
+
+    const body = addDynamic(world, new CircleShape(8), FLOOR_TOP - 8 - 0.5);
+    const sleptAt = framesUntilAsleep(world, body, 8);
+
+    expect(sleptAt).toBeGreaterThan(0);
+    expect(sink(body, 8)).toBeGreaterThan(MAX_SLEEPING_PENETRATION);
+    expect(sink(body, 8)).toBeLessThan(1);
   });
 
   it('a bullet stopped by CCD sleeps at the surface it hit', () => {

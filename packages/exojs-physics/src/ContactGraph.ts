@@ -44,6 +44,17 @@ export interface ContactRecord {
   readonly tangentImpulse: [number, number];
   /** Feature ids the cached impulses belong to (for warm-start matching). */
   readonly pointIds: [number, number];
+  /**
+   * Penetration each point carried on the previous detection pass, matched by
+   * feature id the same way the impulse cache is, or `-1` where the point is new
+   * and has no history. The difference against the manifold's current
+   * penetration is how much the last solve actually moved the overlap, which is
+   * what separates a contact the push-out is still working off from one that has
+   * reached the depth its load holds it at.
+   */
+  readonly previousPenetration: [number, number];
+  /** Penetration per point as of this pass, kept so the next pass can form that difference. */
+  readonly pointPenetration: [number, number];
 }
 
 /**
@@ -183,6 +194,11 @@ export class ContactGraph {
         record.tangentImpulse[1] = 0;
         record.pointIds[0] = 0;
         record.pointIds[1] = 0;
+        // Same reasoning for the penetration history: a contact that carried no
+        // impulse this step did not move its overlap, so the next pass must read
+        // the point as new rather than as one whose push-out has converged.
+        record.pointPenetration[0] = -1;
+        record.pointPenetration[1] = -1;
       }
     }
   }
@@ -334,12 +350,16 @@ const createRecord = (a: Collider, b: Collider, ownerA: Collider, ownerB: Collid
   normalImpulse: [0, 0],
   tangentImpulse: [0, 0],
   pointIds: [0, 0],
+  previousPenetration: [-1, -1],
+  pointPenetration: [-1, -1],
 });
 
 /**
  * Map the previously accumulated impulses onto the new manifold points by feature
- * id (warm-starting). Unmatched points start at zero; the cache is re-keyed to the
- * new ids. Runs after `collide` has refreshed `record.manifold`.
+ * id (warm-starting), and carry each point's previous penetration across the same
+ * match. Unmatched points start at zero impulse and at no penetration history;
+ * the cache is re-keyed to the new ids. Runs after `collide` has refreshed
+ * `record.manifold`.
  */
 const warmStartMatch = (record: ContactRecord): void => {
   const manifold = record.manifold;
@@ -347,30 +367,40 @@ const warmStartMatch = (record: ContactRecord): void => {
   const pn1 = record.normalImpulse[1];
   const pt0 = record.tangentImpulse[0];
   const pt1 = record.tangentImpulse[1];
+  const pd0 = record.pointPenetration[0];
+  const pd1 = record.pointPenetration[1];
   const pid0 = record.pointIds[0];
   const pid1 = record.pointIds[1];
 
   for (let i = 0; i < 2; i++) {
     if (i < manifold.pointCount) {
       // i ∈ {0,1} and within pointCount, so the manifold point exists.
-      const id = (i === 0 ? manifold.points[0] : manifold.points[1]).id;
+      const point = i === 0 ? manifold.points[0] : manifold.points[1];
+      const id = point.id;
       let normal = 0;
       let tangent = 0;
+      let previous = -1;
 
       if (id === pid0) {
         normal = pn0;
         tangent = pt0;
+        previous = pd0;
       } else if (id === pid1) {
         normal = pn1;
         tangent = pt1;
+        previous = pd1;
       }
 
       record.normalImpulse[i] = normal;
       record.tangentImpulse[i] = tangent;
+      record.previousPenetration[i] = previous;
+      record.pointPenetration[i] = point.penetration;
       record.pointIds[i] = id;
     } else {
       record.normalImpulse[i] = 0;
       record.tangentImpulse[i] = 0;
+      record.previousPenetration[i] = -1;
+      record.pointPenetration[i] = -1;
       record.pointIds[i] = 0;
     }
   }
