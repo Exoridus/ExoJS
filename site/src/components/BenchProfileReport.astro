@@ -69,6 +69,10 @@ const renderingBlocks = (rendering?.backends ?? []).map(backend => {
 
 const physicsArms = physics === undefined ? [] : armsOfSection(physics.section);
 const physicsRows = physics === undefined ? [] : tableRows([physics.section], physicsArms);
+
+/** The machine is one across the pooled runs, so the first run's stamps name it for all of them. */
+const renderingStamps = rendering?.runs[0]?.provenance ?? [];
+const physicsHost = physics?.runs[0];
 ---
 
 <section class="profile">
@@ -91,7 +95,7 @@ const physicsRows = physics === undefined ? [] : tableRows([physics.section], ph
                 <dd>{physics.libraries.map(library => `${library.name} ${library.version}`).join(', ')}</dd>
             </div>
         )}
-        {rendering?.provenance.map(stamp => (
+        {renderingStamps.map(stamp => (
             <div>
                 <dt>{BACKEND_LABELS[stamp.backend]} adapter</dt>
                 <dd>
@@ -104,14 +108,14 @@ const physicsRows = physics === undefined ? [] : tableRows([physics.section], ph
                 </dd>
             </div>
         ))}
-        {physics !== undefined && (
+        {physicsHost !== undefined && (
             <div>
                 <dt>Physics host</dt>
                 <dd>
-                    {physics.provenance.host.cpu}
+                    {physicsHost.host.cpu}
                     <span class="detail">
-                        {physics.provenance.host.cpuCount} logical cores, {physics.provenance.host.os} {physics.provenance.host.arch}, Node{' '}
-                        {physics.provenance.host.node}, fixed step {(physics.provenance.fixedDelta * 1000).toFixed(2)} ms
+                        {physicsHost.host.cpuCount} logical cores, {physicsHost.host.os} {physicsHost.host.arch}, Node{' '}
+                        {physicsHost.host.node}, fixed step {(physicsHost.fixedDelta * 1000).toFixed(2)} ms
                     </span>
                 </dd>
             </div>
@@ -295,11 +299,11 @@ const physicsRows = physics === undefined ? [] : tableRows([physics.section], ph
                 </div>
             )}
 
-            {physics.provenance.caveats.length > 0 && (
+            {physicsHost !== undefined && physicsHost.caveats.length > 0 && (
                 <details class="omissions">
-                    <summary>{physics.provenance.caveats.length} caveats the physics run disclosed</summary>
+                    <summary>{physicsHost.caveats.length} caveats the physics runs disclosed</summary>
                     <ul>
-                        {physics.provenance.caveats.map(caveat => (
+                        {physicsHost.caveats.map(caveat => (
                             <li>{caveat}</li>
                         ))}
                     </ul>

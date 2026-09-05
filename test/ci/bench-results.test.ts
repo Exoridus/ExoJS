@@ -17,6 +17,10 @@ import { computeProfileSignature } from '../../packages/exojs-bench/src/profile/
  * tinguishable from no gate at all right up to the moment it mattered, which is
  * why each defect below is introduced into a real file and run through the real
  * script rather than asserted against the validation logic in isolation.
+ *
+ * Two of the defects are about evidence rather than integrity: a profile that
+ * pools too few runs, and a schema version 1 file, which described a single run
+ * and therefore a ratio no repetition ever confirmed.
  */
 
 const REPO_ROOT = resolve(import.meta.dirname!, '../..');
@@ -25,9 +29,33 @@ const TSX_CLI = join('node_modules', 'tsx', 'dist', 'cli.mjs');
 
 const SLUG = 'test-gpu-linux-chromium';
 
-/** A minimal but structurally complete profile, of the shape `bench:compare --profile` writes. */
-const validProfile = (): Record<string, unknown> => ({
-  schemaVersion: 1,
+/** How many separate runs a published profile has to pool. */
+const REQUIRED_RUNS = 3;
+
+const renderingStamp = (run: number) => ({
+  backend: 'webgl2',
+  adapter: 'Test Adapter',
+  flags: ['--force-device-scale-factor=1'],
+  headless: true,
+  software: false,
+  engineVersion: '0.17.0',
+  timestamp: `2026-01-0${String(run + 1)}T00:00:00.000Z`,
+});
+
+const physicsStamp = (run: number) => ({
+  host: { node: 'v24.14.1', cpu: 'Test CPU', cpuCount: 16, os: 'linux 6.1.0', arch: 'x64' },
+  fixedDelta: 0.016666666666666666,
+  caveats: ['Measured in one Node process.'],
+  engineVersion: '0.17.0',
+  timestamp: `2026-01-0${String(run + 1)}T00:00:00.000Z`,
+});
+
+/**
+ * A minimal but structurally complete profile, of the shape
+ * `bench:compare --profile` writes, pooling `runs` separate harness runs.
+ */
+const validProfile = (runs = REQUIRED_RUNS): Record<string, unknown> => ({
+  schemaVersion: 2,
   profile: {
     slug: SLUG,
     gpu: 'test-gpu',
@@ -35,19 +63,10 @@ const validProfile = (): Record<string, unknown> => ({
     browser: 'chromium',
     engineVersion: '0.17.0',
     measuredAt: '2026-01-01T00:00:00.000Z',
+    runs,
   },
   rendering: {
-    provenance: [
-      {
-        backend: 'webgl2',
-        adapter: 'Test Adapter',
-        flags: ['--force-device-scale-factor=1'],
-        headless: true,
-        software: false,
-        engineVersion: '0.17.0',
-        timestamp: '2026-01-01T00:00:00.000Z',
-      },
-    ],
+    runs: Array.from({ length: runs }, (_, run) => ({ provenance: [renderingStamp(run)] })),
     libraries: [{ name: 'pixi.js', version: '8.19.0' }],
     backends: [
       {
@@ -69,6 +88,13 @@ const validProfile = (): Record<string, unknown> => ({
                     competitorMs: 0.5,
                     verdict: { side: 'exojs', ratio: 0.5, factor: 2, label: 'ExoJS leads (2.00x)', structural: false },
                     mechanism: 'fewer draw calls',
+                    aggregate: {
+                      runs,
+                      reference: { minMs: 0.24, maxMs: 0.26, ratio: 0.26 / 0.24 },
+                      competitor: { minMs: 0.49, maxMs: 0.51, ratio: 0.51 / 0.49 },
+                      stable: true,
+                      rungs: Array.from({ length: runs }, () => 'exojs-leads'),
+                    },
                   },
                 ],
               },
@@ -81,13 +107,30 @@ const validProfile = (): Record<string, unknown> => ({
     ],
   },
   physics: {
-    provenance: {
-      host: { node: 'v24.14.1', cpu: 'Test CPU', cpuCount: 16, os: 'linux 6.1.0', arch: 'x64' },
-      fixedDelta: 0.016666666666666666,
-      caveats: ['Measured in one Node process.'],
-      engineVersion: '0.17.0',
-      timestamp: '2026-01-01T00:00:00.000Z',
-    },
+    runs: Array.from({ length: runs }, (_, run) => physicsStamp(run)),
+    libraries: [{ name: '@codexo/exojs-physics', version: '0.17.0' }],
+    section: { title: 'Physics', rows: [] },
+  },
+});
+
+/** The schema version 1 profile shape, which described a single run and is no longer readable. */
+const version1Profile = (): Record<string, unknown> => ({
+  schemaVersion: 1,
+  profile: {
+    slug: SLUG,
+    gpu: 'test-gpu',
+    os: 'linux',
+    browser: 'chromium',
+    engineVersion: '0.17.0',
+    measuredAt: '2026-01-01T00:00:00.000Z',
+  },
+  rendering: {
+    provenance: [renderingStamp(0)],
+    libraries: [{ name: 'pixi.js', version: '8.19.0' }],
+    backends: [{ backend: 'webgl2', headlineCount: 1000, competitors: ['pixi'], sections: [], excluded: [], webgl1: [] }],
+  },
+  physics: {
+    provenance: physicsStamp(0),
     libraries: [{ name: '@codexo/exojs-physics', version: '0.17.0' }],
     section: { title: 'Physics', rows: [] },
   },
@@ -96,10 +139,10 @@ const validProfile = (): Record<string, unknown> => ({
 let directory = '';
 
 /** Write a document into the fixture directory, signing it unless `sign` is false. */
-const write = (document: Record<string, unknown>, { sign = true }: { sign?: boolean } = {}): void => {
+const write = (document: Record<string, unknown>, { sign = true, indent = 2 }: { sign?: boolean; indent?: number } = {}): void => {
   const signed = sign ? { ...document, signature: { algorithm: 'sha256', value: computeProfileSignature(document) } } : document;
 
-  writeFileSync(join(directory, `${SLUG}.json`), `${JSON.stringify(signed, null, 2)}\n`);
+  writeFileSync(join(directory, `${SLUG}.json`), `${JSON.stringify(signed, null, indent)}\n`);
 };
 
 /** Run the gate over the fixture directory; returns its output on failure, or null when it passed. */
@@ -129,8 +172,37 @@ describe('verify-bench-results', () => {
     expect(check()).toBeNull();
   });
 
-  it('passes a profile the harness signed', () => {
+  it('passes a profile the harness signed from three separate runs', () => {
     write(validProfile());
+
+    expect(check()).toBeNull();
+  });
+
+  it('rejects a profile that pools fewer runs than a published ratio needs', () => {
+    write(validProfile(2));
+
+    expect(check()).toContain(`pools 2 run(s), but a published profile needs at least ${String(REQUIRED_RUNS)}`);
+  });
+
+  it('rejects a schema version 1 file outright: it described a single run', () => {
+    write(version1Profile());
+
+    expect(check()).toContain('which this repository does not understand');
+  });
+
+  it('rejects a run count the domains do not actually carry', () => {
+    const document = validProfile();
+    const profile = document['profile'] as { runs: number };
+
+    profile.runs = 4;
+
+    write(document);
+
+    expect(check()).toContain('rendering.runs holds 3 run(s) but profile.runs declares 4');
+  });
+
+  it('accepts a re-formatted file: the signature covers canonical JSON, so a formatter cannot invalidate it', () => {
+    write(validProfile(), { indent: 4 });
 
     expect(check()).toBeNull();
   });
@@ -147,15 +219,15 @@ describe('verify-bench-results', () => {
     expect(check()).toContain('does not match its harness signature');
   });
 
-  it('rejects a profile missing a provenance field', () => {
+  it('rejects a profile missing a provenance field, naming the run it belongs to', () => {
     const document = validProfile();
-    const rendering = document['rendering'] as { provenance: Array<Record<string, unknown>> };
+    const rendering = document['rendering'] as { runs: Array<{ provenance: Array<Record<string, unknown>> }> };
 
-    delete rendering.provenance[0]!['adapter'];
+    delete rendering.runs[1]!.provenance[0]!['adapter'];
 
     write(document);
 
-    expect(check()).toContain('rendering.provenance[0].adapter is missing or empty');
+    expect(check()).toContain('rendering.runs[1].provenance[0].adapter is missing or empty');
   });
 
   it('rejects an arm that was not installed when the run was measured', () => {
@@ -177,9 +249,9 @@ describe('verify-bench-results', () => {
 
   it('rejects stamps that disagree on the engine version', () => {
     const document = validProfile();
-    const physics = document['physics'] as { provenance: { engineVersion: string } };
+    const physics = document['physics'] as { runs: Array<{ engineVersion: string }> };
 
-    physics.provenance.engineVersion = '0.16.0';
+    physics.runs[2]!.engineVersion = '0.16.0';
 
     write(document);
 

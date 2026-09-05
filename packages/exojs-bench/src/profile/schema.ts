@@ -1,4 +1,4 @@
-import type { BackendComparison, ComparisonSection } from '../comparison/build';
+import type { AggregatedBackendComparison, AggregatedSection } from '../comparison/pooled';
 import type { Backend } from '../rendering/EngineAdapter';
 
 /**
@@ -11,25 +11,32 @@ import type { Backend } from '../rendering/EngineAdapter';
  * consumer reads this shape and never the raw run artifacts, which are
  * machine-local and never committed.
  *
- * Two properties make the document safe to publish. The comparison model is
+ * Three properties make the document safe to publish. The comparison model is
  * copied verbatim from what `bench:compare` computed, so no verdict, ratio or
- * mechanism can be authored by hand; and the whole document is covered by a
+ * mechanism can be authored by hand; every published number is pooled from
+ * several separate runs and carries the spread those runs observed, so a single
+ * unlucky measurement cannot set it; and the whole document is covered by a
  * {@link ProfileSignature} that recomputes from its own contents, so an edited
  * number no longer matches the file it sits in.
  *
  * A document may carry one domain or both. `rendering` is absent when the
- * profile was written from a physics run alone, `physics` when it was written
- * from a rendering run alone; at least one is always present. A consumer must
- * read a missing domain as "not measured on this machine", never as zero.
+ * profile was written from a physics measurement alone, `physics` when it was
+ * written from a rendering measurement alone; at least one is always present. A
+ * consumer must read a missing domain as "not measured on this machine", never
+ * as zero.
  */
 
 /** Schema version `bench:compare` stamps into a new document. */
-export const BENCH_PROFILE_SCHEMA_VERSION = 1;
+export const BENCH_PROFILE_SCHEMA_VERSION = 2;
 
 /**
  * Schema versions a reader accepts. A document carrying anything else is
  * rejected rather than parsed on a guess: the fields a consumer needs may have
  * changed meaning, and a silently misread benchmark is worse than a missing one.
+ *
+ * Version 1 is deliberately absent. It described a single run, which cannot
+ * support a published ratio, and reading one as if it were a reference
+ * measurement is exactly the mistake the version bump exists to prevent.
  */
 export const SUPPORTED_BENCH_PROFILE_SCHEMA_VERSIONS: readonly number[] = [BENCH_PROFILE_SCHEMA_VERSION];
 
@@ -69,6 +76,15 @@ export interface BenchProfile {
   readonly engineVersion: string;
   /** Latest ISO-8601 timestamp among the document's stamps: when the profile was measured. */
   readonly measuredAt: string;
+  /**
+   * How many separate harness runs every measured domain pools.
+   *
+   * A published number is the median of that many per-run medians, and the
+   * verdict beside it was confirmed against each run separately. Both domains
+   * of a document pool the same number of runs, so this one value speaks for
+   * the whole file.
+   */
+  readonly runs: number;
 }
 
 /**
@@ -133,24 +149,34 @@ export interface PhysicsStamp {
   readonly timestamp: string;
 }
 
-/** The rendering half of a document: provenance, arms, and the built per-backend comparison. */
-export interface RenderingProfile {
-  /** One stamp per backend exercised. */
+/** One pooled rendering run's provenance. */
+export interface RenderingRun {
+  /** One stamp per backend this run exercised. */
   readonly provenance: readonly RenderingStamp[];
+}
+
+/** The rendering half of a document: per-run provenance, arms, and the pooled per-backend comparison. */
+export interface RenderingProfile {
+  /**
+   * One entry per pooled run, in the order the runs were measured. Every run is
+   * kept: a reader judging the spread beside a number needs to see how many
+   * measurements it came from and when each was taken.
+   */
+  readonly runs: readonly RenderingRun[];
   /** Competitor library arms and their versions. */
   readonly libraries: readonly ProfileLibrary[];
   /** The comparison model, one block per backend, exactly as `bench:compare` computed it. */
-  readonly backends: readonly BackendComparison[];
+  readonly backends: readonly AggregatedBackendComparison[];
 }
 
-/** The physics half of a document: provenance, arms, and the built comparison section. */
+/** The physics half of a document: per-run provenance, arms, and the pooled comparison section. */
 export interface PhysicsProfile {
-  /** The run's single provenance stamp. */
-  readonly provenance: PhysicsStamp;
+  /** One stamp per pooled run, in the order the runs were measured; physics has no backend axis. */
+  readonly runs: readonly PhysicsStamp[];
   /** Physics engine arms and their versions. */
   readonly libraries: readonly ProfileLibrary[];
   /** The comparison model, exactly as `bench:compare` computed it. */
-  readonly section: ComparisonSection;
+  readonly section: AggregatedSection;
 }
 
 /**
