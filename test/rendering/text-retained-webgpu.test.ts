@@ -30,6 +30,7 @@ import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import type { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
 import type { RenderNode } from '#rendering/RenderNode';
 import { RetainedContainer } from '#rendering/RetainedContainer';
+import { textNodeDataFloats } from '#rendering/text/nodeDataPacker';
 import { Text } from '#rendering/text/Text';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 import { WebGpuRetainedGroupBundle } from '#rendering/webgpu/WebGpuRetainedGroupBundle';
@@ -260,7 +261,7 @@ const instanceLabel = 'sprite:retained-instance-buffer';
 const sharedTransformLabel = 'sprite:retained-transform-buffer';
 const nodeDataLabel = 'WebGpuTextRenderer/retained-node-data';
 /** Bytes one packed node row occupies (10 vec4s), the patch upload's granularity. */
-const nodeRowBytes = 10 * 4 * Float32Array.BYTES_PER_ELEMENT;
+const nodeRowBytes = textNodeDataFloats * Float32Array.BYTES_PER_ELEMENT;
 const textUniformLabel = 'WebGpuTextRenderer/retained-uniform';
 
 const countLabel = (writes: readonly CapturedWrite[], label: string, from = 0): number => {
