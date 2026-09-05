@@ -41,7 +41,7 @@ const SPRITE_COUNT = 1000;
  * one fixed scene + drive pattern. See each `it` for what a drift means.
  *
  * columns: collect  = RenderNode.collect calls (nodes visited by the walk)
- *          inView   = SceneNode._inCullRectUsingBounds calls (cull checks)
+ *          inView   = RenderNode._inCullRectUsingBounds calls (cull checks)
  *          gt       = SceneNode.getGlobalTransform calls (build + play transform reads)
  *          mk       = Drawable._getOrComputeMaterialKey calls (per-draw material keys)
  *          plus the deterministic RenderStats totals (submitted/culled/draws/batches).

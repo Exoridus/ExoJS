@@ -51,8 +51,8 @@ afterEach(() => {
 // Minimal Application mock - enough for DebugOverlay constructor + usage.
 // ---------------------------------------------------------------------------
 
-// A view-like object that satisfies the SceneNode.inView() call path.
-// SceneNode.inView() calls view.getBounds().intersectsWith(...), so the
+// A view-like object that satisfies the RenderNode.inView() call path.
+// RenderNode.inView() calls view.getBounds().intersectsWith(...), so the
 // view mock needs getBounds returning a Rectangle-like with intersectsWith.
 const makeFakeView = () => ({
   width: 800,

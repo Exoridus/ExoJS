@@ -73,7 +73,7 @@ export interface ArchetypeSpec {
    * of them except `scrolling-world`: a cull check can only ever be a no-op
    * there, and the two engines do NOT pay the same cost for an identically-set
    * flag. ExoJS's `cullable` drives a real per-node bounds+intersection check in
-   * the render walk (`SceneNode.inView`); Pixi's `cullable` is inert unless
+   * the render walk (`RenderNode.inView`); Pixi's `cullable` is inert unless
    * `Culler.shared.cull(...)` is called explicitly (`CullerPlugin` hooks the
    * Application ticker, which this harness never runs). Leaving it `true` on a
    * fully-visible archetype would therefore add cull-walk overhead to the ExoJS

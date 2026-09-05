@@ -105,6 +105,7 @@ The automatic check calls `getBounds()`, which for a `Container` walks every vis
 
 Two things to keep in mind:
 
+- `cullable` and `cullArea` live on `RenderNode`, so every node that draws something has them; a bare `SceneNode` is structural only, never reaches the renderer, and carries neither.
 - `cullArea` replaces `getBounds()` only in the `inView()` check — it has no effect on hit-testing, collision, or rendering, and it's ignored entirely when `cullable = false`.
 - Because the rectangle is used as-is (not transformed), a `cullArea` on a node that moves, rotates, or scales after it's set will go stale. Either recompute it when the node's position changes, or reserve it for nodes whose world placement is fixed once configured — e.g. static level decoration, or particle-heavy effects anchored to a known spawn point.
 
