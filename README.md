@@ -12,7 +12,7 @@
 
 A TypeScript-first 2D engine for games and interactive apps. Explicit scene graph, WebGPU/WebGL2 rendering, native physics, spatial audio, and a strict type system — measured and verified, not just claimed.
 
-**[Guide](https://exoridus.github.io/ExoJS/en/guide/)** · **[API Reference](https://exoridus.github.io/ExoJS/en/api/)** · **[Playground](https://exoridus.github.io/ExoJS/en/playground/)**
+**[Guide](https://exoridus.github.io/ExoJS/en/guide/)** · **[API Reference](https://exoridus.github.io/ExoJS/en/api/)** · **[Playground](https://exoridus.github.io/ExoJS/en/playground/)** · **[Benchmarks](https://exoridus.github.io/ExoJS/en/benchmarks/)**
 
 </div>
 
@@ -191,6 +191,16 @@ Directional work toward the `1.0.0` API freeze. Priorities may shift — nothing
 - Post-processing passes (bloom, tone mapping, grading) on `RenderPipeline`
 - Platform adapters for Worker and headless runtimes
 - Final pre-1.0 API audit and stabilization pass
+
+## Benchmarks
+
+ExoJS is measured against Pixi, Phaser and Excalibur for rendering, and against matter.js, planck and Rapier for physics, on one reference machine per release. On the current reference run:
+
+- Level with Pixi on plain sprite scaling, and 2x or better ahead of it on WebGPU filter chains.
+- About 7x behind Pixi on masked clipping — the widest rendering loss on that machine.
+- In physics, ahead of the pure-JS peers on a 1000-body box stack (roughly 3x over matter.js, 17x over planck) and behind Rapier's Rust/WASM solver on five of six scenes.
+
+The full matrix, the mechanism behind each row, the rows that were left out and the steps to reproduce all of it are on the [benchmarks page](https://exoridus.github.io/ExoJS/en/benchmarks/).
 
 ## WebGPU and WebGL2
 
