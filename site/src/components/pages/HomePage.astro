@@ -214,6 +214,14 @@ const examples = [
             </article>
         </div>
 
+        <div class="bench-teaser">
+            <p>
+                Measured against Pixi, Phaser, Excalibur, matter.js, planck and Rapier on one reference machine — roughly 2x ahead of Pixi on WebGPU filter
+                chains, and about 7x behind it on masked clipping, both published with the counters behind them.
+            </p>
+            <a class="btn btn-ghost" href={`${localeBase}benchmarks/`}>See the benchmarks</a>
+        </div>
+
         <section class="section">
             <div class="section-head">
                 <div class="l">
@@ -661,6 +669,25 @@ const examples = [
         max-width: 1180px;
         margin: var(--s-10) auto 0;
         padding: 0 var(--s-7);
+    }
+
+    .bench-teaser {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--s-4);
+        max-width: 1180px;
+        margin: var(--s-6) auto 0;
+        padding: var(--s-5) var(--s-7);
+    }
+
+    .bench-teaser p {
+        margin: 0;
+        flex: 1 1 32ch;
+        max-width: 74ch;
+        color: var(--fg-muted);
+        line-height: 1.6;
     }
 
     .cap {
