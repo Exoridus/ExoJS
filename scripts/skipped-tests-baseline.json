@@ -1,6 +1,7 @@
 {
   "note": "Per-file budget of skipped tests, measured as the SUM across every CI test lane (unit + browser-webgl + browser-webgpu + browser-webgl-firefox + browser-audio + browser-tilemap-worker), aggregated from each lane's own JUnit report — one global budget, not one per lane. Skipping more than the budget fails `pnpm test:skips`, and so does any skip in a file with no budget — a conditional test (including a runtime `ctx.skip(...)`) must be a reviewed entry, not a quiet default. Skipping fewer only prints a note, because the count depends on which lanes actually ran (a local partial run, or a local `dist/` that unskips the production-stripping checks). Run `pnpm test:skips:update-baseline` against a full set of lane reports to record a change.",
   "files": {
+    "packages/exojs-pathfinding/test/allocation.test.ts": 3,
     "test/build-defines/production-stripping.test.ts": 12,
     "test/perf/rendering/sweep.test.ts": 1
   }
