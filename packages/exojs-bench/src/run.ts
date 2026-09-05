@@ -259,12 +259,22 @@ const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
   const archetypeArg = args.get('archetype');
   const bodiesArg = args.get('bodies');
   const framesArg = args.get('frames');
+  const engineArg = args.get('engine');
   const outDir = resolve(args.get('out') ?? DEFAULT_PHYSICS_OUT_DIR);
 
   const filter: { -readonly [K in keyof PhysicsCellSpec]?: PhysicsCellSpec[K] } = {};
 
   if (archetypeArg !== undefined) {
     filter.archetype = archetypeArg as PhysicsCellSpec['archetype'];
+  }
+
+  // `--engine` narrows the matrix to one arm. The arms are independent
+  // processes' worth of work in one process, so isolating an arm is the only way
+  // to measure it without the other arms' heap and JIT state in the mix - which
+  // is exactly what an A/B of a solver change needs, and exactly why such a run
+  // is a SUBSET RUN and not a cross-arm comparison.
+  if (engineArg !== undefined) {
+    filter.engine = engineArg;
   }
 
   if (bodiesArg !== undefined) {
@@ -293,14 +303,14 @@ const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
     timedStepsOverride = frames;
   }
 
-  const isSubset = archetypeArg !== undefined || bodiesArg !== undefined || timedStepsOverride !== undefined;
+  const isSubset = archetypeArg !== undefined || bodiesArg !== undefined || engineArg !== undefined || timedStepsOverride !== undefined;
 
   if (isSubset) {
     console.warn('SUBSET RUN — not a reportable comparison (see the same-run rule).');
   }
 
   console.log(
-    `Running physics benchmark: ${archetypeArg ? `archetype=${archetypeArg}` : 'all archetypes'}${bodiesArg ? `, bodies=${bodiesArg}` : ''}${timedStepsOverride !== undefined ? `, frames=${timedStepsOverride} (OVERRIDE — thin sampling, not reportable)` : ''}`,
+    `Running physics benchmark: ${archetypeArg ? `archetype=${archetypeArg}` : 'all archetypes'}${engineArg ? `, engine=${engineArg}` : ''}${bodiesArg ? `, bodies=${bodiesArg}` : ''}${timedStepsOverride !== undefined ? `, frames=${timedStepsOverride} (OVERRIDE — thin sampling, not reportable)` : ''}`,
   );
 
   // Resolve the arms: the native exojs-physics arm is always present; the
