@@ -1,4 +1,3 @@
-import { RENDERING_BROWSER } from '../shared/provenance';
 import type { PhysicsStamp, RenderingStamp } from './schema';
 
 /**
@@ -16,12 +15,17 @@ import type { PhysicsStamp, RenderingStamp } from './schema';
  * - **gpu** - the rendering adapter string, normalized. With no rendering
  *   domain there is no GPU to name, and the CPU model takes its place; the
  *   `browser` part then reads `node`, so the pair cannot be mistaken for a
- *   graphics measurement.
- * - **os** - the physics host's platform. With no physics domain it is inferred
- *   from the graphics API named in the adapter string, which is the only OS
- *   evidence a rendering run records.
- * - **browser** - the browser the rendering harness drives, or `node` for a
- *   physics-only document, whose numbers were taken in the Node process itself.
+ *   graphics measurement. How specific this part can be is decided by the
+ *   browser: an engine that reports a constant vendor-level string in place of
+ *   the device model yields a correspondingly coarse part, which the `browser`
+ *   part beside it accounts for.
+ * - **os** - taken from whichever stamp read the platform directly, the physics
+ *   host's or the rendering run's. Only a document carrying neither falls back
+ *   to inferring it from the graphics API named in the adapter string.
+ * - **browser** - the browser the run selected, or `node` for a physics-only
+ *   document, whose numbers were taken in the Node process itself. Two browsers
+ *   on one machine therefore produce two files, which is the point: their
+ *   numbers are not comparable with each other.
  */
 
 /** Runtime part used when a document carries physics alone. */
@@ -182,18 +186,21 @@ export const deriveProfileParts = (sources: SlugSources): ProfileParts => {
     throw new Error('Cannot derive the profile slug: the run stamped no adapter or CPU model to name the machine by.');
   }
 
-  const os =
-    sources.physics === undefined
-      ? (stamps.map(stamp => inferOsFromAdapter(stamp.adapter)).find(name => name !== null) ?? '')
-      : normalizeOsName(sources.physics.host.os);
+  // A directly recorded platform beats one inferred from a graphics API: both
+  // domains read it from the same `os` module, and inference is a guess the
+  // adapter string only sometimes supports.
+  const recordedOs = sources.physics === undefined ? (stamps.find(stamp => stamp.os.length > 0)?.os ?? '') : sources.physics.host.os;
+  const os = recordedOs.length > 0 ? normalizeOsName(recordedOs) : (stamps.map(stamp => inferOsFromAdapter(stamp.adapter)).find(name => name !== null) ?? '');
 
   if (os.length === 0) {
     throw new Error(
-      'Cannot derive the profile slug: no physics run recorded the operating system and no adapter string names a graphics API it could be inferred from. Pass --physics as well.',
+      'Cannot derive the profile slug: no run recorded the operating system and no adapter string names a graphics API it could be inferred from. Pass --physics as well.',
     );
   }
 
-  const browser = stamps.length > 0 ? RENDERING_BROWSER : PHYSICS_RUNTIME;
+  // Every stamp of one run names the same browser - one run drives one engine -
+  // so the first stamp speaks for the document.
+  const browser = stamps[0]?.browser ?? PHYSICS_RUNTIME;
 
   return { slug: `${gpu}-${os}-${browser}`, gpu, os, browser };
 };

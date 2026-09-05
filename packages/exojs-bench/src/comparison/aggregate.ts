@@ -1,5 +1,6 @@
 import type { PhysicsProvenance } from '../physics/driver';
 import type { PhysicsReportData } from '../physics/report';
+import { normalizeCpuModel, normalizeGpuAdapter, normalizeOsName } from '../profile/slug';
 import type { Provenance } from '../rendering/driver';
 import type { ReportData } from '../rendering/report';
 import type { LibraryProvenance } from '../shared/provenance';
@@ -116,6 +117,64 @@ const requireSameSet = (perRun: ReadonlyArray<readonly string[]>, what: string, 
     );
   }
 };
+
+/**
+ * Reject runs taken on different machines: their timings describe different
+ * hardware.
+ *
+ * Pooling across machines is the one incomparability that produces a
+ * plausible-looking result rather than an obvious one. Every other check here
+ * guards the measurement's subject; this one guards its subject's identity, and
+ * without it a fast machine's run and a slow machine's run merge into a median
+ * belonging to neither, with a spread that reports the gap between two
+ * computers as the noise of one.
+ */
+const requireSameMachine = (perRun: readonly string[], what: string, domain: string): void => {
+  const first = perRun[0];
+
+  for (const [index, identity] of perRun.entries()) {
+    if (index === 0 || identity === first) {
+      continue;
+    }
+
+    throw new IncomparableRunsError(
+      domain,
+      `${domain} run ${String(index + 1)} was measured on a different ${what} than run 1 (${String(first)} vs ${identity}). Runs pooled into one profile describe one machine; measure each machine into its own profile.`,
+    );
+  }
+};
+
+/**
+ * The machine and browser a rendering run belongs to.
+ *
+ * Built from exactly the parts that decide which published profile a run lands
+ * in - the GPU the adapter string names, the operating system, the browser
+ * engine - plus whether the platform was pre-release, using the slug's own
+ * normalizations. Two runs may therefore pool precisely when they would be
+ * written to one file, and a run that would land elsewhere is rejected instead
+ * of quietly averaged into this one.
+ *
+ * Deliberately tolerated, because these move between runs on one machine: the
+ * timestamp; the driver, API and device-id tail of an adapter string
+ * (`Direct3D11 vs_5_0 ps_5_0`, `(0x00002C05)`), which a driver update rewrites
+ * without the GPU changing; and the operating system's patch level. The browser
+ * patch version is tolerated too - the checkout pins the browser build, so it
+ * cannot drift within a repetition - and every stamp records all of it in full
+ * for a reader to judge.
+ *
+ * The pre-release bit is part of the identity rather than a tolerance: a run on
+ * a beta platform and a run on the shipping one describe different platforms,
+ * and pooling them would publish a stable-looking number half of which was not.
+ */
+const renderingMachine = (stamps: readonly Provenance[]): string => {
+  const gpu = stamps.map(stamp => normalizeGpuAdapter(stamp.adapter)).find(name => name.length > 0) ?? 'unknown-gpu';
+  const first = stamps[0];
+
+  return [gpu, normalizeOsName(first?.os ?? ''), first?.browser ?? 'unknown-browser', first?.prerelease.value === true ? 'prerelease' : 'shipping'].join(' / ');
+};
+
+/** The machine a physics run belongs to: no GPU is exercised, so the CPU host names it. */
+const physicsMachine = (stamp: PhysicsProvenance): string => [normalizeCpuModel(stamp.host.cpu), normalizeOsName(stamp.host.os), stamp.host.arch].join(' / ');
 
 /** Reject runs measured against different trees: their timings describe different code. */
 const requireSameEngineVersion = (perRun: ReadonlyArray<readonly string[]>, domain: string): void => {
@@ -279,11 +338,17 @@ const armKeys = (libraries: readonly LibraryProvenance[]): readonly string[] => 
 /**
  * Pool several rendering runs into the comparison a profile publishes.
  *
- * Throws {@link IncomparableRunsError} when the runs were measured at different
- * engine versions, against different library arms, or over different matrices.
+ * Throws {@link IncomparableRunsError} when the runs were measured on different
+ * machines or browsers, at different engine versions, against different library
+ * arms, or over different matrices.
  */
 export const aggregateRenderingRuns = (runs: readonly ReportData[]): AggregatedRendering => {
   requireRuns(runs, 'rendering');
+  requireSameMachine(
+    runs.map(run => renderingMachine(run.provenance)),
+    'machine or browser',
+    'rendering',
+  );
   requireSameEngineVersion(
     runs.map(run => run.provenance.map(stamp => stamp.engineVersion)),
     'rendering',
@@ -313,6 +378,11 @@ export const aggregateRenderingRuns = (runs: readonly ReportData[]): AggregatedR
  */
 export const aggregatePhysicsRuns = (runs: readonly PhysicsReportData[]): AggregatedPhysics => {
   requireRuns(runs, 'physics');
+  requireSameMachine(
+    runs.map(run => physicsMachine(run.provenance)),
+    'machine',
+    'physics',
+  );
   requireSameEngineVersion(
     runs.map(run => [run.provenance.engineVersion]),
     'physics',

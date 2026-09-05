@@ -15,15 +15,103 @@ import { dirname, resolve } from 'node:path';
  * {@link BaseProvenance}.
  */
 
+/** Browsers the rendering harness can measure in. */
+export const RENDERING_BROWSERS = ['chromium', 'webkit'] as const;
+
 /**
- * The browser every rendering measurement is taken in.
+ * The browser one rendering run was measured in.
  *
- * The rendering driver launches this Playwright channel and no other, so the
- * name is a property of the harness rather than of any one run - which is why
- * the published machine profile can name it without a per-run stamp. Adding a
- * second browser to the harness means stamping the choice per run instead.
+ * The choice belongs to the run, not to the harness: the two engines differ in
+ * which backends they expose, in what they disclose about the GPU, and in how
+ * fast they are, so a number is only comparable against another taken in the
+ * same one. Every rendering stamp therefore names its browser, and the machine
+ * profile's slug carries it.
  */
-export const RENDERING_BROWSER = 'chromium';
+export type RenderingBrowser = (typeof RENDERING_BROWSERS)[number];
+
+/**
+ * Browser used when a run does not select one.
+ *
+ * Chromium is the default because it is the only engine that exposes WebGPU on
+ * every platform the harness runs on; WebKit reaches it on macOS alone.
+ */
+export const DEFAULT_RENDERING_BROWSER: RenderingBrowser = 'chromium';
+
+/** Resolve the `--browser` selector, or throw naming the browsers that exist. */
+export const parseRenderingBrowser = (raw: string | undefined): RenderingBrowser => {
+  if (raw === undefined) {
+    return DEFAULT_RENDERING_BROWSER;
+  }
+
+  if ((RENDERING_BROWSERS as readonly string[]).includes(raw)) {
+    return raw as RenderingBrowser;
+  }
+
+  throw new Error(`--browser must be one of [${RENDERING_BROWSERS.join(', ')}] (got '${raw}').`);
+};
+
+/** How a run's pre-release status was established. */
+export type PrereleaseSource = 'detected' | 'declared' | 'assumed-stable';
+
+/**
+ * Whether a run was taken on a pre-release platform, and on what that rests.
+ *
+ * A measurement taken on a beta operating system or a preview browser build is
+ * not a measurement of what anyone ships, so it has to say so in the data
+ * rather than in a footnote a reader can drop. `source` is what makes the claim
+ * auditable: `assumed-stable` records that nothing established the platform's
+ * status, which is a weaker statement than a stable platform and must not be
+ * read as one.
+ */
+export interface PrereleaseStamp {
+  /** True when the platform is known to be pre-release. */
+  readonly value: boolean;
+  /** How {@link value} was arrived at. */
+  readonly source: PrereleaseSource;
+  /** The version string, the runner's declaration, or the reason nothing established it. */
+  readonly evidence: string;
+}
+
+/**
+ * Words a browser puts in its own version string when the build is not a
+ * shipping one. Deliberately not a table of known pre-release version numbers:
+ * such a table goes stale silently and would start passing beta builds as
+ * stable, which is the one failure this field exists to prevent.
+ */
+const PRERELEASE_BROWSER_MARKER = /\b(?:alpha|beta|canary|dev|nightly|preview|tp)\b/i;
+
+/**
+ * Classify a run's platform, preferring evidence the harness read itself.
+ *
+ * The browser version is the only pre-release evidence available at runtime: a
+ * build that is not shipping usually names itself so. The operating system's
+ * own release status is not readable - `os.release()` reports the kernel
+ * version, which on macOS is identical for a beta and for the release it
+ * becomes - so a beta OS has to be declared by whoever measured on it, and the
+ * result records that it was declared rather than observed.
+ */
+export const classifyPrerelease = (options: { browserVersion: string; declared?: string | undefined }): PrereleaseStamp => {
+  const marker = PRERELEASE_BROWSER_MARKER.exec(options.browserVersion);
+
+  if (marker !== null) {
+    return { value: true, source: 'detected', evidence: `browser version '${options.browserVersion}' names a '${marker[0].toLowerCase()}' build` };
+  }
+
+  const declared = options.declared?.trim() ?? '';
+
+  if (declared.length > 0) {
+    return { value: true, source: 'declared', evidence: declared === 'true' ? 'declared by the runner, without a stated reason' : declared };
+  }
+
+  return {
+    value: false,
+    source: 'assumed-stable',
+    evidence: `browser version '${options.browserVersion}' carries no pre-release marker and none was declared; the operating system's own release status cannot be read at runtime`,
+  };
+};
+
+/** `os.platform()` and `os.release()` joined, e.g. `win32 10.0.26200`. */
+export const readOsRelease = (): string => `${osPlatform()} ${osRelease()}`;
 
 /** The provenance fields every domain records, regardless of what it measured. */
 export interface BaseProvenance {
@@ -125,7 +213,7 @@ export const readHostInfo = (): HostInfo => {
     node: process.version,
     cpu: logicalCpus[0]?.model.trim() ?? 'unknown',
     cpuCount: logicalCpus.length,
-    os: `${osPlatform()} ${osRelease()}`,
+    os: readOsRelease(),
     arch: osArch(),
   };
 };

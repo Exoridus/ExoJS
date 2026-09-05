@@ -1,5 +1,6 @@
 import type { AggregatedBackendComparison, AggregatedSection } from '../comparison/pooled';
 import type { Backend } from '../rendering/EngineAdapter';
+import type { PrereleaseStamp, RenderingBrowser } from '../shared/provenance';
 
 /**
  * The published machine-profile document.
@@ -27,16 +28,19 @@ import type { Backend } from '../rendering/EngineAdapter';
  */
 
 /** Schema version `bench:compare` stamps into a new document. */
-export const BENCH_PROFILE_SCHEMA_VERSION = 2;
+export const BENCH_PROFILE_SCHEMA_VERSION = 3;
 
 /**
  * Schema versions a reader accepts. A document carrying anything else is
  * rejected rather than parsed on a guess: the fields a consumer needs may have
  * changed meaning, and a silently misread benchmark is worse than a missing one.
  *
- * Version 1 is deliberately absent. It described a single run, which cannot
- * support a published ratio, and reading one as if it were a reference
- * measurement is exactly the mistake the version bump exists to prevent.
+ * Earlier versions are deliberately absent, and no compatibility path exists for
+ * them. Version 1 described a single run, which cannot support a published
+ * ratio. Version 2 pooled runs but named no browser per stamp, because the
+ * harness measured in one; a reader cannot tell whether such a file describes
+ * the browser it would name today, and a benchmark attributed to the wrong
+ * engine is worse than a missing one.
  */
 export const SUPPORTED_BENCH_PROFILE_SCHEMA_VERSIONS: readonly number[] = [BENCH_PROFILE_SCHEMA_VERSION];
 
@@ -68,8 +72,11 @@ export interface BenchProfile {
   /** Normalized operating system, e.g. `windows`, `macos`, `linux`. */
   readonly os: string;
   /**
-   * JavaScript runtime the numbers were taken in: the browser the rendering
-   * harness drove, or `node` for a physics-only document.
+   * JavaScript runtime the numbers were taken in: the browser this run selected
+   * for the rendering harness, or `node` for a physics-only document.
+   *
+   * It is part of the slug, so the same machine measured in two browsers
+   * publishes two files rather than overwriting one with the other.
    */
   readonly browser: string;
   /** Engine version every stamp in the document agrees on. */
@@ -105,9 +112,34 @@ export interface ProfileLibrary {
 export interface RenderingStamp {
   /** Backend these numbers were measured on. */
   readonly backend: Backend;
-  /** GPU/adapter identity string as the browser reported it. */
+  /**
+   * GPU/adapter identity string as the browser reported it.
+   *
+   * How much this identifies is the browser's choice, not the harness's: some
+   * engines report the device model, others substitute a constant vendor-level
+   * string for it. A reader comparing two profiles has to read it together with
+   * {@link RenderingStamp.browser}.
+   */
   readonly adapter: string;
-  /** Browser launch flags the run used. */
+  /** Browser engine the run was measured in. */
+  readonly browser: RenderingBrowser;
+  /** Browser build the run was measured in, as the browser reported it. */
+  readonly browserVersion: string;
+  /** Operating system of the host that drove the browser, e.g. `darwin 25.0.0`. */
+  readonly os: string;
+  /**
+   * Whether the platform is a pre-release build, and what established that.
+   *
+   * A number measured on a beta operating system or a preview browser build
+   * does not describe what anyone ships, so it carries the fact rather than
+   * relying on a footnote. `source` distinguishes a status the harness read
+   * from one the runner declared and from one nobody established.
+   */
+  readonly prerelease: PrereleaseStamp;
+  /**
+   * Browser launch flags the run used. Empty under an engine that takes none;
+   * a stamp never carries another browser's flags.
+   */
   readonly flags: readonly string[];
   /** Whether the browser ran headless. */
   readonly headless: boolean;
