@@ -1,0 +1,546 @@
+---
+/**
+ * BenchProfileReport - one published machine profile, rendered whole.
+ *
+ * Everything on screen is read out of the profile document: the provenance, the
+ * per-backend tables, the physics table, the disclosed caveats and the rows the
+ * harness measured but kept out of the comparison. Nothing is authored here and
+ * nothing is filtered out, so a re-measurement changes the page and no prose is
+ * left behind that the numbers no longer support.
+ *
+ * A cell where ExoJS trails carries the same weight as one where it leads: the
+ * two sides differ by hue and label, never by prominence. A missing cell is
+ * shown as "not comparable" rather than dropped - an arm that sat an archetype
+ * out or exceeded the harness's runaway budget produced no number, which is a
+ * result and not a defect.
+ */
+
+import {
+    armsOfSection,
+    BACKEND_LABELS,
+    formatDay,
+    formatMs,
+    type BenchProfileDocument,
+    type ProfileRow,
+    type ProfileSection,
+} from '../lib/bench-profiles';
+
+interface Props {
+    document: BenchProfileDocument;
+    /** Heading level the block starts at, so a collapsed further machine does not outrank the reference. */
+    headingLevel?: 2 | 3;
+    /** Set false where the surrounding markup already names the machine, such as a collapsed further machine. */
+    showTitle?: boolean;
+}
+
+const { document: profileDocument, headingLevel = 2, showTitle = true } = Astro.props;
+const { profile, rendering, physics } = profileDocument;
+const Heading = `h${String(headingLevel)}` as 'h2' | 'h3';
+const SubHeading = `h${String(headingLevel + 1)}` as 'h3' | 'h4';
+
+/**
+ * One archetype flattened into the table rows it occupies: one per arm the block
+ * has a column for, with `cell` left null where that arm produced no comparable
+ * number. The ExoJS median is lifted onto the archetype because it is the same
+ * measurement for every arm in the row, which also keeps it readable when one
+ * arm is missing.
+ */
+const tableRows = (sections: readonly ProfileSection[], arms: readonly string[]) =>
+    sections.flatMap(section =>
+        section.rows.map((row: ProfileRow) => ({
+            section: section.title,
+            archetype: row.archetype,
+            count: row.count,
+            exojsMs: row.cells.find(cell => cell.referenceMs !== null)?.referenceMs ?? null,
+            entries: arms.map(arm => ({ arm, cell: row.cells.find(candidate => candidate.competitor === arm) ?? null })),
+        })),
+    );
+
+const renderingBlocks = (rendering?.backends ?? []).map(backend => {
+    const webgl1Arms = [...new Set(backend.webgl1.flatMap(row => row.cells.map(cell => cell.competitor)))].sort();
+
+    return {
+        backend,
+        rows: tableRows(backend.sections, backend.competitors),
+        webgl1Arms,
+        webgl1Rows: tableRows([{ title: 'WebGL1', rows: backend.webgl1 }], webgl1Arms),
+    };
+});
+
+const physicsArms = physics === undefined ? [] : armsOfSection(physics.section);
+const physicsRows = physics === undefined ? [] : tableRows([physics.section], physicsArms);
+---
+
+<section class="profile">
+    {showTitle && <Heading id={`profile-${profile.slug}`}>{profile.gpu} / {profile.os} / {profile.browser}</Heading>}
+
+    <dl class="provenance">
+        <div><dt>ExoJS</dt><dd>{profile.engineVersion}</dd></div>
+        <div><dt>Measured</dt><dd>{formatDay(profile.measuredAt)}</dd></div>
+        <div><dt>Profile</dt><dd><code>{profile.slug}</code></dd></div>
+        <div><dt>Signature</dt><dd><code>{profileDocument.signature.algorithm}:{profileDocument.signature.value.slice(0, 16)}</code></dd></div>
+        {rendering !== undefined && (
+            <div>
+                <dt>Rendering arms</dt>
+                <dd>{rendering.libraries.map(library => `${library.name} ${library.version}`).join(', ')}</dd>
+            </div>
+        )}
+        {physics !== undefined && (
+            <div>
+                <dt>Physics arms</dt>
+                <dd>{physics.libraries.map(library => `${library.name} ${library.version}`).join(', ')}</dd>
+            </div>
+        )}
+        {rendering?.provenance.map(stamp => (
+            <div>
+                <dt>{BACKEND_LABELS[stamp.backend]} adapter</dt>
+                <dd>
+                    {stamp.adapter}
+                    <span class="detail">
+                        {stamp.headless ? 'headless' : 'headed'}, {stamp.software ? 'software rasterizer - timings untrusted' : 'hardware adapter'}
+                        {stamp.slotTier === undefined ? '' : `, texture-slot tier ${String(stamp.slotTier)}`}
+                        {stamp.flags.length === 0 ? '' : `, flags: ${stamp.flags.join(' ')}`}
+                    </span>
+                </dd>
+            </div>
+        ))}
+        {physics !== undefined && (
+            <div>
+                <dt>Physics host</dt>
+                <dd>
+                    {physics.provenance.host.cpu}
+                    <span class="detail">
+                        {physics.provenance.host.cpuCount} logical cores, {physics.provenance.host.os} {physics.provenance.host.arch}, Node{' '}
+                        {physics.provenance.host.node}, fixed step {(physics.provenance.fixedDelta * 1000).toFixed(2)} ms
+                    </span>
+                </dd>
+            </div>
+        )}
+    </dl>
+
+    {renderingBlocks.map(block => (
+        <section class="block">
+            <SubHeading id={`${profile.slug}-${block.backend.backend}`}>Rendering on {BACKEND_LABELS[block.backend.backend]}</SubHeading>
+            <p class="block-note">
+                {block.backend.headlineCount === null
+                    ? 'No single node count qualified for a headline table on this backend, so no rows are published for it.'
+                    : `Every row is measured at ${String(block.backend.headlineCount)} nodes, chosen from the archetype ladders before any timing was read. Times are median CPU milliseconds per frame; lower is better.`}
+            </p>
+
+            {block.rows.length > 0 && (
+                <div class="scroller">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th scope="col">Archetype</th>
+                                <th scope="col">ExoJS (ms)</th>
+                                <th scope="col">Against</th>
+                                <th scope="col">Arm (ms)</th>
+                                <th scope="col">Verdict</th>
+                                <th scope="col">Mechanism</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {block.rows.map(row =>
+                                row.entries.map((entry, index) => (
+                                    <tr class:list={[index === 0 && 'row-start']}>
+                                        {index === 0 && (
+                                            <th scope="row" rowspan={row.entries.length}>
+                                                {row.archetype}
+                                                <span class="category">{row.section}</span>
+                                            </th>
+                                        )}
+                                        {index === 0 && (
+                                            <td class="num" rowspan={row.entries.length}>
+                                                {formatMs(row.exojsMs)}
+                                            </td>
+                                        )}
+                                        <td class="arm">{entry.arm}</td>
+                                        <td class="num">{entry.cell === null ? '-' : formatMs(entry.cell.competitorMs)}</td>
+                                        <td>
+                                            <span class:list={['verdict', entry.cell === null ? 'absent' : entry.cell.verdict.side]}>
+                                                {entry.cell === null ? 'not comparable' : entry.cell.verdict.label}
+                                            </span>
+                                        </td>
+                                        <td class="mechanism">
+                                            {entry.cell === null
+                                                ? `This arm produced no comparable cell at ${String(row.count)} nodes, so the pair is not published as a comparison.`
+                                                : (entry.cell.mechanism ?? 'No structural counters were reported for this pair.')}
+                                        </td>
+                                    </tr>
+                                )),
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {block.webgl1Rows.length > 0 && (
+                <div class="aside">
+                    <h5>WebGL1 arms, CPU time only</h5>
+                    <p>
+                        These arms render through a WebGL1 context, so a gap against them can be caused by the backend generation as much as by the engine,
+                        and the structural probe cannot attach to say which. The rows compare CPU time and carry no mechanism, which makes them an
+                        observation rather than a finding.
+                    </p>
+                    <div class="scroller">
+                        <table class="narrow">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Archetype</th>
+                                    <th scope="col">ExoJS (ms)</th>
+                                    <th scope="col">Against</th>
+                                    <th scope="col">Arm (ms)</th>
+                                    <th scope="col">Verdict</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {block.webgl1Rows.map(row =>
+                                    row.entries.map((entry, index) => (
+                                        <tr class:list={[index === 0 && 'row-start']}>
+                                            {index === 0 && (
+                                                <th scope="row" rowspan={row.entries.length}>
+                                                    {row.archetype}
+                                                </th>
+                                            )}
+                                            {index === 0 && (
+                                                <td class="num" rowspan={row.entries.length}>
+                                                    {formatMs(row.exojsMs)}
+                                                </td>
+                                            )}
+                                            <td class="arm">{entry.arm}</td>
+                                            <td class="num">{entry.cell === null ? '-' : formatMs(entry.cell.competitorMs)}</td>
+                                            <td>
+                                                <span class:list={['verdict', entry.cell === null ? 'absent' : entry.cell.verdict.side]}>
+                                                    {entry.cell === null ? 'not comparable' : entry.cell.verdict.label}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    )),
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {block.backend.excluded.length > 0 && (
+                <details class="omissions">
+                    <summary>{block.backend.excluded.length} archetypes measured but left out of this table</summary>
+                    <ul>
+                        {block.backend.excluded.map(entry => (
+                            <li>
+                                <code>{entry.archetype}</code> - {entry.reason}
+                            </li>
+                        ))}
+                    </ul>
+                </details>
+            )}
+        </section>
+    ))}
+
+    {physics !== undefined && (
+        <section class="block">
+            <SubHeading id={`${profile.slug}-physics`}>Physics</SubHeading>
+            <p class="block-note">
+                {physicsRows.length === 0
+                    ? 'No single body count qualified for a headline table, so no physics rows are published.'
+                    : `Every row is measured at ${String(physicsRows[0]?.count ?? 0)} bodies. Times are median CPU milliseconds per fixed step; lower is better.`}
+            </p>
+
+            {physicsRows.length > 0 && (
+                <div class="scroller">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th scope="col">Archetype</th>
+                                <th scope="col">ExoJS (ms)</th>
+                                <th scope="col">Against</th>
+                                <th scope="col">Arm (ms)</th>
+                                <th scope="col">Verdict</th>
+                                <th scope="col">Mechanism</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {physicsRows.map(row =>
+                                row.entries.map((entry, index) => (
+                                    <tr class:list={[index === 0 && 'row-start']}>
+                                        {index === 0 && (
+                                            <th scope="row" rowspan={row.entries.length}>
+                                                {row.archetype}
+                                            </th>
+                                        )}
+                                        {index === 0 && (
+                                            <td class="num" rowspan={row.entries.length}>
+                                                {formatMs(row.exojsMs)}
+                                            </td>
+                                        )}
+                                        <td class="arm">{entry.arm}</td>
+                                        <td class="num">{entry.cell === null ? '-' : formatMs(entry.cell.competitorMs)}</td>
+                                        <td>
+                                            <span class:list={['verdict', entry.cell === null ? 'absent' : entry.cell.verdict.side]}>
+                                                {entry.cell === null ? 'not comparable' : entry.cell.verdict.label}
+                                            </span>
+                                        </td>
+                                        <td class="mechanism">
+                                            {entry.cell === null
+                                                ? `This arm produced no comparable cell at ${String(row.count)} bodies - it either sits this archetype out or exceeded the harness's runaway step budget there.`
+                                                : (entry.cell.mechanism ?? 'No structural counters were reported for this pair.')}
+                                        </td>
+                                    </tr>
+                                )),
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
+            {physics.provenance.caveats.length > 0 && (
+                <details class="omissions">
+                    <summary>{physics.provenance.caveats.length} caveats the physics run disclosed</summary>
+                    <ul>
+                        {physics.provenance.caveats.map(caveat => (
+                            <li>{caveat}</li>
+                        ))}
+                    </ul>
+                </details>
+            )}
+        </section>
+    )}
+
+    <p class="verdict-key">
+        <span class="verdict exojs">ExoJS leads</span>
+        <span class="verdict competitor">the arm leads</span>
+        <span class="verdict neither">level, inside the noise band</span>
+        <span class="verdict absent">not comparable</span>
+    </p>
+</section>
+
+<style>
+    .profile {
+        margin-top: var(--s-6);
+    }
+
+    .provenance {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+        gap: var(--s-2) var(--s-4);
+        margin: 0 0 var(--s-6);
+        padding: var(--s-4);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-3);
+        background: var(--bg-elevated);
+        font-size: 0.82rem;
+    }
+
+    .provenance div {
+        min-width: 0;
+    }
+
+    .provenance dt {
+        color: var(--fg-faint);
+        font-size: 0.72rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .provenance dd {
+        margin: 0.15rem 0 0;
+        color: var(--fg);
+        overflow-wrap: anywhere;
+    }
+
+    .provenance code {
+        font-family: var(--f-mono);
+        font-size: 0.76rem;
+    }
+
+    .detail {
+        display: block;
+        margin-top: 0.15rem;
+        color: var(--fg-muted);
+        font-size: 0.75rem;
+    }
+
+    .block {
+        margin-bottom: var(--s-7);
+    }
+
+    .block-note {
+        margin: 0 0 var(--s-3);
+        color: var(--fg-muted);
+        font-size: 0.85rem;
+    }
+
+    .scroller {
+        overflow-x: auto;
+        max-width: 100%;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-3);
+    }
+
+    table {
+        width: 100%;
+        min-width: 56rem;
+        border-collapse: collapse;
+        font-size: 0.82rem;
+    }
+
+    table.narrow {
+        min-width: 34rem;
+    }
+
+    th,
+    td {
+        padding: 0.5rem 0.7rem;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid var(--line-soft);
+    }
+
+    thead th {
+        background: var(--bg-elevated);
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    tbody th {
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    tbody tr:not(.row-start) td {
+        border-top: 0;
+    }
+
+    tbody tr.row-start > * {
+        border-top: 1px solid var(--line-soft);
+    }
+
+    .category {
+        display: block;
+        margin-top: 0.15rem;
+        font-weight: 400;
+        font-size: 0.72rem;
+        color: var(--fg-faint);
+    }
+
+    .arm {
+        font-family: var(--f-mono);
+        font-size: 0.76rem;
+        white-space: nowrap;
+    }
+
+    .num {
+        font-family: var(--f-mono);
+        font-size: 0.76rem;
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .mechanism {
+        min-width: 22rem;
+        color: var(--fg-muted);
+        font-size: 0.78rem;
+        line-height: 1.5;
+    }
+
+    /*
+     * Both sides of a comparison are drawn with the same weight, padding and
+     * border; only the hue differs, and neither hue is the conventional
+     * good/bad pair. A table that makes a loss quieter than a win stops being a
+     * measurement.
+     */
+    .verdict {
+        display: inline-block;
+        padding: 0.15rem 0.45rem;
+        border: 1px solid currentcolor;
+        border-radius: var(--r-pill);
+        font-size: 0.72rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .verdict.exojs {
+        color: var(--sky);
+    }
+
+    .verdict.competitor {
+        color: var(--violet);
+    }
+
+    .verdict.neither {
+        color: var(--fg-muted);
+    }
+
+    .verdict.absent {
+        color: var(--amber);
+    }
+
+    .aside {
+        margin-top: var(--s-5);
+        padding: var(--s-4);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-3);
+        background: var(--bg-elevated);
+    }
+
+    .aside h5 {
+        margin: 0 0 0.35rem;
+        font-size: 0.88rem;
+    }
+
+    .aside p {
+        margin: 0 0 var(--s-3);
+        color: var(--fg-muted);
+        font-size: 0.82rem;
+        line-height: 1.55;
+    }
+
+    .aside .scroller {
+        background: var(--bg-canvas);
+    }
+
+    .omissions {
+        margin-top: var(--s-4);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-3);
+        padding: var(--s-3) var(--s-4);
+    }
+
+    .omissions summary {
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .omissions ul {
+        margin: var(--s-3) 0 0;
+        padding-left: 1.1rem;
+        color: var(--fg-muted);
+        font-size: 0.8rem;
+        line-height: 1.55;
+    }
+
+    .omissions code {
+        font-family: var(--f-mono);
+        color: var(--fg);
+    }
+
+    .verdict-key {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--s-2);
+        margin: 0;
+    }
+
+    @media (max-width: 760px) {
+        .provenance {
+            grid-template-columns: 1fr;
+        }
+
+        .mechanism {
+            min-width: 18rem;
+        }
+    }
+</style>
