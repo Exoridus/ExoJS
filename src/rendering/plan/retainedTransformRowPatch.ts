@@ -255,6 +255,13 @@ export const reconcileRetainedTransformRows = (
     return isEligible(node) && tryPatchRetainedTransformRow(node, record, patchableBundle, backend, base);
   });
 
+  // Inside the pass, not per patch: a bundle whose store is a GPU buffer stages
+  // the rows and uploads the dirty regions here, so a scene moving k nodes costs
+  // a handful of uploads rather than k. Flushed even on the failed path - the
+  // rows already written have to reach the buffer they were staged for, and the
+  // re-record that follows overwrites them anyway.
+  bundle.flushRowPatches?.();
+
   if (!patched) {
     // A move this fragment owns but cannot patch - not a recorded draw, or the
     // index no longer covers the cursor. Drop the baked recording: validation
@@ -334,6 +341,8 @@ export const reconcileRetainedTintRows = (fragment: RetainedGroupFragment, owns:
 
     return true;
   });
+
+  bundle?.flushRowPatches?.();
 
   if (applied) {
     fragment.markContentSeen();
