@@ -171,6 +171,18 @@ pnpm bench:compare --profile</code></pre>
                 moves them.
             </p>
             <p>
+                <code>pnpm bench --browser=webkit</code> measures in WebKit instead of the default Chromium. The browser is part of the profile's name,
+                so the same machine measured in both publishes two files rather than overwriting one with the other, and the harness refuses to pool runs
+                taken in different browsers. A backend the browser does not expose is published as not measured, never as a number: WebKit reaches WebGPU
+                on macOS alone.
+            </p>
+            <p>
+                If you measure on a beta operating system, add <code>--prerelease="macOS 26.0 beta 3"</code> to every run. Each provenance stamp records
+                whether the platform was pre-release and how that was established - read from a browser version naming a preview build, declared with that
+                flag, or neither, which is recorded as assumed rather than as a stable platform. An operating system's release status cannot be read at
+                runtime, so the flag is the only way a beta OS reaches the file.
+            </p>
+            <p>
                 A profile for a machine that is not published yet is welcome as a pull request containing that one file. Nothing else needs to change - this
                 page picks it up from the directory.
             </p>

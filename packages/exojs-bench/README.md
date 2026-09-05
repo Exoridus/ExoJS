@@ -234,9 +234,26 @@ mid-frame GPU-driver stall cannot be interrupted from inside the page.
 
 ## Browser and environment
 
-- Headless Chromium via Playwright (`channel: 'chromium'`), launched with
+- **`--browser=chromium` (default) or `--browser=webkit`**, both headless via
+  Playwright. The choice belongs to the run, not to the harness: it is stamped
+  into every provenance block and forms part of the published profile's file
+  name, so a WebKit number can never be read as a Chromium one and the two never
+  pool into one profile.
+- Chromium is launched on the `chromium` channel with
   `--force-device-scale-factor=1` so `devicePixelRatio` is 1 and the canvas
   backing size is deterministic. WebGPU adds `--enable-unsafe-webgpu`.
+- WebKit is launched with **no arguments at all**: every flag here is a Chromium
+  one, and its stamp records an empty flag set rather than claiming a launch
+  that never happened. Nothing is lost by it - the harness page sizes its own
+  1280x720 backing store and the Pixi arm pins `resolution: 1`, so no
+  measurement depends on a pinned device scale factor.
+- **A backend the selected browser does not expose produces no number.** WebKit
+  reaches WebGPU on macOS alone; elsewhere `navigator.gpu` is undefined and every
+  WebGPU cell is emitted `unavailable` with that reason attached, exactly as a
+  refused software adapter is.
+- `--profile` (the V8 CPU sampler) is Chromium-only, because the sampler is
+  driven over a CDP session. It refuses in any other browser rather than falling
+  back and attributing one engine's frame cost to another engine's name.
 - No software rasterizer is ever forced. `--use-angle=swiftshader` and
   `--enable-features=Vulkan` are deliberately absent; either would land the run
   on SwiftShader and make every timing worthless.
@@ -256,11 +273,23 @@ mid-frame GPU-driver stall cannot be interrupted from inside the page.
 
 `results.json` / `results.md` carry, per backend:
 
-- **GPU adapter identity.** On WebGL2 the unmasked `WEBGL_debug_renderer_info`
-  renderer string, read from the stage canvas's own context after the first
-  measured cell — not from a throwaway canvas, which can report a different
-  adapter on a multi-GPU machine. On WebGPU the adapter's vendor / architecture /
-  device / description.
+- **GPU adapter identity.** On WebGL2 the `WEBGL_debug_renderer_info` renderer
+  string, read from the stage canvas's own context after the first measured cell
+  — not from a throwaway canvas, which can report a different adapter on a
+  multi-GPU machine. On WebGPU the adapter's vendor / architecture / device /
+  description. How much this identifies is the browser's choice: Chromium
+  unmasks the device model, while WebKit substitutes a constant vendor-level
+  string (`Apple GPU`) for it on every platform, so a WebKit profile's GPU part
+  is correspondingly coarse.
+- **Browser and browser version**, as the browser reported it, plus the
+  operating system of the host that drove it.
+- **`prerelease`** — whether the platform is a pre-release build, and a `source`
+  saying what that rests on: `detected` from a browser version string naming a
+  non-shipping build, `declared` from `--prerelease` (needed for a beta OS,
+  which is not readable at runtime — `os.release()` reports the kernel version,
+  identical for a macOS beta and the release it becomes), or `assumed-stable`,
+  which records that nothing established it and is weaker than a stable
+  platform.
 - **`software`** — the honesty bit. A WebGL2 run on a software rasterizer marks
   every timing column `UNTRUSTED` in the Markdown report; a software WebGPU
   adapter is refused outright and its cells are emitted `unavailable`.
@@ -273,9 +302,10 @@ mid-frame GPU-driver stall cannot be interrupted from inside the page.
 The physics domain additionally records the Node version, CPU model, logical CPU
 count and OS.
 
-**Gap worth knowing:** the rendering domain records the GPU, not the host. CPU
-model, RAM, OS build, GPU driver version and Chromium build are _not_ captured
-automatically — record them by hand alongside any run you intend to quote.
+**Gap worth knowing:** the rendering domain records the GPU, the browser and the
+operating system, but not the rest of the host. CPU model, RAM and GPU driver
+version are _not_ captured automatically — record them by hand alongside any run
+you intend to quote.
 
 ## Reproducing a single scenario
 
@@ -300,6 +330,12 @@ cell as it lands, so a crash never discards finished work.
 
 Other flags:
 
+- `--browser=chromium` (default) / `--browser=webkit` — the engine to measure in.
+  Not a subset marker: a run in either browser is a full measurement of that
+  browser, published under its own profile.
+- `--prerelease` / `--prerelease="macOS 26.0 beta 3"` — declare that the platform
+  is a pre-release build. Required on a beta OS, on **every** pooled run; a
+  preview browser build is detected from its own version string instead.
 - `--backend=webgl2` / `--backend=webgpu` — omit for both.
 - `--engine`, `--config`, `--archetype`, `--nodes` — comma-separated selections.
 - `--frames=N` — override every cell's timed-frame count for a fast spot check.
@@ -468,8 +504,21 @@ verdict** - it keeps its row, its value and its range, and states what each run
 said instead.
 
 `bench:compare` refuses to pool runs that are not repetitions of one measurement:
-a differing engine version, a differing set of arms or versions, or a differing
-set of measured cells.
+a differing engine version, a differing set of arms or versions, a differing set
+of measured cells, or a differing machine.
+
+The machine check is what a second reference machine makes necessary — three
+runs from two machines would otherwise pool into a median belonging to neither,
+with a spread reporting the gap between two computers as the noise of one. A
+rendering run's identity is the normalized GPU the adapter string names, the
+operating system, the browser and the pre-release bit, using the same
+normalizations the profile slug uses, so runs may pool exactly when they would
+be written to one file. A physics run's identity is the CPU model, the operating
+system and the architecture. Tolerated within one machine: timestamps, an
+adapter string's driver / device-id / shader-model tail, the OS patch level, and
+the browser's patch version, which a checkout pins and which every stamp records
+in full anyway. Assembling one profile from a rendering measurement on one
+machine and a physics measurement on another is refused for the same reason.
 
 Rules the generator enforces rather than merely intends:
 

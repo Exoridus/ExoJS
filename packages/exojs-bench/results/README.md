@@ -11,6 +11,13 @@ harness from the stamped provenance, never typed by hand, so **re-measuring the
 same machine overwrites its file** and a different machine can only ever arrive
 as a new one.
 
+The browser is part of the name because it is part of the measurement: the same
+machine measured in Chromium and in WebKit publishes two files, and their
+numbers are not comparable with each other. How specific the GPU part can be is
+the browser's choice - an engine that reports a constant vendor-level string
+instead of the device model yields a correspondingly coarse part, which the
+browser part beside it accounts for.
+
 ## A reference measurement is three runs
 
 A published claim is a ratio between two arms, and one run does not support one.
@@ -43,9 +50,10 @@ rather than the spread the repetition exists to expose.
   was derived from, the engine version, when it was measured, and how many runs
   every measured domain pools;
 - one rendering provenance entry per run (each with one stamp per backend:
-  adapter string, launch flags, headless and software-rasterizer bits, engine
-  version, timestamp) and one physics provenance stamp per run (Node and CPU
-  host, fixed timestep, disclosed caveats, engine version, timestamp);
+  adapter string, browser and browser version, operating system, pre-release
+  status, launch flags, headless and software-rasterizer bits, engine version,
+  timestamp) and one physics provenance stamp per run (Node and CPU host, fixed
+  timestep, disclosed caveats, engine version, timestamp);
 - the library arms with their exact installed versions;
 - the pooled comparison itself, per rendering backend and for physics, including
   every published value with its spread and stability flag, the verdict where
@@ -81,10 +89,54 @@ rather than days apart: these are wall-clock comparisons, and background load
 moves them.
 
 `bench:compare` refuses to pool runs that are not repetitions of one
-measurement - a differing engine version, a differing set of arms or versions,
-or a differing set of measured cells - because a median over values that were
-never comparable describes the difference between two runs rather than the noise
-of one.
+measurement - a differing engine version, a differing set of arms or versions, a
+differing set of measured cells, or **a different machine, browser or
+pre-release status** - because a median over values that were never comparable
+describes the difference between two runs rather than the noise of one. What
+that tolerates within one machine: the timestamps, the driver and device-id tail
+of an adapter string, and the operating system's patch level. What it does not:
+a different GPU, a different operating system, a different browser, or one run
+on a beta platform among runs on a shipping one.
+
+## Choosing a browser
+
+```sh
+pnpm --filter @codexo/exojs-bench bench --browser=webkit --out .workspace/output/run-1
+```
+
+`--browser` takes `chromium` (the default) or `webkit`. It selects the engine
+the run is measured in, is stamped into every provenance block, and lands in the
+file name, so the two never merge into one profile.
+
+The choice is not free of consequences, and the harness does not hide them. A
+backend the selected browser does not expose is emitted as `unavailable` cells
+carrying the reason - WebKit reaches WebGPU on macOS alone, so a WebKit run
+elsewhere publishes an empty WebGPU block rather than a number under the wrong
+heading. Launch flags are Chromium's; a WebKit stamp records an empty set rather
+than claiming flags it never passed. CPU profiling (`--profile`) needs the V8
+sampler and refuses outright in any other browser.
+
+## The pre-release marker
+
+A measurement taken on a beta operating system or a preview browser build does
+not describe what anyone ships, so it says so in the data. Every rendering stamp
+carries `prerelease`, with a `source` that says what the value rests on:
+
+- **`detected`** - the browser's own version string names a non-shipping build
+  (`beta`, `canary`, `dev`, `nightly`, `preview`, `alpha`, `tp`). Nobody has to
+  remember anything for this to fire.
+- **`declared`** - the runner passed `--prerelease`, optionally with the reason:
+  `--prerelease="macOS 26.0 beta 3"`. Needed because an operating system's
+  release status **cannot be read at runtime** - `os.release()` reports the
+  kernel version, which on macOS is identical for a beta and for the release it
+  becomes.
+- **`assumed-stable`** - neither applied. This records that nothing established
+  the platform's status. It is a weaker statement than a stable platform and
+  must not be read as one.
+
+If you measure on a beta OS, pass `--prerelease` on **every** run: pooling one
+declared run with two that forgot the flag is refused, precisely so a
+half-pre-release profile cannot pass as a stable one.
 
 ## Submitting one
 
