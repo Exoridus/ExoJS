@@ -33,7 +33,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(family: string, fontStyle: FontStyle, fontVariant: FontVariant, fontWeight: string, pageSize: number, mode: AtlasMode, sdfRadius: number, pixelRatio: number, metrics?: GlyphMetrics): GlyphAtlas",
+          "signature": "new(font: FontVariantKey, pageSize: number, mode: AtlasMode, sdfRadius: number, pixelRatio: number, metrics?: GlyphMetrics): GlyphAtlas",
           "signatureTokens": [
             {
               "text": "new",
@@ -44,7 +44,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "family",
+              "text": "font",
               "kind": "param"
             },
             {
@@ -52,56 +52,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "fontStyle",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "FontStyle",
+              "text": "FontVariantKey",
               "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "fontVariant",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "FontVariant",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "fontWeight",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
             },
             {
               "text": ", ",
@@ -202,23 +154,8 @@
           ],
           "params": [
             {
-              "name": "family",
-              "type": "string",
-              "optional": false
-            },
-            {
-              "name": "fontStyle",
-              "type": "FontStyle",
-              "optional": false
-            },
-            {
-              "name": "fontVariant",
-              "type": "FontVariant",
-              "optional": false
-            },
-            {
-              "name": "fontWeight",
-              "type": "string",
+              "name": "font",
+              "type": "FontVariantKey",
               "optional": false
             },
             {
@@ -740,7 +677,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Dispatched whenever a new atlas page is allocated. Listen here to detect unexpected atlas growth (e.g. many unique CJK glyphs or an oversized font size). The payload is the zero-based page index. ts const atlas = pool.getAtlas('Roboto', 'normal', 'normal', '400'); atlas.onPageAdded.on(idx => console.warn(Atlas page ${idx} added)); "
+          "description": "Dispatched whenever a new atlas page is allocated. Listen here to detect unexpected atlas growth (e.g. many unique CJK glyphs or an oversized font size). The payload is the zero-based page index. ts const atlas = pool.getAtlas({ family: 'Roboto', fontWeight: '400' }); atlas.onPageAdded.on(idx => console.warn(Atlas page ${idx} added)); "
         }
       ],
       "paragraphs": [],

@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 29,
+  "memberCount": 30,
   "counts": {
     "constructors": 1,
     "methods": 3,
-    "properties": 24,
+    "properties": 25,
     "events": 1
   },
   "sections": [
@@ -150,7 +150,7 @@
           ],
           "params": [],
           "returnType": "StyleChangeHint | null",
-          "description": "Returns the accumulated StyleChangeHint and clears the dirty flag, or null if nothing has changed since the last call. Call this once per frame from the owning node's update() method."
+          "description": "Returns the accumulated StyleChangeHint and clears the dirty flag, or null if nothing has changed since the last call. Call this once per frame from the owning node's layout pass."
         },
         {
           "name": "copy",
@@ -362,6 +362,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "fontKey",
+          "signature": "fontKey: FontVariantKey",
+          "signatureTokens": [
+            {
+              "text": "fontKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontVariantKey",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The typeface, slant, weight and caps variant this style selects, as the key a glyph atlas, a metrics cache or a line shaper is resolved by."
         },
         {
           "name": "fontSize",

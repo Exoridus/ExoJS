@@ -1,15 +1,15 @@
 {
   "title": "Text",
-  "description": "GPU-accelerated text node that rasterizes individual glyphs into a shared per-font-variant GlyphAtlas using the SDF (Signed Distance Field) technique and renders them through the `text-sdf` shader. Style mutations are applied automatically before the next draw - no manual `update()` call required. Mutating `text.style` any number of times in the same frame is cheap; the geometry is rebuilt at most once, on demand. ```ts const label = new Text('Hello', { fontSize: 24 }); scene.addChild(label); label.style.fillColor = new Color(255, 0, 0); // cheap - no atlas work label.style.outlineWidth = 0.08; // cheap - only shader uniforms // changes are picked up automatically on the next render pass ``` **FontFace-first:** load fonts via FontFactory before constructing the node, then pass the loaded `FontFace` via the `font` style option. The label renders immediately with the correct glyphs - no async waiting needed. ```ts const face = await loader.load(Asset.type('font', 'roboto.woff2', { family: 'Roboto' })); const label = new Text('Score: 0', { font: face, fontSize: 24 }); scene.addChild(label); // renders immediately with Roboto ``` Enable colour-glyph (emoji) mode via `colorGlyphs: true` in the constructor options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`. Glyphs are rasterized at the Application's `pixelRatio`, so text is crisp on a HiDPI surface without any opt-in. TextOptions.pixelRatio decouples one node's glyph raster from the surface without changing its layout by so much as a line break.",
+  "description": "GPU-accelerated text node that rasterizes individual glyphs into a shared per-font-variant GlyphAtlas using the SDF (Signed Distance Field) technique and renders them through the `text-sdf` shader. Style mutations are applied automatically before the next draw - nothing has to be ticked by hand. Mutating `text.style` any number of times in the same frame is cheap; the geometry is rebuilt at most once, on demand. ```ts const label = new Text('Hello', { fontSize: 24 }); scene.addChild(label); label.style.fillColor = new Color(255, 0, 0); // cheap - no atlas work label.style.outlineWidth = 0.08; // cheap - only shader uniforms // changes are picked up automatically on the next render pass ``` **FontFace-first:** load fonts via FontFactory before constructing the node, then pass the loaded `FontFace` via the `font` style option. The label renders immediately with the correct glyphs - no async waiting needed. ```ts const face = await loader.load(Asset.type('font', 'roboto.woff2', { family: 'Roboto' })); const label = new Text('Score: 0', { font: face, fontSize: 24 }); scene.addChild(label); // renders immediately with Roboto ``` Enable colour-glyph (emoji) mode via `colorGlyphs: true` in the constructor options. Colour-glyph nodes use the `text-color` shader instead of `text-sdf`. Glyphs are rasterized at the Application's `pixelRatio`, so text is crisp on a HiDPI surface without any opt-in. TextOptions.pixelRatio decouples one node's glyph raster from the surface without changing its layout by so much as a line break.",
   "symbol": "Text",
   "kind": "class",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 104,
+  "memberCount": 103,
   "counts": {
     "constructors": 1,
-    "methods": 43,
+    "methods": 42,
     "properties": 46,
     "events": 14
   },
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "GPU-accelerated text node that rasterizes individual glyphs into a shared per-font-variant GlyphAtlas using the SDF (Signed Distance Field) technique and renders them through the `text-sdf` shader.",
-        "Style mutations are applied automatically before the next draw - no manual `update()` call required. Mutating `text.style` any number of times in the same frame is cheap; the geometry is rebuilt at most once, on demand.",
+        "Style mutations are applied automatically before the next draw - nothing has to be ticked by hand. Mutating `text.style` any number of times in the same frame is cheap; the geometry is rebuilt at most once, on demand.",
         "```ts const label = new Text('Hello', { fontSize: 24 }); scene.addChild(label);",
         "label.style.fillColor = new Color(255, 0, 0); // cheap - no atlas work label.style.outlineWidth = 0.08; // cheap - only shader uniforms // changes are picked up automatically on the next render pass ```",
         "**FontFace-first:** load fonts via FontFactory before constructing the node, then pass the loaded `FontFace` via the `font` style option. The label renders immediately with the correct glyphs - no async waiting needed.",
@@ -1925,35 +1925,6 @@
           "params": [],
           "returnType": "void",
           "description": "Resolve a pending layout pass, if any, and apply it synchronously. The renderer calls this before each draw and every extent read resolves on its own, so manual calls are rarely needed."
-        },
-        {
-          "name": "update",
-          "signature": "update(): void",
-          "signatureTokens": [
-            {
-              "text": "update",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": "Alias for syncDirty, kept for game loops that tick their nodes explicitly. It takes no time step: a text node holds no animated state, so there is nothing for one to advance."
         },
         {
           "name": "updateBounds",

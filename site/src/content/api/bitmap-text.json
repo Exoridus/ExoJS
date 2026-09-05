@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 103,
+  "memberCount": 102,
   "counts": {
     "constructors": 1,
-    "methods": 44,
+    "methods": 43,
     "properties": 44,
     "events": 14
   },
@@ -1973,35 +1973,6 @@
           "params": [],
           "returnType": "void",
           "description": "Resolve a pending layout pass, if any, and apply it synchronously. The renderer calls this before each draw and every extent read resolves on its own, so manual calls are rarely needed."
-        },
-        {
-          "name": "update",
-          "signature": "update(): void",
-          "signatureTokens": [
-            {
-              "text": "update",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": "Alias for syncDirty, kept for game loops that tick their nodes explicitly. It takes no time step: a text node holds no animated state, so there is nothing for one to advance."
         },
         {
           "name": "updateBounds",

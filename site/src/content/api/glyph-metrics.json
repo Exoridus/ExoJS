@@ -34,7 +34,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(family: string, fontStyle: FontStyle, fontVariant: FontVariant, fontWeight: string): GlyphMetrics",
+          "signature": "new(font: FontVariantKey): GlyphMetrics",
           "signatureTokens": [
             {
               "text": "new",
@@ -45,7 +45,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "family",
+              "text": "font",
               "kind": "param"
             },
             {
@@ -53,56 +53,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "fontStyle",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "FontStyle",
+              "text": "FontVariantKey",
               "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "fontVariant",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "FontVariant",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "fontWeight",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
             },
             {
               "text": ")",
@@ -119,23 +71,8 @@
           ],
           "params": [
             {
-              "name": "family",
-              "type": "string",
-              "optional": false
-            },
-            {
-              "name": "fontStyle",
-              "type": "FontStyle",
-              "optional": false
-            },
-            {
-              "name": "fontVariant",
-              "type": "FontVariant",
-              "optional": false
-            },
-            {
-              "name": "fontWeight",
-              "type": "string",
+              "name": "font",
+              "type": "FontVariantKey",
               "optional": false
             }
           ],
