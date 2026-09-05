@@ -73,7 +73,7 @@
     "{src,test,examples,scripts,packages}/**/*.{ts,tsx,mts,cts}": "eslint --fix --no-warn-ignored --max-warnings=0"
   },
   "scripts": {
-    "bootstrap": "pnpm install --frozen-lockfile --ignore-scripts && pnpm build:tooling",
+    "bootstrap": "pnpm install --frozen-lockfile --ignore-scripts && pnpm build:tooling && pnpm bench:setup",
     "build:tooling": "pnpm --filter @codexo/exojs-build build",
     "clean": "rimraf dist",
     "build": "pnpm build:tooling && pnpm clean && tsx scripts/build.ts",
