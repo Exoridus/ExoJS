@@ -1,6 +1,6 @@
 import type { AggregatedBackendComparison, AggregatedSection } from '../comparison/pooled';
 import type { Backend } from '../rendering/EngineAdapter';
-import type { PrereleaseStamp, RenderingBrowser } from '../shared/provenance';
+import type { PlatformVersionStamp, PrereleaseStamp, RenderingBrowser } from '../shared/provenance';
 
 /**
  * The published machine-profile document.
@@ -28,7 +28,7 @@ import type { PrereleaseStamp, RenderingBrowser } from '../shared/provenance';
  */
 
 /** Schema version `bench:compare` stamps into a new document. */
-export const BENCH_PROFILE_SCHEMA_VERSION = 3;
+export const BENCH_PROFILE_SCHEMA_VERSION = 4;
 
 /**
  * Schema versions a reader accepts. A document carrying anything else is
@@ -40,7 +40,10 @@ export const BENCH_PROFILE_SCHEMA_VERSION = 3;
  * ratio. Version 2 pooled runs but named no browser per stamp, because the
  * harness measured in one; a reader cannot tell whether such a file describes
  * the browser it would name today, and a benchmark attributed to the wrong
- * engine is worse than a missing one.
+ * engine is worse than a missing one. Version 3 named no platform version, so a
+ * measurement taken on a pre-release operating system and the shipping
+ * platform's later one wrote the same file, the second silently replacing
+ * numbers taken under conditions it does not share.
  */
 export const SUPPORTED_BENCH_PROFILE_SCHEMA_VERSIONS: readonly number[] = [BENCH_PROFILE_SCHEMA_VERSION];
 
@@ -50,11 +53,30 @@ const SLUG_CHARACTERS = /^[a-z0-9-]+$/;
 /** True for a well-formed slug: lowercase ASCII words joined by single hyphens. */
 export const isProfileSlug = (slug: string): boolean => SLUG_CHARACTERS.test(slug) && !slug.startsWith('-') && !slug.endsWith('-') && !slug.includes('--');
 
+/** The operating system a profile was measured on, spelled out behind the slug's OS part. */
+export interface ProfilePlatform {
+  /** Normalized name, e.g. `windows`, `macos`, `linux`. */
+  readonly name: string;
+  /** Major version, e.g. 11 for Windows 11 or 27 for macOS 27. */
+  readonly version: number;
+  /**
+   * How the version was arrived at.
+   *
+   * `detected` means the host reported it; `declared` means the runner stated
+   * it, which is the only source available on a platform whose kernel version
+   * does not name the product version. A reader judging a comparison across
+   * machines needs to tell one from the other.
+   */
+  readonly versionSource: 'detected' | 'declared';
+  /** True when the platform is a pre-release build; the slug's OS part then ends in `-beta`. */
+  readonly prerelease: boolean;
+}
+
 /**
  * The machine profile a document describes, and the parts its slug was derived
  * from.
  *
- * The slug is `<gpu>-<os>-<browser>` and is also the file's base name, so a
+ * The slug is `<machine>-<os>-<browser>` and is also the file's base name, so a
  * re-measurement of the same machine overwrites the file it belongs to and a
  * different machine can only ever arrive as a new file. Every part is derived
  * from the stamped provenance; none of them is typed by hand.
@@ -63,13 +85,20 @@ export interface BenchProfile {
   /** `<gpu>-<os>-<browser>`, and the file's base name without the extension. */
   readonly slug: string;
   /**
-   * Normalized GPU part, derived from the rendering provenance's adapter
-   * string - or from the CPU model when the document carries physics alone,
-   * since a physics run exercises no GPU and naming one would be a claim the
-   * file cannot support.
+   * Normalized machine part.
+   *
+   * The GPU the rendering provenance's adapter string names, or the CPU model
+   * when no adapter names a machine - because the document carries physics
+   * alone, or because the browser substituted a constant for the device. On the
+   * systems where that substitution happens the GPU shares the CPU's package, so
+   * the CPU model is also the correct name for it.
    */
   readonly gpu: string;
-  /** Normalized operating system, e.g. `windows`, `macos`, `linux`. */
+  /**
+   * The slug's operating-system part: name, major version, and `-beta` for a
+   * pre-release build, e.g. `windows-11` or `macos-27-beta`. See
+   * {@link BenchProfile.platform} for the same information in parts.
+   */
   readonly os: string;
   /**
    * JavaScript runtime the numbers were taken in: the browser this run selected
@@ -79,6 +108,8 @@ export interface BenchProfile {
    * publishes two files rather than overwriting one with the other.
    */
   readonly browser: string;
+  /** The operating system behind {@link BenchProfile.os}, in parts, including what its version rests on. */
+  readonly platform: ProfilePlatform;
   /** Engine version every stamp in the document agrees on. */
   readonly engineVersion: string;
   /** Latest ISO-8601 timestamp among the document's stamps: when the profile was measured. */
@@ -128,6 +159,15 @@ export interface RenderingStamp {
   /** Operating system of the host that drove the browser, e.g. `darwin 25.0.0`. */
   readonly os: string;
   /**
+   * The operating system's major version, and what established it.
+   *
+   * Separate from {@link RenderingStamp.os} because that field carries the
+   * kernel release, which on macOS no longer maps to the product version. The
+   * slug's OS part is built from this, so a reader can see whether the version
+   * the file name claims was read from the host or stated by the runner.
+   */
+  readonly platformVersion: PlatformVersionStamp;
+  /**
    * Whether the platform is a pre-release build, and what established that.
    *
    * A number measured on a beta operating system or a preview browser build
@@ -163,6 +203,8 @@ export interface ProfileHost {
   readonly cpuCount: number;
   /** Platform and release, e.g. `win32 10.0.26200`. */
   readonly os: string;
+  /** The operating system's major version, and what established it; see {@link RenderingStamp.platformVersion}. */
+  readonly platformVersion: PlatformVersionStamp;
   /** CPU architecture, e.g. `x64`. */
   readonly arch: string;
 }
@@ -171,6 +213,15 @@ export interface ProfileHost {
 export interface PhysicsStamp {
   /** Node runtime and CPU host the step times were measured on. */
   readonly host: ProfileHost;
+  /**
+   * Whether the platform is a pre-release build, and what established that.
+   *
+   * A physics run drives no browser, so nothing here can be detected; the value
+   * rests on the runner's declaration or records that nothing established it.
+   * It is carried all the same, because the slug's OS part marks a pre-release
+   * platform for a physics-only profile exactly as it does for a rendering one.
+   */
+  readonly prerelease: PrereleaseStamp;
   /** Fixed physics timestep (seconds) each timed step advanced. */
   readonly fixedDelta: number;
   /** Caveats the run disclosed about how the numbers were produced. */

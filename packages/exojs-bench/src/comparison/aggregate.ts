@@ -1,9 +1,9 @@
 import type { PhysicsProvenance } from '../physics/driver';
 import type { PhysicsReportData } from '../physics/report';
-import { normalizeCpuModel, normalizeGpuAdapter, normalizeOsName } from '../profile/slug';
+import { isIdentifyingPart, normalizeCpuModel, normalizeGpuAdapter, normalizeOsName, PRERELEASE_SEGMENT } from '../profile/slug';
 import type { Provenance } from '../rendering/driver';
 import type { ReportData } from '../rendering/report';
-import type { LibraryProvenance } from '../shared/provenance';
+import type { LibraryProvenance, PlatformVersionStamp, PrereleaseStamp } from '../shared/provenance';
 import { median } from '../shared/timing';
 import type { BackendComparison, ComparisonCell, ComparisonRow, ComparisonSection, ExcludedRow } from './build';
 import { buildPhysicsComparison, buildRenderingComparison } from './build';
@@ -145,14 +145,31 @@ const requireSameMachine = (perRun: readonly string[], what: string, domain: str
 };
 
 /**
+ * The operating system a run belongs to, exactly as the slug's OS part spells
+ * it: name, major version and, for a pre-release build, the `beta` marker.
+ *
+ * The major version is part of the identity because it is part of the file
+ * name: a run on a beta platform and a run on the release it became would
+ * otherwise pool into a number describing neither. A version nothing
+ * established is kept distinct from every established one, so an undeclared run
+ * cannot pool with a declared one and quietly borrow its version.
+ */
+const platformIdentity = (os: string, version: PlatformVersionStamp | undefined, prerelease: PrereleaseStamp | undefined): string =>
+  [
+    normalizeOsName(os),
+    version === undefined || version.source === 'undetermined' ? 'unstated-version' : String(version.major),
+    prerelease?.value === true ? PRERELEASE_SEGMENT : 'shipping',
+  ].join('-');
+
+/**
  * The machine and browser a rendering run belongs to.
  *
  * Built from exactly the parts that decide which published profile a run lands
- * in - the GPU the adapter string names, the operating system, the browser
- * engine - plus whether the platform was pre-release, using the slug's own
- * normalizations. Two runs may therefore pool precisely when they would be
- * written to one file, and a run that would land elsewhere is rejected instead
- * of quietly averaged into this one.
+ * in - the GPU the adapter string names, the operating system with its major
+ * version, the browser engine - plus whether the platform was pre-release,
+ * using the slug's own normalizations. Two runs may therefore pool precisely
+ * when they would be written to one file, and a run that would land elsewhere
+ * is rejected instead of quietly averaged into this one.
  *
  * Deliberately tolerated, because these move between runs on one machine: the
  * timestamp; the driver, API and device-id tail of an adapter string
@@ -165,16 +182,24 @@ const requireSameMachine = (perRun: readonly string[], what: string, domain: str
  * The pre-release bit is part of the identity rather than a tolerance: a run on
  * a beta platform and a run on the shipping one describe different platforms,
  * and pooling them would publish a stable-looking number half of which was not.
+ *
+ * One limit is inherent and cannot be closed here. Where the browser reports a
+ * constant instead of the GPU, the slug names the machine after the CPU model,
+ * which only the physics provenance carries; a rendering run therefore
+ * identifies its machine no more precisely than that constant does, and two
+ * such machines running the same operating system and browser are
+ * indistinguishable to this check.
  */
 const renderingMachine = (stamps: readonly Provenance[]): string => {
-  const gpu = stamps.map(stamp => normalizeGpuAdapter(stamp.adapter)).find(name => name.length > 0) ?? 'unknown-gpu';
+  const gpu = stamps.map(stamp => normalizeGpuAdapter(stamp.adapter)).find(isIdentifyingPart) ?? 'unidentified-gpu';
   const first = stamps[0];
 
-  return [gpu, normalizeOsName(first?.os ?? ''), first?.browser ?? 'unknown-browser', first?.prerelease.value === true ? 'prerelease' : 'shipping'].join(' / ');
+  return [gpu, platformIdentity(first?.os ?? '', first?.platformVersion, first?.prerelease), first?.browser ?? 'unknown-browser'].join(' / ');
 };
 
 /** The machine a physics run belongs to: no GPU is exercised, so the CPU host names it. */
-const physicsMachine = (stamp: PhysicsProvenance): string => [normalizeCpuModel(stamp.host.cpu), normalizeOsName(stamp.host.os), stamp.host.arch].join(' / ');
+const physicsMachine = (stamp: PhysicsProvenance): string =>
+  [normalizeCpuModel(stamp.host.cpu), platformIdentity(stamp.host.os, stamp.host.platformVersion, stamp.prerelease), stamp.host.arch].join(' / ');
 
 /** Reject runs measured against different trees: their timings describe different code. */
 const requireSameEngineVersion = (perRun: ReadonlyArray<readonly string[]>, domain: string): void => {

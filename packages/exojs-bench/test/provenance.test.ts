@@ -1,10 +1,12 @@
-import { classifyPrerelease, DEFAULT_RENDERING_BROWSER, parseRenderingBrowser } from '../src/shared/provenance';
+import { classifyPrerelease, DEFAULT_RENDERING_BROWSER, parsePlatformDeclaration, parseRenderingBrowser } from '../src/shared/provenance';
 
 /**
- * The two provenance decisions a run cannot take back: which browser it was
- * measured in, and whether the platform under it was a shipping one. Both reach
- * the published profile verbatim, so a permissive selector or a pre-release bit
- * that quietly reads "stable" would publish a claim no measurement supports.
+ * The provenance decisions a run cannot take back: which browser it was
+ * measured in, which operating-system version it ran on, and whether that
+ * platform was a shipping one. All three reach the published profile verbatim
+ * and two of them reach its file name, so a permissive selector, an unvalidated
+ * version or a pre-release bit that quietly reads "stable" would publish a
+ * claim no measurement supports.
  */
 
 describe('parseRenderingBrowser', () => {
@@ -37,8 +39,13 @@ describe('classifyPrerelease', () => {
     expect(status).toEqual({ value: true, source: 'declared', evidence: 'macOS 26.0 beta 3' });
   });
 
-  test('records a bare declaration as one without a stated reason rather than inventing one', () => {
-    expect(classifyPrerelease({ browserVersion: '26.5', declared: 'true' }).evidence).toBe('declared by the runner, without a stated reason');
+  test('rests on the declaration alone for a domain that drives no browser', () => {
+    expect(classifyPrerelease({ declared: `the runner declared the platform as '27-beta'` })).toEqual({
+      value: true,
+      source: 'declared',
+      evidence: `the runner declared the platform as '27-beta'`,
+    });
+    expect(classifyPrerelease({}).source).toBe('assumed-stable');
   });
 
   test('prefers what it read over what was declared, so the evidence names the build', () => {
@@ -60,5 +67,20 @@ describe('classifyPrerelease', () => {
   test('does not read a pre-release marker out of a plain version number', () => {
     expect(classifyPrerelease({ browserVersion: '151.0.7922.34' }).value).toBe(false);
     expect(classifyPrerelease({ browserVersion: '26.5' }).value).toBe(false);
+  });
+});
+
+describe('parsePlatformDeclaration', () => {
+  test('reads a shipping platform and a pre-release one from the same flag', () => {
+    expect(parsePlatformDeclaration('11')).toEqual({ major: 11, prerelease: false, raw: '11' });
+    expect(parsePlatformDeclaration('27-beta')).toEqual({ major: 27, prerelease: true, raw: '27-beta' });
+  });
+
+  test('is absent when the flag was not passed, so a platform that reports its own version needs nothing', () => {
+    expect(parsePlatformDeclaration(undefined)).toBeUndefined();
+  });
+
+  test.each(['macos', 'true', '10.0.26200', '0', '100', '27-preview', '27 beta', ''])('refuses %s, which is not a plausible major version', raw => {
+    expect(() => parsePlatformDeclaration(raw)).toThrow(/major version/);
   });
 });

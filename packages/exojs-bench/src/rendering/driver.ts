@@ -4,8 +4,15 @@ import { fileURLToPath } from 'node:url';
 import type { Browser } from 'playwright';
 import { chromium, webkit } from 'playwright';
 
-import type { BaseProvenance, LibraryProvenance, PrereleaseStamp, RenderingBrowser } from '../shared/provenance';
-import { classifyPrerelease, DEFAULT_RENDERING_BROWSER, readLibraryProvenance, readOsRelease } from '../shared/provenance';
+import type { BaseProvenance, LibraryProvenance, PlatformDeclaration, PlatformVersionStamp, PrereleaseStamp, RenderingBrowser } from '../shared/provenance';
+import {
+  classifyPrerelease,
+  declaredPrereleaseOf,
+  DEFAULT_RENDERING_BROWSER,
+  readLibraryProvenance,
+  readOsRelease,
+  readPlatformVersion,
+} from '../shared/provenance';
 import type { ViteDevServer } from '../shared/viteServer';
 import { LIBRARY_ARMS, readEngineVersion, startViteServer as startPageServer } from '../shared/viteServer';
 import { buildMatrix } from './archetypes';
@@ -52,6 +59,8 @@ export interface Provenance extends BaseProvenance {
   readonly browserVersion: string;
   /** Operating system of the host that drove the browser (`os.platform()` + `os.release()`). */
   readonly os: string;
+  /** The operating system's major version, and what established it. */
+  readonly platformVersion: PlatformVersionStamp;
   /** Whether the platform is a pre-release build, and what that rests on. */
   readonly prerelease: PrereleaseStamp;
   /**
@@ -510,8 +519,8 @@ const runBackend = async (options: {
   cells: CellSpec[];
   engineVersion: string;
   onCellResult: CellResultSink;
-  /** Pre-release declaration from the command line; see {@link runMatrix}. */
-  declaredPrerelease?: string;
+  /** Platform declaration from the command line; see {@link runMatrix}. */
+  platform?: PlatformDeclaration;
   /** Replaces the per-backend launch flags; see {@link runMatrix}. */
   launchFlags?: readonly string[];
 }): Promise<{ provenance: Provenance; results: CellResult[] }> => {
@@ -621,7 +630,8 @@ const runBackend = async (options: {
     browser: browserName,
     browserVersion,
     os: readOsRelease(),
-    prerelease: classifyPrerelease({ browserVersion, declared: options.declaredPrerelease }),
+    platformVersion: readPlatformVersion(options.platform),
+    prerelease: classifyPrerelease({ browserVersion, declared: declaredPrereleaseOf(options.platform) }),
   } as const;
 
   const provenance: Provenance =
@@ -757,8 +767,8 @@ export const profileCell = async (options: {
   intervalUs?: number;
   /** Browser to profile in; only Chromium can be profiled. */
   browser?: RenderingBrowser;
-  /** Pre-release declaration from the command line; see {@link runMatrix}. */
-  declaredPrerelease?: string;
+  /** Platform declaration from the command line; see {@link runMatrix}. */
+  platform?: PlatformDeclaration;
 }): Promise<ProfileOutcome> => {
   const { spec } = options;
   const browserName = options.browser ?? DEFAULT_RENDERING_BROWSER;
@@ -871,7 +881,8 @@ export const profileCell = async (options: {
           browser: browserName,
           browserVersion,
           os: readOsRelease(),
-          prerelease: classifyPrerelease({ browserVersion, declared: options.declaredPrerelease }),
+          platformVersion: readPlatformVersion(options.platform),
+          prerelease: classifyPrerelease({ browserVersion, declared: declaredPrereleaseOf(options.platform) }),
           flags,
           headless: true,
           engineVersion,
@@ -928,12 +939,13 @@ export const runMatrix = async (options: {
    */
   browser?: RenderingBrowser;
   /**
-   * Declares that the platform is a pre-release build, optionally stating which
-   * one. Needed because a beta operating system cannot be detected at runtime -
-   * see {@link '../shared/provenance'.classifyPrerelease}. A preview BROWSER
-   * build is detected from its own version string and needs no declaration.
+   * The runner's statement about the operating system: its major version and
+   * whether that build is a pre-release one. Needed because neither is readable
+   * at runtime on every platform - see
+   * {@link '../shared/provenance'.readPlatformVersion}. A preview BROWSER build
+   * is detected from its own version string and needs no declaration.
    */
-  declaredPrerelease?: string;
+  platform?: PlatformDeclaration;
   filter?: Partial<CellSpec>;
   /** Multi-value selection applied after `filter`; see {@link MatrixSelection}. */
   selection?: MatrixSelection;
@@ -997,7 +1009,7 @@ export const runMatrix = async (options: {
         cells: backendCells,
         engineVersion,
         onCellResult,
-        ...(options.declaredPrerelease !== undefined && { declaredPrerelease: options.declaredPrerelease }),
+        ...(options.platform !== undefined && { platform: options.platform }),
         ...(options.launchFlags !== undefined && { launchFlags: options.launchFlags }),
       });
 

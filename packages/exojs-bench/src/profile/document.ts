@@ -39,6 +39,7 @@ const toRenderingStamp = (provenance: Provenance): RenderingStamp => ({
   browser: provenance.browser,
   browserVersion: provenance.browserVersion,
   os: provenance.os,
+  platformVersion: { ...provenance.platformVersion },
   prerelease: { ...provenance.prerelease },
   flags: [...provenance.flags],
   headless: provenance.headless,
@@ -54,8 +55,10 @@ const toPhysicsStamp = (provenance: PhysicsProvenance): PhysicsStamp => ({
     cpu: provenance.host.cpu,
     cpuCount: provenance.host.cpuCount,
     os: provenance.host.os,
+    platformVersion: { ...provenance.host.platformVersion },
     arch: provenance.host.arch,
   },
+  prerelease: { ...provenance.prerelease },
   fixedDelta: provenance.fixedDelta,
   caveats: [...provenance.caveats],
   engineVersion: provenance.engineVersion,
@@ -102,6 +105,22 @@ const agreedRunCount = (counts: readonly number[]): number => {
 };
 
 /**
+ * The operating system a stamp names, version included, or an empty string when
+ * it recorded none. Both halves matter: a rendering measurement on a beta
+ * platform and a physics measurement on the shipping release it became are as
+ * much "not one machine" as two different operating systems are.
+ */
+const describePlatform = (stamp: { readonly os: string; readonly platformVersion: { readonly major: number; readonly source: string } }): string => {
+  const name = normalizeOsName(stamp.os);
+
+  if (name.length === 0) {
+    return '';
+  }
+
+  return stamp.platformVersion.source === 'undetermined' ? name : `${name} ${String(stamp.platformVersion.major)}`;
+};
+
+/**
  * The two domains have to describe one machine.
  *
  * Each domain's own pooling already rejects runs from different machines, but
@@ -112,8 +131,8 @@ const agreedRunCount = (counts: readonly number[]): number => {
  * another would publish a file naming a machine that does not exist.
  */
 const requireOneMachine = (renderingStamps: readonly RenderingStamp[], physicsStamp: PhysicsStamp | undefined): void => {
-  const rendering = renderingStamps.map(stamp => normalizeOsName(stamp.os)).find(name => name.length > 0);
-  const physics = physicsStamp === undefined ? undefined : normalizeOsName(physicsStamp.host.os);
+  const rendering = renderingStamps.map(describePlatform).find(name => name.length > 0);
+  const physics = physicsStamp === undefined ? undefined : describePlatform({ os: physicsStamp.host.os, platformVersion: physicsStamp.host.platformVersion });
 
   if (rendering !== undefined && physics !== undefined && rendering !== physics) {
     throw new Error(

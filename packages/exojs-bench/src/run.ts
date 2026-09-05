@@ -8,6 +8,8 @@ import type { ArchetypeId, Backend, CellResult, MatrixSelection, RenderingBrowse
 import { isHitching, parseRenderingBrowser, profileCell, runMatrix, writeReport } from './rendering';
 import { parseArgs } from './shared/args';
 import { createCheckpointWriter } from './shared/checkpoint';
+import type { PlatformDeclaration } from './shared/provenance';
+import { parsePlatformDeclaration, PLATFORM_DECLARATION_SYNTAX, readPlatformVersion } from './shared/provenance';
 
 /** Domains this CLI can drive. Each has its own archetypes + arms; the shared layer (timing, provenance, checkpoint, report skeleton) is reused across both. */
 const DOMAINS = ['rendering', 'physics'] as const;
@@ -34,6 +36,47 @@ const parseList = (raw: string | undefined): string[] | undefined => {
     .filter(value => value.length > 0);
 
   return values.length > 0 ? values : undefined;
+};
+
+/**
+ * Resolve the `--platform` declaration and refuse the flag it replaced.
+ *
+ * `--prerelease` used to declare a beta operating system without naming its
+ * version. Silently ignoring it would let a stale command line publish a beta
+ * measurement under a shipping platform's name, so it is rejected outright
+ * rather than dropped.
+ */
+const resolvePlatform = (args: Map<string, string>): PlatformDeclaration | undefined => {
+  if (args.has('prerelease')) {
+    throw new Error(`--prerelease has been replaced by ${PLATFORM_DECLARATION_SYNTAX}, which states the pre-release build together with the version it is of.`);
+  }
+
+  return parsePlatformDeclaration(args.get('platform'));
+};
+
+/**
+ * Refuse a reportable run whose platform version nothing established.
+ *
+ * The version is part of a published profile's file name, and it is only
+ * readable on some platforms. Failing here, before any measurement, costs the
+ * runner a command line; failing at `bench:compare` would cost them every run
+ * they had already taken. A narrowed run cannot be published anyway, so it only
+ * warns.
+ */
+const requirePlatformVersion = (declared: PlatformDeclaration | undefined, isSubset: boolean): void => {
+  if (readPlatformVersion(declared).source !== 'undetermined') {
+    return;
+  }
+
+  const message = `This platform does not report its own major version, which a published profile's file name carries. Declare it with ${PLATFORM_DECLARATION_SYNTAX}.`;
+
+  if (isSubset) {
+    console.warn(`\n${message}`);
+
+    return;
+  }
+
+  throw new Error(message);
 };
 
 /** Parse and validate the `--domain` selector (defaults to `rendering`). */
@@ -121,11 +164,12 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
 
   // `--browser` selects the engine the run is measured in and is stamped into
   // every provenance block, so a WebKit number can never be read as a Chromium
-  // one. `--prerelease` declares a beta operating system, which nothing at
-  // runtime can observe; a preview BROWSER build is detected from its own
-  // version string and needs no flag.
+  // one. `--platform` states the operating system's major version and whether
+  // that build is a beta, neither of which is observable at runtime on every
+  // platform; a preview BROWSER build is detected from its own version string
+  // and needs no flag.
   const browser = parseRenderingBrowser(args.get('browser'));
-  const declaredPrerelease = args.get('prerelease');
+  const platform = resolvePlatform(args);
 
   const backends: readonly Backend[] = backendArg ? (backendArg.split(',').map(value => value.trim()) as Backend[]) : DEFAULT_BACKENDS;
 
@@ -198,6 +242,8 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
     console.warn('SUBSET RUN — not a reportable comparison (see the same-session rule).');
   }
 
+  requirePlatformVersion(platform, isSubset);
+
   console.log(
     `Running rendering benchmark: browser=${browser}, backends=[${backends.join(', ')}]${engines ? `, engine=[${engines.join(', ')}]` : ''}${configs ? `, config=[${configs.join(', ')}]` : ''}${archetypes ? `, archetype=[${archetypes.join(', ')}]` : ''}${nodeCounts ? `, nodes=[${nodeCounts.join(', ')}]` : ''}${timedFramesOverride !== undefined ? `, frames=${timedFramesOverride} (OVERRIDE — thin sampling, not reportable)` : ''}`,
   );
@@ -210,7 +256,7 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
   const data = await runMatrix({
     backends,
     browser,
-    ...(declaredPrerelease !== undefined && { declaredPrerelease }),
+    ...(platform !== undefined && { platform }),
     ...(hasSelection && { selection }),
     ...(timedFramesOverride !== undefined && { timedFramesOverride }),
     onCellResult: result => checkpoint.append(result),
@@ -231,7 +277,7 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
 
   for (const entry of data.provenance) {
     console.log(
-      `  backend=${entry.backend} browser=${entry.browser}/${entry.browserVersion} os=${entry.os} prerelease=${String(entry.prerelease.value)} (${entry.prerelease.source}) adapter="${entry.adapter}" software=${String(entry.software)} headless=${String(entry.headless)} flags=[${entry.flags.join(' ')}] engine=${entry.engineVersion}`,
+      `  backend=${entry.backend} browser=${entry.browser}/${entry.browserVersion} os=${entry.os} platformVersion=${String(entry.platformVersion.major)} (${entry.platformVersion.source}) prerelease=${String(entry.prerelease.value)} (${entry.prerelease.source}) adapter="${entry.adapter}" software=${String(entry.software)} headless=${String(entry.headless)} flags=[${entry.flags.join(' ')}] engine=${entry.engineVersion}`,
     );
   }
 
@@ -278,6 +324,7 @@ const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
   const framesArg = args.get('frames');
   const engineArg = args.get('engine');
   const outDir = resolve(args.get('out') ?? DEFAULT_PHYSICS_OUT_DIR);
+  const platform = resolvePlatform(args);
 
   const filter: { -readonly [K in keyof PhysicsCellSpec]?: PhysicsCellSpec[K] } = {};
 
@@ -326,6 +373,8 @@ const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
     console.warn('SUBSET RUN — not a reportable comparison (see the same-run rule).');
   }
 
+  requirePlatformVersion(platform, isSubset);
+
   console.log(
     `Running physics benchmark: ${archetypeArg ? `archetype=${archetypeArg}` : 'all archetypes'}${engineArg ? `, engine=${engineArg}` : ''}${bodiesArg ? `, bodies=${bodiesArg}` : ''}${timedStepsOverride !== undefined ? `, frames=${timedStepsOverride} (OVERRIDE — thin sampling, not reportable)` : ''}`,
   );
@@ -368,6 +417,7 @@ const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
   const data = runPhysicsMatrix({
     adapters,
     libraries,
+    ...(platform !== undefined && { platform }),
     ...(isSubset && { filter }),
     ...(timedStepsOverride !== undefined && { timedStepsOverride }),
     onCellResult: result => checkpoint.append(result),
@@ -383,7 +433,7 @@ const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
 
   console.log('\n=== Provenance ===');
   console.log(
-    `  node=${data.provenance.host.node} cpu="${data.provenance.host.cpu}" (${String(data.provenance.host.cpuCount)} logical) os=${data.provenance.host.os} engine=${data.provenance.engineVersion} fixedDelta=${String(data.provenance.fixedDelta)}`,
+    `  node=${data.provenance.host.node} cpu="${data.provenance.host.cpu}" (${String(data.provenance.host.cpuCount)} logical) os=${data.provenance.host.os} platformVersion=${String(data.provenance.host.platformVersion.major)} (${data.provenance.host.platformVersion.source}) prerelease=${String(data.provenance.prerelease.value)} (${data.provenance.prerelease.source}) engine=${data.provenance.engineVersion} fixedDelta=${String(data.provenance.fixedDelta)}`,
   );
 
   writePhysicsReport(data, outDir);
