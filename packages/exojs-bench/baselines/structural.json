@@ -52,8 +52,8 @@
       "archetype": "filter-chain-1",
       "nodeCount": 200,
       "drawCalls": 3,
-      "textureBinds": 5,
-      "bufferUploads": 6
+      "textureBinds": 9,
+      "bufferUploads": 1
     },
     {
       "engine": "exojs",
@@ -62,8 +62,8 @@
       "archetype": "filter-chain-2",
       "nodeCount": 200,
       "drawCalls": 4,
-      "textureBinds": 7,
-      "bufferUploads": 6
+      "textureBinds": 11,
+      "bufferUploads": 1
     },
     {
       "engine": "exojs",
@@ -72,8 +72,8 @@
       "archetype": "filter-chain-4",
       "nodeCount": 200,
       "drawCalls": 6,
-      "textureBinds": 11,
-      "bufferUploads": 6
+      "textureBinds": 15,
+      "bufferUploads": 1
     },
     {
       "engine": "exojs",
@@ -102,8 +102,8 @@
       "archetype": "mask-clip",
       "nodeCount": 200,
       "drawCalls": 4,
-      "textureBinds": 0,
-      "bufferUploads": 4
+      "textureBinds": 4,
+      "bufferUploads": 3
     },
     {
       "engine": "exojs",
