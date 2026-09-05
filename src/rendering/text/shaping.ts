@@ -1,5 +1,5 @@
 import type { LayoutOptions } from './LayoutOptions';
-import type { GlyphInfo } from './types';
+import type { GlyphInfo, SolidTexel } from './types';
 
 /**
  * How a laid-out line is turned into something placeable when the engine has
@@ -25,6 +25,12 @@ export interface LineShaper {
    * exactly as a glyph-metrics provider does.
    */
   shapeLine(line: string, fontSize: number): GlyphInfo;
+  /**
+   * A solid texel on the pages this shaper rasterizes into, for decoration
+   * quads. A measurement-only shaper owns no pages and omits it, which reads
+   * as "no decorations", exactly as it does on a glyph provider.
+   */
+  getSolidTexel?(): SolidTexel | null;
 }
 
 /** The representation a text node uses for its glyph run. */

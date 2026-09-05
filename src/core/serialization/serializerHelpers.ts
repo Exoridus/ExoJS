@@ -55,6 +55,11 @@ export const serializeStyle = (style: {
   shadowOffsetY: number;
   shadowAlpha: number;
   shadowBlur: number;
+  underline: boolean;
+  strikethrough: boolean;
+  decorationColor: Color | null;
+  decorationThickness: number;
+  decorationOffset: number;
   gradient: ResolvedTextGradient | null;
 }): Record<string, unknown> | undefined => {
   const out: Record<string, unknown> = {};
@@ -76,6 +81,12 @@ export const serializeStyle = (style: {
   if (style.shadowOffsetY !== 0) out.shadowOffsetY = style.shadowOffsetY;
   if (style.shadowAlpha !== 0) out.shadowAlpha = style.shadowAlpha;
   if (style.shadowBlur !== 0) out.shadowBlur = style.shadowBlur;
+
+  if (style.underline) out.underline = true;
+  if (style.strikethrough) out.strikethrough = true;
+  if (style.decorationColor !== null) out.decorationColor = colorToArray(style.decorationColor);
+  if (style.decorationThickness !== 0) out.decorationThickness = style.decorationThickness;
+  if (style.decorationOffset !== 0) out.decorationOffset = style.decorationOffset;
 
   if (style.gradient !== null) out.gradient = gradientToJson(style.gradient);
 
@@ -158,6 +169,15 @@ export const deserializeStyleOptions = (data: unknown): TextStyleOptions | undef
   if (typeof source.shadowOffsetY === 'number') options.shadowOffsetY = source.shadowOffsetY;
   if (typeof source.shadowAlpha === 'number') options.shadowAlpha = source.shadowAlpha;
   if (typeof source.shadowBlur === 'number') options.shadowBlur = source.shadowBlur;
+
+  if (typeof source.underline === 'boolean') options.underline = source.underline;
+  if (typeof source.strikethrough === 'boolean') options.strikethrough = source.strikethrough;
+
+  const decorationColor = arrayToColor(source.decorationColor);
+  if (decorationColor !== undefined) options.decorationColor = decorationColor;
+
+  if (typeof source.decorationThickness === 'number') options.decorationThickness = source.decorationThickness;
+  if (typeof source.decorationOffset === 'number') options.decorationOffset = source.decorationOffset;
 
   const gradient = jsonToGradient(source.gradient);
   if (gradient !== undefined) options.gradient = gradient;

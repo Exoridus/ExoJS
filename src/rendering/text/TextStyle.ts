@@ -186,6 +186,26 @@ export interface TextStyleOptions {
   /** Shadow blur softness (0..1). Larger values soften the shadow edge. */
   shadowBlur?: number;
 
+  // ── Decorations ───────────────────────────────────────────────────────────
+  /** Draw a rule under each line. Defaults to `false`. */
+  underline?: boolean;
+  /** Draw a rule through each line. Defaults to `false`. */
+  strikethrough?: boolean;
+  /**
+   * Rule colour. `null` (the default) takes the fill, gradient included, so a
+   * gradient-filled label gets a gradient-filled rule.
+   */
+  decorationColor?: Color | null;
+  /**
+   * Rule thickness in pixels. `0` (the default) derives it from the font size.
+   */
+  decorationThickness?: number;
+  /**
+   * Extra downward offset in pixels applied to both rules, on top of the
+   * position the font's metrics put them at. Defaults to `0`.
+   */
+  decorationOffset?: number;
+
   // ── Gradient ──────────────────────────────────────────────────────────────
   /**
    * Multi-stop fill gradient. When set it overrides `fillColor` for the glyph
@@ -235,6 +255,13 @@ export class TextStyle {
   private _shadowAlpha: number;
   private _shadowBlur: number;
 
+  // Decorations
+  private _underline: boolean;
+  private _strikethrough: boolean;
+  private _decorationColor: Color | null;
+  private _decorationThickness: number;
+  private _decorationOffset: number;
+
   // Gradient
   private _gradient: ResolvedTextGradient | null;
 
@@ -260,6 +287,12 @@ export class TextStyle {
     this._shadowOffsetY = options.shadowOffsetY ?? 0;
     this._shadowAlpha = options.shadowAlpha ?? 0;
     this._shadowBlur = options.shadowBlur ?? 0;
+
+    this._underline = options.underline ?? false;
+    this._strikethrough = options.strikethrough ?? false;
+    this._decorationColor = options.decorationColor ? options.decorationColor.clone() : null;
+    this._decorationThickness = options.decorationThickness ?? 0;
+    this._decorationOffset = options.decorationOffset ?? 0;
 
     this._gradient = options.gradient ? _normalizeGradient(options.gradient) : null;
 
@@ -478,6 +511,62 @@ export class TextStyle {
     this._markDirty('tint');
   }
 
+  // ── Decoration properties ───────────────────────────────────────────────
+
+  /** Rule under each line. Rebuilds the geometry: a rule is a quad of its own. */
+  public get underline(): boolean {
+    return this._underline;
+  }
+
+  public set underline(v: boolean) {
+    if (this._underline === v) return;
+    this._underline = v;
+    this._markDirty('layout');
+  }
+
+  /** Rule through each line. */
+  public get strikethrough(): boolean {
+    return this._strikethrough;
+  }
+
+  public set strikethrough(v: boolean) {
+    if (this._strikethrough === v) return;
+    this._strikethrough = v;
+    this._markDirty('layout');
+  }
+
+  /** Rule colour, or `null` to follow the fill. */
+  public get decorationColor(): Color | null {
+    return this._decorationColor;
+  }
+
+  public set decorationColor(v: Color | null) {
+    this._decorationColor = v ? v.clone() : null;
+    this._markDirty('tint');
+  }
+
+  /** Rule thickness in pixels; `0` derives it from the font size. */
+  public get decorationThickness(): number {
+    return this._decorationThickness;
+  }
+
+  public set decorationThickness(v: number) {
+    if (this._decorationThickness === v) return;
+    this._decorationThickness = v;
+    this._markDirty('layout');
+  }
+
+  /** Extra downward offset in pixels applied to both rules. */
+  public get decorationOffset(): number {
+    return this._decorationOffset;
+  }
+
+  public set decorationOffset(v: number) {
+    if (this._decorationOffset === v) return;
+    this._decorationOffset = v;
+    this._markDirty('layout');
+  }
+
   // ── Gradient properties (hint: 'tint') ──────────────────────────────────
 
   /**
@@ -529,6 +618,11 @@ export class TextStyle {
       this._shadowOffsetY = style._shadowOffsetY;
       this._shadowAlpha = style._shadowAlpha;
       this._shadowBlur = style._shadowBlur;
+      this._underline = style._underline;
+      this._strikethrough = style._strikethrough;
+      this._decorationColor = style._decorationColor ? style._decorationColor.clone() : null;
+      this._decorationThickness = style._decorationThickness;
+      this._decorationOffset = style._decorationOffset;
       this._gradient = _cloneGradient(style._gradient);
       this._markDirty('font');
     }
@@ -555,6 +649,11 @@ export class TextStyle {
     s._shadowOffsetY = this._shadowOffsetY;
     s._shadowAlpha = this._shadowAlpha;
     s._shadowBlur = this._shadowBlur;
+    s._underline = this._underline;
+    s._strikethrough = this._strikethrough;
+    s._decorationColor = this._decorationColor ? this._decorationColor.clone() : null;
+    s._decorationThickness = this._decorationThickness;
+    s._decorationOffset = this._decorationOffset;
     s._gradient = _cloneGradient(this._gradient);
     s._dirty = true;
     s._pendingHint = 'font';

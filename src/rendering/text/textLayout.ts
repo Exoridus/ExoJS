@@ -4,7 +4,18 @@ import type { LayoutOptions } from './LayoutOptions';
 import { graphemes, graphemeStarts, isTrivialText, textRuns, wordSegments } from './segmentation';
 import type { LineShaper } from './shaping';
 import { resolveShaping } from './shaping';
-import type { GlyphInfo, GlyphPlacement, GlyphProvider, TextLayoutResult, TextLayoutStyle, TextLineMetrics, TextPageQuads, TextTransform } from './types';
+import type {
+  GlyphInfo,
+  GlyphPlacement,
+  GlyphProvider,
+  SolidTexel,
+  TextFontMetrics,
+  TextLayoutResult,
+  TextLayoutStyle,
+  TextLineMetrics,
+  TextPageQuads,
+  TextTransform,
+} from './types';
 
 interface LinePlacement {
   // `advance` is the entry's own pen step rather than `info.advance`: a tab's
@@ -365,6 +376,29 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
     });
   }
 
+  // ── Decoration rules ──────────────────────────────────────────────────────
+  //
+  // Appended after every glyph and outside every line's placement range, so a
+  // caret walking a line never has to skip one. Each rule spans its line's
+  // laid-out advance, which already carries the alignment offset, the wrap and
+  // the letter spacing - there is nothing left for a rule to recompute.
+  if (style.underline === true || style.strikethrough === true) {
+    const solid = shaped ? (shaper.getSolidTexel?.() ?? null) : (provider.getSolidTexel?.() ?? null);
+
+    if (solid !== null) {
+      const rules = _decorationGeometry(style, fontSize, provider);
+
+      for (const line of lines) {
+        // An empty line has nothing to underline; a rule there would draw a
+        // stray dash where the reader sees only a blank.
+        if (line.count === 0) continue;
+
+        if (style.underline === true) place(_decorationQuad(solid, line, line.y + rules.underlineTop, rules.thickness));
+        if (style.strikethrough === true) place(_decorationQuad(solid, line, line.y + rules.strikeTop, rules.thickness));
+      }
+    }
+  }
+
   // Text that is nothing but line breaks places no glyph yet still occupies
   // the line boxes it broke into - a caret has to be able to sit on them.
   if (result.length === 0) {
@@ -405,6 +439,7 @@ export const buildTextPageQuads = (placements: readonly GlyphPlacement[]): TextP
     const vertices = new Float32Array(n * 8);
     const uvs = new Float32Array(n * 8);
     const indices = new Uint32Array(n * 6);
+    const decorations = new Uint8Array(n);
 
     for (let i = 0; i < n; i++) {
       // In-bounds: i < n === pagePlacements.length.
@@ -437,15 +472,73 @@ export const buildTextPageQuads = (placements: readonly GlyphPlacement[]): TextP
       indices[idxBase + 3] = baseV;
       indices[idxBase + 4] = baseV + 2;
       indices[idxBase + 5] = baseV + 3;
+
+      decorations[i] = p.decoration === true ? 1 : 0;
     }
 
-    result.push({ pageIndex, vertices, uvs, indices, quadCount: n });
+    result.push({ pageIndex, vertices, uvs, indices, decorations, quadCount: n });
   }
 
   return result;
 };
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
+
+/** Where the two rules sit relative to a line's top, and how thick they are. */
+interface DecorationGeometry {
+  thickness: number;
+  underlineTop: number;
+  strikeTop: number;
+}
+
+/** Vertical metrics for a font that reports none, as fractions of the size. */
+const _fallbackFontMetrics = (fontSize: number): TextFontMetrics => ({
+  ascent: fontSize * 0.8,
+  descent: fontSize * 0.2,
+  xHeight: fontSize * 0.5,
+});
+
+/**
+ * Resolve the decoration rules from the font's own metrics.
+ *
+ * The underline sits inside the descender space rather than at a fixed
+ * fraction of the font size, and the strikethrough is centred on half the
+ * x-height - the typographic definition, and the reason a rule crosses the
+ * middle of the lowercase letters in a tall font and a short one alike.
+ */
+const _decorationGeometry = (style: TextLayoutStyle, fontSize: number, provider: GlyphProvider): DecorationGeometry => {
+  const metrics = provider.getFontMetrics?.(fontSize) ?? _fallbackFontMetrics(fontSize);
+  const requested = style.decorationThickness ?? 0;
+  const thickness = requested > 0 ? requested : Math.max(1, Math.round(fontSize * 0.06));
+  const offset = style.decorationOffset ?? 0;
+  const baseline = metrics.ascent;
+
+  return {
+    thickness,
+    underlineTop: baseline + Math.max(1, metrics.descent * 0.18) + offset,
+    strikeTop: baseline - metrics.xHeight * 0.5 - thickness * 0.5 + offset,
+  };
+};
+
+/** One rule spanning a laid-out line, as a quad sampling a single solid texel. */
+const _decorationQuad = (solid: SolidTexel, line: TextLineMetrics, top: number, thickness: number): GlyphPlacement => ({
+  x: line.x,
+  y: top,
+  width: line.width,
+  height: thickness,
+  decoration: true,
+  penX: line.x,
+  penAdvance: 0,
+  // A rule stands for no character of its own; it collapses to an empty range
+  // at the end of the line it underlines, the way an ellipsis glyph does.
+  sourceStart: line.sourceEnd,
+  sourceEnd: line.sourceEnd,
+  page: solid.page,
+  uvLeft: solid.u,
+  uvTop: solid.v,
+  uvRight: solid.u,
+  uvBottom: solid.v,
+});
 
 /** Marker appended to the last kept line under `overflow: 'ellipsis'`. */
 const defaultEllipsis = '…';

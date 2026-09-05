@@ -203,6 +203,10 @@ export class BitmapText extends AbstractText {
       leading: style.leading,
       align: style.align,
       textTransform: style.textTransform,
+      underline: style.underline,
+      strikethrough: style.strikethrough,
+      decorationThickness: style.decorationThickness,
+      decorationOffset: style.decorationOffset,
     };
   }
 

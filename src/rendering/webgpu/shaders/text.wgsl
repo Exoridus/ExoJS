@@ -26,6 +26,7 @@ struct VertexOutput {
     @location(2) @interpolate(flat) nodeIdx  : u32,
     @location(3) @interpolate(flat) textureSlot : u32,
     @location(4) @interpolate(flat) pxAxes : vec4<f32>,
+    @location(5) @interpolate(flat) decoration : u32,
 };
 
 @vertex
@@ -94,6 +95,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     out.nodeIdx  = ni;
     out.textureSlot = input.packedNodeSlot >> {{atlasSlotShift}}u;
     out.pxAxes = vec4<f32>(unitClipX * frame.viewport.zw * 0.5, unitClipY * frame.viewport.zw * 0.5);
+    out.decoration = select(0u, 1u, (input.packedNodeSlot & {{decorationFlagBit}}u) != 0u);
     return out;
 }
 
@@ -220,6 +222,13 @@ fn fragmentSdf(in: VertexOutput) -> @location(0) vec4<f32> {
         fillColor = tFill;
     }
 
+    // A rule samples solid ink, so it is coloured exactly like a glyph interior
+    // by default - which is what gives an underline the gradient for free. An
+    // explicit decoration colour overrides it here.
+    if (in.decoration == 1u && tShadow2.z > 0.5) {
+        fillColor = nodes[base + 8u];
+    }
+
     return fillColor * fill + tOutline * outline + tShadow * shadow;
 }
 
@@ -279,6 +288,13 @@ fn fragmentMsdf(in: VertexOutput) -> @location(0) vec4<f32> {
         fillColor = tFill;
     }
 
+    // A rule samples solid ink, so it is coloured exactly like a glyph interior
+    // by default - which is what gives an underline the gradient for free. An
+    // explicit decoration colour overrides it here.
+    if (in.decoration == 1u && tShadow2.z > 0.5) {
+        fillColor = nodes[base + 8u];
+    }
+
     return fillColor * fill + tOutline * outline + tShadow * shadow;
 }
 
@@ -288,7 +304,15 @@ fn fragmentMsdf(in: VertexOutput) -> @location(0) vec4<f32> {
 fn fragmentColor(in: VertexOutput) -> @location(0) vec4<f32> {
     let ni     = in.nodeIdx;
     let base   = ni * {{nodeDataTexels}}u;
-    let tint   = nodes[base + 2u];
+    var tint   = nodes[base + 2u];
+    let params = nodes[base + 6u];
+
+    // A decoration quad samples the atlas's white block, so tinting it with the
+    // fill is already right; an explicit rule colour replaces the tint outright.
+    if (in.decoration == 1u && params.z > 0.5) {
+        tint = nodes[base + 8u];
+    }
+
     let sample = sampleTexture(in.textureSlot, in.texcoord, dpdx(in.texcoord), dpdy(in.texcoord));
     return sample * tint;
 }

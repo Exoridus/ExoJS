@@ -5,7 +5,7 @@
  */
 
 import { Color } from '#core/Color';
-import { textGradientMaxStops,TextStyle } from '#rendering/text/TextStyle';
+import { textGradientMaxStops, TextStyle } from '#rendering/text/TextStyle';
 
 // ---------------------------------------------------------------------------
 // Constructor defaults
@@ -32,6 +32,11 @@ describe('TextStyle constructor defaults', () => {
     expect(style.shadowAlpha).toBe(0);
     expect(style.shadowBlur).toBe(0);
     expect(style.gradient).toBeNull();
+    expect(style.underline).toBe(false);
+    expect(style.strikethrough).toBe(false);
+    expect(style.decorationColor).toBeNull();
+    expect(style.decorationThickness).toBe(0);
+    expect(style.decorationOffset).toBe(0);
   });
 
   test('overrides every default when options are provided', () => {
@@ -362,6 +367,29 @@ describe('setters', () => {
     expect(style.consumeDirty()).toBe('tint');
 
     style.shadowBlur = 0.6;
+    expect(style.consumeDirty()).toBe('tint');
+  });
+
+  test('underline: same value is a no-op; different value marks layout-dirty', () => {
+    const style = freshStyle();
+    style.underline = false;
+    expect(style.consumeDirty()).toBeNull();
+
+    // A rule is a quad of its own, so turning one on has to rebuild geometry.
+    style.underline = true;
+    expect(style.consumeDirty()).toBe('layout');
+  });
+
+  test('decorationColor: cloned on the way in and marks tint-dirty', () => {
+    const style = freshStyle();
+    const color = Color.red;
+
+    style.decorationColor = color;
+    expect(style.decorationColor).not.toBe(color);
+    expect(style.consumeDirty()).toBe('tint');
+
+    style.decorationColor = null;
+    expect(style.decorationColor).toBeNull();
     expect(style.consumeDirty()).toBe('tint');
   });
 

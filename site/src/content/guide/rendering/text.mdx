@@ -84,6 +84,11 @@ The visual appearance comes from [`TextStyleOptions`](/ExoJS/en/api/text-style-o
 | `shadowOffsetY` | `number` | `0` | Vertical shadow offset in pixels |
 | `shadowAlpha` | `number` | `0` | Shadow opacity (`0`–`1`); `0` disables the shadow |
 | `shadowBlur` | `number` | `0` | Shadow blur softness (`0`–`1`) |
+| `underline` | `boolean` | `false` | Draw a rule under each line |
+| `strikethrough` | `boolean` | `false` | Draw a rule through each line |
+| `decorationColor` | `Color \| null` | `null` | Rule colour; `null` follows the fill, gradient included |
+| `decorationThickness` | `number` | `0` | Rule thickness in pixels; `0` derives it from the font size |
+| `decorationOffset` | `number` | `0` | Extra downward offset applied to both rules |
 | `gradient` | `TextGradient \| null` | `null` | Multi-stop fill gradient; overrides `fillColor` |
 
 A `gradient` takes up to eight colour stops and an `angle` in degrees. The angle follows the CSS `linear-gradient` convention — `0` runs towards the top, `90` towards the right, increasing clockwise — and defaults to `180`, top to bottom. The ramp spans the ink extent (`getLocalBounds()`) corner to corner along that direction, not the advance box, so the first and last stops always land on the box edges:
@@ -105,6 +110,23 @@ const banner = new Text('Level Up', {
 ```
 
 Stop offsets are clamped to `0`–`1` and sorted on the way in, and the colours are cloned, so the object you pass is never aliased. Reading `style.gradient` back gives the normalized form. The ramp is evaluated in the fragment shader from the node's own packed style, so changing it costs no atlas work — it is a `'tint'` change like `fillColor`.
+
+### Underline and strikethrough
+
+Both rules are quads the layout emits per line, so they follow the alignment, the wrap and the letter spacing without any further work:
+
+```ts
+import { Color, Text } from '@codexo/exojs';
+
+const link = new Text('Read the manual', { fontSize: 18, underline: true });
+const removed = new Text('Old price', { fontSize: 18, strikethrough: true, decorationColor: Color.red });
+```
+
+Their position and thickness come from the font's own metrics rather than from a fraction of the font size: the underline sits inside the descender space and the strikethrough is centred on half the x-height, which is what keeps a rule in the same relation to the letters across typefaces. `decorationThickness` and `decorationOffset` override the two numbers when a design needs a specific one.
+
+A rule samples an opaque block in the glyph atlas, so by default it takes exactly the fill the glyphs take — including a gradient. `decorationColor` replaces that for the rules only.
+
+A [`BitmapText`](/ExoJS/en/api/bitmap-text/) draws from an offline atlas that has no opaque block reserved in it, so it renders no rules.
 
 ### Style and caps variants
 

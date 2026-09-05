@@ -9,7 +9,7 @@
 import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 import { buildTextPageQuads, layoutText } from '#rendering/text/textLayout';
 import { TextStyle } from '#rendering/text/TextStyle';
-import type { GlyphInfo, GlyphPlacement, GlyphProvider, TextTransform } from '#rendering/text/types';
+import type { GlyphInfo, GlyphPlacement, GlyphProvider, SolidTexel, TextTransform } from '#rendering/text/types';
 
 // ---------------------------------------------------------------------------
 // Mock atlas
@@ -1044,6 +1044,114 @@ describe('layoutText grapheme safety', () => {
     const placements = layoutText('日本語のテキスト', style, { maxWidth: 45 }, provider).placements;
 
     expect([...new Set(placements.map(placement => placement.y))].length).toBeGreaterThan(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Underline and strikethrough
+// ---------------------------------------------------------------------------
+
+describe('layoutText decorations', () => {
+  const solid: SolidTexel = { page: 3, u: 0.25, v: 0.75 };
+
+  const decoratingProvider = (): GlyphProvider => ({
+    ...makeProvider(),
+    getFontMetrics: () => ({ ascent: 12, descent: 4, xHeight: 8 }),
+    getSolidTexel: () => solid,
+  });
+
+  const rulesOf = (result: ReturnType<typeof layoutText>): GlyphPlacement[] => result.placements.filter(placement => placement.decoration === true);
+
+  test('places no rule unless one is asked for', () => {
+    const style = new TextStyle({ fontSize: 16 });
+
+    expect(rulesOf(layoutText('Hi', style, {}, decoratingProvider()))).toHaveLength(0);
+  });
+
+  test('an underline spans its line and samples the solid texel', () => {
+    const style = new TextStyle({ fontSize: 16, underline: true });
+
+    const { placements, lines } = layoutText('Hi', style, {}, decoratingProvider());
+    const rule = rulesOf({ placements, lines } as ReturnType<typeof layoutText>)[0]!;
+
+    expect(rule.x).toBe(lines[0].x);
+    expect(rule.width).toBe(lines[0].width);
+    expect(rule.page).toBe(solid.page);
+    // A degenerate UV: every sample of the rule reads the same texel, so no
+    // neighbouring glyph can bleed into its edge.
+    expect([rule.uvLeft, rule.uvRight]).toEqual([solid.u, solid.u]);
+    expect([rule.uvTop, rule.uvBottom]).toEqual([solid.v, solid.v]);
+  });
+
+  test('the underline sits below the baseline and the strikethrough above it', () => {
+    const style = new TextStyle({ fontSize: 16, underline: true, strikethrough: true });
+
+    const rules = rulesOf(layoutText('Hi', style, {}, decoratingProvider()));
+
+    expect(rules).toHaveLength(2);
+    // ascent 12 is the baseline; the strike is centred on half the x-height.
+    expect(rules[0]!.y).toBeGreaterThan(12);
+    expect(rules[1]!.y).toBeLessThan(12);
+  });
+
+  test('one rule per laid-out line, aligned with each', () => {
+    const style = new TextStyle({ fontSize: 16, align: 'right', underline: true });
+
+    const { placements, lines } = layoutText('A\nBBB', style, {}, decoratingProvider());
+    const rules = placements.filter(placement => placement.decoration === true);
+
+    expect(rules).toHaveLength(2);
+    expect(rules.map(rule => rule.x)).toEqual([lines[0].x, lines[1].x]);
+    expect(rules.map(rule => rule.width)).toEqual([lines[0].width, lines[1].width]);
+  });
+
+  test('an empty line carries no rule', () => {
+    const style = new TextStyle({ fontSize: 16, underline: true });
+
+    const { lines, placements } = layoutText('A\n\nB', style, {}, decoratingProvider());
+
+    expect(lines).toHaveLength(3);
+    expect(placements.filter(placement => placement.decoration === true)).toHaveLength(2);
+  });
+
+  test('a source with no solid texel renders no rule at all', () => {
+    const style = new TextStyle({ fontSize: 16, underline: true, strikethrough: true });
+
+    expect(rulesOf(layoutText('Hi', style, {}, makeProvider()))).toHaveLength(0);
+  });
+
+  test('an explicit thickness overrides the metric-derived one', () => {
+    const style = new TextStyle({ fontSize: 16, underline: true, decorationThickness: 7 });
+
+    expect(rulesOf(layoutText('Hi', style, {}, decoratingProvider()))[0]!.height).toBe(7);
+  });
+
+  test('decorationOffset pushes both rules down together', () => {
+    const provider = decoratingProvider();
+    const plain = rulesOf(layoutText('Hi', new TextStyle({ fontSize: 16, underline: true, strikethrough: true }), {}, provider));
+    const shifted = rulesOf(layoutText('Hi', new TextStyle({ fontSize: 16, underline: true, strikethrough: true, decorationOffset: 5 }), {}, provider));
+
+    expect(shifted.map(rule => rule.y)).toEqual(plain.map(rule => rule.y + 5));
+  });
+
+  test('rules stand outside every line placement range, so a caret never walks one', () => {
+    const style = new TextStyle({ fontSize: 16, underline: true });
+
+    const { placements, lines } = layoutText('Hi', style, {}, decoratingProvider());
+    const lineGlyphs = placements.slice(lines[0].start, lines[0].start + lines[0].count);
+
+    expect(lineGlyphs.every(placement => placement.decoration !== true)).toBe(true);
+  });
+
+  test('the quad builder flags a rule for the renderers', () => {
+    const style = new TextStyle({ fontSize: 16, underline: true });
+
+    const { placements } = layoutText('Hi', style, {}, decoratingProvider());
+    const pages = buildTextPageQuads(placements);
+    const rulePage = pages.find(page => page.pageIndex === solid.page)!;
+
+    expect(Array.from(rulePage.decorations)).toEqual([1]);
+    expect(pages.find(page => page.pageIndex === 0)!.decorations.every(flag => flag === 0)).toBe(true);
   });
 });
 

@@ -27,6 +27,7 @@ const makeMockCtx = (overrides: Partial<CanvasRenderingContext2D> = {}): CanvasR
         fontBoundingBoxDescent: 4,
       }) as TextMetrics,
     fillText: vi.fn(),
+    fillRect: vi.fn(),
     clearRect: vi.fn(),
     ...overrides,
   } as unknown as CanvasRenderingContext2D;
@@ -192,6 +193,26 @@ describe('GlyphAtlas', () => {
     // every page - same instances, same count, just emptied.
     expect(atlas.pages).toHaveLength(pageCountBefore);
     expect([...atlas.pages]).toEqual(pagesBefore);
+  });
+
+  test('hands out a solid texel for decoration quads, reusing one block', () => {
+    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 'normal', 1024, 'color');
+
+    const solid = atlas.getSolidTexel();
+
+    expect(atlas.getSolidTexel()).toBe(solid);
+    expect(solid.page).toBe(0);
+    expect(solid.u).toBeGreaterThan(0);
+    expect(solid.v).toBeGreaterThan(0);
+  });
+
+  test('clear() drops the solid texel, whose slot the packer is about to reuse', () => {
+    const atlas = new GlyphAtlas('sans-serif', 'normal', 'normal', 'normal', 1024, 'color');
+    const before = atlas.getSolidTexel();
+
+    atlas.clear();
+
+    expect(atlas.getSolidTexel()).not.toBe(before);
   });
 
   test('clear() dispatches onCleared so nodes holding stale GlyphInfo can re-layout', () => {

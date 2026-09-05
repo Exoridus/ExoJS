@@ -243,6 +243,29 @@ describe('shared text node-data packer', () => {
       expect(Array.from(target.slice(40, 80))).toEqual(new Array(40).fill(0));
     });
 
+    test('an explicit decoration colour sets the override flag and its texel', () => {
+      const text = new Text('Hi', { underline: true, decorationColor: new Color(9, 19, 29, 0.39) });
+      const target = new Float32Array(textNodeDataFloats);
+
+      packTextNodeData(target, 0, text);
+
+      expect(target[26]).toBe(1);
+      expect(target[32]).toBeCloseTo(9 / 255);
+      expect(target[33]).toBeCloseTo(19 / 255);
+      expect(target[34]).toBeCloseTo(29 / 255);
+      expect(target[35]).toBeCloseTo(0.39);
+    });
+
+    test('no decoration colour leaves the rule taking the fill', () => {
+      const text = new Text('Hi', { underline: true });
+      const target = new Float32Array(textNodeDataFloats);
+
+      packTextNodeData(target, 0, text);
+
+      expect(target[26]).toBe(0);
+      expect(Array.from(target.slice(32, 36))).toEqual([0, 0, 0, 0]);
+    });
+
     test('the default angle runs the ramp top to bottom', () => {
       const text = new Text('Hi', {
         gradient: {

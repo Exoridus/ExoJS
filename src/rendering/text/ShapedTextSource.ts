@@ -1,10 +1,10 @@
 import { applyCanvasTextState } from './canvasTextState';
 import type { AtlasMode } from './GlyphAtlas';
-import { AtlasPage, SDF_RADIUS } from './GlyphAtlas';
+import { AtlasPage, claimSolidTexel, SDF_RADIUS } from './GlyphAtlas';
 import { GlyphSdf } from './GlyphSdf';
 import type { ShapedTextMetrics } from './ShapedTextMetrics';
 import type { LineShaper } from './shaping';
-import type { FontStyle, FontVariant, GlyphInfo } from './types';
+import type { FontStyle, FontVariant, GlyphInfo, SolidTexel } from './types';
 
 type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
@@ -90,6 +90,9 @@ export class ShapedTextSource implements LineShaper {
   private _generation = 0;
   private _repackPending = false;
 
+  /** Solid block for decoration quads, claimed on first use and dropped by a repack. */
+  private _solidTexel: SolidTexel | null = null;
+
   /** Scratch context for colour-mode line metrics, created on first use. */
   private _measureCtx: Ctx2D | null = null;
 
@@ -145,6 +148,17 @@ export class ShapedTextSource implements LineShaper {
     return this._metrics.measureLine(line, fontSize);
   }
 
+  /**
+   * A solid texel on this source's own pages.
+   *
+   * It cannot come from the shared glyph atlas: a browser-shaped node's quads
+   * address the pages this source owns, so an atlas UV would point into a
+   * different texture entirely.
+   */
+  public getSolidTexel(): SolidTexel {
+    return (this._solidTexel ??= claimSolidTexel((w, h) => this._allocateSlot(w, h, 'solid', 0)));
+  }
+
   public shapeLine(line: string, fontSize: number): GlyphInfo {
     const key = `${fontSize}:${line}`;
     const cached = this._cache.get(key);
@@ -171,6 +185,7 @@ export class ShapedTextSource implements LineShaper {
     this._pages = [];
     this._cache.clear();
     this._sdfInstances.clear();
+    this._solidTexel = null;
   }
 
   // ── Private ──────────────────────────────────────────────────────────────
@@ -316,5 +331,6 @@ export class ShapedTextSource implements LineShaper {
     this._pages = [];
     this._cache.clear();
     this._repackPending = false;
+    this._solidTexel = null;
   }
 }

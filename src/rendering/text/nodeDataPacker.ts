@@ -17,10 +17,11 @@ import { textGradientMaxStops } from './TextStyle';
 //                 outlineMin = 0.5 → disabled; < 0.5 → enabled with that threshold
 //                 gradientStopCount = 0 → the fill takes `fillColor`
 // Texel 5     : (r,  g,  b,  a ) - shadowColor
-// Texel 6     : (shadowOffX_px, shadowOffY_px, 0, sdfRadius_logical)
+// Texel 6     : (shadowOffX_px, shadowOffY_px, decorationOverride, sdfRadius_logical)
+//                 decorationOverride = 1 → a decoration quad takes texel 8
 // Texel 7     : (gradAxisX, gradAxisY, gradBias, 0)
 //                 ramp position t = dot(gradUV, gradAxis) + gradBias
-// Texel 8     : reserved
+// Texel 8     : (r, g, b, a) - decorationColor
 // Texel 9     : (minX, minY, w, h) - text block bounds (local space, for gradient UV)
 // Texel 10-17 : (r, g, b, a) - gradient stop colours 0..7
 // Texel 18    : gradient stop offsets 0..3
@@ -124,7 +125,9 @@ export const packTextNodeData = (target: Float32Array, base: number, node: Text 
   const texelsPerLogicalPixel = node.rasterPixelRatio;
   target[base + 24] = style.shadowOffsetX * texelsPerLogicalPixel;
   target[base + 25] = style.shadowOffsetY * texelsPerLogicalPixel;
-  target[base + 26] = 0;
+  // Zero means "a rule takes the fill", which is what makes an underline pick
+  // up the gradient for free rather than needing its own copy of the ramp.
+  target[base + 26] = style.decorationColor === null ? 0 : 1;
   // The node's SDF buffer radius in LOGICAL pixels, which is the field's scale:
   // the distance value moves by 1/radius per logical unit whatever the atlas
   // density. The fragment stage sizes its antialiased edge from it. Zero means
@@ -142,6 +145,13 @@ export const packTextNodeData = (target: Float32Array, base: number, node: Text 
   target[base + 37] = ink.y;
   target[base + 38] = ink.width;
   target[base + 39] = ink.height;
+
+  // Decoration color (texel 8)
+  const dc = style.decorationColor;
+  target[base + 32] = dc === null ? 0 : dc.r / 255;
+  target[base + 33] = dc === null ? 0 : dc.g / 255;
+  target[base + 34] = dc === null ? 0 : dc.b / 255;
+  target[base + 35] = dc === null ? 0 : dc.a;
 
   // Gradient ramp (texel 7) and stops (texels 10-19)
   packTextGradient(target, base, gradient, ink.width, ink.height);
@@ -176,10 +186,6 @@ const packTextGradient = (
   target[axisBase + 1] = 0;
   target[axisBase + 2] = 0;
   target[axisBase + 3] = 0;
-
-  // Texel 8 is reserved; zeroed so a recycled row never leaks a previous
-  // node's bytes into a future shader that starts reading it.
-  target[base + 32] = target[base + 33] = target[base + 34] = target[base + 35] = 0;
 
   for (let i = 0; i < textGradientMaxStops; i++) {
     const at = colorBase + i * 4;

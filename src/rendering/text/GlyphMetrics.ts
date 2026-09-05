@@ -1,5 +1,5 @@
 import { applyCanvasTextState, cssFontString } from './canvasTextState';
-import type { FontStyle, FontVariant, GlyphInfo, GlyphProvider } from './types';
+import type { FontStyle, FontVariant, GlyphInfo, GlyphProvider, TextFontMetrics } from './types';
 
 type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
@@ -51,6 +51,7 @@ export class GlyphMetrics implements GlyphProvider {
 
   private readonly _infos = new Map<string, GlyphInfo>();
   private readonly _kerning = new Map<string, number>();
+  private readonly _fontMetrics = new Map<number, TextFontMetrics>();
 
   /** Created on first use - a font variant that is never measured allocates no canvas. */
   private _ctx: Ctx2D | null = null;
@@ -112,6 +113,39 @@ export class GlyphMetrics implements GlyphProvider {
   }
 
   /**
+   * Vertical metrics of this variant at `fontSize`.
+   *
+   * The ascent and descent come from the font's own bounding box where the
+   * platform reports one, so every string of the variant shares one baseline;
+   * the x-height is measured from a lowercase letter's ink, which is the only
+   * way to get it from Canvas 2D at all. Where a measurement is missing the
+   * value degrades to a fraction of the font size.
+   */
+  public getFontMetrics(fontSize: number): TextFontMetrics {
+    const cached = this._fontMetrics.get(fontSize);
+    if (cached !== undefined) return cached;
+
+    type Vertical = TextMetrics & {
+      fontBoundingBoxAscent?: number;
+      fontBoundingBoxDescent?: number;
+      actualBoundingBoxAscent?: number;
+      actualBoundingBoxDescent?: number;
+    };
+
+    const reference = this._measure('HgjpqyÉÅ', fontSize) as Vertical;
+    const lowercase = this._measure('x', fontSize) as Vertical;
+    const metrics: TextFontMetrics = {
+      ascent: Math.max(1, reference.fontBoundingBoxAscent ?? reference.actualBoundingBoxAscent ?? fontSize * 0.8),
+      descent: Math.max(0, reference.fontBoundingBoxDescent ?? reference.actualBoundingBoxDescent ?? fontSize * 0.2),
+      xHeight: Math.max(1, lowercase.actualBoundingBoxAscent ?? fontSize * 0.5),
+    };
+
+    this._fontMetrics.set(fontSize, metrics);
+
+    return metrics;
+  }
+
+  /**
    * Drop every cached measurement.
    *
    * Called when the variant's {@link FontFace} finishes loading: everything
@@ -120,6 +154,7 @@ export class GlyphMetrics implements GlyphProvider {
   public clear(): void {
     this._infos.clear();
     this._kerning.clear();
+    this._fontMetrics.clear();
   }
 
   // ── Private ──────────────────────────────────────────────────────────────

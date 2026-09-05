@@ -13,6 +13,7 @@ uniform sampler2D u_nodeData;  // RGBA32F per-node data (see WebGl2TextRenderer)
 uniform float     u_pageSize;  // atlas page size in px (for shadow UV conversion)
 
 flat in int   v_nodeIndex;
+flat in uint  v_decoration;
 flat in vec4  v_pxAxes;
      in vec2  v_texcoord;
      in vec2  v_gradUV;
@@ -161,6 +162,13 @@ void main(void) {
     fillColor = evalTextGradient(ni, gradStops, dot(v_gradUV, tGradAxis.xy) + tGradAxis.z);
   } else {
     fillColor = tFill;
+  }
+
+  // A rule samples solid ink, so it would otherwise be coloured exactly like a
+  // glyph interior - which is the default, and the reason an underline picks up
+  // the gradient for free. An explicit decoration colour overrides it here.
+  if (v_decoration == 1u && tShadow2.z > 0.5) {
+    fillColor = texelFetch(u_nodeData, ivec2(8, ni), 0);
   }
 
   fragColor = fillColor * fill
