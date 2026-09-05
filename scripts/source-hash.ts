@@ -11,7 +11,9 @@ import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
-export const SOURCE_STAMP_FILE = '.source-stamp.json';
+// No leading dot: the CI build artifact skips hidden files, and a stamp that
+// never reaches the consuming job would fail every dist-consuming lane.
+export const SOURCE_STAMP_FILE = 'source-stamp.json';
 
 interface SourceStamp {
   readonly sourceHash: string;
