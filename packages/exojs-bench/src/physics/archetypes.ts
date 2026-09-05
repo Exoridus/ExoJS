@@ -65,6 +65,28 @@ export const PHYSICS_ARCHETYPES: readonly PhysicsArchetypeSpec[] = [
   // and short enough that every arm remains stable at its own default iteration
   // count.
   { id: 'joints', scene: 'joint-chains', bodyCounts: BODY_COUNTS, gravity: { x: 0, y: 1_000 }, perturbFraction: 0, jointChainLength: 8 },
+  // SLEEPING VISIBILITY. Simulates the `many-dynamic` scene unchanged - same
+  // layout, same perturbed impulses, same seed (`seedFor` keys on scene, not
+  // archetype) - except its dynamic bodies get a resting material (nonzero
+  // friction, zero restitution) via `dynamicMaterial` instead of
+  // `many-dynamic`'s frictionless, bouncy one.
+  //
+  // `many-dynamic` never lets a body settle: with zero friction and a 0.4
+  // restitution its field of circles keeps every contact live for the whole
+  // run, so an engine's sleeping/deactivation path never gets to fire and two
+  // engines that differ only in whether they sleep measure the same. Here the
+  // perturbed impulse dissipates into the floor and walls and the pile comes
+  // to rest, which is the one condition under which sleeping is observable at
+  // all: falling contact counts and falling step time on an arm that sleeps,
+  // and neither on one that does not.
+  {
+    id: 'settling-pile',
+    scene: 'many-dynamic',
+    bodyCounts: BODY_COUNTS,
+    gravity: { x: 0, y: 300 },
+    perturbFraction: 1,
+    dynamicMaterial: { friction: 0.5, restitution: 0 },
+  },
 ];
 
 /**

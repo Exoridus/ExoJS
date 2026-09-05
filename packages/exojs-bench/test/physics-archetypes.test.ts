@@ -123,6 +123,59 @@ describe('joints', () => {
   });
 });
 
+describe('settling-pile', () => {
+  test('simulates the many-dynamic scene unchanged except for its dynamic material', () => {
+    const settling = byId['settling-pile'];
+    const base = byId['many-dynamic'];
+
+    expect(settling.scene).toBe(base.scene);
+    expect(settling.gravity).toEqual(base.gravity);
+    expect(settling.perturbFraction).toBe(base.perturbFraction);
+    expect(settling.bodyCounts).toEqual(base.bodyCounts);
+    expect(settling.dynamicMaterial).not.toEqual(base.dynamicMaterial);
+  });
+
+  test('gives its dynamic bodies nonzero friction and zero restitution, so the pile can come to rest', () => {
+    expect(byId['settling-pile'].dynamicMaterial).toEqual({ friction: 0.5, restitution: 0 });
+  });
+
+  test('builds the byte-identical layout its base archetype does, differing only in material', () => {
+    const settlingBodies = sceneFor('settling-pile', 200).bodies;
+    const baseBodies = sceneFor('many-dynamic', 200).bodies;
+
+    expect(settlingBodies).toHaveLength(baseBodies.length);
+
+    for (const [index, body] of settlingBodies.entries()) {
+      const baseBody = baseBodies[index]!;
+
+      expect({ ...body, friction: undefined, restitution: undefined }).toEqual({ ...baseBody, friction: undefined, restitution: undefined });
+    }
+  });
+
+  test('leaves many-dynamic itself frictionless and bouncy', () => {
+    const bodies = sceneFor('many-dynamic', 200).bodies;
+    const dynamicBodies = bodies.filter(body => body.type === 'dynamic');
+
+    expect(dynamicBodies.length).toBeGreaterThan(0);
+
+    for (const body of dynamicBodies) {
+      expect(body.friction).toBe(0);
+      expect(body.restitution).toBe(0.4);
+    }
+  });
+
+  test('applies the override to every dynamic body of the settling pile', () => {
+    const dynamicBodies = sceneFor('settling-pile', 200).bodies.filter(body => body.type === 'dynamic');
+
+    expect(dynamicBodies.length).toBeGreaterThan(0);
+
+    for (const body of dynamicBodies) {
+      expect(body.friction).toBe(0.5);
+      expect(body.restitution).toBe(0);
+    }
+  });
+});
+
 describe('scene shapes', () => {
   test('every archetype names a scene, and the pre-existing three name their own id', () => {
     for (const id of ['box-stack', 'many-dynamic', 'mixed-static-dynamic'] as const) {

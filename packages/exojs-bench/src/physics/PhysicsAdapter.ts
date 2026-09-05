@@ -9,7 +9,7 @@ import type { BaseCellResult } from '../shared/result';
  * ExoJS user cares about when deciding stay-native vs. attach an adapter -
  * resting-contact solving, wide broad-phase + many active contacts, and a mix.
  */
-export type PhysicsArchetypeId = 'box-stack' | 'many-dynamic' | 'mixed-static-dynamic' | 'raycast' | 'body-churn' | 'joints';
+export type PhysicsArchetypeId = 'box-stack' | 'many-dynamic' | 'mixed-static-dynamic' | 'raycast' | 'body-churn' | 'joints' | 'settling-pile';
 
 /**
  * Body layout an archetype simulates, independent of what its per-step work is.
@@ -65,6 +65,17 @@ export interface PhysicsArchetypeSpec {
    * from its own static anchor.
    */
   readonly jointChainLength?: number;
+  /**
+   * Material override applied to every DYNAMIC body a scene builds, replacing
+   * that scene's own default friction/restitution.
+   *
+   * This is what lets an archetype reuse an existing {@link PhysicsSceneShape}
+   * (body layout, RNG draws and therefore `seedFor` seed) unchanged while
+   * differing from it in exactly one property - how contacts behave rather
+   * than where bodies start. `undefined` leaves the scene's own defaults in
+   * place.
+   */
+  readonly dynamicMaterial?: { readonly friction: number; readonly restitution: number };
 }
 
 /** One physics matrix cell: an (engine, config, archetype, body count) combination to measure. */
