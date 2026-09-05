@@ -1,0 +1,72 @@
+---
+/**
+ * BenchMeasurement - one published median together with the range the pooled
+ * runs observed behind it.
+ *
+ * The range is part of the value rather than an annotation on it. A median whose
+ * runs agreed to three decimals and one whose runs moved by half again as much
+ * as the band the verdict ladder calls noise are different kinds of claim, and a
+ * reader shown only the median cannot tell them apart. A range that reaches that
+ * far is marked, so a soft measurement is visible without the reader dividing
+ * two numbers in their head.
+ *
+ * A value no run produced prints a dash and no range: an absence, never a zero.
+ */
+
+import { formatFactor, formatMs, formatRange, isWideSpread, type ProfileSpread } from '../lib/bench-profiles';
+
+interface Props {
+    /** The published value: median of the per-run medians. */
+    ms: number | null;
+    /** Spread of the per-run medians behind it; omitted where the arm produced no cell. */
+    spread?: ProfileSpread | undefined;
+}
+
+const { ms, spread } = Astro.props;
+const range = spread === undefined ? '' : formatRange(spread);
+const wide = spread !== undefined && isWideSpread(spread);
+---
+
+{
+    ms === null ? (
+        <span class="value">-</span>
+    ) : (
+        <>
+            <span class="value">{formatMs(ms)}</span>
+            {range !== '' && (
+                <span class:list={['range', wide && 'wide']}>
+                    {range}
+                    {wide && <span class="factor">{formatFactor(spread?.ratio ?? null)} spread</span>}
+                </span>
+            )}
+        </>
+    )
+}
+
+<style>
+    .value {
+        display: block;
+    }
+
+    .range {
+        display: block;
+        margin-top: 0.15rem;
+        color: var(--fg-faint);
+        font-size: 0.7rem;
+        font-variant-numeric: tabular-nums;
+    }
+
+    /*
+     * The mark is a colour AND a printed factor, not a colour alone: the point
+     * is that a reader scanning the column sees which numbers are soft without
+     * having to divide the two ends of every range.
+     */
+    .range.wide {
+        color: var(--amber);
+    }
+
+    .factor {
+        display: block;
+        font-weight: 600;
+    }
+</style>

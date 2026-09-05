@@ -13,14 +13,24 @@
  * shown as "not comparable" rather than dropped - an arm that sat an archetype
  * out or exceeded the harness's runaway budget produced no number, which is a
  * result and not a defect.
+ *
+ * Every published number is pooled from several separate runs, so every number
+ * is printed with the range those runs observed underneath it, and a range wide
+ * enough to reach into the verdict ladder's own noise band is marked rather than
+ * left for the reader to compute. A cell whose runs reached different verdicts
+ * prints none: it keeps its numbers and its range and states what each run
+ * concluded instead.
  */
 
+import BenchMeasurement from './BenchMeasurement.astro';
 import {
     armsOfSection,
     BACKEND_LABELS,
+    describeRungs,
     formatDay,
-    formatMs,
+    formatRunTime,
     type BenchProfileDocument,
+    type ProfileCell,
     type ProfileRow,
     type ProfileSection,
 } from '../lib/bench-profiles';
@@ -39,21 +49,57 @@ const Heading = `h${String(headingLevel)}` as 'h2' | 'h3';
 const SubHeading = `h${String(headingLevel + 1)}` as 'h3' | 'h4';
 
 /**
+ * What a cell publishes in its verdict column.
+ *
+ * The three outcomes are decided here and nowhere else, so no table can print a
+ * verdict for a cell whose runs did not agree on one. An unstable cell gets its
+ * own tone rather than a side, which keeps it out of the win/loss hues as well
+ * as out of the win/loss words; its evidence is what each run concluded.
+ */
+const outcomeOf = (cell: ProfileCell | null) => {
+    if (cell === null) {
+        return { tone: 'absent', label: 'not comparable', rungs: null };
+    }
+
+    if (!cell.aggregate.stable) {
+        return { tone: 'unstable', label: 'no verdict - the runs disagreed', rungs: describeRungs(cell.aggregate.rungs) };
+    }
+
+    return { tone: cell.verdict.side, label: cell.verdict.label, rungs: null };
+};
+
+/**
  * One archetype flattened into the table rows it occupies: one per arm the block
- * has a column for, with `cell` left null where that arm produced no comparable
- * number. The ExoJS median is lifted onto the archetype because it is the same
- * measurement for every arm in the row, which also keeps it readable when one
- * arm is missing.
+ * has a column for, with the arm's value left null where it produced no
+ * comparable number. The ExoJS median is lifted onto the archetype because it is
+ * the same measurement for every arm in the row, which also keeps it readable
+ * when one arm is missing.
  */
 const tableRows = (sections: readonly ProfileSection[], arms: readonly string[]) =>
     sections.flatMap(section =>
-        section.rows.map((row: ProfileRow) => ({
-            section: section.title,
-            archetype: row.archetype,
-            count: row.count,
-            exojsMs: row.cells.find(cell => cell.referenceMs !== null)?.referenceMs ?? null,
-            entries: arms.map(arm => ({ arm, cell: row.cells.find(candidate => candidate.competitor === arm) ?? null })),
-        })),
+        section.rows.map((row: ProfileRow) => {
+            const reference = row.cells.find(cell => cell.referenceMs !== null) ?? null;
+
+            return {
+                section: section.title,
+                archetype: row.archetype,
+                count: row.count,
+                exojsMs: reference?.referenceMs ?? null,
+                exojsSpread: reference?.aggregate.reference,
+                entries: arms.map(arm => {
+                    const cell = row.cells.find(candidate => candidate.competitor === arm) ?? null;
+
+                    return {
+                        arm,
+                        armMs: cell?.competitorMs ?? null,
+                        armSpread: cell?.aggregate.competitor,
+                        outcome: outcomeOf(cell),
+                        mechanism: cell?.mechanism ?? null,
+                        present: cell !== null,
+                    };
+                }),
+            };
+        }),
     );
 
 const renderingBlocks = (rendering?.backends ?? []).map(backend => {
@@ -73,6 +119,22 @@ const physicsRows = physics === undefined ? [] : tableRows([physics.section], ph
 /** The machine is one across the pooled runs, so the first run's stamps name it for all of them. */
 const renderingStamps = rendering?.runs[0]?.provenance ?? [];
 const physicsHost = physics?.runs[0];
+
+/**
+ * When each pooled run was taken, per domain.
+ *
+ * The times are the point of the entry. A profile that named only its newest
+ * measurement would read as one run, which is the reading the pooling exists to
+ * prevent; seeing three separate stamps is what tells a reader the number above
+ * them is a median over three measurements and not a single lucky one.
+ */
+const runTimes = [
+    ...(rendering === undefined ? [] : [{ domain: 'Rendering', times: rendering.runs.map(run => run.provenance[0]?.timestamp ?? null) }]),
+    ...(physics === undefined ? [] : [{ domain: 'Physics', times: physics.runs.map(run => run.timestamp) }]),
+].map(entry => ({
+    domain: entry.domain,
+    times: entry.times.filter((time): time is string => time !== null).map(formatRunTime),
+}));
 ---
 
 <section class="profile">
@@ -81,6 +143,17 @@ const physicsHost = physics?.runs[0];
     <dl class="provenance">
         <div><dt>ExoJS</dt><dd>{profile.engineVersion}</dd></div>
         <div><dt>Measured</dt><dd>{formatDay(profile.measuredAt)}</dd></div>
+        <div>
+            <dt>Pooled runs</dt>
+            <dd>
+                {profile.runs} separate runs
+                {runTimes.map(entry => (
+                    <span class="detail">
+                        {entry.domain}: {entry.times.join('; ')}
+                    </span>
+                ))}
+            </dd>
+        </div>
         <div><dt>Profile</dt><dd><code>{profile.slug}</code></dd></div>
         <div><dt>Signature</dt><dd><code>{profileDocument.signature.algorithm}:{profileDocument.signature.value.slice(0, 16)}</code></dd></div>
         {rendering !== undefined && (
@@ -128,7 +201,7 @@ const physicsHost = physics?.runs[0];
             <p class="block-note">
                 {block.backend.headlineCount === null
                     ? 'No single node count qualified for a headline table on this backend, so no rows are published for it.'
-                    : `Every row is measured at ${String(block.backend.headlineCount)} nodes, chosen from the archetype ladders before any timing was read. Times are median CPU milliseconds per frame; lower is better.`}
+                    : `Every row is measured at ${String(block.backend.headlineCount)} nodes, chosen from the archetype ladders before any timing was read. Times are CPU milliseconds per frame, pooled over ${String(profile.runs)} separate runs as the median of their per-run medians; lower is better. The range under a time is what those runs observed.`}
             </p>
 
             {block.rows.length > 0 && (
@@ -156,20 +229,21 @@ const physicsHost = physics?.runs[0];
                                         )}
                                         {index === 0 && (
                                             <td class="num" rowspan={row.entries.length}>
-                                                {formatMs(row.exojsMs)}
+                                                <BenchMeasurement ms={row.exojsMs} spread={row.exojsSpread} />
                                             </td>
                                         )}
                                         <td class="arm">{entry.arm}</td>
-                                        <td class="num">{entry.cell === null ? '-' : formatMs(entry.cell.competitorMs)}</td>
-                                        <td>
-                                            <span class:list={['verdict', entry.cell === null ? 'absent' : entry.cell.verdict.side]}>
-                                                {entry.cell === null ? 'not comparable' : entry.cell.verdict.label}
-                                            </span>
+                                        <td class="num">
+                                            <BenchMeasurement ms={entry.armMs} spread={entry.armSpread} />
+                                        </td>
+                                        <td class="outcome">
+                                            <span class:list={['verdict', entry.outcome.tone]}>{entry.outcome.label}</span>
+                                            {entry.outcome.rungs !== null && <span class="rungs">{entry.outcome.rungs}</span>}
                                         </td>
                                         <td class="mechanism">
-                                            {entry.cell === null
+                                            {!entry.present
                                                 ? `This arm produced no comparable cell at ${String(row.count)} nodes, so the pair is not published as a comparison.`
-                                                : (entry.cell.mechanism ?? 'No structural counters were reported for this pair.')}
+                                                : (entry.mechanism ?? 'No structural counters were reported for this pair.')}
                                         </td>
                                     </tr>
                                 )),
@@ -209,15 +283,16 @@ const physicsHost = physics?.runs[0];
                                             )}
                                             {index === 0 && (
                                                 <td class="num" rowspan={row.entries.length}>
-                                                    {formatMs(row.exojsMs)}
+                                                    <BenchMeasurement ms={row.exojsMs} spread={row.exojsSpread} />
                                                 </td>
                                             )}
                                             <td class="arm">{entry.arm}</td>
-                                            <td class="num">{entry.cell === null ? '-' : formatMs(entry.cell.competitorMs)}</td>
-                                            <td>
-                                                <span class:list={['verdict', entry.cell === null ? 'absent' : entry.cell.verdict.side]}>
-                                                    {entry.cell === null ? 'not comparable' : entry.cell.verdict.label}
-                                                </span>
+                                            <td class="num">
+                                                <BenchMeasurement ms={entry.armMs} spread={entry.armSpread} />
+                                            </td>
+                                            <td class="outcome">
+                                                <span class:list={['verdict', entry.outcome.tone]}>{entry.outcome.label}</span>
+                                                {entry.outcome.rungs !== null && <span class="rungs">{entry.outcome.rungs}</span>}
                                             </td>
                                         </tr>
                                     )),
@@ -249,7 +324,7 @@ const physicsHost = physics?.runs[0];
             <p class="block-note">
                 {physicsRows.length === 0
                     ? 'No single body count qualified for a headline table, so no physics rows are published.'
-                    : `Every row is measured at ${String(physicsRows[0]?.count ?? 0)} bodies. Times are median CPU milliseconds per fixed step; lower is better.`}
+                    : `Every row is measured at ${String(physicsRows[0]?.count ?? 0)} bodies. Times are CPU milliseconds per fixed step, pooled over ${String(profile.runs)} separate runs as the median of their per-run medians; lower is better. The range under a time is what those runs observed.`}
             </p>
 
             {physicsRows.length > 0 && (
@@ -276,20 +351,21 @@ const physicsHost = physics?.runs[0];
                                         )}
                                         {index === 0 && (
                                             <td class="num" rowspan={row.entries.length}>
-                                                {formatMs(row.exojsMs)}
+                                                <BenchMeasurement ms={row.exojsMs} spread={row.exojsSpread} />
                                             </td>
                                         )}
                                         <td class="arm">{entry.arm}</td>
-                                        <td class="num">{entry.cell === null ? '-' : formatMs(entry.cell.competitorMs)}</td>
-                                        <td>
-                                            <span class:list={['verdict', entry.cell === null ? 'absent' : entry.cell.verdict.side]}>
-                                                {entry.cell === null ? 'not comparable' : entry.cell.verdict.label}
-                                            </span>
+                                        <td class="num">
+                                            <BenchMeasurement ms={entry.armMs} spread={entry.armSpread} />
+                                        </td>
+                                        <td class="outcome">
+                                            <span class:list={['verdict', entry.outcome.tone]}>{entry.outcome.label}</span>
+                                            {entry.outcome.rungs !== null && <span class="rungs">{entry.outcome.rungs}</span>}
                                         </td>
                                         <td class="mechanism">
-                                            {entry.cell === null
+                                            {!entry.present
                                                 ? `This arm produced no comparable cell at ${String(row.count)} bodies - it either sits this archetype out or exceeded the harness's runaway step budget there.`
-                                                : (entry.cell.mechanism ?? 'No structural counters were reported for this pair.')}
+                                                : (entry.mechanism ?? 'No structural counters were reported for this pair.')}
                                         </td>
                                     </tr>
                                 )),
@@ -316,7 +392,13 @@ const physicsHost = physics?.runs[0];
         <span class="verdict exojs">ExoJS leads</span>
         <span class="verdict competitor">the arm leads</span>
         <span class="verdict neither">level, inside the noise band</span>
+        <span class="verdict unstable">no verdict - the runs disagreed</span>
         <span class="verdict absent">not comparable</span>
+    </p>
+    <p class="reading-key">
+        The smaller line under a time is the range the {profile.runs} pooled runs observed for it. A range marked in amber spans a factor of 1.2 or more - as
+        wide as the band the verdict ladder treats as noise - so the number above it is soft on this machine. A cell whose runs reached different verdicts
+        publishes none of them and lists what each run concluded instead.
     </p>
 </section>
 
@@ -385,13 +467,13 @@ const physicsHost = physics?.runs[0];
 
     table {
         width: 100%;
-        min-width: 56rem;
+        min-width: 62rem;
         border-collapse: collapse;
         font-size: 0.82rem;
     }
 
     table.narrow {
-        min-width: 34rem;
+        min-width: 40rem;
     }
 
     th,
@@ -442,6 +524,10 @@ const physicsHost = physics?.runs[0];
         white-space: nowrap;
     }
 
+    .outcome {
+        min-width: 13rem;
+    }
+
     .mechanism {
         min-width: 22rem;
         color: var(--fg-muted);
@@ -479,6 +565,25 @@ const physicsHost = physics?.runs[0];
 
     .verdict.absent {
         color: var(--amber);
+    }
+
+    /*
+     * An unstable cell is deliberately given neither side's hue and a dashed
+     * border: a reader scanning the colour alone must not be able to read it as
+     * a quiet win, a quiet loss, or a settled "level".
+     */
+    .verdict.unstable {
+        color: var(--fg-muted);
+        border-style: dashed;
+        white-space: normal;
+    }
+
+    .rungs {
+        display: block;
+        margin-top: 0.25rem;
+        color: var(--fg-faint);
+        font-size: 0.7rem;
+        line-height: 1.45;
     }
 
     .aside {
@@ -536,6 +641,14 @@ const physicsHost = physics?.runs[0];
         flex-wrap: wrap;
         gap: var(--s-2);
         margin: 0;
+    }
+
+    .reading-key {
+        margin: var(--s-3) 0 0;
+        max-width: 74ch;
+        color: var(--fg-muted);
+        font-size: 0.8rem;
+        line-height: 1.55;
     }
 
     @media (max-width: 760px) {
