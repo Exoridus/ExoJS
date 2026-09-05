@@ -14,8 +14,9 @@
  * be predicted from `text.getLocalBounds()` and compared. Partial coverage
  * scales both channels equally and cancels out of the ratio.
  *
- * It also pins the ORIENTATION: the default 180-degree angle runs the ramp top to
- * first colour must dominate the top rows and fade out towards the bottom.
+ * It also pins the ORIENTATION: the default 180-degree angle runs the ramp from
+ * top to bottom, so the first stop must dominate the top rows and fade out
+ * towards the bottom.
  *
  * Run via:  pnpm test:browser:webgl
  */
