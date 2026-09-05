@@ -28,7 +28,16 @@ const { locale } = Astro.props;
 const findings = referenceProfile === undefined ? [] : headlineFindings(referenceProfile);
 
 /** The word next to a headline sentence, so a lead and a loss are labelled rather than coloured into a ranking. */
-const TONE_LABELS = { scope: 'scope', lead: 'lead', level: 'level', loss: 'loss' } as const;
+const TONE_LABELS = { scope: 'scope', lead: 'lead', level: 'level', loss: 'loss', unstable: 'unstable' } as const;
+
+/**
+ * Runs the reproduction below pools. A published profile states the number it
+ * was actually built from; until one exists the page can only quote the count
+ * its own reproduction steps prescribe.
+ */
+const REPRODUCTION_RUNS = 3;
+
+const pooledRuns = referenceProfile?.profile.runs ?? REPRODUCTION_RUNS;
 ---
 
 <DocsLayout title="ExoJS benchmarks" description="Measured comparisons between ExoJS and other 2D rendering and physics libraries.">
@@ -53,7 +62,8 @@ const TONE_LABELS = { scope: 'scope', lead: 'lead', level: 'level', loss: 'loss'
                 How ExoJS compares against Pixi, Phaser and Excalibur for rendering, and against matter.js, planck and Rapier for physics. The ratios are
                 the statement and the milliseconds are the evidence behind them. Every number on this page was written by the benchmark harness into a
                 signed profile file in the repository; none of it is typed by hand, and every cell where ExoJS trails is published exactly like the ones
-                where it leads.
+                where it leads. Every number is also pooled from {pooledRuns} separate runs and printed with the range those runs observed, and a comparison
+                the runs did not agree on publishes no verdict at all.
             </p>
         </header>
 
@@ -61,9 +71,9 @@ const TONE_LABELS = { scope: 'scope', lead: 'lead', level: 'level', loss: 'loss'
             <h2>Headline findings</h2>
             {findings.length === 0 ? (
                 <p class="empty">
-                    No measurements are published yet. The reference run is taken on one machine after a release is tagged and lands as a single profile
-                    file in the repository; until then there is nothing here to read. The methodology, the reproduction steps and the fairness terms below
-                    already apply.
+                    No measurements are published yet. The reference measurement is {REPRODUCTION_RUNS} separate runs on one machine after a release is
+                    tagged, pooled into a single profile file in the repository; until then there is nothing here to read. The methodology, the reproduction
+                    steps and the fairness terms below already apply.
                 </p>
             ) : (
                 <ul class="findings">
@@ -81,8 +91,9 @@ const TONE_LABELS = { scope: 'scope', lead: 'lead', level: 'level', loss: 'loss'
             <section id="reference">
                 <h2>Reference profile</h2>
                 <p>
-                    One machine, measured after the release was tagged, with no other load on it. A re-measurement of the same machine overwrites this
-                    profile; a different machine can only ever arrive as a new file.
+                    One machine, measured after the release was tagged, with no other load on it, and measured {pooledRuns} times over: the numbers below are
+                    pooled across those runs and each carries the range they observed. A re-measurement of the same machine overwrites this profile; a
+                    different machine can only ever arrive as a new file.
                 </p>
                 <BenchProfileReport document={referenceProfile} headingLevel={3} />
             </section>
@@ -124,7 +135,26 @@ const TONE_LABELS = { scope: 'scope', lead: 'lead', level: 'level', loss: 'loss'
         <section id="methodology">
             <h2>Methodology</h2>
             <ul class="method">
-                <li>Every published number is a <strong>median</strong> over the timed window of one cell, never a mean and never an aggregate across archetypes.</li>
+                <li>
+                    A published profile pools <strong>{pooledRuns} separate runs</strong> of the same matrix. One run cannot support a ratio: the same code
+                    measured twice on one idle machine moves a cell's median far enough to reverse which library a cell favours - a reversal this harness
+                    has produced in practice, which is why a single run is not published as a reference measurement.
+                </li>
+                <li>
+                    The published value is the <strong>median of the per-run medians</strong> - each run's own median over its timed window, then the median
+                    across the runs - so one unlucky run cannot set a number. Nothing is ever a mean, and nothing is aggregated across archetypes.
+                </li>
+                <li>
+                    Every number carries the <strong>range its runs observed</strong>, printed under it. A range spanning a factor of 1.2 or more is marked:
+                    the measurement's own noise then reaches as wide as the band the ladder below treats as no difference at all, which is something to know
+                    before reading the number, not after.
+                </li>
+                <li>
+                    A verdict is published <strong>only when all {pooledRuns} runs independently reach it</strong>. Each run is placed on the ladder on its
+                    own, and the pooled medians have to land on the same rung as well. A cell whose runs disagreed publishes <em>no verdict</em>: it keeps
+                    its numbers and its range, states what each run concluded, and is counted nowhere - not as a win, not as a loss, and not as a level row.
+                    That the pair cannot be separated on this machine is the finding.
+                </li>
                 <li>
                     A ratio between <strong>0.8 and 1.2</strong> is reported as <code>level</code>: inside that band the difference is not distinguishable
                     from machine mood.
@@ -158,17 +188,35 @@ const TONE_LABELS = { scope: 'scope', lead: 'lead', level: 'level', loss: 'loss'
 
         <section id="reproduce">
             <h2>Reproduce</h2>
-            <p>The harness is in the repository, and so are the adapters. Running it yourself produces a profile in the same format as the ones above.</p>
+            <p>
+                The harness is in the repository, and so are the adapters. A reference profile is <strong>{REPRODUCTION_RUNS} separate runs</strong>, not one
+                run repeated inside itself: repeating a matrix in one process shares JIT and heap state between the repetitions and measures the same warm
+                state {REPRODUCTION_RUNS} times, which is the very effect the repetition exists to expose. Each run is its own invocation with its own output
+                directory, and <code>bench:compare</code> pools them by taking each input flag once per run.
+            </p>
             <pre><code>git clone {appInfo.repositoryUrl}
 cd exojs
 pnpm bootstrap
-pnpm bench
-pnpm bench:compare --profile</code></pre>
+
+pnpm bench --out=a
+pnpm bench --out=b
+pnpm bench --out=c
+
+pnpm bench --domain=physics --out=a-physics
+pnpm bench --domain=physics --out=b-physics
+pnpm bench --domain=physics --out=c-physics
+
+pnpm bench:compare \
+  --rendering a/results.json --rendering b/results.json --rendering c/results.json \
+  --physics a-physics/results.json --physics b-physics/results.json --physics c-physics/results.json \
+  --profile</code></pre>
             <p>
-                <code>pnpm bootstrap</code> installs the competitor libraries alongside the workspace, <code>pnpm bench</code> runs both matrices, and
-                <code>pnpm bench:compare --profile</code> writes a profile named after your machine into
-                <code>packages/exojs-bench/results/</code>. Measure on an otherwise idle machine: these are wall-clock comparisons and background load
-                moves them.
+                <code>pnpm bootstrap</code> installs the competitor libraries alongside the workspace, each <code>pnpm bench</code> runs one matrix into its
+                own directory, and <code>bench:compare --profile</code> pools them into a profile named after your machine under
+                <code>packages/exojs-bench/results/</code>. Repeating an input flag is what pools: a profile built from fewer than {REPRODUCTION_RUNS} runs is
+                rejected by the repository's own check on this directory. Pooling is refused outright for runs that do not repeat one measurement - a different engine version, different library
+                arms, a different matrix - because a spread over those would describe the difference between two runs rather than the noise of one. Measure on
+                an otherwise idle machine: these are wall-clock comparisons and background load moves them.
             </p>
             <p>
                 <code>pnpm bench --browser=webkit</code> measures in WebKit instead of the default Chromium. The browser is part of the profile's name,
@@ -291,6 +339,10 @@ pnpm bench:compare --profile</code></pre>
 
     .finding.level .tone {
         color: var(--fg-muted);
+    }
+
+    .finding.unstable .tone {
+        color: var(--amber);
     }
 
     .machine {
