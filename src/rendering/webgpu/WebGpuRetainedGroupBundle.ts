@@ -2,6 +2,7 @@ import type { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet';
 import type { View } from '#rendering/View';
 
+import { DirtyRowTracker } from './DirtyRowTracker';
 import type { WebGpuRetainedRendererReplayState } from './retainedGroupResources';
 import { retainedGroupUniformBytes, retainedTintSlotBytes, retainedTransformSlotBytes } from './retainedGroupResources';
 import { requireRepresentableStorageGrowth } from './storageLimits';
@@ -21,28 +22,8 @@ const growCapacity = (current: number, min: number): number => {
 /** Floats one transform row occupies in the CPU mirror. */
 const transformFloatsPerRow = retainedTransformSlotBytes / Float32Array.BYTES_PER_ELEMENT;
 
-/**
- * Rows one patch block covers.
- *
- * Moved rows are tracked per BLOCK rather than individually because
- * `queue.writeBuffer` is priced per CALL far more than per byte: a block is
- * 2 KB of transform rows and 256 B of tints, so re-sending a whole block for a
- * single moved row costs less than the call it saves. 64 also keeps the block
- * scan trivial - a 5 000-row group is 79 blocks.
- */
+/** Rows one patch block covers: 2 KB of transform rows, 256 B of tints. */
 const rowsPerPatchBlock = 64;
-
-/**
- * Dirty-block runs above which the whole dirty SPAN is uploaded in one call
- * instead of one call per run.
- *
- * Runs alone are not enough: rows are addressed by the capture's draw order, so
- * a scene moving a small random fraction of its nodes dirties blocks all over
- * the store and coalescing adjacent ones saves nothing. Past this many runs the
- * span's redundant bytes are cheaper than the calls they replace, and below it
- * a clustered patch keeps its tight upload.
- */
-const maxPatchRuns = 4;
 
 /**
  * Group-owned GPU resources for one retained group on the WebGPU backend:
@@ -90,10 +71,8 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
    */
   private _mirrorTransformRows = new Float32Array(0);
   private _mirrorTintRows = new Uint8Array(0);
-  private _dirtyTransformBlocks = new Uint8Array(0);
-  private _dirtyTintBlocks = new Uint8Array(0);
-  private _hasDirtyTransformRows = false;
-  private _hasDirtyTintRows = false;
+  private readonly _dirtyTransforms = new DirtyRowTracker(rowsPerPatchBlock, retainedTransformSlotBytes);
+  private readonly _dirtyTints = new DirtyRowTracker(rowsPerPatchBlock, retainedTintSlotBytes);
   private _uniformBuffer: GPUBuffer | null = null;
   private _bindGroup: GPUBindGroup | null = null;
   private _bindGroupLayout: GPUBindGroupLayout | null = null;
@@ -282,18 +261,8 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
       this._mirrorTintRows = new Uint8Array(rowCount * retainedTintSlotBytes);
     }
 
-    const blocks = Math.ceil(rowCount / rowsPerPatchBlock);
-
-    if (this._dirtyTransformBlocks.length < blocks) {
-      this._dirtyTransformBlocks = new Uint8Array(blocks);
-      this._dirtyTintBlocks = new Uint8Array(blocks);
-    } else {
-      this._dirtyTransformBlocks.fill(0);
-      this._dirtyTintBlocks.fill(0);
-    }
-
-    this._hasDirtyTransformRows = false;
-    this._hasDirtyTintRows = false;
+    this._dirtyTransforms.reset(rowCount);
+    this._dirtyTints.reset(rowCount);
   }
 
   /**
@@ -348,8 +317,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
     }
 
     this._mirrorTransformRows.set(floats, localRow * transformFloatsPerRow);
-    this._dirtyTransformBlocks[(localRow / rowsPerPatchBlock) | 0] = 1;
-    this._hasDirtyTransformRows = true;
+    this._dirtyTransforms.mark(localRow);
   }
 
   /**
@@ -366,8 +334,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
     }
 
     this._mirrorTintRows.set(bytes, localRow * retainedTintSlotBytes);
-    this._dirtyTintBlocks[(localRow / rowsPerPatchBlock) | 0] = 1;
-    this._hasDirtyTintRows = true;
+    this._dirtyTints.mark(localRow);
   }
 
   /**
@@ -385,79 +352,17 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
       return;
     }
 
-    if (this._hasDirtyTransformRows && this._transformBuffer !== null) {
-      this._flushDirtyBlocks(device, this._dirtyTransformBlocks, this._transformBuffer, this._mirrorTransformRows, retainedTransformSlotBytes);
-      this._hasDirtyTransformRows = false;
+    if (this._transformBuffer !== null) {
+      this._dirtyTransforms.flush(device, this._transformBuffer, this._mirrorTransformRows);
     }
 
-    if (this._hasDirtyTintRows && this._tintBuffer !== null) {
-      this._flushDirtyBlocks(device, this._dirtyTintBlocks, this._tintBuffer, this._mirrorTintRows, retainedTintSlotBytes);
-      this._hasDirtyTintRows = false;
-    }
-  }
-
-  /** Upload the dirty blocks of one row store, as runs or as one span, and clear them. */
-  private _flushDirtyBlocks(device: GPUDevice, blocks: Uint8Array, buffer: GPUBuffer, rows: ArrayBufferView, slotBytes: number): void {
-    const blockCount = Math.ceil(this._transformRowCount / rowsPerPatchBlock);
-    let runs = 0;
-    let firstBlock = -1;
-    let lastBlock = -1;
-
-    for (let block = 0; block < blockCount; block++) {
-      if (blocks[block] === 0) {
-        continue;
-      }
-
-      if (firstBlock < 0) {
-        firstBlock = block;
-      }
-
-      lastBlock = block;
-
-      if (block === 0 || blocks[block - 1] === 0) {
-        runs++;
-      }
+    if (this._tintBuffer !== null) {
+      this._dirtyTints.flush(device, this._tintBuffer, this._mirrorTintRows);
     }
 
-    if (firstBlock < 0) {
-      return;
-    }
-
-    if (runs > maxPatchRuns) {
-      this._writeRowSpan(device, buffer, rows, slotBytes, firstBlock * rowsPerPatchBlock, (lastBlock + 1) * rowsPerPatchBlock);
-    } else {
-      let block = firstBlock;
-
-      while (block <= lastBlock) {
-        if (blocks[block] === 0) {
-          block++;
-
-          continue;
-        }
-
-        const runStart = block;
-
-        while (block <= lastBlock && blocks[block] !== 0) {
-          block++;
-        }
-
-        this._writeRowSpan(device, buffer, rows, slotBytes, runStart * rowsPerPatchBlock, block * rowsPerPatchBlock);
-      }
-    }
-
-    blocks.fill(0, 0, blockCount);
-  }
-
-  /** One `writeBuffer` covering rows `[firstRow, endRow)`, clamped to the recorded range. */
-  private _writeRowSpan(device: GPUDevice, buffer: GPUBuffer, rows: ArrayBufferView, slotBytes: number, firstRow: number, endRow: number): void {
-    const lastRow = Math.min(endRow, this._transformRowCount);
-    const bytes = (lastRow - firstRow) * slotBytes;
-
-    if (bytes <= 0) {
-      return;
-    }
-
-    device.queue.writeBuffer(buffer, firstRow * slotBytes, rows.buffer, rows.byteOffset + firstRow * slotBytes, bytes);
+    // A renderer that keeps its own per-node store off this bundle (Text) stages
+    // its patches the same way and has no other point to flush them at.
+    this.rendererReplayState?.flushRowPatches?.();
   }
 
   /**
@@ -518,8 +423,8 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
     this._tintCapacity = 0;
     this._transformRowCount = 0;
     this._patchDevice = null;
-    this._hasDirtyTransformRows = false;
-    this._hasDirtyTintRows = false;
+    this._dirtyTransforms.reset(0);
+    this._dirtyTints.reset(0);
     this._bindGroup = null;
     this._bindGroupLayout = null;
     this._generation++;

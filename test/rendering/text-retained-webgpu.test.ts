@@ -259,6 +259,8 @@ const fragmentOf = (group: RetainedContainer): RetainedGroupFragment => (group a
 const instanceLabel = 'sprite:retained-instance-buffer';
 const sharedTransformLabel = 'sprite:retained-transform-buffer';
 const nodeDataLabel = 'WebGpuTextRenderer/retained-node-data';
+/** Bytes one packed node row occupies (10 vec4s), the patch upload's granularity. */
+const nodeRowBytes = 10 * 4 * Float32Array.BYTES_PER_ELEMENT;
 const textUniformLabel = 'WebGpuTextRenderer/retained-uniform';
 
 const countLabel = (writes: readonly CapturedWrite[], label: string, from = 0): number => {
@@ -284,6 +286,27 @@ const buildTextGroup = (): { root: Container; group: RetainedContainer; text: Te
   root.addChild(group);
 
   return { root, group, text };
+};
+
+/** The same group with `count` text leaves, for the per-region upload proof. */
+const buildTextGroupOf = (count: number): { root: Container; group: RetainedContainer; texts: Text[] } => {
+  const root = new Container();
+  const group = new RetainedContainer();
+  const texts: Text[] = [];
+
+  group.setPosition(8, 8);
+
+  for (let index = 0; index < count; index++) {
+    const text = new Text('Hi', { fontSize: 16 });
+
+    text.setPosition(0, index * 20);
+    group.addChild(text);
+    texts.push(text);
+  }
+
+  root.addChild(group);
+
+  return { root, group, texts };
 };
 
 describe('WebGPU Text retained-batch record/replay', () => {
@@ -407,20 +430,70 @@ describe('WebGPU Text retained-batch record/replay', () => {
       // is re-uploaded.
       expect(countLabel(environment.writes(), instanceLabel, mark)).toBe(0);
 
-      // Exactly one small patch write into the node-data buffer: 2 vec4s (32
-      // bytes) at the moved node's row offset (row 0, the only node).
+      // Exactly one patch write into the node-data buffer, covering the moved
+      // node's block clamped to the recording's single row.
       const patchWrites = environment
         .writes()
         .slice(mark)
         .filter(write => write.label === nodeDataLabel);
 
       expect(patchWrites).toHaveLength(1);
-      expect(patchWrites[0]!.bytes.byteLength).toBe(32);
+      expect(patchWrites[0]!.bytes.byteLength).toBe(nodeRowBytes);
       expect(patchWrites[0]!.bufferOffset).toBe(0);
 
       expect(bundle.generation).toBe(generation);
       expect(fragmentOf(group).instructions).toBe(recordedSet);
       expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
+
+      root.destroy();
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test('many moved nodes cost uploads per dirty region, not one per node', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const backend = await createBackend(environment);
+      const { root, texts } = buildTextGroupOf(64);
+
+      renderFrame(backend, root); // F1: capture
+      renderFrame(backend, root); // F2: record
+      renderFrame(backend, root); // F3: replay (first node-data upload)
+
+      const mark = environment.writes().length;
+
+      // Every node moves: one contiguous dirty region over the whole store.
+      for (const text of texts) {
+        text.setPosition(4, text.position.y);
+      }
+
+      renderFrame(backend, root);
+
+      const patchWrites = environment
+        .writes()
+        .slice(mark)
+        .filter(write => write.label === nodeDataLabel);
+
+      expect(patchWrites).toHaveLength(1);
+      expect(patchWrites[0]!.bufferOffset).toBe(0);
+      expect(patchWrites[0]!.bytes.byteLength).toBe(64 * nodeRowBytes);
+
+      // A single moved node in the middle stays a single small write.
+      const secondMark = environment.writes().length;
+
+      texts[40]!.setPosition(9, texts[40]!.position.y);
+      renderFrame(backend, root);
+
+      const singleWrites = environment
+        .writes()
+        .slice(secondMark)
+        .filter(write => write.label === nodeDataLabel);
+
+      expect(singleWrites).toHaveLength(1);
+      expect(singleWrites[0]!.bytes.byteLength).toBeLessThanOrEqual(16 * nodeRowBytes);
 
       root.destroy();
       backend.destroy();

@@ -41,6 +41,13 @@ export interface WebGpuRetainedGeometryRef {
 export interface WebGpuRetainedRendererReplayState {
   /** Release any GPU buffers this state owns (called from the bundle). */
   destroy(): void;
+  /**
+   * Push whatever in-place row patches this state has staged. Called from the
+   * owning bundle's own flush, which the reconciler runs once per patch pass and
+   * always before the frame's submit; a state whose patches go straight to the
+   * GPU omits it.
+   */
+  flushRowPatches?(): void;
 }
 
 /** Bytes of the per-group uniform buffer (projection mat4 + group mat4 + snap viewport vec4). */

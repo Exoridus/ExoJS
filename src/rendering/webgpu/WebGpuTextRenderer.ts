@@ -23,6 +23,7 @@ import type { View } from '#rendering/View';
 
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import { getWebGpuBlendState } from './blendState';
+import { DirtyRowTracker } from './DirtyRowTracker';
 import {
   type WebGpuRetainedBatchPayload,
   type WebGpuRetainedBatchReplayer,
@@ -53,6 +54,13 @@ import { WebGpuRetainedGroupBundle } from './WebGpuRetainedGroupBundle';
 // [ni*10+9]: (minX, minY, w, h) text block bounds
 
 const nodeFloats = textNodeDataFloats;
+
+/**
+ * Node rows one patch block covers. Smaller than the sprite store's block
+ * because a text row is 160 bytes against a sprite transform row's 32, so this
+ * lands on the same couple of kilobytes per block.
+ */
+const rowsPerPatchBlock = 16;
 
 // Per-vertex layout (20 bytes): pos f32x2 + uv f32x2 + packed node/atlas u32
 const vertexStrideBytes = 20;
@@ -166,6 +174,48 @@ class TextRetainedReplayState implements WebGpuRetainedRendererReplayState {
   public readonly nodeIndexByDrawable = new Map<Text | BitmapText, number>();
   public drawsInPass: WebGpuActiveRenderPass | null = null;
 
+  /**
+   * The recording's own packed rows, doubling as the CPU mirror an in-place
+   * transform patch writes into, and the device its upload goes through.
+   *
+   * Patching the recording's array rather than a second copy is what keeps the
+   * two consistent: a later full re-upload of `nodeData` then carries the moves
+   * that have happened since it was recorded, instead of resurrecting the
+   * positions the nodes had at record time.
+   */
+  private _nodeData: Float32Array | null = null;
+  private _device: GPUDevice | null = null;
+  private readonly _dirtyRows = new DirtyRowTracker(rowsPerPatchBlock, nodeFloats * Float32Array.BYTES_PER_ELEMENT);
+
+  /** Adopt the rows a fresh recording uploaded, as the mirror later patches write into. */
+  public adoptNodeData(device: GPUDevice, nodeData: Float32Array, nodeCount: number): void {
+    this._device = device;
+    this._nodeData = nodeData;
+    this._dirtyRows.reset(nodeCount);
+  }
+
+  /**
+   * Overwrite one node's transform texels in the mirror and mark its block.
+   * `false` when no recording's rows are held, which leaves the caller on the
+   * re-record path.
+   */
+  public patchNodeTransform(localIndex: number, row: Float32Array): boolean {
+    if (this._nodeData === null) {
+      return false;
+    }
+
+    this._nodeData.set(row, localIndex * nodeFloats);
+    this._dirtyRows.mark(localIndex);
+
+    return true;
+  }
+
+  public flushRowPatches(): void {
+    if (this._device !== null && this.nodeDataBuffer !== null && this._nodeData !== null) {
+      this._dirtyRows.flush(this._device, this.nodeDataBuffer, this._nodeData);
+    }
+  }
+
   public destroy(): void {
     this.uniformBuffer?.destroy();
     this.nodeDataBuffer?.destroy();
@@ -177,6 +227,9 @@ class TextRetainedReplayState implements WebGpuRetainedRendererReplayState {
     this.lastPayload = null;
     this.nodeIndexByDrawable.clear();
     this.drawsInPass = null;
+    this._nodeData = null;
+    this._device = null;
+    this._dirtyRows.reset(0);
   }
 }
 
@@ -1311,11 +1364,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
     packTextNodeTransform(row, 0, drawable);
 
-    const byteOffset = localIndex * nodeFloats * 4;
-
-    device.queue.writeBuffer(state.nodeDataBuffer, byteOffset, row.buffer, row.byteOffset, row.byteLength);
-
-    return true;
+    return state.patchNodeTransform(localIndex, row);
   }
 
   private _getTextReplayState(bundle: WebGpuRetainedGroupBundle, device: GPUDevice): TextRetainedReplayState {
@@ -1360,6 +1409,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       device.queue.writeBuffer(state.nodeDataBuffer, 0, data.nodeData.buffer, data.nodeData.byteOffset, requiredBytes);
     }
 
+    state.adoptNodeData(device, data.nodeData, data.nodeCount);
     state.nodeIndexByDrawable.clear();
 
     for (let i = 0; i < data.drawables.length; i++) {
