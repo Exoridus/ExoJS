@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path';
 import { buildPhysicsComparison, buildRenderingComparison } from './comparison/build';
 import { renderComparison } from './comparison/render';
 import type { PhysicsReportData } from './physics/report';
+import { buildProfileDocument, writeProfileDocument } from './profile/document';
 import type { ReportData } from './rendering/report';
 import { parseArgs } from './shared/args';
 
@@ -20,10 +21,19 @@ import { parseArgs } from './shared/args';
  * wrote, and `--out` at the document to write. Both inputs default to nothing -
  * a document must never imply it covers a domain that was not measured - and
  * `--out` defaults to the harness's own (gitignored) output directory.
+ *
+ * `--profile` additionally writes the comparison as a signed machine-profile
+ * JSON into the committed `results/` directory, named after the machine the
+ * provenance describes, which is what the published benchmark pages are
+ * generated from. Passing a path instead of a bare flag writes it elsewhere.
+ * The Markdown output is unaffected either way.
  */
 
 /** Default output path for the generated document. */
 const DEFAULT_OUT = '.workspace/output/comparison.md';
+
+/** Committed profile directory: one file per machine, overwritten by a re-measurement of that machine. */
+const RESULTS_DIR = resolve(import.meta.dirname, '../results');
 
 /** Read and parse one `results.json`, or exit with a message naming the missing file. */
 const readResults = <T>(path: string): T => {
@@ -70,6 +80,17 @@ const main = (): void => {
   writeFileSync(outPath, document);
 
   console.log(`Comparison written to ${outPath}`);
+
+  const profile = args.get('profile');
+
+  if (profile !== undefined) {
+    const written = writeProfileDocument(
+      buildProfileDocument({ ...(rendering !== undefined && { rendering }), ...(physics !== undefined && { physics }) }),
+      profile === 'true' ? RESULTS_DIR : resolve(profile),
+    );
+
+    console.log(`Profile written to ${written}`);
+  }
 };
 
 try {

@@ -454,6 +454,17 @@ Rules the generator enforces rather than merely intends:
   own WebGL1 block, CPU time only, explicitly carrying no mechanism.
 - Cells where ExoJS loses are published exactly like the cells where it wins.
 
+### Machine profiles
+
+`bench:compare --profile` additionally writes the comparison as JSON into
+`results/`, one file per machine, named after the GPU, operating system and
+browser the provenance describes. The name is derived from the stamps, so
+re-measuring a machine overwrites its file and a different machine can only
+arrive as a new one. Each file carries a signature over its own contents, and
+`verify:bench-results` (in the `lint` gate group) rejects a file whose signature
+does not recompute - which is what keeps a typed number out. See
+[`results/README.md`](./results/README.md).
+
 ## Cross-library numbers
 
 The harness runs competitor arms, and no cross-library figure is published in the
