@@ -1,6 +1,6 @@
 import { mutationSignature, selectMutationIndices } from '../shared/mutation';
-import type { BaseProvenance, HostInfo, LibraryProvenance } from '../shared/provenance';
-import { readHostInfo, readLibraryProvenance } from '../shared/provenance';
+import type { BaseProvenance, HostInfo, LibraryProvenance, PlatformDeclaration, PrereleaseStamp } from '../shared/provenance';
+import { classifyPrerelease, declaredPrereleaseOf, readHostInfo, readLibraryProvenance, readPlatformVersion } from '../shared/provenance';
 import { createCpuTimer, median, percentile, shouldAbort } from '../shared/timing';
 import { createExoJsPhysicsAdapter } from './adapters/exojs-physics';
 import { buildPhysicsMatrix, PHYSICS_ARCHETYPES, seedFor, STEP_DELTA } from './archetypes';
@@ -57,6 +57,15 @@ const ABORT_WINDOW = 30;
 export interface PhysicsProvenance extends BaseProvenance {
   /** Node runtime + CPU host the step-time numbers were measured on. */
   readonly host: HostInfo;
+  /**
+   * Whether the platform is a pre-release build, and what that rests on.
+   *
+   * No browser is involved, so nothing here can be detected from a version
+   * string: the value rests on the runner's declaration or records that nothing
+   * established it. It is carried because a published profile's file name marks
+   * a pre-release platform whether or not the profile has a rendering half.
+   */
+  readonly prerelease: PrereleaseStamp;
   /** Fixed physics timestep (seconds) each timed `step` advanced. */
   readonly fixedDelta: number;
   /** Disclosed caveats about how these numbers were produced. */
@@ -176,6 +185,12 @@ export const runPhysicsMatrix = (
      * a run never claims a version for an arm it did not include.
      */
     libraries?: readonly string[];
+    /**
+     * The runner's statement about the operating system: its major version and
+     * whether that build is a pre-release one. Neither is readable at runtime on
+     * every platform, and both are part of a published profile's file name.
+     */
+    platform?: PlatformDeclaration;
     filter?: Partial<PhysicsCellSpec>;
     /** Forces every selected cell's timed-step count to this value (smoke/spot-check knob; never a reportable run). */
     timedStepsOverride?: number;
@@ -218,7 +233,8 @@ export const runPhysicsMatrix = (
   const provenance: PhysicsProvenance = {
     timestamp: new Date().toISOString(),
     engineVersion,
-    host: readHostInfo(),
+    host: readHostInfo(readPlatformVersion(options.platform)),
+    prerelease: classifyPrerelease({ declared: declaredPrereleaseOf(options.platform) }),
     fixedDelta: STEP_DELTA,
     caveats: [
       'Step time is CPU wall-clock per step() over the timed window (median/p95), measured in one Node process (same-run discipline).',

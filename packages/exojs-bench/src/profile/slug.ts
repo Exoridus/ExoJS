@@ -1,27 +1,34 @@
-import type { PhysicsStamp, RenderingStamp } from './schema';
+import type { PlatformVersionStamp } from '../shared/provenance';
+import type { PhysicsStamp, ProfilePlatform, RenderingStamp } from './schema';
 
 /**
  * Derivation of a machine profile's slug from the stamped provenance.
  *
- * The slug is `<gpu>-<os>-<browser>` and doubles as the result file's name, so
- * it decides which file a re-measurement overwrites. It is therefore derived,
- * never typed: two runs on one machine must produce one name, and a run on a
- * different machine must not be able to land on someone else's file by an
- * inconsistent hand-written label.
+ * The slug is `<machine>-<os>-<major>[-beta]-<browser>` and doubles as the
+ * result file's name, so it decides which file a re-measurement overwrites. It
+ * is therefore derived, never typed: two runs on one machine must produce one
+ * name, and a run on a different machine must not be able to land on someone
+ * else's file by an inconsistent hand-written label.
  *
  * Each part comes from a different stamp, and a document may carry only one
  * domain, so each part has a documented fallback:
  *
- * - **gpu** - the rendering adapter string, normalized. With no rendering
- *   domain there is no GPU to name, and the CPU model takes its place; the
- *   `browser` part then reads `node`, so the pair cannot be mistaken for a
- *   graphics measurement. How specific this part can be is decided by the
- *   browser: an engine that reports a constant vendor-level string in place of
- *   the device model yields a correspondingly coarse part, which the `browser`
- *   part beside it accounts for.
- * - **os** - taken from whichever stamp read the platform directly, the physics
- *   host's or the rendering run's. Only a document carrying neither falls back
- *   to inferring it from the graphics API named in the adapter string.
+ * - **machine** - the rendering adapter string, normalized. Some browsers
+ *   substitute a constant for the GPU rather than reporting it (WebKit reports
+ *   `Apple GPU` on every machine, including one with an NVIDIA card in it), and
+ *   a vendor-stripped adapter can also reduce to a bare category word such as
+ *   `graphics`. Neither names a machine, so the CPU model takes over, exactly as
+ *   it does for a document carrying physics alone. On Apple silicon that is also
+ *   the correct name for the GPU, which is part of the same package. The CPU
+ *   model lives in the physics provenance, so a rendering-only run whose adapter
+ *   names nothing cannot be slugged at all and fails rather than publishing a
+ *   file no later run would find again.
+ * - **os** - the platform name, from whichever stamp read it directly, followed
+ *   by its major version and, for a pre-release build, `-beta`. The version
+ *   keeps a beta-platform measurement and the shipping platform's later one in
+ *   separate files instead of letting the second silently replace the first.
+ *   Only a document whose stamps recorded no platform falls back to inferring
+ *   the name from the graphics API in the adapter string.
  * - **browser** - the browser the run selected, or `node` for a physics-only
  *   document, whose numbers were taken in the Node process itself. Two browsers
  *   on one machine therefore produce two files, which is the point: their
@@ -31,14 +38,25 @@ import type { PhysicsStamp, RenderingStamp } from './schema';
 /** Runtime part used when a document carries physics alone. */
 export const PHYSICS_RUNTIME = 'node';
 
+/** Marks the operating-system part of a slug as a pre-release build. */
+export const PRERELEASE_SEGMENT = 'beta';
+
+/**
+ * Thrown when the stamped provenance does not name a machine profile well
+ * enough to be published under a file name a later run would find again.
+ */
+export class ProfileSlugError extends Error {
+  public constructor(message: string) {
+    super(message);
+    this.name = 'ProfileSlugError';
+  }
+}
+
 /**
  * Vendor and product-line words dropped from the front of a normalized part
  * name. They repeat what the model token already says (`rtx 5070 ti` is an
  * NVIDIA GeForce part by construction) and would otherwise push the identifying
  * token out of the middle of every file name.
- *
- * `apple` is deliberately absent: its part names are bare generation tokens
- * (`m3 max`) that identify nothing on their own.
  */
 const LEADING_NOISE = new Set([
   'angle',
@@ -56,7 +74,19 @@ const LEADING_NOISE = new Set([
   'mali',
   'qualcomm',
   'arm',
+  'apple',
 ]);
+
+/**
+ * Normalized names that identify no machine.
+ *
+ * Each is a category word rather than a model: what is left of a browser's
+ * constant privacy substitution (`Apple GPU`) or of an integrated part named
+ * only after its vendor (`AMD Radeon Graphics`) once the vendor words are
+ * dropped. A part reducing to one of these is treated as no part at all, so the
+ * CPU model names the machine instead of a word every machine would share.
+ */
+const NON_IDENTIFYING = new Set(['gpu', 'graphics', 'renderer', 'device', 'processor', 'unknown']);
 
 /**
  * Where a model name ends. Everything from the first of these onward is the
@@ -89,13 +119,18 @@ const dropLeadingNoise = (parts: readonly string[]): string[] => {
   return kept;
 };
 
+/** True when a normalized part names a specific machine rather than a category of them. */
+export const isIdentifyingPart = (name: string): boolean => name.length > 0 && !NON_IDENTIFYING.has(name);
+
 /**
  * Reduce an adapter string to the GPU part it names.
  *
  * Handles the three shapes browsers report: a bare model (`Apple M3 Max`), an
  * ANGLE triple whose middle field is the device description, and a
  * `<api> Renderer: <model>` form where the model follows the colon. Returns an
- * empty string when nothing identifying is left.
+ * empty string when nothing identifying is left; a browser that reports a
+ * constant instead of the device yields a category word, which
+ * {@link isIdentifyingPart} rejects.
  */
 export const normalizeGpuAdapter = (adapter: string): string => {
   const withoutTrademarks = adapter.replaceAll(TRADEMARK, ' ');
@@ -111,7 +146,7 @@ export const normalizeGpuAdapter = (adapter: string): string => {
   return dropLeadingNoise(slugify(head).split('-').filter(Boolean)).join('-');
 };
 
-/** Reduce a CPU model string to the part it names, dropping package and clock detail. */
+/** Reduce a CPU model string to the part it names, dropping vendor, package and clock detail. */
 export const normalizeCpuModel = (cpu: string): string =>
   dropLeadingNoise(slugify(cpu.replaceAll(TRADEMARK, ' ').replaceAll(CPU_TAIL, ' ')).split('-').filter(Boolean)).join('-');
 
@@ -127,8 +162,7 @@ export const normalizeOsName = (os: string): string => {
 
 /**
  * The operating system implied by the graphics API an adapter string names.
- * Only used when the document carries no physics domain, whose host stamp
- * records the platform outright.
+ * Only used when no stamp recorded the platform outright.
  */
 const inferOsFromAdapter = (adapter: string): string | null => {
   const text = adapter.toLowerCase();
@@ -139,6 +173,10 @@ const inferOsFromAdapter = (adapter: string): string | null => {
 
   return null;
 };
+
+/** The slug's operating-system part: name, major version, and `-beta` for a pre-release build. */
+export const platformSegment = (platform: ProfilePlatform): string =>
+  `${platform.name}-${String(platform.version)}${platform.prerelease ? `-${PRERELEASE_SEGMENT}` : ''}`;
 
 /** The stamps a slug can be derived from. At least one domain must be present. */
 export interface SlugSources {
@@ -151,9 +189,12 @@ export interface SlugSources {
 /** The derived parts, and the slug they compose. */
 export interface ProfileParts {
   readonly slug: string;
+  /** Normalized machine name: the GPU the adapter identifies, or the CPU model when it identifies none. */
   readonly gpu: string;
+  /** The slug's operating-system part, version and pre-release marker included. */
   readonly os: string;
   readonly browser: string;
+  readonly platform: ProfilePlatform;
 }
 
 /**
@@ -164,43 +205,84 @@ export interface ProfileParts {
  * an architecture family, and under other browsers it is the other way round.
  * The one carrying a model number is the more specific of the two, so it wins
  * regardless of which backend produced it; without one, recorded order decides.
+ * Adapters naming no machine at all are dropped before either rule applies.
  */
 const chooseGpu = (stamps: readonly RenderingStamp[]): string => {
-  const candidates = stamps.map(stamp => normalizeGpuAdapter(stamp.adapter)).filter(name => name.length > 0);
+  const candidates = stamps.map(stamp => normalizeGpuAdapter(stamp.adapter)).filter(isIdentifyingPart);
 
   return candidates.find(name => /\d/.test(name)) ?? candidates[0] ?? '';
+};
+
+/** The machine part, falling back to the CPU model when no adapter identifies the machine. */
+const deriveMachine = (stamps: readonly RenderingStamp[], physics: PhysicsStamp | undefined): string => {
+  const fromAdapter = chooseGpu(stamps);
+
+  if (fromAdapter.length > 0) {
+    return fromAdapter;
+  }
+
+  const fromCpu = normalizeCpuModel(physics?.host.cpu ?? '');
+
+  if (isIdentifyingPart(fromCpu)) {
+    return fromCpu;
+  }
+
+  if (stamps.length > 0 && physics === undefined) {
+    throw new ProfileSlugError(
+      `Cannot derive the profile slug: no adapter string names a machine (${stamps.map(stamp => `'${stamp.adapter}'`).join(', ')}), and the CPU model that would name it instead is recorded by the physics domain, which this profile does not carry. Measure the physics domain on the same machine and pass its results.json to bench:compare with --physics.`,
+    );
+  }
+
+  throw new ProfileSlugError(
+    'Cannot derive the profile slug: neither the stamped adapter strings nor the CPU model name a specific machine, so the profile has no name a later measurement of that machine would find again.',
+  );
+};
+
+/** The platform version the document's stamps agree on, preferring one the host reported. */
+const choosePlatformVersion = (stamps: readonly RenderingStamp[], physics: PhysicsStamp | undefined): PlatformVersionStamp | undefined => {
+  const candidates = [...(physics === undefined ? [] : [physics.host.platformVersion]), ...stamps.map(stamp => stamp.platformVersion)];
+
+  return candidates.find(version => version.source === 'detected') ?? candidates.find(version => version.source === 'declared');
 };
 
 /**
  * Derive the profile parts and slug from a run's provenance.
  *
- * Throws when a part cannot be derived - a profile whose machine cannot be
- * named must not be written under a guessed file name, because the next run on
- * that machine would not find it again.
+ * Throws {@link ProfileSlugError} when a part cannot be derived - a profile
+ * whose machine or platform cannot be named must not be written under a guessed
+ * file name, because the next run on that machine would not find it again.
  */
 export const deriveProfileParts = (sources: SlugSources): ProfileParts => {
   const stamps = sources.rendering ?? [];
-  const gpu = stamps.length > 0 ? chooseGpu(stamps) : normalizeCpuModel(sources.physics?.host.cpu ?? '');
-
-  if (gpu.length === 0) {
-    throw new Error('Cannot derive the profile slug: the run stamped no adapter or CPU model to name the machine by.');
-  }
+  const gpu = deriveMachine(stamps, sources.physics);
 
   // A directly recorded platform beats one inferred from a graphics API: both
   // domains read it from the same `os` module, and inference is a guess the
   // adapter string only sometimes supports.
   const recordedOs = sources.physics === undefined ? (stamps.find(stamp => stamp.os.length > 0)?.os ?? '') : sources.physics.host.os;
-  const os = recordedOs.length > 0 ? normalizeOsName(recordedOs) : (stamps.map(stamp => inferOsFromAdapter(stamp.adapter)).find(name => name !== null) ?? '');
+  const name = recordedOs.length > 0 ? normalizeOsName(recordedOs) : (stamps.map(stamp => inferOsFromAdapter(stamp.adapter)).find(part => part !== null) ?? '');
 
-  if (os.length === 0) {
-    throw new Error(
+  if (name.length === 0) {
+    throw new ProfileSlugError(
       'Cannot derive the profile slug: no run recorded the operating system and no adapter string names a graphics API it could be inferred from. Pass --physics as well.',
     );
   }
+
+  const version = choosePlatformVersion(stamps, sources.physics);
+
+  if (version === undefined) {
+    throw new ProfileSlugError(
+      `Cannot derive the profile slug: nothing established the operating system's major version, which the file name carries so that a pre-release platform and the shipping one it becomes do not overwrite each other. Re-measure with --platform=<major>[-beta].`,
+    );
+  }
+
+  const prerelease = stamps.some(stamp => stamp.prerelease.value) || sources.physics?.prerelease.value === true;
+  const platform: ProfilePlatform = { name, version: version.major, versionSource: version.source === 'detected' ? 'detected' : 'declared', prerelease };
+  const os = platformSegment(platform);
 
   // Every stamp of one run names the same browser - one run drives one engine -
   // so the first stamp speaks for the document.
   const browser = stamps[0]?.browser ?? PHYSICS_RUNTIME;
 
-  return { slug: `${gpu}-${os}-${browser}`, gpu, os, browser };
+  return { slug: `${gpu}-${os}-${browser}`, gpu, os, browser, platform };
 };

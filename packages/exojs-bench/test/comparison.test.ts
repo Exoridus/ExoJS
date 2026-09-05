@@ -64,6 +64,7 @@ const stamp = (engineVersion = '0.17.0', overrides: Partial<Provenance> = {}): P
   browser: 'chromium',
   browserVersion: '151.0.7922.34',
   os: 'win32 10.0.26200',
+  platformVersion: { major: 11, source: 'detected', evidence: "os.release() reported '10.0.26200'" },
   prerelease: { value: false, source: 'assumed-stable', evidence: 'no marker, none declared' },
   flags: ['--force-device-scale-factor=1'],
   headless: true,
@@ -74,7 +75,16 @@ const stamp = (engineVersion = '0.17.0', overrides: Partial<Provenance> = {}): P
 });
 
 const physicsStamp = (engineVersion = '0.17.0', host: Partial<PhysicsProvenance['host']> = {}): PhysicsProvenance => ({
-  host: { node: 'v24.14.1', cpu: 'Test CPU', cpuCount: 16, os: 'linux 6.1.0', arch: 'x64', ...host },
+  host: {
+    node: 'v24.14.1',
+    cpu: 'Test CPU',
+    cpuCount: 16,
+    os: 'linux 6.1.0',
+    platformVersion: { major: 26, source: 'declared', evidence: "the runner declared '26'" },
+    arch: 'x64',
+    ...host,
+  },
+  prerelease: { value: false, source: 'assumed-stable', evidence: 'no marker, none declared' },
   fixedDelta: 1 / 60,
   caveats: [],
   engineVersion,
@@ -421,6 +431,22 @@ describe('aggregateRenderingRuns', () => {
     expect(() => aggregateRenderingRuns([run(2), onBeta])).toThrow(/different machine or browser/);
   });
 
+  test('rejects runs measured on different operating-system versions, which would write different files', () => {
+    const onWindows10 = renderingRun(run(2).results, {
+      stamp: { os: 'win32 10.0.19045', platformVersion: { major: 10, source: 'detected', evidence: `os.release() reported '10.0.19045'` } },
+    });
+
+    expect(() => aggregateRenderingRuns([run(2), run(2), onWindows10])).toThrow(/different machine or browser/);
+  });
+
+  test('rejects a run whose platform version nothing established alongside one where it was, rather than letting it borrow the version', () => {
+    const unstated = renderingRun(run(2).results, {
+      stamp: { platformVersion: { major: 0, source: 'undetermined', evidence: 'the kernel version does not name the product version' } },
+    });
+
+    expect(() => aggregateRenderingRuns([run(2), unstated])).toThrow(/different machine or browser/);
+  });
+
   test('tolerates the driver detail of an adapter string and the operating system patch level', () => {
     // A driver update rewrites the device-id and shader-model tail, and a
     // Windows build number moves under a machine between runs. Neither is a
@@ -457,6 +483,12 @@ describe('aggregatePhysicsRuns', () => {
 
   test('rejects runs measured on different CPUs, which is the physics domain of a different machine', () => {
     expect(() => aggregatePhysicsRuns([run(2), physicsRun(run(2).results, { cpu: 'Apple M3 Max' })])).toThrow(/different machine/);
+  });
+
+  test('rejects runs measured on different operating-system versions of one machine', () => {
+    const older = physicsRun(run(2).results, { platformVersion: { major: 25, source: 'declared', evidence: `the runner declared '25'` } });
+
+    expect(() => aggregatePhysicsRuns([run(2), older])).toThrow(/different machine/);
   });
 });
 

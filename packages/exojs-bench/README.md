@@ -279,17 +279,22 @@ mid-frame GPU-driver stall cannot be interrupted from inside the page.
   multi-GPU machine. On WebGPU the adapter's vendor / architecture / device /
   description. How much this identifies is the browser's choice: Chromium
   unmasks the device model, while WebKit substitutes a constant vendor-level
-  string (`Apple GPU`) for it on every platform, so a WebKit profile's GPU part
-  is correspondingly coarse.
+  string (`Apple GPU`) for it on every platform — including a Windows machine
+  with an NVIDIA card — so a WebKit profile is named after the CPU model
+  instead, which the physics domain records.
 - **Browser and browser version**, as the browser reported it, plus the
   operating system of the host that drove it.
+- **`platformVersion`** — the operating system's major version and what
+  established it: `detected` where the host reports one (Windows, whose
+  `10.0.<build>` release string names Windows 11 from build 22000 up), or
+  `declared` from `--platform`. It is separate from the `os` field because that
+  field carries the kernel release, which on macOS no longer tracks the product
+  version.
 - **`prerelease`** — whether the platform is a pre-release build, and a `source`
   saying what that rests on: `detected` from a browser version string naming a
-  non-shipping build, `declared` from `--prerelease` (needed for a beta OS,
-  which is not readable at runtime — `os.release()` reports the kernel version,
-  identical for a macOS beta and the release it becomes), or `assumed-stable`,
-  which records that nothing established it and is weaker than a stable
-  platform.
+  non-shipping build, `declared` from `--platform=<major>-beta` (needed for a
+  beta OS, which is not readable at runtime), or `assumed-stable`, which records
+  that nothing established it and is weaker than a stable platform.
 - **`software`** — the honesty bit. A WebGL2 run on a software rasterizer marks
   every timing column `UNTRUSTED` in the Markdown report; a software WebGPU
   adapter is refused outright and its cells are emitted `unavailable`.
@@ -323,19 +328,30 @@ pnpm --filter @codexo/exojs-bench bench \
   --out=.workspace/output/my-run
 ```
 
-No `--` separator is needed; pnpm forwards these straight to the script. The run
-writes `results.json`, `results.csv` and `results.md` into `--out` (default
-`.workspace/output/baseline/`, gitignored), plus a `checkpoint.jsonl` appended per
-cell as it lands, so a crash never discards finished work.
+No `--` separator is needed with `pnpm --filter …`; pnpm forwards these straight
+to the script. Running the same script from inside `packages/exojs-bench`
+(`pnpm bench -- --out=…`) works too, and `--out` is then relative to the package
+directory either way. The root `pnpm bench` is a different thing entirely — the
+engine's own `vitest bench` micro-benchmarks — and there is no root
+`bench:compare`.
+
+The run writes `results.json`, `results.csv` and `results.md` into `--out`
+(default `.workspace/output/baseline/`, gitignored), plus a `checkpoint.jsonl`
+appended per cell as it lands, so a crash never discards finished work.
 
 Other flags:
 
 - `--browser=chromium` (default) / `--browser=webkit` — the engine to measure in.
   Not a subset marker: a run in either browser is a full measurement of that
   browser, published under its own profile.
-- `--prerelease` / `--prerelease="macOS 26.0 beta 3"` — declare that the platform
-  is a pre-release build. Required on a beta OS, on **every** pooled run; a
-  preview browser build is detected from its own version string instead.
+- `--platform=<major>` / `--platform=<major>-beta` — declare the operating
+  system's major version, and with the suffix that the build is a pre-release
+  one. Required on macOS and Linux, whose kernel version names no product
+  version; optional on Windows, which reports its own and refuses a declaration
+  contradicting it. A full run without it fails before measuring anything, a
+  narrowed run only warns. Pass it on **every** pooled run: both the version and
+  the beta marker are part of the profile's file name, and runs disagreeing on
+  either are refused rather than pooled.
 - `--backend=webgl2` / `--backend=webgpu` — omit for both.
 - `--engine`, `--config`, `--archetype`, `--nodes` — comma-separated selections.
 - `--frames=N` — override every cell's timed-frame count for a fast spot check.
@@ -511,14 +527,21 @@ The machine check is what a second reference machine makes necessary — three
 runs from two machines would otherwise pool into a median belonging to neither,
 with a spread reporting the gap between two computers as the noise of one. A
 rendering run's identity is the normalized GPU the adapter string names, the
-operating system, the browser and the pre-release bit, using the same
-normalizations the profile slug uses, so runs may pool exactly when they would
-be written to one file. A physics run's identity is the CPU model, the operating
-system and the architecture. Tolerated within one machine: timestamps, an
-adapter string's driver / device-id / shader-model tail, the OS patch level, and
-the browser's patch version, which a checkout pins and which every stamp records
-in full anyway. Assembling one profile from a rendering measurement on one
-machine and a physics measurement on another is refused for the same reason.
+operating system with its major version and pre-release bit, and the browser,
+using the same normalizations the profile slug uses, so runs may pool exactly
+when they would be written to one file. A physics run's identity is the CPU
+model, the same platform identity, and the architecture. Tolerated within one
+machine: timestamps, an adapter string's driver / device-id / shader-model tail,
+the OS patch level, and the browser's patch version, which a checkout pins and
+which every stamp records in full anyway. Assembling one profile from a
+rendering measurement on one machine and a physics measurement on another is
+refused for the same reason.
+
+One limit is inherent: where the browser reports a constant instead of the GPU,
+a rendering run identifies its machine no more precisely than that constant
+does, because the CPU model that names it in the file is recorded by the physics
+domain. Two such machines on the same operating system and browser are
+indistinguishable to the check.
 
 Rules the generator enforces rather than merely intends:
 
@@ -540,8 +563,11 @@ Rules the generator enforces rather than merely intends:
 ### Machine profiles
 
 `bench:compare --profile` additionally writes the comparison as JSON into
-`results/`, one file per machine, named after the GPU, operating system and
-browser the provenance describes. The name is derived from the stamps, so
+`results/`, one file per machine, named
+`<machine>-<os>-<major>[-beta]-<browser>.json` after the provenance — the GPU or,
+where the browser reports a constant instead of one, the CPU model; the
+operating system with its major version and pre-release marker; and the browser.
+The name is derived from the stamps, so
 re-measuring a machine overwrites its file and a different machine can only
 arrive as a new one. Each file carries every pooled run's provenance and a
 signature over its own contents, and `verify:bench-results` (in the `lint` gate
