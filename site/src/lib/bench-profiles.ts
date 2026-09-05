@@ -8,6 +8,10 @@
  * only which rows are worth a headline sentence. The values inside that sentence
  * are still copied out of the file.
  *
+ * A document pools several separate harness runs, so each cell also carries the
+ * spread those runs observed and whether they agreed on the verdict. A cell they
+ * disagreed on carries no verdict at all.
+ *
  * The directory is legitimately empty - a fresh clone carries no measurement -
  * so every consumer has to render that case. A file whose schema version this
  * reader does not know fails the build instead of being skipped: its fields may
@@ -16,7 +20,7 @@
  */
 
 /** Schema version this reader understands; anything else is refused. */
-const SUPPORTED_SCHEMA_VERSION = 1;
+const SUPPORTED_SCHEMA_VERSION = 2;
 
 /**
  * Arms that stand as a reference ceiling rather than as a peer.
@@ -47,14 +51,38 @@ export interface ProfileVerdict {
   readonly structural: boolean;
 }
 
+/** How far one measured value moved across the runs a profile pools. */
+export interface ProfileSpread {
+  readonly minMs: number | null;
+  readonly maxMs: number | null;
+  /** `maxMs / minMs`: the measurement's own noise, as a factor. */
+  readonly ratio: number | null;
+}
+
+/** What the pooled runs agreed and disagreed on for one arm pair. */
+export interface ProfileAggregate {
+  /** How many runs produced a comparable cell here. */
+  readonly runs: number;
+  readonly reference: ProfileSpread;
+  readonly competitor: ProfileSpread;
+  /** False when the runs reached different verdicts; the cell then carries none. */
+  readonly stable: boolean;
+  /** The ladder rung each run produced, in run order. */
+  readonly rungs: readonly string[];
+}
+
 /** One competitor's outcome on one row. */
 export interface ProfileCell {
   readonly competitor: string;
+  /** Median of the per-run medians. */
   readonly referenceMs: number | null;
+  /** Median of the per-run medians. */
   readonly competitorMs: number | null;
   readonly verdict: ProfileVerdict;
   /** Structural evidence behind the difference, or `null` when the counters carry none. */
   readonly mechanism: string | null;
+  /** Spread and stability of the numbers above. */
+  readonly aggregate: ProfileAggregate;
 }
 
 /** One published row: an archetype at the block's single node or body count. */
@@ -124,16 +152,23 @@ export interface PhysicsStamp {
   readonly timestamp: string;
 }
 
+/** One pooled rendering run's provenance. */
+export interface RenderingRun {
+  readonly provenance: readonly RenderingStamp[];
+}
+
 /** The rendering half of a document. */
 export interface RenderingProfile {
-  readonly provenance: readonly RenderingStamp[];
+  /** One entry per pooled run, in the order they were measured. */
+  readonly runs: readonly RenderingRun[];
   readonly libraries: readonly ProfileLibrary[];
   readonly backends: readonly ProfileBackend[];
 }
 
 /** The physics half of a document. */
 export interface PhysicsProfile {
-  readonly provenance: PhysicsStamp;
+  /** One stamp per pooled run, in the order they were measured. */
+  readonly runs: readonly PhysicsStamp[];
   readonly libraries: readonly ProfileLibrary[];
   readonly section: ProfileSection;
 }
@@ -146,6 +181,8 @@ export interface BenchProfile {
   readonly browser: string;
   readonly engineVersion: string;
   readonly measuredAt: string;
+  /** How many separate harness runs every measured domain pools. */
+  readonly runs: number;
 }
 
 /** Integrity cover the harness wrote over the document. */
