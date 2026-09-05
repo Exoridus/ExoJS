@@ -1,15 +1,15 @@
 {
   "title": "AtlasPage",
-  "description": "A single texture page within a GlyphAtlas. Glyphs are packed into the page using a shelf-bin algorithm. In `'sdf'` mode the page owns a `DataTexture` (`r8`) populated by tiny-sdf output. In `'color'` mode a Canvas 2D context preserves full glyph colours for emoji.",
+  "description": "A single texture page within a GlyphAtlas. Glyphs are packed into the page using a shelf-bin algorithm. In `'sdf'` mode the page owns a `DataTexture` (`r8`) filled with the single-channel distance field GlyphSdf computes. In `'color'` mode a Canvas 2D context preserves full glyph colours for emoji.",
   "symbol": "AtlasPage",
   "kind": "interface",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 12,
+  "memberCount": 13,
   "counts": {
     "constructors": 0,
-    "methods": 7,
+    "methods": 8,
     "properties": 5,
     "events": 0
   },
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "A single texture page within a GlyphAtlas. Glyphs are packed into the page using a shelf-bin algorithm.",
-        "In `'sdf'` mode the page owns a `DataTexture` (`r8`) populated by tiny-sdf output. In `'color'` mode a Canvas 2D context preserves full glyph colours for emoji."
+        "In `'sdf'` mode the page owns a `DataTexture` (`r8`) filled with the single-channel distance field GlyphSdf computes. In `'color'` mode a Canvas 2D context preserves full glyph colours for emoji."
       ],
       "importLine": "import { AtlasPage } from '@codexo/exojs'",
       "sourceLink": null
@@ -57,6 +57,116 @@
           "params": [],
           "returnType": "void",
           "description": "Release the page's GPU resource. Only for pages whose owner is a single node. The pages of a GlyphAtlas outlive every node that drew from them and are reset, never destroyed."
+        },
+        {
+          "name": "fillSolid",
+          "signature": "fillSolid(slotX: number, slotY: number, w: number, h: number): void",
+          "signatureTokens": [
+            {
+              "text": "fillSolid",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "slotX",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "slotY",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "w",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "h",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "slotX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "slotY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "w",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "h",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Fill a slot with fully opaque ink - the deepest inside value in 'sdf' mode, opaque white in 'color' mode - so a quad sampling it renders as a solid rectangle whichever fragment stage draws it."
         },
         {
           "name": "insert",

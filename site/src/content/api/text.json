@@ -1928,7 +1928,7 @@
         },
         {
           "name": "update",
-          "signature": "update(_dt: number): void",
+          "signature": "update(): void",
           "signatureTokens": [
             {
               "text": "update",
@@ -1937,18 +1937,6 @@
             {
               "text": "(",
               "kind": "punctuation"
-            },
-            {
-              "text": "_dt",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
             },
             {
               "text": ")",
@@ -1963,15 +1951,9 @@
               "kind": "keyword"
             }
           ],
-          "params": [
-            {
-              "name": "_dt",
-              "type": "number",
-              "optional": false
-            }
-          ],
+          "params": [],
           "returnType": "void",
-          "description": "Advance the node by dt milliseconds. Delegates to syncDirty - kept for manual game-loop patterns, but no longer required; the renderer applies pending changes automatically."
+          "description": "Alias for syncDirty, kept for game loops that tick their nodes explicitly. It takes no time step: a text node holds no animated state, so there is nothing for one to advance."
         },
         {
           "name": "updateBounds",

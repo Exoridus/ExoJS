@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 84,
+  "memberCount": 85,
   "counts": {
     "constructors": 0,
     "methods": 51,
-    "properties": 33,
+    "properties": 34,
     "events": 0
   },
   "sections": [
@@ -3938,6 +3938,27 @@
           "params": [],
           "returnType": null,
           "description": "τ = 2π, the full-circle radian constant."
+        },
+        {
+          "name": "textGradientMaxStops",
+          "signature": "textGradientMaxStops: 8",
+          "signatureTokens": [
+            {
+              "text": "textGradientMaxStops",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "8",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How many stops one text gradient may carry. The ramp is evaluated per fragment from the node's own packed style row, so the stop list has to be a fixed-size part of it rather than a texture of its own. Eight covers the gradients display type actually uses; more of them would cost every text node the space whether it gradients or not."
         },
         {
           "name": "textSourceCodec",

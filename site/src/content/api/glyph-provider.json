@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 2,
+  "memberCount": 4,
   "counts": {
     "constructors": 0,
-    "methods": 2,
+    "methods": 4,
     "properties": 0,
     "events": 0
   },
@@ -29,6 +29,65 @@
       "id": "methods",
       "title": "Methods",
       "members": [
+        {
+          "name": "getFontMetrics",
+          "signature": "getFontMetrics?(fontSize: number): TextFontMetrics | null",
+          "signatureTokens": [
+            {
+              "text": "getFontMetrics",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "fontSize",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextFontMetrics",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "fontSize",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "TextFontMetrics | null",
+          "description": "Vertical metrics of this source's font at fontSize. Optional - a caller without it falls back to fractions of the font size, which places a decoration plausibly but not typographically."
+        },
         {
           "name": "getGlyph",
           "signature": "getGlyph(char: string, fontSize: number): GlyphInfo",
@@ -189,6 +248,47 @@
           ],
           "returnType": "number",
           "description": "Return the kerning adjustment (in pixels) between two adjacent characters. Positive values add space; negative values pull glyphs together. Optional - callers treat a missing method as zero kerning."
+        },
+        {
+          "name": "getSolidTexel",
+          "signature": "getSolidTexel?(): SolidTexel | null",
+          "signatureTokens": [
+            {
+              "text": "getSolidTexel",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SolidTexel",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "SolidTexel | null",
+          "description": "A solid texel decoration quads sample, or null when this source has none. A source that answers null renders no underline and no strikethrough: there is nowhere in its texture that is reliably opaque, and an offline atlas cannot be given one after the fact."
         }
       ],
       "paragraphs": [],

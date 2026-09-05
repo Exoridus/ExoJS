@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 13,
+  "memberCount": 14,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 13,
+    "properties": 14,
     "events": 0
   },
   "sections": [
@@ -28,6 +28,31 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "decoration",
+          "signature": "decoration?: boolean",
+          "signatureTokens": [
+            {
+              "text": "decoration",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether this quad is a decoration rule rather than a glyph. Rules are appended after every glyph and belong to no line's placement range, so a caret or a hit test never has to skip one."
+        },
         {
           "name": "height",
           "signature": "height: number",
