@@ -1,0 +1,95 @@
+{
+  "title": "JobStatus",
+  "description": "Lifecycle of a Job. `pending` until its first step, `running` from then on, and exactly one of the three terminal states afterwards.",
+  "symbol": "JobStatus",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Lifecycle of a Job. `pending` until its first step, `running` from then on, and exactly one of the three terminal states afterwards."
+      ],
+      "importLine": "import { JobStatus } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "JobStatus",
+          "signature": "\"cancelled\" | \"done\" | \"failed\" | \"pending\" | \"running\"",
+          "signatureTokens": [
+            {
+              "text": "\"cancelled\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"done\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"failed\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"pending\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"running\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/JobScheduler.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/JobScheduler.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/JobScheduler.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/JobScheduler.ts"
+}

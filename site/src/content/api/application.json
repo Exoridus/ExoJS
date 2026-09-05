@@ -1,16 +1,16 @@
 {
   "title": "Application",
-  "description": "Top-level engine instance. Owns the canvas, render backend, scene-stack controller, the core systems (input, interaction, audio, tweens, animations, rendering), the app-level SystemRegistry for user/extension systems, asset loader, and the per-frame loop. Lifecycle: construct with options → `await app.start(scene)` → engine runs the request-animation-frame loop until `app.stop()` or `app.destroy()`. The render backend is chosen and initialized during `start()`; query Application.backend or Application.capabilities after start has resolved. The class exposes Signals for the major state-change points (Application.onResize, Application.onFrame, Application.onCanvasFocusChange, Application.onVisibilityChange, Application.onBackendLost, Application.onBackendRestored) so subscribers can react without subclassing. `pauseOnHidden = true` short-circuits the per-frame work while `document.hidden` is true (still consumes RAF callbacks but skips scene update + render). Useful for games; leave off for tools and background-active simulations.",
+  "description": "Top-level engine instance. Owns the canvas, render backend, scene-stack controller, the core systems (input, interaction, audio, jobs, tweens, animations, rendering), the app-level SystemRegistry for user/extension systems, asset loader, and the per-frame loop. Lifecycle: construct with options → `await app.start(scene)` → engine runs the request-animation-frame loop until `app.stop()` or `app.destroy()`. The render backend is chosen and initialized during `start()`; query Application.backend or Application.capabilities after start has resolved. The class exposes Signals for the major state-change points (Application.onResize, Application.onFrame, Application.onCanvasFocusChange, Application.onVisibilityChange, Application.onBackendLost, Application.onBackendRestored) so subscribers can react without subclassing. `pauseOnHidden = true` short-circuits the per-frame work while `document.hidden` is true (still consumes RAF callbacks but skips scene update + render). Useful for games; leave off for tools and background-active simulations.",
   "symbol": "Application",
   "kind": "class",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 54,
+  "memberCount": 55,
   "counts": {
     "constructors": 1,
     "methods": 10,
-    "properties": 35,
+    "properties": 36,
     "events": 8
   },
   "sections": [
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Top-level engine instance. Owns the canvas, render backend, scene-stack controller, the core systems (input, interaction, audio, tweens, animations, rendering), the app-level SystemRegistry for user/extension systems, asset loader, and the per-frame loop.",
+        "Top-level engine instance. Owns the canvas, render backend, scene-stack controller, the core systems (input, interaction, audio, jobs, tweens, animations, rendering), the app-level SystemRegistry for user/extension systems, asset loader, and the per-frame loop.",
         "Lifecycle: construct with options → `await app.start(scene)` → engine runs the request-animation-frame loop until `app.stop()` or `app.destroy()`. The render backend is chosen and initialized during `start()`; query Application.backend or Application.capabilities after start has resolved.",
         "The class exposes Signals for the major state-change points (Application.onResize, Application.onFrame, Application.onCanvasFocusChange, Application.onVisibilityChange, Application.onBackendLost, Application.onBackendRestored) so subscribers can react without subclassing.",
         "`pauseOnHidden = true` short-circuits the per-frame work while `document.hidden` is true (still consumes RAF callbacks but skips scene update + render). Useful for games; leave off for tools and background-active simulations."
@@ -218,7 +218,7 @@
           ],
           "params": [],
           "returnType": "Promise<void>",
-          "description": "Tear down every owned subsystem (loader, the core systems - input, interaction, audio, tweens, animations, rendering - the app system registry, backend, scene director, all clocks, all signals) and release event listeners. The application instance is unusable after this call. The page is left as it was found: the active sizing policy is detached, so its observers go and the CSS box it wrote is cleared, and a canvas the engine created itself is removed from the document. A canvas supplied through canvas.element belongs to the caller and stays in place, as does every element around it - no sizing policy ever styles the page itself. Fires the RAF halt synchronously (so no further frame runs after this call returns) and returns a Promise that fulfils once the rest of teardown has run: scenes - including every retained and preloaded scope, and any scene's own async unload() - is fully disposed FIRST, before the Loader, rendering context, audio system, or backend are destroyed, so a scene's teardown code never touches an already-destroyed dependency. This intentionally does not route through the public Application.stop, which fire-and-forgets its own scene-clear - that would race against scenes._dispose()'s own active-scope teardown for ownership of the same scope. destroy() instead halts the frame loop directly and lets scenes._dispose() own scene teardown entirely. destroy() called right after a stop() is covered by the same guarantee, not an exception to it: the scene teardown stop() fired and did not await is published on the director, and scenes._dispose() waits for it - including a still-pending Scene.unload() - before any dependency is destroyed. Every extension goes down with the application: the disposers Extension.install returned run in reverse installation order, after scene teardown and before any subsystem they might still reach for is released. An extension's lifetime is exactly this application's - there is no uninstall short of it. The returned Promise **never rejects**: teardown failures go to Application.onError and the log, exactly as they did when this was a fire-and-forget chain, and the remaining stages still run. Awaiting it therefore means \"teardown is over\", not \"teardown succeeded\" - which is what a caller reusing the canvas or asserting on released resources needs. Scene teardown is bounded: if scenes._dispose() has not settled within the grace period the engine reports a timeout and releases everything else anyway, rather than leaving the whole application pinned by one scene whose unload() never resolves. A scene that wants to cooperate with this should watch Scene.lifecycleSignal, which is aborted when its teardown begins - including for the incoming scene of a navigation still inside load(), which is aborted and awaited rather than left to finish preparing against subsystems this call has released. Idempotent: every call after the first returns the same Promise as the first and starts no second teardown. Application.state is Destroying while the returned Promise is pending and Destroyed afterwards."
+          "description": "Tear down every owned subsystem (loader, the core systems - input, interaction, audio, jobs, tweens, animations, rendering - the app system registry, backend, scene director, all clocks, all signals) and release event listeners. The application instance is unusable after this call. The page is left as it was found: the active sizing policy is detached, so its observers go and the CSS box it wrote is cleared, and a canvas the engine created itself is removed from the document. A canvas supplied through canvas.element belongs to the caller and stays in place, as does every element around it - no sizing policy ever styles the page itself. Fires the RAF halt synchronously (so no further frame runs after this call returns) and returns a Promise that fulfils once the rest of teardown has run: scenes - including every retained and preloaded scope, and any scene's own async unload() - is fully disposed FIRST, before the Loader, rendering context, audio system, or backend are destroyed, so a scene's teardown code never touches an already-destroyed dependency. This intentionally does not route through the public Application.stop, which fire-and-forgets its own scene-clear - that would race against scenes._dispose()'s own active-scope teardown for ownership of the same scope. destroy() instead halts the frame loop directly and lets scenes._dispose() own scene teardown entirely. destroy() called right after a stop() is covered by the same guarantee, not an exception to it: the scene teardown stop() fired and did not await is published on the director, and scenes._dispose() waits for it - including a still-pending Scene.unload() - before any dependency is destroyed. Every extension goes down with the application: the disposers Extension.install returned run in reverse installation order, after scene teardown and before any subsystem they might still reach for is released. An extension's lifetime is exactly this application's - there is no uninstall short of it. The returned Promise **never rejects**: teardown failures go to Application.onError and the log, exactly as they did when this was a fire-and-forget chain, and the remaining stages still run. Awaiting it therefore means \"teardown is over\", not \"teardown succeeded\" - which is what a caller reusing the canvas or asserting on released resources needs. Scene teardown is bounded: if scenes._dispose() has not settled within the grace period the engine reports a timeout and releases everything else anyway, rather than leaving the whole application pinned by one scene whose unload() never resolves. A scene that wants to cooperate with this should watch Scene.lifecycleSignal, which is aborted when its teardown begins - including for the incoming scene of a navigation still inside load(), which is aborted and awaited rather than left to finish preparing against subsystems this call has released. Idempotent: every call after the first returns the same Promise as the first and starts no second teardown. Application.state is Destroying while the returned Promise is pending and Destroyed afterwards."
         },
         {
           "name": "resize",
@@ -944,6 +944,27 @@
           "description": ""
         },
         {
+          "name": "jobs",
+          "signature": "jobs: JobScheduler",
+          "signatureTokens": [
+            {
+              "text": "jobs",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "JobScheduler",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Frame-budgeted scheduler for generator jobs (world generation, batch pathfinding, anything too heavy for one frame). Ticks in the update phase with a 2 ms default budget; see JobScheduler."
+        },
+        {
           "name": "loader",
           "signature": "loader: Loader",
           "signatureTokens": [
@@ -1133,7 +1154,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "App-level system registry for user/extension systems - Application lifetime, independent of the active scene. The core systems (input, interaction, audio, tweens, animations, rendering) are driven directly by the internal per-frame prepare stage and never occupy this registry, so any order is available; see SystemOrder for common reference points. Scene-scoped systems live on scenes.systems."
+          "description": "App-level system registry for user/extension systems - Application lifetime, independent of the active scene. The core systems (input, interaction, audio, jobs, tweens, animations, rendering) are driven directly by the internal per-frame prepare stage and never occupy this registry, so any order is available; see SystemOrder for common reference points. Scene-scoped systems live on scenes.systems."
         },
         {
           "name": "tweens",

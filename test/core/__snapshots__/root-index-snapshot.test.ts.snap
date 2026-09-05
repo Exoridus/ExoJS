@@ -124,6 +124,8 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "InteractionSystem",
   "Interval",
   "InvalidSceneRegistrationError",
+  "Job",
+  "JobScheduler",
   "Json",
   "JsonAssetType",
   "KeyEvent",

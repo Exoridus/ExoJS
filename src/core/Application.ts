@@ -4,6 +4,7 @@ import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, type LoaderOptions } from '#assets/Loader';
 import { AudioSystem } from '#audio/AudioSystem';
 import { createDefaultCanvas, isRenderSurface, resolveAutoPixelRatio, watchAutoPixelRatio } from '#core/applicationCanvas';
+import { JobScheduler } from '#core/JobScheduler';
 import { SceneDirector } from '#core/scene/SceneDirector';
 import { SceneNavigationAbortedError } from '#core/scene/sceneErrors';
 import {
@@ -430,7 +431,7 @@ const defaultInputSettings: Required<InputApplicationOptions> = {
 
 /**
  * Top-level engine instance. Owns the canvas, render backend, scene-stack
- * controller, the core systems (input, interaction, audio, tweens,
+ * controller, the core systems (input, interaction, audio, jobs, tweens,
  * animations, rendering), the app-level {@link SystemRegistry} for user/extension
  * systems, asset loader, and the per-frame loop.
  *
@@ -493,6 +494,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public readonly random: Random;
   public readonly tweens: TweenSystem = new TweenSystem();
   /**
+   * Frame-budgeted scheduler for generator jobs (world generation, batch
+   * pathfinding, anything too heavy for one frame). Ticks in the `update`
+   * phase with a 2 ms default budget; see {@link JobScheduler}.
+   */
+  public readonly jobs: JobScheduler = new JobScheduler({ order: SystemOrder.CoreJobs });
+  /**
    * Drives frame playback for every {@link AnimatedSprite} that is playing and
    * attached to this application's scene tree. Registration is automatic - see
    * {@link AnimationSystem}.
@@ -501,7 +508,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * App-level system registry for user/extension systems - Application
    * lifetime, independent of the active scene. The core systems (input,
-   * interaction, audio, tweens, animations, rendering) are driven directly by the
+   * interaction, audio, jobs, tweens, animations, rendering) are driven directly by the
    * internal per-frame prepare stage and never occupy this registry, so any
    * `order` is available; see {@link SystemOrder} for common reference
    * points. Scene-scoped systems live on `scenes.systems`.
@@ -840,11 +847,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this.systems._addCoreSystem(this.input, { order: SystemOrder.CoreInput });
       this.systems._addCoreSystem(this.interaction, { order: SystemOrder.CoreInteraction });
       this.systems._addCoreSystem(this._audio, { order: SystemOrder.CoreAudio });
+      this.systems._addCoreSystem(this.jobs, { order: SystemOrder.CoreJobs });
       this.systems._addCoreSystem(this.tweens, { order: SystemOrder.CoreTweens });
       this.systems._addCoreSystem(this.animations, { order: SystemOrder.CoreAnimation });
       this.systems._addCoreSystem(this._rendering, { order: SystemOrder.CoreRendering });
 
-      this._coreSystems = [this.input, this.interaction, this._audio, this.tweens, this.animations, this._rendering];
+      this._coreSystems = [this.input, this.interaction, this._audio, this.jobs, this.tweens, this.animations, this._rendering];
 
       // The last construction step, so `install(app)` sees a complete
       // application - every system and every materialised binding already in
@@ -965,6 +973,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     attempt(() => this.animations.destroy());
     attempt(() => this.tweens.destroy());
+    attempt(() => this.jobs.destroy());
     attempt(() => this._audio.destroy());
 
     attempt(() => {
@@ -1924,7 +1933,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * Tear down every owned subsystem (loader, the core systems - input,
-   * interaction, audio, tweens, animations, rendering - the app system registry, backend,
+   * interaction, audio, jobs, tweens, animations, rendering - the app system registry, backend,
    * scene director, all clocks, all signals) and release event listeners. The
    * application instance is unusable after this call.
    *
@@ -2066,6 +2075,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._rendering.destroy();
     this.animations.destroy();
     this.tweens.destroy();
+    this.jobs.destroy();
     this._audio.destroy();
     this.interaction.destroy();
     this.input.destroy();
