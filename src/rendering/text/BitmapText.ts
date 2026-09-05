@@ -202,6 +202,7 @@ export class BitmapText extends AbstractText {
       lineHeight: style.lineHeight,
       leading: style.leading,
       align: style.align,
+      textTransform: style.textTransform,
     };
   }
 

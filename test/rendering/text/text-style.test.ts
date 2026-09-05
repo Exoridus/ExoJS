@@ -23,6 +23,7 @@ describe('TextStyle constructor defaults', () => {
     expect(style.outlineColor.equals(Color.black)).toBe(true);
     expect(style.outlineWidth).toBe(0);
     expect(style.align).toBe('left');
+    expect(style.textTransform).toBe('none');
     expect(style.lineHeight).toBe(1.2);
     expect(style.leading).toBe(0);
     expect(style.shadowColor.equals(Color.black)).toBe(true);
@@ -44,6 +45,7 @@ describe('TextStyle constructor defaults', () => {
       outlineColor: Color.white,
       outlineWidth: 0.2,
       align: 'center',
+      textTransform: 'uppercase',
       lineHeight: 1.5,
       leading: 4,
       shadowColor: Color.white,
@@ -63,6 +65,7 @@ describe('TextStyle constructor defaults', () => {
     expect(style.outlineColor.equals(Color.white)).toBe(true);
     expect(style.outlineWidth).toBe(0.2);
     expect(style.align).toBe('center');
+    expect(style.textTransform).toBe('uppercase');
     expect(style.lineHeight).toBe(1.5);
     expect(style.leading).toBe(4);
     expect(style.shadowColor.equals(Color.white)).toBe(true);
@@ -264,6 +267,15 @@ describe('setters', () => {
     expect(style.consumeDirty()).toBe('layout');
   });
 
+  test('textTransform: same value is a no-op; different value marks layout-dirty', () => {
+    const style = freshStyle();
+    style.textTransform = 'none';
+    expect(style.consumeDirty()).toBeNull();
+
+    style.textTransform = 'capitalize';
+    expect(style.consumeDirty()).toBe('layout');
+  });
+
   test('lineHeight: same value is a no-op; different value marks layout-dirty', () => {
     const style = freshStyle();
     style.lineHeight = 1.2; // default lineHeight — same value
@@ -396,6 +408,7 @@ describe('copy', () => {
       fontFamily: 'Georgia',
       fontSize: 40,
       align: 'right',
+      textTransform: 'capitalize',
       lineHeight: 1.8,
       leading: 2,
       fillColor: Color.black,
@@ -409,6 +422,7 @@ describe('copy', () => {
     expect(target.fontFamily).toBe('Georgia');
     expect(target.fontSize).toBe(40);
     expect(target.align).toBe('right');
+    expect(target.textTransform).toBe('capitalize');
     expect(target.lineHeight).toBe(1.8);
     expect(target.leading).toBe(2);
     expect(target.fillColor.equals(Color.black)).toBe(true);
@@ -446,6 +460,7 @@ describe('clone', () => {
       fontFamily: 'Georgia',
       fontSize: 40,
       align: 'right',
+      textTransform: 'capitalize',
       fillColor: Color.black,
       gradientColors: [Color.white, Color.black],
     });
@@ -456,6 +471,7 @@ describe('clone', () => {
     expect(cloned.fontFamily).toBe('Georgia');
     expect(cloned.fontSize).toBe(40);
     expect(cloned.align).toBe('right');
+    expect(cloned.textTransform).toBe('capitalize');
     expect(cloned.fillColor.equals(Color.black)).toBe(true);
     expect(cloned.fillColor).not.toBe(source.fillColor);
     expect(cloned.gradientColors).not.toBeNull();

@@ -75,6 +75,7 @@ The visual appearance comes from [`TextStyleOptions`](/ExoJS/en/api/text-style-o
 | `outlineColor` | `Color` | `Color.black` | SDF outline colour |
 | `outlineWidth` | `number` | `0` | Outline width in SDF units (`0`–`0.5`); `0` disables the outline |
 | `align` | [`TextAlignment`](/ExoJS/en/api/text-alignment/) — `'left' \| 'center' \| 'right' \| 'justify'` | `'left'` | Horizontal alignment |
+| `textTransform` | `'none' \| 'uppercase' \| 'lowercase' \| 'capitalize'` | `'none'` | Case mapping applied before layout; the node's `text` is untouched |
 | `lineHeight` | `number` | `1.2` | Line-height multiplier on `fontSize` |
 | `leading` | `number` | `0` | Extra pixel gap between lines |
 | `shadowColor` | `Color` | `Color.black` | Drop-shadow colour |
@@ -113,6 +114,22 @@ Text flow and overflow come from [`LayoutOptions`](/ExoJS/en/api/layout-options/
 Layout options stay reachable as `text.layout`. Unlike `style`, this is a plain options object with no change tracking, and the node holds its own copy of it: assign a new one to re-flow the text — mutating the object you passed in, or the one the getter hands back, changes nothing.
 
 Glyphs are rasterized white into the shared SDF atlas and coloured at draw time, so `fillColor`, `outlineColor`, the shadow, and the gradient are shader work only — changing them never touches the atlas.
+
+### Case without rewriting the string
+
+`textTransform` maps case at layout time, exactly as CSS `text-transform` does. The node's `text` is untouched, so a label reads back the string you assigned and an editable widget keeps a caret that lands where the reader clicked:
+
+```ts
+import { Text } from '@codexo/exojs';
+
+const heading = new Text('level complete', { fontSize: 32, textTransform: 'uppercase' });
+
+heading.text; // 'level complete' — the mapping lives in the layout, not in the string
+```
+
+The mapping runs per grapheme cluster and is Unicode-aware, so a cluster that changes length under it — German `ß` uppercasing to `SS` — still traces back to the character it came from. `'capitalize'` raises the first cluster of each word and leaves the rest of the word alone, and word boundaries come from the platform segmenter rather than from splitting on spaces.
+
+Set [`locale`](#international-text) and both the case mapping and the word boundaries follow it, which is the difference between a Turkish `I` lowercasing to `ı` and to `i`.
 
 ## Multiline text and wrap settings
 

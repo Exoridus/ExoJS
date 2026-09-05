@@ -9,7 +9,7 @@
 import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 import { buildTextPageQuads, layoutText } from '#rendering/text/textLayout';
 import { TextStyle } from '#rendering/text/TextStyle';
-import type { GlyphInfo, GlyphPlacement, GlyphProvider } from '#rendering/text/types';
+import type { GlyphInfo, GlyphPlacement, GlyphProvider, TextTransform } from '#rendering/text/types';
 
 // ---------------------------------------------------------------------------
 // Mock atlas
@@ -1044,5 +1044,117 @@ describe('layoutText grapheme safety', () => {
     const placements = layoutText('日本語のテキスト', style, { maxWidth: 45 }, provider).placements;
 
     expect([...new Set(placements.map(placement => placement.y))].length).toBeGreaterThan(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// textTransform
+// ---------------------------------------------------------------------------
+
+describe('layoutText textTransform', () => {
+  const recordingProvider = (): { provider: GlyphProvider; units: string[] } => {
+    const units: string[] = [];
+
+    return {
+      units,
+      provider: {
+        getGlyph: (char: string, fontSize: number): GlyphInfo => {
+          units.push(char);
+
+          return { x: 0, y: 0, width: 10, height: fontSize, advance: 10, ascent: fontSize, page: 0, uvLeft: 0, uvTop: 0, uvRight: 1, uvBottom: 1 };
+        },
+      },
+    };
+  };
+
+  const transformStyle = (textTransform: TextTransform): TextStyle => new TextStyle({ fontSize: 16, align: 'left', textTransform });
+
+  test('"none" hands the string through untouched', () => {
+    const { provider, units } = recordingProvider();
+
+    layoutText('aB c', transformStyle('none'), {}, provider);
+
+    expect(units.join('')).toBe('aB c');
+  });
+
+  test('"uppercase" raises every cluster', () => {
+    const { provider, units } = recordingProvider();
+
+    layoutText('aB c', transformStyle('uppercase'), {}, provider);
+
+    expect(units.join('')).toBe('AB C');
+  });
+
+  test('"lowercase" lowers every cluster', () => {
+    const { provider, units } = recordingProvider();
+
+    layoutText('aB C', transformStyle('lowercase'), {}, provider);
+
+    expect(units.join('')).toBe('ab c');
+  });
+
+  test('"capitalize" raises the first cluster of each word and leaves the rest alone', () => {
+    const { provider, units } = recordingProvider();
+
+    layoutText('hello wIDE world', transformStyle('capitalize'), {}, provider);
+
+    expect(units.join('')).toBe('Hello WIDE World');
+  });
+
+  test('the transform never changes the string the caller assigned', () => {
+    const { provider } = recordingProvider();
+    const text = 'shout';
+
+    layoutText(text, transformStyle('uppercase'), {}, provider);
+
+    expect(text).toBe('shout');
+  });
+
+  test('a cluster that grows under the mapping still traces back to its source character', () => {
+    const { provider, units } = recordingProvider();
+
+    // The German sharp s uppercases to two letters, so every source offset
+    // after it would drift without the transform's own source map.
+    const { placements } = layoutText('aßb', transformStyle('uppercase'), {}, provider);
+
+    expect(units.join('')).toBe('ASSB');
+    // One source character became two glyphs, so the pair covers [1, 2)
+    // between them and only the last of them carries the range - the same
+    // convention a glyph that stands for nothing already follows.
+    expect(placements.map(placement => [placement.sourceStart, placement.sourceEnd])).toEqual([
+      [0, 1],
+      [1, 1],
+      [1, 2],
+      [2, 3],
+    ]);
+  });
+
+  test('a locale-sensitive mapping follows the layout locale', () => {
+    const { provider, units } = recordingProvider();
+
+    // Turkish maps a capital I to a dotless lowercase one; the default mapping
+    // produces the dotted 'i'.
+    layoutText('I', transformStyle('lowercase'), { locale: 'tr' }, provider);
+
+    expect(units.join('')).toBe('ı');
+  });
+
+  test('a transform composes with whitespace collapsing without losing the source mapping', () => {
+    const { provider } = recordingProvider();
+
+    const { placements } = layoutText('a  ß', transformStyle('uppercase'), { whiteSpace: 'normal' }, provider);
+
+    // 'A', the collapsed blank, then the two letters the sharp s became.
+    expect(placements.map(placement => placement.sourceStart)).toEqual([0, 1, 3, 3]);
+  });
+
+  test('a transform re-measures the wrap, so a wider mapping breaks earlier', () => {
+    const { provider } = recordingProvider();
+
+    // advance 10, maxWidth 30: the sharp s doubles the first word's width and
+    // pushes the second word onto its own line.
+    const wrapped = layoutText('aß cd', transformStyle('uppercase'), { maxWidth: 30 }, provider);
+
+    expect(wrapped.lines).toHaveLength(2);
   });
 });

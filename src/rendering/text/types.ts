@@ -2,6 +2,12 @@
 export type TextAlignment = 'left' | 'center' | 'right' | 'justify';
 
 /**
+ * Case mapping applied to the string before it is laid out. Mirrors the CSS
+ * `text-transform` values of the same names.
+ */
+export type TextTransform = 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+
+/**
  * Minimal interface consumed by {@link layoutText}.
  * Both {@link TextStyle} and the BMFont adapter satisfy this structurally.
  */
@@ -10,6 +16,7 @@ export interface TextLayoutStyle {
   readonly lineHeight: number;
   readonly leading: number;
   readonly align: TextAlignment;
+  readonly textTransform: TextTransform;
 }
 
 /**

@@ -1,10 +1,10 @@
 import { assert } from '#core/dev';
 
 import type { LayoutOptions } from './LayoutOptions';
-import { graphemes, graphemeStarts, isTrivialText, textRuns } from './segmentation';
+import { graphemes, graphemeStarts, isTrivialText, textRuns, wordSegments } from './segmentation';
 import type { LineShaper } from './shaping';
 import { resolveShaping } from './shaping';
-import type { GlyphInfo, GlyphPlacement, GlyphProvider, TextLayoutResult, TextLayoutStyle, TextLineMetrics, TextPageQuads } from './types';
+import type { GlyphInfo, GlyphPlacement, GlyphProvider, TextLayoutResult, TextLayoutStyle, TextLineMetrics, TextPageQuads, TextTransform } from './types';
 
 interface LinePlacement {
   placements: Array<{ info: GlyphInfo; x: number; y: number; cluster: string; sourceStart: number; sourceEnd: number }>;
@@ -58,6 +58,10 @@ export const emptyTextLayout = (): TextLayoutResult => ({
  * overflow (`clip` / `ellipsis`), right-to-left flow, and optional kerning (if
  * the provider implements `getKerning`).
  *
+ * `textTransform` maps the string's case before anything else runs, per
+ * grapheme cluster and under `locale`, and the result is traced back to the
+ * caller's string so a caret still lands on the character it was aimed at.
+ *
  * The unit of layout is the grapheme cluster, not the code point: a combining
  * sequence, a ZWJ emoji and a regional-indicator flag are each placed as one
  * glyph and are never split by wrapping or by the ellipsis. `locale` selects
@@ -80,7 +84,7 @@ export const emptyTextLayout = (): TextLayoutResult => ({
 export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutOptions, provider: GlyphProvider, shaper?: LineShaper): TextLayoutResult => {
   if (text.length === 0) return emptyTextLayout();
 
-  const { fontSize, lineHeight, leading, align } = style;
+  const { fontSize, lineHeight, leading, align, textTransform } = style;
   const computedLineHeight = fontSize * lineHeight + leading;
   const letterSpacing = layout.letterSpacing ?? 0;
   const maxWidth = layout.maxWidth;
@@ -95,12 +99,16 @@ export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutO
   // so adding it between placements again would double it.
   const glyphSpacing = shaped ? 0 : letterSpacing;
 
-  // ── Whitespace preprocessing ──────────────────────────────────────────────
+  // ── Preprocessing ─────────────────────────────────────────────────────────
   //
-  // Collapsing blanks moves every character after them, so the pass records
-  // where each surviving unit came from. Without that a caret could not be
-  // mapped onto a laid-out glyph at all.
-  const { text: preprocessed, sourceMap } = _applyWhiteSpace(text, whiteSpace);
+  // Both passes move characters - a case mapping can turn one cluster into two
+  // units, collapsing blanks removes them - so each records where every
+  // surviving unit came from. Without that record a caret could not be mapped
+  // onto a laid-out glyph at all. The two maps compose into one because the
+  // whitespace pass indexes the transformed string, not the caller's.
+  const cased = _applyTextTransform(text, textTransform, locale);
+  const { text: preprocessed, sourceMap: whiteSpaceMap } = _applyWhiteSpace(cased.text, whiteSpace);
+  const sourceMap = _composeSourceMaps(whiteSpaceMap, cased.sourceMap);
   const toSource = (index: number): number => (sourceMap === null ? Math.min(index, text.length) : sourceMap[Math.min(index, sourceMap.length - 1)]!);
 
   // Split into hard lines then optionally word-wrap each.
@@ -664,6 +672,92 @@ interface PreprocessedText {
    */
   sourceMap: Int32Array | null;
 }
+
+/**
+ * Fold two source maps into the one the layout reads.
+ *
+ * `outer` indexes the string `inner` produced, so a lookup has to go through
+ * both; folding them once is cheaper than two lookups per glyph and keeps the
+ * common case - neither pass changed anything - allocating nothing.
+ */
+const _composeSourceMaps = (outer: Int32Array | null, inner: Int32Array | null): Int32Array | null => {
+  if (outer === null) return inner;
+  if (inner === null) return outer;
+
+  const composed = new Int32Array(outer.length);
+  const last = inner.length - 1;
+
+  for (let i = 0; i < outer.length; i++) {
+    composed[i] = inner[Math.min(outer[i]!, last)]!;
+  }
+
+  return composed;
+};
+
+/** Uppercase `text` under `locale`, or locale-independently when there is none. */
+const _upper = (text: string, locale: string | undefined): string => (locale === undefined ? text.toUpperCase() : text.toLocaleUpperCase(locale));
+
+/**
+ * Apply the `textTransform` case mapping, recording where each produced unit
+ * came from.
+ *
+ * The mapping runs per grapheme cluster and can change a cluster's length -
+ * German sharp s uppercases to two letters, a final sigma lowercases
+ * differently from a medial one - so a caret mapped onto the result without
+ * the record would drift by the difference. A transform that changes nothing
+ * returns the input and no map, which is the whole cost of the default.
+ */
+const _applyTextTransform = (text: string, transform: TextTransform, locale: string | undefined): PreprocessedText => {
+  if (transform === 'none' || text.length === 0) return { text, sourceMap: null };
+
+  const starts = graphemeStarts(text, locale);
+  // Only the cluster that opens a word is touched by `capitalize`, and word
+  // boundaries are the segmenter's business, not the case mapper's.
+  const wordStarts = transform === 'capitalize' ? _wordStartOffsets(text, locale) : null;
+
+  let out = '';
+  let changed = false;
+  const map: number[] = [];
+
+  for (let i = 0; i < starts.length; i++) {
+    // In-bounds: i < starts.length.
+    const from = starts[i]!;
+    const to = starts[i + 1] ?? text.length;
+    const cluster = text.slice(from, to);
+    let mapped: string;
+
+    if (wordStarts !== null) {
+      mapped = wordStarts.has(from) ? _upper(cluster, locale) : cluster;
+    } else if (transform === 'uppercase') {
+      mapped = _upper(cluster, locale);
+    } else {
+      mapped = locale === undefined ? cluster.toLowerCase() : cluster.toLocaleLowerCase(locale);
+    }
+
+    if (mapped !== cluster) changed = true;
+
+    for (let k = 0; k < mapped.length; k++) map.push(from);
+
+    out += mapped;
+  }
+
+  if (!changed) return { text, sourceMap: null };
+
+  map.push(text.length);
+
+  return { text: out, sourceMap: Int32Array.from(map) };
+};
+
+/** Offsets at which a word-like segment begins - the clusters `capitalize` raises. */
+const _wordStartOffsets = (text: string, locale: string | undefined): Set<number> => {
+  const offsets = new Set<number>();
+
+  for (const segment of wordSegments(text, locale)) {
+    if (segment.wordLike) offsets.add(segment.start);
+  }
+
+  return offsets;
+};
 
 /** Whether the `whiteSpace` policy would change `text` at all. */
 const _needsWhiteSpaceRewrite = (text: string, collapseBreaks: boolean): boolean => {

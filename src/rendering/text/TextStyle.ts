@@ -1,7 +1,7 @@
 import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
 
-import type { TextAlignment } from './types';
+import type { TextAlignment, TextTransform } from './types';
 
 export type GradientAxis = 'vertical' | 'horizontal';
 
@@ -86,6 +86,19 @@ export interface TextStyleOptions {
   /** Outline width in SDF units (0..0.5). 0 disables the outline. */
   outlineWidth?: number;
   align?: TextAlignment;
+  /**
+   * Case mapping applied before layout. Defaults to `'none'`.
+   *
+   * The mapping is Unicode-aware and never touches the node's `text`: reading
+   * it back gives the string that was assigned, so a transformed label stays
+   * editable and a caret still lands where the reader clicked.
+   *
+   * `'capitalize'` uppercases the first grapheme cluster of each word and
+   * leaves the rest of the word alone, matching CSS. Word boundaries and the
+   * case mapping both follow `locale` when {@link LayoutOptions.locale} sets
+   * one.
+   */
+  textTransform?: TextTransform;
   lineHeight?: number;
   /** Extra pixel gap between lines, added on top of `lineHeight`. */
   leading?: number;
@@ -143,6 +156,7 @@ export class TextStyle {
   private _outlineColor: Color;
   private _outlineWidth: number;
   private _align: TextAlignment;
+  private _textTransform: TextTransform;
   private _lineHeight: number;
   private _leading: number;
 
@@ -169,6 +183,7 @@ export class TextStyle {
     this._outlineColor = options.outlineColor ? options.outlineColor.clone() : Color.black.clone();
     this._outlineWidth = options.outlineWidth ?? 0;
     this._align = options.align ?? 'left';
+    this._textTransform = options.textTransform ?? 'none';
     this._lineHeight = options.lineHeight ?? 1.2;
     this._leading = options.leading ?? 0;
 
@@ -260,6 +275,20 @@ export class TextStyle {
   public set align(v: TextAlignment) {
     if (this._align === v) return;
     this._align = v;
+    this._markDirty('layout');
+  }
+
+  /**
+   * Case mapping applied before layout. Changing it re-flows the text; the
+   * node's `text` is untouched.
+   */
+  public get textTransform(): TextTransform {
+    return this._textTransform;
+  }
+
+  public set textTransform(v: TextTransform) {
+    if (this._textTransform === v) return;
+    this._textTransform = v;
     this._markDirty('layout');
   }
 
@@ -425,6 +454,7 @@ export class TextStyle {
       this._outlineColor = style._outlineColor.clone();
       this._outlineWidth = style._outlineWidth;
       this._align = style._align;
+      this._textTransform = style._textTransform;
       this._lineHeight = style._lineHeight;
       this._leading = style._leading;
       this._shadowColor = style._shadowColor.clone();
@@ -450,6 +480,7 @@ export class TextStyle {
     s._outlineColor = this._outlineColor.clone();
     s._outlineWidth = this._outlineWidth;
     s._align = this._align;
+    s._textTransform = this._textTransform;
     s._lineHeight = this._lineHeight;
     s._leading = this._leading;
     s._shadowColor = this._shadowColor.clone();

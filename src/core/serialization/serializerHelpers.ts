@@ -2,7 +2,7 @@ import { Color } from '#core/Color';
 import type { LayoutOptions } from '#rendering/text/LayoutOptions';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 
-import { FONT_WEIGHTS, readBoolean, readEnum, readNumber, readString, TEXT_ALIGNMENTS } from './read';
+import { FONT_WEIGHTS, readBoolean, readEnum, readNumber, readString, TEXT_ALIGNMENTS, TEXT_TRANSFORMS } from './read';
 
 // ── Options bags ───────────────────────────────────────────────────────────────
 
@@ -46,6 +46,7 @@ export const serializeStyle = (style: {
   outlineColor: Color;
   outlineWidth: number;
   align: string;
+  textTransform: string;
   lineHeight: number;
   leading: number;
   shadowColor: Color;
@@ -66,6 +67,7 @@ export const serializeStyle = (style: {
   if (!colorEquals(style.outlineColor, 0, 0, 0, 1)) out.outlineColor = colorToArray(style.outlineColor);
   if (style.outlineWidth !== 0) out.outlineWidth = style.outlineWidth;
   if (style.align !== 'left') out.align = style.align;
+  if (style.textTransform !== 'none') out.textTransform = style.textTransform;
   if (style.lineHeight !== 1.2) out.lineHeight = style.lineHeight;
   if (style.leading !== 0) out.leading = style.leading;
   if (!colorEquals(style.shadowColor, 0, 0, 0, 1)) out.shadowColor = colorToArray(style.shadowColor);
@@ -140,6 +142,9 @@ export const deserializeStyleOptions = (data: unknown): TextStyleOptions | undef
 
   const align = readEnum(source, 'align', TEXT_ALIGNMENTS);
   if (align !== undefined) options.align = align;
+
+  const textTransform = readEnum(source, 'textTransform', TEXT_TRANSFORMS);
+  if (textTransform !== undefined) options.textTransform = textTransform;
 
   if (typeof source.lineHeight === 'number') options.lineHeight = source.lineHeight;
   if (typeof source.leading === 'number') options.leading = source.leading;

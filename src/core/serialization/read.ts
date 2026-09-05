@@ -1,5 +1,5 @@
 import type { FontWeight } from '#rendering/text/TextStyle';
-import type { TextAlignment } from '#rendering/text/types';
+import type { TextAlignment, TextTransform } from '#rendering/text/types';
 import type { RepeatFit, RepeatMode } from '#rendering/texture/repeat';
 
 import type { SerializedNode } from './types';
@@ -101,6 +101,9 @@ export const FONT_WEIGHTS = ['normal', 'bold', '100', '200', '300', '400', '500'
 
 /** Allowed {@link TextAlignment} values for {@link readEnum}. */
 export const TEXT_ALIGNMENTS = ['left', 'center', 'right', 'justify'] as const satisfies readonly TextAlignment[];
+
+/** Allowed {@link TextTransform} values for {@link readEnum}. */
+export const TEXT_TRANSFORMS = ['none', 'uppercase', 'lowercase', 'capitalize'] as const satisfies readonly TextTransform[];
 
 /** Allowed {@link RepeatMode} values for {@link readEnum}. */
 export const REPEAT_MODES = ['stretch', 'repeat', 'mirror-repeat'] as const satisfies readonly RepeatMode[];
