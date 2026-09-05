@@ -1,5 +1,5 @@
 import { describePhysicsScene, rayForStep } from '../src/physics/adapters/scene';
-import { PHYSICS_ARCHETYPES, seedFor } from '../src/physics/archetypes';
+import { PHYSICS_ARCHETYPES, seedFor, warmupStepsFor, warmupStepsForArchetype } from '../src/physics/archetypes';
 import type { PhysicsArchetypeId, PhysicsArchetypeSpec } from '../src/physics/PhysicsAdapter';
 
 const byId = Object.fromEntries(PHYSICS_ARCHETYPES.map(archetype => [archetype.id, archetype])) as Record<PhysicsArchetypeId, PhysicsArchetypeSpec>;
@@ -119,6 +119,101 @@ describe('joints', () => {
       expect(joint.bodyA).not.toBe(joint.bodyB);
       expect(scene.bodies[joint.bodyA]).toBeDefined();
       expect(scene.bodies[joint.bodyB]).toBeDefined();
+    }
+  });
+});
+
+describe('settling-pile', () => {
+  test('simulates the many-dynamic scene unchanged except for its dynamic material', () => {
+    const settling = byId['settling-pile'];
+    const base = byId['many-dynamic'];
+
+    expect(settling.scene).toBe(base.scene);
+    expect(settling.gravity).toEqual(base.gravity);
+    expect(settling.perturbFraction).toBe(base.perturbFraction);
+    expect(settling.bodyCounts).toEqual(base.bodyCounts);
+    expect(settling.dynamicMaterial).not.toEqual(base.dynamicMaterial);
+  });
+
+  test('gives its dynamic bodies nonzero friction and zero restitution, so the pile can come to rest', () => {
+    expect(byId['settling-pile'].dynamicMaterial).toEqual({ friction: 0.5, restitution: 0 });
+  });
+
+  test('builds the byte-identical layout its base archetype does, differing only in material', () => {
+    const settlingBodies = sceneFor('settling-pile', 200).bodies;
+    const baseBodies = sceneFor('many-dynamic', 200).bodies;
+
+    expect(settlingBodies).toHaveLength(baseBodies.length);
+
+    for (const [index, body] of settlingBodies.entries()) {
+      const baseBody = baseBodies[index]!;
+
+      expect({ ...body, friction: undefined, restitution: undefined }).toEqual({ ...baseBody, friction: undefined, restitution: undefined });
+    }
+  });
+
+  test('leaves many-dynamic itself frictionless and bouncy', () => {
+    const bodies = sceneFor('many-dynamic', 200).bodies;
+    const dynamicBodies = bodies.filter(body => body.type === 'dynamic');
+
+    expect(dynamicBodies.length).toBeGreaterThan(0);
+
+    for (const body of dynamicBodies) {
+      expect(body.friction).toBe(0);
+      expect(body.restitution).toBe(0.4);
+    }
+  });
+
+  test('applies the override to every dynamic body of the settling pile', () => {
+    const dynamicBodies = sceneFor('settling-pile', 200).bodies.filter(body => body.type === 'dynamic');
+
+    expect(dynamicBodies.length).toBeGreaterThan(0);
+
+    for (const body of dynamicBodies) {
+      expect(body.friction).toBe(0.5);
+      expect(body.restitution).toBe(0);
+    }
+  });
+
+  test('names a warmup override for every one of its body counts, each larger than the shared schedule', () => {
+    const settling = byId['settling-pile'];
+
+    expect(settling.warmupStepsOverride).toBeDefined();
+
+    for (const bodyCount of settling.bodyCounts) {
+      expect(settling.warmupStepsOverride![bodyCount]).toBeGreaterThan(warmupStepsFor(bodyCount));
+    }
+  });
+
+  test('warmupStepsForArchetype resolves the override for the settling pile', () => {
+    const settling = byId['settling-pile'];
+
+    for (const bodyCount of settling.bodyCounts) {
+      expect(warmupStepsForArchetype(settling, bodyCount)).toBe(settling.warmupStepsOverride![bodyCount]);
+    }
+  });
+});
+
+describe('warmupStepsForArchetype', () => {
+  test('falls back to the shared schedule for every archetype that names no override', () => {
+    for (const archetype of PHYSICS_ARCHETYPES) {
+      if (archetype.warmupStepsOverride !== undefined) continue;
+
+      for (const bodyCount of archetype.bodyCounts) {
+        expect(warmupStepsForArchetype(archetype, bodyCount)).toBe(warmupStepsFor(bodyCount));
+      }
+    }
+  });
+
+  test('leaves every pre-existing archetype on the shared schedule, unaffected by the settling-pile override', () => {
+    for (const id of ['box-stack', 'many-dynamic', 'mixed-static-dynamic', 'raycast', 'body-churn', 'joints'] as const) {
+      const archetype = byId[id];
+
+      expect(archetype.warmupStepsOverride).toBeUndefined();
+
+      for (const bodyCount of archetype.bodyCounts) {
+        expect(warmupStepsForArchetype(archetype, bodyCount)).toBe(warmupStepsFor(bodyCount));
+      }
     }
   });
 });

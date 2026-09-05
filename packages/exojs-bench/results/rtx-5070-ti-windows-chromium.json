@@ -1,0 +1,1533 @@
+{
+  "schemaVersion": 1,
+  "profile": {
+    "slug": "rtx-5070-ti-windows-chromium",
+    "gpu": "rtx-5070-ti",
+    "os": "windows",
+    "browser": "chromium",
+    "engineVersion": "0.17.0",
+    "measuredAt": "2026-09-05T19:26:09.517Z"
+  },
+  "rendering": {
+    "provenance": [
+      {
+        "backend": "webgl2",
+        "adapter": "ANGLE (NVIDIA, NVIDIA GeForce RTX 5070 Ti (0x00002C05) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "flags": [
+          "--force-device-scale-factor=1"
+        ],
+        "headless": true,
+        "software": false,
+        "engineVersion": "0.17.0",
+        "timestamp": "2026-09-05T17:29:12.330Z"
+      },
+      {
+        "backend": "webgpu",
+        "adapter": "nvidia blackwell",
+        "flags": [
+          "--force-device-scale-factor=1",
+          "--enable-unsafe-webgpu"
+        ],
+        "headless": true,
+        "software": false,
+        "slotTier": 16,
+        "engineVersion": "0.17.0",
+        "timestamp": "2026-09-05T17:42:54.205Z"
+      }
+    ],
+    "libraries": [
+      {
+        "name": "pixi.js",
+        "version": "8.19.0"
+      },
+      {
+        "name": "phaser",
+        "version": "4.2.1"
+      },
+      {
+        "name": "excalibur",
+        "version": "0.32.0"
+      }
+    ],
+    "backends": [
+      {
+        "backend": "webgl2",
+        "headlineCount": 1000,
+        "competitors": [
+          "excalibur",
+          "pixi"
+        ],
+        "sections": [
+          {
+            "title": "Node scaling",
+            "rows": [
+              {
+                "archetype": "static-heavy",
+                "category": "Node scaling",
+                "count": 1000,
+                "cells": [
+                  {
+                    "competitor": "excalibur",
+                    "referenceMs": 0.05500000715255737,
+                    "competitorMs": 2.645000010728836,
+                    "verdict": {
+                      "side": "exojs",
+                      "ratio": 0.0207939534704962,
+                      "factor": 48.09090303192533,
+                      "label": "ExoJS leads clearly (48.09x)",
+                      "structural": true
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/0 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side"
+                  },
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.05500000715255737,
+                    "competitorMs": 0.06000000238418579,
+                    "verdict": {
+                      "side": "neither",
+                      "ratio": 0.9166667494508922,
+                      "factor": 1,
+                      "label": "level",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/0 vs 1/0/0, none of them large enough to account for the gap); the difference is CPU-side"
+                  }
+                ]
+              },
+              {
+                "archetype": "dynamic-heavy",
+                "category": "Node scaling",
+                "count": 1000,
+                "cells": [
+                  {
+                    "competitor": "excalibur",
+                    "referenceMs": 0.12999999523162842,
+                    "competitorMs": 2.832500010728836,
+                    "verdict": {
+                      "side": "exojs",
+                      "ratio": 0.045895849863802074,
+                      "factor": 21.788462420187084,
+                      "label": "ExoJS leads clearly (21.79x)",
+                      "structural": true
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/1 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side"
+                  },
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.12999999523162842,
+                    "competitorMs": 0.15000000596046448,
+                    "verdict": {
+                      "side": "neither",
+                      "ratio": 0.8666666004392862,
+                      "factor": 1,
+                      "label": "level",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/1 vs 1/0/1, none of them large enough to account for the gap); the difference is CPU-side"
+                  }
+                ]
+              },
+              {
+                "archetype": "deep-hierarchy",
+                "category": "Node scaling",
+                "count": 1000,
+                "cells": [
+                  {
+                    "competitor": "excalibur",
+                    "referenceMs": 0.07499998807907104,
+                    "competitorMs": 3.5625,
+                    "verdict": {
+                      "side": "exojs",
+                      "ratio": 0.021052628232721696,
+                      "factor": 47.50000754992287,
+                      "label": "ExoJS leads clearly (47.50x)",
+                      "structural": true
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/1 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side"
+                  },
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.07499998807907104,
+                    "competitorMs": 0.08749999105930328,
+                    "verdict": {
+                      "side": "neither",
+                      "ratio": 0.8571428084859993,
+                      "factor": 1,
+                      "label": "level",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/1 vs 1/0/1, none of them large enough to account for the gap); the difference is CPU-side"
+                  }
+                ]
+              },
+              {
+                "archetype": "lifecycle-churn",
+                "category": "Node scaling",
+                "count": 1000,
+                "cells": [
+                  {
+                    "competitor": "excalibur",
+                    "referenceMs": 0.7999999821186066,
+                    "competitorMs": 8.222499996423721,
+                    "verdict": {
+                      "side": "exojs",
+                      "ratio": 0.09729400820511487,
+                      "factor": 10.278125225263652,
+                      "label": "ExoJS leads clearly (10.28x)",
+                      "structural": true
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/1 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side"
+                  },
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.7999999821186066,
+                    "competitorMs": 0.3824999928474426,
+                    "verdict": {
+                      "side": "competitor",
+                      "ratio": 2.091503260335173,
+                      "factor": 2.091503260335173,
+                      "label": "competitor leads (2.09x)",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/1 vs 1/0/2, none of them large enough to account for the gap); the difference is CPU-side"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Fill and GPU state",
+            "rows": [
+              {
+                "archetype": "overdraw",
+                "category": "Fill and GPU state",
+                "count": 1000,
+                "cells": [
+                  {
+                    "competitor": "excalibur",
+                    "referenceMs": 0.034999996423721313,
+                    "competitorMs": 3.0725000202655792,
+                    "verdict": {
+                      "side": "exojs",
+                      "ratio": 0.011391373862609772,
+                      "factor": 87.78572383462264,
+                      "label": "ExoJS leads clearly (87.79x)",
+                      "structural": true
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/0 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side"
+                  },
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.034999996423721313,
+                    "competitorMs": 0.034999996423721313,
+                    "verdict": {
+                      "side": "neither",
+                      "ratio": 1,
+                      "factor": 1,
+                      "label": "level",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/0 vs 1/0/0, none of them large enough to account for the gap); the difference is CPU-side"
+                  }
+                ]
+              },
+              {
+                "archetype": "batch-breaking",
+                "category": "Fill and GPU state",
+                "count": 1000,
+                "cells": [
+                  {
+                    "competitor": "excalibur",
+                    "referenceMs": 0.26999998092651367,
+                    "competitorMs": 3.9525000005960464,
+                    "verdict": {
+                      "side": "exojs",
+                      "ratio": 0.06831119060994233,
+                      "factor": 14.638889925224863,
+                      "label": "ExoJS leads clearly (14.64x)",
+                      "structural": true
+                    },
+                    "mechanism": "ExoJS issues fewer buffer uploads (0 vs 63 per frame)"
+                  },
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.26999998092651367,
+                    "competitorMs": 0.20500001311302185,
+                    "verdict": {
+                      "side": "competitor",
+                      "ratio": 1.3170729934424719,
+                      "factor": 1.3170729934424719,
+                      "label": "competitor leads (1.32x)",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 63/1000/0 vs 63/1000/0, none of them large enough to account for the gap); the difference is CPU-side"
+                  }
+                ]
+              },
+              {
+                "archetype": "mixed-blend",
+                "category": "Fill and GPU state",
+                "count": 1000,
+                "cells": [
+                  {
+                    "competitor": "excalibur",
+                    "referenceMs": 0.07499998807907104,
+                    "competitorMs": 2.3475000113248825,
+                    "verdict": {
+                      "side": "exojs",
+                      "ratio": 0.03194887655687061,
+                      "factor": 31.30000512600027,
+                      "label": "ExoJS leads clearly (31.30x)",
+                      "structural": true
+                    },
+                    "mechanism": "competitor issues fewer draw calls (26 vs 1 per frame)"
+                  },
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.07499998807907104,
+                    "competitorMs": 0.06499999761581421,
+                    "verdict": {
+                      "side": "neither",
+                      "ratio": 1.1538460127700663,
+                      "factor": 1,
+                      "label": "level",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 26/0/0 vs 32/0/0, none of them large enough to account for the gap); the difference is CPU-side"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Material variety",
+            "rows": [
+              {
+                "archetype": "batch-breaking-atlased",
+                "category": "Material variety",
+                "count": 1000,
+                "cells": [
+                  {
+                    "competitor": "excalibur",
+                    "referenceMs": 0.025000005960464478,
+                    "competitorMs": 2.1525000035762787,
+                    "verdict": {
+                      "side": "exojs",
+                      "ratio": 0.011614404608096693,
+                      "factor": 86.09997961521634,
+                      "label": "ExoJS leads clearly (86.10x)",
+                      "structural": true
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/0 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side"
+                  },
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.025000005960464478,
+                    "competitorMs": 0.050000011920928955,
+                    "verdict": {
+                      "side": "exojs",
+                      "ratio": 0.5,
+                      "factor": 2,
+                      "label": "ExoJS leads (2.00x)",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/0 vs 1/0/0, none of them large enough to account for the gap); the difference is CPU-side"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Text",
+            "rows": [
+              {
+                "archetype": "text-static",
+                "category": "Text",
+                "count": 1000,
+                "cells": [
+                  {
+                    "competitor": "excalibur",
+                    "referenceMs": 0.034999996423721313,
+                    "competitorMs": 11.712499991059303,
+                    "verdict": {
+                      "side": "exojs",
+                      "ratio": 0.002988260102492076,
+                      "factor": 334.6428910810155,
+                      "label": "ExoJS leads clearly (334.64x)",
+                      "structural": true
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/0 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side"
+                  },
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.034999996423721313,
+                    "competitorMs": 0.030000001192092896,
+                    "verdict": {
+                      "side": "neither",
+                      "ratio": 1.1666665010982156,
+                      "factor": 1,
+                      "label": "level",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/0 vs 1/0/0, none of them large enough to account for the gap); the difference is CPU-side"
+                  }
+                ]
+              },
+              {
+                "archetype": "text-dynamic",
+                "category": "Text",
+                "count": 1000,
+                "cells": [
+                  {
+                    "competitor": "excalibur",
+                    "referenceMs": 2.8350000083446503,
+                    "competitorMs": 11.947499990463257,
+                    "verdict": {
+                      "side": "exojs",
+                      "ratio": 0.2372881364810719,
+                      "factor": 4.21428569851729,
+                      "label": "ExoJS leads (4.21x)",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/3 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side"
+                  },
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 2.8350000083446503,
+                    "competitorMs": 6.520000010728836,
+                    "verdict": {
+                      "side": "exojs",
+                      "ratio": 0.43481595148459834,
+                      "factor": 2.299823630171997,
+                      "label": "ExoJS leads (2.30x)",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/3 vs 1/0/2, none of them large enough to account for the gap); the difference is CPU-side"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Render targets",
+            "rows": [
+              {
+                "archetype": "filter-chain-1",
+                "category": "Render targets",
+                "count": 1000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.1524999886751175,
+                    "competitorMs": 0.1550000011920929,
+                    "verdict": {
+                      "side": "neither",
+                      "ratio": 0.9838708871113032,
+                      "factor": 1,
+                      "label": "level",
+                      "structural": false
+                    },
+                    "mechanism": "competitor issues fewer texture binds (9 vs 3 per frame)"
+                  }
+                ]
+              },
+              {
+                "archetype": "filter-chain-2",
+                "category": "Render targets",
+                "count": 1000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.16499999165534973,
+                    "competitorMs": 0.13999998569488525,
+                    "verdict": {
+                      "side": "neither",
+                      "ratio": 1.1785714893925008,
+                      "factor": 1,
+                      "label": "level",
+                      "structural": false
+                    },
+                    "mechanism": "competitor issues fewer texture binds (11 vs 3 per frame)"
+                  }
+                ]
+              },
+              {
+                "archetype": "filter-chain-4",
+                "category": "Render targets",
+                "count": 1000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.10749998688697815,
+                    "competitorMs": 0.10250000655651093,
+                    "verdict": {
+                      "side": "neither",
+                      "ratio": 1.0487802927867191,
+                      "factor": 1,
+                      "label": "level",
+                      "structural": false
+                    },
+                    "mechanism": "competitor issues fewer texture binds (15 vs 7 per frame)"
+                  }
+                ]
+              },
+              {
+                "archetype": "composite",
+                "category": "Render targets",
+                "count": 1000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.1550000011920929,
+                    "competitorMs": 0.15000000596046448,
+                    "verdict": {
+                      "side": "neither",
+                      "ratio": 1.0333333002196432,
+                      "factor": 1,
+                      "label": "level",
+                      "structural": false
+                    },
+                    "mechanism": "ExoJS issues fewer draw calls (5 vs 8 per frame)"
+                  }
+                ]
+              },
+              {
+                "archetype": "mask-clip",
+                "category": "Render targets",
+                "count": 1000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.38499999046325684,
+                    "competitorMs": 0.050000011920928955,
+                    "verdict": {
+                      "side": "competitor",
+                      "ratio": 7.699997973442561,
+                      "factor": 7.699997973442561,
+                      "label": "competitor leads clearly (7.70x)",
+                      "structural": true
+                    },
+                    "mechanism": "ExoJS issues fewer draw calls (4 vs 10 per frame)"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Camera and world",
+            "rows": [
+              {
+                "archetype": "scrolling-world",
+                "category": "Camera and world",
+                "count": 1000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.04749999940395355,
+                    "competitorMs": 0.034999996423721313,
+                    "verdict": {
+                      "side": "competitor",
+                      "ratio": 1.3571429787850018,
+                      "factor": 1.3571429787850018,
+                      "label": "competitor leads (1.36x)",
+                      "structural": false
+                    },
+                    "mechanism": "competitor issues fewer draw calls (120 vs 1 per frame)"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "excluded": [
+          {
+            "archetype": "split-screen",
+            "reason": "ExoJS-internal structural probe: a competitor arm renders a different scene here, so a wall-clock comparison would not be like for like"
+          },
+          {
+            "archetype": "mixed-material",
+            "reason": "ExoJS-internal structural probe: a competitor arm renders a different scene here, so a wall-clock comparison would not be like for like"
+          },
+          {
+            "archetype": "instanced-batch",
+            "reason": "ExoJS-internal structural probe: a competitor arm renders a different scene here, so a wall-clock comparison would not be like for like"
+          },
+          {
+            "archetype": "mixed-sprite-mesh-static",
+            "reason": "ExoJS-internal structural probe: a competitor arm renders a different scene here, so a wall-clock comparison would not be like for like"
+          },
+          {
+            "archetype": "mixed-sprite-mesh-array",
+            "reason": "ExoJS-internal structural probe: a competitor arm renders a different scene here, so a wall-clock comparison would not be like for like"
+          },
+          {
+            "archetype": "mixed-material-atlased",
+            "reason": "ExoJS-internal structural probe: a competitor arm renders a different scene here, so a wall-clock comparison would not be like for like"
+          }
+        ],
+        "webgl1": [
+          {
+            "archetype": "static-heavy",
+            "category": "Node scaling",
+            "count": 1000,
+            "cells": [
+              {
+                "competitor": "phaser",
+                "referenceMs": 0.05500000715255737,
+                "competitorMs": 0.36500000953674316,
+                "verdict": {
+                  "side": "exojs",
+                  "ratio": 0.15068494716579106,
+                  "factor": 6.6363629467232075,
+                  "label": "ExoJS leads clearly (6.64x)",
+                  "structural": true
+                },
+                "mechanism": null
+              }
+            ]
+          },
+          {
+            "archetype": "dynamic-heavy",
+            "category": "Node scaling",
+            "count": 1000,
+            "cells": [
+              {
+                "competitor": "phaser",
+                "referenceMs": 0.12999999523162842,
+                "competitorMs": 0.35499998927116394,
+                "verdict": {
+                  "side": "exojs",
+                  "ratio": 0.366197180733797,
+                  "factor": 2.730769248403742,
+                  "label": "ExoJS leads (2.73x)",
+                  "structural": false
+                },
+                "mechanism": null
+              }
+            ]
+          },
+          {
+            "archetype": "deep-hierarchy",
+            "category": "Node scaling",
+            "count": 1000,
+            "cells": [
+              {
+                "competitor": "phaser",
+                "referenceMs": 0.07499998807907104,
+                "competitorMs": 0.3449999988079071,
+                "verdict": {
+                  "side": "exojs",
+                  "ratio": 0.21739127054556995,
+                  "factor": 4.6000007152558515,
+                  "label": "ExoJS leads (4.60x)",
+                  "structural": false
+                },
+                "mechanism": null
+              }
+            ]
+          },
+          {
+            "archetype": "overdraw",
+            "category": "Fill and GPU state",
+            "count": 1000,
+            "cells": [
+              {
+                "competitor": "phaser",
+                "referenceMs": 0.034999996423721313,
+                "competitorMs": 0.3700000047683716,
+                "verdict": {
+                  "side": "exojs",
+                  "ratio": 0.0945945837098897,
+                  "factor": 10.571429787850018,
+                  "label": "ExoJS leads clearly (10.57x)",
+                  "structural": true
+                },
+                "mechanism": null
+              }
+            ]
+          },
+          {
+            "archetype": "batch-breaking",
+            "category": "Fill and GPU state",
+            "count": 1000,
+            "cells": [
+              {
+                "competitor": "phaser",
+                "referenceMs": 0.26999998092651367,
+                "competitorMs": 0.6749999821186066,
+                "verdict": {
+                  "side": "exojs",
+                  "ratio": 0.39999998233936407,
+                  "factor": 2.5000001103789793,
+                  "label": "ExoJS leads (2.50x)",
+                  "structural": false
+                },
+                "mechanism": null
+              }
+            ]
+          },
+          {
+            "archetype": "mixed-blend",
+            "category": "Fill and GPU state",
+            "count": 1000,
+            "cells": [
+              {
+                "competitor": "phaser",
+                "referenceMs": 0.07499998807907104,
+                "competitorMs": 0.36499999463558197,
+                "verdict": {
+                  "side": "exojs",
+                  "ratio": 0.20547942241465358,
+                  "factor": 4.86666736867704,
+                  "label": "ExoJS leads (4.87x)",
+                  "structural": false
+                },
+                "mechanism": null
+              }
+            ]
+          },
+          {
+            "archetype": "batch-breaking-atlased",
+            "category": "Material variety",
+            "count": 1000,
+            "cells": [
+              {
+                "competitor": "phaser",
+                "referenceMs": 0.025000005960464478,
+                "competitorMs": 0.36500000953674316,
+                "verdict": {
+                  "side": "exojs",
+                  "ratio": 0.0684931652253774,
+                  "factor": 14.59999690055921,
+                  "label": "ExoJS leads clearly (14.60x)",
+                  "structural": true
+                },
+                "mechanism": null
+              }
+            ]
+          },
+          {
+            "archetype": "text-static",
+            "category": "Text",
+            "count": 1000,
+            "cells": [
+              {
+                "competitor": "phaser",
+                "referenceMs": 0.034999996423721313,
+                "competitorMs": 1.875,
+                "verdict": {
+                  "side": "exojs",
+                  "ratio": 0.018666664759318035,
+                  "factor": 53.57143404532508,
+                  "label": "ExoJS leads clearly (53.57x)",
+                  "structural": true
+                },
+                "mechanism": null
+              }
+            ]
+          },
+          {
+            "archetype": "text-dynamic",
+            "category": "Text",
+            "count": 1000,
+            "cells": [
+              {
+                "competitor": "phaser",
+                "referenceMs": 2.8350000083446503,
+                "competitorMs": 1.9299999922513962,
+                "verdict": {
+                  "side": "competitor",
+                  "ratio": 1.4689119273195166,
+                  "factor": 1.4689119273195166,
+                  "label": "competitor leads (1.47x)",
+                  "structural": false
+                },
+                "mechanism": null
+              }
+            ]
+          },
+          {
+            "archetype": "lifecycle-churn",
+            "category": "Node scaling",
+            "count": 1000,
+            "cells": [
+              {
+                "competitor": "phaser",
+                "referenceMs": 0.7999999821186066,
+                "competitorMs": 1.0900000035762787,
+                "verdict": {
+                  "side": "exojs",
+                  "ratio": 0.7339449353154266,
+                  "factor": 1.3625000349245973,
+                  "label": "ExoJS leads (1.36x)",
+                  "structural": false
+                },
+                "mechanism": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "backend": "webgpu",
+        "headlineCount": 5000,
+        "competitors": [
+          "pixi"
+        ],
+        "sections": [
+          {
+            "title": "Node scaling",
+            "rows": [
+              {
+                "archetype": "static-heavy",
+                "category": "Node scaling",
+                "count": 5000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.11500000953674316,
+                    "competitorMs": 0.1300000101327896,
+                    "verdict": {
+                      "side": "neither",
+                      "ratio": 0.8846153890240118,
+                      "factor": 1,
+                      "label": "level",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/2/0 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side"
+                  }
+                ]
+              },
+              {
+                "archetype": "dynamic-heavy",
+                "category": "Node scaling",
+                "count": 5000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.4099999964237213,
+                    "competitorMs": 0.29250000417232513,
+                    "verdict": {
+                      "side": "competitor",
+                      "ratio": 1.4017093694883216,
+                      "factor": 1.4017093694883216,
+                      "label": "competitor leads (1.40x)",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/2/1 vs 1/2/2, none of them large enough to account for the gap); the difference is CPU-side"
+                  }
+                ]
+              },
+              {
+                "archetype": "deep-hierarchy",
+                "category": "Node scaling",
+                "count": 5000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.1550000011920929,
+                    "competitorMs": 0.14499998092651367,
+                    "verdict": {
+                      "side": "neither",
+                      "ratio": 1.0689656660758269,
+                      "factor": 1,
+                      "label": "level",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/2/1 vs 1/2/2, none of them large enough to account for the gap); the difference is CPU-side"
+                  }
+                ]
+              },
+              {
+                "archetype": "lifecycle-churn",
+                "category": "Node scaling",
+                "count": 5000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 4.697499990463257,
+                    "competitorMs": 2.0775000005960464,
+                    "verdict": {
+                      "side": "competitor",
+                      "ratio": 2.26113116202913,
+                      "factor": 2.26113116202913,
+                      "label": "competitor leads (2.26x)",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/2/1 vs 1/2/3, none of them large enough to account for the gap); the difference is CPU-side"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Fill and GPU state",
+            "rows": [
+              {
+                "archetype": "overdraw",
+                "category": "Fill and GPU state",
+                "count": 5000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.10500000417232513,
+                    "competitorMs": 0.10499998927116394,
+                    "verdict": {
+                      "side": "neither",
+                      "ratio": 1.0000001419158353,
+                      "factor": 1,
+                      "label": "level",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/2/0 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side"
+                  }
+                ]
+              },
+              {
+                "archetype": "batch-breaking",
+                "category": "Fill and GPU state",
+                "count": 5000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.7524999976158142,
+                    "competitorMs": 0.4375,
+                    "verdict": {
+                      "side": "competitor",
+                      "ratio": 1.7199999945504325,
+                      "factor": 1.7199999945504325,
+                      "label": "competitor leads (1.72x)",
+                      "structural": false
+                    },
+                    "mechanism": "competitor issues fewer texture binds (626 vs 314 per frame)"
+                  }
+                ]
+              },
+              {
+                "archetype": "mixed-blend",
+                "category": "Fill and GPU state",
+                "count": 5000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.23500001430511475,
+                    "competitorMs": 0.32500000298023224,
+                    "verdict": {
+                      "side": "exojs",
+                      "ratio": 0.7230769604620846,
+                      "factor": 1.382978651900272,
+                      "label": "ExoJS leads (1.38x)",
+                      "structural": false
+                    },
+                    "mechanism": "competitor issues fewer texture binds (240 vs 159 per frame)"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Material variety",
+            "rows": [
+              {
+                "archetype": "batch-breaking-atlased",
+                "category": "Material variety",
+                "count": 5000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.07999998331069946,
+                    "competitorMs": 0.0949999988079071,
+                    "verdict": {
+                      "side": "neither",
+                      "ratio": 0.8421050980480733,
+                      "factor": 1,
+                      "label": "level",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/2/0 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Text",
+            "rows": [
+              {
+                "archetype": "text-static",
+                "category": "Text",
+                "count": 5000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.09000000357627869,
+                    "competitorMs": 0.11000001430511475,
+                    "verdict": {
+                      "side": "neither",
+                      "ratio": 0.8181817442917723,
+                      "factor": 1,
+                      "label": "level",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/2/0 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side"
+                  }
+                ]
+              },
+              {
+                "archetype": "text-dynamic",
+                "category": "Text",
+                "count": 5000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 16.112499997019768,
+                    "competitorMs": 35.04500000178814,
+                    "verdict": {
+                      "side": "exojs",
+                      "ratio": 0.45976601501491343,
+                      "factor": 2.1750193953930306,
+                      "label": "ExoJS leads (2.18x)",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/2/3 vs 1/2/3, none of them large enough to account for the gap); the difference is CPU-side"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Render targets",
+            "rows": [
+              {
+                "archetype": "filter-chain-1",
+                "category": "Render targets",
+                "count": 5000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.20999997854232788,
+                    "competitorMs": 0.45000000298023224,
+                    "verdict": {
+                      "side": "exojs",
+                      "ratio": 0.46666661589234,
+                      "factor": 2.142857376004587,
+                      "label": "ExoJS leads (2.14x)",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 3/6/3 vs 2/4/2, none of them large enough to account for the gap); the difference is CPU-side"
+                  }
+                ]
+              },
+              {
+                "archetype": "filter-chain-2",
+                "category": "Render targets",
+                "count": 5000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.1899999976158142,
+                    "competitorMs": 0.6749999821186066,
+                    "verdict": {
+                      "side": "exojs",
+                      "ratio": 0.28148148540606727,
+                      "factor": 3.552631529414422,
+                      "label": "ExoJS leads (3.55x)",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 4/8/3 vs 3/6/3, none of them large enough to account for the gap); the difference is CPU-side"
+                  }
+                ]
+              },
+              {
+                "archetype": "filter-chain-4",
+                "category": "Render targets",
+                "count": 5000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.22750000655651093,
+                    "competitorMs": 0.4699999988079071,
+                    "verdict": {
+                      "side": "exojs",
+                      "ratio": 0.4840425683692226,
+                      "factor": 2.065934001154234,
+                      "label": "ExoJS leads (2.07x)",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 6/12/3 vs 5/10/5, none of them large enough to account for the gap); the difference is CPU-side"
+                  }
+                ]
+              },
+              {
+                "archetype": "composite",
+                "category": "Render targets",
+                "count": 5000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.25,
+                    "competitorMs": 0.29999998211860657,
+                    "verdict": {
+                      "side": "neither",
+                      "ratio": 0.8333333830038736,
+                      "factor": 1,
+                      "label": "level",
+                      "structural": false
+                    },
+                    "mechanism": "ExoJS issues fewer draw calls (5 vs 8 per frame)"
+                  }
+                ]
+              },
+              {
+                "archetype": "mask-clip",
+                "category": "Render targets",
+                "count": 5000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 1.574999988079071,
+                    "competitorMs": 0.20500001311302185,
+                    "verdict": {
+                      "side": "competitor",
+                      "ratio": 7.682926279671663,
+                      "factor": 7.682926279671663,
+                      "label": "competitor leads clearly (7.68x)",
+                      "structural": true
+                    },
+                    "mechanism": "ExoJS issues fewer draw calls (4 vs 10 per frame)"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Camera and world",
+            "rows": [
+              {
+                "archetype": "scrolling-world",
+                "category": "Camera and world",
+                "count": 5000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.09999999403953552,
+                    "competitorMs": 0.0949999988079071,
+                    "verdict": {
+                      "side": "neither",
+                      "ratio": 1.052631529414422,
+                      "factor": 1,
+                      "label": "level",
+                      "structural": false
+                    },
+                    "mechanism": "competitor issues fewer draw calls (90 vs 1 per frame)"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "excluded": [
+          {
+            "archetype": "split-screen",
+            "reason": "ExoJS-internal structural probe: a competitor arm renders a different scene here, so a wall-clock comparison would not be like for like"
+          },
+          {
+            "archetype": "mixed-material",
+            "reason": "ExoJS-internal structural probe: a competitor arm renders a different scene here, so a wall-clock comparison would not be like for like"
+          },
+          {
+            "archetype": "instanced-batch",
+            "reason": "ExoJS-internal structural probe: a competitor arm renders a different scene here, so a wall-clock comparison would not be like for like"
+          },
+          {
+            "archetype": "mixed-sprite-mesh-static",
+            "reason": "ExoJS-internal structural probe: a competitor arm renders a different scene here, so a wall-clock comparison would not be like for like"
+          },
+          {
+            "archetype": "mixed-sprite-mesh-array",
+            "reason": "ExoJS-internal structural probe: a competitor arm renders a different scene here, so a wall-clock comparison would not be like for like"
+          },
+          {
+            "archetype": "mixed-material-atlased",
+            "reason": "ExoJS-internal structural probe: a competitor arm renders a different scene here, so a wall-clock comparison would not be like for like"
+          }
+        ],
+        "webgl1": []
+      }
+    ]
+  },
+  "physics": {
+    "provenance": {
+      "host": {
+        "node": "v24.14.1",
+        "cpu": "AMD Ryzen 7 3700X 8-Core Processor",
+        "cpuCount": 16,
+        "os": "win32 10.0.26200",
+        "arch": "x64"
+      },
+      "fixedDelta": 0.016666666666666666,
+      "caveats": [
+        "Step time is CPU wall-clock per step() over the timed window (median/p95), measured in one Node process (same-run discipline).",
+        "Scenes are warmed to steady state before timing; the per-cell warmupSteps/timedSteps counts are recorded for honesty.",
+        "All arms build the byte-identical scene (bodies, positions, shapes, sizes, static/dynamic split, gravity, perturbed-body set) from the shared deterministic RNG, and the perturbed-body selection is asserted equal across arms before each cell is timed.",
+        "Each arm runs at its own engine defaults for solver iterations, contact model and sleeping — those engine differences are the measured quantity in a native-vs-adapter comparison, disclosed per arm below.",
+        "Arm roles: matter-js and planck are the PURE-JS PEERS exojs-physics is compared against; rapier is a Rust/WASM engine and stands as the REFERENCE CEILING for what leaving JavaScript buys, not as a peer a JS solver is expected to match.",
+        "exojs-physics arm (native runtime, pure JS): TGS-Soft solver, 4 sub-steps per fixed step, sleeping ON by default (resting bodies deactivate). Contact count = solid contacts in the world contact graph.",
+        "matter-js arm (pure-JS peer): constraint solver at matter defaults (6 position / 4 velocity / 2 constraint iterations), sleeping OFF by default (a settled stack keeps paying full solve cost); matter's default per-step air drag (frictionAir) is zeroed so all arms integrate the same pure-gravity field; gravity (px/s²) and perturbation velocity (px/s) are mapped into matter's px-per-step unit model. Contact count = active colliding pairs (engine.pairs.collisionActive), a pair-level proxy, not identical in semantics to the exojs solid-contact count.",
+        "planck arm (pure-JS peer): Box2D port at planck defaults (8 velocity / 3 position iterations per step), sleeping ON by default; Settings.lengthUnitsPerMeter is set to 30 so planck's absolute MKS tolerances are interpreted at the scene's pixel scale, which is the knob planck gives a pixel-coordinate game - positions, gravity (px/s²) and velocity (px/s) then carry over unconverted. Contact count = the world contact list filtered by isTouching(), a touching collider-pair count. Rays are answered from planck's dynamic tree, but World.rayCast is Box2D's non-solid ray (an origin inside a fixture is not a hit). Continuous collision runs for every body (planck's default), where exojs and rapier restrict it to bullets and matter has none.",
+        "rapier arm (WASM reference ceiling, not a pure-JS peer): TGS-Soft solver at rapier defaults (4 solver / 1 internal PGS iterations), auto-sleeping ON; default lengthUnit=1 is fed a px-scale world (tuned for ~1-unit objects), exactly what attaching rapier with pixel coordinates yields. Contact count = collider pairs with a solid narrow-phase manifold (numContacts > 0), deduped."
+      ],
+      "engineVersion": "0.17.0",
+      "timestamp": "2026-09-05T19:26:09.517Z"
+    },
+    "libraries": [
+      {
+        "name": "@codexo/exojs-physics",
+        "version": "0.17.0"
+      },
+      {
+        "name": "matter-js",
+        "version": "0.20.0"
+      },
+      {
+        "name": "planck",
+        "version": "1.5.0"
+      },
+      {
+        "name": "@dimforge/rapier2d-compat",
+        "version": "0.19.3"
+      }
+    ],
+    "section": {
+      "title": "Physics",
+      "rows": [
+        {
+          "archetype": "box-stack",
+          "category": "Physics",
+          "count": 1000,
+          "cells": [
+            {
+              "competitor": "matter-js",
+              "referenceMs": 2.245450000000119,
+              "competitorMs": 6.300949999997101,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.35636689705538876,
+                "factor": 2.8060967734738105,
+                "label": "ExoJS leads (2.81x)",
+                "structural": false
+              },
+              "mechanism": "ExoJS resolves fewer solved contacts (1000 vs 2218); the counters are not semantically identical across arms (see the run's caveats)"
+            },
+            {
+              "competitor": "planck",
+              "referenceMs": 2.245450000000119,
+              "competitorMs": 48.02665000001434,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.046754249984111915,
+                "factor": 21.38842993609824,
+                "label": "ExoJS leads clearly (21.39x)",
+                "structural": true
+              },
+              "mechanism": "ExoJS resolves fewer solved contacts (1000 vs 1965); the counters are not semantically identical across arms (see the run's caveats)"
+            },
+            {
+              "competitor": "rapier",
+              "referenceMs": 2.245450000000119,
+              "competitorMs": 1.7844000000623055,
+              "verdict": {
+                "side": "competitor",
+                "ratio": 1.2583781662865474,
+                "factor": 1.2583781662865474,
+                "label": "competitor leads (1.26x)",
+                "structural": false
+              },
+              "mechanism": "ExoJS resolves fewer solved contacts (1000 vs 1888); the counters are not semantically identical across arms (see the run's caveats)"
+            }
+          ]
+        },
+        {
+          "archetype": "many-dynamic",
+          "category": "Physics",
+          "count": 1000,
+          "cells": [
+            {
+              "competitor": "matter-js",
+              "referenceMs": 21.029749999998785,
+              "competitorMs": 13.372449999995297,
+              "verdict": {
+                "side": "competitor",
+                "ratio": 1.5726175831658509,
+                "factor": 1.5726175831658509,
+                "label": "competitor leads (1.57x)",
+                "structural": false
+              },
+              "mechanism": "identical scene (1004 bodies, 2766 contacts, 0 joints on both arms); the difference is solver cost"
+            },
+            {
+              "competitor": "planck",
+              "referenceMs": 21.029749999998785,
+              "competitorMs": 31.529249999992317,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.666991761618304,
+                "factor": 1.4992688928776678,
+                "label": "ExoJS leads (1.50x)",
+                "structural": false
+              },
+              "mechanism": "identical scene (1004 bodies, 2766 contacts, 0 joints on both arms); the difference is solver cost"
+            },
+            {
+              "competitor": "rapier",
+              "referenceMs": 21.029749999998785,
+              "competitorMs": 1.7567500000004657,
+              "verdict": {
+                "side": "competitor",
+                "ratio": 11.970826810868484,
+                "factor": 11.970826810868484,
+                "label": "competitor leads clearly (11.97x)",
+                "structural": true
+              },
+              "mechanism": "identical scene (1004 bodies, 2766 contacts, 0 joints on both arms); the difference is solver cost"
+            }
+          ]
+        },
+        {
+          "archetype": "mixed-static-dynamic",
+          "category": "Physics",
+          "count": 1000,
+          "cells": [
+            {
+              "competitor": "matter-js",
+              "referenceMs": 5.054949999997916,
+              "competitorMs": 4.258450000008452,
+              "verdict": {
+                "side": "neither",
+                "ratio": 1.1870398854014685,
+                "factor": 1,
+                "label": "level",
+                "structural": false
+              },
+              "mechanism": "identical scene (1063 bodies, 1277 contacts, 0 joints on both arms); the difference is solver cost"
+            },
+            {
+              "competitor": "planck",
+              "referenceMs": 5.054949999997916,
+              "competitorMs": 27.968200000032084,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.18073919665878094,
+                "factor": 5.53283415267087,
+                "label": "ExoJS leads clearly (5.53x)",
+                "structural": true
+              },
+              "mechanism": "identical scene (1063 bodies, 1277 contacts, 0 joints on both arms); the difference is solver cost"
+            },
+            {
+              "competitor": "rapier",
+              "referenceMs": 5.054949999997916,
+              "competitorMs": 1.7765000000363216,
+              "verdict": {
+                "side": "competitor",
+                "ratio": 2.8454545453951954,
+                "factor": 2.8454545453951954,
+                "label": "competitor leads (2.85x)",
+                "structural": false
+              },
+              "mechanism": "identical scene (1063 bodies, 1277 contacts, 0 joints on both arms); the difference is solver cost"
+            }
+          ]
+        },
+        {
+          "archetype": "raycast",
+          "category": "Physics",
+          "count": 1000,
+          "cells": [
+            {
+              "competitor": "matter-js",
+              "referenceMs": 6.46244999999908,
+              "competitorMs": 9.681449999989127,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.6675084827176031,
+                "factor": 1.498108302577274,
+                "label": "ExoJS leads (1.50x)",
+                "structural": false
+              },
+              "mechanism": "identical scene (1063 bodies, 1277 contacts, 0 joints on both arms) with 29 vs 40 ray hits per step; the difference is query and solver cost"
+            },
+            {
+              "competitor": "planck",
+              "referenceMs": 6.46244999999908,
+              "competitorMs": 37.585299999976996,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.1719408917849009,
+                "factor": 5.8159521543659665,
+                "label": "ExoJS leads clearly (5.82x)",
+                "structural": true
+              },
+              "mechanism": "identical scene (1063 bodies, 1277 contacts, 0 joints on both arms) with 29 vs 27 ray hits per step; the difference is query and solver cost"
+            },
+            {
+              "competitor": "rapier",
+              "referenceMs": 6.46244999999908,
+              "competitorMs": 1.908400000014808,
+              "verdict": {
+                "side": "competitor",
+                "ratio": 3.3863183818638314,
+                "factor": 3.3863183818638314,
+                "label": "competitor leads (3.39x)",
+                "structural": false
+              },
+              "mechanism": "identical scene (1063 bodies, 1277 contacts, 0 joints on both arms) with 29 vs 33 ray hits per step; the difference is query and solver cost"
+            }
+          ]
+        },
+        {
+          "archetype": "body-churn",
+          "category": "Physics",
+          "count": 1000,
+          "cells": [
+            {
+              "competitor": "matter-js",
+              "referenceMs": 5.407300000006217,
+              "competitorMs": 15.575199999992037,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.3471737120556385,
+                "factor": 2.8804024189473734,
+                "label": "ExoJS leads (2.88x)",
+                "structural": false
+              },
+              "mechanism": "ExoJS resolves fewer solved contacts (934 vs 2511); the counters are not semantically identical across arms (see the run's caveats)"
+            },
+            {
+              "competitor": "planck",
+              "referenceMs": 5.407300000006217,
+              "competitorMs": 52.95314999995753,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.10211479392652852,
+                "factor": 9.792900338412267,
+                "label": "ExoJS leads clearly (9.79x)",
+                "structural": true
+              },
+              "mechanism": "ExoJS resolves fewer solved contacts (934 vs 2076); the counters are not semantically identical across arms (see the run's caveats)"
+            },
+            {
+              "competitor": "rapier",
+              "referenceMs": 5.407300000006217,
+              "competitorMs": 0.9538000000175089,
+              "verdict": {
+                "side": "competitor",
+                "ratio": 5.669217865283031,
+                "factor": 5.669217865283031,
+                "label": "competitor leads clearly (5.67x)",
+                "structural": true
+              },
+              "mechanism": "identical scene (1004 bodies, 934 contacts, 0 joints on both arms); the difference is solver cost"
+            }
+          ]
+        },
+        {
+          "archetype": "joints",
+          "category": "Physics",
+          "count": 1000,
+          "cells": [
+            {
+              "competitor": "matter-js",
+              "referenceMs": 0.9549000000042724,
+              "competitorMs": 2.198999999993248,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.4342428376567551,
+                "factor": 2.3028589380913282,
+                "label": "ExoJS leads (2.30x)",
+                "structural": false
+              },
+              "mechanism": "competitor resolves fewer solved contacts (875 vs 0); the counters are not semantically identical across arms (see the run's caveats)"
+            },
+            {
+              "competitor": "planck",
+              "referenceMs": 0.9549000000042724,
+              "competitorMs": 0.0625,
+              "verdict": {
+                "side": "competitor",
+                "ratio": 15.278400000068359,
+                "factor": 15.278400000068359,
+                "label": "competitor leads clearly (15.28x)",
+                "structural": true
+              },
+              "mechanism": "competitor resolves fewer solved contacts (875 vs 0); the counters are not semantically identical across arms (see the run's caveats)"
+            },
+            {
+              "competitor": "rapier",
+              "referenceMs": 0.9549000000042724,
+              "competitorMs": 0.04389999998966232,
+              "verdict": {
+                "side": "competitor",
+                "ratio": 21.75170843346548,
+                "factor": 21.75170843346548,
+                "label": "competitor leads clearly (21.75x)",
+                "structural": true
+              },
+              "mechanism": "competitor resolves fewer solved contacts (875 vs 125); the counters are not semantically identical across arms (see the run's caveats)"
+            }
+          ]
+        },
+        {
+          "archetype": "settling-pile",
+          "category": "Physics",
+          "count": 1000,
+          "cells": [
+            {
+              "competitor": "matter-js",
+              "referenceMs": 1.9831500000000233,
+              "competitorMs": 13.303499999979977,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.1490697936635478,
+                "factor": 6.7082671507348515,
+                "label": "ExoJS leads clearly (6.71x)",
+                "structural": true
+              },
+              "mechanism": "identical scene (1004 bodies, 1992 contacts, 0 joints on both arms); the difference is solver cost"
+            },
+            {
+              "competitor": "planck",
+              "referenceMs": 1.9831500000000233,
+              "competitorMs": 25.04400000005262,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.07918663152834438,
+                "factor": 12.62839422134096,
+                "label": "ExoJS leads clearly (12.63x)",
+                "structural": true
+              },
+              "mechanism": "identical scene (1004 bodies, 1992 contacts, 0 joints on both arms); the difference is solver cost"
+            },
+            {
+              "competitor": "rapier",
+              "referenceMs": 1.9831500000000233,
+              "competitorMs": 0.10934999998426065,
+              "verdict": {
+                "side": "competitor",
+                "ratio": 18.135802471746402,
+                "factor": 18.135802471746402,
+                "label": "competitor leads clearly (18.14x)",
+                "structural": true
+              },
+              "mechanism": "identical scene (1004 bodies, 1992 contacts, 0 joints on both arms); the difference is solver cost"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "signature": {
+    "algorithm": "sha256",
+    "value": "f0eb3340e3220236be1031b8357f8ca469236076d112231a224216e1e044986b"
+  }
+}

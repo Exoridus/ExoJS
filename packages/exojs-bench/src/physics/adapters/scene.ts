@@ -164,13 +164,26 @@ const buildBoxStack = (bodies: BodyDesc[], bodyCount: number, rng: () => number)
   }
 };
 
+/** Friction/restitution the `many-dynamic` scene gives its dynamic bodies unless {@link PhysicsArchetypeSpec.dynamicMaterial} overrides it. */
+const MANY_DYNAMIC_MATERIAL = { friction: 0, restitution: 0.4 } as const;
+
 /**
  * `many-dynamic`: a grid of small dynamic circles inside a bounded box, every
  * body given a deterministic initial impulse. Transcribes
  * `exojs-physics.ts::buildManyDynamic`: four static walls first (no RNG), then
  * two `rng()` draws (vx, vy) per perturbed body in ascending index order.
+ *
+ * `material` is the only thing that can distinguish an archetype simulating
+ * this scene from `many-dynamic` itself - every position, shape and impulse
+ * stays byte-identical regardless of what it is.
  */
-const buildManyDynamic = (bodies: BodyDesc[], bodyCount: number, rng: () => number, perturbed: readonly number[]): void => {
+const buildManyDynamic = (
+  bodies: BodyDesc[],
+  bodyCount: number,
+  rng: () => number,
+  perturbed: readonly number[],
+  material: { readonly friction: number; readonly restitution: number },
+): void => {
   const radius = BODY_SIZE / 2;
   const cell = BODY_SIZE + 8;
   const columns = Math.ceil(Math.sqrt(bodyCount));
@@ -193,8 +206,8 @@ const buildManyDynamic = (bodies: BodyDesc[], bodyCount: number, rng: () => numb
       y: 40 + row * cell + radius,
       shape: { kind: 'circle', radius },
       density: 1,
-      friction: 0,
-      restitution: 0.4,
+      friction: material.friction,
+      restitution: material.restitution,
     };
 
     if (perturbedSet.has(i)) {
@@ -385,7 +398,7 @@ export const describePhysicsScene = (spec: PhysicsArchetypeSpec, bodyCount: numb
       buildBoxStack(bodies, bodyCount, rng);
       break;
     case 'many-dynamic':
-      buildManyDynamic(bodies, bodyCount, rng, impulsed);
+      buildManyDynamic(bodies, bodyCount, rng, impulsed, spec.dynamicMaterial ?? MANY_DYNAMIC_MATERIAL);
       break;
     case 'mixed-static-dynamic':
       buildMixed(bodies, bodyCount, rng);
