@@ -331,14 +331,7 @@ export class RenderPlanBuilder {
     this._view = null;
     this._resolutionStack.length = 0;
     this._plan.reset();
-    this._groupPoolCursor = 0;
-    this._drawEntryPoolCursor = 0;
-    this._groupEntryPoolCursor = 0;
-    this._barrierEntryPoolCursor = 0;
-    this._barrierScopePoolCursor = 0;
-    this._effectDescriptorPoolCursor = 0;
-    this._drainScopeStack();
-    this._hasPending = false;
+    this._rewindPools();
     this._viewCullSuppression = 0;
     this._retentionRoot = root._supportsRootRetention() ? root : null;
     this._trackedRoot = null;
@@ -512,7 +505,16 @@ export class RenderPlanBuilder {
         this._resolutionStack.push(resolution);
 
         try {
-          node._collectForRenderPlan(this);
+          // The barrier's CONTENT is an ordinary subtree and gets the same
+          // persistent representation a render root does. Without this the
+          // effect was a retention floor: a filter or clip above a scene made
+          // everything below it a scene-graph walk on every frame. The effect
+          // stays outside it, resolved live by the barrier entry.
+          if (node._supportsRootRetention()) {
+            this._collectRetainedRoot(node);
+          } else {
+            node._collectForRenderPlan(this);
+          }
         } finally {
           this._resolutionStack.pop();
           this._popScope();
@@ -1072,11 +1074,14 @@ export class RenderPlanBuilder {
     }
 
     const previousTracked = this._trackedRoot;
+    const previousCaptureCullActive = this._captureCullActive;
 
-    // Exactly one node per build is the retention root (`_retentionRoot` is
-    // compared by identity in `emitNode`), so the capture cull rect needs no
-    // stack - it is armed here and disarmed below.
+    // The rect needs no stack even though roots nest (a barrier's content is
+    // one): it derives from the view alone, so every root inflates it to the
+    // same value. Only the ARMED flag is per root - an inner capture must not
+    // leave an enclosing collect culling against the inflated rect.
     this._inflateCaptureCullRect(view);
+    this._captureCullActive = true;
     representation.beginCapture(this._captureCullRect);
     this._trackedRoot = representation;
 
@@ -1089,7 +1094,7 @@ export class RenderPlanBuilder {
       }
     } finally {
       this._trackedRoot = previousTracked;
-      this._captureCullActive = false;
+      this._captureCullActive = previousCaptureCullActive;
     }
 
     representation.commitCapture(
@@ -1167,7 +1172,6 @@ export class RenderPlanBuilder {
     // Admit against the view grown by the same margin a capture uses, so the
     // stream this selection produces stays valid for every view still inside it.
     this._inflateCaptureCullRect(view);
-    this._captureCullActive = false;
 
     const rect = this._captureCullRect;
 
@@ -1299,8 +1303,10 @@ export class RenderPlanBuilder {
   }
 
   /**
-   * Arm {@link _captureCullRect} as the view's rect grown by
-   * {@link RETAINED_CULL_MARGIN_RATIO} on every side.
+   * Set {@link _captureCullRect} to the view's rect grown by
+   * {@link RETAINED_CULL_MARGIN_RATIO} on every side. Arming it as the rect a
+   * collect culls against is the caller's: the persistent-indexed tier wants the
+   * rect without changing what an enclosing collect culls against.
    *
    * The margin is what lets a capture outlive a moving camera. Culling against
    * the tight view rect makes the resulting product valid for that rect and
@@ -1323,7 +1329,6 @@ export class RenderPlanBuilder {
     const marginY = rect.height * RETAINED_CULL_MARGIN_RATIO;
 
     this._captureCullRect.set(rect.x - marginX, rect.y - marginY, rect.width + 2 * marginX, rect.height + 2 * marginY);
-    this._captureCullActive = true;
   }
 
   /**
@@ -1621,16 +1626,25 @@ export class RenderPlanBuilder {
     }
   }
 
-  private _resetRuntimeState(): void {
+  /**
+   * Rewind the per-frame scope stack and object pools. Deliberately excludes the
+   * draw-command cursor, which is frame-global rather than plan-local (see
+   * {@link build}).
+   */
+  private _rewindPools(): void {
     this._drainScopeStack();
     this._hasPending = false;
     this._groupPoolCursor = 0;
-    this._commandPoolCursor = 0;
     this._drawEntryPoolCursor = 0;
     this._groupEntryPoolCursor = 0;
     this._barrierEntryPoolCursor = 0;
     this._barrierScopePoolCursor = 0;
     this._effectDescriptorPoolCursor = 0;
+  }
+
+  private _resetRuntimeState(): void {
+    this._rewindPools();
+    this._commandPoolCursor = 0;
     this._view = null;
     this._resolutionStack.length = 0;
     this._nodeIndex = 0;
