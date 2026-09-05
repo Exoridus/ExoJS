@@ -433,6 +433,34 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // root stays unmasked so the Pixi arm has somewhere to host its mask sources
   // (a Pixi mask source parented under the container it masks would be clipped by
   // its own mask), and both arms therefore clip spine levels 1..3.
+  // BLOOM-SHAPED MULTIPASS. The composite a real post-processing stack renders,
+  // which no `filter-chain-*` row reaches: the scene is captured into an
+  // off-screen target, that capture is blurred DOWN into a half-resolution
+  // target, the scene is drawn again directly, and the blurred capture is
+  // composited over it additively.
+  //
+  // Read against `filter-chain-1` (one target pass over the same scene at the
+  // same nesting depth and node ladder), the difference is what a multipass
+  // costs beyond a single filter: a second full scene walk, a resolution change
+  // between two targets, and a full-screen additive blend. Read against
+  // `static-heavy`, it is the whole post-processing stack.
+  //
+  // The blur radius is small on purpose - the archetype measures the pass
+  // structure, and a wide kernel would move the bottleneck into fragment ALU
+  // and hide it, the same reason the filter rows use a colour matrix.
+  //
+  // WebGL2/WebGPU arms only, like every other render-target row.
+  {
+    id: 'composite',
+    category: 'render-targets',
+    crossArm: true,
+    nodeCounts: GPU_BOUND_COUNTS,
+    nestingDepth: 2,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    compositeBlurRadius: 4,
+  },
   {
     id: 'mask-clip',
     category: 'render-targets',

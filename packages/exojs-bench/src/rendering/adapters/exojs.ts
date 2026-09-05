@@ -2,7 +2,9 @@ import { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
+import { CallbackRenderPass } from '#rendering/CallbackRenderPass';
 import { Container } from '#rendering/Container';
+import { BlurFilter } from '#rendering/filters/BlurFilter';
 import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import type { Filter } from '#rendering/filters/Filter';
 import { Geometry } from '#rendering/geometry/Geometry';
@@ -12,10 +14,13 @@ import { Mesh } from '#rendering/mesh/Mesh';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { RenderBatch } from '#rendering/RenderBatch';
+import { RenderNodePass } from '#rendering/RenderNodePass';
+import { RenderPipeline } from '#rendering/RenderPipeline';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 import { spriteVertexGlsl } from '#rendering/sprite/materialSources';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Text } from '#rendering/text/Text';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
 import { View } from '#rendering/View';
@@ -24,8 +29,9 @@ import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
 import { createDistinctTextureCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
-import { filterChainDepth, isChurning, isTextArchetype, isTextUpdating, maskDepth, textForLeaf } from '../traits';
+import { compositeBlurRadius, filterChainDepth, isChurning, isTextArchetype, isTextUpdating, maskDepth, textForLeaf } from '../traits';
 import {
+  BLOOM_DOWNSCALE,
   cameraCenterAt,
   GRID_MARGIN,
   gridLayout,
@@ -314,6 +320,18 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
   /** Shared by every mesh leaf in `mixed-sprite-mesh-static`; absent for the array case. */
   let sharedMeshGeometry: Geometry | null = null;
   /**
+   * The `composite` archetype's bloom stack (`spec.compositeBlurRadius`, see
+   * `EngineAdapter.ts`); `null` for every single-pass archetype, in which case
+   * `renderFrame` takes the ordinary scene-render path. The pipeline owns its
+   * passes, but the textures, the filter and the overlay sprite are the arm's -
+   * a pass never frees a caller-supplied target.
+   */
+  let compositePipeline: RenderPipeline | null = null;
+  let captureTexture: RenderTexture | null = null;
+  let bloomTexture: RenderTexture | null = null;
+  let bloomFilter: BlurFilter | null = null;
+  let bloomOverlay: Sprite | null = null;
+  /**
    * The archetype currently built, when it scrolls a camera
    * (`ArchetypeSpec.cameraSpeed`); `null` for every static-view archetype, in
    * which case `mutate` leaves the view alone. The camera is driven through the
@@ -334,6 +352,53 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
   let textUpdating = false;
   /** Characters per text leaf of the built archetype; `0` when it has no text. */
   let textGlyphs = 0;
+
+  /** Drop the `composite` archetype's bloom stack so a rebuild (or teardown) leaks no GPU resources. */
+  const releaseComposite = (): void => {
+    compositePipeline?.destroy();
+    compositePipeline = null;
+    bloomOverlay?.destroy();
+    bloomOverlay = null;
+    bloomFilter?.destroy();
+    bloomFilter = null;
+    captureTexture?.destroy();
+    captureTexture = null;
+    bloomTexture?.destroy();
+    bloomTexture = null;
+  };
+
+  /**
+   * Build the bloom-shaped multipass for the `composite` archetype: capture the
+   * scene off-screen, blur that capture DOWN into a half-resolution target, draw
+   * the scene again directly, then add the blurred capture on top.
+   *
+   * Expressed as a {@link RenderPipeline} of stock passes rather than as
+   * hand-rolled target switching in `renderFrame`, because that is the API an
+   * ExoJS app writes a post-processing stack with - and it is what the Pixi arm's
+   * hand-rolled `render({ target })` sequence is being compared against.
+   */
+  const buildComposite = (sceneRoot: Container, radius: number): void => {
+    const capture = new RenderTexture(VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+    const bloom = new RenderTexture(Math.round(VIEWPORT_WIDTH * BLOOM_DOWNSCALE), Math.round(VIEWPORT_HEIGHT * BLOOM_DOWNSCALE));
+    // A single blur from the full-size capture into the half-size target is both
+    // the downsample and the blur: the filter sizes its sweep to the OUTPUT, so
+    // the wide kernel runs over a quarter of the fragments.
+    const filter = new BlurFilter({ radius, quality: 2 });
+    const overlay = new Sprite(bloom).setBlendMode(BlendModes.Additive);
+
+    overlay.width = VIEWPORT_WIDTH;
+    overlay.height = VIEWPORT_HEIGHT;
+
+    captureTexture = capture;
+    bloomTexture = bloom;
+    bloomFilter = filter;
+    bloomOverlay = overlay;
+    compositePipeline = new RenderPipeline()
+      .addPass(new RenderNodePass(sceneRoot, { target: capture, clear: Color.transparentBlack }))
+      .addPass(new CallbackRenderPass(pass => filter.apply(pass.backend, capture, bloom)))
+      .addPass(new RenderNodePass(sceneRoot))
+      .addPass(new RenderNodePass(overlay));
+  };
 
   /** Drop the `instanced-batch` scene so a rebuild (or teardown) leaks no GPU resources. */
   const releaseBatchScene = (): void => {
@@ -436,6 +501,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       }
 
       releaseBatchScene();
+      releaseComposite();
       sharedMeshGeometry?.destroy();
       sharedMeshGeometry = null;
 
@@ -657,6 +723,12 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         spine[level + 1]!.mask = new Rectangle(rect.x, rect.y, rect.width, rect.height);
       }
 
+      const bloomRadius = compositeBlurRadius(spec);
+
+      if (bloomRadius > 0) {
+        buildComposite(sceneRoot, bloomRadius);
+      }
+
       root = sceneRoot;
       mutableLeaves = leaves;
       mutableIndices = selectedIndices;
@@ -779,6 +851,16 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         throw new Error('renderFrame was called before buildScene.');
       }
 
+      // `composite`: the bloom stack renders the frame itself (capture, blur,
+      // direct draw, additive overlay), so the ordinary single render below
+      // would be a fifth, redundant scene walk.
+      if (compositePipeline !== null) {
+        compositePipeline.execute(app.rendering);
+        backend.flush();
+
+        return;
+      }
+
       if (views.length > 0) {
         // Multi-view replay: each additional view re-issues the retained
         // group's ALREADY-RECORDED instruction set with its own view/viewport,
@@ -796,6 +878,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
 
     teardown(): void {
       releaseBatchScene();
+      releaseComposite();
 
       if (root !== null) {
         root.destroy();

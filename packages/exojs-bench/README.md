@@ -44,7 +44,7 @@ A cell's scene comes from a fixed **archetype** (`src/rendering/archetypes.ts`):
 `mixed-blend`, `mixed-material`, `mixed-material-atlased`, `instanced-batch`,
 `mixed-sprite-mesh-static`, `mixed-sprite-mesh-array`, `scrolling-world`,
 `text-static`, `text-dynamic`, `filter-chain-1`, `filter-chain-2`,
-`filter-chain-4`, `mask-clip`. Each pins nesting depth, texture count, per-frame
+`filter-chain-4`, `mask-clip`, `composite`. Each pins nesting depth, texture count, per-frame
 mutation fraction and whatever dimension it exists to isolate, and sweeps a
 ladder of node counts.
 
@@ -53,7 +53,10 @@ value is: `lifecycle-churn` differs from `dynamic-heavy` only in destroying the
 leaves it would otherwise have moved, so the difference between the two rows is
 what structural invalidation costs; `text-dynamic` differs from `text-static`
 only in re-setting strings; each `filter-chain-*` step adds one render-target
-pass. Every archetype also declares whether a cross-arm comparison of it is
+pass; `composite` is `filter-chain-1`'s scene rendered as a bloom-shaped
+multipass (off-screen capture, downscaled blur, direct draw, additive overlay),
+so the two rows separate one node-attached filter from an explicit multipass
+over the same content. Every archetype also declares whether a cross-arm comparison of it is
 meaningful at all (`crossArm`) - the ExoJS-internal probes say no, and the
 published comparison excludes them by construction.
 

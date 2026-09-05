@@ -1,12 +1,14 @@
 import {
   Application,
   BitmapText,
+  BlurFilter,
   ColorMatrixFilter,
   Container,
   Culler,
   type Filter,
   Graphics,
   RendererType,
+  RenderTexture,
   Sprite,
   Texture,
   type WebGPURenderer,
@@ -15,8 +17,19 @@ import {
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
 import { createDistinctTextureCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
-import { filterChainDepth, isChurning, isTextArchetype, isTextUpdating, maskDepth, textForLeaf } from '../traits';
-import { cameraCenterAt, GRID_MARGIN, gridLayout, gridPosition, isScrolling, maskRect, VIEWPORT_HEIGHT, VIEWPORT_WIDTH, worldExtent } from '../world';
+import { compositeBlurRadius, filterChainDepth, isChurning, isTextArchetype, isTextUpdating, maskDepth, textForLeaf } from '../traits';
+import {
+  BLOOM_DOWNSCALE,
+  cameraCenterAt,
+  GRID_MARGIN,
+  gridLayout,
+  gridPosition,
+  isScrolling,
+  maskRect,
+  VIEWPORT_HEIGHT,
+  VIEWPORT_WIDTH,
+  worldExtent,
+} from '../world';
 
 /**
  * Pixi.js v8 arm of the rendering benchmark - the direct renderer comparison and
@@ -166,6 +179,29 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
   let textUpdating = false;
   /** Characters per text leaf of the built archetype; `0` when it has no text. */
   let textGlyphs = 0;
+  /**
+   * The `composite` archetype's bloom stack; `null` for every single-pass
+   * archetype, in which case `renderFrame` takes the ordinary one-render path.
+   * Hand-rolled out of `RenderTexture` + `renderer.render({ target })` + a
+   * filtered source sprite, which is what a Pixi app writes: Pixi has no
+   * pipeline object to declare a multipass with.
+   */
+  let bloom: { readonly capture: RenderTexture; readonly blurred: RenderTexture; readonly source: Sprite; readonly overlay: Sprite } | null = null;
+
+  /** Drop the bloom stack so a rebuild (or teardown) leaks no GPU resources. */
+  const releaseBloom = (): void => {
+    if (bloom === null) {
+      return;
+    }
+
+    // `destroy(true)` on the sprites would take the render textures with them,
+    // so the textures are released explicitly and the sprites are not allowed to.
+    bloom.source.destroy();
+    bloom.overlay.destroy();
+    bloom.capture.destroy(true);
+    bloom.blurred.destroy(true);
+    bloom = null;
+  };
 
   return {
     engine: 'pixi',
@@ -384,6 +420,33 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
         spine[level + 1]!.mask = source;
       }
 
+      // Bloom-shaped multipass, hand-rolled the way a Pixi app writes one: a
+      // full-size capture target, a half-size blur target, a source sprite of the
+      // capture carrying the blur filter and scaled to the smaller target (Pixi
+      // renders 1:1 into a target, so the scale IS the downsample), and an
+      // additive overlay sprite of the blurred result stretched back to the
+      // viewport. `renderFrame` drives the four passes explicitly.
+      releaseBloom();
+
+      const bloomRadius = compositeBlurRadius(spec);
+
+      if (bloomRadius > 0) {
+        const capture = RenderTexture.create({ width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT });
+        const blurred = RenderTexture.create({
+          width: Math.round(VIEWPORT_WIDTH * BLOOM_DOWNSCALE),
+          height: Math.round(VIEWPORT_HEIGHT * BLOOM_DOWNSCALE),
+        });
+        const source = new Sprite(capture);
+        const overlay = new Sprite(blurred);
+
+        source.scale.set(BLOOM_DOWNSCALE);
+        source.filters = [new BlurFilter({ strength: bloomRadius, quality: 2 })];
+        overlay.width = VIEWPORT_WIDTH;
+        overlay.height = VIEWPORT_HEIGHT;
+        overlay.blendMode = 'add';
+        bloom = { capture, blurred, source, overlay };
+      }
+
       root = sceneRoot;
       mutableLeaves = leaves;
       mutableIndices = selectedIndices;
@@ -476,12 +539,26 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
         Culler.shared.cull(root, app.renderer.screen, false);
       }
 
+      // `composite`: capture the scene off-screen, blur that capture down into
+      // the half-size target, draw the scene to the canvas, then add the blurred
+      // capture on top. Same four passes the ExoJS arm declares as a pipeline.
+      if (bloom !== null) {
+        app.renderer.render({ container: root, target: bloom.capture, clear: true });
+        app.renderer.render({ container: bloom.source, target: bloom.blurred, clear: true });
+        app.renderer.render({ container: root, clear: true });
+        app.renderer.render({ container: bloom.overlay, clear: false });
+
+        return;
+      }
+
       // One explicit frame: clear + render the tree + submit, the analogue of the
       // ExoJS adapter's resetStats/clear/render/flush sequence.
       app.renderer.render({ container: root, clear: true });
     },
 
     teardown(): void {
+      releaseBloom();
+
       if (root !== null) {
         root.destroy({ children: true });
         root = null;
