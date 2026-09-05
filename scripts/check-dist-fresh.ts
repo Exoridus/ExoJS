@@ -1,13 +1,15 @@
 /**
  * Refuse to run a dist-consuming step against a stale build.
  *
- * The site build, the example smoke and the full-bundle export check all read
- * `dist/` (Core) and `packages/exojs-*\/dist/` (extensions) rather than the
- * sources. After a pull or a local edit those artifacts silently lag behind:
- * the site bundles an engine without the new export, the smoke reports a
- * black canvas with no error, the export check names a symbol the package
+ * The site build and the full-bundle export check read `dist/` (Core) and
+ * `packages/exojs-*\/dist/` (extensions) rather than the sources. After a
+ * pull or a local edit those artifacts silently lag behind: the site bundles
+ * an engine without the new export and the example smoke then reports a
+ * black canvas with no error; the export check names a symbol the package
  * "does not export". Each of those wasted a diagnosis before this check
- * existed.
+ * existed. The smoke itself is not gated: it consumes the site build, which
+ * is checked here, and in CI it runs from a downloaded site artifact with no
+ * engine dist beside it.
  *
  * Every build records a content hash of its source tree in its dist (see
  * `source-hash.ts`); a unit is stale when the hash of the sources on disk no
