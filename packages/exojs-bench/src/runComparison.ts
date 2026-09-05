@@ -1,26 +1,45 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
-import { buildPhysicsComparison, buildRenderingComparison } from './comparison/build';
+import { aggregatePhysicsRuns, aggregateRenderingRuns } from './comparison/aggregate';
 import { renderComparison } from './comparison/render';
 import type { PhysicsReportData } from './physics/report';
 import { buildProfileDocument, writeProfileDocument } from './profile/document';
 import type { ReportData } from './rendering/report';
-import { parseArgs } from './shared/args';
+import { parseArgList, parseArgs } from './shared/args';
 
 /**
  * Generate the published cross-library comparison from measured runs.
  *
- * Reads the `results.json` a rendering run and/or a physics run wrote and emits
- * one Markdown document. It never measures anything itself: a comparison
- * assembled in the same process that took the timings could quietly re-run a cell
- * that looked wrong, and the artifact would stop being a function of the
- * recorded data.
+ * Reads the `results.json` files a rendering measurement and/or a physics
+ * measurement wrote and emits one Markdown document. It never measures anything
+ * itself: a comparison assembled in the same process that took the timings could
+ * quietly re-run a cell that looked wrong, and the artifact would stop being a
+ * function of the recorded data.
  *
  * Usage: point `--rendering` and/or `--physics` at the `results.json` a run
  * wrote, and `--out` at the document to write. Both inputs default to nothing -
  * a document must never imply it covers a domain that was not measured - and
  * `--out` defaults to the harness's own (gitignored) output directory.
+ *
+ * **Both input flags are repeatable, once per run.** A published claim is a
+ * ratio between two arms, and one run does not support one: the same code
+ * measured twice on one idle machine moves a cell's median far enough to change
+ * which arm it favours. Repeating the flag pools the runs - the published value
+ * is the median of the per-run medians, each number carries the range the runs
+ * observed, and a cell whose runs disagreed on the verdict publishes none.
+ *
+ * The runs must come from SEPARATE invocations of the harness, each with its own
+ * `--out` directory. Repeating a matrix inside one process shares JIT and heap
+ * state across the repetitions, so it measures the same warm state several times
+ * instead of the measurement's actual spread. Nothing here can check that.
+ *
+ * ```sh
+ * bench:compare \
+ *   --rendering run-1/results.json --rendering run-2/results.json --rendering run-3/results.json \
+ *   --physics   run-1/results.json --physics   run-2/results.json --physics   run-3/results.json \
+ *   --profile
+ * ```
  *
  * `--profile` additionally writes the comparison as a signed machine-profile
  * JSON into the committed `results/` directory, named after the machine the
@@ -47,33 +66,18 @@ const readResults = <T>(path: string): T => {
 };
 
 const main = (): void => {
-  const args = parseArgs(process.argv.slice(2));
-  const renderingPath = args.get('rendering');
-  const physicsPath = args.get('physics');
+  const argv = process.argv.slice(2);
+  const args = parseArgs(argv);
+  const renderingPaths = parseArgList(argv, 'rendering');
+  const physicsPaths = parseArgList(argv, 'physics');
   const outPath = resolve(args.get('out') ?? DEFAULT_OUT);
 
-  if (renderingPath === undefined && physicsPath === undefined) {
-    throw new Error('Nothing to compare: pass --rendering and/or --physics pointing at a run results.json.');
+  if (renderingPaths.length === 0 && physicsPaths.length === 0) {
+    throw new Error('Nothing to compare: pass --rendering and/or --physics pointing at a run results.json. Repeat either flag once per run.');
   }
 
-  const rendering =
-    renderingPath === undefined
-      ? undefined
-      : ((): { provenance: ReportData['provenance']; libraries: ReportData['libraries']; backends: ReturnType<typeof buildRenderingComparison> } => {
-          const data = readResults<ReportData>(renderingPath);
-
-          return { provenance: data.provenance, libraries: data.libraries, backends: buildRenderingComparison(data.results) };
-        })();
-
-  const physics =
-    physicsPath === undefined
-      ? undefined
-      : ((): { provenance: PhysicsReportData['provenance']; libraries: PhysicsReportData['libraries']; section: ReturnType<typeof buildPhysicsComparison> } => {
-          const data = readResults<PhysicsReportData>(physicsPath);
-
-          return { provenance: data.provenance, libraries: data.libraries, section: buildPhysicsComparison(data.results) };
-        })();
-
+  const rendering = renderingPaths.length === 0 ? undefined : aggregateRenderingRuns(renderingPaths.map(path => readResults<ReportData>(path)));
+  const physics = physicsPaths.length === 0 ? undefined : aggregatePhysicsRuns(physicsPaths.map(path => readResults<PhysicsReportData>(path)));
   const document = renderComparison({ ...(rendering !== undefined && { rendering }), ...(physics !== undefined && { physics }) });
 
   mkdirSync(dirname(outPath), { recursive: true });
