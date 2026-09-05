@@ -1,6 +1,6 @@
 {
   "name": "@codexo/exojs-lighting",
-  "version": "0.16.1",
+  "version": "0.17.0",
   "description": "Forward 2D normal-mapped point lighting for ExoJS sprites.",
   "repository": {
     "type": "git",
@@ -33,7 +33,7 @@
     "test": "vitest run --root ../.. --project=exojs-lighting"
   },
   "peerDependencies": {
-    "@codexo/exojs": "0.16.x"
+    "@codexo/exojs": "0.17.x"
   },
   "devDependencies": {
     "@codexo/exojs": "workspace:*",

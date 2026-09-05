@@ -3,12 +3,14 @@
     "chromium": {
       "measuredAt": "2026-09-05",
       "commit": "f1d5fea24",
-      "platform": "win32"
+      "platform": "win32",
+      "release": "0.17.0"
     },
     "firefox": {
       "measuredAt": "2026-09-05",
       "commit": "f1d5fea24",
-      "platform": "win32"
+      "platform": "win32",
+      "release": "0.17.0"
     },
     "webkit": {
       "measuredAt": "2026-08-05",

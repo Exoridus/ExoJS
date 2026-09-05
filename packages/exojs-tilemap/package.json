@@ -1,6 +1,6 @@
 {
   "name": "@codexo/exojs-tilemap",
-  "version": "0.16.2",
+  "version": "0.17.0",
   "description": "Generic, format-independent tilemap runtime for ExoJS.",
   "repository": {
     "type": "git",
@@ -33,7 +33,7 @@
     "test": "vitest run --root ../.. --project=exojs-tilemap"
   },
   "peerDependencies": {
-    "@codexo/exojs": "0.16.x"
+    "@codexo/exojs": "0.17.x"
   },
   "devDependencies": {
     "@codexo/exojs": "workspace:*",

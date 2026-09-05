@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-09-05
+
 ### Changed
 
 - **BREAKING: Retain filtered and clipped scopes, coalesce WebGPU row patches, add hitArea and move culling to RenderNode.** ([#681](https://github.com/Exoridus/ExoJS/pull/681))
