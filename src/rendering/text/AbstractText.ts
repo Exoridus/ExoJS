@@ -201,15 +201,6 @@ export abstract class AbstractText extends Drawable {
     this._updateOrigin();
   }
 
-  /**
-   * Alias for {@link syncDirty}, kept for game loops that tick their nodes
-   * explicitly. It takes no time step: a text node holds no animated state, so
-   * there is nothing for one to advance.
-   */
-  public update(): void {
-    this.syncDirty();
-  }
-
   public override destroy(): void {
     this._style.onChange.remove(this._onStyleChange);
     this._pageQuads = [];

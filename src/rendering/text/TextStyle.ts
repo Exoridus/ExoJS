@@ -296,7 +296,7 @@ export class TextStyle {
 
     this._gradient = options.gradient ? _normalizeGradient(options.gradient) : null;
 
-    // Mark dirty immediately so the first update() triggers a full rebuild.
+    // Mark dirty immediately so the first layout pass is a full rebuild.
     this._dirty = true;
     this._pendingHint = 'font';
   }
@@ -305,7 +305,7 @@ export class TextStyle {
    * Returns the accumulated {@link StyleChangeHint} and clears the dirty flag,
    * or `null` if nothing has changed since the last call.
    *
-   * Call this once per frame from the owning node's `update()` method.
+   * Call this once per frame from the owning node's layout pass.
    */
   public consumeDirty(): StyleChangeHint | null {
     if (!this._dirty) return null;

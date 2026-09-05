@@ -85,9 +85,9 @@ export interface TextOptions extends TextStyleOptions, LayoutOptions {
  * per-font-variant {@link GlyphAtlas} using the SDF (Signed Distance Field)
  * technique and renders them through the `text-sdf` shader.
  *
- * Style mutations are applied automatically before the next draw - no manual
- * `update()` call required. Mutating `text.style` any number of times in the
- * same frame is cheap; the geometry is rebuilt at most once, on demand.
+ * Style mutations are applied automatically before the next draw - nothing has
+ * to be ticked by hand. Mutating `text.style` any number of times in the same
+ * frame is cheap; the geometry is rebuilt at most once, on demand.
  *
  * ```ts
  * const label = new Text('Hello', { fontSize: 24 });
