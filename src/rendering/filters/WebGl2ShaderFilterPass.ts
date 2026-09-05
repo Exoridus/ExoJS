@@ -27,6 +27,14 @@ const quadVertices = new Float32Array([-1, -1, 0, 0, 1, -1, 1, 0, -1, 1, 0, 1, 1
 /** Bytes per vertex: 2 floats position + 2 floats UV = 16 bytes */
 const vertexStride = 16;
 
+/**
+ * The `uOrientation` this backend binds. A WebGL2 render texture stores the
+ * effect domain bottom-up, so `v` grows AGAINST the domain's y axis.
+ *
+ * Constant for the backend and shared by every pass: it is only ever read.
+ */
+const orientationValue = new Float32Array([-1]);
+
 interface WebGl2Connection {
   readonly gl: WebGL2RenderingContext;
   readonly vertexBuffer: WebGl2RenderBuffer;
@@ -122,6 +130,11 @@ export class WebGl2ShaderFilterPass {
       this._resolutionScratch[0] = output.width;
       this._resolutionScratch[1] = output.height;
       shader.getUniform('uResolution').setValue(this._resolutionScratch);
+    }
+
+    // Auto-bind uOrientation
+    if (shader.uniforms.has('uOrientation')) {
+      shader.getUniform('uOrientation').setValue(orientationValue);
     }
 
     // Sync user uniforms - texture uniforms start at slot 1

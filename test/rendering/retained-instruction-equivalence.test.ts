@@ -45,7 +45,7 @@ const nodeIndexWord = 5;
 class ByteLeaf extends Drawable {
   public constructor(public readonly id = '') {
     super();
-    this._setLocalBounds(0, 0, 16, 16);
+    this.setLocalBounds(0, 0, 16, 16);
   }
 }
 
@@ -313,7 +313,7 @@ const createByteBackend = (): ByteBackendHarness => {
         stampRetainedBatchGeneration(instruction);
       }
     },
-    _replayRetainedBatch(batch: RetainedBatchInstruction): void {
+    replayRetainedBatch(batch: RetainedBatchInstruction): void {
       flushPending(); // belt-and-braces; the boundary switch already drained
 
       log.push({ type: 'replay', payload: batch.payload as ModelPayload });

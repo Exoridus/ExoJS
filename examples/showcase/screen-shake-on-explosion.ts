@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Vector, View } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Time, Vector, View } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem } from '@codexo/exojs-particles';
 
 class ScreenShakeOnExplosionScene extends Scene {
@@ -28,7 +28,7 @@ class ScreenShakeOnExplosionScene extends Scene {
     app.input.onPointerTap.add(p => {
       this.burstPos.set(p.x - this.ps.position.x, p.y - this.ps.position.y);
       this.burst.reset();
-      this.view.shake(22, 280, { frequency: 26, decay: true });
+      this.view.shake(22, Time.seconds(0.28), { frequency: 26, decay: true });
     });
   }
 

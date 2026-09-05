@@ -57,7 +57,7 @@
           ],
           "params": [],
           "returnType": "AnimatedSprite",
-          "description": "Create an AnimatedSprite with all frame-tag clips pre-defined. Each clip is registered via AnimatedSprite.defineClip, which clones the frame Rectangles so the sprite owns its own copies. Call AnimatedSprite.play with a tag name to start playback."
+          "description": "Create an AnimatedSprite with all frame-tag clips pre-defined. Each clip is registered via AnimatedSprite.addClip, which clones the frame Rectangles so the sprite owns its own copies. Call AnimatedSprite.play with a tag name to start playback."
         },
         {
           "name": "destroy",
@@ -204,7 +204,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Animation clips derived from the Aseprite frameTags metadata. Each clip's frames are live references into spritesheet.frames; they are cloned automatically when passed to AnimatedSprite.defineClip."
+          "description": "Animation clips derived from the Aseprite frameTags metadata. Each clip's frames are live references into spritesheet.frames; they are cloned automatically when passed to AnimatedSprite.addClip."
         },
         {
           "name": "layers",

@@ -9,13 +9,25 @@ import {
 export const textAtlasTextureSlots = spriteMaterialTextureSlots;
 
 /** Low bits reserved for Text's dense per-flush node row. @internal */
-export const textNodeIndexMask = 0x00ffffff;
+export const textNodeIndexMask = 0x007fffff;
+
+/**
+ * Bit marking a quad as a decoration rule rather than a glyph.
+ *
+ * Taken from the node-row field rather than from the atlas-slot byte: a flush
+ * addresses at most a few thousand rows, so giving up half of an eight-million
+ * row space costs nothing, while the slot byte is sized by the texture-unit
+ * limit and has no spare bit to give.
+ * @internal
+ */
+export const textDecorationFlagBit = 0x00800000;
 
 /** Bit shift of the atlas-texture slot in the packed per-vertex word. @internal */
 export const textAtlasSlotShift = 24;
 
-/** Pack one dense Text node row and atlas slot into the existing 32-bit vertex word. @internal */
-export const packTextNodeAtlasSlot = (nodeIndex: number, atlasSlot: number): number => nodeIndex | (atlasSlot << textAtlasSlotShift);
+/** Pack one dense Text node row, atlas slot and decoration flag into the 32-bit vertex word. @internal */
+export const packTextNodeAtlasSlot = (nodeIndex: number, atlasSlot: number, decoration = false): number =>
+  nodeIndex | (decoration ? textDecorationFlagBit : 0) | (atlasSlot << textAtlasSlotShift);
 
 const dimensionCases = Array.from({ length: textAtlasTextureSlots }, (_, slot) =>
   slot < textAtlasTextureSlots - 1

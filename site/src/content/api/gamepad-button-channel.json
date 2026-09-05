@@ -1,0 +1,273 @@
+{
+  "title": "GamepadButtonChannel",
+  "description": "Branded literal-union type identifying a canonical button-style gamepad input channel. Members are absolute offsets into the engine's shared Float32Array input channel buffer (relative to slot 0): the 24 named buttons (`South`-`Paddle4`), computed as `ChannelOffset.Gamepads + 0..23` (512..535 with the default layout - `ChannelSize.Category = 256`, `Gamepads = 2 * Category = 512`). Offsets 24..31 of the button section are reserved in the channel buffer layout but deliberately excluded from this type: they carry no InputToken, so a binding built from one would type-check and read back with `InputSystem`/`Gamepad`, then throw a plain `Error` the moment it was serialized (`ActionMap.serializeBindings`) or checked for a conflict (`ActionMap.conflicts`). A custom `GamepadMapping` that genuinely needs one of those offsets has to say so with an explicit cast, which is the point - it opts into a channel this type otherwise refuses to hand out. The brand keeps the type system from confusing button channels with GamepadAxisChannel or raw `number`s during mapping authoring. User code does not construct values of this type directly - read them from the GamepadButton namespace (`GamepadButton.South`, ...).",
+  "symbol": "GamepadButtonChannel",
+  "kind": "type",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Branded literal-union type identifying a canonical button-style gamepad input channel. Members are absolute offsets into the engine's shared Float32Array input channel buffer (relative to slot 0): the 24 named buttons (`South`-`Paddle4`), computed as `ChannelOffset.Gamepads + 0..23` (512..535 with the default layout - `ChannelSize.Category = 256`, `Gamepads = 2 * Category = 512`).",
+        "Offsets 24..31 of the button section are reserved in the channel buffer layout but deliberately excluded from this type: they carry no InputToken, so a binding built from one would type-check and read back with `InputSystem`/`Gamepad`, then throw a plain `Error` the moment it was serialized (`ActionMap.serializeBindings`) or checked for a conflict (`ActionMap.conflicts`). A custom `GamepadMapping` that genuinely needs one of those offsets has to say so with an explicit cast, which is the point - it opts into a channel this type otherwise refuses to hand out.",
+        "The brand keeps the type system from confusing button channels with GamepadAxisChannel or raw `number`s during mapping authoring. User code does not construct values of this type directly - read them from the GamepadButton namespace (`GamepadButton.South`, ...)."
+      ],
+      "importLine": "import { GamepadButtonChannel } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "GamepadButtonChannel",
+          "signature": "512 | 513 | 514 | 515 | 516 | 517 | 518 | 519 | 520 | 521 | 522 | 523 | 524 | 525 | 526 | 527 | 528 | 529 | 530 | 531 | 532 | 533 | 534 | 535 & { [gamepadButtonChannelBrand]: void }",
+          "signatureTokens": [
+            {
+              "text": "512",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "513",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "514",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "515",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "516",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "517",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "518",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "519",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "520",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "521",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "522",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "523",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "524",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "525",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "526",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "527",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "528",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "529",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "530",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "531",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "532",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "533",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "534",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "535",
+              "kind": "keyword"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[gamepadButtonChannelBrand]",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/GamepadButton.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadButton.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/GamepadButton.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadButton.ts"
+}

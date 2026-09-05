@@ -393,6 +393,22 @@ describe('validateLdtkData — field instance __value shapes', () => {
     );
   });
 
+  it.each(['LocalEnum.HeroKind', 'ExternEnum.Faction'] as const)('accepts a string value on a %s field', __type => {
+    expect(() => validateLdtkData(withField({ __identifier: 'kind', __type, __value: 'Ranger' }), SOURCE)).not.toThrow();
+  });
+
+  it('rejects a non-string value on an enum field', () => {
+    expect(() => validateLdtkData(withField({ __identifier: 'kind', __type: 'LocalEnum.HeroKind', __value: 3 }), SOURCE)).toThrow(
+      /fieldInstances\[0\]\.__value.*expected a string/,
+    );
+  });
+
+  it('points at the bad index of an Array<LocalEnum.T> field', () => {
+    expect(() => validateLdtkData(withField({ __identifier: 'resistances', __type: 'Array<LocalEnum.Element>', __value: ['Fire', 7] }), SOURCE)).toThrow(
+      /fieldInstances\[0\]\.__value\[1\].*expected a string/,
+    );
+  });
+
   it('leaves a field type this package does not model unchecked', () => {
     expect(() => validateLdtkData(withField({ __identifier: 'future', __type: 'SomeFutureType', __value: { anything: true } }), SOURCE)).not.toThrow();
   });

@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 42,
+  "memberCount": 39,
   "counts": {
     "constructors": 1,
-    "methods": 23,
-    "properties": 18,
+    "methods": 22,
+    "properties": 16,
     "events": 0
   },
   "sections": [
@@ -71,116 +71,6 @@
       "id": "methods",
       "title": "Methods",
       "members": [
-        {
-          "name": "_setLocalBounds",
-          "signature": "_setLocalBounds(x: number, y: number, width: number, height: number): this",
-          "signatureTokens": [
-            {
-              "text": "_setLocalBounds",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "x",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "y",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "width",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "height",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "x",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "y",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "width",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "height",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Write this node's local extent and run the bounds invalidation the change implies - the node's own bounds flag, the ancestor bounds cascade, and the content-dirty stamp that keeps retained fragments from replaying the old extent. This is the only supported way to resize a node from outside getLocalBounds; the rectangle itself is handed out read-only so the invalidation cannot be forgotten. Built-in drawables (Sprite, Text, BitmapText, Mesh, ...) and custom ones alike go through here. Part of the renderer SDK contract for extension renderers."
-        },
         {
           "name": "collidesWith",
           "signature": "collidesWith(target: Collidable): CollisionResponse | null",
@@ -440,7 +330,7 @@
           ],
           "params": [],
           "returnType": "ReadonlyRectangle",
-          "description": "This node's untransformed extent in its own local coordinate space. Returns the LIVE internal rectangle, not a copy: it is read on hot paths (updateBounds re-reads it on every transform-dirty recompute, i.e. potentially every frame for a moving node), so copying it here would add a per-frame allocation. It is therefore typed as a ReadonlyRectangle - reads are unchanged, writes are rejected at compile time. Writing to it directly would skip the bounds/content invalidation the engine needs, leaving culling, hit-testing and retained render fragments on a stale extent. A custom Drawable that owns its own size sets it through _setLocalBounds, which writes and invalidates in one step."
+          "description": "This node's untransformed extent in its own local coordinate space. Returns the LIVE internal rectangle, not a copy: it is read on hot paths (updateBounds re-reads it on every transform-dirty recompute, i.e. potentially every frame for a moving node), so copying it here would add a per-frame allocation. It is therefore typed as a ReadonlyRectangle - reads are unchanged, writes are rejected at compile time. Writing to it directly would skip the bounds/content invalidation the engine needs, leaving culling, hit-testing and retained render fragments on a stale extent. A custom Drawable that owns its own size sets it through setLocalBounds, which writes and invalidates in one step."
         },
         {
           "name": "getNormals",
@@ -579,53 +469,6 @@
           ],
           "returnType": "boolean",
           "description": "Test whether this shape overlaps target using a fast boolean algorithm (no penetration depth or normal computed). Prefer this over collidesWith when only the yes/no result is needed."
-        },
-        {
-          "name": "inView",
-          "signature": "inView(view: View): boolean",
-          "signatureTokens": [
-            {
-              "text": "inView",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "view",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "View",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "boolean",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "view",
-              "type": "View",
-              "optional": false
-            }
-          ],
-          "returnType": "boolean",
-          "description": ""
         },
         {
           "name": "move",
@@ -809,6 +652,116 @@
           ],
           "returnType": "this",
           "description": ""
+        },
+        {
+          "name": "setLocalBounds",
+          "signature": "setLocalBounds(x: number, y: number, width: number, height: number): this",
+          "signatureTokens": [
+            {
+              "text": "setLocalBounds",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Write this node's local extent and run the bounds invalidation the change implies - the node's own bounds flag, the ancestor bounds cascade, and the content-dirty stamp that keeps retained fragments from replaying the old extent. This is the only supported way to resize a node from outside getLocalBounds; the rectangle itself is handed out read-only so the invalidation cannot be forgotten. Built-in drawables (Sprite, Text, BitmapText, Mesh, ...) and custom ones alike go through here. Part of the renderer SDK contract for extension renderers."
         },
         {
           "name": "setOrigin",
@@ -1307,56 +1260,6 @@
           "params": [],
           "returnType": null,
           "description": "Optional human-readable identity for this node. Defaults to null. Purely a label the engine never interprets: useful for debugging, find-by-name lookups, prefab references, and as a stable key when merging serialized state back onto an existing tree. Not required to be unique."
-        },
-        {
-          "name": "cullable",
-          "signature": "cullable: boolean",
-          "signatureTokens": [
-            {
-              "text": "cullable",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "boolean",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "When false, this node is never culled by the viewport check and is always considered in-view. Defaults to true."
-        },
-        {
-          "name": "cullArea",
-          "signature": "cullArea: Rectangle | null",
-          "signatureTokens": [
-            {
-              "text": "cullArea",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Rectangle",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Custom rectangle used for viewport cull intersection test. When set, replaces the default node bounds in cull checks. Set to null to restore default bounds-based culling."
         },
         {
           "name": "destroyed",

@@ -9,7 +9,6 @@ import {
   intersectionRectEllipse,
   intersectionSat,
 } from '#math/Collision';
-import { intersectionRectRect } from '#math/collisionPrimitives';
 import type { Collidable, CollisionResponse } from '#math/collisionTypes';
 import { CollisionType } from '#math/collisionTypes';
 import type { Ellipse } from '#math/Ellipse';
@@ -17,16 +16,14 @@ import { Flags } from '#math/Flags';
 import { Interval } from '#math/Interval';
 import type { Line } from '#math/Line';
 import { Matrix } from '#math/Matrix';
-import { ObservableVector, type ObservableVectorOwner } from '#math/ObservableVector';
+import { ObservableVector } from '#math/ObservableVector';
 import { Polygon } from '#math/Polygon';
 import type { ReadonlyRectangle } from '#math/Rectangle';
 import { Rectangle } from '#math/Rectangle';
-import type { RectangleLike } from '#math/RectangleLike';
 import { degreesToRadians, trimRotation } from '#math/utils';
 import { Vector } from '#math/Vector';
 import type { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
-import type { View } from '#rendering/View';
 
 import { DirtyChannel, nodeDirtyIndex } from './nodeDirtyIndex';
 import { nextNodeRevision, NodeRevision } from './NodeRevision';
@@ -70,6 +67,9 @@ export enum SceneNodeVectorChannel {
 
 /** Shared scratch for the four oriented corners - written then copied into a node's polygon (single-threaded). */
 const orientedCorners = [new Vector(), new Vector(), new Vector(), new Vector()];
+
+/** Shared scratch for the world-to-local point map; read immediately, never retained. */
+const localPoint = new Vector();
 
 /**
  * Process-wide dirty-walk epoch. Advanced by EVERY consumer read of a
@@ -177,7 +177,7 @@ const NO_PARENT_VERSION = 0;
  * Subclasses: {@link Container} (carries children), {@link RenderNode}
  * (carries draw payloads).
  */
-export class SceneNode implements Collidable, ObservableVectorOwner {
+export class SceneNode implements Collidable {
   public readonly collisionType: CollisionType = CollisionType.SceneNode;
 
   public readonly flags: Flags<SceneNodeTransformFlags> = new Flags<SceneNodeTransformFlags>(
@@ -253,15 +253,13 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * pattern the invalidating writers below cannot serve: a subclass that
    * recomputes its extent lazily from inside its own {@link getLocalBounds}
    * override. Such an override must write this rectangle directly - routing it
-   * through {@link _setLocalBounds} would cascade an invalidation on every
+   * through {@link setLocalBounds} would cascade an invalidation on every
    * read, which re-dirties the node once per frame and defeats the retained
-   * static-subtree skip. Every other writer belongs in {@link _setLocalBounds}.
+   * static-subtree skip. Every other writer belongs in {@link setLocalBounds}.
    */
   protected readonly _localBounds = new Rectangle();
   private _parentNode: Container | null = null;
   private _zIndex = 0;
-  private _cullable = true;
-  private _cullArea: Rectangle | null = null;
   private _isDestroyed = false;
   /** Lazily-built oriented bounding box (the local bounds under the global transform) for rotated-node SAT. */
   private _orientedBounds: Polygon | null = null;
@@ -373,37 +371,6 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
       this._zIndex = zIndex;
       this._parentNode?._invalidatePaintOrder();
       this._markContentDirty();
-    }
-  }
-
-  /**
-   * When `false`, this node is never culled by the viewport check and is
-   * always considered in-view. Defaults to `true`.
-   */
-  public get cullable(): boolean {
-    return this._cullable;
-  }
-
-  public set cullable(cullable: boolean) {
-    if (this._cullable !== cullable) {
-      this._cullable = cullable;
-      this._markStructureDirty();
-    }
-  }
-
-  /**
-   * Custom rectangle used for viewport cull intersection test.
-   * When set, replaces the default node bounds in cull checks.
-   * Set to `null` to restore default bounds-based culling.
-   */
-  public get cullArea(): Rectangle | null {
-    return this._cullArea;
-  }
-
-  public set cullArea(rect: Rectangle | null) {
-    if (this._cullArea !== rect) {
-      this._cullArea = rect;
-      this._markStructureDirty();
     }
   }
 
@@ -548,7 +515,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * Writing to it directly would skip the bounds/content invalidation the
    * engine needs, leaving culling, hit-testing and retained render fragments on
    * a stale extent. A custom {@link Drawable} that owns its own size sets it
-   * through {@link _setLocalBounds}, which writes and invalidates in one step.
+   * through {@link setLocalBounds}, which writes and invalidates in one step.
    */
   public getLocalBounds(): ReadonlyRectangle {
     return this._localBounds;
@@ -567,7 +534,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    *
    * Part of the renderer SDK contract for extension renderers.
    */
-  public _setLocalBounds(x: number, y: number, width: number, height: number): this {
+  public setLocalBounds(x: number, y: number, width: number, height: number): this {
     this._localBounds.set(x, y, width, height);
     this._invalidateBoundsCascade();
 
@@ -884,83 +851,37 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
       return this.getBounds().contains(x, y);
     }
 
+    const local = this._toLocalPoint(x, y);
+
+    return local !== null && this.getLocalBounds().contains(local.x, local.y);
+  }
+
+  /**
+   * Map the world-space point `(x, y)` back into this node's own local space -
+   * the space {@link getLocalBounds} and every local-space shape are expressed
+   * in - or `null` when the node's global transform is singular (a zero scale
+   * collapses it, so no world point maps back).
+   *
+   * The result is a shared scratch vector overwritten by the next call on any
+   * node: read the two components immediately and never retain the instance.
+   * Returning scratch is what keeps hit-testing allocation-free on a path that
+   * runs once per interactive node per pointer event.
+   * @internal
+   */
+  protected _toLocalPoint(x: number, y: number): Vector | null {
     const matrix = this.getGlobalTransform();
     const determinant = matrix.a * matrix.d - matrix.b * matrix.c;
 
     if (determinant === 0) {
-      return false;
+      return null;
     }
 
-    // Inverse of the forward map `world = [[a, b], [c, d]] · local + (x, y)`
+    // Inverse of the forward map `world = [[a, b], [c, d]] * local + (x, y)`
     // (AbstractVector.transform - the same map getBounds()/Sprite vertices use).
-    // Recovers the local-space coordinate, then tests the untransformed bounds.
     const deltaX = x - matrix.x;
     const deltaY = y - matrix.y;
-    const localX = (matrix.d * deltaX - matrix.b * deltaY) / determinant;
-    const localY = (matrix.a * deltaY - matrix.c * deltaX) / determinant;
 
-    return this.getLocalBounds().contains(localX, localY);
-  }
-
-  public inView(view: View): boolean {
-    return this._inCullRect(view.getBounds());
-  }
-
-  /**
-   * The view test against an explicit rect rather than a view's own bounds.
-   *
-   * A capturing collect culls against a rect slightly LARGER than the view so
-   * the resulting retained product survives a camera that moves (see
-   * `RenderPlanBuilder.cullRect`); everything else passes the view's own rect
-   * and gets exactly {@link inView}.
-   * @internal
-   */
-  public _inCullRect(rect: ReadonlyRectangle): boolean {
-    return this._inCullRectUsingBounds(rect, null);
-  }
-
-  /**
-   * {@link _inCullRect} against bounds the caller already holds.
-   *
-   * Exists because {@link getBounds} resolves the whole parent chain on every
-   * call, and the persistent-source scan asks this question once per item in a
-   * subtree that can hold a million of them - at which point that resolve is the
-   * single most expensive thing a camera step pays for.
-   *
-   * The rule is split along the line of what a caller may safely have cached:
-   *
-   * - `cullable` and `cullArea` are read LIVE, always. `cullArea` is a mutable
-   *   `Rectangle` and only REPLACING the reference stamps a revision, so a
-   *   caller that had copied it could go stale in place, unnoticed.
-   * - `bounds` is the caller's, and it is the caller's obligation to pass one
-   *   that is current. The persistent source does that by keying its items on
-   *   the subtree's transform revision: they are only selected from while
-   *   nothing in it has moved, so no stored extent can be wrong.
-   *
-   * `null` means "resolve them from this node", which is exactly
-   * {@link _inCullRect}. It is a null rather than an eagerly-passed
-   * `getBounds()` because the two early exits above must come FIRST: a node that
-   * opted out of culling, or one carrying a `cullArea`, never needs its bounds,
-   * and resolving them anyway walks its whole parent chain. Passing them in as
-   * an argument made every node in a culling-free scene pay that walk - measured
-   * on `deep-hierarchy` at 100,000 nodes as 1.9ms -> 19.3ms median.
-   *
-   * One rule, one implementation. A second copy would be free to drift, and this
-   * one decides which nodes reach the screen.
-   * @internal
-   */
-  public _inCullRectUsingBounds(rect: ReadonlyRectangle, bounds: RectangleLike | null): boolean {
-    if (!this._cullable) {
-      return true;
-    }
-
-    const area = this._cullArea;
-
-    if (area !== null) {
-      return rect.intersectsWith(area);
-    }
-
-    return intersectionRectRect(rect, bounds ?? this.getBounds());
+    return localPoint.set((matrix.d * deltaX - matrix.b * deltaY) / determinant, (matrix.a * deltaY - matrix.c * deltaX) / determinant);
   }
 
   /**
@@ -1080,7 +1001,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
 
   /**
    * Write the local extent and refresh the bounds flags WITHOUT a revision
-   * stamp - the {@link _setLocalBounds} counterpart for a node that already
+   * stamp - the {@link setLocalBounds} counterpart for a node that already
    * stamped itself content-dirty when the change was requested.
    *
    * A node that lays its content out lazily has to stamp at mutation time,

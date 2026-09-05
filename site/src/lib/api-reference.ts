@@ -18,6 +18,8 @@ export const API_SUBSYSTEM_ORDER = [
   'tiled',
   'physics',
   'tilemap-physics',
+  'lighting',
+  'pathfinding',
   'aseprite',
   'ldtk',
 ] as const;
@@ -92,6 +94,14 @@ export const API_SUBSYSTEM_META: Record<ApiSubsystem, { label: string; descripti
   'tilemap-physics': {
     label: 'Tilemap physics (official extension)',
     description: 'The @codexo/exojs-tilemap-physics package: static physics colliders built and streamed from tilemap collision geometry.',
+  },
+  lighting: {
+    label: 'Lighting (official extension)',
+    description: 'The @codexo/exojs-lighting package: forward normal-mapped point lighting for sprites, in one batch and one pass.',
+  },
+  pathfinding: {
+    label: 'Pathfinding (official extension)',
+    description: 'The @codexo/exojs-pathfinding package: deterministic A* and jump-point search over weighted grids and waypoint graphs.',
   },
 };
 

@@ -390,7 +390,7 @@ export class Sprite extends Drawable {
 
     this._textureFrame.copy(frame);
     this.flags.addMask(SpriteFlags.TextureCoords);
-    this._setLocalBounds(0, 0, frame.width, frame.height);
+    this.setLocalBounds(0, 0, frame.width, frame.height);
 
     // Sizing against an empty frame is skipped rather than assigned: the size
     // setters hold what they cannot express yet, and a zero from this internal
@@ -506,8 +506,14 @@ export class Sprite extends Drawable {
    * Return `true` if the world-space point (`x`, `y`) lies inside the quad.
    * Uses a fast AABB check for axis-aligned quads, and a cross-product sign
    * test for rotated or skewed quads.
+   *
+   * A {@link RenderNode.hitArea} replaces the quad test entirely.
    */
   public override contains(x: number, y: number): boolean {
+    if (this.hitArea !== null) {
+      return super.contains(x, y);
+    }
+
     if (this.isAlignedBox) {
       return this.getBounds().contains(x, y);
     }

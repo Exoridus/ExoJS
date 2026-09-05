@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "LdtkFieldInstance",
-          "signature": "{ __identifier: string; __type: \"EntityRef\"; __value: LdtkFieldEntityRefValue | null } | { __identifier: string; __type: \"Point\"; __value: LdtkFieldPointValue | null } | { __identifier: string; __type: \"Tile\"; __value: LdtkFieldTileValue | null } | { __identifier: string; __type: LdtkFieldScalarType; __value: boolean | null | number | string } | { __identifier: string; __type: templateLiteral; __value: null | readonly unknown[] }",
+          "signature": "{ __identifier: string; __type: \"EntityRef\"; __value: LdtkFieldEntityRefValue | null } | { __identifier: string; __type: \"Point\"; __value: LdtkFieldPointValue | null } | { __identifier: string; __type: \"Tile\"; __value: LdtkFieldTileValue | null } | { __identifier: string; __type: LdtkFieldEnumType; __value: null | string } | { __identifier: string; __type: LdtkFieldScalarType; __value: boolean | null | number | string } | { __identifier: string; __type: templateLiteral; __value: null | readonly unknown[] }",
           "signatureTokens": [
             {
               "text": "{ ",
@@ -214,6 +214,70 @@
             },
             {
               "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "__identifier",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "__type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkFieldEnumType",
+              "kind": "type"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "__value",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
               "kind": "keyword"
             },
             {

@@ -1,5 +1,5 @@
 export { BrowserPlatform } from './BrowserPlatform';
-export { browserNetworkHints } from './networkHints';
+export { browserNetworkHints, type OwnedNetworkHintSource } from './networkHints';
 export { OffscreenPlatform, type OffscreenSurfaceRect } from './OffscreenPlatform';
 export type {
   FrameScheduler,

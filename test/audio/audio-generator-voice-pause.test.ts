@@ -1,10 +1,11 @@
-import type { MockInstance } from 'vitest';
+﻿import type { MockInstance } from 'vitest';
 
 import { getAudioContext } from '#audio/audioContext';
 import { AudioGenerator } from '#audio/AudioGenerator';
 import type { AudioGeneratorVoice } from '#audio/AudioGeneratorVoice';
 import { AudioSystem } from '#audio/AudioSystem';
 import { Envelope } from '#audio/Envelope';
+import { Time } from '#core/units';
 
 // ---------------------------------------------------------------------------
 // Helpers - same oscillator/gain spies as audio-generator-voice.test.ts, plus a
@@ -106,7 +107,7 @@ const setupSpy = (): Spy => {
 
 /**
  * The voice's envelope gain. Two gains are created per play: the voice output
- * (in `AudioGenerator._createVoice`) and then the envelope gain (in the voice
+ * (in `AudioGenerator.createVoice`) and then the envelope gain (in the voice
  * constructor).
  */
 const envelopeGainOf = (spy: Spy): MockGainNode => {
@@ -280,15 +281,15 @@ describe('AudioGeneratorVoice — Pausable', () => {
   // ---- stop / teardown while paused ----
 
   test('stop() while paused ends the voice immediately instead of scheduling a silent release', () => {
-    const envelope = new Envelope({ attackMs: 10, decayMs: 100, releaseMs: 500 });
-    const releaseSpy = vi.spyOn(envelope, 'release');
+    const envelope = new Envelope({ attack: Time.seconds(0.01), decay: Time.seconds(0.1), release: Time.seconds(0.5) });
+    const releaseSpy = vi.spyOn(envelope, 'releaseAt');
     const { voice, dispose } = play({ envelope });
 
     voice.pause();
     voice.stop();
 
     // Nothing audible is left to ramp - a release tail on a retired oscillator
-    // would only strand the voice for `releaseMs`.
+    // would only strand the voice for `release`.
     expect(releaseSpy).not.toHaveBeenCalled();
     expect(voice.ended).toBe(true);
     // `paused` is not unwound by the end - same as `SoundVoice`/
@@ -313,7 +314,7 @@ describe('AudioGeneratorVoice — Pausable', () => {
   });
 
   test('pause() during an envelope release ends the voice rather than stranding it', () => {
-    const envelope = new Envelope({ attackMs: 10, decayMs: 100, releaseMs: 500 });
+    const envelope = new Envelope({ attack: Time.seconds(0.01), decay: Time.seconds(0.1), release: Time.seconds(0.5) });
     const { voice, dispose } = play({ envelope });
 
     // stop() with an envelope leaves the voice alive until the release tail is
@@ -333,7 +334,7 @@ describe('AudioGeneratorVoice — Pausable', () => {
   test('pause() during a timed fade-out ends the voice rather than stranding it', () => {
     const { voice, dispose } = play();
 
-    voice.stop(200);
+    voice.stop(Time.seconds(0.2));
     expect(voice.ended).toBe(false);
 
     voice.pause();
@@ -346,7 +347,7 @@ describe('AudioGeneratorVoice — Pausable', () => {
   // ---- envelope: state is frozen at the pause point ----
 
   test('pause during attack holds the interpolated attack value and cancels the pending ramps', () => {
-    const envelope = new Envelope({ attackMs: 100, decayMs: 100, sustainLevel: 0.25 });
+    const envelope = new Envelope({ attack: Time.seconds(0.1), decay: Time.seconds(0.1), sustainLevel: 0.25 });
     const { voice, spy, dispose } = play({ envelope });
     const gain = envelopeGainOf(spy).gain;
 
@@ -356,7 +357,7 @@ describe('AudioGeneratorVoice — Pausable', () => {
 
     voice.pause();
 
-    // Half way through a 100 ms attack → 0.5.
+    // Half way through a 0.1s attack → 0.5.
     expect(gain.cancelScheduledValues).toHaveBeenCalledWith(0.05);
     expect(gain.setValueAtTime).toHaveBeenCalledWith(0.5, 0.05);
 
@@ -364,7 +365,7 @@ describe('AudioGeneratorVoice — Pausable', () => {
   });
 
   test('resume re-schedules the remaining attack from the frozen value, not from the elapsed clock', () => {
-    const envelope = new Envelope({ attackMs: 100, decayMs: 100, sustainLevel: 0.25 });
+    const envelope = new Envelope({ attack: Time.seconds(0.1), decay: Time.seconds(0.1), sustainLevel: 0.25 });
     const { voice, spy, dispose } = play({ envelope });
     const gain = envelopeGainOf(spy).gain;
 
@@ -380,7 +381,7 @@ describe('AudioGeneratorVoice — Pausable', () => {
     voice.resume();
 
     expect(gain.setValueAtTime).toHaveBeenCalledWith(0.5, 5);
-    // 50 ms of attack left, then the full decay.
+    // 0.05s of attack left, then the full decay.
     expect(gain.linearRampToValueAtTime).toHaveBeenCalledWith(1, expect.closeTo(5.05, 9));
     expect(gain.linearRampToValueAtTime).toHaveBeenCalledWith(0.25, expect.closeTo(5.15, 9));
 
@@ -388,11 +389,11 @@ describe('AudioGeneratorVoice — Pausable', () => {
   });
 
   test('pause during decay resumes mid-decay, with no second attack ramp', () => {
-    const envelope = new Envelope({ attackMs: 100, decayMs: 200, sustainLevel: 0.4 });
+    const envelope = new Envelope({ attack: Time.seconds(0.1), decay: Time.seconds(0.2), sustainLevel: 0.4 });
     const { voice, spy, dispose } = play({ envelope });
     const gain = envelopeGainOf(spy).gain;
 
-    // 100 ms into a 200 ms decay: 1 + (0.4 - 1) * 0.5 = 0.7.
+    // 0.1s into a 0.2s decay: 1 + (0.4 - 1) * 0.5 = 0.7.
     setCurrentTime(0.2);
     voice.pause();
 
@@ -410,7 +411,7 @@ describe('AudioGeneratorVoice — Pausable', () => {
   });
 
   test('pause during sustain resumes at the sustain level with no ramps left', () => {
-    const envelope = new Envelope({ attackMs: 10, decayMs: 100, sustainLevel: 0.6 });
+    const envelope = new Envelope({ attack: Time.seconds(0.01), decay: Time.seconds(0.1), sustainLevel: 0.6 });
     const { voice, spy, dispose } = play({ envelope });
     const gain = envelopeGainOf(spy).gain;
 

@@ -18,6 +18,7 @@ export type {
   LdtkData,
   LdtkDefs,
   LdtkEntityInstance,
+  LdtkFieldEnumType,
   LdtkFieldInstance,
   LdtkIntGridValueDef,
   LdtkLayerDef,
@@ -30,7 +31,7 @@ export type {
   LdtkWorldData,
   LdtkWorldLayout,
 } from './LdtkData';
-export { LDTK_FLIP_NONE, LDTK_FLIP_X, LDTK_FLIP_XY, LDTK_FLIP_Y } from './LdtkData';
+export { isLdtkFieldEnumType, LDTK_FLIP_NONE, LDTK_FLIP_X, LDTK_FLIP_XY, LDTK_FLIP_Y } from './LdtkData';
 
 // ── Validation ────────────────────────────────────────────────────────────────
 export { LdtkFormatError } from './validate';

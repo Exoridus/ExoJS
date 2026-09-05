@@ -1,9 +1,78 @@
 import { Color } from '#core/Color';
+import { assert } from '#core/dev';
 import { Signal } from '#core/Signal';
+import type { GradientStop } from '#rendering/gradient/Gradient';
 
-import type { TextAlignment } from './types';
+import { cssFontString } from './canvasTextState';
+import type { FontStyle, FontVariant, FontVariantKey, TextAlignment, TextTransform } from './types';
 
-export type GradientAxis = 'vertical' | 'horizontal';
+/**
+ * How many stops one text gradient may carry.
+ *
+ * The ramp is evaluated per fragment from the node's own packed style row, so
+ * the stop list has to be a fixed-size part of it rather than a texture of its
+ * own. Eight covers the gradients display type actually uses; more of them
+ * would cost every text node the space whether it gradients or not.
+ */
+export const textGradientMaxStops = 8;
+
+/**
+ * A multi-stop fill gradient for text.
+ *
+ * The ramp is a shader-side function of the node's ink box, not a rasterized
+ * texture, so it costs no atlas work and follows the text as it re-flows.
+ */
+export interface TextGradient {
+  /**
+   * Colour stops, at most {@link textGradientMaxStops} of them. Offsets are
+   * clamped to `0..1` and sorted on the way in, so the order they are written
+   * in does not matter. At least two are required.
+   */
+  readonly stops: readonly GradientStop[];
+  /**
+   * Direction of the ramp in degrees, following the CSS `linear-gradient`
+   * convention: `0` runs towards the top, `90` towards the right, and the
+   * angle increases clockwise. Defaults to `180` - top to bottom.
+   *
+   * The ramp spans the ink box corner to corner along that direction, so the
+   * first stop lands on the box's leading edge and the last on its trailing
+   * one whatever the angle.
+   */
+  readonly angle?: number;
+}
+
+/** A text gradient with every optional field resolved and its stops normalized. */
+export interface ResolvedTextGradient {
+  readonly stops: readonly GradientStop[];
+  readonly angle: number;
+}
+
+const byOffset = (left: GradientStop, right: GradientStop): number => left.offset - right.offset;
+
+/**
+ * Clone, clamp and order a gradient's stops.
+ *
+ * Cloned because a `Color` is mutable and a style that aliased the caller's
+ * would change colour behind its back; sorted because the shader walks the
+ * stops in order and cannot re-order them per fragment.
+ */
+const _normalizeGradient = (gradient: TextGradient): ResolvedTextGradient => {
+  assert(gradient.stops.length >= 2, 'TextStyle gradient requires at least 2 colour stops.');
+  assert(gradient.stops.length <= textGradientMaxStops, `TextStyle gradient accepts at most ${textGradientMaxStops} colour stops.`);
+
+  const stops = gradient.stops
+    .map(stop => {
+      assert(Number.isFinite(stop.offset), 'TextStyle gradient stop offset must be a finite number.');
+
+      return { offset: Math.min(1, Math.max(0, stop.offset)), color: stop.color.clone() };
+    })
+    .sort(byOffset);
+
+  return { stops, angle: gradient.angle ?? 180 };
+};
+
+const _cloneGradient = (gradient: ResolvedTextGradient | null): ResolvedTextGradient | null =>
+  gradient === null ? null : { stops: gradient.stops.map(stop => ({ offset: stop.offset, color: stop.color.clone() })), angle: gradient.angle };
 
 /**
  * Describes how costly a style change is to incorporate.
@@ -79,13 +148,28 @@ export interface TextStyleOptions {
    * `'bold'` for display / title text that intentionally requires bold.
    */
   fontWeight?: FontWeight;
-  fontStyle?: 'normal' | 'italic';
+  fontStyle?: FontStyle;
+  /** CSS font-variant-caps. Defaults to `'normal'`. */
+  fontVariant?: FontVariant;
   fontSize?: number;
   fillColor?: Color;
   outlineColor?: Color;
   /** Outline width in SDF units (0..0.5). 0 disables the outline. */
   outlineWidth?: number;
   align?: TextAlignment;
+  /**
+   * Case mapping applied before layout. Defaults to `'none'`.
+   *
+   * The mapping is Unicode-aware and never touches the node's `text`: reading
+   * it back gives the string that was assigned, so a transformed label stays
+   * editable and a caret still lands where the reader clicked.
+   *
+   * `'capitalize'` uppercases the first grapheme cluster of each word and
+   * leaves the rest of the word alone, matching CSS. Word boundaries and the
+   * case mapping both follow `locale` when {@link LayoutOptions.locale} sets
+   * one.
+   */
+  textTransform?: TextTransform;
   lineHeight?: number;
   /** Extra pixel gap between lines, added on top of `lineHeight`. */
   leading?: number;
@@ -102,18 +186,34 @@ export interface TextStyleOptions {
   /** Shadow blur softness (0..1). Larger values soften the shadow edge. */
   shadowBlur?: number;
 
+  // ── Decorations ───────────────────────────────────────────────────────────
+  /** Draw a rule under each line. Defaults to `false`. */
+  underline?: boolean;
+  /** Draw a rule through each line. Defaults to `false`. */
+  strikethrough?: boolean;
+  /**
+   * Rule colour. `null` (the default) takes the fill, gradient included, so a
+   * gradient-filled label gets a gradient-filled rule.
+   */
+  decorationColor?: Color | null;
+  /**
+   * Rule thickness in pixels. `0` (the default) derives it from the font size.
+   */
+  decorationThickness?: number;
+  /**
+   * Extra downward offset in pixels applied to both rules, on top of the
+   * position the font's metrics put them at. Defaults to `0`.
+   */
+  decorationOffset?: number;
+
   // ── Gradient ──────────────────────────────────────────────────────────────
   /**
-   * Two-stop fill gradient. When set, overrides `fillColor` for the glyph
-   * interior. `null` disables the gradient.
+   * Multi-stop fill gradient. When set it overrides `fillColor` for the glyph
+   * interior; `null` disables it.
    *
-   * The first colour is the START of the ramp and the second its END, read
-   * along `gradientAxis`: `[top, bottom]` for `'vertical'`, `[left, right]`
-   * for `'horizontal'`.
+   * The ramp spans the ink extent (`getLocalBounds()`), not the advance box.
    */
-  gradientColors?: [Color, Color] | null;
-  /** Gradient orientation. Defaults to `'vertical'`. */
-  gradientAxis?: GradientAxis;
+  gradient?: TextGradient | null;
 }
 
 /**
@@ -137,12 +237,14 @@ export class TextStyle {
 
   private _fontFamily: FontFamily;
   private _fontWeight: FontWeight;
-  private _fontStyle: 'normal' | 'italic';
+  private _fontStyle: FontStyle;
+  private _fontVariant: FontVariant;
   private _fontSize: number;
   private _fillColor: Color;
   private _outlineColor: Color;
   private _outlineWidth: number;
   private _align: TextAlignment;
+  private _textTransform: TextTransform;
   private _lineHeight: number;
   private _leading: number;
 
@@ -153,9 +255,15 @@ export class TextStyle {
   private _shadowAlpha: number;
   private _shadowBlur: number;
 
+  // Decorations
+  private _underline: boolean;
+  private _strikethrough: boolean;
+  private _decorationColor: Color | null;
+  private _decorationThickness: number;
+  private _decorationOffset: number;
+
   // Gradient
-  private _gradientColors: [Color, Color] | null;
-  private _gradientAxis: GradientAxis;
+  private _gradient: ResolvedTextGradient | null;
 
   public constructor(options: TextStyleOptions = {}) {
     const explicitFace = typeof FontFace !== 'undefined' && options.font instanceof FontFace ? options.font : null;
@@ -164,11 +272,13 @@ export class TextStyle {
 
     this._fontWeight = options.fontWeight ?? 'normal';
     this._fontStyle = options.fontStyle ?? 'normal';
+    this._fontVariant = options.fontVariant ?? 'normal';
     this._fontSize = options.fontSize ?? 20;
     this._fillColor = options.fillColor ? options.fillColor.clone() : Color.white.clone();
     this._outlineColor = options.outlineColor ? options.outlineColor.clone() : Color.black.clone();
     this._outlineWidth = options.outlineWidth ?? 0;
     this._align = options.align ?? 'left';
+    this._textTransform = options.textTransform ?? 'none';
     this._lineHeight = options.lineHeight ?? 1.2;
     this._leading = options.leading ?? 0;
 
@@ -178,10 +288,15 @@ export class TextStyle {
     this._shadowAlpha = options.shadowAlpha ?? 0;
     this._shadowBlur = options.shadowBlur ?? 0;
 
-    this._gradientColors = options.gradientColors ? [options.gradientColors[0].clone(), options.gradientColors[1].clone()] : null;
-    this._gradientAxis = options.gradientAxis ?? 'vertical';
+    this._underline = options.underline ?? false;
+    this._strikethrough = options.strikethrough ?? false;
+    this._decorationColor = options.decorationColor ? options.decorationColor.clone() : null;
+    this._decorationThickness = options.decorationThickness ?? 0;
+    this._decorationOffset = options.decorationOffset ?? 0;
 
-    // Mark dirty immediately so the first update() triggers a full rebuild.
+    this._gradient = options.gradient ? _normalizeGradient(options.gradient) : null;
+
+    // Mark dirty immediately so the first layout pass is a full rebuild.
     this._dirty = true;
     this._pendingHint = 'font';
   }
@@ -190,7 +305,7 @@ export class TextStyle {
    * Returns the accumulated {@link StyleChangeHint} and clears the dirty flag,
    * or `null` if nothing has changed since the last call.
    *
-   * Call this once per frame from the owning node's `update()` method.
+   * Call this once per frame from the owning node's layout pass.
    */
   public consumeDirty(): StyleChangeHint | null {
     if (!this._dirty) return null;
@@ -231,13 +346,23 @@ export class TextStyle {
     this._markDirty('font');
   }
 
-  public get fontStyle(): 'normal' | 'italic' {
+  public get fontStyle(): FontStyle {
     return this._fontStyle;
   }
 
-  public set fontStyle(v: 'normal' | 'italic') {
+  public set fontStyle(v: FontStyle) {
     if (this._fontStyle === v) return;
     this._fontStyle = v;
+    this._markDirty('font');
+  }
+
+  public get fontVariant(): FontVariant {
+    return this._fontVariant;
+  }
+
+  public set fontVariant(v: FontVariant) {
+    if (this._fontVariant === v) return;
+    this._fontVariant = v;
     this._markDirty('font');
   }
 
@@ -260,6 +385,20 @@ export class TextStyle {
   public set align(v: TextAlignment) {
     if (this._align === v) return;
     this._align = v;
+    this._markDirty('layout');
+  }
+
+  /**
+   * Case mapping applied before layout. Changing it re-flows the text; the
+   * node's `text` is untouched.
+   */
+  public get textTransform(): TextTransform {
+    return this._textTransform;
+  }
+
+  public set textTransform(v: TextTransform) {
+    if (this._textTransform === v) return;
+    this._textTransform = v;
     this._markDirty('layout');
   }
 
@@ -372,44 +511,97 @@ export class TextStyle {
     this._markDirty('tint');
   }
 
-  // ── Gradient properties (hint: 'tint') ──────────────────────────────────
+  // ── Decoration properties ───────────────────────────────────────────────
 
-  /**
-   * Two-stop fill gradient. When set, overrides `fillColor` for the glyph
-   * interior. Assign `null` to disable.
-   *
-   * The first colour is the START of the ramp and the second its END, read
-   * along `gradientAxis`: `[top, bottom]` for `'vertical'`, `[left, right]`
-   * for `'horizontal'`.
-   */
-  public get gradientColors(): [Color, Color] | null {
-    return this._gradientColors;
+  /** Rule under each line. Rebuilds the geometry: a rule is a quad of its own. */
+  public get underline(): boolean {
+    return this._underline;
   }
 
-  public set gradientColors(v: [Color, Color] | null) {
-    this._gradientColors = v ? [v[0].clone(), v[1].clone()] : null;
+  public set underline(v: boolean) {
+    if (this._underline === v) return;
+    this._underline = v;
+    this._markDirty('layout');
+  }
+
+  /** Rule through each line. */
+  public get strikethrough(): boolean {
+    return this._strikethrough;
+  }
+
+  public set strikethrough(v: boolean) {
+    if (this._strikethrough === v) return;
+    this._strikethrough = v;
+    this._markDirty('layout');
+  }
+
+  /** Rule colour, or `null` to follow the fill. */
+  public get decorationColor(): Color | null {
+    return this._decorationColor;
+  }
+
+  public set decorationColor(v: Color | null) {
+    this._decorationColor = v ? v.clone() : null;
     this._markDirty('tint');
   }
 
-  public get gradientAxis(): GradientAxis {
-    return this._gradientAxis;
+  /** Rule thickness in pixels; `0` derives it from the font size. */
+  public get decorationThickness(): number {
+    return this._decorationThickness;
   }
 
-  public set gradientAxis(v: GradientAxis) {
-    if (this._gradientAxis === v) return;
-    this._gradientAxis = v;
+  public set decorationThickness(v: number) {
+    if (this._decorationThickness === v) return;
+    this._decorationThickness = v;
+    this._markDirty('layout');
+  }
+
+  /** Extra downward offset in pixels applied to both rules. */
+  public get decorationOffset(): number {
+    return this._decorationOffset;
+  }
+
+  public set decorationOffset(v: number) {
+    if (this._decorationOffset === v) return;
+    this._decorationOffset = v;
+    this._markDirty('layout');
+  }
+
+  // ── Gradient properties (hint: 'tint') ──────────────────────────────────
+
+  /**
+   * Multi-stop fill gradient, or `null` when the glyph interior takes
+   * `fillColor`.
+   *
+   * Read back normalized: stops cloned, offsets clamped to `0..1` and sorted,
+   * `angle` resolved. Assigning re-normalizes, so the object handed in is
+   * never aliased and mutating it afterwards changes nothing.
+   */
+  public get gradient(): ResolvedTextGradient | null {
+    return this._gradient;
+  }
+
+  public set gradient(v: TextGradient | null) {
+    this._gradient = v ? _normalizeGradient(v) : null;
     this._markDirty('tint');
   }
 
   // ── Derived properties ──────────────────────────────────────────────────
 
   /**
-   * CSS font string used as `CanvasRenderingContext2D.font` during glyph
-   * rasterization. Includes `fontStyle` so italic fonts render correctly.
+   * CSS `font` shorthand used as `CanvasRenderingContext2D.font` during glyph
+   * rasterization.
    */
   public get font(): string {
-    const style = this._fontStyle !== 'normal' ? `${this._fontStyle} ` : '';
-    return `${style}${this._fontWeight} ${this._fontSize}px ${this._fontFamily}`;
+    return cssFontString(this.fontKey, this._fontSize);
+  }
+
+  /**
+   * The typeface, slant, weight and caps variant this style selects, as the
+   * key a glyph atlas, a metrics cache or a line shaper is resolved by.
+   */
+  public get fontKey(): FontVariantKey {
+    return { family: this._fontFamily, fontStyle: this._fontStyle, fontWeight: this._fontWeight, fontVariant: this._fontVariant };
   }
 
   // ── Clone / copy ────────────────────────────────────────────────────────
@@ -420,11 +612,13 @@ export class TextStyle {
       this._fontFamily = style._fontFamily;
       this._fontWeight = style._fontWeight;
       this._fontStyle = style._fontStyle;
+      this._fontVariant = style._fontVariant;
       this._fontSize = style._fontSize;
       this._fillColor = style._fillColor.clone();
       this._outlineColor = style._outlineColor.clone();
       this._outlineWidth = style._outlineWidth;
       this._align = style._align;
+      this._textTransform = style._textTransform;
       this._lineHeight = style._lineHeight;
       this._leading = style._leading;
       this._shadowColor = style._shadowColor.clone();
@@ -432,8 +626,12 @@ export class TextStyle {
       this._shadowOffsetY = style._shadowOffsetY;
       this._shadowAlpha = style._shadowAlpha;
       this._shadowBlur = style._shadowBlur;
-      this._gradientColors = style._gradientColors ? [style._gradientColors[0].clone(), style._gradientColors[1].clone()] : null;
-      this._gradientAxis = style._gradientAxis;
+      this._underline = style._underline;
+      this._strikethrough = style._strikethrough;
+      this._decorationColor = style._decorationColor ? style._decorationColor.clone() : null;
+      this._decorationThickness = style._decorationThickness;
+      this._decorationOffset = style._decorationOffset;
+      this._gradient = _cloneGradient(style._gradient);
       this._markDirty('font');
     }
     return this;
@@ -445,11 +643,13 @@ export class TextStyle {
     s._fontFamily = this._fontFamily;
     s._fontWeight = this._fontWeight;
     s._fontStyle = this._fontStyle;
+    s._fontVariant = this._fontVariant;
     s._fontSize = this._fontSize;
     s._fillColor = this._fillColor.clone();
     s._outlineColor = this._outlineColor.clone();
     s._outlineWidth = this._outlineWidth;
     s._align = this._align;
+    s._textTransform = this._textTransform;
     s._lineHeight = this._lineHeight;
     s._leading = this._leading;
     s._shadowColor = this._shadowColor.clone();
@@ -457,8 +657,12 @@ export class TextStyle {
     s._shadowOffsetY = this._shadowOffsetY;
     s._shadowAlpha = this._shadowAlpha;
     s._shadowBlur = this._shadowBlur;
-    s._gradientColors = this._gradientColors ? [this._gradientColors[0].clone(), this._gradientColors[1].clone()] : null;
-    s._gradientAxis = this._gradientAxis;
+    s._underline = this._underline;
+    s._strikethrough = this._strikethrough;
+    s._decorationColor = this._decorationColor ? this._decorationColor.clone() : null;
+    s._decorationThickness = this._decorationThickness;
+    s._decorationOffset = this._decorationOffset;
+    s._gradient = _cloneGradient(this._gradient);
     s._dirty = true;
     s._pendingHint = 'font';
     return s;

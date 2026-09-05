@@ -1,6 +1,7 @@
 import { assert } from '#core/dev';
 import type { SceneNode } from '#core/SceneNode';
 import { Signal } from '#core/Signal';
+import type { Seconds } from '#core/units';
 import { clamp, degreesToRadians } from '#math/utils';
 import { Vector } from '#math/Vector';
 
@@ -59,6 +60,7 @@ export interface BaseVoiceInit {
 
 /** A voice the {@link AudioSystem} ticks each frame for spatial updates. */
 export interface SpatialVoice extends Voice {
+  /** @internal - called once per frame by {@link AudioSystem.update}. */
   _tickSpatial(): void;
 }
 
@@ -74,10 +76,8 @@ export interface SpatialVoice extends Voice {
  * inserted between the source and the gain only once the voice is actually
  * spatialized. Concrete voices provide the two source-specific hooks
  * {@link BaseVoice._routeThroughPanner} and {@link BaseVoice._teardownSource}.
- *
- * @internal
  */
-export abstract class BaseVoice implements Voice, SpatialVoice {
+export abstract class BaseVoice implements Voice {
   protected readonly _audioContext: AudioContext;
   protected readonly _output: GainNode;
   protected readonly _system: AudioSystem;
@@ -216,7 +216,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     return this;
   }
 
-  public fade(to: number, ms: number): void {
+  public fade(to: number, duration: Seconds): void {
     if (this._ended) return;
 
     const target = clamp(to, 0, 1);
@@ -225,31 +225,31 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     const ctx = this._audioContext;
     const node = this._output;
 
-    if (ms <= 0) {
+    if (duration <= 0) {
       node.gain.setTargetAtTime(target, ctx.currentTime, 0.01);
       return;
     }
 
     node.gain.cancelScheduledValues(ctx.currentTime);
     node.gain.setValueAtTime(node.gain.value, ctx.currentTime);
-    node.gain.linearRampToValueAtTime(target, ctx.currentTime + ms / 1000);
+    node.gain.linearRampToValueAtTime(target, ctx.currentTime + duration);
   }
 
-  public stop(fadeMs?: number): void {
+  public stop(fade?: Seconds): void {
     if (this._ended) return;
 
-    if (fadeMs !== undefined && fadeMs > 0) {
+    if (fade !== undefined && fade > 0) {
       const ctx = this._audioContext;
       const node = this._output;
       node.gain.cancelScheduledValues(ctx.currentTime);
       node.gain.setValueAtTime(node.gain.value, ctx.currentTime);
-      node.gain.linearRampToValueAtTime(0, ctx.currentTime + fadeMs / 1000);
+      node.gain.linearRampToValueAtTime(0, ctx.currentTime + fade);
 
       this._clearStopTimer();
       this._stopTimer = setTimeout(() => {
         this._stopTimer = null;
         this._finish();
-      }, fadeMs);
+      }, fade * 1000);
       return;
     }
 
@@ -830,7 +830,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
 
   /** Connect `tail` to the bus input, or to the destination with a deferred reroute while the bus is still locked. */
   private _connectTail(tail: AudioNode): void {
-    const input = this._bus._getInputNode();
+    const input = this._bus.getInputNode();
     if (input !== null) {
       tail.connect(input);
       return;
@@ -846,7 +846,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     this._pendingBusSetup = this._bus.onceSetup((): void => {
       this._pendingBusSetup = null;
       if (this._ended) return;
-      const node = this._bus._getInputNode();
+      const node = this._bus.getInputNode();
       if (node !== null) {
         const current = this._tail();
         current.disconnect();

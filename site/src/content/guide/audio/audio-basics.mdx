@@ -88,7 +88,7 @@ Browsers won't start audio until the user interacts with the page. Trigger the f
 Per-play overrides are passed to `play()`; everything afterwards is controlled on the returned `Voice`:
 
 ```ts
-import { type Application, Sound } from '@codexo/exojs';
+import { type Application, Sound, Time } from '@codexo/exojs';
 
 declare const application: Application;
 declare const sound: Sound;
@@ -96,13 +96,13 @@ declare const sound: Sound;
 // Per-play overrides (bus, volume, loop, playbackRate, detune, time, muted)
 const voice = application.audio.play(sound, { volume: 0.5, loop: true, playbackRate: 1.2 });
 
-voice.volume = 0.8;     // live volume, range [0, 1]
-voice.fade(0.2, 500);   // ramp volume to 0.2 over 500ms (no stop)
-voice.stop();           // stop now and release the voice
-voice.stop(800);        // fade out over 800ms, then stop
+voice.volume = 0.8;                    // live volume, range [0, 1]
+voice.fade(0.2, Time.seconds(0.5));    // ramp volume to 0.2 over 0.5s (no stop)
+voice.stop();                          // stop now and release the voice
+voice.stop(Time.seconds(0.8));         // fade out over 0.8s, then stop
 ```
 
-Every `Voice` carries `volume` (get/set), `fade(to, ms)`, `stop(fadeMs?)`, an `ended` flag, an `onEnd` signal, the bus it routes through (`voice.bus`), and an `output` node you can tap for analysis. Beyond that base, a voice mixes in only the capabilities its backing node actually supports — narrow with a cast or an `'x' in voice` check:
+Every `Voice` carries `volume` (get/set), `fade(to, duration)`, `stop(fade?)`, an `ended` flag, an `onEnd` signal, the bus it routes through (`voice.bus`), and an `output` node you can tap for analysis. Beyond that base, a voice mixes in only the capabilities its backing node actually supports — narrow with a cast or an `'x' in voice` check:
 
 ```ts
 import {
@@ -146,18 +146,18 @@ For "one voice at a time" scenarios like voice-over lines, `Sound`'s play option
 
 Voice volume is linear gain in the range `[0, 1]`, where 1 is "as authored". The bus the voice routes through can amplify beyond that (bus volume is 0..2), so a quiet voice on a hot bus can still be loud. dB conversion is up to you.
 
-`fade(to, ms)` ramps a voice's volume without stopping it; `stop(fadeMs)` ramps to zero and then releases the voice:
+`fade(to, duration)` ramps a voice's volume without stopping it; `stop(fade)` ramps to zero and then releases the voice:
 
 ```ts
-import type { Voice } from '@codexo/exojs';
+import { type Voice, Time } from '@codexo/exojs';
 
 declare const voice: Voice;
 
-// Fade out over 800ms, then stop
-voice.stop(800);
+// Fade out over 0.8s, then stop
+voice.stop(Time.seconds(0.8));
 
-// Fade up to 0.7 over 500ms, keep playing
-voice.fade(0.7, 500);
+// Fade up to 0.7 over 0.5s, keep playing
+voice.fade(0.7, Time.seconds(0.5));
 ```
 
 The `crossFade` utility fades one playing voice down while fading another up, in parallel:
@@ -238,8 +238,8 @@ import { type Application, Sound } from '@codexo/exojs';
 declare const application: Application;
 declare const sound: Sound;
 
-sound.defineSprite('impact', { start: 0.5, end: 0.8 });
-sound.defineSprite('whoosh', { start: 1.2, end: 1.6, loop: true });
+sound.addSprite('impact', { start: 0.5, end: 0.8 });
+sound.addSprite('whoosh', { start: 1.2, end: 1.6, loop: true });
 
 // `sprite(name)` is the playback side: it returns a `Sound` over that window.
 application.audio.play(sound.sprite('impact'));

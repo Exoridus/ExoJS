@@ -28,7 +28,6 @@ const initialTransformRowCapacity = 16;
  * scans every recorded batch for the smallest/largest shared-transform row it
  * references, then rebases all instance node indices to `min` so the cached
  * bytes address the group-owned transform store at rows `0..max-min`.
- * @internal
  */
 export interface WebGl2RetainedNodeIndexRange {
   min: number;
@@ -44,7 +43,6 @@ export interface WebGl2RetainedNodeIndexRange {
  * VERSION - never a node revision - so the fragment stays clean and only
  * `_validateRetainedInstructionSet` can force the recapture. Same-size
  * content updates stay replayable (textures are re-bound live at replay).
- * @internal
  */
 export interface WebGl2RecordedTextureState {
   readonly width: number;
@@ -62,7 +60,6 @@ export interface WebGl2RecordedTextureState {
  * `null`) for the self-contained instance-stream renderers (sprite / nine-
  * slice / repeating), whose batch VAO carries no index buffer and draws with
  * `drawArraysInstanced` - the existing path, unchanged.
- * @internal
  */
 export interface WebGl2RetainedGeometryRef {
   readonly vertexBuffer: WebGl2RenderBuffer;
@@ -79,7 +76,6 @@ export interface WebGl2RetainedGeometryRef {
  * store the generic bundle machinery never touches, so the renderer attaches
  * it here and the bundle only has to release it on destroy. Mirrors the WebGPU
  * bundle's `rendererReplayState` slot.
- * @internal
  */
 export interface WebGl2RetainedRendererReplayState {
   /** Release any GPU resources this state owns (called from the bundle). */
@@ -92,7 +88,6 @@ export interface WebGl2RetainedRendererReplayState {
  * everything the owning renderer needs to re-issue the batch from group-owned
  * resources with all STATE (pipeline/blend, projection/group uniforms,
  * texture bindings) resolved live at replay time.
- * @internal
  */
 export interface WebGl2RetainedBatchPayload {
   /** The group bundle whose instance buffer / transform store this batch references. */
@@ -139,19 +134,18 @@ export interface WebGl2RetainedBatchPayload {
  * bundle stores raw instance bytes; only the renderer that packed them knows
  * the layout (where the node index lives, which attributes the VAO needs), so
  * the backend delegates the layout-aware steps here per batch.
- * @internal
  */
 export interface WebGl2RetainedBatchReplayer {
   /** Widen `range` to cover every shared-transform row this batch's instances reference. */
-  _scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void;
+  scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void;
   /** Rewrite this batch's instance node indices to group-local (`index - base`). */
-  _rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void;
+  rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void;
   /** Point `payload.vao`'s attributes at the bundle instance buffer, based at `payload.byteOffset`. */
-  _configureRetainedVao(payload: WebGl2RetainedBatchPayload): void;
+  configureRetainedVao(payload: WebGl2RetainedBatchPayload): void;
   /** Preflight structural live state before any instruction in the set draws. */
-  _validateRetainedBatch?(payload: WebGl2RetainedBatchPayload): boolean;
+  validateRetainedBatch?(payload: WebGl2RetainedBatchPayload): boolean;
   /** Replay the batch: live state (blend, uniforms, textures), cached data (bytes, transforms). */
-  _replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void;
+  replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void;
 }
 
 /**
@@ -172,7 +166,6 @@ export interface WebGl2RetainedBatchReplayer {
  * GPU memory is booked with the backend's {@link GpuResourceAccountant}: the
  * instance buffer books through {@link WebGl2RenderBuffer}'s own accounting,
  * the transform texture through the backend's managed-texture sync.
- * @internal
  */
 export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   private _generation = 1;
@@ -272,6 +265,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
    * the contents recorded by any previous capture are about to be replaced,
    * so instructions referencing them (including an OUTER group's set holding
    * this bundle's batches verbatim) must stop validating.
+   * @internal
    */
   public _beginCapture(): void {
     this._generation++;
@@ -282,6 +276,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   /**
    * Append one recorded batch's instance words (copied) and return the byte
    * offset the batch starts at inside the instance buffer.
+   * @internal
    */
   public _appendInstanceWords(words: Uint32Array): number {
     this._ensureInstanceCapacity(this._usedWords + words.length);
@@ -300,6 +295,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
    * 0) and mark them for upload. Growth recreates both DataTextures (their
    * buffer references are fixed); the generation was already bumped by
    * {@link _beginCapture}, so growth needs no extra invalidation.
+   * @internal
    */
   public _storeTransformRows(source: Float32Array, tintSource: Uint8Array, firstRow: number, rowCount: number): void {
     if (rowCount <= 0) {
@@ -367,7 +363,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
    * moved node per frame, and a view per patch was the single largest per-node
    * allocation on the transform-patch path.
    */
-  public _patchTransformRow(localRow: number, floats: Float32Array): void {
+  public patchTransformRow(localRow: number, floats: Float32Array): void {
     if (
       this._transformTexture === null ||
       this._transformFloats === null ||
@@ -389,12 +385,12 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
 
   /**
    * Fast patch: overwrite one group-local tint row in place and mark ONLY that
-   * row's texel for upload. Same contract as {@link _patchTransformRow} on the
+   * row's texel for upload. Same contract as {@link patchTransformRow} on the
    * parallel store - no generation bump, out-of-range rows ignored - and the
    * reason the two stores are separate: a tint change and a move touch
    * different bytes, so neither pays for the other's upload.
    */
-  public _patchTintRow(localRow: number, bytes: Uint8Array): void {
+  public patchTintRow(localRow: number, bytes: Uint8Array): void {
     if (this._tintTexture === null || this._tintBytes === null || this._transformLayout === null || localRow < 0 || localRow >= this._transformRowCount) {
       return;
     }
@@ -414,6 +410,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
    * the generation - the recorded byte LAYOUT is unchanged, only the baked
    * position values move. Out-of-range writes are ignored (a stale patch after
    * a recapture shrank the store).
+   * @internal
    */
   public _patchInstanceWords(wordOffset: number, floats: Float32Array): void {
     if (this._instanceBuffer === null || wordOffset < 0 || wordOffset + floats.length > this._usedWords) {
@@ -424,14 +421,17 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
     this._instanceBuffer.upload(floats, wordOffset * Float32Array.BYTES_PER_ELEMENT);
   }
 
-  /** Attach the GL context + accountant the device resources are created against. */
+  /**
+   * Attach the GL context + accountant the device resources are created against.
+   * @internal
+   */
   public _connectDevice(gl: WebGL2RenderingContext, accountant: GpuResourceAccountant): void {
     this._gl = gl;
     this._accountant = accountant;
     this._maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
   }
 
-  /** Upload the used instance range into the group's persistent GPU buffer. */
+  /** @internal - upload the used instance range into the group's persistent GPU buffer. */
   public _uploadInstances(): void {
     if (this._gl === null) {
       throw new Error('WebGl2RetainedGroupResources: device not connected before instance upload.');
@@ -457,6 +457,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
    * Pooled per-batch VAO for batch `index` (grow-only pool, reused across
    * recaptures). A reused VAO is cleared; the renderer re-adds its attribute
    * pointers for the new byte offset.
+   * @internal
    */
   public _acquireVao(index: number): WebGl2VertexArrayObject {
     let vao = this._vaos[index];
@@ -480,6 +481,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
    * context restore (the old handles died with the lost context) - every
    * instruction set referencing this bundle stops validating and re-records,
    * recreating the resources against the restored context.
+   * @internal
    */
   public _invalidateDeviceResources(): void {
     this._generation++;

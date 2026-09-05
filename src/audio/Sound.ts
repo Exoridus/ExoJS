@@ -307,7 +307,7 @@ export class Sound implements Playable {
     this._destroySpriteSounds();
 
     for (const [name, clip] of Object.entries(sprites)) {
-      this.defineSprite(name, clip);
+      this.addSprite(name, clip);
     }
 
     return this;
@@ -318,7 +318,7 @@ export class Sound implements Playable {
    * discards the sub-{@link Sound} {@link Sound.sprite} memoized for it, so the
    * next lookup reflects the new window.
    */
-  public defineSprite(name: string, clip: AudioSpriteClip): this {
+  public addSprite(name: string, clip: AudioSpriteClip): this {
     if (name.trim().length === 0) {
       throw new Error('Sound sprite names must be non-empty strings.');
     }
@@ -366,7 +366,7 @@ export class Sound implements Playable {
 
   /**
    * The {@link Sound} for a named sprite - the playback side of
-   * {@link Sound.defineSprite}. Same concept as {@link Sound.clip}, addressed
+   * {@link Sound.addSprite}. Same concept as {@link Sound.clip}, addressed
    * by name instead of by offset: a sub-Sound over the same decoded buffer,
    * with the clip's own `loop` flag and its own voice pool.
    *
@@ -378,7 +378,7 @@ export class Sound implements Playable {
    *
    * @example
    * ```ts
-   * sound.defineSprite('impact', { start: 0.5, end: 0.8 });
+   * sound.addSprite('impact', { start: 0.5, end: 0.8 });
    * app.audio.play(sound.sprite('impact'));
    * ```
    */
@@ -500,7 +500,7 @@ export class Sound implements Playable {
    * Pool limits are enforced: if the pool is full the configured eviction
    * strategy picks a victim to stop before the new voice starts.
    */
-  public _createVoice(system: AudioSystem, options: SoundPlayOptions): Voice {
+  public createVoice(system: AudioSystem, options: SoundPlayOptions): Voice {
     const bus = options.bus ?? system.sound;
 
     // A suspended context's `currentTime` stands still, so `source.start(0, ...)`
@@ -542,7 +542,7 @@ export class Sound implements Playable {
   /**
    * If the sound is not playable-loaded, return a {@link NoopVoice} with a
    * differentiated warning; otherwise return `null` so the caller builds a
-   * real voice. {@link Sound._createVoice} routes through this before reaching
+   * real voice. {@link Sound.createVoice} routes through this before reaching
    * {@link Sound._buildVoice}, which covers full sounds, {@link Sound.clip}s
    * and {@link Sound.sprite}s alike - they are all just Sounds - so
    * `_buildVoice` can never be handed a `null` buffer (a sprite defined while
@@ -635,7 +635,7 @@ export class Sound implements Playable {
     return voice;
   }
 
-  /** Stop all currently active voices (e.g. for replace mode). */
+  /** @internal - stop all currently active voices (e.g. for replace mode). */
   public _stopAllVoices(): void {
     const voices = [...this._activeVoices];
     this._activeVoices.length = 0;

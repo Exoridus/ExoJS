@@ -59,7 +59,10 @@ describe('Assets.from bare-string inference', () => {
     expect(Assets.from({ level: 'levels/1.json' }).level).toBeInstanceOf(AssetRef);
   });
   it('throws a guiding error for an unregistered suffix', () => {
-    expect(() => Assets.from({ x: 'a/b.zzz' })).toThrow(/no built-in asset type claims|Asset\.type\(\)/);
+    // A literal would be refused at compile time; a runtime-built path is the caller this guards.
+    const pathFromConfig = (path: string): string => path;
+
+    expect(() => Assets.from({ x: pathFromConfig('a/b.zzz') })).toThrow(/no built-in asset type claims|Asset\.type\(\)/);
   });
   it('still accepts explicit configs (existing form) unchanged', () => {
     expect(Assets.from({ ship: { type: 'texture', source: 's.png' } }).ship).toBeInstanceOf(Texture);

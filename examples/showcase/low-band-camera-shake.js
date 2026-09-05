@@ -1,5 +1,5 @@
 // Auto-generated from low-band-camera-shake.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Sprite, Text, View } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Sprite, Text, Time, View } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 class LowBandCameraShakeScene extends Scene {
@@ -43,7 +43,7 @@ class LowBandCameraShakeScene extends Scene {
     // No constant floor: amplitude is purely low-band energy, so a quiet
     // passage produces zero shake. A small deadzone keeps faint noise still.
     const amplitude = low > 0.04 ? low * 28 : 0;
-    this.view.shake(amplitude, 90, { decay: true, frequency: 22 });
+    this.view.shake(amplitude, Time.seconds(0.09), { decay: true, frequency: 22 });
     // Advance the shake oscillation (the View only animates when updated).
     this.view.update(delta * 1000);
     if (this.musicVoice) {

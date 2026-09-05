@@ -15,6 +15,7 @@ const repoRoot = resolve(import.meta.dirname!, '../..');
 const workflow = readFileSync(resolve(repoRoot, '.github/workflows/ci.yml'), 'utf8');
 
 const pullRequest = (changedFiles: string[]): CiPlan => planCi({ eventName: 'pull_request', changedFiles, refName: 'feature' });
+const push = (changedFiles: string[], refName = 'next'): CiPlan => planCi({ eventName: 'push', changedFiles, refName });
 const ids = (entries: Array<{ id: string }>): string[] => entries.map(entry => entry.id);
 
 describe('lane table', () => {
@@ -54,6 +55,59 @@ describe('plan for a push to a long-lived branch', () => {
 
   it('collects no coverage on a push to any other branch', () => {
     expect(planCi({ eventName: 'push', changedFiles: [], refName: 'release/0.15.x' }).coverage).toBe(false);
+  });
+});
+
+describe('plan for a push whose before..after diff did not resolve', () => {
+  // The workflow leaves `changedFiles` empty both when `before` is unknown (a
+  // new branch, a force-push with no shared history) and when the diff ran but
+  // legitimately touched nothing; `planCi` cannot tell those apart and must not
+  // skip validation for either, on any branch.
+  it('validates every area, regardless of branch', () => {
+    const plan = planCi({ eventName: 'push', changedFiles: [], refName: 'feature-x' });
+    expect(Object.values(plan.areas).every(Boolean)).toBe(true);
+    expect(ids(plan.test)).toEqual(['unit', 'webgl', 'webgpu', 'firefox', 'audio', 'tilemap', 'bench']);
+  });
+});
+
+describe('plan for a push with a resolved diff', () => {
+  it('narrows to the engine lanes for an engine change, same as a pull request', () => {
+    const plan = push(['src/rendering/webgl2/backend.ts']);
+    expect(ids(plan.test)).toEqual(['unit', 'webgl', 'webgpu', 'firefox', 'bench']);
+    expect(ids(plan.verify)).toEqual(['package']);
+    expect(plan).toMatchObject({ build: true, site: true, smoke: true, smokeSample: false });
+  });
+
+  it('builds the site without the engine lanes for a site-only change', () => {
+    const plan = push(['site/src/pages/index.astro']);
+    expect(plan.test).toEqual([]);
+    expect(plan).toMatchObject({ build: true, site: true, smoke: true });
+  });
+
+  it('runs the engine lanes without the site build for an engine-test-only change', () => {
+    const plan = push(['test/rendering/webgl2/backend.test.ts']);
+    expect(ids(plan.test)).toContain('unit');
+    expect(plan).toMatchObject({ site: false, smoke: false });
+  });
+
+  it('runs only the gates for a docs-only change', () => {
+    const plan = push(['README.md']);
+    expect(ids(plan.gates)).toEqual(['typecheck', 'lint', 'sync']);
+    expect(plan.test).toEqual([]);
+    expect(plan.verify).toEqual([]);
+    expect(plan).toMatchObject({ build: false, site: false, smoke: false });
+  });
+
+  it('never enables the pull-request-only release lane', () => {
+    expect(ids(push(['scripts/release/prepare.ts']).verify)).toEqual(['package']);
+  });
+});
+
+describe('plan for events that always validate everything', () => {
+  it('ignores a changed-file list on a manual dispatch', () => {
+    const plan = planCi({ eventName: 'workflow_dispatch', changedFiles: ['README.md'], refName: 'next' });
+    expect(plan.areas).toEqual(planCi({ eventName: 'workflow_dispatch', changedFiles: [], refName: 'next' }).areas);
+    expect(ids(plan.test)).toEqual(['unit', 'webgl', 'webgpu', 'firefox', 'audio', 'tilemap', 'bench']);
   });
 });
 

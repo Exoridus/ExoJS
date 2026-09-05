@@ -33,7 +33,7 @@ const makeLayer = (opts: Partial<ImageLayerOptions> = {}): ImageLayer => {
  *  - `view.center`         - the parallax patch source,
  *  - `view.getBounds()`    - the repeat-coverage span (Rectangle-like),
  *  - `view.updateId`       - the retained-plan revision key,
- *  - `_isViewCullSuppressed: true` - makes the child `_collect` skip the
+ *  - `_isViewCullSuppressed: true` - makes the child `collect` skip the
  *    `inView` frustum test and go straight to `emitNode` (no cull machinery),
  *  - `emitNode` / `_peekCurrentScopeEntries` + `_peekCurrentScopeEntryCount` - the
  *    no-slot capture bookkeeping,

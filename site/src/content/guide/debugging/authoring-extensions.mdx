@@ -116,27 +116,23 @@ If `install` throws, construction is aborted and every extension installed *befo
 
 ## Typesafe renderer registration
 
-A `RendererBinding` is `{ targets, create }`: the drawable constructors it renders, and a factory that receives the live `RenderBackend` and returns a matching renderer — or `undefined` when the backend is unsupported (the binding is then skipped for that backend). Branch on `backend.backendType` to build the right per-backend renderer; the `satisfies never` exhaustiveness check makes an unhandled backend a *compile* error, not a runtime surprise:
+A `RendererBinding` is `{ targets, create }`: the drawable constructors it renders, and a factory that receives the live `RenderBackend` and returns a matching renderer — or `undefined` when the backend is unsupported (the binding is then skipped for that backend). Write it with `defineRendererBinding`, which infers the drawable union from `targets`, so a renderer that does not handle every target is rejected where you write it rather than at draw time. Branch on `backend.backendType` to build the right per-backend renderer; the `satisfies never` exhaustiveness check makes an unhandled backend a *compile* error, not a runtime surprise:
 
 ```ts no-check -- the Confetti drawable and its two renderers are the reader's own types
 import type { Extension, RendererBinding } from '@codexo/exojs/extensions';
-import type { RenderBackend } from '@codexo/exojs/renderer-sdk';
-import { RenderBackendType } from '@codexo/exojs/renderer-sdk';
+import { defineRendererBinding, RenderBackendType } from '@codexo/exojs/renderer-sdk';
 
 // `Confetti` is your own Drawable subtype; `WebGl2ConfettiRenderer` /
 // `WebGpuConfettiRenderer` extend the ABSTRACT SDK base renderers.
-const confettiRenderer: RendererBinding = {
-    targets: [Confetti],
-    create(backend: RenderBackend) {
-        if (backend.backendType === RenderBackendType.WebGl2) {
-            return new WebGl2ConfettiRenderer();
-        }
-        if (backend.backendType === RenderBackendType.WebGpu) {
-            return new WebGpuConfettiRenderer();
-        }
-        throw new Error(`Unsupported render backend: ${String(backend.backendType satisfies never)}`);
-    },
-};
+const confettiRenderer: RendererBinding = defineRendererBinding([Confetti], backend => {
+    if (backend.backendType === RenderBackendType.WebGl2) {
+        return new WebGl2ConfettiRenderer();
+    }
+    if (backend.backendType === RenderBackendType.WebGpu) {
+        return new WebGpuConfettiRenderer();
+    }
+    throw new Error(`Unsupported render backend: ${String(backend.backendType satisfies never)}`);
+});
 
 export const confettiExtension: Extension = {
     id: 'com.example.confetti',

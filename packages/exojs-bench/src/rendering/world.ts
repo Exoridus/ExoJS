@@ -26,6 +26,15 @@ export const GRID_MARGIN = 32;
 /** Side length of the generated per-archetype textures / leaf quads, in pixels. */
 export const SPRITE_SIZE = 8;
 
+/**
+ * Linear scale of the bloom target relative to the viewport in the `composite`
+ * archetype. Half resolution is what a real bloom uses: the blur is the widest
+ * kernel in the frame, and running it at full resolution pays four times the
+ * fragment cost for a result the upscale throws away again. Shared by both arms
+ * so each one's capture, blur and composite cover the same texel budget.
+ */
+export const BLOOM_DOWNSCALE = 0.5;
+
 /** Row/column layout of the leaf grid, plus the cell size derived from it. */
 export interface GridLayout {
   /** Number of grid columns. */

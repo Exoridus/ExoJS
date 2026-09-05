@@ -4,7 +4,7 @@ import type { PlayOptions, Spatializable, Voice } from './Playable';
  * Apply every spatial {@link PlayOptions} field present on `options` to
  * `voice`, via its live public setters - so a single `audio.play(sound,
  * options)` call can fully configure a spatial emitter without a second
- * step. Shared by every {@link Playable._createVoice} implementation
+ * step. Shared by every {@link Playable.createVoice} implementation
  * (`Sound`, `AudioStream`, `AudioGenerator`) so a new spatial option only
  * needs adding here once, not at every call site.
  */

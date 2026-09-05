@@ -20,7 +20,6 @@ const stencilContentFace: GPUStencilFaceState = {
  * retain the object. Pipelines that omit this state (no active clip) must run in
  * a pass without a depth/stencil attachment - the two variants are never
  * interchangeable, so callers key their pipeline cache on the stencil flag.
- * @internal
  */
 export const stencilContentDepthStencilState = (): GPUDepthStencilState => ({
   format: stencilAttachmentFormat,

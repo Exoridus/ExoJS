@@ -1,22 +1,24 @@
+import { type Seconds, seconds } from '#core/units';
+
 export interface EnvelopeOptions {
-  /** Attack time in ms - gain ramps from 0 to peak (1.0). Default 10. */
-  attackMs?: number;
-  /** Decay time in ms - gain ramps from peak to sustain level. Default 100. */
-  decayMs?: number;
+  /** Attack time - gain ramps from 0 to peak (1.0). Default 0.01. */
+  attack?: Seconds;
+  /** Decay time - gain ramps from peak to sustain level. Default 0.1. */
+  decay?: Seconds;
   /** Sustain level, 0..1. Default 0.7. */
   sustainLevel?: number;
-  /** Release time in ms - gain ramps from current to 0 on release(). Default 200. */
-  releaseMs?: number;
+  /** Release time - gain ramps from current to 0 on release(). Default 0.2. */
+  release?: Seconds;
 }
 
 /**
  * ADSR (Attack-Decay-Sustain-Release) envelope generator. Schedules a gain
  * curve on a target `AudioParam`:
  *
- *   attack:  0 → 1.0 (peak) over attackMs
- *   decay:   1.0 → sustainLevel over decayMs
+ *   attack:  0 → 1.0 (peak) over attack
+ *   decay:   1.0 → sustainLevel over decay
  *   sustain: held at sustainLevel
- *   release: current → 0 over releaseMs (triggered by `release()`)
+ *   release: current → 0 over release (triggered by `release()`)
  *
  * Use `trigger()` to start the attack/decay/sustain phase, and `release()`
  * to start the release phase. Multiple envelopes can target the same
@@ -24,14 +26,14 @@ export interface EnvelopeOptions {
  * `gain.cancelScheduledValues` if needed).
  */
 export class Envelope {
-  /** Attack time in milliseconds - gain ramps from 0 to peak (1.0). */
-  public attackMs: number;
-  /** Decay time in milliseconds - gain ramps from peak to sustain level. */
-  public decayMs: number;
+  /** Attack time - gain ramps from 0 to peak (1.0). */
+  public attack: Seconds;
+  /** Decay time - gain ramps from peak to sustain level. */
+  public decay: Seconds;
   /** Sustain level, 0..1. */
   public sustainLevel: number;
-  /** Release time in milliseconds - gain ramps from current to 0 on {@link Envelope.release}. */
-  public releaseMs: number;
+  /** Release time - gain ramps from current to 0 on {@link Envelope.release}. */
+  public release: Seconds;
 
   /**
    * The time each currently-scheduled param was triggered at, so
@@ -43,32 +45,32 @@ export class Envelope {
   private readonly _triggeredAt = new WeakMap<AudioParam, number>();
 
   public constructor(options: EnvelopeOptions = {}) {
-    this.attackMs = Math.max(0, options.attackMs ?? 10);
-    this.decayMs = Math.max(0, options.decayMs ?? 100);
+    this.attack = seconds(Math.max(0, options.attack ?? 0.01));
+    this.decay = seconds(Math.max(0, options.decay ?? 0.1));
     this.sustainLevel = Math.max(0, Math.min(1, options.sustainLevel ?? 0.7));
-    this.releaseMs = Math.max(0, options.releaseMs ?? 200);
+    this.release = seconds(Math.max(0, options.release ?? 0.2));
   }
 
   /**
    * Schedule attack → decay → sustain on the target gain parameter starting
    * at `atTime` (audioContext.currentTime).
    *
-   * `elapsedMs` resumes an envelope that had already run for that long when it
+   * `elapsed` resumes an envelope that had already run for that long when it
    * was frozen (see {@link Envelope.hold}): the schedule is laid out as if the
-   * note had been triggered `elapsedMs` ago, so the parameter is pinned to the
+   * note had been triggered `elapsed` ago, so the parameter is pinned to the
    * value the envelope had reached and only the stages still ahead are
    * scheduled. A stage already behind the resume point is skipped rather than
    * replayed - that is what keeps a paused voice from starting its attack over,
    * and equally from finding the envelope run out against a clock that kept
    * ticking while it was silent.
    */
-  public trigger(gainParam: AudioParam, atTime: number, elapsedMs = 0): void {
+  public trigger(gainParam: AudioParam, atTime: number, elapsed: Seconds = seconds(0)): void {
     // Bookkeeping records the *virtual* trigger point, so the geometry below -
     // and every later `release()` - reads the same as for a note that really
     // started there.
-    const triggeredAt = atTime - Math.max(0, elapsedMs) / 1000;
-    const attackEnd = triggeredAt + this.attackMs / 1000;
-    const decayEnd = attackEnd + this.decayMs / 1000;
+    const triggeredAt = atTime - Math.max(0, elapsed);
+    const attackEnd = triggeredAt + this.attack;
+    const decayEnd = attackEnd + this.decay;
 
     gainParam.cancelScheduledValues(atTime);
     gainParam.setValueAtTime(this._valueSince(triggeredAt, atTime), atTime);
@@ -91,7 +93,7 @@ export class Envelope {
    * advancing against `audioContext.currentTime` while nothing is audible.
    *
    * Unlike {@link Envelope.release} this keeps the trigger bookkeeping, so the
-   * envelope can be picked up again with `trigger(param, now, elapsedMs)`.
+   * envelope can be picked up again with `trigger(param, now, elapsed)`.
    */
   public hold(gainParam: AudioParam, atTime: number): void {
     if (typeof gainParam.cancelAndHoldAtTime === 'function') {
@@ -114,7 +116,7 @@ export class Envelope {
    * in-flight ramp and snap the parameter back to the previous event's value
    * (0 during attack) - an audible click.
    */
-  public release(gainParam: AudioParam, atTime: number): void {
+  public releaseAt(gainParam: AudioParam, atTime: number): void {
     // `cancelAndHoldAtTime` freezes the automation at its current value in one
     // step. Firefox still does not implement it, hence the analytical fallback:
     // reconstruct the value from the attack/decay geometry and pin it there
@@ -123,8 +125,8 @@ export class Envelope {
 
     this._triggeredAt.delete(gainParam);
 
-    gainParam.setTargetAtTime(0, atTime, this.releaseMs / 1000 / 3);
-    // setTargetAtTime is exponential; tau = releaseMs/3 reaches ~95% of target in releaseMs.
+    gainParam.setTargetAtTime(0, atTime, this.release / 3);
+    // setTargetAtTime is exponential; tau = release/3 reaches ~95% of target in `release`.
   }
 
   /**
@@ -143,8 +145,8 @@ export class Envelope {
 
   /** The envelope value at `time` for a schedule triggered at `triggeredAt`. */
   private _valueSince(triggeredAt: number, time: number): number {
-    const attackEnd = triggeredAt + this.attackMs / 1000;
-    const decayEnd = attackEnd + this.decayMs / 1000;
+    const attackEnd = triggeredAt + this.attack;
+    const decayEnd = attackEnd + this.decay;
 
     if (time >= decayEnd) return this.sustainLevel;
     if (time >= attackEnd) return 1 + (this.sustainLevel - 1) * ((time - attackEnd) / (decayEnd - attackEnd));
@@ -154,8 +156,8 @@ export class Envelope {
   }
 
   /** Total time from trigger to fully-released (attack + decay + release). */
-  public get totalDurationMs(): number {
-    return this.attackMs + this.decayMs + this.releaseMs;
+  public get totalDuration(): Seconds {
+    return seconds(this.attack + this.decay + this.release);
   }
 
   public destroy(): void {

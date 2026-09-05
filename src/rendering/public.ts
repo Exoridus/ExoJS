@@ -23,7 +23,7 @@ export type { RenderErrorCode, RenderErrorOptions } from './RenderError';
 export { formatShaderError, RenderError } from './RenderError';
 export type { CaptureOptions, DrawBatchOptions, DrawGeometryOptions, RenderOptions } from './RenderingContext';
 export { RenderingContext } from './RenderingContext';
-export type { MaskSource } from './RenderNode';
+export type { HitArea, MaskSource } from './RenderNode';
 export { RenderNode } from './RenderNode';
 export type { RenderNodePassOptions } from './RenderNodePass';
 export { RenderNodePass } from './RenderNodePass';
@@ -47,11 +47,15 @@ export {
   WrapModes,
 } from './types';
 export type { ViewFollowOptions, ViewFollowTarget, ViewOptions, ViewShakeOptions } from './View';
-export { View, ViewFlags } from './View';
+export { View } from './View';
 export type { BlurFilterOptions } from '#rendering/filters/BlurFilter';
 export { BlurFilter } from '#rendering/filters/BlurFilter';
 export type { ColorMatrixEntries } from '#rendering/filters/ColorMatrixFilter';
 export { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
+export type { DisplacementFilterOptions } from '#rendering/filters/DisplacementFilter';
+export { DisplacementFilter } from '#rendering/filters/DisplacementFilter';
+export type { DropShadowFilterOptions } from '#rendering/filters/DropShadowFilter';
+export { DropShadowFilter } from '#rendering/filters/DropShadowFilter';
 export { Filter } from '#rendering/filters/Filter';
 export type { LutFilterOptions, LutMode } from '#rendering/filters/LutFilter';
 export { LutFilter } from '#rendering/filters/LutFilter';
@@ -86,7 +90,7 @@ export type { NineSliceInsets, NineSliceModes, NineSliceOptions } from '#renderi
 export { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 export type { RepeatingSpriteOptions } from '#rendering/sprite/repeatingPlan';
 export { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
-export { Sprite, SpriteFlags } from '#rendering/sprite/Sprite';
+export { Sprite } from '#rendering/sprite/Sprite';
 export type { SpritesheetData, SpritesheetFrame } from '#rendering/sprite/Spritesheet';
 export { Spritesheet } from '#rendering/sprite/Spritesheet';
 export { AbstractText } from '#rendering/text/AbstractText';
@@ -94,27 +98,35 @@ export type { BitmapTextOptions } from '#rendering/text/BitmapText';
 export { BitmapText, BmFontAdapter } from '#rendering/text/BitmapText';
 export type { BmFontChar, BmFontData } from '#rendering/text/BmFont';
 export { BmFont } from '#rendering/text/BmFont';
-export type { AtlasMode } from '#rendering/text/GlyphAtlas';
+export type { AtlasMode, AtlasPage } from '#rendering/text/GlyphAtlas';
 export { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 export { GlyphMetrics } from '#rendering/text/GlyphMetrics';
 export type { FontFormat, HTMLTextOptions } from '#rendering/text/HTMLText';
 export { HTMLText } from '#rendering/text/HTMLText';
 export type { LayoutOptions } from '#rendering/text/LayoutOptions';
+export type { LineShaper, ShapingMode } from '#rendering/text/shaping';
 export type { TextOptions } from '#rendering/text/Text';
 export { Text } from '#rendering/text/Text';
-export type { FontFamily, FontRegistry, FontWeight, GradientAxis, StyleChangeHint, TextStyleOptions } from '#rendering/text/TextStyle';
-export { TextStyle } from '#rendering/text/TextStyle';
+export type { FontFamily, FontRegistry, FontWeight, ResolvedTextGradient, StyleChangeHint, TextGradient, TextStyleOptions } from '#rendering/text/TextStyle';
+export { textGradientMaxStops, TextStyle } from '#rendering/text/TextStyle';
 export type {
+  FontStyle,
+  FontTypefaceKey,
+  FontVariant,
+  FontVariantKey,
   GlyphInfo,
   GlyphKey,
   GlyphPlacement,
   GlyphProvider,
+  SolidTexel,
   TextAlignment,
+  TextFontMetrics,
   TextLayoutResult,
   TextLayoutStyle,
   TextLineMetrics,
   TextPageQuads,
   TextSize,
+  TextTransform,
 } from '#rendering/text/types';
 export type { CompressedTextureLevel, CompressedTexturePayload } from '#rendering/texture/compressedPayload';
 export type { CompressedTextureOptions } from '#rendering/texture/CompressedTexture';

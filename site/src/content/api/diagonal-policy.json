@@ -1,0 +1,80 @@
+{
+  "title": "DiagonalPolicy",
+  "description": "How diagonal steps are allowed on a GridSpace. - `never` - four-connected movement only. - `no-corner-cutting` - a diagonal step needs both cells it passes between to be walkable, which is what stops an agent from clipping through the corner where two walls meet. - `always` - eight-connected movement with no such restriction.",
+  "symbol": "DiagonalPolicy",
+  "kind": "type",
+  "subsystem": "pathfinding",
+  "importPath": "@codexo/exojs-pathfinding",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "How diagonal steps are allowed on a GridSpace.",
+        "- `never` - four-connected movement only. - `no-corner-cutting` - a diagonal step needs both cells it passes between to be walkable, which is what stops an agent from clipping through the corner where two walls meet. - `always` - eight-connected movement with no such restriction."
+      ],
+      "importLine": "import { DiagonalPolicy } from '@codexo/exojs-pathfinding'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "DiagonalPolicy",
+          "signature": "\"always\" | \"never\" | \"no-corner-cutting\"",
+          "signatureTokens": [
+            {
+              "text": "\"always\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"never\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"no-corner-cutting\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-pathfinding/src/spaces/GridSpace.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/spaces/GridSpace.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-pathfinding/src/spaces/GridSpace.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/spaces/GridSpace.ts"
+}

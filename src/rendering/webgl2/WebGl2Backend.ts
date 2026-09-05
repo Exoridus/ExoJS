@@ -17,6 +17,7 @@ import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
+import type { GpuTimer } from '#rendering/GpuTimer';
 import type { Mesh } from '#rendering/mesh/Mesh';
 import { assertDrawsAllAttachments, assertSingleAttachmentCompose } from '#rendering/multiAttachmentGuard';
 import { isMultiAttachmentTarget, MultiRenderTarget } from '#rendering/MultiRenderTarget';
@@ -62,6 +63,7 @@ import { BlendModes, type ColorTextureFormat, TextureFormat } from '#rendering/t
 import type { View } from '#rendering/View';
 
 import { probeWebgl2CompressedFormats, type Webgl2CompressedFormatSupport } from './compressedFormat';
+import { createWebGl2GpuTimer } from './createWebGl2GpuTimer';
 import { WebGl2BackdropBlendCompositor } from './WebGl2BackdropBlendCompositor';
 import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
 import { WebGl2MeshRenderer } from './WebGl2MeshRenderer';
@@ -286,6 +288,10 @@ export class WebGl2Backend implements RenderBackend {
   public readonly onRenderError = new Signal<[RenderError]>();
 
   private readonly _context: WebGL2RenderingContext;
+  /** Non-null only while GPU timing is enabled; queries live on the current context. */
+  private _gpuTimer: GpuTimer | null = null;
+  /** Kept separately from `_gpuTimer` so a context restore can re-arm timing that was asked for. */
+  private _gpuTimingRequested = false;
   private readonly _rootRenderTarget: RenderTarget;
   private readonly _onContextLostHandler: (event: Event) => void;
   private readonly _onContextRestoredHandler: () => void;
@@ -575,8 +581,25 @@ export class WebGl2Backend implements RenderBackend {
     // The transform buffer is frame-scoped: reset it once per frame here (was
     // previously reset per render() call in _beginDrawPlan).
     this._transformBuffer.begin();
+    this._gpuTimer?.beginFrame();
 
     return this;
+  }
+
+  public setGpuTimingEnabled(enabled: boolean): boolean {
+    this._gpuTimingRequested = enabled;
+
+    if (!enabled) {
+      this._gpuTimer?.destroy();
+      this._gpuTimer = null;
+      this._stats.gpuFrameTimeMs = null;
+
+      return false;
+    }
+
+    this._gpuTimer ??= createWebGl2GpuTimer(this._context);
+
+    return this._gpuTimer !== null;
   }
 
   /** Frame-global slot base the plan builder indexes from. @internal */
@@ -768,7 +791,7 @@ export class WebGl2Backend implements RenderBackend {
    *
    * Part of the renderer SDK contract for extension renderers.
    */
-  public _stageViewportUniform(shader: Shader): void {
+  public stageViewportUniform(shader: Shader): void {
     if (!shader.uniforms.has('u_viewport')) {
       return;
     }
@@ -795,7 +818,7 @@ export class WebGl2Backend implements RenderBackend {
    *
    * Part of the renderer SDK contract for extension renderers.
    */
-  public _pushTransform(drawable: Drawable): number {
+  public pushTransform(drawable: Drawable): number {
     // Raw global transform - the vertex shaders snap the origin (see
     // {@link _writeTransformCommand}).
     return this._transformBuffer.push(drawable.getGlobalTransform(), drawable.tint, drawable.pixelSnapMode);
@@ -1519,6 +1542,11 @@ export class WebGl2Backend implements RenderBackend {
   public flush(): this {
     this._flushActiveRenderer();
 
+    if (this._gpuTimer !== null) {
+      this._gpuTimer.endFrame();
+      this._stats.gpuFrameTimeMs = this._gpuTimer.lastFrameMs;
+    }
+
     return this;
   }
 
@@ -1560,7 +1588,7 @@ export class WebGl2Backend implements RenderBackend {
   /**
    * Whether at least one retained-capture window is open. Read by capable
    * renderers at flush time to hand their packed batch to
-   * {@link _recordRetainedBatch}, and at render time for the belt-and-braces
+   * {@link recordRetainedBatch}, and at render time for the belt-and-braces
    * poison checks.
    *
    * Part of the renderer SDK contract for extension renderers.
@@ -1655,7 +1683,7 @@ export class WebGl2Backend implements RenderBackend {
     range.max = -1;
 
     for (const payload of frame.payloads) {
-      payload.replayer._scanRetainedNodeIndexRange(payload, range);
+      payload.replayer.scanRetainedNodeIndexRange(payload, range);
     }
 
     // A group whose every recorded batch opts out of the shared transform
@@ -1669,7 +1697,7 @@ export class WebGl2Backend implements RenderBackend {
 
     if (range.max >= range.min) {
       for (const payload of frame.payloads) {
-        payload.replayer._rebaseRetainedNodeIndices(payload, range.min);
+        payload.replayer.rebaseRetainedNodeIndices(payload, range.min);
       }
 
       frame.bundle._storeTransformRows(this._transformBuffer.data, this._transformBuffer.tintData, range.min, range.max - range.min + 1);
@@ -1682,7 +1710,7 @@ export class WebGl2Backend implements RenderBackend {
       const payload = frame.payloads[i]!;
 
       payload.vao = frame.bundle._acquireVao(i);
-      payload.replayer._configureRetainedVao(payload);
+      payload.replayer.configureRetainedVao(payload);
     }
 
     // Resources are final: stamp this frame's instructions with the bundle's
@@ -1710,7 +1738,7 @@ export class WebGl2Backend implements RenderBackend {
    *
    * Part of the renderer SDK contract for extension renderers.
    */
-  public _recordRetainedBatch(
+  public recordRetainedBatch(
     replayer: WebGl2RetainedBatchReplayer,
     words: Uint32Array,
     instanceCount: number,
@@ -1861,7 +1889,7 @@ export class WebGl2Backend implements RenderBackend {
         return false;
       }
 
-      if (payload.replayer._validateRetainedBatch?.(payload) === false) {
+      if (payload.replayer.validateRetainedBatch?.(payload) === false) {
         set.invalidate();
 
         return false;
@@ -1895,7 +1923,7 @@ export class WebGl2Backend implements RenderBackend {
    * submittedNodes parity).
    * @internal
    */
-  public _replayRetainedBatch(batch: RetainedBatchInstruction): void {
+  public replayRetainedBatch(batch: RetainedBatchInstruction): void {
     this._flushActiveRenderer();
 
     if (this._contextLost) {
@@ -1909,7 +1937,7 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     this._bindRenderTarget(this._renderTarget);
-    payload.replayer._replayRetainedBatch(payload);
+    payload.replayer.replayRetainedBatch(payload);
     this._stats.batches++;
     this._stats.drawCalls += batch.drawCalls;
     // Nodes, not instances: a batch whose renderer expands one node into many
@@ -1919,6 +1947,9 @@ export class WebGl2Backend implements RenderBackend {
 
   public destroy(): void {
     this._destroyed = true;
+    this._gpuTimingRequested = false;
+    this._gpuTimer?.destroy();
+    this._gpuTimer = null;
 
     if (this._pendingRestore !== null) {
       clearTimeout(this._pendingRestore);
@@ -2077,6 +2108,11 @@ export class WebGl2Backend implements RenderBackend {
     event.preventDefault();
 
     this._contextLost = true;
+    // The queries belong to the dead context; `_reinitializeDeviceState` mints a
+    // fresh timer against the restored one if timing is still wanted.
+    this._gpuTimer?.destroy();
+    this._gpuTimer = null;
+    this._stats.gpuFrameTimeMs = null;
     this.onContextLost.dispatch();
     this._restoreContext();
   }
@@ -2107,6 +2143,12 @@ export class WebGl2Backend implements RenderBackend {
     // not survive a context loss, so RGBA16F/RGBA32F render targets would stop
     // being color-renderable until this is re-fetched on the fresh context.
     this._floatRenderable = gl.getExtension('EXT_color_buffer_float') !== null;
+
+    // Same reason: the timer's extension and its queries died with the context.
+    if (this._gpuTimingRequested) {
+      this._gpuTimer = createWebGl2GpuTimer(gl);
+    }
+
     this._maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
     this._compressedFormats = probeWebgl2CompressedFormats(gl);
     this._maxColorAttachments = readMaxColorAttachments(gl);

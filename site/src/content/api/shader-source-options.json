@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "glsl",
-          "signature": "glsl?: { fragment: string; vertex: string }",
+          "signature": "glsl?: { fragment: string; vertex?: string }",
           "signatureTokens": [
             {
               "text": "glsl",
@@ -70,6 +70,10 @@
               "kind": "name"
             },
             {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
               "text": ": ",
               "kind": "punctuation"
             },
@@ -84,7 +88,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "GLSL ES 3.00 sources for the WebGL2 backend. Both vertex and fragment are required when glsl is supplied."
+          "description": "GLSL ES 3.00 sources for the WebGL2 backend. fragment is required; vertex may be omitted where the consumer owns the vertex stage - a SpriteMaterial (the sprite vertex program is engine-owned) or a ShaderFilter (the fullscreen quad). A mesh or particle material needs both."
         },
         {
           "name": "wgsl",

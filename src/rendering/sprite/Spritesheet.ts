@@ -65,7 +65,7 @@ export class Spritesheet {
   }
 
   /** Register a single frame by name, creating its {@link Rectangle} and pre-configured {@link Sprite}. */
-  public addFrame(name: string, data: SpritesheetFrame): void {
+  public addFrame(name: string, data: SpritesheetFrame): this {
     const { x, y, w, h } = data.frame;
     const frame = new Rectangle(x, y, w, h);
     const sprite = new Sprite(this.texture);
@@ -74,15 +74,19 @@ export class Spritesheet {
 
     this.frames.set(name, frame);
     this.sprites.set(name, sprite);
+
+    return this;
   }
 
   /** Destroy and remove a single frame's {@link Rectangle} and {@link Sprite} by name. No-op if the frame does not exist. */
-  public removeFrame(name: string): void {
+  public removeFrame(name: string): this {
     this.frames.get(name)?.destroy();
     this.frames.delete(name);
 
     this.sprites.get(name)?.destroy();
     this.sprites.delete(name);
+
+    return this;
   }
 
   /** Register an animation sequence as an ordered list of frame names. All referenced frames must already exist. */

@@ -15,7 +15,7 @@ import type { TextStyleOptions } from '#rendering/text/TextStyle';
 import type { TextLayoutResult } from '#rendering/text/types';
 
 import type { TextEditGranularity } from './TextEditingModel';
-import { codePointOffsets, glyphCount, glyphOffsetAtIndex, graphemeOffsets, lineStartAt, TextEditingModel } from './TextEditingModel';
+import { glyphCount, glyphOffsetAtIndex, graphemeOffsets, TextEditingModel } from './TextEditingModel';
 import type { UIWidgetState } from './theme';
 import { resolveUISkin } from './theme';
 import { Widget } from './Widget';
@@ -67,11 +67,10 @@ const _deleteGranularity = (word: boolean, line: boolean): TextEditGranularity =
 };
 
 /**
- * Shared machinery of the text-editing widgets ({@link TextInput}, and the
- * multi-line field to come): the {@link TextEditingModel}, the platform
- * transport binding, caret blink, selection and caret painting, placeholder
- * rendering, horizontal scroll-to-caret, and the keyboard/pointer editing
- * gestures.
+ * Base class of the text-editing widgets ({@link TextInput},
+ * {@link TextArea}): the editing model, the platform text-input transport,
+ * caret blink, selection and caret painting, placeholder rendering,
+ * scroll-to-caret, and the keyboard/pointer editing gestures.
  *
  * The platform transport is created lazily on first focus and may be `null`
  * - the field then renders and takes focus but rejects edits. Key handling
@@ -80,8 +79,6 @@ const _deleteGranularity = (word: boolean, line: boolean): TextEditGranularity =
  * consumed. The caret blink rides the app's frame signal like a
  * {@link Tooltip}'s show delay - it pauses with the scene and runs no timer
  * while the field is unfocused.
- *
- * @internal
  */
 export abstract class TextEditWidget extends Widget {
   /** Fires whenever the value changed, however it changed. */
@@ -133,6 +130,9 @@ export abstract class TextEditWidget extends Widget {
    */
   private _hostDeletes = 0;
   private _hostLineBreaks = 0;
+  private _wrap = false;
+  /** The wrap width already pushed into the text node; `-1` for "not wrapping". */
+  private _appliedWrapWidth = -1;
 
   private readonly _onFrame = (delta: Seconds): void => {
     if (this._blinkApp?.scenes.currentScene?.paused === true) {
@@ -333,8 +333,12 @@ export abstract class TextEditWidget extends Widget {
     // and tabs, so a field's layout would hold fewer glyphs than the model
     // holds offsets and every caret, selection rect and hit test past the
     // first double space would be off by the collapsed characters.
-    this._textNode = new Text('', { whiteSpace: 'pre' });
-    this._placeholderNode = new Text('', { whiteSpace: 'pre' });
+    // `shaping: 'simple'` is load-bearing too: a browser-shaped line is one
+    // placement, and a caret, a selection rectangle and a hit test all need
+    // one placement per cluster. Editable contextual text needs a logical-to-
+    // visual cluster map the engine does not own yet.
+    this._textNode = new Text('', { whiteSpace: 'pre', shaping: 'simple' });
+    this._placeholderNode = new Text('', { whiteSpace: 'pre', shaping: 'simple' });
     this._placeholderNode.interactive = false;
 
     this.addChild(this._overlays);
@@ -475,7 +479,40 @@ export abstract class TextEditWidget extends Widget {
 
   protected override _relayout(): void {
     super._relayout();
+    this._applyWrapWidth();
     this._refreshScroll();
+  }
+
+  /**
+   * Whether the value soft-wraps at the field's content width instead of
+   * scrolling horizontally. Only a multiline field can wrap.
+   */
+  protected get _softWrap(): boolean {
+    return this._wrap;
+  }
+
+  protected set _softWrap(value: boolean) {
+    if (this._wrap === value) return;
+
+    this._wrap = value;
+    this._applyWrapWidth();
+    this._refreshScroll();
+    this._paintOverlays();
+  }
+
+  /**
+   * Give the text node the wrap width the field currently offers, or take it
+   * away again. Reassigning `layout` re-flows the node, so the width is only
+   * pushed when it actually changed.
+   */
+  private _applyWrapWidth(): void {
+    const insets = this.contentInsets;
+    const width = this._wrap && this.model.multiline ? Math.max(1, this._uiWidth - insets.left - insets.right) : -1;
+
+    if (width === this._appliedWrapWidth) return;
+
+    this._appliedWrapWidth = width;
+    this._textNode.layout = width < 0 ? { whiteSpace: 'pre', shaping: 'simple' } : { whiteSpace: 'pre', shaping: 'simple', maxWidth: width };
   }
 
   protected override _onThemeChanged(): void {
@@ -788,9 +825,13 @@ export abstract class TextEditWidget extends Widget {
    * The mapping runs over the composed text, not `value` - an in-flight
    * composition is displayed and the model's focus points behind the
    * candidate, so a mapping taken over `value` would pin the caret at the
-   * composition start while the candidate grows. A masked field lays its mask
-   * out as one glyph per grapheme and holds no line breaks, so it is always
-   * line 0.
+   * composition start while the candidate grows.
+   *
+   * The lines it reports are the LAID-OUT lines, which under soft wrapping are
+   * not the value's own: nothing in the string marks a wrap, so the answer
+   * comes from the source range each laid-out line carries rather than from
+   * counting line breaks. A masked field lays its mask out as one glyph per
+   * grapheme and holds no line breaks, so it is always line 0.
    */
   private _locate(offset: number): { line: number; glyph: number } {
     const text = this.model.composedText;
@@ -800,14 +841,29 @@ export abstract class TextEditWidget extends Widget {
       return { line: 0, glyph: glyphCount(text.slice(0, clamped)) };
     }
 
-    const start = lineStartAt(text, clamped);
-    let line = 0;
+    const layout = this._layout();
+    const lines = layout.lines;
 
-    for (let i = text.indexOf('\n'); i !== -1 && i < start; i = text.indexOf('\n', i + 1)) {
-      line++;
+    for (let line = 0; line < lines.length; line++) {
+      const metrics = lines[line];
+
+      if (metrics === undefined || clamped > metrics.sourceEnd) {
+        continue;
+      }
+
+      let glyph = 0;
+
+      while (glyph < metrics.count && (layout.placements[metrics.start + glyph]?.sourceStart ?? clamped) < clamped) {
+        glyph++;
+      }
+
+      return { line, glyph };
     }
 
-    return { line, glyph: codePointOffsets(text.slice(start, clamped)).length };
+    const last = lines.length - 1;
+    const lastMetrics = lines[last];
+
+    return lastMetrics === undefined ? { line: 0, glyph: 0 } : { line: last, glyph: lastMetrics.count };
   }
 
   /** The inverse of {@link TextEditWidget._locate}. */
@@ -820,22 +876,18 @@ export abstract class TextEditWidget extends Widget {
       return glyphOffsetAtIndex(offsets, glyph, text.length);
     }
 
-    let start = 0;
+    const layout = this._layout();
+    const metrics = layout.lines[Math.max(0, Math.min(line, layout.lines.length - 1))];
 
-    for (let i = 0; i < line; i++) {
-      const next = text.indexOf('\n', start);
-
-      if (next === -1) {
-        break;
-      }
-
-      start = next + 1;
+    if (metrics === undefined) {
+      return text.length;
     }
 
-    const lineText = text.slice(start, !text.includes('\n', start) ? text.length : text.indexOf('\n', start));
-    const offsets = codePointOffsets(lineText);
+    if (glyph >= metrics.count) {
+      return metrics.sourceEnd;
+    }
 
-    return start + glyphOffsetAtIndex(offsets, glyph, lineText.length);
+    return layout.placements[metrics.start + Math.max(0, glyph)]?.sourceStart ?? metrics.sourceEnd;
   }
 
   /**
@@ -917,11 +969,48 @@ export abstract class TextEditWidget extends Widget {
       this._scrollY = Math.max(0, Math.min(this._scrollY, Math.max(0, layout.advance.height - viewportHeight)));
     }
 
+    this._applyScrollPosition();
+    this._onScrollUpdated();
+  }
+
+  private _applyScrollPosition(): void {
+    const insets = this.contentInsets;
+
     this._textNode.setPosition(insets.left - this._scrollX, insets.top - this._scrollY);
     // Overlays are painted in the layout's own coordinates, so they have to
     // ride the same offset as the text they annotate - otherwise caret and
     // selection sit at the widget origin and drift further with every scroll.
     this._overlays.setPosition(insets.left - this._scrollX, insets.top - this._scrollY);
+  }
+
+  /**
+   * How far the content is scrolled down, in layout pixels. Assigning scrolls
+   * the field without moving the caret, which is what a scrollbar drag does;
+   * the next caret move clamps it back into view.
+   */
+  protected get scrollOffsetY(): number {
+    return this._scrollY;
+  }
+
+  protected set scrollOffsetY(value: number) {
+    const insets = this.contentInsets;
+    const viewport = this._uiHeight - insets.top - insets.bottom;
+    const limit = Math.max(0, this._layout().advance.height - Math.max(0, viewport));
+    const next = Math.max(0, Math.min(value, limit));
+
+    if (this._scrollY === next) return;
+
+    this._scrollY = next;
+    this._applyScrollPosition();
+    this._onScrollUpdated();
+  }
+
+  /**
+   * Called after the field re-clamped its scroll offsets. A subclass that
+   * shows the scroll position - a scrollbar, say - syncs it here.
+   */
+  protected _onScrollUpdated(): void {
+    // Nothing to do for a field that shows no scroll position.
   }
 
   /** Selection rectangles and the caret, painted under the text. */

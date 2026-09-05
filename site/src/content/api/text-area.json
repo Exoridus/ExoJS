@@ -1,16 +1,16 @@
 {
   "title": "TextArea",
-  "description": "Multi-line text field. It shares the editing core, the platform transport and the theme roles with TextInput, and differs in what the keys mean and in how much of the value is on screen at once: - `Enter` inserts a line break instead of confirming. - `Up` / `Down` move by line, keeping the column the caret last chose, and `PageUp` / `PageDown` move by as many lines as the field shows. - `Home` / `End` go to the ends of the current line, not of the value. - The content scrolls in both axes to keep the caret visible, and is clipped to the field. Lines are the ones the value states: a long line scrolls horizontally rather than wrapping.",
+  "description": "Multi-line text field. It shares the editing core, the platform transport and the theme roles with TextInput, and differs in what the keys mean and in how much of the value is on screen at once: - `Enter` inserts a line break instead of confirming. - `Up` / `Down` move by line, keeping the column the caret last chose, and `PageUp` / `PageDown` move by as many lines as the field shows. - `Home` / `End` go to the ends of the current line, not of the value. - The content scrolls to keep the caret visible, and is clipped to the field. A scrollbar along the right edge shows and drives the vertical position once the value outgrows the field. A line too long for the field wraps at a word boundary. The lines the caret and `Up` / `Down` move through are the LAID-OUT lines, so a wrapped line behaves like the two lines it looks like. Turn `wrap` off for content whose own line breaks are what matters - log output, code - and the field scrolls horizontally instead.",
   "symbol": "TextArea",
   "kind": "class",
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 136,
+  "memberCount": 141,
   "counts": {
     "constructors": 1,
-    "methods": 64,
-    "properties": 56,
+    "methods": 65,
+    "properties": 60,
     "events": 15
   },
   "sections": [
@@ -20,8 +20,8 @@
       "members": [],
       "paragraphs": [
         "Multi-line text field. It shares the editing core, the platform transport and the theme roles with TextInput, and differs in what the keys mean and in how much of the value is on screen at once:",
-        "- `Enter` inserts a line break instead of confirming. - `Up` / `Down` move by line, keeping the column the caret last chose, and `PageUp` / `PageDown` move by as many lines as the field shows. - `Home` / `End` go to the ends of the current line, not of the value. - The content scrolls in both axes to keep the caret visible, and is clipped to the field.",
-        "Lines are the ones the value states: a long line scrolls horizontally rather than wrapping."
+        "- `Enter` inserts a line break instead of confirming. - `Up` / `Down` move by line, keeping the column the caret last chose, and `PageUp` / `PageDown` move by as many lines as the field shows. - `Home` / `End` go to the ends of the current line, not of the value. - The content scrolls to keep the caret visible, and is clipped to the field. A scrollbar along the right edge shows and drives the vertical position once the value outgrows the field.",
+        "A line too long for the field wraps at a word boundary. The lines the caret and `Up` / `Down` move through are the LAID-OUT lines, so a wrapped line behaves like the two lines it looks like. Turn `wrap` off for content whose own line breaks are what matters - log output, code - and the field scrolls horizontally instead."
       ],
       "importLine": "import { TextArea } from '@codexo/exojs'",
       "sourceLink": null
@@ -182,78 +182,6 @@
           "params": [],
           "returnType": "void",
           "description": "Push a theme refresh into every themed descendant."
-        },
-        {
-          "name": "_collect",
-          "signature": "_collect(builder: RenderPlanBuilder, seq?: number): void",
-          "signatureTokens": [
-            {
-              "text": "_collect",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "builder",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "RenderPlanBuilder",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "seq",
-              "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "builder",
-              "type": "RenderPlanBuilder",
-              "optional": false
-            },
-            {
-              "name": "seq",
-              "type": "number",
-              "optional": true
-            }
-          ],
-          "returnType": "void",
-          "description": "Part of the renderer SDK contract for extension renderers."
         },
         {
           "name": "_collectContent",
@@ -560,6 +488,35 @@
           "description": "React to a focus change on this widget. Override in subclasses that repaint for it; the default does nothing, so opting into tracking alone does not change how a widget looks."
         },
         {
+          "name": "_onScrollUpdated",
+          "signature": "_onScrollUpdated(): void",
+          "signatureTokens": [
+            {
+              "text": "_onScrollUpdated",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Called after the field re-clamped its scroll offsets. A subclass that shows the scroll position - a scrollbar, say - syncs it here."
+        },
+        {
           "name": "_onThemeChanged",
           "signature": "_onThemeChanged(): void",
           "signatureTokens": [
@@ -721,116 +678,6 @@
           ],
           "returnType": "void",
           "description": "Assign input-method hints; forwarded to the transport on the next sync."
-        },
-        {
-          "name": "_setLocalBounds",
-          "signature": "_setLocalBounds(x: number, y: number, width: number, height: number): this",
-          "signatureTokens": [
-            {
-              "text": "_setLocalBounds",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "x",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "y",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "width",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "height",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "x",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "y",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "width",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "height",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Write this node's local extent and run the bounds invalidation the change implies - the node's own bounds flag, the ancestor bounds cascade, and the content-dirty stamp that keeps retained fragments from replaying the old extent. This is the only supported way to resize a node from outside getLocalBounds; the rectangle itself is handed out read-only so the invalidation cannot be forgotten. Built-in drawables (Sprite, Text, BitmapText, Mesh, ...) and custom ones alike go through here. Part of the renderer SDK contract for extension renderers."
         },
         {
           "name": "_setSkinState",
@@ -1331,6 +1178,78 @@
           "description": ""
         },
         {
+          "name": "collect",
+          "signature": "collect(builder: RenderPlanBuilder, seq?: number): void",
+          "signatureTokens": [
+            {
+              "text": "collect",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "builder",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderPlanBuilder",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "seq",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "builder",
+              "type": "RenderPlanBuilder",
+              "optional": false
+            },
+            {
+              "name": "seq",
+              "type": "number",
+              "optional": true
+            }
+          ],
+          "returnType": "void",
+          "description": "Contribute this node to the render plan under construction: skip it when it is destroyed, invisible, or outside the builder's cull rect, otherwise emit it as one plan entry. Custom node types override this to add their own admission rules and must call super.collect(builder, seq) to keep the skip semantics. seq orders the entry within its parent; omit it to append. Part of the renderer SDK contract for extension renderers."
+        },
+        {
           "name": "collidesWith",
           "signature": "collidesWith(target: Collidable): CollisionResponse | null",
           "signatureTokens": [
@@ -1451,7 +1370,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Hit-test the world-space point (x, y) against this node. For world-axis-aligned nodes (own and inherited rotation a multiple of 90° and no skew) the AABB equals the oriented box, so the cheap getBounds test is exact. For rotated or skewed nodes the point is mapped back into local space with the inverse of the global transform and tested against the untransformed getLocalBounds - i.e. a true oriented-box test. This is the exact inverse of the forward map that getBounds and the renderer use to place the node's corners, so picking matches the rendered quad instead of over-reporting hits in the empty AABB corners of a rotated node."
+          "description": "A container has no geometry of its own, so a point hits it when it hits any child. A RenderNode.hitArea replaces that union with the shape, which is how a bare layout container becomes clickable in its own right."
         },
         {
           "name": "destroy",
@@ -1480,7 +1399,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": ""
+          "description": "Destroy this container and every node beneath it. Ownership is by containment: detaching a subtree only unlinks it, so the descendants' GPU-backed resources (cached textures, filters, render textures) and signal listeners would outlive the tree that owned them and leak on every scene change. Idempotent: a second call is a no-op."
         },
         {
           "name": "focus",
@@ -1712,7 +1631,7 @@
           ],
           "params": [],
           "returnType": "ReadonlyRectangle",
-          "description": "This node's untransformed extent in its own local coordinate space. Returns the LIVE internal rectangle, not a copy: it is read on hot paths (updateBounds re-reads it on every transform-dirty recompute, i.e. potentially every frame for a moving node), so copying it here would add a per-frame allocation. It is therefore typed as a ReadonlyRectangle - reads are unchanged, writes are rejected at compile time. Writing to it directly would skip the bounds/content invalidation the engine needs, leaving culling, hit-testing and retained render fragments on a stale extent. A custom Drawable that owns its own size sets it through _setLocalBounds, which writes and invalidates in one step."
+          "description": "This node's untransformed extent in its own local coordinate space. Returns the LIVE internal rectangle, not a copy: it is read on hot paths (updateBounds re-reads it on every transform-dirty recompute, i.e. potentially every frame for a moving node), so copying it here would add a per-frame allocation. It is therefore typed as a ReadonlyRectangle - reads are unchanged, writes are rejected at compile time. Writing to it directly would skip the bounds/content invalidation the engine needs, leaving culling, hit-testing and retained render fragments on a stale extent. A custom Drawable that owns its own size sets it through setLocalBounds, which writes and invalidates in one step."
         },
         {
           "name": "getNormals",
@@ -2492,6 +2411,116 @@
           ],
           "returnType": "this",
           "description": ""
+        },
+        {
+          "name": "setLocalBounds",
+          "signature": "setLocalBounds(x: number, y: number, width: number, height: number): this",
+          "signatureTokens": [
+            {
+              "text": "setLocalBounds",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Write this node's local extent and run the bounds invalidation the change implies - the node's own bounds flag, the ancestor bounds cascade, and the content-dirty stamp that keeps retained fragments from replaying the old extent. This is the only supported way to resize a node from outside getLocalBounds; the rectangle itself is handed out read-only so the invalidation cannot be forgotten. Built-in drawables (Sprite, Text, BitmapText, Mesh, ...) and custom ones alike go through here. Part of the renderer SDK contract for extension renderers."
         },
         {
           "name": "setOrigin",
@@ -3325,6 +3354,27 @@
           "description": "When true, this node can receive keyboard focus - via focus, Tab traversal, or app.interaction.focus(node) - and is delivered key events through onKeyDown / onKeyUp while focused, or while any of its descendants holds focus (key events bubble up the parent chain like pointer InteractionEvents do). A Widget additionally has to be enabled: disabling one takes it out of the Tab order and rejects programmatic focus, without touching this flag."
         },
         {
+          "name": "hitArea",
+          "signature": "hitArea: HitArea",
+          "signatureTokens": [
+            {
+              "text": "hitArea",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HitArea",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Optional pick shape in this node's LOCAL space, replacing the bounds test contains would otherwise perform. Defaults to null. The world-space point is mapped through the inverse of the node's global transform before the shape is tested, so the region follows the node's position, rotation, scale and skew like the rendered output does - the shape itself is never re-transformed and never needs updating when the node moves. Affects picking only. Bounds, culling and rendering ignore it entirely, and because the interaction system finds candidates by their bounds, a hit area reaching outside the node's bounds is only reliably picked where the two overlap. Use it to shrink or reshape a pick region, not to grow one. The shape is the caller's: it is read live on every hit test, so mutating it in place takes effect immediately, and the node never destroys it."
+        },
+        {
           "name": "model",
           "signature": "model: TextEditingModel",
           "signatureTokens": [
@@ -3974,7 +4024,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "How many lines the value holds."
+          "description": "How many lines the value holds - the value's own lines, not the laid-out ones. Wrapping does not change the value, so it does not change this."
         },
         {
           "name": "mask",
@@ -4243,6 +4293,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "scrollOffsetY",
+          "signature": "scrollOffsetY: number",
+          "signatureTokens": [
+            {
+              "text": "scrollOffsetY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How far the content is scrolled down, in layout pixels. Assigning scrolls the field without moving the caret, which is what a scrollbar drag does; the next caret move clamps it back into view."
         },
         {
           "name": "selectionEnd",
@@ -4563,6 +4634,35 @@
           "description": "The text held, never masked. Assigning replaces the whole value."
         },
         {
+          "name": "verticalScrollbar",
+          "signature": "verticalScrollbar: Scrollbar | null",
+          "signatureTokens": [
+            {
+              "text": "verticalScrollbar",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scrollbar",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The vertical scrollbar, or null when the field was built without one."
+        },
+        {
           "name": "visible",
           "signature": "visible: boolean",
           "signatureTokens": [
@@ -4603,6 +4703,27 @@
           "params": [],
           "returnType": null,
           "description": "Rendered width of the whole subtree, in the node's global-transform space. Unlike Sprite.width - which scales an unscaled texture frame - a container has no intrinsic local size, so this reads the aggregate bounds directly. Those are already scaled, so multiplying by scale again would count it twice. Writing rescales scale.x to make the subtree render at the requested width."
+        },
+        {
+          "name": "wrap",
+          "signature": "wrap: boolean",
+          "signatureTokens": [
+            {
+              "text": "wrap",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether a line too long for the field wraps at a word boundary. Turning it off makes long lines scroll horizontally instead."
         },
         {
           "name": "x",

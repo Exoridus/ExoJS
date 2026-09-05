@@ -77,6 +77,17 @@
       "level": "intermediate"
     },
     {
+      "slug": "custom-transition",
+      "path": "application-scenes/custom-transition.js",
+      "language": "typescript",
+      "title": "Custom Transition",
+      "description": "Write your own SceneTransition: two bars close over the screen, the scene switch commits behind them, then they open again - with the commit/done ordering and the destroy-time resource release the lifecycle contract requires.",
+      "backend": "core",
+      "tags": ["scene", "scenes", "transition"],
+      "capabilities": ["keyboard"],
+      "level": "advanced"
+    },
+    {
       "slug": "loading-screen",
       "path": "application-scenes/loading-screen.js",
       "language": "typescript",
@@ -320,7 +331,7 @@
       "path": "debug-layer/performance-overlay.js",
       "language": "typescript",
       "title": "Performance Overlay",
-      "description": "Enable the built-in debug overlay to monitor FPS, draw calls, sprite count, and GPU memory inside your scene.",
+      "description": "Enable the built-in debug overlay to monitor FPS, frame time, GPU time, draw calls, and node count inside your scene; press B to cycle the frame budget the HUD marks overruns against, and A to toggle the asset-cache panel.",
       "backend": "core",
       "featured": true,
       "tags": ["debug", "performance"],
@@ -391,11 +402,31 @@
       "level": "intro"
     },
     {
+      "slug": "drop-shadow-filter",
+      "path": "filters/drop-shadow-filter.js",
+      "language": "typescript",
+      "title": "Drop Shadow Filter",
+      "description": "Give a Sprite a soft, offset drop shadow with DropShadowFilter; sliders drive offset, blur and opacity, and a toggle shows the shadow on its own.",
+      "backend": "core",
+      "tags": ["fx", "shadow", "filter"],
+      "level": "intro"
+    },
+    {
       "slug": "chromatic-aberration",
       "path": "filters/chromatic-aberration.js",
       "language": "typescript",
       "title": "Chromatic Aberration",
       "description": "Offset RGB channels by different amounts to simulate lens chromatic aberration — drag the pointer to control intensity.",
+      "backend": "core",
+      "tags": ["fx", "filter", "shader"],
+      "level": "intermediate"
+    },
+    {
+      "slug": "displacement-filter",
+      "path": "filters/displacement-filter.js",
+      "language": "typescript",
+      "title": "Displacement Filter",
+      "description": "Warp a sprite by a direction stored in a map texture — a scrolling ripple map with a live scale slider.",
       "backend": "core",
       "tags": ["fx", "filter", "shader"],
       "level": "intermediate"
@@ -672,6 +703,32 @@
       "level": "advanced"
     }
   ],
+  "lighting": [
+    {
+      "slug": "normal-mapped-sprites",
+      "path": "lighting/normal-mapped-sprites.js",
+      "language": "typescript",
+      "title": "Normal-Mapped Sprites",
+      "description": "Forward normal mapping on plain sprites: a LitSpriteMaterial samples a tangent-space normal map and shades every sprite against four moving point lights in a single batch, with spinning and mirrored tiles proving the basis rotation.",
+      "backend": "core",
+      "featured": false,
+      "tags": ["lighting", "material", "shader"],
+      "capabilities": [],
+      "level": "advanced"
+    },
+    {
+      "slug": "many-lights",
+      "path": "lighting/many-lights.js",
+      "language": "typescript",
+      "title": "Many Lights",
+      "description": "Drag the slider from 1 to 48 point lights over a normal-mapped floor: the lights live in a data texture, so the count is a shader loop bound rather than a recompile, and the whole floor stays a single draw call.",
+      "backend": "core",
+      "featured": false,
+      "tags": ["lighting", "material", "shader", "performance"],
+      "capabilities": [],
+      "level": "advanced"
+    }
+  ],
   "particles": [
     {
       "slug": "emitter-basics",
@@ -734,6 +791,31 @@
       "backend": "core",
       "tags": ["particles", "advanced", "webgpu"],
       "level": "advanced"
+    }
+  ],
+  "pathfinding": [
+    {
+      "slug": "grid-navigation",
+      "path": "pathfinding/grid-navigation.js",
+      "language": "typescript",
+      "title": "Grid Navigation",
+      "description": "Click to move an agent across a weighted grid: paint walls and mud, toggle jump-point pruning, path smoothing and a 2x2 agent, and watch the expanded-node counter react.",
+      "backend": "core",
+      "featured": true,
+      "tags": ["pathfinding", "grid", "pointer"],
+      "capabilities": ["pointer"],
+      "level": "intermediate"
+    },
+    {
+      "slug": "tilemap-navigation",
+      "path": "pathfinding/tilemap-navigation.js",
+      "language": "typescript",
+      "title": "Tilemap Navigation",
+      "description": "Build a GridSpace from a tile layer through a cost callback, then route an agent over it — carving a door edits map and grid together.",
+      "backend": "core",
+      "tags": ["pathfinding", "tilemap", "pointer"],
+      "capabilities": ["pointer"],
+      "level": "intermediate"
     }
   ],
   "performance": [
@@ -1310,6 +1392,16 @@
       "description": "BitmapText rendered from an AngelCode .fnt atlas (Kenney Blocks, CC0). Demonstrates pre-built atlas rendering, word wrap, and live text updates without Canvas 2D rasterisation.",
       "backend": "core",
       "tags": ["bitmap", "text", "bmfont"],
+      "level": "intermediate"
+    },
+    {
+      "slug": "typographic-styling",
+      "path": "text-fonts/typographic-styling.js",
+      "language": "typescript",
+      "title": "Typographic Styling",
+      "description": "Multi-stop gradients with an angle, small caps and oblique, underline and strikethrough, textTransform, line clamping with an ellipsis, and tab stops - the TextStyle sweep in one scene.",
+      "backend": "core",
+      "tags": ["text", "typography"],
       "level": "intermediate"
     },
     {

@@ -1,0 +1,125 @@
+{
+  "title": "WaypointEdgeOptions",
+  "description": "Options for WaypointGraph.addEdge and WaypointGraph.connect.",
+  "symbol": "WaypointEdgeOptions",
+  "kind": "interface",
+  "subsystem": "pathfinding",
+  "importPath": "@codexo/exojs-pathfinding",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for WaypointGraph.addEdge and WaypointGraph.connect."
+      ],
+      "importLine": "import { WaypointEdgeOptions } from '@codexo/exojs-pathfinding'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "cost",
+          "signature": "cost?: number",
+          "signatureTokens": [
+            {
+              "text": "cost",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Traversal cost. Defaults to the straight-line distance between the two nodes, or 1 when either of them has no position."
+        },
+        {
+          "name": "data",
+          "signature": "data?: Payload",
+          "signatureTokens": [
+            {
+              "text": "data",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Payload",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Payload for the movement controller: jump impulse, ladder id, anything."
+        },
+        {
+          "name": "kind",
+          "signature": "kind?: string",
+          "signatureTokens": [
+            {
+              "text": "kind",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Free-form traversal tag surfaced through PathResult.edges - the hook a movement controller reads to tell a jump from a walk. Defaults to 'walk'."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-pathfinding/src/spaces/WaypointGraph.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/spaces/WaypointGraph.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-pathfinding/src/spaces/WaypointGraph.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/spaces/WaypointGraph.ts"
+}

@@ -165,6 +165,18 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         apiLinks: ['scene', 'loader', 'time'],
       },
       {
+        slug: 'writing-your-own-transition',
+        level: 'advanced',
+        learningGoals: [
+          'implement the SceneTransition definition/session split',
+          'order commit, committed and done the way the director requires',
+          'survive an abort and release session resources exactly once',
+        ],
+        prerequisites: ['runtime/scenes-and-lifecycle'],
+        examples: ['application-scenes/custom-transition', 'application-scenes/multiple-scenes'],
+        apiLinks: ['scene-transition', 'phased-scene-transition', 'scene-transition-session', 'scene-transition-lifecycle-error', 'scene-director'],
+      },
+      {
         slug: 'scene-graph',
         level: 'intermediate',
         learningGoals: ['compose drawables with containers', 'reason about transforms, draw order, and masks'],
@@ -602,6 +614,37 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         ],
         prerequisites: ['physics/physics-basics'],
         apiLinks: ['joint', 'distance-joint', 'revolute-joint', 'weld-joint', 'prismatic-joint', 'wheel-joint', 'mouse-joint', 'physics-world'],
+      },
+    ],
+  },
+  {
+    slug: 'pathfinding',
+    title: 'Pathfinding',
+    description:
+      'Route agents through a world with @codexo/exojs-pathfinding: weighted grids, jump-point search, path smoothing, reachable-area queries, and waypoint graphs for traversal a grid cannot express.',
+    chapters: [
+      {
+        slug: 'grid-pathfinding',
+        level: 'intermediate',
+        learningGoals: [
+          'build a GridSpace from your own map data and query it',
+          'read a PathResult status instead of catching an exception',
+          'use costs, diagonals, clearance and smoothing to shape a route',
+        ],
+        prerequisites: ['runtime/scenes-and-lifecycle'],
+        examples: ['pathfinding/grid-navigation', 'pathfinding/tilemap-navigation'],
+        apiLinks: ['pathfinder', 'grid-space', 'grid-space-options', 'path-result', 'find-path-options'],
+      },
+      {
+        slug: 'waypoint-graphs',
+        level: 'advanced',
+        learningGoals: [
+          'model jump and fall links a grid cannot express',
+          'read traversal kinds and payloads off a path',
+          'implement NavigationSpace for a world of your own',
+        ],
+        prerequisites: ['pathfinding/grid-pathfinding'],
+        apiLinks: ['waypoint-graph', 'waypoint-edge-options', 'path-edge', 'navigation-space'],
       },
     ],
   },

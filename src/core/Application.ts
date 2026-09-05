@@ -3,6 +3,8 @@ import { TweenSystem } from '#animation/TweenSystem';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, type LoaderOptions } from '#assets/Loader';
 import { AudioSystem } from '#audio/AudioSystem';
+import { createDefaultCanvas, isRenderSurface, resolveAutoPixelRatio, watchAutoPixelRatio } from '#core/applicationCanvas';
+import { JobScheduler } from '#core/JobScheduler';
 import { SceneDirector } from '#core/scene/SceneDirector';
 import { SceneNavigationAbortedError } from '#core/scene/sceneErrors';
 import {
@@ -129,9 +131,11 @@ export interface CanvasApplicationOptions {
   /**
    * Device/render pixel ratio applied to the backing buffer. Default: the
    * host `devicePixelRatio` clamped to `2` (crisp on Retina/HiDPI out of the
-   * box, capped so DPR-3 phones don't pay a 9× fill-rate cost). Pass an
-   * explicit value to override - e.g. `window.devicePixelRatio` for full
-   * native density, or `1` to force logical-pixel rendering.
+   * box, capped so DPR-3 phones don't pay a 9× fill-rate cost), followed for
+   * the application's lifetime as the host's ratio changes. Pass an explicit
+   * value to override - e.g. `window.devicePixelRatio` for full native
+   * density, or `1` to force logical-pixel rendering - which also pins it, so
+   * a later host change is ignored.
    */
   pixelRatio?: number;
   /** Canvas tabIndex. Default: -1, preserving current behavior. */
@@ -378,40 +382,6 @@ const frameMeasure = 'exojs:frame';
 const systemsStartMark = 'exojs:systems:start';
 const systemsMeasure = 'exojs:systems';
 
-const createDefaultCanvas = (): HTMLCanvasElement => {
-  assert(
-    typeof document !== 'undefined',
-    'Application has no document to create a canvas in. Outside a browser window - in a worker, say - pass the surface yourself via `canvas.element` (an OffscreenCanvas transferred from the host).',
-  );
-
-  return document.createElement('canvas');
-};
-
-/** Whether `value` can be used as a {@link RenderSurface} at all. */
-const isRenderSurface = (value: unknown): value is RenderSurface =>
-  isDomCanvas(value as RenderSurface) || (typeof OffscreenCanvas !== 'undefined' && value instanceof OffscreenCanvas);
-
-/**
- * Upper bound for the auto-resolved device-pixel ratio. Caps the backing-store
- * blow-up on very high-density screens (e.g. DPR-3 phones would otherwise
- * allocate 9× the logical pixels → fill-rate / memory pressure and frame drops)
- * while keeping rendering crisp where it matters. Bypassed by an explicit
- * `canvas.pixelRatio` option.
- */
-const maxAutoPixelRatio = 2;
-
-/**
- * Resolve the auto device-pixel ratio used when `pixelRatio` is not specified.
- * Returns the host's `devicePixelRatio` clamped to {@link maxAutoPixelRatio}
- * (crisp on Retina/HiDPI out of the box, without a runaway fill-rate cost on
- * DPR-3 devices); falls back to `1` in non-browser / SSR / test environments.
- */
-const resolveAutoPixelRatio = (): number => {
-  const dpr = (globalThis as { devicePixelRatio?: number }).devicePixelRatio;
-
-  return typeof dpr === 'number' && dpr > 0 ? Math.min(dpr, maxAutoPixelRatio) : 1;
-};
-
 const defaultBackendConfig: AutoBackendConfig = { type: 'auto' };
 const defaultCanvasSettings = {
   width: 800,
@@ -461,7 +431,7 @@ const defaultInputSettings: Required<InputApplicationOptions> = {
 
 /**
  * Top-level engine instance. Owns the canvas, render backend, scene-stack
- * controller, the core systems (input, interaction, audio, tweens,
+ * controller, the core systems (input, interaction, audio, jobs, tweens,
  * animations, rendering), the app-level {@link SystemRegistry} for user/extension
  * systems, asset loader, and the per-frame loop.
  *
@@ -524,6 +494,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public readonly random: Random;
   public readonly tweens: TweenSystem = new TweenSystem();
   /**
+   * Frame-budgeted scheduler for generator jobs (world generation, batch
+   * pathfinding, anything too heavy for one frame). Ticks in the `update`
+   * phase with a 2 ms default budget; see {@link JobScheduler}.
+   */
+  public readonly jobs: JobScheduler = new JobScheduler({ order: SystemOrder.CoreJobs });
+  /**
    * Drives frame playback for every {@link AnimatedSprite} that is playing and
    * attached to this application's scene tree. Registration is automatic - see
    * {@link AnimationSystem}.
@@ -532,7 +508,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * App-level system registry for user/extension systems - Application
    * lifetime, independent of the active scene. The core systems (input,
-   * interaction, audio, tweens, animations, rendering) are driven directly by the
+   * interaction, audio, jobs, tweens, animations, rendering) are driven directly by the
    * internal per-frame prepare stage and never occupy this registry, so any
    * `order` is available; see {@link SystemOrder} for common reference
    * points. Scene-scoped systems live on `scenes.systems`.
@@ -661,6 +637,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   private readonly _ownsCanvas: boolean;
   private _visibilitySubscription: PlatformSubscription | null = null;
+  private _pixelRatioSubscription: PlatformSubscription | null = null;
   private _sizing: CanvasSizing | null = null;
   private readonly _audio: AudioSystem = new AudioSystem();
 
@@ -846,6 +823,15 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this._onPlatformVisibilityChange(visible);
       });
 
+      // Only an auto-resolved ratio follows the host; an explicit one is the
+      // caller's fixed decision and stays where they put it.
+      if (canvasOptions.pixelRatio === undefined) {
+        this._pixelRatioSubscription = watchAutoPixelRatio(this.platform, this._pixelRatio, ratio => {
+          this._pixelRatio = ratio;
+          this.resize(this._baseWidth, this._baseHeight);
+        });
+      }
+
       this.input.onCanvasFocusChange.add(focused => {
         this.onCanvasFocusChange.dispatch(focused);
       });
@@ -861,11 +847,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this.systems._addCoreSystem(this.input, { order: SystemOrder.CoreInput });
       this.systems._addCoreSystem(this.interaction, { order: SystemOrder.CoreInteraction });
       this.systems._addCoreSystem(this._audio, { order: SystemOrder.CoreAudio });
+      this.systems._addCoreSystem(this.jobs, { order: SystemOrder.CoreJobs });
       this.systems._addCoreSystem(this.tweens, { order: SystemOrder.CoreTweens });
       this.systems._addCoreSystem(this.animations, { order: SystemOrder.CoreAnimation });
       this.systems._addCoreSystem(this._rendering, { order: SystemOrder.CoreRendering });
 
-      this._coreSystems = [this.input, this.interaction, this._audio, this.tweens, this.animations, this._rendering];
+      this._coreSystems = [this.input, this.interaction, this._audio, this.jobs, this.tweens, this.animations, this._rendering];
 
       // The last construction step, so `install(app)` sees a complete
       // application - every system and every materialised binding already in
@@ -954,8 +941,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._sizing = null;
     });
     attempt(() => {
-      this._visibilitySubscription?.();
-      this._visibilitySubscription = null;
+      this._releasePlatformSubscriptions();
     });
 
     // Same reasoning: the canvas may already be mounted and the parent already
@@ -987,6 +973,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     attempt(() => this.animations.destroy());
     attempt(() => this.tweens.destroy());
+    attempt(() => this.jobs.destroy());
     attempt(() => this._audio.destroy());
 
     attempt(() => {
@@ -1196,6 +1183,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * host `devicePixelRatio` clamped to `2` - crisp on HiDPI out of the box,
    * without the fill-rate cost a DPR-3 phone would otherwise pay - unless an
    * explicit `canvas.pixelRatio` option was given.
+   *
+   * On that default it follows the host: moving the window to a display of a
+   * different density, or zooming the page, re-derives the backing store at the
+   * new ratio wherever the host can report the change. An explicit
+   * `canvas.pixelRatio` never tracks anything.
    *
    * It converts a requested render resolution into backing-store pixels and
    * nothing else. Which render resolution is requested is the sizing policy's
@@ -1719,6 +1711,14 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     return this;
   }
 
+  /** Undo the host subscriptions held directly rather than through a destroy scope. */
+  private _releasePlatformSubscriptions(): void {
+    this._visibilitySubscription?.();
+    this._visibilitySubscription = null;
+    this._pixelRatioSubscription?.();
+    this._pixelRatioSubscription = null;
+  }
+
   /**
    * The geometry a canvas keeps when nothing is tracking its surroundings: the
    * base resolution in all three axes. `ownsCssBox` is false whenever a policy
@@ -1933,7 +1933,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * Tear down every owned subsystem (loader, the core systems - input,
-   * interaction, audio, tweens, animations, rendering - the app system registry, backend,
+   * interaction, audio, jobs, tweens, animations, rendering - the app system registry, backend,
    * scene director, all clocks, all signals) and release event listeners. The
    * application instance is unusable after this call.
    *
@@ -1978,7 +1978,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * anyway, rather than leaving the whole application pinned by one scene whose
    * `unload()` never resolves. A scene that wants to cooperate with this should
    * watch {@link Scene.lifecycleSignal}, which is aborted when its teardown
-   * begins.
+   * begins - including for the incoming scene of a navigation still inside
+   * `load()`, which is aborted and awaited rather than left to finish
+   * preparing against subsystems this call has released.
    *
    * Idempotent: every call after the first returns the same Promise as the
    * first and starts no second teardown. {@link Application.state} is
@@ -1990,8 +1992,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       return this._destroyPromise;
     }
 
-    this._visibilitySubscription?.();
-    this._visibilitySubscription = null;
+    this._releasePlatformSubscriptions();
     // Detached rather than released through `_detachSizing`: the canvas shows a
     // frozen last frame from here on, and collapsing its display box out from
     // under that is a visible artefact. What has to go is the observation.
@@ -2074,6 +2075,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._rendering.destroy();
     this.animations.destroy();
     this.tweens.destroy();
+    this.jobs.destroy();
     this._audio.destroy();
     this.interaction.destroy();
     this.input.destroy();

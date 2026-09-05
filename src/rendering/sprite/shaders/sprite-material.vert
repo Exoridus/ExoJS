@@ -21,6 +21,10 @@ uniform sampler2D u_tintTexture;                // shared per-frame tint buffer 
 out vec2 v_texcoord;
 out vec4 v_color;
 flat out uint v_textureSlot;
+// World-space fragment position and the instance's local-to-world basis
+// (a, b, c, d), for effects such as lighting a tangent-space normal map.
+out vec2 v_worldPosition;
+flat out vec4 v_basis;
 
 // Round one local boundary coordinate to the device grid along an axis whose
 // local-to-device scale is scale: floor(L*scale + 0.5) / scale. Pure in the
@@ -93,4 +97,6 @@ void main(void) {
 
     v_color = vec4(m2.rgb * m2.a, m2.a);
     v_textureSlot = a_textureSlot;
+    v_worldPosition = vec2(worldX, worldY);
+    v_basis = m0;
 }

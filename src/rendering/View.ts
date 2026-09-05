@@ -1,10 +1,11 @@
 import { SceneNode } from '#core/SceneNode';
+import type { Seconds } from '#core/units';
 import type { AbstractVector } from '#math/AbstractVector';
 import { Bounds } from '#math/Bounds';
 import { Flags } from '#math/Flags';
 import { Matrix } from '#math/Matrix';
 import { ObservableSize } from '#math/ObservableSize';
-import { ObservableVector, type ObservableVectorOwner } from '#math/ObservableVector';
+import { ObservableVector } from '#math/ObservableVector';
 import type { PointLike } from '#math/PointLike';
 import { Rectangle } from '#math/Rectangle';
 import type { Size } from '#math/Size';
@@ -72,7 +73,7 @@ export interface ViewOptions {
  * shake animations.
  * @stable
  */
-export class View implements ObservableVectorOwner {
+export class View {
   private readonly _center: ObservableVector;
   private readonly _size: ObservableSize;
   private readonly _viewport: Rectangle;
@@ -359,16 +360,16 @@ export class View implements ObservableVectorOwner {
   /**
    * Start a procedural camera shake effect.
    * The shake applies a sinusoidal offset to the view's center position, then
-   * stops automatically when `durationMs` elapses. Call {@link clearShake} to
+   * stops automatically when `duration` elapses. Call {@link clearShake} to
    * cancel early.
    *
-   * @param intensity  - Maximum pixel displacement at peak amplitude.
-   * @param durationMs - How long the shake lasts in milliseconds.
-   * @param options    - Shake behaviour overrides ({@link ViewShakeOptions}).
+   * @param intensity - Maximum pixel displacement at peak amplitude.
+   * @param duration  - How long the shake lasts.
+   * @param options   - Shake behaviour overrides ({@link ViewShakeOptions}).
    */
-  public shake(intensity: number, durationMs: number, options: ViewShakeOptions = {}): this {
+  public shake(intensity: number, duration: Seconds, options: ViewShakeOptions = {}): this {
     this._shakeIntensity = Math.max(0, intensity);
-    this._shakeDurationMs = Math.max(0, durationMs);
+    this._shakeDurationMs = Math.max(0, duration * 1000);
     this._shakeElapsedMs = 0;
     this._shakeFrequency = Math.max(0, options.frequency ?? 16);
     this._shakeDecay = options.decay ?? true;

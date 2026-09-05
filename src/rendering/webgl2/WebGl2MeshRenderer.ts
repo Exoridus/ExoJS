@@ -551,7 +551,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     // WebGl2RetainedGeometryRef (vertexBuffer/indexBuffer/indexCount).
     if (backend._isRetainedCapturing) {
       this._retainedTextureScratch[0] = first.texture;
-      backend._recordRetainedBatch(this, this._nodeIndexData.subarray(0, count), count, first.blendMode, this._retainedTextureScratch, 1, cacheEntry);
+      backend.recordRetainedBatch(this, this._nodeIndexData.subarray(0, count), count, first.blendMode, this._retainedTextureScratch, 1, cacheEntry);
     }
   }
 
@@ -571,7 +571,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
     }
 
-    backend._stageViewportUniform(shader);
+    backend.stageViewportUniform(shader);
 
     if (shader.uniforms.has('u_translation')) {
       // Invariant: a custom mesh vertex shader must not declare BOTH `u_group`
@@ -638,7 +638,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
     }
 
-    backend._stageViewportUniform(shader);
+    backend.stageViewportUniform(shader);
 
     if (shader.uniforms.has('u_transforms')) {
       backend.bindTransformBufferTexture(transformTextureUnit, maxNodeIndex + 1);
@@ -682,8 +682,8 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   // group-local, so the layout-aware scan/rebase read word 0 of each 1-word
   // instance - the mesh counterpart of the sprite's word-7-of-8 layout.
 
-  /** @internal See {@link WebGl2RetainedBatchReplayer._scanRetainedNodeIndexRange}. */
-  public _scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void {
+  /** @internal See {@link WebGl2RetainedBatchReplayer.scanRetainedNodeIndexRange}. */
+  public scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void {
     const words = payload.bundle.instanceWords;
     const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
 
@@ -701,8 +701,8 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     }
   }
 
-  /** @internal See {@link WebGl2RetainedBatchReplayer._rebaseRetainedNodeIndices} (rebases to group-local indices). */
-  public _rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void {
+  /** @internal See {@link WebGl2RetainedBatchReplayer.rebaseRetainedNodeIndices} (rebases to group-local indices). */
+  public rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void {
     const words = payload.bundle.instanceWords;
     const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
 
@@ -723,7 +723,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
    * static-batch VAO in {@link _getOrCreateStaticGeometryVao}.
    * @internal
    */
-  public _configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
+  public configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
     const gl = this.getBackend().context;
     const geometry = payload.geometry;
     const instanceBuffer = payload.bundle.instanceBuffer;
@@ -753,7 +753,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
    * (`drawElementsInstanced`), unlike the sprite path's `drawArraysInstanced`.
    * @internal
    */
-  public _replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
+  public replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
     const backend = this.getBackendOrNull();
     const vao = payload.vao;
     const geometry = payload.geometry;
@@ -780,7 +780,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
     }
 
-    backend._stageViewportUniform(shader);
+    backend.stageViewportUniform(shader);
 
     if (shader.uniforms.has('u_texture')) {
       shader.getUniform('u_texture').setValue(this._textureUnitScratch);
@@ -1258,6 +1258,10 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       throw new Error('Mesh material shader has no `glsl` source; cannot render through the WebGL2 backend.');
     }
 
+    if (glsl.vertex === null) {
+      throw new Error('Mesh material shader has no GLSL vertex stage; only sprite materials and shader filters may omit it.');
+    }
+
     const shader = new Shader(glsl.vertex, glsl.fragment);
     shader.connect(createWebGl2ShaderProgram(gl));
     // Force first finalize so getUniform()/uniforms.has() are usable below.
@@ -1266,7 +1270,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     this._customShaders.set(material, shader);
 
     // Wire material.destroy() through to evict + dispose the cached program.
-    material._onDispose(() => {
+    material.onDispose(() => {
       const stored = this._customShaders.get(material);
       if (stored !== undefined) {
         stored.destroy();

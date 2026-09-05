@@ -77,7 +77,7 @@ interface RenderPlanPlaybackContext {
  * - `_endRetainedCapture(set)` - the scope's playback ended. The backend MUST
  *   flush its pending batch INTO the still-active captures before removing
  *   `set` from its stack (the group's trailing draws belong to the set).
- * - `_replayRetainedBatch(batch)` - replay one recorded batch: flush any
+ * - `replayRetainedBatch(batch)` - replay one recorded batch: flush any
  *   pending live batch first (WebGPU: without ending the pass), then
  *   issue the batch from group-owned resources with all STATE resolved live
  *   (pipeline, projection/group uniforms, texture bindings) and bump stats
@@ -92,12 +92,12 @@ interface RenderPlanPlaybackContext {
  * marks/arms scopes of engaged RetainedContainers, and those are transform-
  * group boundaries by construction. The player therefore ALWAYS calls
  * `_setRenderGroupTransform` immediately before `_beginRetainedCapture` fires
- * or the first `_replayRetainedBatch` of a spliced scope runs (and again on
+ * or the first `replayRetainedBatch` of a spliced scope runs (and again on
  * scope exit). Because that switch is the flush boundary, a backend's pending
  * LIVE batch is guaranteed to have drained before any replay instruction
  * executes - backends may rely on this ordering invariant (the WebGL2 half
  * does, for its pending-live-batch vs. replay-instruction ordering); the
- * flush inside `_replayRetainedBatch` is belt-and-braces only.
+ * flush inside `replayRetainedBatch` is belt-and-braces only.
  *
  * Generation stamping: batch instructions are created with
  * {@link retainedGenerationUnstamped} and stamped via
@@ -117,7 +117,7 @@ interface RenderPlanPlaybackHooks {
   _setRenderGroupTransform?(transform: Matrix | null): void;
   _beginRetainedCapture?(set: RetainedInstructionSet): void;
   _endRetainedCapture?(set: RetainedInstructionSet): void;
-  _replayRetainedBatch?(batch: RetainedBatchInstruction): void;
+  replayRetainedBatch?(batch: RetainedBatchInstruction): void;
   _drawPersistentOrder?(bundle: PersistentSlotBundle, order: Uint32Array, count: number): void;
 }
 
@@ -424,7 +424,7 @@ export class RenderPlanPlayer {
    * O(batches) backend dispatches. Group markers re-compose the
    * LIVE nested-boundary matrices through the same scratch logic the entry
    * path uses (camera pan and group moves stay one-matrix-cheap); batches go
-   * to the backend's `_replayRetainedBatch` hook, which resolves all STATE
+   * to the backend's `replayRetainedBatch` hook, which resolves all STATE
    * (pipeline, projection/group uniforms, textures) live and reuses only the
    * recorded DATA. While an OUTER group records, every replayed instruction
    * is appended to the active recorders verbatim - same descriptors, same
@@ -449,7 +449,7 @@ export class RenderPlanPlayer {
         }
 
         if (instruction.kind === RetainedInstructionKind.Batch) {
-          hooks._replayRetainedBatch?.(instruction);
+          hooks.replayRetainedBatch?.(instruction);
         } else if (instruction.kind === RetainedInstructionKind.EnterGroup) {
           const outer = context.activeGroupTransform;
           const scratch = (RenderPlanPlayer._groupTransformScratch[context.groupTransformDepth] ??= new Matrix());

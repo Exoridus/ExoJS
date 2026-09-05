@@ -6,6 +6,11 @@ struct VertexOutput {
     // bit 8 asks for the sample to be converted to premultiplied alpha. Pass it
     // unchanged to sampleBase(); custom fragments must not interpret it.
     @location(2) @interpolate(flat) textureSlot: u32,
+    // World-space position of this fragment and the instance's local-to-world
+    // basis (a, b, c, d), for effects that need to know where the sprite sits or
+    // how it is oriented, such as lighting a tangent-space normal map.
+    @location(3) worldPosition: vec2<f32>,
+    @location(4) @interpolate(flat) basis: vec4<f32>,
 };
 
 // Round one local boundary coordinate to the device grid along an axis whose
@@ -86,6 +91,8 @@ fn spriteVertexCore(
 
     output.color = vec4<f32>(tint.rgb * tint.a, tint.a);
     output.textureSlot = packedSlotFlags;
+    output.worldPosition = vec2<f32>(worldX, worldY);
+    output.basis = m0;
 
     return output;
 }

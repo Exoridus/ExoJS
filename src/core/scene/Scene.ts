@@ -11,6 +11,7 @@ import type { RenderingContext } from '#rendering/RenderingContext';
 import type { RenderNode } from '#rendering/RenderNode';
 import { UIRoot } from '#ui/UIRoot';
 
+import type { SceneAnimations } from './SceneAnimations';
 import type { SceneAudio } from './SceneAudio';
 import type { SceneInputs } from './SceneInputs';
 import type { SceneInteraction } from './SceneInteraction';
@@ -55,8 +56,9 @@ import type { ApplicationLike, ApplicationOf } from './sceneTypes';
  *
  * Scene-bound facilities ({@link Scene.systems}, {@link Scene.loader},
  * {@link Scene.inputs}, {@link Scene.interaction}, {@link Scene.tweens},
- * {@link Scene.audio}) are unavailable during construction and class-field
- * initialization - they become available once the scene is attached and
+ * {@link Scene.audio}, {@link Scene.animations}) are unavailable during
+ * construction and class-field initialization - they become available once
+ * the scene is attached and
  * remain available through {@link Scene.load}, {@link Scene.init}, the frame
  * hooks, {@link Scene.unload}, and {@link Scene.destroy}.
  * @stable
@@ -245,6 +247,17 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    */
   public get audio(): SceneAudio {
     return this._requireScope('audio').audio;
+  }
+
+  /**
+   * Scene-bound animation facade. An {@link AnimatedSprite} handed to
+   * `this.animations.add(...)` follows this scene's pause, retention and
+   * teardown instead of running for as long as it is attached to the tree.
+   *
+   * Throws if accessed before the scene is attached to an {@link Application}.
+   */
+  public get animations(): SceneAnimations {
+    return this._requireScope('animations').animations;
   }
 
   /**

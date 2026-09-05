@@ -1,6 +1,7 @@
 export type { ButtonOptions, ButtonState } from './Button';
 export { Button } from './Button';
 export type { CheckableOptions } from './CheckableWidget';
+export { CheckableWidget } from './CheckableWidget';
 export type { CheckboxOptions } from './Checkbox';
 export { Checkbox } from './Checkbox';
 export type { DockContainerOptions, DockRegion } from './DockContainer';
@@ -22,9 +23,11 @@ export type { StackAlign, StackDirection, StackOptions } from './Stack';
 export { Stack } from './Stack';
 export type { TextAreaOptions } from './TextArea';
 export { TextArea } from './TextArea';
+export { TextEditWidget } from './TextEditWidget';
 export type { TextInputOptions } from './TextInput';
 export { TextInput } from './TextInput';
 export type {
+  UIAnimatedBackground,
   UIBackground,
   UIBackgroundInput,
   UIBackgroundOptions,
@@ -53,3 +56,4 @@ export { Tooltip } from './Tooltip';
 export { UIRoot } from './UIRoot';
 export type { WidgetAnchor } from './Widget';
 export { Widget } from './Widget';
+export type { UIBackgroundNode } from './WidgetBackground';

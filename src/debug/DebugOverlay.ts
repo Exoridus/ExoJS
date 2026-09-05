@@ -4,6 +4,7 @@ import type { InputBinding } from '#input/InputBinding';
 import { Keyboard } from '#input/types';
 import { View } from '#rendering/View';
 
+import { AssetCacheLayer } from './AssetCacheLayer';
 import { BoundingBoxesLayer } from './BoundingBoxesLayer';
 import type { DebugLayer } from './DebugLayer';
 import { HitTestLayer } from './HitTestLayer';
@@ -22,6 +23,7 @@ export interface DebugLayers {
   readonly hitTest: HitTestLayer;
   readonly pointerStack: PointerStackLayer;
   readonly renderPassInspector: RenderPassInspectorLayer;
+  readonly assetCache: AssetCacheLayer;
 }
 
 /**
@@ -41,6 +43,7 @@ export interface DebugLayers {
  *   F3 - toggle HitTest layer
  *   F4 - toggle PointerStack layer
  *   F6 - toggle RenderPassInspector layer
+ *   F7 - toggle AssetCache layer
  *
  * NOTE: F-keys only fire while the canvas has focus (engine convention).
  * F5 is deliberately left unbound: browsers reload the page on it, which
@@ -60,7 +63,7 @@ export class DebugOverlay {
   /** Master visibility switch. When false, no layers render regardless of their individual flags. */
   public visible = true;
 
-  /** The built-in diagnostic layers. Toggle each layer's `visible` flag or use the F1-F4/F6 keybindings. */
+  /** The built-in diagnostic layers. Toggle each layer's `visible` flag or use the F1-F4/F6/F7 keybindings. */
   public readonly layers: DebugLayers;
 
   private readonly _app: Application;
@@ -83,6 +86,7 @@ export class DebugOverlay {
       hitTest: new HitTestLayer(app),
       pointerStack: new PointerStackLayer(app),
       renderPassInspector: new RenderPassInspectorLayer(app),
+      assetCache: new AssetCacheLayer(app),
     };
 
     this._onFrameHandler = this._onFrame.bind(this);
@@ -98,6 +102,7 @@ export class DebugOverlay {
       app.input.onStart(Keyboard.F4, () => this._toggle(this.layers.pointerStack)),
       // F5 is skipped on purpose - see the keybinding note on the class.
       app.input.onStart(Keyboard.F6, () => this._toggle(this.layers.renderPassInspector)),
+      app.input.onStart(Keyboard.F7, () => this._toggle(this.layers.assetCache)),
     ];
   }
 

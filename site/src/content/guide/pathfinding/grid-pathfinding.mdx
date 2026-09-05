@@ -1,0 +1,181 @@
+---
+title: 'Grid pathfinding'
+description: 'Route agents over a weighted grid with @codexo/exojs-pathfinding: build a GridSpace from your own map data, read a PathResult, and shape the route with costs, diagonals, clearance and smoothing.'
+---
+
+import Callout from '../../../components/Callout.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
+
+# Grid pathfinding
+
+`@codexo/exojs-pathfinding` answers one question — *how does this actor get from here to
+there* — and it answers it over a world you describe, not one it owns. There is no scene node,
+no renderer, no asset type and no extension to activate: you build a **navigation space**, you
+construct a **`Pathfinder`**, and you own both.
+
+> **Note:** pathfinding ships as a separate package. Install it alongside `@codexo/exojs`:
+>
+> ```sh
+> npm install @codexo/exojs @codexo/exojs-pathfinding
+> ```
+
+<Callout type="info" title="A library, not a registered extension">
+There is no `extensions: [...]` entry. Nothing in this package renders, loads or registers
+anything, and importing it has no side effects.
+</Callout>
+
+## A grid is a window of costs
+
+[`GridSpace`](/ExoJS/en/api/grid-space/) is a rectangular window of cells. Each cell carries a
+**cost**: `0` blocks it, `1` is ordinary ground, and anything larger is terrain an actor will
+walk around when the detour is cheaper than crossing it.
+
+<SourceSnippet
+  source="examples/guides/pathfinding/grid-setup.ts"
+  region="grid-setup"
+  language="ts"
+  title="examples/guides/pathfinding/grid-setup.ts"
+/>
+
+The callback receives **absolute cell coordinates** — the same numbers your map uses — so the
+grid never needs to know where its window sits. `cellSize` is how the grid converts between
+cells and world pixels, which is what makes coordinate queries and `PathResult.points` work.
+
+Everything outside the window counts as blocked. That is deliberate, and it is the answer for
+infinite or streamed maps: size the window to the region your actors are in, and keep it in
+step as chunks stream by.
+
+<SourceSnippet
+  source="examples/guides/pathfinding/grid-setup.ts"
+  region="grid-edit"
+  language="ts"
+  title="examples/guides/pathfinding/grid-setup.ts"
+/>
+
+Every edit bumps `grid.revision`, which is how anything holding an older path finds out that the
+world moved under it.
+
+## Querying
+
+<SourceSnippet
+  source="examples/guides/pathfinding/queries.ts"
+  region="query"
+  language="ts"
+  title="examples/guides/pathfinding/queries.ts"
+/>
+
+`findPath` takes node ids; `findPathBetween` takes world coordinates and resolves them for you.
+Both return a [`PathResult`](/ExoJS/en/api/path-result/) whose `status` is a **value, not an
+exception** — "there is no way through" is an ordinary game state, not an error:
+
+| `status`          | What you get                                                          |
+| ----------------- | --------------------------------------------------------------------- |
+| `found`           | A complete, cost-optimal path.                                        |
+| `unreachable`     | An empty path. The search exhausted the space.                        |
+| `budget-exceeded` | The best partial path, when `maxExpandedNodes` ran out first.         |
+
+A `budget-exceeded` result is not a guess: it is a real, traversable prefix towards the goal, so
+an actor can start walking it and ask again next frame. That is the shape a frame budget wants.
+
+Set `snapToNearest` when "get as close as you can" is the right behaviour — a click on a wall,
+or a target that has since been walled in.
+
+<SourceSnippet
+  source="examples/guides/pathfinding/queries.ts"
+  region="staleness"
+  language="ts"
+  title="examples/guides/pathfinding/queries.ts"
+/>
+
+## Shaping the route
+
+**Diagonals.** By default a diagonal step needs both cells it passes between to be walkable, so
+an actor never clips through the corner where two walls meet. `diagonals: 'never'` gives
+four-connected movement; `'always'` allows the clip. The policy is fixed when the grid is
+constructed, because the heuristic and the neighbour rules are derived from it.
+
+**Costs.** A diagonal costs its length, so `√2` cells of ordinary ground. Weighted cells
+multiply that. The heuristic is scaled by the cheapest walkable cell in the window, which is
+what keeps it from overestimating on a weighted map — and an overestimating heuristic is exactly
+how a search stops being optimal.
+
+**Clearance.** `agentSize: 2` restricts the route to cells a two-by-two actor fits through.
+Clearance is anchored at a cell's **top-left** corner, so the last row and column of a window
+can never hold an actor wider than one cell.
+
+**Smoothing.** `smooth: true` string-pulls the staircase out of the result: it keeps a waypoint
+only where the straight line past it is blocked. The nodes it returns are no longer adjacent —
+the guarantee is that the straight segment between two consecutive ones stays walkable, and
+never crosses terrain more expensive than the section it replaces.
+
+<Callout type="warning" title="A smoothed path is not a cell walk">
+`result.cost` still reports the cost of the grid path that was smoothed, and `result.edges` is
+empty, because the smoothed steps are no longer space edges.
+</Callout>
+
+## Jump-point search comes for free
+
+On a uniform-cost grid with a one-cell actor and the default diagonal policy, the grid hands the
+search a **pruned expansion**: jump-point search. It skips whole runs of forced steps and
+returns the same cost-optimal path from a fraction of the expanded nodes. `result.expandedNodes`
+shows the difference, and the
+[Grid Navigation](/ExoJS/en/playground/?example=pathfinding/grid-navigation) example puts that
+counter on screen.
+
+Nothing has to be switched on. Painting a single weighted cell switches it back off by itself,
+because its pruning rules only hold while every walkable cell costs the same.
+
+## Feeding it a tilemap
+
+The package has **no dependency on `@codexo/exojs-tilemap`**, in either direction. The bridge is
+the cost callback, and it lives in your game:
+
+<SourceSnippet
+  source="examples/guides/pathfinding/tilemap-bridge.ts"
+  region="tilemap-bridge"
+  language="ts"
+  title="examples/guides/pathfinding/tilemap-bridge.ts"
+/>
+
+Keep the two in step wherever you edit the map:
+
+<SourceSnippet
+  source="examples/guides/pathfinding/tilemap-bridge.ts"
+  region="tilemap-edit"
+  language="ts"
+  title="examples/guides/pathfinding/tilemap-bridge.ts"
+/>
+
+The [Tilemap Navigation](/ExoJS/en/playground/?example=pathfinding/tilemap-navigation) example
+does exactly this against a live [`TileLayer`](/ExoJS/en/api/tile-layer/).
+
+## Reachable areas
+
+`floodFrom` walks outwards from a node and reports everything within a cost budget, cheapest
+first — the "which tiles can this unit still reach" query a turn-based game needs, and the input
+a flow field for many actors heading to one goal would be built from.
+
+<SourceSnippet
+  source="examples/guides/pathfinding/reachable-area.ts"
+  region="flood"
+  language="ts"
+  title="examples/guides/pathfinding/reachable-area.ts"
+/>
+
+## Determinism and cost
+
+Equal-cost paths are resolved by a pinned tie-break, so the same query on an unmutated grid
+returns the identical path on every run and every machine. That is what makes a path safe to
+record in a replay or assert in a test.
+
+One `Pathfinder` reuses its search buffers across every query, including queries against
+different spaces of different sizes, so a search allocates nothing that scales with the nodes it
+visits. The result object is fresh every time — you keep paths, and pooling something you keep
+is how use-after-reuse bugs happen.
+
+Share a pathfinder freely; just do not mutate a space while a query against it is running.
+
+<Callout type="tip" title="Next">
+A grid cannot express "jump across this gap". [Waypoint
+graphs](/ExoJS/en/guide/pathfinding/waypoint-graphs/) can.
+</Callout>

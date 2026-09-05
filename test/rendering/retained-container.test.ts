@@ -23,7 +23,7 @@ import type { View } from '#rendering/View';
 class LeafDrawable extends Drawable {
   public constructor(public readonly id: string) {
     super();
-    this._setLocalBounds(0, 0, 16, 16);
+    this.setLocalBounds(0, 0, 16, 16);
   }
 }
 
@@ -288,7 +288,7 @@ const gatherScopeDraws = (scope: GroupScope, out: DrawCommand[]): void => {
 };
 
 // `build()` always wraps its `root` argument in one Group entry of its own
-// (see `RenderPlanBuilder.build`: `root._collect(this)` runs through the same
+// (see `RenderPlanBuilder.build`: `root.collect(this)` runs through the same
 // `emitNode` path as any other node), so a node's OWN Group entry is never a
 // direct child of `plan.passes[0].root.entries` unless that node was itself
 // passed as `build()`'s root - it is nested one or more Group/Barrier scopes
@@ -608,7 +608,7 @@ describe('RetainedContainer: whole-range fragment splice', () => {
     const boundsSpyB = vi.spyOn(leafB, 'getBounds');
     const materialSpyA = vi.spyOn(leafA, '_getOrComputeMaterialKey');
     const materialSpyB = vi.spyOn(leafB, '_getOrComputeMaterialKey');
-    const collectSpy = vi.spyOn(mid, '_collect');
+    const collectSpy = vi.spyOn(mid, 'collect');
 
     const frame2 = snapshot(collectDraws(root, backend)); // frame 2: splice
 
@@ -873,7 +873,7 @@ describe('RetainedContainer: invalidation gates and view independence', () => {
     backend.destroy();
   });
 
-  test('a barrier-bearing direct child re-dispatches through _collect on every spliced frame', () => {
+  test('a barrier-bearing direct child re-dispatches through collect on every spliced frame', () => {
     const backend = createTestBackend();
     const root = new Container();
     const group = new RetainedContainer();
@@ -887,7 +887,7 @@ describe('RetainedContainer: invalidation gates and view independence', () => {
 
     collectDraws(root, backend); // capture (fragment holds a barrier record + one draw)
 
-    const collectSpy = vi.spyOn(clipped, '_collect');
+    const collectSpy = vi.spyOn(clipped, 'collect');
 
     collectDraws(root, backend); // spliced frame
 
@@ -952,8 +952,8 @@ describe('RetainedContainer: invalidation gates and view independence', () => {
 
     // Clean frame: the static sibling splices from the fragment while ONLY
     // the escaped branch re-dispatches live.
-    const staticCollectSpy = vi.spyOn(staticMid, '_collect');
-    const escapedCollectSpy = vi.spyOn(mid, '_collect');
+    const staticCollectSpy = vi.spyOn(staticMid, 'collect');
+    const escapedCollectSpy = vi.spyOn(mid, 'collect');
 
     collectDraws(root, backend);
     expect(staticCollectSpy).not.toHaveBeenCalled();
@@ -1527,8 +1527,8 @@ describe('RetainedContainer: deep-barrier escape scoped to the offending sub-bra
 
     const boundsSpyA = vi.spyOn(leafA, 'getBounds');
     const materialSpyA = vi.spyOn(leafA, '_getOrComputeMaterialKey');
-    const staticCollectSpy = vi.spyOn(staticMid, '_collect');
-    const dirtyCollectSpy = vi.spyOn(dirtyMid, '_collect');
+    const staticCollectSpy = vi.spyOn(staticMid, 'collect');
+    const dirtyCollectSpy = vi.spyOn(dirtyMid, 'collect');
 
     const frame2 = snapshot(collectDraws(root, backend)); // clean frame: splice
 
@@ -1624,7 +1624,7 @@ describe('RetainedContainer: deep-barrier escape scoped to the offending sub-bra
     // And the branch is retained again: a clean frame splices with no walk.
     collectDraws(root, backend);
 
-    const collectSpy = vi.spyOn(mid, '_collect');
+    const collectSpy = vi.spyOn(mid, 'collect');
 
     collectDraws(root, backend);
     expect(collectSpy).not.toHaveBeenCalled();

@@ -6,10 +6,10 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 25,
+  "memberCount": 24,
   "counts": {
     "constructors": 1,
-    "methods": 10,
+    "methods": 9,
     "properties": 14,
     "events": 0
   },
@@ -117,11 +117,11 @@
       "title": "Methods",
       "members": [
         {
-          "name": "_createVoice",
-          "signature": "_createVoice(system: AudioSystem, options: SoundPlayOptions): Voice",
+          "name": "addSprite",
+          "signature": "addSprite(name: string, clip: AudioSpriteClip): this",
           "signatureTokens": [
             {
-              "text": "_createVoice",
+              "text": "addSprite",
               "kind": "name"
             },
             {
@@ -129,7 +129,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "system",
+              "text": "name",
               "kind": "param"
             },
             {
@@ -137,15 +137,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "AudioSystem",
-              "kind": "type"
+              "text": "string",
+              "kind": "keyword"
             },
             {
               "text": ", ",
               "kind": "punctuation"
             },
             {
-              "text": "options",
+              "text": "clip",
               "kind": "param"
             },
             {
@@ -153,7 +153,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "SoundPlayOptions",
+              "text": "AudioSpriteClip",
               "kind": "type"
             },
             {
@@ -165,53 +165,24 @@
               "kind": "punctuation"
             },
             {
-              "text": "Voice",
-              "kind": "type"
+              "text": "this",
+              "kind": "keyword"
             }
           ],
           "params": [
             {
-              "name": "system",
-              "type": "AudioSystem",
+              "name": "name",
+              "type": "string",
               "optional": false
             },
             {
-              "name": "options",
-              "type": "SoundPlayOptions",
+              "name": "clip",
+              "type": "AudioSpriteClip",
               "optional": false
             }
           ],
-          "returnType": "Voice",
-          "description": "Implements Playable. Called by AudioSystem.play; do not call directly - use app.audio.play(sound, options) instead. Creates one SoundVoice backed by a single AudioBufferSourceNode. Pool limits are enforced: if the pool is full the configured eviction strategy picks a victim to stop before the new voice starts."
-        },
-        {
-          "name": "_stopAllVoices",
-          "signature": "_stopAllVoices(): void",
-          "signatureTokens": [
-            {
-              "text": "_stopAllVoices",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": "Stop all currently active voices (e.g. for replace mode)."
+          "returnType": "this",
+          "description": "Define (or redefine) a named sub-region of the buffer. Redefining a name discards the sub-Sound Sound.sprite memoized for it, so the next lookup reflects the new window."
         },
         {
           "name": "clip",
@@ -282,11 +253,11 @@
           "description": "Return a new Sound that plays only the [offset, offset + duration] sub-range (seconds) of this sound - an audio atlas / sprite-sheet clip. The clip does not copy anything: it reads the decoded AudioBuffer from the sound it was cut from at playback time, so it follows that sound through eviction and reload. It inherits this sound's playback defaults (volume, loop, playbackRate, muted) and pool configuration, and gets its own independent voice pool. Spatialization is not among them: a Sound carries none - it is set per play via PlayOptions and lives on the returned Voice. Available before the sound has loaded, and on a clip of a clip (the nested window is capped by the outer one)."
         },
         {
-          "name": "defineSprite",
-          "signature": "defineSprite(name: string, clip: AudioSpriteClip): this",
+          "name": "createVoice",
+          "signature": "createVoice(system: AudioSystem, options: SoundPlayOptions): Voice",
           "signatureTokens": [
             {
-              "text": "defineSprite",
+              "text": "createVoice",
               "kind": "name"
             },
             {
@@ -294,7 +265,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "name",
+              "text": "system",
               "kind": "param"
             },
             {
@@ -302,15 +273,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
-              "kind": "keyword"
+              "text": "AudioSystem",
+              "kind": "type"
             },
             {
               "text": ", ",
               "kind": "punctuation"
             },
             {
-              "text": "clip",
+              "text": "options",
               "kind": "param"
             },
             {
@@ -318,7 +289,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "AudioSpriteClip",
+              "text": "SoundPlayOptions",
               "kind": "type"
             },
             {
@@ -330,24 +301,24 @@
               "kind": "punctuation"
             },
             {
-              "text": "this",
-              "kind": "keyword"
+              "text": "Voice",
+              "kind": "type"
             }
           ],
           "params": [
             {
-              "name": "name",
-              "type": "string",
+              "name": "system",
+              "type": "AudioSystem",
               "optional": false
             },
             {
-              "name": "clip",
-              "type": "AudioSpriteClip",
+              "name": "options",
+              "type": "SoundPlayOptions",
               "optional": false
             }
           ],
-          "returnType": "this",
-          "description": "Define (or redefine) a named sub-region of the buffer. Redefining a name discards the sub-Sound Sound.sprite memoized for it, so the next lookup reflects the new window."
+          "returnType": "Voice",
+          "description": "Implements Playable. Called by AudioSystem.play; do not call directly - use app.audio.play(sound, options) instead. Creates one SoundVoice backed by a single AudioBufferSourceNode. Pool limits are enforced: if the pool is full the configured eviction strategy picks a victim to stop before the new voice starts."
         },
         {
           "name": "destroy",
@@ -643,7 +614,7 @@
             }
           ],
           "returnType": "Sound",
-          "description": "The Sound for a named sprite - the playback side of Sound.defineSprite. Same concept as Sound.clip, addressed by name instead of by offset: a sub-Sound over the same decoded buffer, with the clip's own loop flag and its own voice pool. The result is memoized per name, so the pool is shared across every play of that sprite and repeated lookups are free. It stays valid until the name is redefined, removed, or this sound is destroyed."
+          "description": "The Sound for a named sprite - the playback side of Sound.addSprite. Same concept as Sound.clip, addressed by name instead of by offset: a sub-Sound over the same decoded buffer, with the clip's own loop flag and its own voice pool. The result is memoized per name, so the pool is shared across every play of that sprite and repeated lookups are free. It stays valid until the name is redefined, removed, or this sound is destroyed."
         }
       ],
       "paragraphs": [],

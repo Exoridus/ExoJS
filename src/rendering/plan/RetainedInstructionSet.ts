@@ -27,7 +27,6 @@ export const enum RetainedInstructionKind {
  * generation counter - bumped whenever the backend recreates or destroys the
  * bundle's resources (device restore, growth reallocation, destroy) - to
  * reject instruction sets that reference stale GPU state.
- * @internal
  */
 export interface RetainedGroupBundle {
   /** Monotonic resource generation; a mismatch invalidates referencing sets. */
@@ -46,7 +45,7 @@ export interface RetainedGroupBundle {
    * backends without patch support - the caller then falls back to entry replay
    * (which re-reads live transforms) or a re-record.
    */
-  _patchTransformRow?(localRow: number, floats: Float32Array): void;
+  patchTransformRow?(localRow: number, floats: Float32Array): void;
   /**
    * Fast patch: overwrite one group-local tint row in place with `bytes`
    * (`TRANSFORM_TINT_BYTES_PER_ROW` = one rgba8 texel / one packed `u32`) and
@@ -55,7 +54,18 @@ export interface RetainedGroupBundle {
    * colour behind the index changed. Absent on backends without patch support -
    * a tint change then re-records, which is what every backend did before.
    */
-  _patchTintRow?(localRow: number, bytes: Uint8Array): void;
+  patchTintRow?(localRow: number, bytes: Uint8Array): void;
+  /**
+   * Push whatever the row patches above have staged, once per patch pass.
+   *
+   * A backend whose row store defers its own upload (a texture whose dirty rect
+   * is unioned and committed at bind time) needs none of this and omits it; one
+   * that writes a GPU buffer directly implements it so the per-frame upload
+   * count follows the number of dirty REGIONS rather than the number of moved
+   * nodes. Called after the last patch of a pass and always before the frame's
+   * submit.
+   */
+  flushRowPatches?(): void;
   /** Release the bundle's GPU resources (container destroy / disengage). */
   destroy?(): void;
 }
@@ -178,6 +188,7 @@ export class RetainedInstructionSet {
    */
   public ownedBundle: RetainedGroupBundle | null = null;
 
+  /** @internal */
   public get instructions(): readonly RetainedInstruction[] {
     return this._instructions;
   }
@@ -203,6 +214,7 @@ export class RetainedInstructionSet {
    * the backend at flush time; group markers by the plan player; replayed
    * inner-set instructions verbatim by the player. Ignored when no
    * recording is active (a backend flush outside any capture window).
+   * @internal
    */
   public append(instruction: RetainedInstruction): void {
     if (!this._recording) {

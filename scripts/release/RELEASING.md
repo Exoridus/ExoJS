@@ -19,13 +19,15 @@ version in the tree indefinitely).
 1. **Land everything on `next`.** Feature PRs merge without version bumps — the
    packages stay at the previous version throughout development.
 
-2. **Keep the CHANGELOG's `## [Unreleased]` section current.** Entries land
-   with the change that causes them, under `## [Unreleased]` at the top of
-   `CHANGELOG.md` - the Keep a Changelog shape this file declares in its own
-   second line. `release:cut` dates that section as the release and opens a
-   fresh empty one, so nothing has to be written twice and no pull request ever
-   carries a heading naming a version nobody has bumped to yet (which is what
-   `release-coherence` refuses).
+2. **Let the cut write the CHANGELOG.** Pull requests do not touch
+   `CHANGELOG.md` (`lint:changelog` refuses a branch that does). `release:cut`
+   assembles the `## [Unreleased]` section from the squash commits since the
+   last tag - Conventional Commits type to heading, subject to headline, pull
+   request description to prose - writes it, and stops so you can review the
+   wording; commit the result and run the cut again, which then dates the
+   section and opens a fresh empty one. `pnpm release:changelog` previews the
+   entries at any time; a hand-written entry that already names a pull request
+   is kept and never duplicated.
 
 3. **Merge `next` into `main`.** Fast-forward if `main` has taken no patch
    commits since the last release; otherwise a regular merge commit:
@@ -156,17 +158,18 @@ followed by its Trusted Publisher config on npmjs.com.
 
 ### Open at the time of writing (checked against the registry 2026-08-29)
 
-- `@codexo/exojs-tilemap-physics` is in `LOCKSTEP_PACKAGES` and therefore in
-  `PUBLISH_ORDER`, but has never been published (npm answers E404). The next
-  coordinated release would reach it and abort the chain there.
+- `@codexo/exojs-tilemap-physics`, `@codexo/exojs-lighting` and
+  `@codexo/exojs-pathfinding` are in `LOCKSTEP_PACKAGES` and therefore in
+  `PUBLISH_ORDER`, but none of them has ever been published (npm answers E404).
+  The next coordinated release would reach them and abort the chain there.
 
-  **Bootstrap it as part of that release, not before it:** run `release:cut`
+  **Bootstrap each as part of that release, not before it:** run `release:cut`
   first so the package carries the release version, then
-  `pnpm release:bootstrap @codexo/exojs-tilemap-physics --execute`, then
-  register its trusted publisher, and only then run the coordinated publish -
-  which skips it as already-published and publishes everything else with
-  provenance. Bootstrapping it earlier publishes a version (today `0.15.2`)
-  that no release will ever correspond to.
+  `pnpm release:bootstrap <name> --execute`, then register its trusted
+  publisher, and only then run the coordinated publish - which skips it as
+  already-published and publishes everything else with provenance.
+  Bootstrapping earlier publishes a version that no release will ever
+  correspond to.
 
 - `create-exo-app` and `@codexo/exojs-build` **are** published, both at `0.1.0`,
   which is what their `package.json` says. They need no bootstrap; their next

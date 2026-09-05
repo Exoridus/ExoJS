@@ -1,0 +1,821 @@
+{
+  "title": "AtlasPage",
+  "description": "A single texture page within a GlyphAtlas. Glyphs are packed into the page using a shelf-bin algorithm. In `'sdf'` mode the page owns a `DataTexture` (`r8`) filled with the single-channel distance field GlyphSdf computes. In `'color'` mode a Canvas 2D context preserves full glyph colours for emoji.",
+  "symbol": "AtlasPage",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 13,
+  "counts": {
+    "constructors": 0,
+    "methods": 8,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A single texture page within a GlyphAtlas. Glyphs are packed into the page using a shelf-bin algorithm.",
+        "In `'sdf'` mode the page owns a `DataTexture` (`r8`) filled with the single-channel distance field GlyphSdf computes. In `'color'` mode a Canvas 2D context preserves full glyph colours for emoji."
+      ],
+      "importLine": "import { AtlasPage } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Release the page's GPU resource. Only for pages whose owner is a single node. The pages of a GlyphAtlas outlive every node that drew from them and are reset, never destroyed."
+        },
+        {
+          "name": "fillSolid",
+          "signature": "fillSolid(slotX: number, slotY: number, w: number, h: number): void",
+          "signatureTokens": [
+            {
+              "text": "fillSolid",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "slotX",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "slotY",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "w",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "h",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "slotX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "slotY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "w",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "h",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Fill a slot with fully opaque ink - the deepest inside value in 'sdf' mode, opaque white in 'color' mode - so a quad sampling it renders as a solid rectangle whichever fragment stage draws it."
+        },
+        {
+          "name": "insert",
+          "signature": "insert(w: number, h: number): null | { x: number; y: number }",
+          "signatureTokens": [
+            {
+              "text": "insert",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "w",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "h",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "w",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "h",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "null | { x: number; y: number }",
+          "description": ""
+        },
+        {
+          "name": "measureGlyph",
+          "signature": "measureGlyph(char: string, state: CanvasTextState): TextMetrics",
+          "signatureTokens": [
+            {
+              "text": "measureGlyph",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "char",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "state",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CanvasTextState",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextMetrics",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "state",
+              "type": "CanvasTextState",
+              "optional": false
+            }
+          ],
+          "returnType": "TextMetrics",
+          "description": ""
+        },
+        {
+          "name": "rasterize",
+          "signature": "rasterize(char: string, slotX: number, slotY: number, ascent: number, bbLeft: number, state: CanvasTextState): void",
+          "signatureTokens": [
+            {
+              "text": "rasterize",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "char",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "slotX",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "slotY",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ascent",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "bbLeft",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "state",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CanvasTextState",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "slotX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "slotY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "ascent",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "bbLeft",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "state",
+              "type": "CanvasTextState",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Rasterize a white glyph into the canvas at the given padded slot origin (canvas mode only)."
+        },
+        {
+          "name": "reset",
+          "signature": "reset(): void",
+          "signatureTokens": [
+            {
+              "text": "reset",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "uploadDirtyRegion",
+          "signature": "uploadDirtyRegion(): void",
+          "signatureTokens": [
+            {
+              "text": "uploadDirtyRegion",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "writeSdf",
+          "signature": "writeSdf(data: Uint8ClampedArray, slotX: number, slotY: number, srcW: number, srcH: number): void",
+          "signatureTokens": [
+            {
+              "text": "writeSdf",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "data",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint8ClampedArray",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "slotX",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "slotY",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "srcW",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "srcH",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "data",
+              "type": "Uint8ClampedArray",
+              "optional": false
+            },
+            {
+              "name": "slotX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "slotY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "srcW",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "srcH",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Copy R8 SDF data into the page buffer at the given slot origin. Only valid in 'sdf' mode. data is a Uint8ClampedArray of single-channel SDF values as produced by GlyphSdf.draw. Each value is one byte (0 = far outside the glyph, 255 = deep inside, ~128 = glyph edge)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "index",
+          "signature": "index: number",
+          "signatureTokens": [
+            {
+              "text": "index",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "mode",
+          "signature": "mode: AtlasMode",
+          "signatureTokens": [
+            {
+              "text": "mode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AtlasMode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "texture",
+          "signature": "texture: Texture",
+          "signatureTokens": [
+            {
+              "text": "texture",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Page height in atlas texels."
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Page width in atlas texels - the denominator of every uvLeft/uvRight addressing it."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/text/GlyphAtlas.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/GlyphAtlas.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/text/GlyphAtlas.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/GlyphAtlas.ts"
+}

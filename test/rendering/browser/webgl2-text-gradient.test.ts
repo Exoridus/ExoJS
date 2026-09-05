@@ -14,8 +14,9 @@
  * be predicted from `text.getLocalBounds()` and compared. Partial coverage
  * scales both channels equally and cancels out of the ratio.
  *
- * It also pins the ORIENTATION: `gradientColors` reads `[top, bottom]`, so the
- * first colour must dominate the top rows and fade out towards the bottom.
+ * It also pins the ORIENTATION: the default 180-degree angle runs the ramp from
+ * top to bottom, so the first stop must dominate the top rows and fade out
+ * towards the bottom.
  *
  * Run via:  pnpm test:browser:webgl
  */
@@ -112,13 +113,17 @@ describe('WebGL2: the text gradient ramp spans the ink extent', () => {
     const backend = await createBackend();
     const root = new Container();
     // 'M' is wide and solid, so most rows carry a strong, unambiguous sample.
-    // gradientColors[0] is the TOP stop - it feeds the shader's ramp-0.0 end,
+    // The first stop is the TOP one - it feeds the shader's ramp-0.0 end,
     // [1] its ramp-1.0 end.
     const text = new Text('M', {
       fontSize: 56,
       fillColor: Color.white,
-      gradientColors: [Color.red, Color.blue],
-      gradientAxis: 'vertical',
+      gradient: {
+        stops: [
+          { offset: 0, color: Color.red },
+          { offset: 1, color: Color.blue },
+        ],
+      },
     });
 
     text.setPosition(8, textY);
@@ -143,7 +148,7 @@ describe('WebGL2: the text gradient ramp spans the ink extent', () => {
         // The shader interpolates at the pixel centre.
         const localY = y + 0.5 - textY;
         const t = Math.min(1, Math.max(0, (localY - ink.y) / ink.height));
-        // Red is gradientColors[0] - the TOP stop - so its share is 1 at the
+        // Red is the first stop - the TOP one - so its share is 1 at the
         // top of the ink box and falls to 0 at the bottom.
         const expected = 1 - t;
 

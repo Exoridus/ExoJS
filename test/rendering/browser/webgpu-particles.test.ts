@@ -35,7 +35,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { ApplyForce, MeshParticles, particlesExtension, ParticleSystem, RibbonParticles } from '../../../packages/exojs-particles/src/index';
+import { ApplyForce, MeshParticles, particlesExtension, ParticleSystem, RibbonParticles, TrailParticles } from '../../../packages/exojs-particles/src/index';
 import { readWebGpuPixels } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
@@ -261,6 +261,70 @@ describe('WebGPU ParticleSystem — ribbon', () => {
 
       // Along the band: both ends and the middle are filled, which a
       // strip-that-drew-only-one-segment would not satisfy.
+      expectPixelNear(readPixel(20, 32), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(32, 32), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(44, 32), [0, 255, 0, 255]);
+      // Across it: the band is a band, not the whole column.
+      expectPixelNear(readPixel(32, 12), [0, 0, 0, 255]);
+      expectPixelNear(readPixel(32, 52), [0, 0, 0, 255]);
+      // Past the ends of the path, and a safely empty corner.
+      expectPixelNear(readPixel(58, 32), [0, 0, 0, 255]);
+      expectPixelNear(readPixel(4, 4), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+describe('WebGPU ParticleSystem — trail', () => {
+  test('one particle renders as a band through the positions it passed', async ctx => {
+    const backend = await setupBackend();
+
+    const texture = createSolidTexture('#ffffff');
+    const root = new Container();
+    // The trail mode ships its own WGSL, which only a real device ever
+    // compiles - a broken module draws nothing and fails the interior
+    // assertions below rather than passing silently in the node lanes.
+    const mode = new TrailParticles({ width: 12, interval: 0.1, points: 4, fade: 1 });
+    const system = new ParticleSystem(texture, { capacity: 4, render: mode });
+
+    try {
+      const particle = system.emit()!;
+
+      particle.position.x = -16;
+      particle.color = new Color(0, 255, 0).toRgba8();
+
+      // Trails are built from what the mode recorded on previous frames, so the
+      // path is walked here: the particle moves and its own clock passes the
+      // sample interval, one build per recorded position. The final position is
+      // recorded by the build the render below performs.
+      for (const [x, elapsed] of [
+        [-16, 0],
+        [0, 0.1],
+      ] as const) {
+        system._storage.posX[0] = x;
+        system._storage.elapsed[0] = elapsed;
+        mode.build(system, system._storage);
+      }
+
+      system._storage.posX[0] = 16;
+      system._storage.elapsed[0] = 0.2;
+
+      // The trail now spans system-local x -16..16 and expands +/-6px around
+      // it, so at (32, 32) it covers x 16..48, y 26..38.
+      system.setPosition(32, 32);
+      root.addChild(system);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      // Along the band: both ends and the middle are filled, which a trail that
+      // kept only the live position would not satisfy.
       expectPixelNear(readPixel(20, 32), [0, 255, 0, 255]);
       expectPixelNear(readPixel(32, 32), [0, 255, 0, 255]);
       expectPixelNear(readPixel(44, 32), [0, 255, 0, 255]);

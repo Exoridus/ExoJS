@@ -155,7 +155,7 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
       render(backend, group);
       expectPixelNear(readWebGl2Pixel(backend, 31, 24), [255, 0, 0, 255]);
 
-      const replay = vi.spyOn(backend, '_replayRetainedBatch');
+      const replay = vi.spyOn(backend, 'replayRetainedBatch');
 
       material.sampler.scaleMode = ScaleModes.Linear;
       render(backend, group);
@@ -192,7 +192,7 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
       render(backend, group); // fragment capture
       render(backend, group); // instruction recording
 
-      let replay = vi.spyOn(backend, '_replayRetainedBatch');
+      let replay = vi.spyOn(backend, 'replayRetainedBatch');
 
       render(backend, group);
       expect(replay).toHaveBeenCalledTimes(1);
@@ -223,7 +223,7 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
       expect(replay).not.toHaveBeenCalled();
 
       replay.mockRestore();
-      replay = vi.spyOn(backend, '_replayRetainedBatch');
+      replay = vi.spyOn(backend, 'replayRetainedBatch');
       render(backend, group);
       expect(replay).toHaveBeenCalledTimes(1);
       replay.mockRestore();
@@ -257,7 +257,7 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
       render(backend, group);
       expectPixelNear(readWebGl2Pixel(backend, 24, 24), [255, 0, 0, 255]);
 
-      const replay = vi.spyOn(backend, '_replayRetainedBatch');
+      const replay = vi.spyOn(backend, 'replayRetainedBatch');
 
       material.setTexture('u_pattern', secondPattern);
       render(backend, group);
@@ -509,6 +509,80 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
       expect(backend.stats.drawCalls).toBe(2);
     } finally {
       root.destroy();
+      material.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+  test('exposes the world position and the local-to-world basis to a custom fragment', async () => {
+    const backend = await createBackend();
+    const texture = createSplitTexture();
+    const material = new SpriteMaterial({
+      shader: new ShaderSource({
+        glsl: {
+          vertex: spriteVertexGlsl,
+          fragment: `#version 300 es
+precision mediump float;
+in vec2 v_worldPosition;
+flat in vec4 v_basis;
+out vec4 fragColor;
+void main() {
+  fragColor = vec4(v_worldPosition / 64.0, v_basis.x > 0.0 ? 1.0 : 0.0, 1.0);
+}`,
+        },
+      }),
+    });
+    const group = new Container();
+    const sprite = new Sprite(texture);
+
+    try {
+      sprite.material = material;
+      sprite.setPosition(16, 16).setScale(16, 16);
+      group.addChild(sprite);
+
+      render(backend, group);
+      expectPixelNear(readWebGl2Pixel(backend, 40, 24), [161, 98, 255, 255], 6);
+
+      // Mirroring flips the basis x column; the quad now extends to the left.
+      sprite.setScale(-16, 16);
+      render(backend, group);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 24), [34, 98, 0, 255], 6);
+    } finally {
+      group.destroy();
+      material.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+  test('a fragment-only GLSL ShaderSource is enough for a sprite material', async () => {
+    const backend = await createBackend();
+    const texture = createSplitTexture();
+    const material = new SpriteMaterial({
+      shader: new ShaderSource({
+        glsl: {
+          fragment: `#version 300 es
+precision mediump float;
+in vec2 v_texcoord;
+out vec4 fragColor;
+void main() {
+  fragColor = vec4(sampleBase(v_textureSlot, v_texcoord).rgb, 1.0);
+}`,
+        },
+      }),
+    });
+    const group = new Container();
+    const sprite = new Sprite(texture);
+
+    try {
+      material.sampler = { scaleMode: ScaleModes.Nearest, wrapMode: WrapModes.ClampToEdge };
+      sprite.material = material;
+      sprite.setPosition(16, 16).setScale(16, 16);
+      group.addChild(sprite);
+
+      render(backend, group);
+      expectPixelNear(readWebGl2Pixel(backend, 24, 24), [255, 0, 0, 255]);
+    } finally {
+      group.destroy();
       material.destroy();
       texture.destroy();
       backend.destroy();

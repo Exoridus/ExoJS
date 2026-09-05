@@ -9,7 +9,7 @@ precision highp float;
 // shared transform buffer, just against Text's own private node-data texture.
 layout(location = 0) in vec2  a_position;   // local-space quad corner
 layout(location = 1) in vec2  a_texcoord;
-layout(location = 2) in uint a_packedNodeSlot; // bits 0..23 = node row, bits 24..31 = atlas slot
+layout(location = 2) in uint a_packedNodeSlot; // bits 0..22 = node row, bit 23 = decoration, bits 24..31 = atlas slot
 
 uniform mat3 u_projection;
 uniform mat3 u_group;
@@ -18,12 +18,14 @@ uniform sampler2D u_nodeData;
 
 flat out int   v_nodeIndex;
 flat out uint  v_textureSlot;
+flat out uint  v_decoration;
 flat out vec4  v_pxAxes;
      out vec2  v_texcoord;
      out vec2  v_gradUV;
 
 void main(void) {
-    int ni = int(a_packedNodeSlot & 0x00ffffffu);
+    // Mirrors textNodeIndexMask / textDecorationFlagBit in atlasTextureSlots.ts.
+    int ni = int(a_packedNodeSlot & 0x007fffffu);
 
     // texel 0: (a, c, snapMode, tx) — mat3 column-major: col0 + snap flag + translate.x
     // texel 1: (b, d, 0, ty) — mat3 column-major: col1 + translate.y
@@ -80,6 +82,7 @@ void main(void) {
     v_nodeIndex = ni;
     v_pxAxes    = vec4(unitClipX * u_viewport.zw * 0.5, unitClipY * u_viewport.zw * 0.5);
     v_textureSlot = a_packedNodeSlot >> 24u;
+    v_decoration  = (a_packedNodeSlot & 0x00800000u) != 0u ? 1u : 0u;
 
     vec2 bSize = t9.zw;
     v_gradUV = (bSize.x > 0.0 && bSize.y > 0.0)

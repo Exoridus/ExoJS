@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 22,
+  "memberCount": 28,
   "counts": {
     "constructors": 1,
-    "methods": 16,
-    "properties": 5,
+    "methods": 20,
+    "properties": 7,
     "events": 0
   },
   "sections": [
@@ -304,6 +304,35 @@
           "description": "Current position, display size and backing-store resolution of the drawing surface. Read per pointer event, so implementations should keep it cheap."
         },
         {
+          "name": "lockPointer",
+          "signature": "lockPointer(): void",
+          "signatureTokens": [
+            {
+              "text": "lockPointer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Ask the host for a pointer lock on the surface. Best-effort and asynchronous: hosts grant it only from a user gesture, may deny it outright, and never report the outcome here - PlatformAdapter.onPointerLockChange does."
+        },
+        {
           "name": "now",
           "signature": "now(): number",
           "signatureTokens": [
@@ -398,6 +427,140 @@
           ],
           "returnType": "PlatformSubscription",
           "description": "Subscribe to PlatformAdapter.networkHint changes."
+        },
+        {
+          "name": "onPixelRatioChange",
+          "signature": "onPixelRatioChange(listener: (ratio: number) => void): PlatformSubscription",
+          "signatureTokens": [
+            {
+              "text": "onPixelRatioChange",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "listener",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ratio",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlatformSubscription",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "listener",
+              "type": "(ratio: number) => void",
+              "optional": false
+            }
+          ],
+          "returnType": "PlatformSubscription",
+          "description": "Watches the ratio through a (resolution: Ndppx) media query rather than a resize listener: a ratio change caused by dragging the window to another display, or by an OS scaling change, raises no resize event at all."
+        },
+        {
+          "name": "onPointerLockChange",
+          "signature": "onPointerLockChange(listener: (locked: boolean) => void): PlatformSubscription",
+          "signatureTokens": [
+            {
+              "text": "onPointerLockChange",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "listener",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "locked",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlatformSubscription",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "listener",
+              "type": "(locked: boolean) => void",
+              "optional": false
+            }
+          ],
+          "returnType": "PlatformSubscription",
+          "description": "Subscribe to PlatformAdapter.pointerLocked changes. Also the only report of a lock the user ended themselves, which every host allows."
         },
         {
           "name": "onSurfaceEvent",
@@ -972,6 +1135,35 @@
           ],
           "returnType": "void",
           "description": "Set the surface's touch-action policy - 'none' keeps native pan/zoom out of the way."
+        },
+        {
+          "name": "unlockPointer",
+          "signature": "unlockPointer(): void",
+          "signatureTokens": [
+            {
+              "text": "unlockPointer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Release a pointer lock this surface holds. No-op while it holds none."
         }
       ],
       "paragraphs": [],
@@ -982,6 +1174,27 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "devicePixelRatio",
+          "signature": "devicePixelRatio: number",
+          "signatureTokens": [
+            {
+              "text": "devicePixelRatio",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Device pixels the host currently packs into one CSS pixel. 1 where the host reports nothing. A property of the display the surface is shown on, not of the surface: it changes when the window moves to a different monitor or the page is zoomed, which is what PlatformAdapter.onPixelRatioChange reports."
+        },
         {
           "name": "documentVisible",
           "signature": "documentVisible: boolean",
@@ -1023,6 +1236,27 @@
           "params": [],
           "returnType": null,
           "description": "What the host reports about network reachability. A hint, and nothing more: a host saying 'online' has a network interface, not a route to any particular origin. 'unknown' is what a host that reports nothing means, and is deliberately not folded into 'online'."
+        },
+        {
+          "name": "pointerLocked",
+          "signature": "pointerLocked: boolean",
+          "signatureTokens": [
+            {
+              "text": "pointerLocked",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the host currently routes pointer input to the surface exclusively - no cursor, no position, motion reported as relative deltas only."
         },
         {
           "name": "surface",

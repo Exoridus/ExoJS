@@ -5,6 +5,7 @@ import type { SceneTransitionContext, SceneTransitionEnvironment } from '#core/s
 import { FadeSceneTransition } from '#core/scene/transitions/FadeSceneTransition';
 import { Time } from '#core/units';
 import type { Matrix } from '#math/Matrix';
+import { Geometry } from '#rendering/geometry/Geometry';
 import { QuadGeometry } from '#rendering/geometry/QuadGeometry';
 
 // Exposes the protected authoring hooks through public wrappers - the
@@ -71,17 +72,17 @@ describe('FadeSceneTransition', () => {
     const fade = new FadeSceneTransition();
 
     expect(fade.color.equals(Color.black)).toBe(true);
-    expect(fade.duration).toBe(220);
+    expect(fade.duration).toBe(0.22);
     expect(fade.easing).toBe(Ease.linear);
     expect(fade.placement).toBe('screen');
   });
 
   test('accepts a custom color and options', () => {
     const customColor = new Color(255, 0, 0, 1);
-    const fade = new FadeSceneTransition({ color: customColor, duration: 500, easing: Ease.cubicOut, placement: 'screen' });
+    const fade = new FadeSceneTransition({ color: customColor, duration: Time.seconds(0.5), easing: Ease.cubicOut, placement: 'screen' });
 
     expect(fade.color).toBe(customColor);
-    expect(fade.duration).toBe(500);
+    expect(fade.duration).toBe(0.5);
     expect(fade.easing).toBe(Ease.cubicOut);
     expect(fade.placement).toBe('screen');
   });
@@ -91,10 +92,10 @@ describe('FadeSceneTransition', () => {
   // the options object to `color` instead of defaulting it - leaving both
   // assertions below false.
   test('options-only call with color omitted keeps the color default alongside the supplied option', () => {
-    const fade = new FadeSceneTransition({ duration: 300 });
+    const fade = new FadeSceneTransition({ duration: Time.seconds(0.3) });
 
     expect(fade.color.equals(Color.black)).toBe(true);
-    expect(fade.duration).toBe(300);
+    expect(fade.duration).toBe(0.3);
   });
 
   test('getPhaseRequirements: none/direct for both phases (no texture, no snapshot)', () => {
@@ -182,5 +183,35 @@ describe('FadeSceneTransition', () => {
     expect(quadA).not.toBe(quadB); // different object identity — proves no shared scratch QuadGeometry
     expect(optionsA.tint).not.toBe(optionsB.tint); // different object identity — proves no shared scratch Color
     expect(optionsA.tint.a).not.toBeCloseTo(optionsB.tint.a); // different progress -> different alpha, would have been clobbered if shared
+  });
+
+  test("destroy() releases the session's geometry, and a second destroy() does not release it again", () => {
+    const fade = new FadeSceneTransition();
+    const session = fade.beginSession(new TestEnvironment());
+    const drawGeometry = vi.fn();
+
+    session.render(stubRendering(drawGeometry), { outgoing: null, current: null, committed: false });
+
+    const [quad] = drawGeometry.mock.calls[0] as [QuadGeometry, Matrix, { tint: Color }];
+    const disposed = vi.fn();
+
+    // Backend GPU buffers hang off this callback, so it firing is what
+    // "the geometry was released" actually means.
+    quad._onDispose(disposed);
+
+    // Both phase states hold a quad, even though only the exit phase rendered.
+    const geometryDestroy = vi.spyOn(Geometry.prototype, 'destroy');
+
+    session.destroy();
+
+    expect(disposed).toHaveBeenCalledTimes(1);
+    expect(geometryDestroy).toHaveBeenCalledTimes(2);
+
+    session.destroy();
+
+    expect(disposed).toHaveBeenCalledTimes(1);
+    expect(geometryDestroy).toHaveBeenCalledTimes(2);
+
+    geometryDestroy.mockRestore();
   });
 });

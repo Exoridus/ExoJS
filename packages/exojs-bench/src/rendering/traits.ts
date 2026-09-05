@@ -26,15 +26,21 @@ export const filterChainDepth = (spec: ArchetypeSpec): number => Math.max(0, Mat
 /** Nested rectangle-mask depth down the container spine; `0` when the archetype is unmasked. */
 export const maskDepth = (spec: ArchetypeSpec): number => Math.max(0, Math.trunc(spec.maskDepth ?? 0));
 
+/** Bloom-composite blur extent in logical px; `0` when the archetype renders the scene in one pass. */
+export const compositeBlurRadius = (spec: ArchetypeSpec): number => Math.max(0, spec.compositeBlurRadius ?? 0);
+
+/** Whether the archetype renders the bloom-shaped capture/blur/composite multipass. */
+export const isComposite = (spec: ArchetypeSpec): boolean => compositeBlurRadius(spec) > 0;
+
 /**
- * Whether the archetype exercises render-target machinery - a filter chain or a
- * mask stack.
+ * Whether the archetype exercises render-target machinery - a filter chain, a
+ * mask stack, or the bloom-shaped composite.
  *
  * This is the WebGL1 exclusion boundary: the Phaser arm renders through a WebGL1
  * context, so a target-heavy row's gap would be attributable to the backend
  * generation rather than to the engine, which is not a claim this matrix makes.
  */
-export const usesRenderTargets = (spec: ArchetypeSpec): boolean => filterChainDepth(spec) > 0 || maskDepth(spec) > 0;
+export const usesRenderTargets = (spec: ArchetypeSpec): boolean => filterChainDepth(spec) > 0 || maskDepth(spec) > 0 || isComposite(spec);
 
 /**
  * Glyph string for text leaf `index`, `length` characters long.

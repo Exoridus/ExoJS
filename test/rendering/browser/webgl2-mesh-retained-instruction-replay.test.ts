@@ -261,7 +261,7 @@ describe('WebGL2 renderer matrix: Mesh retained instruction-set replay cells', (
     const backend = await createBackend();
     const scene = buildScene();
     const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
-    const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+    const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
     try {
       // F1 - full collect + fragment capture (slow tier).
@@ -314,7 +314,7 @@ describe('WebGL2 renderer matrix: Mesh retained instruction-set replay cells', (
       render(backend, scene.root); // F3 splice
 
       const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       // Pan the camera 16px right: everything must appear 16px further left.
       backend.view.setCenter(backend.view.center.x + 16, backend.view.center.y);
@@ -342,7 +342,7 @@ describe('WebGL2 renderer matrix: Mesh retained instruction-set replay cells', (
       render(backend, scene.root); // F3 splice
 
       const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       // Move the WHOLE group +16px right: content revisions untouched (a group
       // move is decoupled by design), so the set keeps replaying via live u_group.
@@ -371,7 +371,7 @@ describe('WebGL2 renderer matrix: Mesh retained instruction-set replay cells', (
       render(backend, scene.root); // F3 splice
 
       const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       // A pure transform move on a direct child stays content-clean, so the
       // group keeps its recording and patches just this child's shared
@@ -403,7 +403,7 @@ describe('WebGL2 renderer matrix: Mesh retained instruction-set replay cells', (
   test('cell 5 — deliberate break: a neutered node-index rebase fetches the wrong rows and diverges', async () => {
     const backend = await createBackend();
     const scene = buildScene();
-    const original = WebGl2MeshRenderer.prototype._rebaseRetainedNodeIndices;
+    const original = WebGl2MeshRenderer.prototype.rebaseRetainedNodeIndices;
 
     try {
       // Baseline: correct replay is byte-identical to the record frame.
@@ -429,7 +429,7 @@ describe('WebGL2 renderer matrix: Mesh retained instruction-set replay cells', (
     const brokenScene = buildScene();
 
     try {
-      WebGl2MeshRenderer.prototype._rebaseRetainedNodeIndices = function (): void {};
+      WebGl2MeshRenderer.prototype.rebaseRetainedNodeIndices = function (): void {};
 
       render(brokenBackend, brokenScene.root); // F1 capture
       render(brokenBackend, brokenScene.root); // F2 record
@@ -440,7 +440,7 @@ describe('WebGL2 renderer matrix: Mesh retained instruction-set replay cells', (
 
       expect(readCanvas(brokenBackend)).not.toEqual(recordFrame);
     } finally {
-      WebGl2MeshRenderer.prototype._rebaseRetainedNodeIndices = original;
+      WebGl2MeshRenderer.prototype.rebaseRetainedNodeIndices = original;
       brokenScene.destroy();
       brokenBackend.destroy();
     }

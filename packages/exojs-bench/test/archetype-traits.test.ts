@@ -1,6 +1,15 @@
 import { ARCHETYPES } from '../src/rendering/archetypes';
 import type { ArchetypeId, ArchetypeSpec } from '../src/rendering/EngineAdapter';
-import { filterChainDepth, isChurning, isTextArchetype, isTextUpdating, maskDepth, textForLeaf, usesRenderTargets } from '../src/rendering/traits';
+import {
+  compositeBlurRadius,
+  filterChainDepth,
+  isChurning,
+  isTextArchetype,
+  isTextUpdating,
+  maskDepth,
+  textForLeaf,
+  usesRenderTargets,
+} from '../src/rendering/traits';
 import { maskRect, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '../src/rendering/world';
 
 const byId = Object.fromEntries(ARCHETYPES.map(archetype => [archetype.id, archetype])) as Record<ArchetypeId, ArchetypeSpec>;
@@ -98,12 +107,23 @@ describe('render-target archetypes', () => {
     expect(maskDepth(mask)).toBe(mask.nestingDepth - 1);
   });
 
-  test('exactly the filter and mask rows use render targets', () => {
+  test('composite is a filter-chain-1 row plus its multipass, so the two are readable as a delta', () => {
+    const composite = byId.composite;
+    const filtered = byId['filter-chain-1'];
+
+    expect(compositeBlurRadius(composite)).toBeGreaterThan(0);
+    expect(composite.nestingDepth).toBe(filtered.nestingDepth);
+    expect(composite.textureCount).toBe(filtered.textureCount);
+    expect(composite.mutationFraction).toBe(filtered.mutationFraction);
+    expect(composite.nodeCounts).toEqual(filtered.nodeCounts);
+  });
+
+  test('exactly the filter, mask and composite rows use render targets', () => {
     expect(
       ARCHETYPES.filter(usesRenderTargets)
         .map(archetype => archetype.id)
         .sort(),
-    ).toEqual(['filter-chain-1', 'filter-chain-2', 'filter-chain-4', 'mask-clip']);
+    ).toEqual(['composite', 'filter-chain-1', 'filter-chain-2', 'filter-chain-4', 'mask-clip']);
   });
 });
 

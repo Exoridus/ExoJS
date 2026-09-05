@@ -51,7 +51,6 @@ export interface WebGl2PassBackend {
  * Inline stencil clips delegate straight to the backend's stencil stack and
  * never count as a render pass - no {@link BackendTargetPass}, no `renderPasses`
  * stat - matching the existing inline scissor / stencil behaviour.
- * @internal
  */
 export class WebGl2PassCoordinator implements RenderPassCoordinator {
   private readonly _backend: WebGl2PassBackend;
@@ -64,6 +63,7 @@ export class WebGl2PassCoordinator implements RenderPassCoordinator {
    */
   private readonly _clearColorScratch = new Color();
 
+  /** @internal */
   public constructor(backend: WebGl2PassBackend) {
     this._backend = backend;
   }

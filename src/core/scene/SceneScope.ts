@@ -7,6 +7,7 @@ import type { Seconds } from '#core/units';
 import type { RenderingContext } from '#rendering/RenderingContext';
 
 import type { Scene } from './Scene';
+import { SceneAnimations } from './SceneAnimations';
 import { SceneAudio } from './SceneAudio';
 import { SceneInputs } from './SceneInputs';
 import { SceneInteraction } from './SceneInteraction';
@@ -48,6 +49,7 @@ export class SceneScope<Data = unknown> {
   public readonly interaction: SceneInteraction;
   public readonly tweens: SceneTweens;
   public readonly audio: SceneAudio;
+  public readonly animations: SceneAnimations;
 
   private readonly _app: Application;
   private readonly _onStateChange: (previous: SceneState, next: SceneState) => void;
@@ -68,9 +70,14 @@ export class SceneScope<Data = unknown> {
       () => this._state,
       () => this._paused,
     );
-    this.interaction = new SceneInteraction(app, () => this._state);
+    this.interaction = new SceneInteraction(
+      app,
+      () => this._state,
+      () => this._paused,
+    );
     this.tweens = new SceneTweens(app, () => this._state);
     this.audio = new SceneAudio(app, () => this._state);
+    this.animations = new SceneAnimations();
 
     scene._attach(app, this);
   }
@@ -143,8 +150,9 @@ export class SceneScope<Data = unknown> {
 
   /**
    * Pause this scope: freezes `fixedUpdate`/`update` while `Active`, applies
-   * the `when` pause policy to tweens/audio (see {@link SceneTweens.pause}/
-   * {@link SceneAudio.pause}), and dispatches {@link Scene.onPause}. Every
+   * the `when` pause policy to tweens/audio/animations (see
+   * {@link SceneTweens.pause}/{@link SceneAudio.pause}/
+   * {@link SceneAnimations.pause}), and dispatches {@link Scene.onPause}. Every
    * stage is individually guarded and a throwing listener is reported through
    * the application error pipeline rather than thrown, so the pause policy is
    * never left half-applied. Returns whether the flag actually changed.
@@ -160,6 +168,8 @@ export class SceneScope<Data = unknown> {
 
     this._guard(errors, () => this.tweens.pause());
     this._guard(errors, () => this.audio.pause());
+    this._guard(errors, () => this.animations.pause());
+    this._guard(errors, () => this.interaction.resume());
     this._guard(errors, () => this.scene.onPause.dispatchIsolated(error => this._reportError(error)));
 
     this._reportErrors(errors);
@@ -169,10 +179,10 @@ export class SceneScope<Data = unknown> {
 
   /**
    * Resume this scope: undoes {@link SceneScope.pause} - including the
-   * tweens/audio `when` policy (see {@link SceneTweens.resume}/
-   * {@link SceneAudio.resume}) - and dispatches {@link Scene.onResume}. Same
-   * error-guarding contract as {@link SceneScope.pause}. Returns whether the
-   * flag actually changed.
+   * tweens/audio/animations `when` policy (see {@link SceneTweens.resume}/
+   * {@link SceneAudio.resume}/{@link SceneAnimations.resume}) - and dispatches
+   * {@link Scene.onResume}. Same error-guarding contract as
+   * {@link SceneScope.pause}. Returns whether the flag actually changed.
    */
   public resume(): boolean {
     if (this._state !== SceneState.Active || !this._paused) {
@@ -185,6 +195,8 @@ export class SceneScope<Data = unknown> {
 
     this._guard(errors, () => this.tweens.resume());
     this._guard(errors, () => this.audio.resume());
+    this._guard(errors, () => this.animations.resume());
+    this._guard(errors, () => this.interaction.resume());
     this._guard(errors, () => this.scene.onResume.dispatchIsolated(error => this._reportError(error)));
 
     this._reportErrors(errors);
@@ -224,6 +236,7 @@ export class SceneScope<Data = unknown> {
     });
     this._guard(errors, () => this.tweens.suspend());
     this._guard(errors, () => this.audio.suspend());
+    this._guard(errors, () => this.animations.suspend());
     this._guard(errors, () => this.scene.onSuspend.dispatchIsolated(error => this._reportError(error)));
 
     this._reportErrors(errors);
@@ -258,6 +271,7 @@ export class SceneScope<Data = unknown> {
     });
     this._guard(errors, () => this.tweens.restore());
     this._guard(errors, () => this.audio.restore());
+    this._guard(errors, () => this.animations.restore());
     this._guard(errors, () => this.audio._flushPending());
     this._guard(errors, () => this.scene.onActivate.dispatchIsolated(error => this._reportError(error)));
 
@@ -389,6 +403,7 @@ export class SceneScope<Data = unknown> {
     this._guard(errors, () => this.systems.destroy());
     this._guard(errors, () => this.tweens.destroy());
     this._guard(errors, () => this.audio.destroy());
+    this._guard(errors, () => this.animations.destroy());
     this._guard(errors, () => this.inputs.destroy());
     this._guard(errors, () => this.interaction.destroy());
     this._callSceneDestroy(errors);
@@ -403,12 +418,12 @@ export class SceneScope<Data = unknown> {
 
   /**
    * Permanent teardown, in normative order: abort
-   * {@link Scene.lifecycleSignal}, disable input +
-   * interaction, `unload()` (guarded), destroy systems, tweens + audio,
-   * inputs + interaction, detach the automatic root/UI observations,
-   * `scene.destroy()` + engine-owned internals teardown, then release loader
-   * claims last. Every stage is individually guarded so one failure never
-   * skips a later stage. Idempotent; `unload()`/`destroy()` run at most once.
+   * {@link Scene.lifecycleSignal}, disable input + interaction, `unload()`
+   * (guarded), destroy systems, tweens + audio + animations, inputs +
+   * interaction, detach the automatic root/UI observations, `scene.destroy()`
+   * + engine-owned internals teardown, then release loader claims last. Every
+   * stage is individually guarded so one failure never skips a later stage.
+   * Idempotent; `unload()`/`destroy()` run at most once.
    */
   public async destroy(): Promise<void> {
     if (!canDestroy(this._state)) {
@@ -438,6 +453,7 @@ export class SceneScope<Data = unknown> {
     this._guard(errors, () => this.systems.destroy());
     this._guard(errors, () => this.tweens.destroy());
     this._guard(errors, () => this.audio.destroy());
+    this._guard(errors, () => this.animations.destroy());
     this._guard(errors, () => this.inputs.destroy());
     this._guard(errors, () => this.interaction.destroy());
     this._guard(errors, () => this._detachRoots());

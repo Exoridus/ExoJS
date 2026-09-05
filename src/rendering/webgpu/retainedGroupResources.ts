@@ -20,7 +20,6 @@ export const retainedTintSlotBytes = 4;
  * `_staticGeometryCache`, one buffer pair per `Geometry`, shared across
  * frames/groups); the group bundle stores only the thin per-instance
  * node-index stream, never the geometry bytes.
- * @internal
  */
 export interface WebGpuRetainedGeometryRef {
   readonly vertexBuffer: GPUBuffer;
@@ -38,11 +37,17 @@ export interface WebGpuRetainedGeometryRef {
  * here so the bundle can dispose it on device loss / destroy - giving the
  * mesh UBO the same grow-only, explicitly-freed lifecycle as the bundle's own
  * buffers WITHOUT the bundle needing to know the mesh layout.
- * @internal
  */
 export interface WebGpuRetainedRendererReplayState {
   /** Release any GPU buffers this state owns (called from the bundle). */
   destroy(): void;
+  /**
+   * Push whatever in-place row patches this state has staged. Called from the
+   * owning bundle's own flush, which the reconciler runs once per patch pass and
+   * always before the frame's submit; a state whose patches go straight to the
+   * GPU omits it.
+   */
+  flushRowPatches?(): void;
 }
 
 /** Bytes of the per-group uniform buffer (projection mat4 + group mat4 + snap viewport vec4). */
@@ -53,8 +58,7 @@ export const retainedGroupUniformBytes = 144;
  * as the opaque `payload` of a
  * {@link RetainedBatchInstruction}; everything here is DATA - all state
  * (pipeline, projection/group uniforms, texture bindings) is resolved live at
- * replay by the owning {@link WebGpuRetainedBatchReplayer._replayRetainedBatch}.
- * @internal
+ * replay by the owning {@link WebGpuRetainedBatchReplayer.replayRetainedBatch}.
  */
 export interface WebGpuRetainedBatchPayload {
   /** The renderer that recorded (and replays) this batch. */
@@ -117,7 +121,6 @@ export interface WebGpuRetainedBatchPayload {
  * record time, per batch - so the range here is scoped to ONE batch, not the
  * whole capture; the backend takes the min/max across all per-batch ranges to
  * get the capture-wide rebase base.
- * @internal
  */
 export interface WebGpuRetainedNodeIndexRange {
   min: number;
@@ -137,17 +140,16 @@ export interface WebGpuRetainedNodeIndexRange {
  * Extends {@link Renderer} so the backend can drive replay through the same
  * active-renderer bookkeeping (`_setActiveRenderer` calls `flush()` on
  * renderer switch) it already uses for live playback.
- * @internal
  */
 export interface WebGpuRetainedBatchReplayer extends Renderer {
   /** Widen `range` to cover every shared-transform row `bytes` (one batch's packed instances) references. */
-  _scanRetainedNodeIndexRange(bytes: Uint8Array, range: WebGpuRetainedNodeIndexRange): void;
+  scanRetainedNodeIndexRange(bytes: Uint8Array, range: WebGpuRetainedNodeIndexRange): void;
   /** Rewrite `bytes`' instance node indices in place to group-local (`index - base`). */
-  _rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void;
+  rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void;
   /** Preflight structural live state before any instruction in the set draws. */
-  _validateRetainedBatch?(payload: WebGpuRetainedBatchPayload): boolean;
+  validateRetainedBatch?(payload: WebGpuRetainedBatchPayload): boolean;
   /** Replay the batch: live state (pipeline, uniforms, textures), cached data (bytes, transforms). */
-  _replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void;
+  replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void;
 }
 
 /** One sprite flush staged during a capture window, finalized at capture end. @internal */

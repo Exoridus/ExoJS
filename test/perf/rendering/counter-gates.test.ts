@@ -40,8 +40,8 @@ const SPRITE_COUNT = 1000;
  * Pinned per-frame counts, measured on Node 24.14.1 against `src`. Each row is
  * one fixed scene + drive pattern. See each `it` for what a drift means.
  *
- * columns: collect  = RenderNode._collect calls (nodes visited by the walk)
- *          inView   = SceneNode._inCullRectUsingBounds calls (cull checks)
+ * columns: collect  = RenderNode.collect calls (nodes visited by the walk)
+ *          inView   = RenderNode._inCullRectUsingBounds calls (cull checks)
  *          gt       = SceneNode.getGlobalTransform calls (build + play transform reads)
  *          mk       = Drawable._getOrComputeMaterialKey calls (per-draw material keys)
  *          plus the deterministic RenderStats totals (submitted/culled/draws/batches).
@@ -49,7 +49,7 @@ const SPRITE_COUNT = 1000;
 const EXPECTED = {
   // Plain Container, nothing changes frame-to-frame. The automatic render-root
   // representation is fully engaged: the root is visited once and the frame
-  // replays recorded flush-level batches - zero child _collect, zero cull, zero
+  // replays recorded flush-level batches - zero child collect, zero cull, zero
   // material-key work. This is the O(1)-visit steady state.
   //
   // globalTransform re-pinned 2001 -> 2 when the render root became retained by

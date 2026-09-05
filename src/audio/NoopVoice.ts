@@ -1,5 +1,6 @@
 import type { SceneNode } from '#core/SceneNode';
 import { Signal } from '#core/Signal';
+import type { Seconds } from '#core/units';
 import type { Vector } from '#math/Vector';
 
 import type { AudioBus } from './AudioBus';
@@ -52,11 +53,11 @@ export class NoopVoice implements Voice {
     // inert - the voice already ended
   }
 
-  public fade(_to: number, _ms: number): void {
+  public fade(_to: number, _duration: Seconds): void {
     // inert - the voice already ended
   }
 
-  public stop(_fadeMs?: number): void {
+  public stop(_fade?: Seconds): void {
     // inert - the voice already ended
   }
 

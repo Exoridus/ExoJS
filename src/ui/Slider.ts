@@ -9,7 +9,7 @@ import { Vector } from '#math/Vector';
 
 import type { UIWidgetState } from './theme';
 import { Widget } from './Widget';
-import { WidgetBackground } from './WidgetBackground';
+import { type UIBackgroundNode, WidgetBackground } from './WidgetBackground';
 
 /** Options for {@link Slider}. */
 export interface SliderOptions {
@@ -153,17 +153,17 @@ export class Slider extends Widget {
   }
 
   /** The node painting the groove, or `null` while it paints nothing. */
-  public get trackNode(): WidgetBackground['node'] {
+  public get trackNode(): UIBackgroundNode | null {
     return this._track.node;
   }
 
   /** The node painting the filled part, or `null` while it paints nothing. */
-  public get fillNode(): WidgetBackground['node'] {
+  public get fillNode(): UIBackgroundNode | null {
     return this._fill.node;
   }
 
   /** The node painting the thumb, or `null` while it paints nothing. */
-  public get thumbNode(): WidgetBackground['node'] {
+  public get thumbNode(): UIBackgroundNode | null {
     return this._thumb.node;
   }
 

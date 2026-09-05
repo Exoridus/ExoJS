@@ -165,7 +165,7 @@ describe('custom SpriteMaterial WebGPU browser', () => {
       await render(backend, group);
       expectPixelNear(readWebGpuPixels(backend, 64)(31, 24), [255, 0, 0, 255]);
 
-      const replay = vi.spyOn(backend, '_replayRetainedBatch');
+      const replay = vi.spyOn(backend, 'replayRetainedBatch');
 
       material.sampler.scaleMode = ScaleModes.Linear;
       await render(backend, group);
@@ -229,7 +229,7 @@ describe('custom SpriteMaterial WebGPU browser', () => {
       await render(backend, group); // fragment capture
       await render(backend, group); // instruction recording
 
-      let replay = vi.spyOn(backend, '_replayRetainedBatch');
+      let replay = vi.spyOn(backend, 'replayRetainedBatch');
 
       await render(backend, group);
       expect(replay).toHaveBeenCalledTimes(1);
@@ -266,7 +266,7 @@ describe('custom SpriteMaterial WebGPU browser', () => {
       expect(replay).not.toHaveBeenCalled();
 
       replay.mockRestore();
-      replay = vi.spyOn(backend, '_replayRetainedBatch');
+      replay = vi.spyOn(backend, 'replayRetainedBatch');
       await render(backend, group);
       expect(replay).toHaveBeenCalledTimes(1);
       replay.mockRestore();
@@ -315,7 +315,7 @@ describe('custom SpriteMaterial WebGPU browser', () => {
       await render(backend, group);
       expectPixelNear(readWebGpuPixels(backend, 64)(24, 24), [255, 0, 0, 255]);
 
-      const replay = vi.spyOn(backend, '_replayRetainedBatch');
+      const replay = vi.spyOn(backend, 'replayRetainedBatch');
 
       material.setTexture('u_pattern', secondPattern);
       await render(backend, group);
@@ -595,6 +595,49 @@ describe('custom SpriteMaterial WebGPU browser', () => {
       expect(backend.stats.drawCalls).toBe(2);
     } finally {
       cleanup();
+    }
+  });
+  test('exposes the world position and the local-to-world basis to a custom fragment', async () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+
+    const backend = new WebGpuBackend(makeApp(canvas));
+
+    await backend.initialize();
+    wireCoreRenderers(backend);
+
+    const texture = createSplitTexture();
+    const material = new SpriteMaterial({
+      shader: new ShaderSource({
+        wgsl: `
+@fragment
+fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
+  return vec4<f32>(input.worldPosition / 64.0, select(0.0, 1.0, input.basis.x > 0.0), 1.0);
+}
+`.trim(),
+      }),
+    });
+    const group = new Container();
+    const sprite = new Sprite(texture);
+
+    sprite.material = material;
+    sprite.setPosition(16, 16).setScale(16, 16);
+    group.addChild(sprite);
+
+    try {
+      await render(backend, group);
+      expectPixelNear(readWebGpuPixels(backend, 64)(40, 24), [161, 98, 255, 255], 6);
+
+      // Mirroring flips the basis x column; the quad now extends to the left.
+      sprite.setScale(-16, 16);
+      await render(backend, group);
+      expectPixelNear(readWebGpuPixels(backend, 64)(8, 24), [34, 98, 0, 255], 6);
+    } finally {
+      group.destroy();
+      material.destroy();
+      texture.destroy();
+      backend.destroy();
     }
   });
 });

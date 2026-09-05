@@ -1,6 +1,7 @@
 import type { AnimationSystem } from '#animation/AnimationSystem';
 import { Signal } from '#core/Signal';
 import type { Stage } from '#core/Stage';
+import { type Seconds, seconds } from '#core/units';
 import type { Rectangle } from '#math/Rectangle';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
@@ -22,13 +23,13 @@ export interface AnimatedSpriteClipDefinition {
    */
   readonly repeat?: number;
   /**
-   * Per-frame hold duration in milliseconds, indexed the same as `frames`.
-   * When provided it is authoritative for playback timing and `fps` is
-   * ignored while advancing frames (still accepted as a display-only
-   * average). Use this to preserve uneven hold-frames - e.g. an Aseprite
-   * export where one frame intentionally lingers longer than the rest.
+   * Per-frame hold duration, indexed the same as `frames`. When provided it
+   * is authoritative for playback timing and `fps` is ignored while
+   * advancing frames (still accepted as a display-only average). Use this to
+   * preserve uneven hold-frames - e.g. an Aseprite export where one frame
+   * intentionally lingers longer than the rest.
    */
-  readonly frameDurations?: readonly number[];
+  readonly frameDurations?: readonly Seconds[];
   /**
    * Per-frame local translation in local (pre-scale) pixels, indexed the
    * same as `frames`, applied on top of the sprite's own position/origin.
@@ -52,15 +53,15 @@ export interface AnimatedSpritePlayOptions {
 
 interface NormalizedAnimatedSpriteClip {
   readonly frames: readonly Rectangle[];
-  readonly frameDurationMs: number;
-  readonly frameDurations: readonly number[] | null;
+  readonly frameDuration: Seconds;
+  readonly frameDurations: readonly Seconds[] | null;
   readonly frameOffsets: ReadonlyArray<{ readonly x: number; readonly y: number }> | null;
   readonly repeat: number;
   /**
    * The clip's untrimmed source canvas, or `null` for a clip without
    * {@link AnimatedSpriteClipDefinition.frameOffsets} (nothing was trimmed, so
    * the frame rectangle IS the layout box). Computed once at
-   * {@link AnimatedSprite.defineClip} time; see
+   * {@link AnimatedSprite.addClip} time; see
    * {@link AnimatedSprite._updateOrigin} for how it is derived and why.
    */
   readonly sourceSize: { readonly width: number; readonly height: number } | null;
@@ -73,7 +74,7 @@ const infiniteRepeat = -1;
 
 /**
  * Throws if `repeat` is not `infiniteRepeat` (`-1`) or a positive integer.
- * Shared by {@link AnimatedSprite.defineClip}, the {@link AnimatedSprite.repeat}
+ * Shared by {@link AnimatedSprite.addClip}, the {@link AnimatedSprite.repeat}
  * setter, and {@link AnimatedSprite.play}'s `options.repeat` so every entry
  * point rejects the same invalid values consistently.
  */
@@ -87,7 +88,7 @@ const assertValidRepeat = (context: string, repeat: number): void => {
  * A {@link Sprite} that advances through a sequence of texture-frame
  * {@link Rectangle}s over time to produce frame-based animation.
  *
- * Multiple named clips can be registered via {@link defineClip} or the
+ * Multiple named clips can be registered via {@link addClip} or the
  * constructor. Call {@link play} to start a clip. Playback then advances by
  * itself: a playing sprite attached to an {@link Application}'s scene tree
  * registers with that application's {@link AnimationSystem} and is ticked
@@ -109,7 +110,7 @@ export class AnimatedSprite extends Sprite {
   private _hasAppliedFrame = false;
   private _playing = false;
   private _repeatOverride: number | null = null;
-  private _elapsedFrameTimeMs = 0;
+  private _elapsedFrameTime: Seconds = seconds(0);
   private _completedCycles = 0;
   /**
    * The {@link AnimationSystem} this sprite is currently registered with, or
@@ -173,14 +174,14 @@ export class AnimatedSprite extends Sprite {
     this._clips.clear();
 
     for (const [name, clip] of Object.entries(clips)) {
-      this.defineClip(name, clip);
+      this.addClip(name, clip);
     }
 
     return this;
   }
 
   /** Register a named clip. Frame rectangles are cloned so the caller may mutate the originals. */
-  public defineClip(name: string, clip: AnimatedSpriteClipDefinition): this {
+  public addClip(name: string, clip: AnimatedSpriteClipDefinition): this {
     if (name.trim().length === 0) {
       throw new Error('AnimatedSprite clip names must be non-empty strings.');
     }
@@ -204,7 +205,7 @@ export class AnimatedSprite extends Sprite {
 
     assertValidRepeat(`clip "${name}"`, repeat);
 
-    let frameDurations: readonly number[] | null = null;
+    let frameDurations: readonly Seconds[] | null = null;
 
     if (clip.frameDurations) {
       if (clip.frameDurations.length !== frames.length) {
@@ -256,7 +257,7 @@ export class AnimatedSprite extends Sprite {
 
     this._clips.set(name, {
       frames: frames.map(frame => frame.clone()),
-      frameDurationMs: 1000 / fps,
+      frameDuration: seconds(1 / fps),
       frameDurations,
       frameOffsets,
       repeat,
@@ -279,7 +280,7 @@ export class AnimatedSprite extends Sprite {
     for (const [name, clip] of this._clips) {
       out[name] = {
         frames: clip.frames.map(frame => frame.clone()),
-        fps: 1000 / clip.frameDurationMs,
+        fps: 1 / clip.frameDuration,
         repeat: clip.repeat,
         ...(clip.frameDurations ? { frameDurations: [...clip.frameDurations] } : {}),
         ...(clip.frameOffsets ? { frameOffsets: clip.frameOffsets.map(offset => ({ x: offset.x, y: offset.y })) } : {}),
@@ -327,7 +328,7 @@ export class AnimatedSprite extends Sprite {
     if (!isSameClip || shouldRestart) {
       this._currentClipName = name;
       this._currentFrameIndex = 0;
-      this._elapsedFrameTimeMs = 0;
+      this._elapsedFrameTime = seconds(0);
       this._completedCycles = 0;
       // A new run starts from the clip's own repeat: an override left over from
       // the previous one would otherwise stop an indefinitely-looping clip after
@@ -350,7 +351,7 @@ export class AnimatedSprite extends Sprite {
   /** Stop playback and rewind the active clip to frame 0. */
   public stop(): this {
     this._playing = false;
-    this._elapsedFrameTimeMs = 0;
+    this._elapsedFrameTime = seconds(0);
     this._syncSystemRegistration();
 
     if (!this._currentClipName) {
@@ -389,9 +390,8 @@ export class AnimatedSprite extends Sprite {
    * Advance playback by `deltaSeconds` - seconds, the same unit as
    * {@link Tween.update}, and the unit a `Time` delta reports through
    * `delta.seconds`. Clip authoring stays in its own units:
-   * {@link AnimatedSpriteClipDefinition.frameDurations} is still milliseconds
-   * per frame and `fps` is still frames per second; only this argument is
-   * seconds.
+   * {@link AnimatedSpriteClipDefinition.frameDurations} is still seconds
+   * per frame and `fps` is still frames per second.
    *
    * Called automatically once per frame by the owning {@link AnimationSystem}
    * for a playing, attached sprite - call it yourself only for a sprite that
@@ -411,26 +411,25 @@ export class AnimatedSprite extends Sprite {
       return this;
     }
 
-    // Clip timing is authored in milliseconds (`frameDurations`, and `fps`
-    // normalized to `frameDurationMs`), so the seconds-based frame delta is
-    // converted once here and every threshold comparison below stays in ms.
-    const deltaMs = deltaSeconds * 1000;
-
-    if (deltaMs <= 0) {
+    if (deltaSeconds <= 0) {
       return this;
     }
 
-    this._elapsedFrameTimeMs += deltaMs;
+    this._elapsedFrameTime = seconds(this._elapsedFrameTime + deltaSeconds);
 
     // The hold duration for the frame CURRENTLY displayed determines how long
     // it takes to advance past it. `frameDurations`, when present, overrides
-    // the clip's uniform `frameDurationMs` per frame - re-read after every
+    // the clip's uniform `frameDuration` per frame - re-read after every
     // index change below rather than cached once, since it depends on
     // `_currentFrameIndex`.
-    let thresholdMs = clip.frameDurations?.[this._currentFrameIndex] ?? clip.frameDurationMs;
+    let threshold = clip.frameDurations?.[this._currentFrameIndex] ?? clip.frameDuration;
 
-    while (this._elapsedFrameTimeMs >= thresholdMs) {
-      this._elapsedFrameTimeMs -= thresholdMs;
+    // Tolerance so an elapsed time that lands a rounding-error below a whole
+    // multiple of the threshold (fractional seconds, unlike a millisecond
+    // accumulator, do not sum exactly) still crosses it. Mirrors
+    // FixedTimestep.advance's epsilon guard.
+    while (this._elapsedFrameTime >= threshold - threshold * 1e-9) {
+      this._elapsedFrameTime = seconds(Math.max(0, this._elapsedFrameTime - threshold));
 
       const nextFrame = this._currentFrameIndex + 1;
 
@@ -453,7 +452,7 @@ export class AnimatedSprite extends Sprite {
           // Normalized clips always hold at least one frame.
           this._applyFrame(clip, 0);
           this.onFrame.dispatch(this._currentClipName, 0);
-          thresholdMs = clip.frameDurations?.[this._currentFrameIndex] ?? clip.frameDurationMs;
+          threshold = clip.frameDurations?.[this._currentFrameIndex] ?? clip.frameDuration;
           continue;
         }
 
@@ -473,7 +472,7 @@ export class AnimatedSprite extends Sprite {
       // In-bounds: nextFrame < frames.length.
       this._applyFrame(clip, this._currentFrameIndex);
       this.onFrame.dispatch(this._currentClipName, this._currentFrameIndex);
-      thresholdMs = clip.frameDurations?.[this._currentFrameIndex] ?? clip.frameDurationMs;
+      threshold = clip.frameDurations?.[this._currentFrameIndex] ?? clip.frameDuration;
     }
 
     return this;
@@ -566,7 +565,7 @@ export class AnimatedSprite extends Sprite {
    * `height = max(offset.y + frame.height)` over every frame, anchored at the
    * local origin `(0, 0)` - the point the offsets are expressed relative to.
    * That is the smallest canvas every frame of the clip fits on, it is
-   * computed once per clip in {@link defineClip}, and it is identical for
+   * computed once per clip in {@link addClip}, and it is identical for
    * every frame index. It can under-report an authored canvas whose right or
    * bottom edge is empty in every single frame; nothing in the frame data can
    * distinguish that case, and the pivot stays stable either way.
@@ -629,7 +628,7 @@ export class AnimatedSprite extends Sprite {
       // after it: {@link _updateOrigin} measures a trimmed clip against the
       // clip-wide source canvas, which this write cannot change, and the
       // origin pass inside `setTextureFrame` above already ran against it.
-      this._setLocalBounds(offset.x, offset.y, width, height);
+      this.setLocalBounds(offset.x, offset.y, width, height);
     }
   }
 }

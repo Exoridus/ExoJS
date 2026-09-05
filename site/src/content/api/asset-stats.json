@@ -1,0 +1,201 @@
+{
+  "title": "AssetStats",
+  "description": "Aggregate view of what a loader currently holds, for HUDs and memory dashboards that want counters rather than the per-asset rows Loader.inspect returns. Counts follow the same five lifecycle states AssetInspection reports, collapsed to ready / pending / failed.",
+  "symbol": "AssetStats",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Aggregate view of what a loader currently holds, for HUDs and memory dashboards that want counters rather than the per-asset rows Loader.inspect returns.",
+        "Counts follow the same five lifecycle states AssetInspection reports, collapsed to ready / pending / failed."
+      ],
+      "importLine": "import { AssetStats } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bytes",
+          "signature": "bytes: number",
+          "signatureTokens": [
+            {
+              "text": "bytes",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Estimated resident bytes over every ready asset. The loader cannot see inside a type's resource, so payloads are sized by shape: binary buffers and blobs by their length, strings by their UTF-16 length, decoded audio by its PCM footprint, and anything carrying pixel dimensions at four bytes per texel. A structured payload (parsed JSON, an XML document, a font face) contributes nothing, and GPU-side copies are not counted at all - read RenderStats.gpuMemoryBytes for those. Treat this as a floor on CPU-side asset memory, not an accounting of it."
+        },
+        {
+          "name": "byType",
+          "signature": "byType: readonly AssetTypeStats[]",
+          "signatureTokens": [
+            {
+              "text": "byType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetTypeStats",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Per type, largest resident footprint first, ties broken by type id."
+        },
+        {
+          "name": "failed",
+          "signature": "failed: number",
+          "signatureTokens": [
+            {
+              "text": "failed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Assets whose last fetch attempt errored."
+        },
+        {
+          "name": "largest",
+          "signature": "largest: readonly AssetSizeStats[]",
+          "signatureTokens": [
+            {
+              "text": "largest",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetSizeStats",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The heaviest resident assets, largest first, as many as were asked for."
+        },
+        {
+          "name": "pending",
+          "signature": "pending: number",
+          "signatureTokens": [
+            {
+              "text": "pending",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Assets that are claimed but not settled - idle, queued in the background lane, or fetching."
+        },
+        {
+          "name": "ready",
+          "signature": "ready: number",
+          "signatureTokens": [
+            {
+              "text": "ready",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Assets whose payload is resident and readable."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetResidency.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetResidency.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetResidency.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetResidency.ts"
+}

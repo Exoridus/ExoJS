@@ -1,5 +1,5 @@
 // Auto-generated from crossfade-tracks.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, crossFade, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Color, crossFade, FixedResolutionCanvasSizing, Graphics, Scene, Text, Time } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const PEAK = 0.7;
 const COLOR_A = new Color(120, 200, 255);
@@ -62,10 +62,10 @@ class CrossfadeTracksScene extends Scene {
     app.input.onPointerTap.add(() => {
       // stopAfter: false keeps both loops alive so we can crossfade back.
       if (this.toB) {
-        void crossFade(this.trackAVoice, this.trackBVoice, 2000, { toVolume: PEAK, stopAfter: false });
+        void crossFade(this.trackAVoice, this.trackBVoice, Time.seconds(2), { toVolume: PEAK, stopAfter: false });
         this.hud.setStatus('Crossfading to Track B…');
       } else {
-        void crossFade(this.trackBVoice, this.trackAVoice, 2000, { toVolume: PEAK, stopAfter: false });
+        void crossFade(this.trackBVoice, this.trackAVoice, Time.seconds(2), { toVolume: PEAK, stopAfter: false });
         this.hud.setStatus('Crossfading to Track A…');
       }
       this.toB = !this.toB;

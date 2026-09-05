@@ -428,25 +428,70 @@ describe('SpawnModule', () => {
     expect(system.liveCount).toBe(15);
   });
 
-  test('BurstSpawn loop repeats the schedule once exhausted', () => {
+  test('BurstSpawn repeats the schedule once per interval', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 128 });
 
     system.addSpawnModule(
       new BurstSpawn({
         schedule: [{ time: 0, count: 5 }],
         lifetime: new Constant(10),
-        loop: true,
+        interval: 0.5,
       }),
     );
 
-    // First tick fires the t=0 burst, then wraps back to t=0 since the
-    // 1-entry schedule is immediately exhausted.
+    // First tick fires the t=0 burst; the schedule is exhausted afterwards.
     system.update(tick(0.1));
     expect(system.liveCount).toBe(5);
 
-    // Wrapped schedule fires again on the next tick.
+    // Still inside the period, so no repeat.
     system.update(tick(0.1));
+    expect(system.liveCount).toBe(5);
+
+    // Past the period, the schedule wraps and fires again.
+    system.update(tick(0.4));
     expect(system.liveCount).toBe(10);
+  });
+
+  test('BurstSpawn emits the same bursts at 30 and at 60 frames per second', () => {
+    const run = (frames: number, dt: number): number => {
+      const system = new ParticleSystem(makeTexture(), { capacity: 128 });
+
+      system.addSpawnModule(
+        new BurstSpawn({
+          schedule: [{ time: 0, count: 1 }],
+          lifetime: new Constant(1000),
+          interval: 0.3,
+        }),
+      );
+
+      for (let i = 0; i < frames; i++) {
+        system.update(tick(dt));
+      }
+
+      return system.liveCount;
+    };
+
+    // Two simulated seconds either way: one burst at t=0 plus one per 0.3s
+    // period. The step count must not change the answer.
+    expect(run(120, 1 / 60)).toBe(7);
+    expect(run(60, 1 / 30)).toBe(7);
+  });
+
+  test('BurstSpawn catches up every period a single long frame skipped', () => {
+    const system = new ParticleSystem(makeTexture(), { capacity: 128 });
+
+    system.addSpawnModule(
+      new BurstSpawn({
+        schedule: [{ time: 0, count: 1 }],
+        lifetime: new Constant(10),
+        interval: 0.25,
+      }),
+    );
+
+    // One second in one step covers t=0 plus the periods at 0.25, 0.5, 0.75
+    // and 1.0.
+    system.update(tick(1));
+    expect(system.liveCount).toBe(5);
   });
 
   test('BurstSpawn.reset() restarts the schedule from t=0', () => {

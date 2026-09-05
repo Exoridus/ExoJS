@@ -114,7 +114,7 @@ const createMockVideoElement = (options: MockVideoElementOptions = {}): MockVide
  */
 const gainTarget = (video: Video): GainNode => video.analyserTarget as GainNode;
 
-/** A minimal `RenderPlanBuilder` fake - just enough surface for `RenderNode._collect`. */
+/** A minimal `RenderPlanBuilder` fake - just enough surface for `RenderNode.collect`. */
 const createBuilder = (): {
   view: View;
   cullRect: Rectangle;
@@ -127,7 +127,7 @@ const createBuilder = (): {
 
   return {
     view,
-    // What `_collect` actually tests against: the view's own rect off a capture,
+    // What `collect` actually tests against: the view's own rect off a capture,
     // the capture's inflated rect while a render root is being captured.
     cullRect: view.getBounds(),
     backend: { stats: { culledNodes: 0 } },
@@ -556,7 +556,7 @@ describe('Video', () => {
       const video = new Video(mockVideo.element);
       const gainNode = video.analyserTarget!;
       const connectSpy = vi.spyOn(gainNode, 'connect');
-      const fakeBus = { _getInputNode: () => null } as unknown as AudioBus;
+      const fakeBus = { getInputNode: () => null } as unknown as AudioBus;
 
       video.bus = fakeBus;
 
@@ -566,7 +566,7 @@ describe('Video', () => {
     });
   });
 
-  describe('_collect (internal render-plan hook)', () => {
+  describe('collect (internal render-plan hook)', () => {
     test('marks the texture dirty and refreshes it while visible', () => {
       const mockVideo = createMockVideoElement();
       const video = new Video(mockVideo.element);
@@ -577,7 +577,7 @@ describe('Video', () => {
       const updateSpy = vi.spyOn(video, 'updateTexture');
       const builder = createBuilder();
 
-      video._collect(builder as unknown as RenderPlanBuilder);
+      video.collect(builder as unknown as RenderPlanBuilder);
 
       expect(updateSpy).toHaveBeenCalled();
       expect(builder.emitNode).toHaveBeenCalled();
@@ -595,14 +595,14 @@ describe('Video', () => {
       const builder = createBuilder();
 
       // First collect establishes `_lastVideoTime` and clears the dirty flag.
-      video._collect(builder as unknown as RenderPlanBuilder);
+      video.collect(builder as unknown as RenderPlanBuilder);
 
       const texture = video.texture!;
       const sourceSpy = vi.spyOn(texture, 'updateSource');
 
       // currentTime is unchanged - the playback-advance branch stays false and
       // the frame is not re-uploaded.
-      video._collect(builder as unknown as RenderPlanBuilder);
+      video.collect(builder as unknown as RenderPlanBuilder);
 
       expect(sourceSpy).not.toHaveBeenCalled();
 
@@ -618,7 +618,7 @@ describe('Video', () => {
       const updateSpy = vi.spyOn(video, 'updateTexture');
       const builder = createBuilder();
 
-      video._collect(builder as unknown as RenderPlanBuilder);
+      video.collect(builder as unknown as RenderPlanBuilder);
 
       expect(updateSpy).not.toHaveBeenCalled();
       expect(builder.emitNode).not.toHaveBeenCalled();
@@ -757,7 +757,7 @@ describe('Video', () => {
       video.destroy();
     });
 
-    test('a native timeupdate event bumps the content revision independent of _collect (no-rVFC fallback path)', () => {
+    test('a native timeupdate event bumps the content revision independent of collect (no-rVFC fallback path)', () => {
       const mockVideo = createMockVideoElement();
       const video = new Video(mockVideo.element);
       const revisionBeforeUpdate = video._contentRevision;

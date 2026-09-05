@@ -2694,7 +2694,7 @@ const driveZeroDurationTransition = async (manager: SceneDirector, app: ReturnTy
 
 describe('SceneDirector — registry-default transition resolution', () => {
   test("change() uses the target's registered default transition when no call-site transition is given", async () => {
-    const registeredDefault = new RecordingPhaseForDirectorTest({ duration: 0 });
+    const registeredDefault = new RecordingPhaseForDirectorTest({ duration: Time.seconds(0) });
     const app = createApplicationStub();
     const GameScene = makeSceneClass();
     const manager = new SceneDirector(app, { game: { scene: GameScene, transition: registeredDefault } });
@@ -2711,7 +2711,7 @@ describe('SceneDirector — registry-default transition resolution', () => {
   });
 
   test('an explicit call-site transition: false suppresses the registered default entirely', async () => {
-    const registeredDefault = new RecordingPhaseForDirectorTest({ duration: 0 });
+    const registeredDefault = new RecordingPhaseForDirectorTest({ duration: Time.seconds(0) });
     const app = createApplicationStub();
     const GameScene = makeSceneClass();
     const manager = new SceneDirector(app, { game: { scene: GameScene, transition: registeredDefault } });
@@ -2723,7 +2723,7 @@ describe('SceneDirector — registry-default transition resolution', () => {
   });
 
   test('unload() never consults the registered default transition', async () => {
-    const registeredDefault = new RecordingPhaseForDirectorTest({ duration: 0 });
+    const registeredDefault = new RecordingPhaseForDirectorTest({ duration: Time.seconds(0) });
     const app = createApplicationStub();
     const GameScene = makeSceneClass();
     const manager = new SceneDirector(app, { game: { scene: GameScene, transition: registeredDefault } });
@@ -2741,7 +2741,7 @@ describe('SceneDirector — registry-default transition resolution', () => {
   });
 
   test("restore() uses the target's registered default transition when no call-site transition is given", async () => {
-    const registeredDefault = new RecordingPhaseForDirectorTest({ duration: 0 });
+    const registeredDefault = new RecordingPhaseForDirectorTest({ duration: Time.seconds(0) });
     const app = createApplicationStub();
     const GameScene = makeSceneClass();
     const OtherScene = makeSceneClass();

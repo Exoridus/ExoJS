@@ -84,6 +84,7 @@ export class MouseJoint extends Joint {
     this.bodyB.wake();
   }
 
+  /** @internal */
   public override _prepare(h: number): void {
     const body = this.bodyB;
 
@@ -124,6 +125,7 @@ export class MouseJoint extends Joint {
     this._impulseScale = a3;
   }
 
+  /** @internal */
   public override _warmStart(): void {
     if (!this._active) {
       return;
@@ -132,6 +134,7 @@ export class MouseJoint extends Joint {
     this._applyImpulse(this._impulseX, this._impulseY);
   }
 
+  /** @internal */
   public override _solve(useBias: boolean): void {
     if (!this._active) {
       return;

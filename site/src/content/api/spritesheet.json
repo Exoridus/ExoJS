@@ -108,7 +108,7 @@
       "members": [
         {
           "name": "addFrame",
-          "signature": "addFrame(name: string, data: SpritesheetFrame): void",
+          "signature": "addFrame(name: string, data: SpritesheetFrame): this",
           "signatureTokens": [
             {
               "text": "addFrame",
@@ -155,7 +155,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "void",
+              "text": "this",
               "kind": "keyword"
             }
           ],
@@ -171,7 +171,7 @@
               "optional": false
             }
           ],
-          "returnType": "void",
+          "returnType": "this",
           "description": "Register a single frame by name, creating its Rectangle and pre-configured Sprite."
         },
         {
@@ -535,7 +535,7 @@
         },
         {
           "name": "removeFrame",
-          "signature": "removeFrame(name: string): void",
+          "signature": "removeFrame(name: string): this",
           "signatureTokens": [
             {
               "text": "removeFrame",
@@ -566,7 +566,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "void",
+              "text": "this",
               "kind": "keyword"
             }
           ],
@@ -577,7 +577,7 @@
               "optional": false
             }
           ],
-          "returnType": "void",
+          "returnType": "this",
           "description": "Destroy and remove a single frame's Rectangle and Sprite by name. No-op if the frame does not exist."
         }
       ],

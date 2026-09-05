@@ -126,7 +126,7 @@ export class RenderPassInspectorLayer extends DebugLayer {
 
     const root = this._app.scenes.currentScene?.root;
     if (root) {
-      this._collect(root);
+      this.collect(root);
     }
 
     this._refreshPanel();
@@ -188,7 +188,7 @@ export class RenderPassInspectorLayer extends DebugLayer {
 
   // -----------------------------------------------------------------------
 
-  private _collect(node: RenderNode): void {
+  private collect(node: RenderNode): void {
     if (!node.visible) return;
 
     if (node.filters.length > 0) {
@@ -206,7 +206,7 @@ export class RenderPassInspectorLayer extends DebugLayer {
     const container = node as Partial<{ children: RenderNode[] }>;
     if (Array.isArray(container.children)) {
       for (const child of container.children) {
-        this._collect(child);
+        this.collect(child);
       }
     }
   }

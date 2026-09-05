@@ -254,6 +254,12 @@ export class InputSystem {
 
   public readonly onCanvasFocusChange = new Signal<[focused: boolean]>();
   /**
+   * Fires whenever {@link InputSystem.pointerLocked} changes, including a lock
+   * the user ended themselves with Escape - which every host allows and no
+   * application can prevent, so this is the only reliable place to notice it.
+   */
+  public readonly onPointerLockChange = new Signal<[locked: boolean]>();
+  /**
    * Every pointer signal below carries the phase's own `(x, y)` explicitly,
    * in design pixels, alongside the pointer - an immutable snapshot rather
    * than a temporary rewind of {@link Pointer.position}. `pointer.x`/
@@ -441,6 +447,34 @@ export class InputSystem {
    */
   public get canvasFocused(): boolean {
     return this.canvasFocusedValue;
+  }
+
+  /**
+   * Whether the host currently routes pointer input to the surface
+   * exclusively. While locked, pointers report no meaningful position:
+   * {@link Pointer.position} and {@link Pointer.delta} stand still and
+   * {@link Pointer.movement} carries the motion instead.
+   */
+  public get pointerLocked(): boolean {
+    return this.platform.pointerLocked;
+  }
+
+  /**
+   * Ask the host to lock the pointer to the drawing surface, hiding the cursor
+   * and reporting motion as relative deltas.
+   *
+   * Best-effort and asynchronous. Hosts grant a lock only from a user gesture -
+   * call this from a press or key handler, not from a frame update - and may
+   * deny it outright; wait for {@link InputSystem.onPointerLockChange} rather
+   * than assuming the lock is in place when this returns.
+   */
+  public lockPointer(): void {
+    this.platform.lockPointer();
+  }
+
+  /** Release a lock this surface holds. No-op while it holds none. */
+  public unlockPointer(): void {
+    this.platform.unlockPointer();
   }
 
   /**
@@ -779,6 +813,7 @@ export class InputSystem {
     this.onRotate.destroy();
     this.onLongPress.destroy();
     this.onCanvasFocusChange.destroy();
+    this.onPointerLockChange.destroy();
   }
 
   private createBinding(channel: InputChannel | readonly InputChannel[], options: InputBindingOptions = {}): InputBinding {
@@ -1390,6 +1425,7 @@ export class InputSystem {
       platform.onSurfaceEvent('pointerup', event => this.handlePointerUp(event), active),
       platform.onSurfaceEvent('pointercancel', event => this.handlePointerCancel(event), passive),
       platform.onSurfaceEvent('contextmenu', event => this.handleContextMenu(event), active),
+      platform.onPointerLockChange(locked => this.onPointerLockChange.dispatch(locked)),
     );
 
     if (!this.allowTextSelection) {

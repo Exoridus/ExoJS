@@ -40,8 +40,6 @@ export interface BitmapTextOptions extends Omit<TextStyleOptions, 'fontSize'> {
  * - `getGlyph()` maps BMFont metrics to {@link GlyphInfo} using bearings that
  *   place each glyph correctly relative to its line's Y origin.
  * - `getKerning()` looks up the BMFont kerning table.
- *
- * @internal
  */
 export class BmFontAdapter implements GlyphProvider {
   private readonly _fontData: BmFontData;
@@ -204,6 +202,11 @@ export class BitmapText extends AbstractText {
       lineHeight: style.lineHeight,
       leading: style.leading,
       align: style.align,
+      textTransform: style.textTransform,
+      underline: style.underline,
+      strikethrough: style.strikethrough,
+      decorationThickness: style.decorationThickness,
+      decorationOffset: style.decorationOffset,
     };
   }
 

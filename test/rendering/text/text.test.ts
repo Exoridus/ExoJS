@@ -112,9 +112,21 @@ const mockMetrics = {
   clear: vi.fn(),
 };
 
+/**
+ * Contextual measurement is a separate authority from the per-cluster one -
+ * it answers for a whole line. The mock reports the same advance per cluster
+ * so a shaped measurement and a simple one stay comparable.
+ */
+const mockShapedMetrics = {
+  measureLine: vi.fn((line: string) => line.length * fixedGlyphInfo.advance),
+  shapeLine: vi.fn((line: string) => ({ ...fixedGlyphInfo, advance: line.length * fixedGlyphInfo.advance })),
+  clear: vi.fn(),
+};
+
 const mockPool = {
   getAtlas: vi.fn(() => mockAtlas),
   getMetrics: vi.fn(() => mockMetrics),
+  getShapedMetrics: vi.fn(() => mockShapedMetrics),
   clearVariant: vi.fn(),
 };
 
@@ -304,7 +316,7 @@ describe('Text', () => {
     expect(() => mockAtlas.onCleared!.dispatch()).not.toThrow();
   });
 
-  test('update() with tint-only hint does not rebuild geometry', () => {
+  test('syncDirty() with tint-only hint does not rebuild geometry', () => {
     const text = new Text('Hi', { fontSize: 16 });
     const style = text.style;
     const quadsBefore = text.pageQuads[0];
@@ -314,20 +326,20 @@ describe('Text', () => {
     const currentFillColor = style.fillColor;
     style.fillColor = currentFillColor;
 
-    text.update(16);
+    text.syncDirty();
 
     // Geometry reference must be the same (no rebuild)
     expect(text.pageQuads[0]).toBe(quadsBefore);
   });
 
-  test('update() triggers rebuild for layout hint', () => {
+  test('syncDirty() triggers rebuild for layout hint', () => {
     const text = new Text('Hi', { fontSize: 16 });
     const style = text.style;
     const quadsBefore = text.pageQuads[0];
 
     style.fontSize = 32; // layout hint
 
-    text.update(16);
+    text.syncDirty();
 
     expect(text.pageQuads[0]).not.toBe(quadsBefore);
   });
@@ -342,7 +354,7 @@ describe('Text', () => {
 
     expect(layoutPasses()).toBe(passesBefore);
 
-    text.update(16);
+    text.syncDirty();
 
     expect(layoutPasses()).toBe(passesBefore + 1);
     expect(text.pageQuads[0]).not.toBe(quadsBefore);

@@ -43,7 +43,7 @@ describe('default render mode sharing', () => {
     const material = mode.material;
     const materialDisposed = vi.fn();
 
-    material._onDispose(materialDisposed);
+    material.onDispose(materialDisposed);
 
     destroyed.destroy();
 

@@ -236,7 +236,7 @@ export abstract class Material {
    *
    * Part of the renderer SDK contract for extension renderers.
    */
-  public _onDispose(callback: () => void): void {
+  public onDispose(callback: () => void): void {
     this._disposeCallbacks.add(callback);
   }
 

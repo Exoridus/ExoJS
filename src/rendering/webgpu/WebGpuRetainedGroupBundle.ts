@@ -2,6 +2,7 @@ import type { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet';
 import type { View } from '#rendering/View';
 
+import { DirtyRowTracker } from './DirtyRowTracker';
 import type { WebGpuRetainedRendererReplayState } from './retainedGroupResources';
 import { retainedGroupUniformBytes, retainedTintSlotBytes, retainedTransformSlotBytes } from './retainedGroupResources';
 import { requireRepresentableStorageGrowth } from './storageLimits';
@@ -17,6 +18,12 @@ const growCapacity = (current: number, min: number): number => {
 
   return next;
 };
+
+/** Floats one transform row occupies in the CPU mirror. */
+const transformFloatsPerRow = retainedTransformSlotBytes / Float32Array.BYTES_PER_ELEMENT;
+
+/** Rows one patch block covers: 2 KB of transform rows, 256 B of tints. */
+const rowsPerPatchBlock = 64;
 
 /**
  * Group-owned GPU resources for one retained group on the WebGPU backend:
@@ -35,7 +42,6 @@ const growCapacity = (current: number, min: number): number => {
  * recreated or dropped (growth, device loss, destroy); instruction sets
  * stamped with an older generation fail plan-level validation and fall back
  * to entry replay.
- * @internal
  */
 export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   private _generation = 1;
@@ -52,6 +58,21 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   private _transformRowBase = 0;
   private _transformRowCount = 0;
   private _patchDevice: GPUDevice | null = null;
+  /**
+   * CPU mirror of the rows currently in the GPU stores, and the blocks a patch
+   * has touched since the last flush.
+   *
+   * A patch used to be one `writeBuffer` of its own 32 bytes, which made the
+   * per-frame upload count scale with the number of moving nodes - 375 moved
+   * sprites were 375 calls, against one on WebGL2, whose row store is a texture
+   * whose dirty rect is unioned and uploaded once. The mirror is what lets a
+   * span of rows be handed to `writeBuffer` in one piece; without it the only
+   * contiguous source of a patched row is the row itself.
+   */
+  private _mirrorTransformRows = new Float32Array(0);
+  private _mirrorTintRows = new Uint8Array(0);
+  private readonly _dirtyTransforms = new DirtyRowTracker(rowsPerPatchBlock, retainedTransformSlotBytes);
+  private readonly _dirtyTints = new DirtyRowTracker(rowsPerPatchBlock, retainedTintSlotBytes);
   private _uniformBuffer: GPUBuffer | null = null;
   private _bindGroup: GPUBindGroup | null = null;
   private _bindGroupLayout: GPUBindGroupLayout | null = null;
@@ -80,6 +101,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
    */
   public rendererReplayState: WebGpuRetainedRendererReplayState | null = null;
 
+  /** @internal */
   public constructor(accountant: GpuResourceAccountant, onRelease: (bundle: WebGpuRetainedGroupBundle) => void) {
     this._accountant = accountant;
     this._onRelease = onRelease;
@@ -222,24 +244,66 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   }
 
   /**
-   * Record the group-local transform range this capture just uploaded (Slice
-   * 4c): the shared-buffer rebase `base`, the `rowCount` now living in the
-   * storage buffer, and the `device` whose queue a later in-place patch writes
-   * through. Called by the backend right after it copies the rows into the
-   * group-owned storage buffer.
+   * Record the group-local transform range this capture just uploaded: the
+   * shared-buffer rebase `base`, the `rowCount` now living in the storage
+   * buffer, and the `device` whose queue a later in-place patch writes through.
+   * Called by the backend right after it copies the rows into the group-owned
+   * storage buffer.
+   * @internal
    */
   public _recordTransformRowRange(device: GPUDevice, base: number, rowCount: number): void {
     this._patchDevice = device;
     this._transformRowBase = base;
     this._transformRowCount = rowCount;
+
+    if (this._mirrorTransformRows.length < rowCount * transformFloatsPerRow) {
+      this._mirrorTransformRows = new Float32Array(rowCount * transformFloatsPerRow);
+      this._mirrorTintRows = new Uint8Array(rowCount * retainedTintSlotBytes);
+    }
+
+    this._dirtyTransforms.reset(rowCount);
+    this._dirtyTints.reset(rowCount);
   }
 
   /**
-   * Fast patch: overwrite one group-local transform row in place with
-   * `floats` (8 = one `TransformSlot`, the {@link TransformBuffer} row layout)
-   * via a single `queue.writeBuffer` of that row's 32-byte sub-range. Mirrors
-   * {@link WebGl2RetainedGroupResources._patchTransformRow}: deliberately does
-   * NOT bump the generation - the recorded instance bytes reference this row by
+   * Copy the capture's rows `[transformRowBase, +rowCount)` out of the shared
+   * frame stores into the group-owned buffers, mirroring them CPU-side so a
+   * later in-place patch can be uploaded as part of a span.
+   *
+   * Call after {@link _recordTransformRowRange}, which settles the range this
+   * reads.
+   * @internal
+   */
+  public _uploadTransformRows(transformSource: Float32Array, tintSource: Uint8Array): void {
+    const device = this._patchDevice;
+    const rowCount = this._transformRowCount;
+
+    if (device === null || rowCount === 0 || this._transformBuffer === null || this._tintBuffer === null) {
+      return;
+    }
+
+    const base = this._transformRowBase;
+
+    this._mirrorTransformRows.set(transformSource.subarray(base * transformFloatsPerRow, (base + rowCount) * transformFloatsPerRow), 0);
+    this._mirrorTintRows.set(tintSource.subarray(base * retainedTintSlotBytes, (base + rowCount) * retainedTintSlotBytes), 0);
+
+    device.queue.writeBuffer(
+      this._transformBuffer,
+      0,
+      this._mirrorTransformRows.buffer,
+      this._mirrorTransformRows.byteOffset,
+      rowCount * retainedTransformSlotBytes,
+    );
+    device.queue.writeBuffer(this._tintBuffer, 0, this._mirrorTintRows.buffer, this._mirrorTintRows.byteOffset, rowCount * retainedTintSlotBytes);
+  }
+
+  /**
+   * Fast patch: overwrite one group-local transform row in place with `floats`
+   * (8 = one `TransformSlot`, the {@link TransformBuffer} row layout) and mark
+   * its block for upload. Mirrors
+   * {@link WebGl2RetainedGroupResources.patchTransformRow}, including that the
+   * write reaches the GPU only at {@link flushRowPatches}: deliberately does NOT
+   * bump the generation - the recorded instance bytes reference this row by
    * index and stay valid; only the transform behind the index moved. Tint is
    * not touched (a moved node's tint doesn't change).
    *
@@ -247,33 +311,58 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
    * the store), as is any patch before a range is recorded or after device loss
    * (`_transformBuffer`/`_patchDevice` null).
    */
-  public _patchTransformRow(localRow: number, floats: Float32Array): void {
+  public patchTransformRow(localRow: number, floats: Float32Array): void {
     if (this._transformBuffer === null || this._patchDevice === null || localRow < 0 || localRow >= this._transformRowCount) {
       return;
     }
 
-    this._patchDevice.queue.writeBuffer(
-      this._transformBuffer,
-      localRow * retainedTransformSlotBytes,
-      floats.buffer,
-      floats.byteOffset,
-      retainedTransformSlotBytes,
-    );
+    this._mirrorTransformRows.set(floats, localRow * transformFloatsPerRow);
+    this._dirtyTransforms.mark(localRow);
   }
 
   /**
    * Fast patch: overwrite one group-local tint slot in place. Same contract as
-   * {@link _patchTransformRow} on the parallel store - no generation bump,
-   * out-of-range slots and a lost device ignored - and the reason the two
-   * stores are separate: a tint change and a move touch different bytes, so
-   * neither pays for the other's upload.
+   * {@link patchTransformRow} on the parallel store - no generation bump,
+   * out-of-range slots and a lost device ignored, uploaded at
+   * {@link flushRowPatches} - and the reason the two stores are separate: a tint
+   * change and a move touch different bytes, so neither pays for the other's
+   * upload.
    */
-  public _patchTintRow(localRow: number, bytes: Uint8Array): void {
+  public patchTintRow(localRow: number, bytes: Uint8Array): void {
     if (this._tintBuffer === null || this._patchDevice === null || localRow < 0 || localRow >= this._transformRowCount) {
       return;
     }
 
-    this._patchDevice.queue.writeBuffer(this._tintBuffer, localRow * retainedTintSlotBytes, bytes.buffer, bytes.byteOffset, retainedTintSlotBytes);
+    this._mirrorTintRows.set(bytes, localRow * retainedTintSlotBytes);
+    this._dirtyTints.mark(localRow);
+  }
+
+  /**
+   * Push every row patched since the last flush.
+   *
+   * Must run before the frame's submit, which is what the reconciler guarantees
+   * by flushing at the end of its patch pass - `queue.writeBuffer` is ordered
+   * against the submit, never against the individual draws inside it, so a patch
+   * left unflushed would replay the previous frame's transform.
+   */
+  public flushRowPatches(): void {
+    const device = this._patchDevice;
+
+    if (device === null) {
+      return;
+    }
+
+    if (this._transformBuffer !== null) {
+      this._dirtyTransforms.flush(device, this._transformBuffer, this._mirrorTransformRows);
+    }
+
+    if (this._tintBuffer !== null) {
+      this._dirtyTints.flush(device, this._tintBuffer, this._mirrorTintRows);
+    }
+
+    // A renderer that keeps its own per-node store off this bundle (Text) stages
+    // its patches the same way and has no other point to flush them at.
+    this.rendererReplayState?.flushRowPatches?.();
   }
 
   /**
@@ -334,6 +423,8 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
     this._tintCapacity = 0;
     this._transformRowCount = 0;
     this._patchDevice = null;
+    this._dirtyTransforms.reset(0);
+    this._dirtyTints.reset(0);
     this._bindGroup = null;
     this._bindGroupLayout = null;
     this._generation++;

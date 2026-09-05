@@ -1,0 +1,200 @@
+{
+  "title": "GridSpaceOptions",
+  "description": "Construction options for GridSpace.",
+  "symbol": "GridSpaceOptions",
+  "kind": "interface",
+  "subsystem": "pathfinding",
+  "importPath": "@codexo/exojs-pathfinding",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for GridSpace."
+      ],
+      "importLine": "import { GridSpaceOptions } from '@codexo/exojs-pathfinding'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "cellOriginX",
+          "signature": "cellOriginX?: number",
+          "signatureTokens": [
+            {
+              "text": "cellOriginX",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "World x of cell 0's left edge, before the window origin. Defaults to 0."
+        },
+        {
+          "name": "cellOriginY",
+          "signature": "cellOriginY?: number",
+          "signatureTokens": [
+            {
+              "text": "cellOriginY",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "World y of cell 0's top edge, before the window origin. Defaults to 0."
+        },
+        {
+          "name": "cellSize",
+          "signature": "cellSize?: number",
+          "signatureTokens": [
+            {
+              "text": "cellSize",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "World size of one cell. The distance metric assumes square cells, so a tilemap with non-square tiles has to pick one axis. Defaults to 1."
+        },
+        {
+          "name": "diagonals",
+          "signature": "diagonals?: DiagonalPolicy",
+          "signatureTokens": [
+            {
+              "text": "diagonals",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DiagonalPolicy",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Defaults to 'no-corner-cutting'."
+        },
+        {
+          "name": "originX",
+          "signature": "originX?: number",
+          "signatureTokens": [
+            {
+              "text": "originX",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Cell x of the window's left column. Defaults to 0."
+        },
+        {
+          "name": "originY",
+          "signature": "originY?: number",
+          "signatureTokens": [
+            {
+              "text": "originY",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Cell y of the window's top row. Defaults to 0."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-pathfinding/src/spaces/GridSpace.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/spaces/GridSpace.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-pathfinding/src/spaces/GridSpace.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/spaces/GridSpace.ts"
+}

@@ -58,8 +58,8 @@ describe('keyboardChannelFromCode', () => {
     expect(keyboardChannelFromCode('Digit1')).toBe(Keyboard.One);
     expect(keyboardChannelFromCode('ArrowLeft')).toBe(Keyboard.Left);
     expect(keyboardChannelFromCode('Numpad5')).toBe(Keyboard.NumPad5);
-    expect(keyboardChannelFromCode('Semicolon')).toBe(Keyboard.Colon);
-    expect(keyboardChannelFromCode('Backquote')).toBe(Keyboard.Tilde);
+    expect(keyboardChannelFromCode('Semicolon')).toBe(Keyboard.Semicolon);
+    expect(keyboardChannelFromCode('Backquote')).toBe(Keyboard.Backquote);
   });
 
   test('a digit row key and its keypad twin stay separate channels', () => {
@@ -144,7 +144,7 @@ describe('InputSystem — layout-independent keyboard channels', () => {
 
     press({ code: 'Semicolon', key: 'ö', keyCode: 192 });
 
-    expect(ch(im, Keyboard.Colon)).toBe(1);
+    expect(ch(im, Keyboard.Semicolon)).toBe(1);
 
     im.destroy();
   });
@@ -404,17 +404,17 @@ describe('Keyboard enum stability', () => {
     IntlBackslash: 147,
     IntlRo: 148,
     IntlYen: 149,
-    Colon: 186,
-    Equals: 187,
+    Semicolon: 186,
+    Equal: 187,
     Comma: 188,
-    Dash: 189,
+    Minus: 189,
     Period: 190,
-    QuestionMark: 191,
-    Tilde: 192,
-    OpenBracket: 219,
-    BackwardSlash: 220,
-    ClosedBracket: 221,
-    Quotes: 222,
+    Slash: 191,
+    Backquote: 192,
+    BracketLeft: 219,
+    Backslash: 220,
+    BracketRight: 221,
+    Quote: 222,
   };
 
   test('every pre-existing member still resolves to its exact original numeric channel value', () => {

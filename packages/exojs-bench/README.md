@@ -2,7 +2,7 @@
 
 Private, reproducible cross-library rendering/physics benchmark harness for ExoJS.
 Not published. Compares ExoJS against competitor libraries (Pixi, Phaser,
-Excalibur, matter-js, rapier2d-compat) kept in an isolated `competitors/`
+Excalibur, matter-js, planck, rapier2d-compat) kept in an isolated `competitors/`
 manifest — see `competitors/package.json` and `competitors/link.ts` for why
 they're excluded from the workspace install.
 
@@ -44,7 +44,7 @@ A cell's scene comes from a fixed **archetype** (`src/rendering/archetypes.ts`):
 `mixed-blend`, `mixed-material`, `mixed-material-atlased`, `instanced-batch`,
 `mixed-sprite-mesh-static`, `mixed-sprite-mesh-array`, `scrolling-world`,
 `text-static`, `text-dynamic`, `filter-chain-1`, `filter-chain-2`,
-`filter-chain-4`, `mask-clip`. Each pins nesting depth, texture count, per-frame
+`filter-chain-4`, `mask-clip`, `composite`. Each pins nesting depth, texture count, per-frame
 mutation fraction and whatever dimension it exists to isolate, and sweeps a
 ladder of node counts.
 
@@ -53,7 +53,10 @@ value is: `lifecycle-churn` differs from `dynamic-heavy` only in destroying the
 leaves it would otherwise have moved, so the difference between the two rows is
 what structural invalidation costs; `text-dynamic` differs from `text-static`
 only in re-setting strings; each `filter-chain-*` step adds one render-target
-pass. Every archetype also declares whether a cross-arm comparison of it is
+pass; `composite` is `filter-chain-1`'s scene rendered as a bloom-shaped
+multipass (off-screen capture, downscaled blur, direct draw, additive overlay),
+so the two rows separate one node-attached filter from an explicit multipass
+over the same content. Every archetype also declares whether a cross-arm comparison of it is
 meaningful at all (`crossArm`) - the ExoJS-internal probes say no, and the
 published comparison excludes them by construction.
 
@@ -74,6 +77,14 @@ carries one cause. Every arm builds the identical scene from the
 identical seed; the harness asserts that by comparing each arm's mutation-index
 signature against a canonical selection and failing the cell loudly on any
 divergence.
+
+The physics arms are not one flat field of competitors. **matter-js** and
+**planck** are the pure-JS **peers** — the libraries an ExoJS app would
+realistically attach instead of the native runtime, and what `exojs-physics` is
+compared against. **rapier** is a Rust engine compiled to WASM and is read as the
+**reference ceiling**: it measures what leaving JavaScript buys, not a bar a JS
+solver is expected to reach. Each arm's solver iterations, sleeping default and
+contact-count semantics are disclosed per arm in every report's caveats block.
 
 What is **not** measured: game-loop update, input, physics (in the rendering
 domain), asset loading, GC headroom — everything outside `mutate` +

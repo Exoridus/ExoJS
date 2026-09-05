@@ -1,4 +1,5 @@
 import { Color } from '#core/Color';
+import type { AnimatedSpriteClipDefinition } from '#rendering/sprite/AnimatedSprite';
 import type { NineSliceInsets, NineSliceModes } from '#rendering/sprite/nineSlice';
 import type { TextStyleOptions } from '#rendering/text/TextStyle';
 import type { Texture } from '#rendering/texture/Texture';
@@ -66,8 +67,30 @@ export interface UISpriteBackground {
   readonly fit: UISpriteFit;
 }
 
+/**
+ * Clip-driven background: an atlas, the clips cut from it, and the one that
+ * plays. Stretched over the widget box, so it suits a flat animated panel face
+ * or a progress bar's fill rather than a frame with corners to preserve - a
+ * nine-slice does not animate, and tiling would need a repeating sprite, which
+ * does not either.
+ *
+ * Playback runs through the application's animation system as soon as the
+ * widget is in a scene tree, and costs nothing while no clip is running.
+ * A {@link ProgressBar} on `fillMode: 'clip'` plays the frame at full size and
+ * cuts it to the value, which is what makes an animated bar read correctly.
+ */
+export interface UIAnimatedBackground {
+  readonly kind: 'animated';
+  readonly texture: Texture;
+  readonly clips: Readonly<Record<string, AnimatedSpriteClipDefinition>>;
+  /** Name of the clip to play; must be one of {@link UIAnimatedBackground.clips}. */
+  readonly clip: string;
+  /** Reserved for a second fill rule; `'stretch'` is the only one an animated surface has. */
+  readonly fit?: 'stretch';
+}
+
 /** How a widget paints its body. */
-export type UIBackground = UINoBackground | UIFillBackground | UINineSliceBackground | UISpriteBackground;
+export type UIBackground = UINoBackground | UIFillBackground | UINineSliceBackground | UISpriteBackground | UIAnimatedBackground;
 
 /**
  * What a background can be stated as. A texture or region becomes a textured

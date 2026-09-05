@@ -1,0 +1,98 @@
+{
+  "title": "JobOptions",
+  "description": "",
+  "symbol": "JobOptions",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [],
+      "importLine": "import { JobOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "priority",
+          "signature": "priority?: number",
+          "signatureTokens": [
+            {
+              "text": "priority",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Higher priorities run first; a job never takes a step while a runnable job of higher priority exists, so a long high-priority job starves lower ones for its duration. Jobs of equal priority take turns. Default 0."
+        },
+        {
+          "name": "scope",
+          "signature": "scope?: DestroyScope",
+          "signatureTokens": [
+            {
+              "text": "scope",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DestroyScope",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Scope that owns the job for as long as it runs: the scheduler tracks the job in it on run and untracks it again when the job settles, so a scene or screen that is destroyed mid-job cancels it without collecting every finished job it ever started."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/JobScheduler.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/JobScheduler.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/JobScheduler.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/JobScheduler.ts"
+}

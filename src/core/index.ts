@@ -22,6 +22,8 @@ export { Color } from './Color';
 export type { ConnectivityState, NetworkMode } from './Connectivity';
 export { Connectivity } from './Connectivity';
 export { DestroyScope } from './DestroyScope';
+export type { JobOptions, JobSchedulerOptions, JobStatus, JobWork } from './JobScheduler';
+export { Job, JobScheduler } from './JobScheduler';
 export type { LoadStateValue } from './LoadState';
 export type { LogEntry, LogOptions, LogSink } from './Logger';
 export { Logger, logger, LogSeverity } from './Logger';
@@ -67,7 +69,7 @@ export {
   UnregisteredSceneError,
 } from '#core/scene/sceneErrors';
 export type { SceneActionMapOptions, SceneInputBindingOptions } from '#core/scene/SceneInputs';
-export type { InteractionObservation, InteractionScope } from '#core/scene/SceneInteraction';
+export type { InteractionObservation, InteractionScope, SceneInteractionOptions } from '#core/scene/SceneInteraction';
 export { SceneState } from '#core/scene/SceneState';
 export type {
   SceneTransitionContext,

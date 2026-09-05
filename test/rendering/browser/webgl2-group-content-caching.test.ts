@@ -226,7 +226,7 @@ describe('WebGL2 group uniform — content caching', () => {
       render();
       matrixUpload.mockClear();
 
-      const replay = vi.spyOn(backend, '_replayRetainedBatch');
+      const replay = vi.spyOn(backend, 'replayRetainedBatch');
 
       render();
 

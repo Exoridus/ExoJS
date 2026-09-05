@@ -6,10 +6,10 @@
   "subsystem": "physics",
   "importPath": "@codexo/exojs-physics",
   "tier": "stable",
-  "memberCount": 21,
+  "memberCount": 20,
   "counts": {
     "constructors": 1,
-    "methods": 2,
+    "methods": 1,
     "properties": 18,
     "events": 0
   },
@@ -85,35 +85,6 @@
       "id": "methods",
       "title": "Methods",
       "members": [
-        {
-          "name": "_markDestroyed",
-          "signature": "_markDestroyed(): void",
-          "signatureTokens": [
-            {
-              "text": "_markDestroyed",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": "Internal: mark destroyed (called by the world)."
-        },
         {
           "name": "synchronize",
           "signature": "synchronize(bodyTransform: Transform): void",

@@ -9,6 +9,7 @@ import { AssetRef } from './AssetRef';
 import type { AssetTypeRegistry } from './AssetTypeRegistry';
 import type { AssetLocator, CanonicalAsset, ResourceKey } from './canonicalKey';
 import type { LoaderScope, LoaderScopeKind } from './LoaderScope';
+import { residentBytes } from './residentBytes';
 import type { SeamlessAdapter } from './seamless';
 import { isAbortError, SharedAbort } from './SharedAbort';
 import { WeakHandleSet } from './WeakHandleSet';
@@ -99,6 +100,62 @@ export interface AssetInspection {
   readonly background: boolean;
 }
 
+/** One resident asset, sized, as reported by {@link AssetStats.largest}. */
+export interface AssetSizeStats {
+  readonly canonicalKey: ResourceKey;
+  /** The asset type's id, or the dispatch token's name for a type not installed on this loader. */
+  readonly type: string;
+  /** Estimated resident bytes; see {@link AssetStats.bytes}. */
+  readonly bytes: number;
+}
+
+/** Residency totals for one asset type, as reported by {@link AssetStats.byType}. */
+export interface AssetTypeStats {
+  /** The asset type's id, or the dispatch token's name for a type not installed on this loader. */
+  readonly type: string;
+  /** Assets of this type whose payload is resident and readable. */
+  readonly ready: number;
+  /** Assets of this type that are claimed but not settled - idle, queued in the background lane, or fetching. */
+  readonly pending: number;
+  /** Assets of this type whose last fetch attempt errored. */
+  readonly failed: number;
+  /** Estimated resident bytes across this type's ready assets; see {@link AssetStats.bytes}. */
+  readonly bytes: number;
+}
+
+/**
+ * Aggregate view of what a loader currently holds, for HUDs and memory
+ * dashboards that want counters rather than the per-asset rows
+ * {@link Loader.inspect} returns.
+ *
+ * Counts follow the same five lifecycle states {@link AssetInspection} reports,
+ * collapsed to ready / pending / failed.
+ */
+export interface AssetStats {
+  /** Assets whose payload is resident and readable. */
+  readonly ready: number;
+  /** Assets that are claimed but not settled - idle, queued in the background lane, or fetching. */
+  readonly pending: number;
+  /** Assets whose last fetch attempt errored. */
+  readonly failed: number;
+  /**
+   * Estimated resident bytes over every ready asset.
+   *
+   * The loader cannot see inside a type's resource, so payloads are sized by
+   * shape: binary buffers and blobs by their length, strings by their UTF-16
+   * length, decoded audio by its PCM footprint, and anything carrying pixel
+   * dimensions at four bytes per texel. A structured payload (parsed JSON, an
+   * XML document, a font face) contributes nothing, and GPU-side copies are not
+   * counted at all - read `RenderStats.gpuMemoryBytes` for those. Treat this as
+   * a floor on CPU-side asset memory, not an accounting of it.
+   */
+  readonly bytes: number;
+  /** Per type, largest resident footprint first, ties broken by type id. */
+  readonly byType: readonly AssetTypeStats[];
+  /** The heaviest resident assets, largest first, as many as were asked for. */
+  readonly largest: readonly AssetSizeStats[];
+}
+
 /** One resident payload, kept together with the canonical identity it was stored under. */
 interface ResidentEntry {
   readonly asset: CanonicalAsset;
@@ -176,6 +233,7 @@ export class AssetResidency {
   // screen and a scene preloader may wait on one drain, and both have to settle.
   private readonly _backgroundResolvers = new Set<() => void>();
 
+  /** @internal */
   public constructor(typeRegistry: AssetTypeRegistry, decoder: AssetDecoder, signals: AssetResidencySignals, concurrency: number, hooks: AssetResidencyHooks) {
     this._typeRegistry = typeRegistry;
     this._decoder = decoder;
@@ -250,6 +308,81 @@ export class AssetResidency {
       return 0;
     });
     return Object.freeze(rows);
+  }
+
+  /**
+   * Aggregate counters over the same rows {@link _inspect} walks, sized against
+   * the resident store.
+   *
+   * Built from the row snapshot rather than from the maps directly so the two
+   * can never disagree on what counts as ready, pending or failed - the
+   * lifecycle priority rules live in one place.
+   * @internal
+   */
+  public _stats(topCount: number): AssetStats {
+    const rows = this._inspect();
+    const byType = new Map<string, { ready: number; pending: number; failed: number; bytes: number }>();
+    const sized: AssetSizeStats[] = [];
+
+    let ready = 0;
+    let pending = 0;
+    let failed = 0;
+    let bytes = 0;
+
+    for (const row of rows) {
+      const type = this._typeRegistry.getInstalled(row.type)?.type.id ?? row.type.name;
+      const totals = byType.get(type) ?? { ready: 0, pending: 0, failed: 0, bytes: 0 };
+
+      if (row.state === 'ready') {
+        // Sized from the store rather than from the row: a row reports the
+        // representative handle's lifecycle, the store holds the payload.
+        const size = residentBytes(this._resources.get(row.canonicalKey)?.value);
+
+        ready++;
+        bytes += size;
+        totals.ready++;
+        totals.bytes += size;
+
+        if (size > 0) {
+          sized.push(Object.freeze({ canonicalKey: row.canonicalKey, type, bytes: size }));
+        }
+      } else if (row.state === 'failed') {
+        failed++;
+        totals.failed++;
+      } else {
+        pending++;
+        totals.pending++;
+      }
+
+      byType.set(type, totals);
+    }
+
+    // Descending by footprint, then by name - a plain codepoint comparison, so
+    // the order of two equally sized entries does not vary by ICU locale.
+    const compareByBytes = (leftBytes: number, rightBytes: number, leftName: string, rightName: string): number => {
+      if (rightBytes !== leftBytes) {
+        return rightBytes - leftBytes;
+      }
+
+      if (leftName < rightName) return -1;
+      if (leftName > rightName) return 1;
+      return 0;
+    };
+
+    sized.sort((left, right) => compareByBytes(left.bytes, right.bytes, left.canonicalKey, right.canonicalKey));
+
+    return Object.freeze({
+      ready,
+      pending,
+      failed,
+      bytes,
+      byType: Object.freeze(
+        [...byType.entries()]
+          .map(([type, totals]) => Object.freeze({ type, ...totals }))
+          .sort((left, right) => compareByBytes(left.bytes, right.bytes, left.type, right.type)),
+      ),
+      largest: Object.freeze(sized.slice(0, Math.max(0, topCount))),
+    });
   }
 
   /** The load-lifecycle state of whatever handle/ref is registered for `key`, or `undefined` if none is. Backs {@link _inspect}. */

@@ -31,14 +31,14 @@ import type { View } from '#rendering/View';
 class RecordableLeaf extends Drawable {
   public constructor(public readonly id = '') {
     super();
-    this._setLocalBounds(0, 0, 16, 16);
+    this.setLocalBounds(0, 0, 16, 16);
   }
 }
 
 class UnflaggedLeaf extends Drawable {
   public constructor() {
     super();
-    this._setLocalBounds(0, 0, 16, 16);
+    this.setLocalBounds(0, 0, 16, 16);
   }
 }
 
@@ -48,7 +48,7 @@ class MaterialLeaf extends Drawable {
 
   public constructor() {
     super();
-    this._setLocalBounds(0, 0, 16, 16);
+    this.setLocalBounds(0, 0, 16, 16);
   }
 }
 
@@ -57,7 +57,7 @@ class RetainedMaterialLeaf extends MaterialLeaf {}
 class UnregisteredLeaf extends Drawable {
   public constructor() {
     super();
-    this._setLocalBounds(0, 0, 16, 16);
+    this.setLocalBounds(0, 0, 16, 16);
   }
 }
 
@@ -587,7 +587,7 @@ const createRecordingBackend = (): RecordingBackendHarness => {
 
       events.push('endCapture');
     },
-    _replayRetainedBatch(batch: RetainedBatchInstruction): void {
+    replayRetainedBatch(batch: RetainedBatchInstruction): void {
       flushPending();
       events.push(`replay:${(batch.payload as FakeBatchPayload).ids.join(',')}@${transformLabel()}`);
     },
@@ -980,7 +980,7 @@ describe('collect switch: fallback ladder end-to-end (Task 5)', () => {
   });
 
   test('a transform-only child move on a backend WITHOUT row-patch support drops the recording (no stale splice) — CRITICAL-1 regression', () => {
-    // The fake bundle has no `_patchTransformRow` - the WebGPU shape (4c not
+    // The fake bundle has no `patchTransformRow` - the WebGPU shape (4c not
     // built). A recorded group's baked transform rows cannot be patched, so a
     // transform-only descendant move MUST drop the recording and fall to entry
     // replay (live transforms), never keep splicing the stale rows.
@@ -1170,7 +1170,7 @@ describe('collect switch: fallback ladder end-to-end (Task 5)', () => {
     bundle.generation++;
 
     // F5: the outer entry replay finds the inner set invalid -> the inner
-    // node is re-dispatched through _collect and draws LIVE (flush:b), while
+    // node is re-dispatched through collect and draws LIVE (flush:b), while
     // both groups re-arm and re-record.
     events.length = 0;
     playFrame(root, backend);

@@ -235,8 +235,8 @@ describe('Material base', () => {
     const disposeA = vi.fn();
     const disposeB = vi.fn();
 
-    material._onDispose(disposeA);
-    material._onDispose(disposeB);
+    material.onDispose(disposeA);
+    material.onDispose(disposeB);
 
     material.destroy();
     material.destroy();

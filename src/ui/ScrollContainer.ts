@@ -2,13 +2,14 @@ import { Color } from '#core/Color';
 import type { Stage } from '#core/Stage';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
+import type { RenderNode } from '#rendering/RenderNode';
 
 import type { ScrollbarVisibility } from './Scrollbar';
 import { Scrollbar } from './Scrollbar';
 import type { UIBackground, UIBackgroundInput, UIBackgroundOptions } from './theme';
 import { applyUIFillPatch, backgroundOptionsFrom, createUIBackground } from './theme';
 import { Widget } from './Widget';
-import { WidgetBackground } from './WidgetBackground';
+import { type UIBackgroundNode, WidgetBackground } from './WidgetBackground';
 
 const transparentBackground: UIBackground = { kind: 'none' };
 
@@ -87,7 +88,9 @@ class ScrollContent extends Container {
  * that resized itself - needs {@link ScrollContainer.refresh}.
  *
  * Mouse-wheel events from the global {@link InputSystem} are consumed only
- * when the pointer is within the widget's bounds. The container subscribes to
+ * while the pointer's hit resolves into this container, so overlapping and
+ * nested containers scroll the one actually under the pointer rather than every
+ * container whose box the point happens to fall in. The container subscribes to
  * the app's `onMouseWheel` signal when it enters the scene tree, and
  * unsubscribes on detach.
  *
@@ -118,15 +121,7 @@ export class ScrollContainer extends Widget {
   private readonly _viewportRect = new Rectangle();
 
   private readonly _onWheel = (deltaX: number, deltaY: number): void => {
-    const pos = this._stage?.app?.input.getPrimaryPointerPosition();
-
-    if (pos === null || pos === undefined) {
-      return;
-    }
-
-    const bounds = this.getBounds();
-
-    if (!bounds.contains(pos.x, pos.y)) {
+    if (!this._ownsWheel(this._stage?.app?.interaction.getHoveredNode() ?? null)) {
       return;
     }
 
@@ -185,7 +180,7 @@ export class ScrollContainer extends Widget {
   }
 
   /** The node painting the background, or `null` while it paints nothing. */
-  public get backgroundNode(): WidgetBackground['node'] {
+  public get backgroundNode(): UIBackgroundNode | null {
     return this._surface.node;
   }
 
@@ -287,8 +282,15 @@ export class ScrollContainer extends Widget {
    * check) - a scrolled-out child's own geometry no longer makes the
    * `ScrollContainer` itself claim a point far outside what is actually
    * rendered.
+   *
+   * A {@link RenderNode.hitArea} replaces both halves of that rule with the
+   * shape.
    */
   public override contains(x: number, y: number): boolean {
+    if (this.hitArea !== null) {
+      return super.contains(x, y);
+    }
+
     return this.getBounds().contains(x, y) && super.contains(x, y);
   }
 
@@ -310,6 +312,27 @@ export class ScrollContainer extends Widget {
     this._surface.destroy();
     this._viewportRect.destroy();
     super.destroy();
+  }
+
+  /**
+   * Whether a wheel belongs to this container: the innermost `ScrollContainer`
+   * on the hovered node's ancestor chain takes it, and every container further
+   * out stays still.
+   *
+   * Reading the hit rather than testing a pointer position against this
+   * widget's bounds is what makes overlapping and nested containers behave. The
+   * hit already accounts for paint order, clipping and the coordinate space of
+   * the layer the widget lives in - none of which a bounds test can see, and
+   * the last of which a design-space pointer position does not even share.
+   */
+  private _ownsWheel(hovered: RenderNode | null): boolean {
+    for (let node: RenderNode | null = hovered; node !== null; node = node.parent) {
+      if (node instanceof ScrollContainer) {
+        return node === this;
+      }
+    }
+
+    return false;
   }
 
   /** Build one bar and wire its drag back into this container's scroll position. */

@@ -561,6 +561,48 @@ describe('ShaderFilter on WebGPU', () => {
     output.destroy();
   });
 
+  test('re-applying with unchanged uniforms and target size uploads nothing', () => {
+    const backend = makeWebGpuBackend(env);
+    const filter = new ShaderFilter({ wgsl: minimalFragSrc, uniforms: { uTime: 3.14 } });
+    const input = new RenderTexture(16, 16);
+    const output = new RenderTexture(64, 64);
+
+    filter.apply(backend, input, output);
+    env.queue.writeBuffer.mockClear();
+
+    // Two further passes into an equally sized target: the resolution block and
+    // the user block already hold what this pass would write.
+    filter.apply(backend, input, output);
+    filter.apply(backend, input, output);
+
+    expect(env.queue.writeBuffer).not.toHaveBeenCalled();
+
+    // A changed uniform is uploaded on the next pass.
+    filter.setUniform('uTime', 6.28);
+    filter.apply(backend, input, output);
+
+    expect(env.queue.writeBuffer).toHaveBeenCalledTimes(1);
+
+    // So is a changed target extent.
+    const larger = new RenderTexture(128, 64);
+
+    env.queue.writeBuffer.mockClear();
+    filter.apply(backend, input, larger);
+
+    const resCall = env.queue.writeBuffer.mock.calls.find((args: unknown[]) => {
+      const data = args[2] as Float32Array;
+
+      return data instanceof Float32Array && data[0] === 128 && data[1] === 64;
+    });
+
+    expect(resCall).toBeDefined();
+
+    filter.destroy();
+    input.destroy();
+    output.destroy();
+    larger.destroy();
+  });
+
   // 12. Number uniform → 16-byte aligned slot in the user UBO
   test('number uniform is placed at the start of a 16-byte slot', () => {
     const backend = makeWebGpuBackend(env);
@@ -775,8 +817,8 @@ describe('ShaderFilter on WebGPU', () => {
     output.destroy();
   });
 
-  // 22. Auto bind group layout has 3 entries: UBO, texture, sampler
-  test('auto bind group layout has 3 entries (resolution UBO, texture, sampler)', () => {
+  // 22. Auto bind group layout has 4 entries: UBO, texture, sampler, orientation UBO
+  test('auto bind group layout has 4 entries (resolution UBO, texture, sampler, orientation UBO)', () => {
     const backend = makeWebGpuBackend(env);
     const filter = new ShaderFilter({ wgsl: minimalFragSrc });
     const input = new RenderTexture(32, 32);
@@ -787,7 +829,7 @@ describe('ShaderFilter on WebGPU', () => {
     // First createBindGroupLayout call is for the auto group
     const autoLayoutDesc = env.createBindGroupLayout.mock.calls[0][0] as GPUBindGroupLayoutDescriptor;
 
-    expect(autoLayoutDesc.entries).toHaveLength(3);
+    expect(autoLayoutDesc.entries).toHaveLength(4);
 
     filter.destroy();
     input.destroy();

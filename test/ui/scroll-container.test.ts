@@ -9,22 +9,28 @@ import { Signal } from '#core/Signal';
 import type { Stage } from '#core/Stage';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
+import type { RenderNode } from '#rendering/RenderNode';
 import { ScrollContainer } from '#ui/ScrollContainer';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Build a minimal Stage whose `app.input` carries a real onMouseWheel Signal. */
-const makeStage = (
-  pointerPos: { x: number; y: number } | null | undefined = null,
-): { stage: Stage; onMouseWheel: Signal<[deltaX: number, deltaY: number]> } => {
+/**
+ * Build a minimal Stage whose `app.input` carries a real onMouseWheel Signal and
+ * whose `app.interaction` answers with whatever node the test declares hovered -
+ * the same answer the real hit-test path produces for a pointer position.
+ */
+const makeStage = (): {
+  stage: Stage;
+  onMouseWheel: Signal<[deltaX: number, deltaY: number]>;
+  setHovered: (node: RenderNode | null) => void;
+} => {
   const onMouseWheel = new Signal<[deltaX: number, deltaY: number]>();
+  let hovered: RenderNode | null = null;
   const app = {
-    input: {
-      onMouseWheel,
-      getPrimaryPointerPosition: vi.fn(() => pointerPos),
-    },
+    input: { onMouseWheel },
+    interaction: { getHoveredNode: vi.fn(() => hovered) },
   } as unknown as Application;
 
   // Full no-op hook implementations - Container._setStage() propagates the
@@ -44,7 +50,11 @@ const makeStage = (
     _notifyNodeRemoved: vi.fn(),
   };
 
-  return { stage: { interaction, focus, app }, onMouseWheel };
+  return {
+    stage: { interaction, focus, app },
+    onMouseWheel,
+    setHovered: (node: RenderNode | null): void => void (hovered = node),
+  };
 };
 
 /**
@@ -155,8 +165,8 @@ describe('ScrollContainer.scrollTo / scrollBy', () => {
 });
 
 describe('ScrollContainer mouse-wheel routing', () => {
-  test('ignores wheel events when the pointer position is unavailable', () => {
-    const { stage, onMouseWheel } = makeStage(null);
+  test('ignores wheel events while nothing is hovered', () => {
+    const { stage, onMouseWheel } = makeStage();
     const scroll = new ScrollContainer({ width: 100, height: 100 });
 
     stubContentBounds(scroll, new Rectangle(0, 0, 500, 500));
@@ -167,24 +177,42 @@ describe('ScrollContainer mouse-wheel routing', () => {
     expect(scroll.scrollY).toBe(0);
   });
 
-  test('ignores wheel events when the pointer is outside the widget bounds', () => {
-    const { stage, onMouseWheel } = makeStage({ x: 500, y: 500 });
+  test('ignores wheel events while the hit lands outside this container', () => {
+    const { stage, onMouseWheel, setHovered } = makeStage();
     const scroll = new ScrollContainer({ width: 100, height: 100 });
+    const elsewhere = new Container();
 
     stubContentBounds(scroll, new Rectangle(0, 0, 500, 500));
     scroll._setStage(stage);
+    setHovered(elsewhere);
 
     onMouseWheel.dispatch(0, 50);
 
     expect(scroll.scrollY).toBe(0);
+  });
+
+  test('takes the wheel for a hit on a descendant of its content', () => {
+    const { stage, onMouseWheel, setHovered } = makeStage();
+    const scroll = new ScrollContainer({ width: 100, height: 100 });
+    const item = new Container();
+
+    scroll.content.addChild(item);
+    stubContentBounds(scroll, new Rectangle(0, 0, 500, 500));
+    scroll._setStage(stage);
+    setHovered(item);
+
+    onMouseWheel.dispatch(0, 50);
+
+    expect(scroll.scrollY).toBe(50);
   });
 
   test('vertical (default) direction scrolls only on the Y delta', () => {
-    const { stage, onMouseWheel } = makeStage({ x: 50, y: 50 });
+    const { stage, onMouseWheel, setHovered } = makeStage();
     const scroll = new ScrollContainer({ width: 100, height: 100 });
 
     stubContentBounds(scroll, new Rectangle(0, 0, 500, 500));
     scroll._setStage(stage);
+    setHovered(scroll);
 
     onMouseWheel.dispatch(30, 20);
 
@@ -193,11 +221,12 @@ describe('ScrollContainer mouse-wheel routing', () => {
   });
 
   test('horizontal direction scrolls only on the X delta', () => {
-    const { stage, onMouseWheel } = makeStage({ x: 50, y: 50 });
+    const { stage, onMouseWheel, setHovered } = makeStage();
     const scroll = new ScrollContainer({ width: 100, height: 100, direction: 'horizontal' });
 
     stubContentBounds(scroll, new Rectangle(0, 0, 500, 500));
     scroll._setStage(stage);
+    setHovered(scroll);
 
     onMouseWheel.dispatch(30, 20);
 
@@ -206,16 +235,56 @@ describe('ScrollContainer mouse-wheel routing', () => {
   });
 
   test('"both" direction scrolls on both axes', () => {
-    const { stage, onMouseWheel } = makeStage({ x: 50, y: 50 });
+    const { stage, onMouseWheel, setHovered } = makeStage();
     const scroll = new ScrollContainer({ width: 100, height: 100, direction: 'both' });
 
     stubContentBounds(scroll, new Rectangle(0, 0, 500, 500));
     scroll._setStage(stage);
+    setHovered(scroll);
 
     onMouseWheel.dispatch(30, 20);
 
     expect(scroll.scrollX).toBe(30);
     expect(scroll.scrollY).toBe(20);
+  });
+
+  test('only the container the hit resolves into scrolls when two overlap', () => {
+    const { stage, onMouseWheel, setHovered } = makeStage();
+    const behind = new ScrollContainer({ width: 100, height: 100 });
+    const front = new ScrollContainer({ width: 100, height: 100 });
+
+    stubContentBounds(behind, new Rectangle(0, 0, 500, 500));
+    stubContentBounds(front, new Rectangle(0, 0, 500, 500));
+    behind._setStage(stage);
+    front._setStage(stage);
+
+    // Both occupy the same box; the hit-test path resolved the wheel to the one
+    // painted on top, and the one underneath must not scroll with it.
+    setHovered(front);
+
+    onMouseWheel.dispatch(0, 50);
+
+    expect(front.scrollY).toBe(50);
+    expect(behind.scrollY).toBe(0);
+  });
+
+  test('a nested container takes the wheel from the one around it', () => {
+    const { stage, onMouseWheel, setHovered } = makeStage();
+    const outer = new ScrollContainer({ width: 200, height: 200 });
+    const inner = new ScrollContainer({ width: 100, height: 100 });
+    const item = new Container();
+
+    inner.content.addChild(item);
+    outer.content.addChild(inner);
+    stubContentBounds(outer, new Rectangle(0, 0, 500, 500));
+    stubContentBounds(inner, new Rectangle(0, 0, 500, 500));
+    outer._setStage(stage);
+    setHovered(item);
+
+    onMouseWheel.dispatch(0, 50);
+
+    expect(inner.scrollY).toBe(50);
+    expect(outer.scrollY).toBe(0);
   });
 });
 
@@ -240,22 +309,6 @@ describe('ScrollContainer viewport bounds (ME-58)', () => {
 
     expect(scroll.getBounds().width).toBe(250);
     expect(scroll.getBounds().height).toBe(180);
-  });
-
-  test('a wheel event over content that scrolled past the viewport is ignored — content bounds no longer widen the hit area', () => {
-    const { stage, onMouseWheel } = makeStage({ x: 150, y: 150 });
-    const scroll = new ScrollContainer({ width: 100, height: 100 });
-
-    // The content is far bigger than the 100x100 viewport; wheel routing
-    // used to gate on this union instead of the viewport, so a point
-    // at (150, 150) - inside the content extent, outside the viewport -
-    // would have wrongly been accepted.
-    stubContentBounds(scroll, new Rectangle(0, 0, 5000, 5000));
-    scroll._setStage(stage);
-
-    onMouseWheel.dispatch(0, 50);
-
-    expect(scroll.scrollY).toBe(0);
   });
 
   test('contains() rejects a point outside the viewport even when a scrolled child would otherwise claim it', () => {
@@ -283,7 +336,7 @@ describe('ScrollContainer viewport bounds (ME-58)', () => {
 
 describe('ScrollContainer stage attach/detach', () => {
   test('_setStage(stage) subscribes to the new app onMouseWheel signal', () => {
-    const { stage, onMouseWheel } = makeStage({ x: 50, y: 50 });
+    const { stage, onMouseWheel } = makeStage();
     const scroll = new ScrollContainer({ width: 100, height: 100 });
 
     expect(onMouseWheel.count).toBe(0);
@@ -292,7 +345,7 @@ describe('ScrollContainer stage attach/detach', () => {
   });
 
   test('re-setting the same app is a no-op (does not double-subscribe)', () => {
-    const { stage, onMouseWheel } = makeStage({ x: 50, y: 50 });
+    const { stage, onMouseWheel } = makeStage();
     const scroll = new ScrollContainer({ width: 100, height: 100 });
 
     scroll._setStage(stage);
@@ -302,8 +355,8 @@ describe('ScrollContainer stage attach/detach', () => {
   });
 
   test('switching to a different stage unsubscribes from the old app and subscribes to the new one', () => {
-    const first = makeStage({ x: 50, y: 50 });
-    const second = makeStage({ x: 50, y: 50 });
+    const first = makeStage();
+    const second = makeStage();
     const scroll = new ScrollContainer({ width: 100, height: 100 });
 
     scroll._setStage(first.stage);
@@ -315,7 +368,7 @@ describe('ScrollContainer stage attach/detach', () => {
   });
 
   test('_setStage(null) unsubscribes from the current app', () => {
-    const { stage, onMouseWheel } = makeStage({ x: 50, y: 50 });
+    const { stage, onMouseWheel } = makeStage();
     const scroll = new ScrollContainer({ width: 100, height: 100 });
 
     scroll._setStage(stage);
@@ -328,7 +381,7 @@ describe('ScrollContainer stage attach/detach', () => {
 
 describe('ScrollContainer.destroy()', () => {
   test('removes the wheel subscription from the attached app', () => {
-    const { stage, onMouseWheel } = makeStage({ x: 50, y: 50 });
+    const { stage, onMouseWheel } = makeStage();
     const scroll = new ScrollContainer({ width: 100, height: 100 });
 
     scroll._setStage(stage);

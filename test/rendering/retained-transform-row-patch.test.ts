@@ -28,7 +28,7 @@ import { View } from '#rendering/View';
 class RecordableLeaf extends Drawable {
   public constructor(public readonly id = '') {
     super();
-    this._setLocalBounds(0, 0, 16, 16);
+    this.setLocalBounds(0, 0, 16, 16);
   }
 }
 
@@ -64,10 +64,10 @@ const createPatchingBackend = (): Harness => {
   const bundle: RetainedGroupBundle = {
     generation: 1,
     transformRowBase: 0,
-    _patchTransformRow(localRow: number): void {
+    patchTransformRow(localRow: number): void {
       patches.push({ localRow });
     },
-    _patchTintRow(localRow: number, bytes: Uint8Array): void {
+    patchTintRow(localRow: number, bytes: Uint8Array): void {
       tintPatches.push({ localRow, rgba: [...bytes] });
     },
   };
@@ -185,7 +185,7 @@ const createPatchingBackend = (): Harness => {
         activeCaptures.splice(index, 1);
       }
     },
-    _replayRetainedBatch(batch: RetainedBatchInstruction): void {
+    replayRetainedBatch(batch: RetainedBatchInstruction): void {
       flushPending();
       events.push(`replay:${(batch.payload as { ids: readonly string[] }).ids.join(',')}`);
     },

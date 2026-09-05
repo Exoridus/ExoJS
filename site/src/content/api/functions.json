@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 84,
+  "memberCount": 85,
   "counts": {
     "constructors": 0,
     "methods": 51,
-    "properties": 33,
+    "properties": 34,
     "events": 0
   },
   "sections": [
@@ -1248,7 +1248,7 @@
         },
         {
           "name": "crossFade",
-          "signature": "crossFade(from: Voice, to: Voice, durationMs: number, options: CrossFadeOptions): Promise<void>",
+          "signature": "crossFade(from: Voice, to: Voice, duration: Seconds, options: CrossFadeOptions): Promise<void>",
           "signatureTokens": [
             {
               "text": "crossFade",
@@ -1291,7 +1291,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "durationMs",
+              "text": "duration",
               "kind": "param"
             },
             {
@@ -1299,8 +1299,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Seconds",
+              "kind": "type"
             },
             {
               "text": ", ",
@@ -1355,8 +1355,8 @@
               "optional": false
             },
             {
-              "name": "durationMs",
-              "type": "number",
+              "name": "duration",
+              "type": "Seconds",
               "optional": false
             },
             {
@@ -1366,7 +1366,7 @@
             }
           ],
           "returnType": "Promise<void>",
-          "description": "Cross-fade from one playing Voice to another over durationMs, in milliseconds. Ramps to up to toVolume and from down to silence. By default from is stopped when the fade finishes; pass stopAfter: false to keep it alive. Both voices must already be playing - start the incoming voice (typically at volume 0) before calling: ts const next = app.audio.play(track, { volume: 0 }); await crossFade(current, next, 1000);  Returns a Promise that resolves once durationMs elapses."
+          "description": "Cross-fade from one playing Voice to another over duration. Ramps to up to toVolume and from down to silence. By default from is stopped when the fade finishes; pass stopAfter: false to keep it alive. Both voices must already be playing - start the incoming voice (typically at volume 0) before calling: ts const next = app.audio.play(track, { volume: 0 }); await crossFade(current, next, Time.seconds(1));  Returns a Promise that resolves once duration elapses."
         },
         {
           "name": "decodeAudioData",
@@ -2985,7 +2985,7 @@
             }
           ],
           "returnType": "RenderStats",
-          "description": "Advance the frame counter and zero all per-frame accumulators in place. Call once at the start of each render tick before recording new data. Note: RenderStats.gpuMemoryBytes is intentionally **not** reset here. It is a running total of live GPU resources owned by the backend's resource accountant, which persists across frames; zeroing it each tick would make it read 0 after the first frame."
+          "description": "Advance the frame counter and zero all per-frame accumulators in place. Call once at the start of each render tick before recording new data. Note: RenderStats.gpuMemoryBytes is intentionally **not** reset here. It is a running total of live GPU resources owned by the backend's resource accountant, which persists across frames; zeroing it each tick would make it read 0 after the first frame. RenderStats.gpuFrameTimeMs is likewise left alone: it describes an already-finished frame whose results resolved late, so zeroing it per tick would blank it on every frame it is read on."
         },
         {
           "name": "resolveUISkin",
@@ -3733,7 +3733,7 @@
         },
         {
           "name": "onAudioContextReady",
-          "signature": "onAudioContextReady: AudioContextReadySignal",
+          "signature": "onAudioContextReady: Signal<[AudioContext]>",
           "signatureTokens": [
             {
               "text": "onAudioContextReady",
@@ -3744,8 +3744,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "AudioContextReadySignal",
+              "text": "Signal",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioContext",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
@@ -3918,6 +3938,27 @@
           "params": [],
           "returnType": null,
           "description": "τ = 2π, the full-circle radian constant."
+        },
+        {
+          "name": "textGradientMaxStops",
+          "signature": "textGradientMaxStops: 8",
+          "signatureTokens": [
+            {
+              "text": "textGradientMaxStops",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "8",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How many stops one text gradient may carry. The ramp is evaluated per fragment from the node's own packed style row, so the stop list has to be a fixed-size part of it rather than a texture of its own. Eight covers the gradients display type actually uses; more of them would cost every text node the space whether it gradients or not."
         },
         {
           "name": "textSourceCodec",

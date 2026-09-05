@@ -4,7 +4,13 @@ import { registerRetainedRenderRoot, SceneNode, unregisterRetainedRenderRoot } f
 import { Signal } from '#core/Signal';
 import type { InteractionEvent, InteractionEventType } from '#input/InteractionEvent';
 import type { KeyEvent } from '#input/KeyEvent';
+import type { Circle } from '#math/Circle';
+import { intersectionRectRect } from '#math/collisionPrimitives';
+import type { Ellipse } from '#math/Ellipse';
+import type { Polygon } from '#math/Polygon';
+import type { ReadonlyRectangle } from '#math/Rectangle';
 import { Rectangle } from '#math/Rectangle';
+import type { RectangleLike } from '#math/RectangleLike';
 import type { Filter } from '#rendering/filters/Filter';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { drawDrawableDirect } from '#rendering/plan/drawDrawableDirect';
@@ -77,6 +83,16 @@ const NO_FILTERS: readonly Filter[] = [];
 export type MaskSource = Rectangle | Texture | RenderTexture | RenderNode | null;
 
 /**
+ * Acceptable shapes for {@link RenderNode.hitArea}, expressed in the node's own
+ * local space: a {@link Rectangle}, {@link Circle}, {@link Ellipse} or
+ * {@link Polygon}, or `null` for no override.
+ *
+ * A `Polygon` may be concave - containment is an even-odd ray cast, not a
+ * convex test - so an L-shaped or ring-like pick region behaves as drawn.
+ */
+export type HitArea = Rectangle | Circle | Ellipse | Polygon | null;
+
+/**
  * {@link SceneNode} that can produce visual output. Adds the rendering
  * pipeline features on top of the structural transform/bounds carried by
  * SceneNode: post-process `filters`, an optional `mask` (via
@@ -125,6 +141,28 @@ export abstract class RenderNode extends SceneNode {
    * node will never receive `pointerdown` and therefore cannot start a drag.
    */
   public draggable = false;
+
+  /**
+   * Optional pick shape in this node's LOCAL space, replacing the bounds test
+   * {@link contains} would otherwise perform. Defaults to `null`.
+   *
+   * The world-space point is mapped through the inverse of the node's global
+   * transform before the shape is tested, so the region follows the node's
+   * position, rotation, scale and skew like the rendered output does - the
+   * shape itself is never re-transformed and never needs updating when the node
+   * moves.
+   *
+   * Affects picking only. Bounds, culling and rendering ignore it entirely, and
+   * because the interaction system finds candidates by their bounds, a hit area
+   * reaching outside the node's bounds is only reliably picked where the two
+   * overlap. Use it to shrink or reshape a pick region, not to grow one.
+   *
+   * The shape is the caller's: it is read live on every hit test, so mutating
+   * it in place takes effect immediately, and the node never destroys it.
+   *
+   * @default null
+   */
+  public hitArea: HitArea = null;
 
   private _preserveDrawOrder = false;
 
@@ -200,6 +238,41 @@ export abstract class RenderNode extends SceneNode {
     if (this._clipShape !== clipShape) {
       this._clipShape = clipShape;
       this.invalidateCache();
+      this._markStructureDirty();
+    }
+  }
+
+  private _cullable = true;
+
+  /**
+   * When `false`, this node is never culled by the viewport check and is
+   * always considered in-view. Defaults to `true`.
+   */
+  public get cullable(): boolean {
+    return this._cullable;
+  }
+
+  public set cullable(cullable: boolean) {
+    if (this._cullable !== cullable) {
+      this._cullable = cullable;
+      this._markStructureDirty();
+    }
+  }
+
+  private _cullArea: Rectangle | null = null;
+
+  /**
+   * Custom rectangle used for viewport cull intersection test.
+   * When set, replaces the default node bounds in cull checks.
+   * Set to `null` to restore default bounds-based culling.
+   */
+  public get cullArea(): Rectangle | null {
+    return this._cullArea;
+  }
+
+  public set cullArea(rect: Rectangle | null) {
+    if (this._cullArea !== rect) {
+      this._cullArea = rect;
       this._markStructureDirty();
     }
   }
@@ -471,8 +544,101 @@ export abstract class RenderNode extends SceneNode {
     return this;
   }
 
-  /** Part of the renderer SDK contract for extension renderers. */
-  public _collect(builder: RenderPlanBuilder, seq?: number): void {
+  /**
+   * Hit-test the world-space point `(x, y)` against this node, honouring
+   * {@link hitArea}: with one set, the point is mapped into local space and
+   * tested against the shape; without one, the inherited bounds/oriented-box
+   * test applies.
+   *
+   * A subclass that overrides this with its own geometry test must forward to
+   * `super.contains` while `hitArea` is set, or the override silently defeats
+   * the caller's pick shape.
+   */
+  public override contains(x: number, y: number): boolean {
+    const hitArea = this.hitArea;
+
+    if (hitArea === null) {
+      return super.contains(x, y);
+    }
+
+    const local = this._toLocalPoint(x, y);
+
+    return local !== null && hitArea.contains(local.x, local.y);
+  }
+
+  public inView(view: View): boolean {
+    return this._inCullRect(view.getBounds());
+  }
+
+  /**
+   * The view test against an explicit rect rather than a view's own bounds.
+   *
+   * A capturing collect culls against a rect slightly LARGER than the view so
+   * the resulting retained product survives a camera that moves (see
+   * `RenderPlanBuilder.cullRect`); everything else passes the view's own rect
+   * and gets exactly {@link inView}.
+   * @internal
+   */
+  public _inCullRect(rect: ReadonlyRectangle): boolean {
+    return this._inCullRectUsingBounds(rect, null);
+  }
+
+  /**
+   * {@link _inCullRect} against bounds the caller already holds.
+   *
+   * Exists because {@link getBounds} resolves the whole parent chain on every
+   * call, and the persistent-source scan asks this question once per item in a
+   * subtree that can hold a million of them - at which point that resolve is the
+   * single most expensive thing a camera step pays for.
+   *
+   * The rule is split along the line of what a caller may safely have cached:
+   *
+   * - `cullable` and `cullArea` are read LIVE, always. `cullArea` is a mutable
+   *   `Rectangle` and only REPLACING the reference stamps a revision, so a
+   *   caller that had copied it could go stale in place, unnoticed.
+   * - `bounds` is the caller's, and it is the caller's obligation to pass one
+   *   that is current. The persistent source does that by keying its items on
+   *   the subtree's transform revision: they are only selected from while
+   *   nothing in it has moved, so no stored extent can be wrong.
+   *
+   * `null` means "resolve them from this node", which is exactly
+   * {@link _inCullRect}. It is a null rather than an eagerly-passed
+   * `getBounds()` because the two early exits above must come FIRST: a node that
+   * opted out of culling, or one carrying a `cullArea`, never needs its bounds,
+   * and resolving them anyway walks its whole parent chain. Passing them in as
+   * an argument made every node in a culling-free scene pay that walk - measured
+   * on `deep-hierarchy` at 100,000 nodes as 1.9ms -> 19.3ms median.
+   *
+   * One rule, one implementation. A second copy would be free to drift, and this
+   * one decides which nodes reach the screen.
+   * @internal
+   */
+  public _inCullRectUsingBounds(rect: ReadonlyRectangle, bounds: RectangleLike | null): boolean {
+    if (!this._cullable) {
+      return true;
+    }
+
+    const area = this._cullArea;
+
+    if (area !== null) {
+      return rect.intersectsWith(area);
+    }
+
+    return intersectionRectRect(rect, bounds ?? this.getBounds());
+  }
+
+  /**
+   * Contribute this node to the render plan under construction: skip it when it
+   * is destroyed, invisible, or outside the builder's cull rect, otherwise emit
+   * it as one plan entry.
+   *
+   * Custom node types override this to add their own admission rules and must
+   * call `super.collect(builder, seq)` to keep the skip semantics. `seq` orders
+   * the entry within its parent; omit it to append.
+   *
+   * Part of the renderer SDK contract for extension renderers.
+   */
+  public collect(builder: RenderPlanBuilder, seq?: number): void {
     if (this.destroyed) {
       // A destroyed node has released its pooled transform/bounds; collecting
       // it would read freed state and re-pin it. `destroy()` unlinks the node,

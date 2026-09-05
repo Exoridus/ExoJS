@@ -8,7 +8,7 @@ import type { MembershipBits, VisibilityQueryStats } from './SourceVisibilityInd
 /**
  * @internal
  *
- * O(N) scan over a scope's items, straight through `SceneNode._inCullRect`.
+ * O(N) scan over a scope's items, straight through `RenderNode._inCullRect`.
  *
  * The reference implementation and the fallback. It reads `cullable` and
  * `cullArea` live from every node on every query, so it is correct under any

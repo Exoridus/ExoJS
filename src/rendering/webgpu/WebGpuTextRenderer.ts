@@ -11,10 +11,11 @@ import {
   textAtlasSlotShift,
   textAtlasTextureSlots,
   textAtlasTextureSlotWgsl,
+  textDecorationFlagBit,
   textNodeIndexMask,
 } from '#rendering/text/atlasTextureSlots';
 import { type BitmapText } from '#rendering/text/BitmapText';
-import { packTextNodeData, packTextNodeTransform, textNodeDataFloats } from '#rendering/text/nodeDataPacker';
+import { packTextNodeData, packTextNodeTransform, textNodeDataFloats, textNodeDataTexels } from '#rendering/text/nodeDataPacker';
 import type { TextPageQuads } from '#rendering/text/Text';
 import { Text } from '#rendering/text/Text';
 import type { Texture } from '#rendering/texture/Texture';
@@ -23,6 +24,7 @@ import type { View } from '#rendering/View';
 
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import { getWebGpuBlendState } from './blendState';
+import { DirtyRowTracker } from './DirtyRowTracker';
 import {
   type WebGpuRetainedBatchPayload,
   type WebGpuRetainedBatchReplayer,
@@ -53,6 +55,13 @@ import { WebGpuRetainedGroupBundle } from './WebGpuRetainedGroupBundle';
 // [ni*10+9]: (minX, minY, w, h) text block bounds
 
 const nodeFloats = textNodeDataFloats;
+
+/**
+ * Node rows one patch block covers. Smaller than the sprite store's block
+ * because a text row is 160 bytes against a sprite transform row's 32, so this
+ * lands on the same couple of kilobytes per block.
+ */
+const rowsPerPatchBlock = 16;
 
 // Per-vertex layout (20 bytes): pos f32x2 + uv f32x2 + packed node/atlas u32
 const vertexStrideBytes = 20;
@@ -124,7 +133,7 @@ const sharesAtlasBatchClass = (a: PendingQuad, b: PendingQuad): boolean =>
  * Text opts out of the shared `TransformBuffer` (`_consumesSharedTransform ===
  * false`), so the generic bundle machinery has nothing to persist for it - this
  * is the renderer's own carrier from record time (`flush()`) through to replay
- * (`_replayRetainedBatch`), where `TextRetainedReplayState` uploads it into a
+ * (`replayRetainedBatch`), where `TextRetainedReplayState` uploads it into a
  * persistent, group-owned GPU buffer on first use.
  */
 interface TextRetainedRendererData {
@@ -166,6 +175,48 @@ class TextRetainedReplayState implements WebGpuRetainedRendererReplayState {
   public readonly nodeIndexByDrawable = new Map<Text | BitmapText, number>();
   public drawsInPass: WebGpuActiveRenderPass | null = null;
 
+  /**
+   * The recording's own packed rows, doubling as the CPU mirror an in-place
+   * transform patch writes into, and the device its upload goes through.
+   *
+   * Patching the recording's array rather than a second copy is what keeps the
+   * two consistent: a later full re-upload of `nodeData` then carries the moves
+   * that have happened since it was recorded, instead of resurrecting the
+   * positions the nodes had at record time.
+   */
+  private _nodeData: Float32Array | null = null;
+  private _device: GPUDevice | null = null;
+  private readonly _dirtyRows = new DirtyRowTracker(rowsPerPatchBlock, nodeFloats * Float32Array.BYTES_PER_ELEMENT);
+
+  /** Adopt the rows a fresh recording uploaded, as the mirror later patches write into. */
+  public adoptNodeData(device: GPUDevice, nodeData: Float32Array, nodeCount: number): void {
+    this._device = device;
+    this._nodeData = nodeData;
+    this._dirtyRows.reset(nodeCount);
+  }
+
+  /**
+   * Overwrite one node's transform texels in the mirror and mark its block.
+   * `false` when no recording's rows are held, which leaves the caller on the
+   * re-record path.
+   */
+  public patchNodeTransform(localIndex: number, row: Float32Array): boolean {
+    if (this._nodeData === null) {
+      return false;
+    }
+
+    this._nodeData.set(row, localIndex * nodeFloats);
+    this._dirtyRows.mark(localIndex);
+
+    return true;
+  }
+
+  public flushRowPatches(): void {
+    if (this._device !== null && this.nodeDataBuffer !== null && this._nodeData !== null) {
+      this._dirtyRows.flush(this._device, this.nodeDataBuffer, this._nodeData);
+    }
+  }
+
   public destroy(): void {
     this.uniformBuffer?.destroy();
     this.nodeDataBuffer?.destroy();
@@ -177,6 +228,9 @@ class TextRetainedReplayState implements WebGpuRetainedRendererReplayState {
     this.lastPayload = null;
     this.nodeIndexByDrawable.clear();
     this.drawsInPass = null;
+    this._nodeData = null;
+    this._device = null;
+    this._dirtyRows.reset(0);
   }
 }
 
@@ -185,7 +239,9 @@ class TextRetainedReplayState implements WebGpuRetainedRendererReplayState {
 export const textShaderSource = fillShaderSource(textShaderTemplate, {
   atlasTextureSlots: textAtlasTextureSlotWgsl,
   nodeIndexMask: textNodeIndexMask,
+  decorationFlagBit: textDecorationFlagBit,
   atlasSlotShift: textAtlasSlotShift,
+  nodeDataTexels: textNodeDataTexels,
 });
 
 /**
@@ -409,7 +465,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
         const { quads: batch, nodeIndex, atlasTexture } = quads[k]!;
         const atlasSlot = atlasSlots.get(atlasTexture)!;
         const qVerts = batch.quadCount * 4;
-        const { vertices, uvs, indices } = batch;
+        const { vertices, uvs, indices, decorations } = batch;
 
         // vertices/uvs hold quadCount*4 vec2 entries; indices is fully iterated.
         for (let v = 0; v < qVerts; v++) {
@@ -419,7 +475,8 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
           this._float32View[w + 1] = vertices[vp + 1]!;
           this._float32View[w + 2] = uvs[vp]!;
           this._float32View[w + 3] = uvs[vp + 1]!;
-          this._uint32View[w + 4] = packTextNodeAtlasSlot(nodeIndex, atlasSlot);
+          // Four vertices per quad, so the flag is read once per quad.
+          this._uint32View[w + 4] = packTextNodeAtlasSlot(nodeIndex, atlasSlot, decorations[v >> 2] === 1);
         }
 
         for (let x = 0; x < indices.length; x++) {
@@ -544,7 +601,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     if (coordinator.passHasDraws) {
       outer: for (const batch of batches) {
         for (const texture of batch.atlasTextures) {
-          if (backend._textureUploadWouldMutate(texture)) {
+          if (backend.textureUploadWouldMutate(texture)) {
             coordinator.endPass();
             break outer;
           }
@@ -767,12 +824,11 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     // which atlas the node rasterizes into.
     node._setSurfacePixelRatio(this.getBackend().surfacePixelRatio);
     node.syncDirty();
-    const { pageQuads, atlas } = node;
-    if (pageQuads.length === 0 || atlas === null) return;
+    const { pageQuads, textPages: pages } = node;
+    if (pageQuads.length === 0 || pages.length === 0) return;
 
     const nodeIndex = this._assignNodeIndex(node);
     const shaderType: ShaderType = node.colorGlyphs ? 'color' : 'sdf';
-    const pages = atlas.pages;
     const blendMode = node.blendMode;
 
     for (const batch of pageQuads) {
@@ -1084,16 +1140,16 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   // data end-to-end via `WebGpuRetainedBatchPayload.rendererData`, uploaded
   // into a group-owned buffer (`TextRetainedReplayState`) on first replay.
 
-  /** @internal See {@link WebGpuRetainedBatchReplayer._scanRetainedNodeIndexRange}. */
-  public _scanRetainedNodeIndexRange(_bytes: Uint8Array, _range: WebGpuRetainedNodeIndexRange): void {
+  /** @internal See {@link WebGpuRetainedBatchReplayer.scanRetainedNodeIndexRange}. */
+  public scanRetainedNodeIndexRange(_bytes: Uint8Array, _range: WebGpuRetainedNodeIndexRange): void {
     // Deliberately does not touch `_range`: widening it here would corrupt
     // the shared-transform-row span `WebGpuBackend._finalizeRetainedCapture`
     // computes across every OTHER (shared-transform-consuming) renderer's
     // batches recorded into the same bundle this capture.
   }
 
-  /** @internal See {@link WebGpuRetainedBatchReplayer._rebaseRetainedNodeIndices}. */
-  public _rebaseRetainedNodeIndices(_bytes: Uint8Array, _base: number): void {
+  /** @internal See {@link WebGpuRetainedBatchReplayer.rebaseRetainedNodeIndices}. */
+  public rebaseRetainedNodeIndices(_bytes: Uint8Array, _base: number): void {
     // Deliberately does not touch `_bytes`: Text's node indices are already
     // correct as packed (dense, 0-based, matching the parallel `rendererData`
     // uploaded alongside them) and have no relationship to the shared-buffer
@@ -1143,7 +1199,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     // The batch's instances are its glyph quads; its NODES are the text runs the
     // quads came from - a single run contributes one to `submittedNodes` however
     // many glyphs it draws, on this tier as on the live one.
-    backend._recordRetainedBatch(
+    backend.recordRetainedBatch(
       this,
       vertexBytes,
       vertexByteLength,
@@ -1169,7 +1225,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
    * recording, on first replay).
    * @internal
    */
-  public _replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void {
+  public replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void {
     const backend = this._backend;
     const device = this._device;
     const bundle = payload.bundle;
@@ -1248,7 +1304,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     // pass survives a renderer switch.
     if (coordinator.passHasDraws) {
       for (const texture of payload.textures) {
-        if (backend._textureUploadWouldMutate(texture)) {
+        if (backend.textureUploadWouldMutate(texture)) {
           coordinator.endPass();
           state.drawsInPass = null;
           break;
@@ -1312,11 +1368,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
     packTextNodeTransform(row, 0, drawable);
 
-    const byteOffset = localIndex * nodeFloats * 4;
-
-    device.queue.writeBuffer(state.nodeDataBuffer, byteOffset, row.buffer, row.byteOffset, row.byteLength);
-
-    return true;
+    return state.patchNodeTransform(localIndex, row);
   }
 
   private _getTextReplayState(bundle: WebGpuRetainedGroupBundle, device: GPUDevice): TextRetainedReplayState {
@@ -1361,6 +1413,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       device.queue.writeBuffer(state.nodeDataBuffer, 0, data.nodeData.buffer, data.nodeData.byteOffset, requiredBytes);
     }
 
+    state.adoptNodeData(device, data.nodeData, data.nodeCount);
     state.nodeIndexByDrawable.clear();
 
     for (let i = 0; i < data.drawables.length; i++) {

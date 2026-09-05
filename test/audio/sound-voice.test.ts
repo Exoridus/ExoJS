@@ -413,7 +413,7 @@ describe('SoundVoice — capabilities', () => {
     const factory = setupSourceSpy();
     const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(10));
-    sound.defineSprite('hit', { start: 2, end: 3 });
+    sound.addSprite('hit', { start: 2, end: 3 });
 
     system.play(sound.sprite('hit'));
 
@@ -428,7 +428,7 @@ describe('SoundVoice — capabilities', () => {
     const factory = setupSourceSpy();
     const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(10));
-    sound.defineSprite('hit', { start: 2, end: 3, loop: true });
+    sound.addSprite('hit', { start: 2, end: 3, loop: true });
 
     const voice = system.play(sound.sprite('hit')) as SoundVoice;
     const first = factory.sources[0];
@@ -461,7 +461,7 @@ describe('SoundVoice — capabilities', () => {
     const factory = setupSourceSpy();
     const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(10));
-    sound.defineSprite('hit', { start: 2, end: 3, loop: true });
+    sound.addSprite('hit', { start: 2, end: 3, loop: true });
 
     const voice = system.play(sound.sprite('hit')) as SoundVoice;
 
@@ -486,7 +486,7 @@ describe('SoundVoice — capabilities', () => {
     const factory = setupSourceSpy();
     const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(10));
-    sound.defineSprite('hit', { start: 2, end: 3, loop: true });
+    sound.addSprite('hit', { start: 2, end: 3, loop: true });
 
     const voice = system.play(sound.sprite('hit')) as SoundVoice;
 
@@ -512,7 +512,7 @@ describe('SoundVoice — capabilities', () => {
     const factory = setupSourceSpy();
     const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(10));
-    sound.defineSprite('hit', { start: 2, end: 3 });
+    sound.addSprite('hit', { start: 2, end: 3 });
 
     const voice = system.play(sound.sprite('hit')) as SoundVoice;
     voice.seek(voice.duration);

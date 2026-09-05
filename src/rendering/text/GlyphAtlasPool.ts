@@ -1,19 +1,24 @@
 import { type AtlasMode, GlyphAtlas, SDF_RADIUS } from './GlyphAtlas';
 import { GlyphMetrics } from './GlyphMetrics';
+import { ShapedTextMetrics } from './ShapedTextMetrics';
+import type { FontTypefaceKey, FontVariantKey } from './types';
 
 /**
  * Manages one {@link GlyphAtlas} per font variant + mode + SDF radius + pixel
  * ratio combination, and one {@link GlyphMetrics} per font variant.
  *
- * The pool key is `"${family}:${fontStyle}:${fontWeight}:${mode}:${sdfRadius}:${pixelRatio}"`.
- * All text nodes sharing that combination draw from the same atlas pages, so
- * identical glyphs are rasterized only once regardless of which node first
- * requests them.
+ * An atlas is keyed by its {@link FontVariantKey} plus mode, SDF radius and
+ * pixel ratio. All text nodes sharing that combination draw from the same atlas
+ * pages, so identical glyphs are rasterized only once regardless of which node
+ * first requests them.
  *
- * The metrics key is only `"${family}:${fontStyle}:${fontWeight}"`: an advance
- * is a property of the typeface, not of the raster grid it happens to be drawn
- * on, so every atlas of one variant shares a single measurement cache and no two
- * of them can disagree about where a line breaks.
+ * A {@link GlyphMetrics} is keyed by the {@link FontVariantKey} alone: an
+ * advance is a property of the typeface, not of the raster grid it happens to
+ * be drawn on, so every atlas of one variant shares a single measurement cache
+ * and no two of them can disagree about where a line breaks.
+ *
+ * Within every key the caps variant sits LAST, after the typeface half, so the
+ * prefix {@link clearVariant} matches reaches each of a typeface's variants.
  *
  * Use {@link getDefaultGlyphAtlasPool} to obtain the shared process-wide
  * instance; tests reset it via {@link resetDefaultGlyphAtlasPool} for isolation.
@@ -32,35 +37,35 @@ import { GlyphMetrics } from './GlyphMetrics';
 export class GlyphAtlasPool {
   private readonly _atlases = new Map<string, GlyphAtlas>();
   private readonly _metrics = new Map<string, GlyphMetrics>();
+  private readonly _shapedMetrics = new Map<string, ShapedTextMetrics>();
   private readonly _pageSize: number;
 
   public constructor(pageSize = 1024) {
     this._pageSize = pageSize;
   }
 
+  /** The typeface half of a key, which every cache key starts with. */
+  private static _typefacePrefix(font: FontTypefaceKey): string {
+    return `${font.family}:${font.fontStyle ?? 'normal'}:${font.fontWeight ?? 'normal'}:`;
+  }
+
   /**
    * Returns (or lazily creates) the atlas for the given font variant, mode, SDF
    * radius and raster pixel ratio. Defaults to `'sdf'` mode (R8 DataTexture,
-   * tiny-sdf rasterization) at ratio 1.
+   * Canvas 2D rasterization followed by a Euclidean distance transform) at
+   * ratio 1.
    *
    * Nodes with different `sdfRadius` values get separate atlas instances so
    * each can encode a different outline/shadow reach without conflict; nodes at
    * different `pixelRatio` values get separate instances because the pages hold
    * a different raster grid entirely.
    */
-  public getAtlas(
-    family: string,
-    fontStyle: 'normal' | 'italic',
-    fontWeight: string,
-    mode: AtlasMode = 'sdf',
-    sdfRadius = SDF_RADIUS,
-    pixelRatio = 1,
-  ): GlyphAtlas {
-    const key = `${family}:${fontStyle}:${fontWeight}:${mode}:${sdfRadius}:${pixelRatio}`;
+  public getAtlas(font: FontVariantKey, mode: AtlasMode = 'sdf', sdfRadius = SDF_RADIUS, pixelRatio = 1): GlyphAtlas {
+    const key = `${GlyphAtlasPool._typefacePrefix(font)}${mode}:${sdfRadius}:${pixelRatio}:${font.fontVariant ?? 'normal'}`;
     let atlas = this._atlases.get(key);
 
     if (atlas === undefined) {
-      atlas = new GlyphAtlas(family, fontStyle, fontWeight, this._pageSize, mode, sdfRadius, pixelRatio, this.getMetrics(family, fontStyle, fontWeight));
+      atlas = new GlyphAtlas(font, this._pageSize, mode, sdfRadius, pixelRatio, this.getMetrics(font));
       this._atlases.set(key, atlas);
     }
 
@@ -73,12 +78,12 @@ export class GlyphAtlasPool {
    * This is what a measurement wants: it answers advances and kerning without
    * rasterizing a glyph, allocating a page, or having to know a pixel ratio.
    */
-  public getMetrics(family: string, fontStyle: 'normal' | 'italic', fontWeight: string): GlyphMetrics {
-    const key = `${family}:${fontStyle}:${fontWeight}`;
+  public getMetrics(font: FontVariantKey): GlyphMetrics {
+    const key = `${GlyphAtlasPool._typefacePrefix(font)}${font.fontVariant ?? 'normal'}`;
     let metrics = this._metrics.get(key);
 
     if (metrics === undefined) {
-      metrics = new GlyphMetrics(family, fontStyle, fontWeight);
+      metrics = new GlyphMetrics(font);
       this._metrics.set(key, metrics);
     }
 
@@ -86,18 +91,48 @@ export class GlyphAtlasPool {
   }
 
   /**
-   * Clear every atlas held for one font variant, across every mode, SDF radius
-   * and pixel ratio. Used when the variant's underlying face changes (e.g. a
-   * previously-fallback `FontFace` finishes loading): a caller that resolved
-   * one specific atlas by mode/radius/ratio would clear only the atlas it
-   * currently expects to draw from, leaving every other combination of the
-   * same variant holding glyph tiles rasterized from the stale face.
+   * Returns (or lazily creates) the shared contextual line measurement for a
+   * font variant at one base direction and letter spacing.
+   *
+   * The counterpart of {@link getMetrics} for text the engine cannot measure
+   * one cluster at a time. Direction and letter spacing are part of the key
+   * because both change what the browser's text engine shapes, and therefore
+   * the width it reports.
    */
-  public clearVariant(family: string, fontStyle: 'normal' | 'italic', fontWeight: string): void {
-    const prefix = `${family}:${fontStyle}:${fontWeight}:`;
+  public getShapedMetrics(font: FontVariantKey, direction: 'ltr' | 'rtl' = 'ltr', letterSpacing = 0): ShapedTextMetrics {
+    const key = `${GlyphAtlasPool._typefacePrefix(font)}${direction}:${letterSpacing}:${font.fontVariant ?? 'normal'}`;
+    let metrics = this._shapedMetrics.get(key);
+
+    if (metrics === undefined) {
+      metrics = new ShapedTextMetrics(font, direction, letterSpacing);
+      this._shapedMetrics.set(key, metrics);
+    }
+
+    return metrics;
+  }
+
+  /**
+   * Clear every atlas and measurement held for one typeface, across every caps
+   * variant, mode, SDF radius, pixel ratio, direction and letter spacing. Used
+   * when the typeface's underlying face changes (e.g. a previously-fallback
+   * `FontFace` finishes loading): a caller that resolved one specific atlas by
+   * mode/radius/ratio would clear only the atlas it currently expects to draw
+   * from, leaving every other combination of the same typeface holding glyph
+   * tiles rasterized from the stale face.
+   *
+   * Takes a {@link FontTypefaceKey} rather than a {@link FontVariantKey}
+   * because a loaded face replaces the small-cap rendering of a typeface as
+   * surely as its ordinary one - there is no caps variant to name here.
+   */
+  public clearVariant(font: FontTypefaceKey): void {
+    const prefix = GlyphAtlasPool._typefacePrefix(font);
 
     for (const [key, atlas] of this._atlases) {
       if (key.startsWith(prefix)) atlas.clear();
+    }
+
+    for (const [key, metrics] of this._shapedMetrics) {
+      if (key.startsWith(prefix)) metrics.clear();
     }
   }
 }

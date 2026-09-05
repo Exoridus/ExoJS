@@ -91,7 +91,7 @@ Keyboard.F1 .. Keyboard.F12
 Keyboard.NumPad0 .. Keyboard.NumPad9
 ```
 
-The full list includes punctuation, brackets, and navigation keys. Punctuation members carry the glyph a US-QWERTY keyboard prints on that key (`Keyboard.Colon`, `Keyboard.Tilde`, `Keyboard.OpenBracket`, …) — the name is the US legend, the binding is the position, so on a QWERTZ keyboard `Keyboard.Colon` is the key printed "ö". Keys ExoJS does not track (media keys, IME/language keys) drive no channel at all. To resolve a raw DOM event yourself — in a rebinding UI, say — use `keyboardChannelFromCode(event.code)`; for a modifier this returns the side-specific channel (see below), never the aggregate.
+The full list includes punctuation, brackets, and navigation keys. Punctuation members carry the `code` name of the key (`Keyboard.Semicolon`, `Keyboard.Backquote`, `Keyboard.BracketLeft`, …), the same vocabulary the pattern tokens use (`keyboard.semicolon`) — the name is the US legend, the binding is the position, so on a QWERTZ keyboard `Keyboard.Semicolon` is the key printed "ö". Keys ExoJS does not track (media keys, IME/language keys) drive no channel at all. To resolve a raw DOM event yourself — in a rebinding UI, say — use `keyboardChannelFromCode(event.code)`; for a modifier this returns the side-specific channel (see below), never the aggregate.
 
 ### Modifier sides
 

@@ -27,14 +27,14 @@ export const enum LiveEntryReason {
  * @internal
  *
  * A producer the source refuses to persist: re-dispatched through a normal
- * `_collect` at its recorded placement on every selection.
+ * `collect` at its recorded placement on every selection.
  *
  * Kept as local as the semantics allow, which is what contract 10 of the
  * architecture freeze asks for - the optimisation object is a segment, not the
  * whole renderer. One view-dependent parallax layer must therefore cost one
  * live entry, not the persistence of the other 999,999 sprites around it.
  *
- * No `zIndex`: the re-dispatch goes through `RenderNode._collect`, which reads
+ * No `zIndex`: the re-dispatch goes through `RenderNode.collect`, which reads
  * the node's live `zIndex` exactly as a full collect would. Only the placement
  * the source cannot re-derive - the child index the producer was collected at -
  * has to be stored.
@@ -43,7 +43,7 @@ export interface LiveEntry {
   /**
    * Reuses the barrier discriminant on purpose: in the retained fragment
    * `RetainedFragmentBarrier` already means "not captured, re-dispatched through
-   * a normal `_collect` on every replay", which is exactly this entry's
+   * a normal `collect` on every replay", which is exactly this entry's
    * playback. {@link LiveEntryReason} carries why, so the two are still
    * distinguishable where it matters.
    */
@@ -104,7 +104,7 @@ export interface SourceScope extends EntryPlacementState {
  * A nested scope inside the source, mirroring the collected group structure.
  *
  * Carries `node` because a selection has to apply the SAME subtree-level cull
- * `SceneNode._collect` applies: a container whose aggregate bounds miss the rect
+ * `SceneNode.collect` applies: a container whose aggregate bounds miss the rect
  * holds no child that meets it, so the whole group is skipped rather than
  * scanned item by item. Without it the selection would emit an empty group where
  * a full collect emits nothing.

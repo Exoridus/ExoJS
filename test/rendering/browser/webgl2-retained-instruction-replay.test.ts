@@ -2,7 +2,7 @@
  * WebGL2 renderer-matrix browser tests - retained instruction-set replay.
  *
  * Pixel cells for the flush-level batch cache: a retained group whose
- * playback was recorded replays through `_replayRetainedBatch` from
+ * playback was recorded replays through `replayRetainedBatch` from
  * group-owned resources (persistent instance buffer + group transform
  * texture) and must produce BYTE-IDENTICAL frames to the entry-replay slow
  * path - the recorded bytes ARE the slow path's bytes, the transform rows
@@ -156,7 +156,7 @@ describe('WebGL2 renderer matrix: retained instruction-set replay cells', () => 
     const backend = await createBackend();
     const scene = buildScene();
     const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
-    const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+    const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
     try {
       // F1 - full collect + fragment capture (slow tier).
@@ -208,7 +208,7 @@ describe('WebGL2 renderer matrix: retained instruction-set replay cells', () => 
       render(backend, scene.root); // F3 splice
 
       const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       // Pan the camera 16px right: everything must appear 16px further left.
       backend.view.setCenter(backend.view.center.x + 16, backend.view.center.y);
@@ -236,7 +236,7 @@ describe('WebGL2 renderer matrix: retained instruction-set replay cells', () => 
       render(backend, scene.root); // F3 splice
 
       const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       // Move the WHOLE group: content revisions untouched (a group move is
       // decoupled by design), so the set keeps replaying - via live u_group.
@@ -265,7 +265,7 @@ describe('WebGL2 renderer matrix: retained instruction-set replay cells', () => 
       render(backend, scene.root); // F3 splice
 
       const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       // A pure transform move on a direct child stays content-clean, so the
       // group keeps its recording and patches just this child's row in
@@ -321,7 +321,7 @@ describe('WebGL2 renderer matrix: retained instruction-set replay cells', () => 
       render(backend, root); // recapture
       render(backend, root); // splice of the fresh recording
 
-      const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       render(backend, root); // steady replay
 
@@ -352,7 +352,7 @@ describe('WebGL2 renderer matrix: retained instruction-set replay cells', () => 
       render(backend, scene.root); // recapture
       render(backend, scene.root); // splice of the fresh recording
 
-      const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       render(backend, scene.root); // steady replay
 
@@ -429,7 +429,7 @@ describe('WebGL2 renderer matrix: retained instruction-set replay cells', () => 
       expectPixelNear(readWebGl2Pixel(backend, 20, 36), [0, 255, 0, 255]); // stale UVs would show BLUE here
       expect(beginSpy).toHaveBeenCalledTimes(1); // re-recorded the same frame
 
-      const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       render(backend, root); // the fresh recording replays
 

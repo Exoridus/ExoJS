@@ -165,7 +165,7 @@ describe('Sound', () => {
     const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub());
 
-    sound.defineSprite('hum', { start: 0.1, end: 0.6, loop: true });
+    sound.addSprite('hum', { start: 0.1, end: 0.6, loop: true });
     system.play(sound.sprite('hum'));
 
     expect(factory.sources.length).toBe(1);
@@ -212,7 +212,7 @@ describe('Sound', () => {
     const sound = new Sound(createAudioBufferStub(2), { sprites: { click: { start: 0, end: 0.5 } } });
     const first = sound.sprite('click');
 
-    sound.defineSprite('click', { start: 1, end: 1.5 });
+    sound.addSprite('click', { start: 1, end: 1.5 });
     const redefined = sound.sprite('click');
     expect(redefined).not.toBe(first);
 
@@ -234,7 +234,7 @@ describe('Sound', () => {
 
   test('hasSprite() / removeSprite() manage the sprite table', () => {
     const sound = new Sound(createAudioBufferStub());
-    sound.defineSprite('click', { start: 0, end: 0.5 });
+    sound.addSprite('click', { start: 0, end: 0.5 });
 
     expect(sound.hasSprite('click')).toBe(true);
     expect(sound.hasSprite('missing')).toBe(false);
@@ -245,29 +245,29 @@ describe('Sound', () => {
     sound.destroy();
   });
 
-  test('defineSprite() rejects an empty/whitespace name', () => {
+  test('addSprite() rejects an empty/whitespace name', () => {
     const sound = new Sound(createAudioBufferStub());
-    expect(() => sound.defineSprite('  ', { start: 0, end: 1 })).toThrow('Sound sprite names must be non-empty strings.');
+    expect(() => sound.addSprite('  ', { start: 0, end: 1 })).toThrow('Sound sprite names must be non-empty strings.');
     sound.destroy();
   });
 
-  test('defineSprite() rejects an invalid start time', () => {
+  test('addSprite() rejects an invalid start time', () => {
     const sound = new Sound(createAudioBufferStub());
-    expect(() => sound.defineSprite('bad', { start: -1, end: 1 })).toThrow(/invalid start time/);
-    expect(() => sound.defineSprite('bad', { start: Number.NaN, end: 1 })).toThrow(/invalid start time/);
+    expect(() => sound.addSprite('bad', { start: -1, end: 1 })).toThrow(/invalid start time/);
+    expect(() => sound.addSprite('bad', { start: Number.NaN, end: 1 })).toThrow(/invalid start time/);
     sound.destroy();
   });
 
-  test('defineSprite() rejects an invalid end time', () => {
+  test('addSprite() rejects an invalid end time', () => {
     const sound = new Sound(createAudioBufferStub());
-    expect(() => sound.defineSprite('bad', { start: 0.5, end: 0.5 })).toThrow(/invalid end time/);
-    expect(() => sound.defineSprite('bad', { start: 0, end: Number.NaN })).toThrow(/invalid end time/);
+    expect(() => sound.addSprite('bad', { start: 0.5, end: 0.5 })).toThrow(/invalid end time/);
+    expect(() => sound.addSprite('bad', { start: 0, end: Number.NaN })).toThrow(/invalid end time/);
     sound.destroy();
   });
 
-  test('defineSprite() rejects an end time beyond the sound duration', () => {
+  test('addSprite() rejects an end time beyond the sound duration', () => {
     const sound = new Sound(createAudioBufferStub(2));
-    expect(() => sound.defineSprite('bad', { start: 0, end: 3 })).toThrow(/exceeds sound duration/);
+    expect(() => sound.addSprite('bad', { start: 0, end: 3 })).toThrow(/exceeds sound duration/);
     sound.destroy();
   });
 
@@ -281,15 +281,15 @@ describe('Sound', () => {
     sound.destroy();
   });
 
-  test('_createVoice() past the clip end returns a NoopVoice on the requested bus', () => {
+  test('createVoice() past the clip end returns a NoopVoice on the requested bus', () => {
     const system = new AudioSystem();
     const sound = new Sound(createAudioBufferStub(2));
 
-    const voice = sound._createVoice(system, { time: 10 });
+    const voice = sound.createVoice(system, { time: 10 });
     expect(voice).toBeInstanceOf(NoopVoice);
 
     // With no explicit bus, falls back to system.sound.
-    const withBus = sound._createVoice(system, { time: 10, bus: system.music });
+    const withBus = sound.createVoice(system, { time: 10, bus: system.music });
     expect(withBus).toBeInstanceOf(NoopVoice);
 
     sound.destroy();

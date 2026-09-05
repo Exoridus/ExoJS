@@ -66,7 +66,7 @@ const makeTileset = (collisionByTile: Record<number, readonly TileMapObject[]>, 
     localTileId: Number(id),
     collision,
   }));
-  tileset._setDefinitions(definitions);
+  tileset.setDefinitions(definitions);
 
   return tileset;
 };

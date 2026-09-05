@@ -138,7 +138,7 @@ describe('DuckingEffect', () => {
 
     it('sidechain bus output is connected to worklet input 1 after ready', async () => {
       // Ensure sidechain output node exists
-      const sidechainOutputNode = sidechain._getOutputNode();
+      const sidechainOutputNode = sidechain.getOutputNode();
       if (sidechainOutputNode) {
         const connectSpy = vi.spyOn(sidechainOutputNode, 'connect');
         const filter = new DuckingEffect({ sidechain });
@@ -157,7 +157,7 @@ describe('DuckingEffect', () => {
       // First call (inside _onWorkletReady) returns null so the else/onceSetup branch is
       // taken; subsequent calls (inside the deferred callback) return a real node.
       let callCount = 0;
-      const getOutputNodeSpy = vi.spyOn(sidechain, '_getOutputNode').mockImplementation(() => {
+      const getOutputNodeSpy = vi.spyOn(sidechain, 'getOutputNode').mockImplementation(() => {
         callCount++;
         return callCount === 1 ? null : fakeOutputNode;
       });
@@ -177,7 +177,7 @@ describe('DuckingEffect', () => {
     it('deferred onceSetup callback is a no-op if the sidechain output is still unavailable', async () => {
       // Always returns null: neither the immediate check nor the deferred callback
       // ever obtains a real output node, so `.connect` must never be called.
-      vi.spyOn(sidechain, '_getOutputNode').mockReturnValue(null);
+      vi.spyOn(sidechain, 'getOutputNode').mockReturnValue(null);
       const onceSetupSpy = vi.spyOn(sidechain, 'onceSetup');
 
       const filter = new DuckingEffect({ sidechain });

@@ -167,7 +167,7 @@ describe('BeatDetector', () => {
       const bus = new AudioBus('bd-bus2');
       const d = new BeatDetector();
       await d.ready;
-      const outputNode = bus._getOutputNode();
+      const outputNode = bus.getOutputNode();
       if (outputNode) {
         const connectSpy = vi.spyOn(outputNode, 'connect');
         d.source = bus;
@@ -1019,10 +1019,10 @@ describe('BeatDetector', () => {
   describe('source setter — AudioBus not yet internally set up', () => {
     it('defers via the bus onceSetup hook and connects once the bus becomes available', async () => {
       const bus = new AudioBus('bd-deferred-bus');
-      const outputNode = bus._getOutputNode();
+      const outputNode = bus.getOutputNode();
       expect(outputNode).not.toBeNull();
       const onceSetupSpy = vi.spyOn(bus, 'onceSetup');
-      vi.spyOn(bus, '_getOutputNode').mockReturnValueOnce(null);
+      vi.spyOn(bus, 'getOutputNode').mockReturnValueOnce(null);
       const connectSpy = vi.spyOn(outputNode!, 'connect');
 
       const d = new BeatDetector();
@@ -1037,7 +1037,7 @@ describe('BeatDetector', () => {
 
     it('the bus onceSetup callback is a no-op if the source changed before it fired', async () => {
       const bus = new AudioBus('bd-deferred-bus-2');
-      vi.spyOn(bus, '_getOutputNode').mockReturnValue(null);
+      vi.spyOn(bus, 'getOutputNode').mockReturnValue(null);
       let capturedCallback: (() => void) | undefined;
       vi.spyOn(bus, 'onceSetup').mockImplementation(cb => {
         capturedCallback = cb;

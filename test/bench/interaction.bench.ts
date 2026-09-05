@@ -9,7 +9,7 @@ import type { RenderNode } from '../../src/rendering/RenderNode';
 
 const makeInteractiveDrawable = (x: number, y: number, size = 32): Drawable => {
   const d = new Drawable();
-  d._setLocalBounds(0, 0, size, size);
+  d.setLocalBounds(0, 0, size, size);
   d.setPosition(x, y);
   d.interactive = true;
   return d;

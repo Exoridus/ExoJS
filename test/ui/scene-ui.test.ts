@@ -418,7 +418,7 @@ describe('UI directional navigation', () => {
     const node = new Container();
 
     node.focusable = true;
-    node._setLocalBounds(0, 0, 10, 10);
+    node.setLocalBounds(0, 0, 10, 10);
     node.setPosition(x, y);
 
     return node;

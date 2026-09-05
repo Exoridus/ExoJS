@@ -8,7 +8,7 @@ declare const matrix: Matrix;
 // `SceneNode.getLocalBounds()` hands out the LIVE internal rectangle for zero
 // allocation cost, so its return type is a read-only view: writing through it
 // would silently skip the bounds/content invalidation the engine needs.
-// Engine-internal writers go through `_setLocalBounds` instead.
+// Engine-internal writers go through `setLocalBounds` instead.
 
 // @ts-expect-error - the read-only bounds view has no set()
 node.getLocalBounds().set(0, 0, 16, 16);
@@ -44,6 +44,6 @@ const boxed: Rectangle = node.getLocalBounds().getBounds();
 const mapped: Rectangle = node.getLocalBounds().transform(matrix, Rectangle.temp);
 
 // The engine-internal writer takes flat coordinates and owns the invalidation.
-node._setLocalBounds(0, 0, 16, 16);
+node.setLocalBounds(0, 0, 16, 16);
 
 export { bottom, boxed, copied, height, hit, left, mapped, right, same, top, width, x, y };

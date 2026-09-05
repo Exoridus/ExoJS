@@ -1,3 +1,5 @@
+import { type Seconds, seconds } from '#core/units';
+
 import type { OscillatorType } from './AudioGenerator';
 import { BaseVoice, type BaseVoiceInit } from './BaseVoice';
 import type { Envelope } from './Envelope';
@@ -59,8 +61,8 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
   private _stopping = false;
   /** Context time the currently-scheduled envelope counts its stages from. */
   private _envelopeStartedAt: number;
-  /** Envelope progress (ms) frozen at the last {@link AudioGeneratorVoice.pause}. */
-  private _envelopeElapsedMs = 0;
+  /** Envelope progress frozen at the last {@link AudioGeneratorVoice.pause}. */
+  private _envelopeElapsed: Seconds = seconds(0);
 
   public constructor(init: AudioGeneratorVoiceInit) {
     super(init);
@@ -178,7 +180,7 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
       // level, so a longer elapsed time carries no extra information and would
       // only push the virtual trigger point further into the past on every
       // pause of a long-held note.
-      this._envelopeElapsedMs = Math.min((now - this._envelopeStartedAt) * 1000, this._envelope.attackMs + this._envelope.decayMs);
+      this._envelopeElapsed = seconds(Math.min(now - this._envelopeStartedAt, this._envelope.attack + this._envelope.decay));
       this._envelope.hold(this._envelopeGain.gain, now);
     }
 
@@ -201,8 +203,8 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
     this._paused = false;
 
     if (this._envelope) {
-      this._envelope.trigger(this._envelopeGain.gain, now, this._envelopeElapsedMs);
-      this._envelopeStartedAt = now - this._envelopeElapsedMs / 1000;
+      this._envelope.trigger(this._envelopeGain.gain, now, this._envelopeElapsed);
+      this._envelopeStartedAt = now - this._envelopeElapsed;
     }
 
     this._oscillator = this._startOscillator();
@@ -216,7 +218,7 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
   // Stop (envelope-aware)
   // -------------------------------------------------------------------------
 
-  public override stop(fadeMs?: number): void {
+  public override stop(fade?: Seconds): void {
     if (this._ended) return;
 
     // Paused: there is no live oscillator to release or fade out, so both timed
@@ -226,17 +228,17 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
       return;
     }
 
-    if (fadeMs !== undefined && fadeMs > 0) {
+    if (fade !== undefined && fade > 0) {
       this._stopping = true;
-      super.stop(fadeMs);
+      super.stop(fade);
       return;
     }
 
     if (this._envelope) {
       const now = this._audioContext.currentTime;
       this._stopping = true;
-      this._envelope.release(this._envelopeGain.gain, now);
-      const stopAt = now + this._envelope.releaseMs / 1000;
+      this._envelope.releaseAt(this._envelopeGain.gain, now);
+      const stopAt = now + this._envelope.release;
       try {
         this._oscillator.stop(stopAt);
       } catch {

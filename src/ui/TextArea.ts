@@ -1,3 +1,4 @@
+import { Scrollbar } from './Scrollbar';
 import type { TextEditWidgetOptions } from './TextEditWidget';
 import { TextEditWidget } from './TextEditWidget';
 
@@ -12,6 +13,18 @@ export interface TextAreaOptions extends Omit<TextEditWidgetOptions, 'multiline'
    * is rejected does not happen at all - a refused paste is dropped whole.
    */
   filter?: (candidate: string) => boolean;
+  /**
+   * Whether a line too long for the field breaks at a word boundary instead of
+   * scrolling horizontally. Default `true`.
+   */
+  wrap?: boolean;
+  /**
+   * Whether a scrollbar appears along the right edge once the value is taller
+   * than the field. Default `true`.
+   */
+  scrollbar?: boolean;
+  /** Scrollbar width in pixels. Default `10`. */
+  scrollbarThickness?: number;
 }
 
 /**
@@ -23,11 +36,15 @@ export interface TextAreaOptions extends Omit<TextEditWidgetOptions, 'multiline'
  * - `Up` / `Down` move by line, keeping the column the caret last chose, and
  *   `PageUp` / `PageDown` move by as many lines as the field shows.
  * - `Home` / `End` go to the ends of the current line, not of the value.
- * - The content scrolls in both axes to keep the caret visible, and is
- *   clipped to the field.
+ * - The content scrolls to keep the caret visible, and is clipped to the
+ *   field. A scrollbar along the right edge shows and drives the vertical
+ *   position once the value outgrows the field.
  *
- * Lines are the ones the value states: a long line scrolls horizontally
- * rather than wrapping.
+ * A line too long for the field wraps at a word boundary. The lines the caret
+ * and `Up` / `Down` move through are the LAID-OUT lines, so a wrapped line
+ * behaves like the two lines it looks like. Turn `wrap` off for content whose
+ * own line breaks are what matters - log output, code - and the field scrolls
+ * horizontally instead.
  *
  * @example
  * ```ts
@@ -37,8 +54,33 @@ export interface TextAreaOptions extends Omit<TextEditWidgetOptions, 'multiline'
  * ```
  */
 export class TextArea extends TextEditWidget {
+  /**
+   * Left undefined rather than null on purpose: the base constructor sizes the
+   * field, and that reaches {@link TextArea._onScrollUpdated} before this
+   * class's own fields have been initialised at all.
+   */
+  private readonly _verticalBar: Scrollbar | undefined;
+  private readonly _scrollbarThickness: number;
+  /** Guards the bar sync against the relayout its own sizing triggers. */
+  private _syncingScrollbar = false;
+
   public constructor(options: TextAreaOptions = {}) {
     super({ ...options, multiline: true, height: options.height ?? 120 });
+
+    this._scrollbarThickness = options.scrollbarThickness ?? 10;
+
+    if (options.scrollbar ?? true) {
+      const bar = new Scrollbar({ orientation: 'vertical', thickness: this._scrollbarThickness });
+
+      bar.visible = false;
+      bar.onScroll.add(offset => {
+        this.scrollOffsetY = offset;
+      });
+      this.addChild(bar);
+      this._verticalBar = bar;
+    }
+
+    this._softWrap = options.wrap ?? true;
 
     if (options.placeholder !== undefined) {
       this.placeholder = options.placeholder;
@@ -51,6 +93,8 @@ export class TextArea extends TextEditWidget {
     if (options.filter !== undefined) {
       this.model.filter = options.filter;
     }
+
+    this._onScrollUpdated();
   }
 
   /** Maximum value length in UTF-16 code units, or `null` for unlimited. */
@@ -71,8 +115,53 @@ export class TextArea extends TextEditWidget {
     this.model.filter = value;
   }
 
-  /** How many lines the value holds. */
+  /**
+   * Whether a line too long for the field wraps at a word boundary. Turning it
+   * off makes long lines scroll horizontally instead.
+   */
+  public get wrap(): boolean {
+    return this._softWrap;
+  }
+
+  public set wrap(value: boolean) {
+    this._softWrap = value;
+  }
+
+  /** The vertical scrollbar, or `null` when the field was built without one. */
+  public get verticalScrollbar(): Scrollbar | null {
+    return this._verticalBar ?? null;
+  }
+
+  /**
+   * How many lines the value holds - the value's own lines, not the laid-out
+   * ones. Wrapping does not change the value, so it does not change this.
+   */
   public get lineCount(): number {
     return this.model.value.split('\n').length;
+  }
+
+  protected override _onScrollUpdated(): void {
+    const bar = this._verticalBar;
+
+    if (bar === undefined || this._syncingScrollbar) {
+      return;
+    }
+
+    this._syncingScrollbar = true;
+
+    try {
+      const insets = this.contentInsets;
+
+      bar.setRange(Math.max(0, this._uiHeight - insets.top - insets.bottom), this.textNode.textBounds.height);
+      bar.offset = this.scrollOffsetY;
+      bar.setLength(this._uiHeight);
+      bar.setPosition(this._uiWidth - this._scrollbarThickness, 0);
+      // Overlaid rather than inset, like every other scroll surface in the
+      // suite: reserving room for the bar would change the wrap width, which
+      // would change the content height, which decides whether the bar shows.
+      bar.visible = bar.overflowing;
+    } finally {
+      this._syncingScrollbar = false;
+    }
   }
 }

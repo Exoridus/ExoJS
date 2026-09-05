@@ -105,7 +105,7 @@ export class AudioSend {
   }
 
   private _connect(): void {
-    const input = this.bus._getInputNode();
+    const input = this.bus.getInputNode();
 
     if (input !== null) {
       this._gain.connect(input);
@@ -124,7 +124,7 @@ export class AudioSend {
         return;
       }
 
-      const node = this.bus._getInputNode();
+      const node = this.bus.getInputNode();
 
       if (node !== null) {
         this._gain.connect(node);

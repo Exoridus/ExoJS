@@ -327,7 +327,7 @@ describe('WebGPU renderer matrix: TileChunkNode retained instruction replay cell
       // Record-on-first-CLEAN-frame policy: the dirty frame above dropped the
       // stale recording but did not re-arm it; the re-record proof lands here.
       const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
-      const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+      const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
       if (!(await renderScene(ctx, backend, scene.root))) {
         return; // clean entry-replay + re-arm record

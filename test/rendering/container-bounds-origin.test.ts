@@ -6,7 +6,7 @@ import { RetainedContainer } from '#rendering/RetainedContainer';
 /** A 100x100 local-space box, so a container has a nontrivial extent to aggregate. */
 class SizedDrawable extends Drawable {
   public override updateBounds(): this {
-    this._setLocalBounds(0, 0, 100, 100);
+    this.setLocalBounds(0, 0, 100, 100);
 
     return super.updateBounds();
   }

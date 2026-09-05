@@ -39,6 +39,7 @@ export class ObservableVector extends AbstractVector {
   private _owner: ObservableVectorOwner | null;
   private readonly _channel: number;
 
+  /** @internal */
   public constructor(owner: ObservableVectorOwner | null, channel = 0, x = 0, y = 0) {
     super();
 

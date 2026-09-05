@@ -1,8 +1,17 @@
 import type { TileCellSource, TileMapObject, TileProperties, TilePropertyValue, TileSet } from '@codexo/exojs-tilemap';
 import { ObjectLayer, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TilePropertyKind } from '@codexo/exojs-tilemap';
 
-import type { LdtkData, LdtkEntityInstance, LdtkFieldInstance, LdtkIntGridValueDef, LdtkLayerInstance, LdtkLevel, LdtkTileData } from './LdtkData';
-import { LDTK_FLIP_X, LDTK_FLIP_Y } from './LdtkData';
+import type {
+  LdtkData,
+  LdtkEntityInstance,
+  LdtkFieldEnumType,
+  LdtkFieldInstance,
+  LdtkIntGridValueDef,
+  LdtkLayerInstance,
+  LdtkLevel,
+  LdtkTileData,
+} from './LdtkData';
+import { isLdtkFieldEnumType, LDTK_FLIP_X, LDTK_FLIP_Y } from './LdtkData';
 import { getLdtkLevelEntries } from './ldtkLevelEntries';
 import { LdtkMap } from './LdtkMap';
 import type { LdtkLayerParallax } from './ldtkParallax';
@@ -459,8 +468,9 @@ const convertEntity = (entity: LdtkEntityInstance, id: number): TileMapObject =>
 /**
  * Project LDtk field instances to a flat {@link TileProperties} bag.
  * Every LDtk field type maps to a canonical {@link TilePropertyValue}
- * (scalars pass through; `Point`/`EntityRef`/`Tile` become their tagged
- * structured variants; `Array<T>` fields recursively convert each element).
+ * (scalars and enum entries pass through as their raw value;
+ * `Point`/`EntityRef`/`Tile` become their tagged structured variants;
+ * `Array<T>` fields recursively convert each element).
  * A field whose raw `__value` is `null` (LDtk's "not set" convention) is
  * omitted from the bag entirely, matching the property-absent case rather
  * than a present-but-null value.
@@ -485,6 +495,10 @@ const convertFieldInstances = (fields: readonly LdtkFieldInstance[]): TileProper
 const isLdtkArrayField = (field: LdtkFieldInstance): field is Extract<LdtkFieldInstance, { readonly __type: `Array<${string}>` }> =>
   field.__type.startsWith('Array<');
 
+/** See {@link isLdtkArrayField} for why the narrowing needs a predicate on `field`. */
+const isLdtkEnumField = (field: LdtkFieldInstance): field is Extract<LdtkFieldInstance, { readonly __type: LdtkFieldEnumType }> =>
+  isLdtkFieldEnumType(field.__type);
+
 /** Convert one {@link LdtkFieldInstance} to its canonical {@link TilePropertyValue}, or `undefined` for a `null` (unset) field. */
 const convertField = (field: LdtkFieldInstance): TilePropertyValue | undefined => {
   switch (field.__type) {
@@ -503,6 +517,10 @@ const convertField = (field: LdtkFieldInstance): TilePropertyValue | undefined =
 
     default:
       break;
+  }
+
+  if (isLdtkEnumField(field)) {
+    return mapLdtkFieldValue(field.__type, field.__value);
   }
 
   if (isLdtkArrayField(field)) {
@@ -528,10 +546,17 @@ const convertField = (field: LdtkFieldInstance): TilePropertyValue | undefined =
  * {@link TilePropertyValue}, given the LDtk type name it was declared with.
  * Shared by {@link convertField} (top-level fields) and array-element
  * conversion (`typeName` is the `T` extracted from an `Array<T>` field).
- * Returns `undefined` for a `null` value or an unrecognised `typeName`.
+ * Returns `undefined` for a `null` value; throws on a type name this package
+ * does not model, at the top level and inside an array alike, so an
+ * unsupported field type is never mistaken for an absent or empty one.
  */
 const mapLdtkFieldValue = (typeName: string, value: unknown): TilePropertyValue | undefined => {
   if (value === null || value === undefined) return undefined;
+
+  // An enum entry is its identifier; the enum's own name is only in the type.
+  if (isLdtkFieldEnumType(typeName)) {
+    return value as string;
+  }
 
   switch (typeName) {
     case 'Int':
@@ -566,10 +591,7 @@ const mapLdtkFieldValue = (typeName: string, value: unknown): TilePropertyValue 
     }
 
     default:
-      // Unknown/unsupported array element type (e.g. a future LDtk type
-      // inside Array<T>) - skip rather than throw, since this path is not
-      // compiler-exhaustive (element types are plain runtime strings).
-      return undefined;
+      throw new Error(`convertFieldInstances: unrecognised LDtk field type "${typeName}".`);
   }
 };
 

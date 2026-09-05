@@ -300,7 +300,7 @@ describe('Real de-spatialization — each concrete voice reconnects directly exa
     const generator = new AudioGenerator();
 
     const voice = system.play(generator, { position: { x: 1, y: 1 } }) as AudioGeneratorVoice;
-    // gains[0] is the voice's `output` (created by AudioGenerator._createVoice);
+    // gains[0] is the voice's `output` (created by AudioGenerator.createVoice);
     // gains[1] is `_envelopeGain` (created inside the AudioGeneratorVoice constructor).
     const output = gainSpy.gains[0];
     const envelopeGain = gainSpy.gains[1];

@@ -1,0 +1,75 @@
+{
+  "title": "SceneInteractionOptions",
+  "description": "Options for SceneInteraction.observe and SceneInteraction.scope.",
+  "symbol": "SceneInteractionOptions",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for SceneInteraction.observe and SceneInteraction.scope."
+      ],
+      "importLine": "import { SceneInteractionOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "when",
+          "signature": "when?: SceneAvailability",
+          "signatureTokens": [
+            {
+              "text": "when",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneAvailability",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When the registration takes part in dispatch: 'always' (the default) keeps it live through SceneDirector.pause, so a pause menu drawn by the paused scene still receives pointer events; 'active' detaches it while the scene is paused; 'paused' attaches it only then."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/scene/SceneInteraction.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/SceneInteraction.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/scene/SceneInteraction.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/SceneInteraction.ts"
+}

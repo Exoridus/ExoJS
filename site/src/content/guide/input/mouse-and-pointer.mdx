@@ -147,6 +147,35 @@ A `Sprite` (or any `RenderNode`) can be made interactive and draggable directly:
 
 Setting `interactive = true` makes the sprite participate in hit testing. Setting `draggable = true` lets the user drag it with the pointer — the engine handles pointer tracking and position updates.
 
+## Custom hit areas
+
+By default a node is picked by its bounds — the axis-aligned box for an unrotated node, the true oriented box once it is rotated or skewed. That is right for a rectangular sprite and wrong for almost anything else: a circular button claims its corners, and an L-shaped panel claims the notch it does not cover. Set `hitArea` to a `Rectangle`, `Circle`, `Ellipse` or `Polygon` and that shape decides the pick instead:
+
+```ts
+import { Circle, Polygon, Sprite, Vector } from '@codexo/exojs';
+
+declare const knob: Sprite;
+declare const panel: Sprite;
+
+// A round knob: the bounds corners stop responding.
+knob.interactive = true;
+knob.hitArea = new Circle(32, 32, 32);
+
+// A concave L-shape - containment is an even-odd ray cast, so the notch
+// between the two arms is a miss, not a hit.
+panel.interactive = true;
+panel.hitArea = new Polygon([new Vector(0, 0), new Vector(60, 0), new Vector(60, 60), new Vector(120, 60), new Vector(120, 120), new Vector(0, 120)]);
+```
+
+The shape is in the node's **local** space, the same space its untransformed geometry lives in. The pointer position is mapped back through the inverse of the node's global transform before the test, so the region rotates, scales and moves with the node and never needs recomputing — the opposite of `cullArea`, which is world-space and does go stale when its node moves.
+
+Two things to keep in mind:
+
+- `hitArea` affects picking only. Bounds, culling and rendering ignore it, so shrinking the pick region does not shrink what is drawn or what the renderer considers on-screen.
+- Because bounds are what the interaction system uses to find candidates, a hit area is reliable where it overlaps the node's bounds. Use it to shrink or reshape a pick region rather than to grow one past the node's own extent.
+
+Setting `hitArea` back to `null` restores the bounds test.
+
 ## Pointer properties
 
 The `Pointer` instance passed to every signal callback carries the properties you typically need:

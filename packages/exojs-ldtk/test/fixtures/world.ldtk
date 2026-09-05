@@ -17,6 +17,28 @@
     "layers": [
       { "uid": 101, "identifier": "Tiles", "type": "Tiles", "gridSize": 16, "tilesetDefUid": 1 },
       { "uid": 102, "identifier": "Entities", "type": "Entities", "gridSize": 16 }
+    ],
+    "enums": [
+      {
+        "uid": 300,
+        "identifier": "HeroKind",
+        "externalRelPath": null,
+        "values": [{ "id": "Ranger" }, { "id": "Mage" }]
+      },
+      {
+        "uid": 301,
+        "identifier": "Element",
+        "externalRelPath": null,
+        "values": [{ "id": "Fire" }, { "id": "Ice" }]
+      }
+    ],
+    "externalEnums": [
+      {
+        "uid": 302,
+        "identifier": "Faction",
+        "externalRelPath": "factions.cs",
+        "values": [{ "id": "Rebels" }, { "id": "Empire" }]
+      }
     ]
   },
   "levels": [
@@ -64,7 +86,12 @@
               "width": 16,
               "height": 16,
               "__pivot": [0, 0],
-              "fieldInstances": [],
+              "fieldInstances": [
+                { "__identifier": "kind", "__type": "LocalEnum.HeroKind", "__value": "Ranger" },
+                { "__identifier": "faction", "__type": "ExternEnum.Faction", "__value": "Rebels" },
+                { "__identifier": "resistances", "__type": "Array<LocalEnum.Element>", "__value": ["Fire", "Ice"] },
+                { "__identifier": "curse", "__type": "LocalEnum.HeroKind", "__value": null }
+              ],
               "iid": "cccccccc-0000-0000-0000-000000000001",
               "defUid": 200
             }

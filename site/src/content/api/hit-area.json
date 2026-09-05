@@ -1,0 +1,96 @@
+{
+  "title": "HitArea",
+  "description": "Acceptable shapes for RenderNode.hitArea, expressed in the node's own local space: a Rectangle, Circle, Ellipse or Polygon, or `null` for no override. A `Polygon` may be concave - containment is an even-odd ray cast, not a convex test - so an L-shaped or ring-like pick region behaves as drawn.",
+  "symbol": "HitArea",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Acceptable shapes for RenderNode.hitArea, expressed in the node's own local space: a Rectangle, Circle, Ellipse or Polygon, or `null` for no override.",
+        "A `Polygon` may be concave - containment is an even-odd ray cast, not a convex test - so an L-shaped or ring-like pick region behaves as drawn."
+      ],
+      "importLine": "import { HitArea } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "HitArea",
+          "signature": "Circle | Ellipse | Polygon | Rectangle | null",
+          "signatureTokens": [
+            {
+              "text": "Circle",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Ellipse",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Polygon",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/RenderNode.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderNode.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/RenderNode.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderNode.ts"
+}

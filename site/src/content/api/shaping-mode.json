@@ -1,7 +1,7 @@
 {
-  "title": "GradientAxis",
-  "description": "",
-  "symbol": "GradientAxis",
+  "title": "ShapingMode",
+  "description": "The representation a text node uses for its glyph run.",
+  "symbol": "ShapingMode",
   "kind": "type",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
@@ -18,8 +18,10 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [],
-      "importLine": "import { GradientAxis } from '@codexo/exojs'",
+      "paragraphs": [
+        "The representation a text node uses for its glyph run."
+      ],
+      "importLine": "import { ShapingMode } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -27,11 +29,11 @@
       "title": "Definition",
       "members": [
         {
-          "name": "GradientAxis",
-          "signature": "\"horizontal\" | \"vertical\"",
+          "name": "ShapingMode",
+          "signature": "\"browser\" | \"simple\"",
           "signatureTokens": [
             {
-              "text": "\"horizontal\"",
+              "text": "\"browser\"",
               "kind": "keyword"
             },
             {
@@ -39,7 +41,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"vertical\"",
+              "text": "\"simple\"",
               "kind": "keyword"
             }
           ],
@@ -59,11 +61,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/rendering/text/TextStyle.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/TextStyle.ts"
+        "label": "src/rendering/text/shaping.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/shaping.ts"
       }
     }
   ],
-  "sourcePath": "src/rendering/text/TextStyle.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/TextStyle.ts"
+  "sourcePath": "src/rendering/text/shaping.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/shaping.ts"
 }

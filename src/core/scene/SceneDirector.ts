@@ -195,6 +195,16 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * the race-guard disposal that follows them.
    */
   private _pendingNavigation: Promise<void> | null = null;
+  /**
+   * The incoming scene of the navigation currently inside its asynchronous
+   * preparation window, or `null` outside it. Held so
+   * {@link SceneDirector._abortInFlightNavigation} can abort its
+   * {@link Scene.lifecycleSignal}: invalidating the generation only makes the
+   * navigation's RESULT unusable, while a cooperative `load()` needs the
+   * signal to stop awaiting at all - and until it settles,
+   * {@link SceneDirector._dispose} is still waiting for it.
+   */
+  private _preparingScene: Scene | null = null;
   private _navigationGeneration = 0;
   private _destroyed = false;
 
@@ -364,7 +374,23 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         const sessionAtStart = this._activeSession;
         const generationAtStart = this._navigationGeneration;
         const scene = claimedEntry !== null ? (claimedEntry.scope.scene as Scene) : new resolvedTarget();
-        const newScope = claimedEntry !== null ? await this._awaitClaimedPreload(claimedEntry) : await this._prepareScene(scene, data);
+
+        // Published only for the duration of the prepare `await`, and only
+        // from inside `commitSwitch`: from here on this scope is committed or
+        // discarded by the race guard below, never handed back to
+        // `_preloaded`, so aborting its lifecycle can never strand a scope
+        // that goes on to live.
+        this._preparingScene = scene;
+
+        let newScope: SceneScope;
+
+        try {
+          newScope = claimedEntry !== null ? await this._awaitClaimedPreload(claimedEntry) : await this._prepareScene(scene, data);
+        } finally {
+          if (this._preparingScene === scene) {
+            this._preparingScene = null;
+          }
+        }
 
         // Concurrency guard, combining TWO checks - neither subsumes the
         // other:
@@ -1144,14 +1170,15 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     // the session gone and bails instead of mutating `_activeScope` behind us.
     this._abortInFlightNavigation(new SceneTransitionLifecycleError('aborted'));
 
-    // Aborting a navigation only invalidates its generation. Its incoming
-    // scene may still be inside `load()`, and the race guard that catches the
-    // stale generation afterwards goes on to run that scope's `init()`,
-    // `unload()` and `destroy()`. Waiting for the whole run to settle is what
-    // keeps that teardown from executing against a Loader, rendering context,
-    // audio system and backend this disposal has already released. The
-    // rejection is not this disposal's to observe - it belongs to whoever
-    // started the navigation.
+    // Aborting a navigation invalidates its generation and aborts the
+    // incoming scene's `lifecycleSignal`; its `load()` may still be inside an
+    // await that ignores the signal, and the race guard that catches the stale
+    // generation afterwards goes on to run that scope's `init()`, `unload()`
+    // and `destroy()`. Waiting for the whole run to settle is what keeps that
+    // teardown from executing against a Loader, rendering context, audio
+    // system and backend this disposal has already released. The rejection is
+    // not this disposal's to observe - it belongs to whoever started the
+    // navigation.
     const navigation = this._pendingNavigation;
 
     this._pendingNavigation = null;
@@ -1269,9 +1296,14 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * and bails instead of mutating `_activeScope` for an already-rejected
    * navigation. That guard lives in {@link SceneDirector.change}'s commit
    * closure (the only navigation whose commit has an async prepare step).
+   * The incoming scene's {@link Scene.lifecycleSignal} is aborted here as
+   * well, so a cooperative `load()` stops at its own await points instead of
+   * running to completion against subsystems a concurrent
+   * `Application.destroy()` is releasing.
    */
   public _abortInFlightNavigation(reason: Error): boolean {
     this._navigationGeneration++;
+    this._preparingScene?._abortLifecycle();
 
     if (this._activeSession === null) {
       return false;

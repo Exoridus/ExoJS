@@ -16,8 +16,6 @@ declare const pointerChannelBrand: unique symbol;
  *
  * User code reads channel constants from the {@link Pointer} namespace
  * (`Pointer.X`, `Pointer.Active`, `Pointer.Slot1X`, ...).
- *
- * @internal
  */
 export type PointerChannel = number & { readonly [pointerChannelBrand]: void };
 
@@ -152,6 +150,21 @@ export class Pointer {
   /** Movement accumulated over the current frame - `position - previousPosition`. */
   public readonly delta: Vector = new Vector();
 
+  /**
+   * Relative motion the host reported for this frame, in design pixels.
+   *
+   * Normally the same journey as {@link delta}, summed over the individual
+   * platform events instead of measured between two frame boundaries. The two
+   * part company while the pointer is locked
+   * ({@link InputSystem.lockPointer}): a locked pointer has no position on
+   * screen, so {@link position} and {@link delta} stand still and this is the
+   * only thing that still moves. It is what a first-person camera or an
+   * infinite drag reads.
+   *
+   * Zero on a host that reports no relative motion.
+   */
+  public readonly movement: Vector = new Vector();
+
   /** Position of the most recent press. Retains its value after release so tap/drag logic can still read it. */
   public readonly pressPosition: Vector = new Vector(-1, -1);
 
@@ -199,6 +212,8 @@ export class Pointer {
    * side effect of computing the delta.
    */
   private readonly _frameBaseline = new Vector();
+  /** Relative motion seen since the last frame boundary, promoted to {@link movement} by {@link _beginFrame}. */
+  private readonly _pendingMovement = new Vector();
 
   public constructor(event: PlatformPointerEvent, app: Application, platform: PlatformAdapter, channels: Float32Array, slotIndex: number) {
     const { pointerId, pointerType, clientX, clientY, width, height, tiltX, tiltY, buttons, pressure, twist, isPrimary } = event;
@@ -411,6 +426,8 @@ export class Pointer {
     this.previousPosition.set(baseX, baseY);
     this.position.set(x, y);
     this.delta.set(x - baseX, y - baseY);
+    this.movement.copy(this._pendingMovement);
+    this._pendingMovement.set(0, 0);
     this._frameBaseline.set(x, y);
   }
 
@@ -458,6 +475,8 @@ export class Pointer {
     this.position.destroy();
     this.previousPosition.destroy();
     this.delta.destroy();
+    this.movement.destroy();
+    this._pendingMovement.destroy();
     this.pressPosition.destroy();
     this.movePosition.destroy();
     this.releasePosition.destroy();
@@ -477,6 +496,7 @@ export class Pointer {
 
     this.position.set(geometry.x, geometry.y);
     this._latestPosition.set(geometry.x, geometry.y);
+    this._accumulateMovement(clientX, clientY, geometry.x, geometry.y, event.movementX ?? 0, event.movementY ?? 0);
 
     // Track the press excursion as it happens: keeping only the release
     // position would read "out and back" as a tap.
@@ -496,6 +516,27 @@ export class Pointer {
     this._isPrimary = isPrimary;
 
     return this;
+  }
+
+  /**
+   * Add one event's host-pixel relative motion to this frame's total, mapped
+   * into design pixels through the same transform as the position.
+   *
+   * Measured against the event's own point rather than the surface origin,
+   * which keeps the mapping correct for a non-uniform transform and needs only
+   * one extra conversion - the event's design position is already known.
+   */
+  private _accumulateMovement(clientX: number, clientY: number, designX: number, designY: number, movementX: number, movementY: number): void {
+    const app = this._app;
+    const platform = this._platform;
+
+    if ((movementX === 0 && movementY === 0) || !app || !platform) {
+      return;
+    }
+
+    const moved = computeDesignPoint(app, platform, clientX + movementX, clientY + movementY);
+
+    this._pendingMovement.set(this._pendingMovement.x + moved.x - designX, this._pendingMovement.y + moved.y - designY);
   }
 
   /**

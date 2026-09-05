@@ -1,0 +1,192 @@
+{
+  "title": "UIAnimatedBackground",
+  "description": "Clip-driven background: an atlas, the clips cut from it, and the one that plays. Stretched over the widget box, so it suits a flat animated panel face or a progress bar's fill rather than a frame with corners to preserve - a nine-slice does not animate, and tiling would need a repeating sprite, which does not either. Playback runs through the application's animation system as soon as the widget is in a scene tree, and costs nothing while no clip is running. A ProgressBar on `fillMode: 'clip'` plays the frame at full size and cuts it to the value, which is what makes an animated bar read correctly.",
+  "symbol": "UIAnimatedBackground",
+  "kind": "interface",
+  "subsystem": "ui",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Clip-driven background: an atlas, the clips cut from it, and the one that plays. Stretched over the widget box, so it suits a flat animated panel face or a progress bar's fill rather than a frame with corners to preserve - a nine-slice does not animate, and tiling would need a repeating sprite, which does not either.",
+        "Playback runs through the application's animation system as soon as the widget is in a scene tree, and costs nothing while no clip is running. A ProgressBar on `fillMode: 'clip'` plays the frame at full size and cuts it to the value, which is what makes an animated bar read correctly."
+      ],
+      "importLine": "import { UIAnimatedBackground } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "clip",
+          "signature": "clip: string",
+          "signatureTokens": [
+            {
+              "text": "clip",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Name of the clip to play; must be one of UIAnimatedBackground.clips."
+        },
+        {
+          "name": "clips",
+          "signature": "clips: Readonly<Record<string, AnimatedSpriteClipDefinition>>",
+          "signatureTokens": [
+            {
+              "text": "clips",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AnimatedSpriteClipDefinition",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "fit",
+          "signature": "fit?: \"stretch\"",
+          "signatureTokens": [
+            {
+              "text": "fit",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"stretch\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Reserved for a second fill rule; 'stretch' is the only one an animated surface has."
+        },
+        {
+          "name": "kind",
+          "signature": "kind: \"animated\"",
+          "signatureTokens": [
+            {
+              "text": "kind",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"animated\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "texture",
+          "signature": "texture: Texture",
+          "signatureTokens": [
+            {
+              "text": "texture",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/ui/theme.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/theme.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/ui/theme.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/theme.ts"
+}

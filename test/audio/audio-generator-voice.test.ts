@@ -5,6 +5,7 @@ import { AudioGenerator } from '#audio/AudioGenerator';
 import type { AudioGeneratorVoice } from '#audio/AudioGeneratorVoice';
 import { AudioSystem } from '#audio/AudioSystem';
 import { Envelope } from '#audio/Envelope';
+import { Time } from '#core/units';
 
 // ---------------------------------------------------------------------------
 // Helpers - mirrors the oscillator/gain spies used in audio-generator.test.ts.
@@ -259,19 +260,19 @@ describe('AudioGeneratorVoice', () => {
     gen.destroy();
   });
 
-  // ---- stop(fadeMs): delegates to the base fade-out path, bypassing the envelope release ----
+  // ---- stop(fade): delegates to the base fade-out path, bypassing the envelope release ----
 
-  test('stop(fadeMs) with fadeMs > 0 fades out via BaseVoice instead of releasing the envelope', () => {
+  test('stop(fade) with fade > 0 fades out via BaseVoice instead of releasing the envelope', () => {
     const system = new AudioSystem();
     const spy = setupSpy();
-    const env = new Envelope({ releaseMs: 500 });
-    const releaseSpy = vi.spyOn(env, 'release');
+    const env = new Envelope({ release: Time.seconds(0.5) });
+    const releaseSpy = vi.spyOn(env, 'releaseAt');
     const gen = new AudioGenerator({ envelope: env });
 
     const voice = system.play(gen) as AudioGeneratorVoice;
-    voice.stop(200);
+    voice.stop(Time.seconds(0.2));
 
-    // The envelope's own release() is bypassed entirely for a faded stop.
+    // The envelope's own releaseAt() is bypassed entirely for a faded stop.
     expect(releaseSpy).not.toHaveBeenCalled();
     // The oscillator itself is not told to stop synchronously - BaseVoice
     // schedules a timed gain fade on the voice output instead.

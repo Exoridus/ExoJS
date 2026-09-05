@@ -6,6 +6,533 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING: Retain filtered and clipped scopes, coalesce WebGPU row patches, add hitArea and move culling to RenderNode.** ([#681](https://github.com/Exoridus/ExoJS/pull/681))
+  Two per-frame costs that scaled with the scene rather than with the
+  change.
+
+  **A filter or a clip was a retention floor.** A barrier-bearing node
+  collected through the effect path and never reached the plan builder's
+  group branch, so it never got the automatic persistent render
+  representation. Everything below a filter chain or a rect clip was
+  walked out of the scene graph, transform-derived and material-resolved
+  on every single frame, however static it was. The barrier's content now
+  climbs the same ladder a render root does, while the effect itself stays
+  live in the barrier entry and the effect executor: a changed filter
+  chain, clip rect or target size still takes effect on the frame it
+  changes.
+
+  A 5 000-sprite scene under a colour-matrix chain drops from 3.8 ms to
+  0.25 ms per frame on WebGL2 and from 2.7 ms to 0.35 ms on WebGPU, with
+  the per-frame instance re-upload gone (7 -> 1). Three nested rectangle
+  masks over the same scene drop from 3.9 ms to 2.2 ms (WebGL2) and 3.1 ms
+  to 1.9 ms (WebGPU). Draw calls are unchanged everywhere.
+
+  **A moving node cost a GPU upload of its own on WebGPU.** The retained
+  group bundle wrote each patched transform row with its own
+  `queue.writeBuffer`, so the per-frame upload count followed the number
+  of moving nodes: 375 moved sprites were 375 calls, against one on
+  WebGL2, whose row store is a texture whose dirty rect is unioned and
+  committed once. The bundle now mirrors its rows, marks the blocks a
+  patch touches and uploads them at the end of the patch pass: tight runs
+  while the moves cluster, one span once they scatter. Uploads per frame
+  on `dynamic-heavy` at 5 000 nodes: 369 -> 1.
+
+  Text nodes get the same treatment as sprites: a moved text node no
+  longer costs a `queue.writeBuffer` of its own, since the retained
+  node-data store is now block-mirrored and uploaded per dirty region
+  through the shared `DirtyRowTracker`. A WGSL filter pass writes its
+  resolution and user uniform blocks only when they actually change, which
+  makes the per-frame upload count on `filter-chain-1/2/4` flat in chain
+  depth (11 -> 3 at depth four) instead of growing by two per link.
+
+  The benchmark's structural baseline is re-recorded in the same change:
+  the immediate arm's filter-chain and mask-clip cells now submit what the
+  retained arm already did.
+
+  Measured but not changed here: `lifecycle-churn` is not object
+  construction cost (1.2 us per sprite create/add/destroy) but a full
+  immediate collect after every structural change, which needs an
+  incremental structural delta in the retained source; `mask-clip` keeps
+  ~1.9 ms of entry replay behind nested clips because a recorded fragment
+  cannot carry a barrier, which needs a splice-contract change;
+  `scrolling-world` already renders in one draw call (the earlier "120
+  draws" read raw totals over 120 frames).
+
+  **Also in this change: `hitArea`, and `cullable`/`cullArea` move to
+  `RenderNode`.** A bare `SceneNode` is structural and never rendered, and
+  the cull test is evaluated over render items, so the two culling
+  properties now live on `RenderNode`; semantics unchanged (read live,
+  caller-owned rectangle, default `cullable = true`). `RenderNode.hitArea`
+  accepts a `Rectangle`, `Circle`, `Ellipse` or `Polygon` in the node's
+  own space (default `null`): when set, `contains()` maps the world point
+  through the inverse world transform and tests the shape instead of the
+  bounds, so a round button, a hex cell or a province outline picks
+  exactly, rotated or not. Picking only; bounds, culling and rendering
+  ignore it. Widgets inherit it.
+
+  **Breaking changes**
+  - `cullable` / `cullArea` no longer exist on a bare `SceneNode`; every
+    renderable class keeps them through `RenderNode`.
+
+  ***
+
+- **BREAKING: Multi-stop gradients, caps and slant variants, decorations, line clamping, case mapping and tab stops.** ([#682](https://github.com/Exoridus/ExoJS/pull/682))
+  A sweep across `TextStyle` and `LayoutOptions` that closes the gap
+  between what the text stack can lay out and what display typography
+  actually needs, plus two DX fixes.
+
+  **Multi-stop gradients with an angle.** `gradient: { stops, angle }`
+  replaces `gradientColors` + `gradientAxis`. Up to eight stops, offsets
+  clamped and sorted on the way in, and an angle in degrees following the
+  CSS `linear-gradient` convention (0 = to top, 90 = to right, default
+  180). The ramp spans the ink box corner to corner, so the first and last
+  stops land on the box edges at every angle. Evaluated per fragment from
+  the node's own packed style row, still a `'tint'` change that never
+  touches the atlas. The stop type is reused from the existing
+  `GradientStop`.
+
+  **Caps and slant variants.** `fontStyle` gains `'oblique'`;
+  `fontVariant: 'small-caps'` is new. Both go into the CSS `font`
+  shorthand the rasterizer hands to Canvas 2D, and both are part of a
+  glyph atlas's identity, so a small-cap `a` never shares a cache entry
+  with an ordinary one.
+
+  **Underline and strikethrough.** `underline`, `strikethrough`,
+  `decorationColor`, `decorationThickness`, `decorationOffset`. Rules are
+  quads the layout emits per line, so they follow alignment, wrapping and
+  letter spacing. Their position comes from the font's own ascent, descent
+  and x-height rather than from a fraction of the font size. A rule takes
+  the fill, gradient included, unless `decorationColor` overrides it.
+  `BitmapText` renders no rules: an offline atlas has no opaque block to
+  sample.
+
+  **Line clamping.** `maxLines` caps the laid-out line count after
+  wrapping and clips on its own; pair it with `overflow: 'ellipsis'` for a
+  marker. `ellipsis` configures that marker (`'...'`, `''`, anything).
+  Under a cap the marker also reaches a line that no wrap could shorten,
+  such as `maxLines: 1` on a single unbreakable word.
+
+  **Case mapping.** `textTransform: 'none' | 'uppercase' | 'lowercase' |
+'capitalize'`, applied at layout time per grapheme cluster and under the
+  layout locale. The node's `text` is untouched, and a cluster that
+  changes length under the mapping still traces back to the character it
+  came from, so a caret lands where the reader clicked.
+
+  **Tab stops.** `tabSize` (default 8, the CSS `tab-size` initial value)
+  advances a preserved tab to the next stop from the line origin, so
+  tab-separated values line up as columns. Only reachable under
+  `whiteSpace: 'pre'`; the collapsing modes turn a tab into one space
+  before layout, as CSS does.
+
+  **DX.** `AbstractText.update()` is gone; `syncDirty()` is the name.
+  Stale references to a distance-field package the engine never depended
+  on are replaced with a description of the in-house rasterizer. Glyph
+  caches are keyed by one named `FontVariantKey` instead of four
+  positional strings.
+
+  New guide sections (case, variants, decorations, line clamping, tab
+  stops) and the example `text-fonts/typographic-styling`. Verified on
+  both backends in the browser, including new pixel-probing tests that
+  prove a rule reaches the frame and that `decorationColor` reaches only
+  the rule.
+
+  **Breaking changes**
+  - `TextStyleOptions.gradientColors` / `gradientAxis` -> `gradient`; the
+    `GradientAxis` type is gone. Serialized text styles carry `gradient`
+    instead of the two old keys.
+  - `AbstractText.update()` is removed. `syncDirty()` is the name; the
+    renderer and every extent read already resolve a pending pass on their
+    own, so most callers need nothing.
+  - `GlyphAtlasPool.getAtlas` / `getMetrics` / `getShapedMetrics` /
+    `clearVariant`, and the `GlyphAtlas` / `GlyphMetrics` /
+    `ShapedTextMetrics` constructors, take one named `FontVariantKey` (`{
+family, fontStyle?, fontWeight?, fontVariant? }`, each optional field
+    defaulting to `'normal'`) instead of positional strings. `clearVariant`
+    takes the narrower `FontTypefaceKey`. `ShapedTextSourceOptions` nests
+    its font fields under `font`.
+  - `TextPageQuads` gains `decorations`; the packed per-vertex node index
+    narrows from 24 to 23 bits to make room for the decoration flag.
+
+  ***
+
+- **`ShaderSource.glsl.vertex` is optional.** A sprite material and a shader
+  filter never compiled the author's vertex stage (the sprite vertex program is
+  engine-owned, the filter draws a fullscreen quad), yet the source required a
+  non-empty string, so callers passed a dummy. `glsl: { fragment }` is now
+  enough for both; `ShaderSource.glsl.vertex` reads `null` in that case, and a
+  mesh or particle material without a vertex stage fails with a named error.
+
+- **The extension seams that survived the `@internal` strip lost their
+  underscore prefix.** A member an official package (or any extension author)
+  has to call is API, and now reads like it: `SceneNode._setLocalBounds` is
+  `setLocalBounds`, `RenderNode._collect` is `collect`, `Material._onDispose` is
+  `onDispose`, `AudioBus._getInputNode`/`_getOutputNode` are
+  `getInputNode`/`getOutputNode`, and `Playable._createVoice` is `createVoice`
+  (with `Sound`, `AudioStream` and `AudioGenerator` following). On the renderer
+  SDK, `WebGl2Backend._stageViewportUniform` is `stageViewportUniform`,
+  `_pushTransform` and `_recordRetainedBatch` are `pushTransform` and
+  `recordRetainedBatch` on both backends, `WebGpuBackend._transformStorageWouldGrow`
+  and `_textureUploadWouldMutate` are `transformStorageWouldGrow` and
+  `textureUploadWouldMutate`, the retained replayer contracts
+  (`_scanRetainedNodeIndexRange`, `_rebaseRetainedNodeIndices`,
+  `_configureRetainedVao`, `_validateRetainedBatch`, `_replayRetainedBatch`) and
+  `RetainedGroupBundle`'s `_patchTransformRow`/`_patchTintRow` drop the prefix
+  the same way. Rename the call sites; there are no compatibility aliases. Every
+  remaining underscore member is engine-private and no longer reaches the
+  published `.d.ts` at all.
+
+- **Punctuation keys are named after their `code` on both input surfaces.**
+  `Keyboard.Colon`, `Equals`, `Dash`, `QuestionMark`, `Tilde`, `OpenBracket`,
+  `BackwardSlash`, `ClosedBracket` and `Quotes` are now `Semicolon`, `Equal`,
+  `Minus`, `Slash`, `Backquote`, `BracketLeft`, `Backslash`, `BracketRight` and
+  `Quote`, matching the pattern tokens (`keyboard.semicolon`, ...) and
+  `KeyboardEvent.code`. Channel values, bindings and actions are unchanged.
+
+- **`ShaderFilter` sources get a `uOrientation` auto-bind, so one shader offsets
+  along `v` the same way on both backends.** A WebGL2 render texture stores the
+  effect domain bottom-up and a WebGPU one top-down, which used to make a
+  directional `v` offset move the image up on one backend and down on the other.
+  `uOrientation` is `+1` where `v` grows along the domain's y axis and `-1`
+  where it grows against it (GLSL `uniform float uOrientation`, WGSL
+  `@group(0) @binding(3) var<uniform> uOrientation: f32`); multiply the v
+  component of a directional offset by it. Existing sources that only sample
+  their own texel need no change.
+
+- **Every remaining public duration input takes branded `Seconds` instead of a
+  plain millisecond `number`.** `AudioBus.fadeIn`/`fadeOut`, `Voice.fade`/`stop`
+  (and `crossFade`'s duration), `InputVoice.record`, `Envelope`'s
+  `attack`/`decay`/`release`/`totalDuration` (renamed from the `*Ms` fields,
+  with `trigger`'s `elapsed` following) and its `releaseAt` method (renamed
+  from `release`, which now names the duration field instead),
+  `View.shake`'s duration, `AnimatedSprite`'s `frameDuration`/`frameDurations`,
+  and `PhasedSceneTransition`/`CrossFadeSceneTransition`'s `duration` all match
+  the `Seconds` unit the rest of the engine already uses. Wrap existing
+  millisecond literals with `Time.seconds(ms / 1000)` (or write the value
+  directly in seconds); `Envelope.releaseAt` replaces `envelope.release(...)`
+  now that `release` names the duration property.
+
+- **The published `.d.ts` no longer carries `@internal` members.** The
+  declaration emit now strips them, so consumer autocomplete on `Loader`,
+  `AssetRef`, `Text`, `Tween`, `AudioBus` and the rest shows the API instead of
+  the engine's internals, and the published types finally agree with the
+  published API reference. Types that a public or renderer-SDK signature
+  genuinely exposes became part of the surface rather than disappearing with
+  the tag: `CheckableWidget`, `TextEditWidget`, `UIBackgroundNode`, `Ticker`,
+  `InputVoice`, `ShapeLike`, `PointerChannel`, `GamepadButtonChannel`,
+  `GamepadAxisChannel`, `CatalogResourceLeaf`, `CatalogValueLeaf`,
+  `OwnedNetworkHintSource` and `BmFontAdapter` on the root barrel;
+  `RenderPlanBuilder`, `DrawCommand`, `MaterialKey`, `InstanceDataView`,
+  `InstanceAttributeBinding`, `ShaderProgram`, `RenderPassCoordinator`,
+  `RenderPassDescriptor`, `RenderPassLoad`, `StencilAttachmentMode`, the
+  retained-group payload/replayer types and `WebGpuActiveRenderPass` on
+  `@codexo/exojs/renderer-sdk`. Going the other way, `SpriteFlags` and
+  `ViewFlags` - internal dirty-flag bitmasks that were exported by accident -
+  are gone from the root barrel, `ObservableVector`'s owner constructor is
+  internal (construct a plain vector with `new ObservableVector()`), and
+  `onAudioContextReady` is typed as the `Signal<[AudioContext]>` it always
+  was.
+
+- **`AnimatedSprite.defineClip` is now `addClip`, `Sound.defineSprite` is now
+  `addSprite`, and `Spritesheet.addFrame`/`removeFrame` return `this`.** One
+  verb pair, `add`/`remove`, for every named-registration mutator, and every
+  one of them chainable. Rename the calls; the `clips`/`sprites` constructor
+  options and `setClips`/`setSprites` are unchanged.
+
+- **`Assets.from` rejects a bare path whose suffix no asset type claims, at the
+  literal.** `'hero.pgn'` used to type-check and hand back `unknown`; it now
+  fails to compile with a message naming the path and the way out. Paths that
+  only exist at runtime (`string`, not a literal) are unaffected.
+
+- **`BurstSpawn`'s `loop: boolean` is replaced by `interval: number`, the
+  period in seconds between two runs of the schedule.** `loop: true` restarted
+  the schedule in the same `apply()` call that exhausted it and zeroed the
+  clock, so a schedule with nothing after its final burst re-fired every frame
+  and the emitted count followed the frame rate rather than elapsed time. The
+  period is now declared, the clock wraps by subtracting it so overshoot
+  carries into the next cycle, and a long frame fires every period it covered.
+  Replace `loop: true` with `interval: <seconds>`; a schedule that used a
+  trailing `{ time: period, count: 0 }` entry to fake a period can drop it.
+
+- **`TileSet._setDefinitions` is now `setDefinitions`.** The tilemap SDK
+  contract for extension packages that build tilesets programmatically loses
+  the leading underscore now that the method is the only cross-package member
+  in the extension packages that isn't `@internal`; the other 25
+  package-private members across `@codexo/exojs-physics` and
+  `@codexo/exojs-tilemap` are now tagged `@internal` and no longer appear in
+  the published `.d.ts`. Rename the call.
+
+### Added
+
+- **Show examples without guide markers and with one-line imports.** ([#683](https://github.com/Exoridus/ExoJS/pull/683))
+  The playground and guide code blocks showed example sources verbatim,
+  including the `// #region guide:...` markers that exist only for snippet
+  extraction and the import lists Prettier had wrapped one specifier per
+  line. The display source now drops the markers (with the blank line they
+  would leave) and joins each wrapped import back onto one line. Execution
+  source and files on disk are unchanged, so snippet extraction,
+  typechecking and formatting keep working on the originals.
+
+- **Add JobScheduler for frame-budgeted generator jobs.** ([#679](https://github.com/Exoridus/ExoJS/pull/679))
+  Heavy work (world generation, batch pathfinding, visibility rebuilds) no
+  longer has to choose between blocking a frame and an `async` update that
+  resumes in a later microtask.
+
+  - `JobScheduler` advances generator jobs one `yield` at a time inside a
+    per-frame time budget (default 2 ms; at least one step per update so a
+    job always progresses), in strict priority order with round-robin inside
+    a priority. Instantiable with its own budget and order, so a scene can
+    own one via `scene.systems.add(new JobScheduler())`.
+  - `Job<T>` handle: frame code polls `status` / `result` / `error`, async
+    code awaits `done` (created lazily, so an unawaited failure never raises
+    an unhandled rejection; cancellation rejects with an `AbortError`).
+    `cancel()` stops the generator at its `yield` and runs `finally` blocks;
+    `{ scope }` lets a `DestroyScope` own the job only while it runs.
+  - `app.jobs` is the application-owned instance, ticked in the `update`
+    phase at the new `SystemOrder.CoreJobs`.
+  - Guide section "Spreading work over frames" in the Application chapter;
+    API docs generated; export snapshot updated.
+
+  Worker-backed jobs are deliberately not part of this: the handle is
+  designed so a `WorkerPool` can hand out the same `Job` later.
+
+  ***
+
+- **`@codexo/exojs-pathfinding`, the official pathfinding extension.** One
+  search core - A\* over integer node handles - serving pluggable navigation
+  spaces. `GridSpace` is a finite window of weighted cells with diagonal
+  policies, `setCost`/`revision` for runtime edits, brushfire clearance for
+  agents wider than one cell, and string-pulling smoothing; `WaypointGraph` is a
+  directed graph whose edges carry a `kind` and a typed payload, which is what a
+  platformer's jump and fall links need and what a grid cannot express, and
+  which degrades to plain Dijkstra when its nodes have no positions.
+  `Pathfinder.findPath`/`findPathBetween` return a `PathResult` whose `status`
+  distinguishes `found`, `unreachable` and `budget-exceeded` instead of throwing
+  or returning `null`, and `floodFrom` answers "everything reachable within this
+  cost". Jump-point search self-enables on a uniform-cost grid and returns the
+  same optimal path from a fraction of the expanded nodes. Paths are
+  reproducible across runs and machines, and a search allocates nothing that
+  scales with the nodes it visits. The package depends on `@codexo/exojs` alone:
+  a tilemap reaches it through the cost callback `GridSpace.from` takes, not
+  through a package edge.
+
+- **Browser-native shaping for bidirectional and contextual text.**
+  `LayoutOptions.shaping` selects how a glyph's appearance is resolved:
+  `'auto'` (the default) keeps ordinary content on the shared glyph atlas and
+  hands text that needs its surroundings - a right-to-left base direction, an
+  explicit bidi control, or any script outside a proven-safe allow-list - to
+  the browser's canvas text engine one complete line at a time, which resolves
+  the bidirectional order and the contextual forms. `'simple'` and `'browser'`
+  force either path; `Text.shapingMode` reports which one settled. Shaped
+  lines are rasterized into pages the node owns and released with it, so no
+  process-wide cache of whole strings accumulates. No runtime dependency is
+  added: the platform provides the segmentation, the shaping and the raster.
+
+- **`LayoutOptions.locale`.** The language tag Unicode segmentation runs
+  under - which clusters count as one character, and where a line may break.
+  It selects no font and loads nothing.
+
+- **`GlyphPlacement.sourceStart` / `sourceEnd` and the same pair on
+  `TextLineMetrics`.** Every laid-out glyph and every laid-out line now carries
+  the UTF-16 range of the string it came from. Nothing in a string marks a soft
+  wrap, so this is what maps a caret, a selection or a hit test onto wrapped
+  text; a glyph that stands for no source character (the ellipsis an overflow
+  appended) reports an empty range at the point it replaced.
+
+- **`TextArea` wraps and scrolls.** A line too long for the field breaks at a
+  word boundary instead of scrolling sideways, and a vertical scrollbar appears
+  along the right edge once the value outgrows the field and drives the scroll
+  position. `wrap: false` restores horizontal scrolling for content whose own
+  line breaks are what matters; `scrollbar: false` and `scrollbarThickness`
+  control the bar, and `TextArea.verticalScrollbar` exposes it. Caret motion,
+  `Home`/`End`, `PageUp`/`PageDown`, hit testing and selection rectangles
+  follow the laid-out lines, so a wrapped line behaves like the two lines it
+  looks like while the value keeps exactly the line breaks the user typed.
+
+- **`when` on `SceneInteraction.observe()` and `scope()`.** Interaction
+  registrations take the same `SceneAvailability` policy the input, tween and
+  audio facades have. The default stays `'always'`, so a pause menu drawn by
+  the paused scene keeps receiving pointer events; `'active'` detaches a
+  registration while the scene is paused and `'paused'` attaches it only then.
+
+- **`DisplacementFilter`.** Warps the filtered node by a direction read out of a
+  map texture - heat haze, water refraction, glass, shockwaves. `map`'s red and
+  green channels are decoded to `[-1, 1]` and scaled by `scale` (one number or
+  `[x, y]`, logical units, default `20`); `offsetU`/`offsetV` move where the map
+  is sampled, so animating them scrolls the distortion. The reach is declared
+  through `getOutputBounds`, and a fragment displaced past the effect domain
+  comes out transparent rather than smearing the border.
+
+- **`PhasedSceneTransition.destroyPhaseState(state)`.** The release half of
+  `createPhaseState()`, called exactly once per session on every exit path -
+  normal completion, an abort before the commit, or the application being
+  destroyed mid-transition. Override it when the phase state owns GPU-backed
+  resources; plain scratch needs no override. A `{ enter, exit }` pair holds
+  one state per side and each side is released through its own phase's hook.
+
+- **A guide chapter and a playground example for writing your own scene
+  transition.** The **Writing your own transition** chapter spells out the
+  lifecycle contract `SceneTransitionLifecycleError` enforces - the
+  definition/session split, what the director guarantees per frame, why
+  `commit()` does not switch the scene in the same call, and what an abort and
+  a `destroy()` have to leave behind - and builds a complete bar-wipe
+  transition against it, both as a full `SceneTransition` and as a
+  `PhasedSceneTransition`. The matching `application-scenes/custom-transition`
+  example runs that transition between two scenes. No API change.
+
+- **`DropShadowFilter`.** A soft, offset silhouette of the filtered node drawn
+  behind it: `offsetX`/`offsetY`, `blur`, `quality`, `color` (alpha is the
+  shadow opacity) and `shadowOnly` for glows and detached shadows. Composed from
+  the stock colour-matrix and blur passes, so it runs on both backends and
+  declares the extra reach it needs through `getOutputBounds`.
+
+- **`@codexo/exojs-lighting`, forward normal-mapped point lighting for
+  sprites.** Lighting happens inside the sprite fragment stage, so a lit scene
+  costs no extra render pass and no extra draw call - sprites sharing one
+  `LitSpriteMaterial` stay in one batch. `PointLight` is plain mutable
+  world-space data (`x`, `y`, `radius`, `color`, `intensity`, `height`);
+  `LightingSystem` collects lights and packs them, together with the active
+  count and the ambient term, into one `rgba32f` data texture per frame, and
+  registers on any `SystemRegistry` like every other system. The light list
+  being a texture rather than a uniform array is what makes the light count a
+  shader loop bound instead of a compiled-in constant: a material user uniform
+  is one `vec4` per name, which would have capped a scene at a handful of
+  lights and needed a recompile to change. `LitSpriteMaterial` samples a
+  tangent-space normal map next to the albedo and rotates the normal by the
+  instance's local-to-world basis, so spinning and mirrored sprites keep their
+  bumps facing the right way. One normal map per material (= per atlas) is the
+  v1 contract; there is no deferred path yet. Two examples ship with it:
+  `lighting/normal-mapped-sprites` and `lighting/many-lights`, which walks from
+  1 to 48 lights over a normal-mapped floor without leaving a single draw call.
+
+- **Custom sprite materials receive the fragment's world position and the
+  instance's local-to-world basis.** `v_worldPosition` / `v_basis` (GLSL) and
+  `worldPosition` / `basis` on `VertexOutput` (WGSL) let a fragment shade
+  against world-space lights and rotate a tangent-space normal with the
+  sprite, which is what a lighting effect needs and what the varyings did not
+  carry before. The `lighting/normal-mapped-sprites` example lights a batch of
+  spinning and mirrored sprites through one material and four point lights.
+
+- **`Scene.animations`, a scene-bound animation facade with the same `when`
+  policy the tween and audio facades already have.** An `AnimatedSprite`
+  attached to a scene tree kept advancing through `SceneDirector.pause()` and
+  through retention, so a pause menu drawn over a "frozen" world still had
+  moving sprites and a suspended scene kept burning frames.
+  `this.animations.add(sprite, { when: 'active' })` binds playback to the
+  scene: frozen while it is paused, frozen while it is retained, stopped when
+  it ends. `when` takes the same `SceneAvailability` values with the same
+  `'always'` default, so an untracked sprite behaves exactly as before.
+
+- **`TrailParticles`, a particle render mode that draws a motion trail behind
+  every particle.** Where `RibbonParticles` connects the particles of one
+  system into a single band, this gives each particle its own strip through the
+  positions it recently occupied, kept in a per-particle ring buffer and drawn
+  in one non-instanced draw. Positions are recorded on each particle's own
+  clock (`interval`), so a trail covers the same travel at any frame rate;
+  `points` sets how far back it reaches, `width` its thickness and `fade` how
+  its alpha falls off towards the tail. CPU-only, like `RibbonParticles`.
+
+### Fixed
+
+- **Raise the contact push-out cap to its pixel-scale value and sleep settled piles.** ([#680](https://github.com/Exoridus/ExoJS/pull/680))
+  The soft-constraint push-out was capped at 4 px/s. Box2D-v3's analogue
+  is 3 m/s, which at the pixel scales ExoJS targets is 60-300 px/s, so the
+  cap stood an order of magnitude below the speed it was meant to express.
+  A gravity-driven pile rearranges faster than such a push-out can work:
+  overlap accumulated instead of resolving, and 1000 dynamic circles
+  settled at 4.7 px mean penetration across 4939 touching pairs where the
+  geometry has about 2800. The cap is now 60 px/s, the low end of the
+  honest conversion band and the point where measurement shows the scene
+  stops fighting it.
+
+  The sleep gate compounded the problem: it reset both bodies' timers
+  while a contact's penetration exceeded the sleep tolerance, but a loaded
+  contact rests at the depth its own soft-constraint deflection holds it
+  at, which in a pile is several times a lone body's, so islands never
+  slept and a fully settled scene kept being solved in full. The gate now
+  reads push-out progress instead of depth: a contact deeper than the
+  tolerance blocks sleep only while the last step actually moved its
+  overlap, or while the point has no history at all, so geometry appearing
+  inside a sleeping body still reopens the decision.
+
+  Numbers (median ms/step, touching pairs): `many-dynamic` 1000 bodies
+  35.5 ms / 4875 pairs -> 16.1 ms / 2766; 4000 bodies 235.9 ms / 34 423 ->
+  99.1 ms / 10 894. A settling pile now sleeps completely at 2.4 ms/step
+  instead of never at 5.2. `box-stack` 4000: 16.5 -> 9.7 ms with identical
+  contact counts, which is the sleep gate alone. Three tests whose
+  literals pinned the old cap were retuned deliberately and one was added:
+  a contact resting deeper than the tolerance must still sleep once its
+  push-out has stalled.
+
+  Bench package, same change set:
+  - planck.js joins the physics matrix as a second pure-JS peer
+    (`lengthUnitsPerMeter = 30`; its default of 1 double-counts contacts in
+    pixel coordinates), Rapier is labelled as the WASM reference rather than
+    a peer, and `--engine` filters the physics domain. Contact counts now
+    agree across exojs, matter-js, planck and rapier, which they previously
+    did not.
+  - New `composite` rendering archetype: scene into an offscreen render
+    texture, blur sweeps, additive composite over the direct draw. ExoJS
+    through the public `RenderPipeline`, Pixi hand-rolled with
+    `RenderTexture` and filters. Structural baseline re-recorded for the two
+    new cells; no other counter moved.
+
+  ***
+
+- **Text no longer splits a grapheme cluster.** Layout counted code points, so
+  a combining sequence, an emoji with a skin-tone modifier, a ZWJ sequence and
+  a regional-indicator flag were each placed as several glyphs, could be broken
+  in half by `breakWords` or `maxWidth`, and could be truncated to a dangling
+  mark or a lone regional indicator by `overflow: 'ellipsis'`. The unit of
+  layout is now the grapheme cluster throughout - placement, wrapping,
+  truncation and the caret granularity of the editing widgets - resolved
+  through `Intl.Segmenter`. Where a browser does not provide it, clusters
+  degrade to code points and word boundaries to blank runs; no polyfill ships.
+
+- **Word wrapping is locale-aware rather than a split on spaces.** Text in a
+  script written without inter-word spaces used to overflow as one unbreakable
+  token; it now wraps at its own word boundaries. A run of blanks is one break
+  candidate, and a run that stays inside a line is preserved verbatim.
+
+- **`FadeSceneTransition` no longer leaks a `QuadGeometry` per navigation.**
+  Its per-session phase state allocates one, and nothing released it, so every
+  faded scene change left a backend vertex/index buffer pair behind for the
+  lifetime of the context. It now releases the quad through the new
+  `destroyPhaseState` hook.
+
+- **WebGPU shader filters no longer mirror their input vertically.** The
+  fullscreen pass sampled v = 0 at the bottom of the quad, which is texel row
+  0 on WebGL2 but the last row on WebGPU, so every `ShaderFilter` pass on
+  WebGPU wrote its input upside down. Invisible while the effect domain equals
+  the content bounds; wrong for a filter with asymmetric reach or one that
+  samples away from its own texel.
+
+- **`Application.destroy()` now aborts the lifecycle signal of a navigation
+  still inside `load()`.** Teardown already waited for an in-flight navigation
+  to settle, but nothing told the incoming scene to stop: a `load()` awaiting
+  `Scene.lifecycleSignal` never resolved, so the wait ran out the full
+  five-second grace period and the backend went down while the scene was still
+  preparing. The signal is aborted at the same point the navigation's
+  generation is invalidated, so a cooperative `load()` returns immediately and
+  the incoming scope's teardown completes before anything it depends on is
+  released.
+
+### Documentation
+
+- **Bring the README up to the 0.17 surface.** ([#684](https://github.com/Exoridus/ExoJS/pull/684))
+  Package table and install list gain lighting, pathfinding and
+  tilemap-physics, each package linked to its directory. The feature list
+  covers custom sprite materials, the lighting package, the Unicode text
+  stack with its new style properties, exact picking with `hitArea`, the
+  frame-budgeted job scheduler, the transition authoring kit and the
+  pathfinding package. The quickstart compiles again against the current
+  API (`Seconds` instead of the removed `Time` type, a mounted canvas, a
+  colour that still exists; verified with tsc against `src/`), and the
+  roadmap names the 0.18 themes instead of items that have shipped.
+
+  ***
+
 ## [0.16.2] - 2026-09-03
 
 ### Added

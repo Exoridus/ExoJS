@@ -171,6 +171,7 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
     return this._step / this._steps.length;
   }
 
+  /** @internal */
   public override _update(sample: ActionSample): void {
     this._triggered = false;
 
@@ -234,6 +235,7 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
     this._expire(sample.timestamp);
   }
 
+  /** Clear all state, as if no source had ever been touched. @internal */
   public override _reset(): void {
     this._values.fill(0);
     this._seeded = false;

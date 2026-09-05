@@ -3,7 +3,7 @@ import { Matrix } from '#math/Matrix';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { MeshMaterial } from '#rendering/material/MeshMaterial';
 
-/** Component count of each per-instance attribute format. @internal */
+/** Component count of each per-instance attribute format. */
 const instanceFormatComponents = {
   float32: 1,
   float32x2: 2,
@@ -53,7 +53,7 @@ export interface RenderBatchOptions {
   readonly instanceAttributes?: readonly InstanceAttribute[];
 }
 
-/** Resolved layout of one declared instance attribute. @internal */
+/** Resolved layout of one declared instance attribute. */
 export interface InstanceAttributeBinding {
   readonly name: string;
   readonly componentCount: number;
@@ -62,7 +62,7 @@ export interface InstanceAttributeBinding {
   readonly location: number;
 }
 
-/** The packed per-instance attribute stream handed to a backend. @internal */
+/** The packed per-instance attribute stream handed to a backend. */
 export interface InstanceDataView {
   /** Interleaved storage; only the first `count * strideFloats` entries are valid. */
   readonly data: Float32Array;

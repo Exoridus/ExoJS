@@ -238,7 +238,7 @@ class AudioContextReadySignal extends Signal<[AudioContext]> {
  * });
  * ```
  */
-export const onAudioContextReady = new AudioContextReadySignal();
+export const onAudioContextReady: Signal<[AudioContext]> = new AudioContextReadySignal();
 
 /**
  * Return the global singleton `AudioContext`, creating it if it does not yet

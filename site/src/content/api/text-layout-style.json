@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 4,
+  "memberCount": 9,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 4,
+    "properties": 9,
     "events": 0
   },
   "sections": [
@@ -48,6 +48,56 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "decorationOffset",
+          "signature": "decorationOffset?: number",
+          "signatureTokens": [
+            {
+              "text": "decorationOffset",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Extra downward offset in pixels applied to both rules. Defaults to 0."
+        },
+        {
+          "name": "decorationThickness",
+          "signature": "decorationThickness?: number",
+          "signatureTokens": [
+            {
+              "text": "decorationThickness",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "0 or omitted derives the thickness from the font's metrics."
         },
         {
           "name": "fontSize",
@@ -111,6 +161,81 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "strikethrough",
+          "signature": "strikethrough?: boolean",
+          "signatureTokens": [
+            {
+              "text": "strikethrough",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Defaults to false."
+        },
+        {
+          "name": "textTransform",
+          "signature": "textTransform?: TextTransform",
+          "signatureTokens": [
+            {
+              "text": "textTransform",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextTransform",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Defaults to 'none' when the style omits it."
+        },
+        {
+          "name": "underline",
+          "signature": "underline?: boolean",
+          "signatureTokens": [
+            {
+              "text": "underline",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Defaults to false."
         }
       ],
       "paragraphs": [],

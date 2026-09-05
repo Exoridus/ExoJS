@@ -6,10 +6,10 @@
   "subsystem": "physics",
   "importPath": "@codexo/exojs-physics",
   "tier": "stable",
-  "memberCount": 41,
+  "memberCount": 39,
   "counts": {
     "constructors": 1,
-    "methods": 20,
+    "methods": 18,
     "properties": 16,
     "events": 4
   },
@@ -86,82 +86,6 @@
       "id": "methods",
       "title": "Methods",
       "members": [
-        {
-          "name": "_allocateColliderId",
-          "signature": "_allocateColliderId(): number",
-          "signatureTokens": [
-            {
-              "text": "_allocateColliderId",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "number",
-          "description": ""
-        },
-        {
-          "name": "_registerCollider",
-          "signature": "_registerCollider(collider: Collider): void",
-          "signatureTokens": [
-            {
-              "text": "_registerCollider",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "collider",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Collider",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "collider",
-              "type": "Collider",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
-          "description": ""
-        },
         {
           "name": "add",
           "signature": "add(body: PhysicsBody): PhysicsBody",

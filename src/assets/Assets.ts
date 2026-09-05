@@ -1,7 +1,7 @@
 import { logger } from '#core/Logger';
 
 import { AssetImpl } from './Asset';
-import type { AnyAssetConfig, AssetDefinitions, CatalogEntry, InferCatalogLeaf, OptionsForKind } from './AssetDefinitions';
+import type { AnyAssetConfig, AssetDefinitions, CatalogEntry, InferCatalogLeaf, OptionsForKind, ValidatedCatalog } from './AssetDefinitions';
 import { createLeaf } from './catalogLeaf';
 import { builtinLeaf, builtinTypeForPath } from './coreAssetTypes';
 
@@ -233,7 +233,12 @@ const ASSETS_DEV_PROXY_DUCK_TYPING_KEYS = new Set(['then', 'toJSON']);
  */
 let assetsDevProxyInstanceCounter = 0;
 
-/** @internal */
+/**
+ * The class behind the {@link Assets} type. Catalogs are created through
+ * {@link Assets.from} / {@link Assets.one} / {@link Assets.compose}, never with
+ * `new` - the public {@link Assets} type adds the per-key properties that make
+ * `catalog.player` resolve to its leaf, which this class alone cannot express.
+ */
 export class AssetsImpl<M extends Record<string, CatalogEntry>> {
   public readonly entries!: InferAssetsEntries<M>;
 
@@ -416,7 +421,7 @@ type AssetsFacade = AssetsConstructorFn & {
    * in a streaming loop is a fresh object each time, which is fine for the
    * fetch (dedup still applies) but means it cannot be used as a lookup key.
    */
-  from<const M extends Record<string, CatalogEntry>>(definition: M): Assets<M>;
+  from<const M extends Record<string, CatalogEntry>>(definition: M & ValidatedCatalog<M>): Assets<M>;
 
   /**
    * Build a single meta-stamped leaf (a usable placeholder resource or an
@@ -507,7 +512,9 @@ type AssetsFacade = AssetsConstructorFn & {
   extend<M extends Record<string, CatalogEntry>, const E extends Record<string, CatalogEntry>>(base: Assets<M>, entries: E): ExtendResult<M, E>;
 };
 
-(AssetsImpl as unknown as { from: unknown }).from = function from<const M extends Record<string, CatalogEntry>>(definition: M): Assets<M> {
+(AssetsImpl as unknown as { from: unknown }).from = function from<const M extends Record<string, CatalogEntry>>(
+  definition: M & ValidatedCatalog<M>,
+): Assets<M> {
   return new (AssetsImpl as unknown as AssetsConstructorFn)(definition as never);
 };
 

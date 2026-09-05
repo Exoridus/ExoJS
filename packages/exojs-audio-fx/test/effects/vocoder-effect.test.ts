@@ -190,7 +190,7 @@ describe('VocoderEffect', () => {
 
       // Give modulator time to set up
       const modOutputConnectSpy = vi.fn();
-      vi.spyOn(modulator, '_getOutputNode').mockReturnValue({
+      vi.spyOn(modulator, 'getOutputNode').mockReturnValue({
         connect: modOutputConnectSpy,
         disconnect: vi.fn(),
       } as unknown as GainNode);
@@ -211,7 +211,7 @@ describe('VocoderEffect', () => {
       // First call (inside _onWorkletReady) returns null so the else/onceSetup branch is
       // taken; subsequent calls (inside the deferred callback) return a real node.
       let callCount = 0;
-      const getOutputNodeSpy = vi.spyOn(modulator, '_getOutputNode').mockImplementation(() => {
+      const getOutputNodeSpy = vi.spyOn(modulator, 'getOutputNode').mockImplementation(() => {
         callCount++;
         return callCount === 1 ? null : fakeOutputNode;
       });
@@ -232,7 +232,7 @@ describe('VocoderEffect', () => {
       const modulator = makeModulatorBus();
       // Always returns null: neither the immediate check nor the deferred callback
       // ever obtains a real output node, so `.connect` must never be called.
-      vi.spyOn(modulator, '_getOutputNode').mockReturnValue(null);
+      vi.spyOn(modulator, 'getOutputNode').mockReturnValue(null);
       const onceSetupSpy = vi.spyOn(modulator, 'onceSetup');
 
       const filter = new VocoderEffect({ modulator });

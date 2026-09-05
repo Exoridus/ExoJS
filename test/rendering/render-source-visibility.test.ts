@@ -30,7 +30,7 @@ import { View } from '#rendering/View';
 class Leaf extends Drawable {
   public constructor(public readonly id: string) {
     super();
-    this._setLocalBounds(0, 0, 16, 16);
+    this.setLocalBounds(0, 0, 16, 16);
   }
 }
 
@@ -273,7 +273,7 @@ describe('source visibility: the grid answers exactly what the scan answers', ()
     // own extent.
     const huge = new Leaf('huge');
 
-    huge._setLocalBounds(0, 0, 40_000, 900);
+    huge.setLocalBounds(0, 0, 40_000, 900);
     huge.setPosition(-20_000, 0);
     root.addChild(huge);
 

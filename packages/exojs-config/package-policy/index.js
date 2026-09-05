@@ -71,7 +71,16 @@ export function verifyRuntimePackage(dir, opts) {
     ok('no production deps', !pkg.dependencies || Object.keys(pkg.dependencies).length === 0);
     ok('library sideEffects: false', pkg.sideEffects === false);
   } else {
-    ok('Core sideEffects: false', pkg.sideEffects === false);
+    // Core registers a few modules by import (renderers, the logger sink, the
+    // UI theme); those are declared as an explicit dist allowlist so bundlers
+    // keep them while still shaking everything else.
+    ok(
+      'Core sideEffects: false or a dist allowlist',
+      pkg.sideEffects === false ||
+        (Array.isArray(pkg.sideEffects) &&
+          pkg.sideEffects.length > 0 &&
+          pkg.sideEffects.every((/** @type {unknown} */ entry) => typeof entry === 'string' && entry.startsWith('./dist/esm/'))),
+    );
     ok('Core has no extension deps', !Object.keys({ ...pkg.dependencies }).some(d => /^@codexo\/exojs-(particles|tiled)/.test(d)));
   }
 

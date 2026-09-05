@@ -19,21 +19,16 @@ export interface BurstSchedule {
 export interface BurstSpawnConfig extends ParticleSpawnFields {
   schedule: readonly BurstSchedule[];
   /**
-   * Whether to repeat the schedule from t=0 once exhausted. Default `false`.
+   * Seconds from one run of the schedule to the next, measured from the
+   * schedule's own `t=0`. Omit for a one-shot: the schedule fires once and
+   * then stays exhausted until {@link BurstSpawn.reset}.
    *
-   * The restart happens in the same `apply()` call that exhausts the
-   * schedule, zeroing the elapsed clock outright rather than wrapping it
-   * modulo a declared period - so a schedule whose last entry is `{ time: 0,
-   * count: N }` (or, more generally, any schedule with nothing after its
-   * final burst) re-fires that burst on every subsequent frame instead of
-   * waiting: emission becomes a function of frame rate, not of time.
-   * Overshoot past the last entry's `time` is discarded on each restart
-   * rather than carried into the next cycle. To loop a burst schedule with a
-   * genuine period, add a trailing no-op entry at the period's end (e.g.
-   * `{ time: period, count: 0 }`) so `_elapsed` has somewhere to catch up to
-   * before it restarts.
+   * The clock wraps by subtracting the period rather than restarting from
+   * zero, so overshoot carries into the next cycle and a given span of time
+   * produces the same bursts at any frame rate. A period shorter than the
+   * schedule's last entry overlaps cycles; each one still fires in full.
    */
-  loop?: boolean;
+  interval?: number;
 }
 
 /**
@@ -43,6 +38,7 @@ export interface BurstSpawnConfig extends ParticleSpawnFields {
  * @example
  * new BurstSpawn({
  *     schedule: [{ time: 0, count: 50 }, { time: 0.2, count: 25 }],
+ *     interval: 2, // repeat the pair every two seconds
  *     velocity: ConeDirection.omni(150, 350),
  *     lifetime: new Range(0.4, 0.9),
  * });
@@ -61,8 +57,7 @@ export class BurstSpawn extends SpawnModule {
   }
 
   public override apply(emitter: ParticleEmitter, dt: number): void {
-    const cfg = this.config;
-    const schedule = cfg.schedule;
+    const { schedule, interval } = this.config;
 
     if (schedule.length === 0) {
       return;
@@ -70,16 +65,22 @@ export class BurstSpawn extends SpawnModule {
 
     this._elapsed += dt;
 
-    let next = schedule[this._nextIndex];
+    for (;;) {
+      let next = schedule[this._nextIndex];
 
-    while (next !== undefined && this._elapsed >= next.time) {
-      this._spawnBurst(emitter, next.count);
-      this._nextIndex++;
-      next = schedule[this._nextIndex];
-    }
+      while (next !== undefined && this._elapsed >= next.time) {
+        this._spawnBurst(emitter, next.count);
+        this._nextIndex++;
+        next = schedule[this._nextIndex];
+      }
 
-    if (cfg.loop && this._nextIndex >= schedule.length) {
-      this._elapsed = 0;
+      // A period of zero or less can never be caught up with - the wrap below
+      // would leave the clock where it is and this loop would not terminate.
+      if (interval === undefined || interval <= 0 || this._nextIndex < schedule.length || this._elapsed < interval) {
+        return;
+      }
+
+      this._elapsed -= interval;
       this._nextIndex = 0;
     }
   }

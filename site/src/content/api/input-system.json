@@ -6,12 +6,12 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 40,
+  "memberCount": 44,
   "counts": {
     "constructors": 1,
-    "methods": 9,
-    "properties": 8,
-    "events": 22
+    "methods": 11,
+    "properties": 9,
+    "events": 23
   },
   "sections": [
     {
@@ -293,6 +293,35 @@
           "params": [],
           "returnType": "PointLike | null",
           "description": "Returns the canvas-relative position of the primary pointer (isPrimary = true), or the first non-cancelled pointer if no primary is found. Returns null when no active pointer is present. Used by debug layers to show cursor info."
+        },
+        {
+          "name": "lockPointer",
+          "signature": "lockPointer(): void",
+          "signatureTokens": [
+            {
+              "text": "lockPointer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Ask the host to lock the pointer to the drawing surface, hiding the cursor and reporting motion as relative deltas. Best-effort and asynchronous. Hosts grant a lock only from a user gesture - call this from a press or key handler, not from a frame update - and may deny it outright; wait for InputSystem.onPointerLockChange rather than assuming the lock is in place when this returns."
         },
         {
           "name": "onActive",
@@ -888,6 +917,35 @@
           ],
           "returnType": "void",
           "description": "SystemMethods.preUpdate phase, registered on app.systems by the Application at SystemOrder.CoreInput - ahead of every other core system, so this frame's snapshot is current before anything simulates. Polls the gamepad API, drains queued keyboard/pointer/wheel deltas into the channel buffer, fires the corresponding Signals, then evaluates each registered binding. delta is also the clock a pending long-press matures on - see GestureRecognizer.update."
+        },
+        {
+          "name": "unlockPointer",
+          "signature": "unlockPointer(): void",
+          "signatureTokens": [
+            {
+              "text": "unlockPointer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Release a lock this surface holds. No-op while it holds none."
         }
       ],
       "paragraphs": [],
@@ -1104,6 +1162,27 @@
           "params": [],
           "returnType": null,
           "description": "true when at least one slot is occupied by a physical gamepad."
+        },
+        {
+          "name": "pointerLocked",
+          "signature": "pointerLocked: boolean",
+          "signatureTokens": [
+            {
+              "text": "pointerLocked",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the host currently routes pointer input to the surface exclusively. While locked, pointers report no meaningful position: Pointer.position and Pointer.delta stand still and Pointer.movement carries the motion instead."
         },
         {
           "name": "pointersInCanvas",
@@ -1975,6 +2054,47 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "onPointerLockChange",
+          "signature": "onPointerLockChange: Signal<[locked]>",
+          "signatureTokens": [
+            {
+              "text": "onPointerLockChange",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "locked",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires whenever InputSystem.pointerLocked changes, including a lock the user ended themselves with Escape - which every host allows and no application can prevent, so this is the only reliable place to notice it."
         },
         {
           "name": "onPointerMove",

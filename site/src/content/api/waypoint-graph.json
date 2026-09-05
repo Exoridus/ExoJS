@@ -1,0 +1,1058 @@
+{
+  "title": "WaypointGraph",
+  "description": "A directed graph of hand-placed waypoints. This is the representation for worlds a grid cannot describe: a platformer where traversal is a topology of walk, jump and fall links rather than cell walkability, or a purely abstract graph with no geometry at all. Nodes carry an optional position, edges carry a cost, a WaypointEdgeOptions.kind and an arbitrary payload, and the resulting path reports the edges it took so the game can execute each step in its own way. With positions the search is A* over straight-line distance; without them the heuristic is zero and the same search degrades cleanly to Dijkstra.",
+  "symbol": "WaypointGraph",
+  "kind": "class",
+  "subsystem": "pathfinding",
+  "importPath": "@codexo/exojs-pathfinding",
+  "tier": "stable",
+  "memberCount": 16,
+  "counts": {
+    "constructors": 1,
+    "methods": 11,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A directed graph of hand-placed waypoints.",
+        "This is the representation for worlds a grid cannot describe: a platformer where traversal is a topology of walk, jump and fall links rather than cell walkability, or a purely abstract graph with no geometry at all. Nodes carry an optional position, edges carry a cost, a WaypointEdgeOptions.kind and an arbitrary payload, and the resulting path reports the edges it took so the game can execute each step in its own way.",
+        "With positions the search is A* over straight-line distance; without them the heuristic is zero and the same search degrades cleanly to Dijkstra."
+      ],
+      "importLine": "import { WaypointGraph } from '@codexo/exojs-pathfinding'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): WaypointGraph<Payload>",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WaypointGraph",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Payload",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "WaypointGraph<Payload>",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "addEdge",
+          "signature": "addEdge(from: number, to: number, options: WaypointEdgeOptions<Payload>): void",
+          "signatureTokens": [
+            {
+              "text": "addEdge",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "from",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "to",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WaypointEdgeOptions",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Payload",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "from",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "to",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "WaypointEdgeOptions<Payload>",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Adds a directed edge. A second edge between the same pair replaces the first."
+        },
+        {
+          "name": "addNode",
+          "signature": "addNode(x?: number, y?: number): number",
+          "signatureTokens": [
+            {
+              "text": "addNode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": true
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": true
+            }
+          ],
+          "returnType": "number",
+          "description": "Adds a node. Omitting the position puts the graph in Dijkstra mode: the heuristic drops to zero for every query, since a positionless node makes no geometric estimate meaningful."
+        },
+        {
+          "name": "connect",
+          "signature": "connect(a: number, b: number, options: WaypointEdgeOptions<Payload>): void",
+          "signatureTokens": [
+            {
+              "text": "connect",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "a",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "b",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WaypointEdgeOptions",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Payload",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "a",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "b",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "WaypointEdgeOptions<Payload>",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Adds the edge in both directions with the same options."
+        },
+        {
+          "name": "describeEdge",
+          "signature": "describeEdge(from: number, to: number): PathEdge<Payload> | null",
+          "signatureTokens": [
+            {
+              "text": "describeEdge",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "from",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "to",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PathEdge",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Payload",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "from",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "to",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "PathEdge<Payload> | null",
+          "description": "Describes the traversal from from to to, if the space models one."
+        },
+        {
+          "name": "heuristic",
+          "signature": "heuristic(node: number, goal: number): number",
+          "signatureTokens": [
+            {
+              "text": "heuristic",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "goal",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "goal",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Estimated remaining cost from node to goal. Must never overestimate, or the result stops being cost-optimal; returning 0 degrades the search to Dijkstra, which is the correct answer for a space without positions."
+        },
+        {
+          "name": "nearestNode",
+          "signature": "nearestNode(x: number, y: number): number",
+          "signatureTokens": [
+            {
+              "text": "nearestNode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "The node closest to a point, whether or not it is traversable and whether or not the point lies inside the space. Backs snapToNearest for coordinate queries; without it such a query reports unreachable."
+        },
+        {
+          "name": "neighbors",
+          "signature": "neighbors(node: number, _agentSize: number, outNodes: Int32Array, outCosts: Float64Array): number",
+          "signatureTokens": [
+            {
+              "text": "neighbors",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_agentSize",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "outNodes",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Int32Array",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "outCosts",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float64Array",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "_agentSize",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "outNodes",
+              "type": "Int32Array",
+              "optional": false
+            },
+            {
+              "name": "outCosts",
+              "type": "Float64Array",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Writes the neighbours of node and the cost of stepping to each into the buffers, and returns how many were written. The buffers belong to the pathfinder and are reused across nodes and searches, so an implementation must not retain them. Costs must be positive and finite. agentSize is the requested clearance; spaces that do not model clearance ignore it."
+        },
+        {
+          "name": "nodeToPoint",
+          "signature": "nodeToPoint(node: number, out: Vector): void",
+          "signatureTokens": [
+            {
+              "text": "nodeToPoint",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "out",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "out",
+              "type": "Vector",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Writes the node's position into out."
+        },
+        {
+          "name": "pointToNode",
+          "signature": "pointToNode(x: number, y: number): number",
+          "signatureTokens": [
+            {
+              "text": "pointToNode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "The positioned node closest to the point, or -1 when the graph has none. A graph has no cells, so there is no \"outside\" for a point to fall into."
+        },
+        {
+          "name": "removeEdge",
+          "signature": "removeEdge(from: number, to: number): void",
+          "signatureTokens": [
+            {
+              "text": "removeEdge",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "from",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "to",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "from",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "to",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "removeNode",
+          "signature": "removeNode(node: number): void",
+          "signatureTokens": [
+            {
+              "text": "removeNode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Removes a node together with every edge touching it. Ids are recycled: a later addNode may hand out the id this call freed, so a node id held across a removal can silently refer to a different node."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "maxDegree",
+          "signature": "maxDegree: number",
+          "signatureTokens": [
+            {
+              "text": "maxDegree",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Upper bound on how many neighbours one node can have."
+        },
+        {
+          "name": "nodeCapacity",
+          "signature": "nodeCapacity: number",
+          "signatureTokens": [
+            {
+              "text": "nodeCapacity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "One past the largest node id. Sizes the pathfinder's search buffers."
+        },
+        {
+          "name": "nodeCount",
+          "signature": "nodeCount: number",
+          "signatureTokens": [
+            {
+              "text": "nodeCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Number of live nodes."
+        },
+        {
+          "name": "revision",
+          "signature": "revision: number",
+          "signatureTokens": [
+            {
+              "text": "revision",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Increments on every mutation that can invalidate a path. Carried into PathResult.revision so callers can detect stale paths."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-pathfinding/src/spaces/WaypointGraph.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/spaces/WaypointGraph.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-pathfinding/src/spaces/WaypointGraph.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-pathfinding/src/spaces/WaypointGraph.ts"
+}

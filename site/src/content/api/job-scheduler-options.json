@@ -1,0 +1,123 @@
+{
+  "title": "JobSchedulerOptions",
+  "description": "",
+  "symbol": "JobSchedulerOptions",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [],
+      "importLine": "import { JobSchedulerOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "budget",
+          "signature": "budget?: Seconds",
+          "signatureTokens": [
+            {
+              "text": "budget",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Time the scheduler may spend advancing jobs per JobScheduler.update call. Default 0.002 (2 ms). At least one step runs per update whatever the budget, so a job always makes progress."
+        },
+        {
+          "name": "order",
+          "signature": "order?: number",
+          "signatureTokens": [
+            {
+              "text": "order",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Registry tick order when the scheduler is added as a system. Default 0."
+        },
+        {
+          "name": "timeSource",
+          "signature": "timeSource?: TimeSource",
+          "signatureTokens": [
+            {
+              "text": "timeSource",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TimeSource",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Clock used for the budget; the host's monotonic clock unless supplied."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/JobScheduler.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/JobScheduler.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/JobScheduler.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/JobScheduler.ts"
+}

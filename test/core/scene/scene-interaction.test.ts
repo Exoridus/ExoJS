@@ -1,4 +1,5 @@
 import type { Application } from '#core/Application';
+import { SceneAvailability } from '#core/scene/SceneAvailability';
 import { SceneInteraction } from '#core/scene/SceneInteraction';
 import { SceneState } from '#core/scene/SceneState';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -383,5 +384,71 @@ describe('SceneInteraction — dormancy (registration while not Active)', () => 
 
     expect(app.interaction.pushScope).not.toHaveBeenCalled();
     expect(app.interaction.popScope).not.toHaveBeenCalled();
+  });
+});
+
+describe('SceneInteraction when policy', () => {
+  test('the default keeps a registration attached through pause and resume', () => {
+    const app = createAppStub();
+    let paused = false;
+    const interaction = new SceneInteraction(
+      app,
+      () => SceneState.Active,
+      () => paused,
+    );
+    const root = fakeRoot();
+
+    interaction.observe(root);
+    paused = true;
+    interaction.resume();
+
+    expect(app.interaction.detachRoot).not.toHaveBeenCalled();
+  });
+
+  test("'active' detaches while paused and reattaches on resume, in place", () => {
+    const app = createAppStub();
+    let paused = false;
+    const interaction = new SceneInteraction(
+      app,
+      () => SceneState.Active,
+      () => paused,
+    );
+    const root = fakeRoot();
+
+    interaction.observe(root, { when: SceneAvailability.Active });
+    expect(app.interaction.attachRoot).toHaveBeenCalledTimes(1);
+
+    paused = true;
+    interaction.resume();
+    expect(app.interaction.detachRoot).toHaveBeenCalledWith(root);
+
+    paused = false;
+    interaction.resume();
+    expect(app.interaction.attachRoot).toHaveBeenCalledTimes(2);
+  });
+
+  test("'paused' scopes are pushed only while the scene is paused", () => {
+    const app = createAppStub();
+    let paused = false;
+    const interaction = new SceneInteraction(
+      app,
+      () => SceneState.Active,
+      () => paused,
+    );
+    const root = fakeRoot();
+    const token = Symbol('token');
+
+    vi.mocked(app.interaction.pushScope).mockReturnValue(token as never);
+    const scope = interaction.scope(root, { when: SceneAvailability.Paused });
+    expect(app.interaction.pushScope).not.toHaveBeenCalled();
+
+    paused = true;
+    interaction.resume();
+    expect(app.interaction.pushScope).toHaveBeenCalledWith(root);
+
+    paused = false;
+    interaction.resume();
+    expect(app.interaction.popScope).toHaveBeenCalledWith(token);
+    expect(scope.active).toBe(true);
   });
 });

@@ -89,7 +89,7 @@ export class SlideSceneTransition extends PhasedSceneTransition<SlidePhaseState>
 
   protected override exit(context: SceneTransitionPhaseContext, state: SlidePhaseState): void {
     if (this.mode === 'cover') {
-      return; // static — the outgoing scene stays put, untouched, until commit
+      return; // static - the outgoing scene stays put, untouched, until commit
     }
 
     // 'push' and 'reveal': the outgoing texture slides toward `direction`,
@@ -103,7 +103,7 @@ export class SlideSceneTransition extends PhasedSceneTransition<SlidePhaseState>
 
   protected override enter(context: SceneTransitionPhaseContext, state: SlidePhaseState): void {
     if (this.mode === 'reveal') {
-      return; // nothing left to animate — the reveal already happened during exit
+      return; // nothing left to animate - the reveal already happened during exit
     }
 
     if (this.mode === 'cover' && context.frame.outgoing !== null) {

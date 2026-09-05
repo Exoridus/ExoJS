@@ -298,7 +298,7 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
 
       // A destroyed mode takes its GPU resources with it: `ParticleSystem.destroy`
       // destroys a mode it owns, which destroys the material.
-      material._onDispose(() => {
+      material.onDispose(() => {
         // `Material.destroy` drops its callbacks after firing them, so this
         // registration is gone - forget it, and the next creation re-registers.
         this._disposeListenerRegistered.delete(material);
@@ -335,6 +335,10 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
     const meshGeometry = mode.vertexGeometry;
 
     assertVertexGeometryCompatible(layout, meshGeometry, mode.instanced, mode.constructor.name);
+
+    if (glsl.vertex === null) {
+      throw new Error('Particle render mode shader has no GLSL vertex stage; particle materials need both stages.');
+    }
 
     const shader = new Shader(glsl.vertex, glsl.fragment);
 

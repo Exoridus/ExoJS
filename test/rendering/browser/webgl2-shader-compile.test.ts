@@ -17,6 +17,7 @@ import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 
 import { fillShaderSource } from '#rendering/shader/fillShaderSource';
 import { resolveTransformTextureGlsl } from '#rendering/shader/transformTextureLayout';
+import { composeSpriteMaterialFragmentGlsl } from '#rendering/sprite/materialSources';
 import { composeTextAtlasFragmentGlsl } from '#rendering/text/atlasTextureSlots';
 
 import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../../../packages/exojs-tilemap/src/tileWord';
@@ -66,8 +67,17 @@ const placeholderValues: Readonly<Record<string, Readonly<Record<string, number>
 const composeRuntimeSource = (name: string, source: string): string => {
   const values = placeholderValues[name];
   const filled = values ? fillShaderSource(source, values) : source;
+  // A sprite-material fragment is authored without the base-texture slot table
+  // and `sampleBase()`: the renderer splices those in. `lit-sprite.frag` ships
+  // from the lighting package and only compiles in that spliced form.
+  const composed =
+    name.startsWith('text-') && name.endsWith('.frag')
+      ? composeTextAtlasFragmentGlsl(filled)
+      : name === 'lit-sprite.frag'
+        ? composeSpriteMaterialFragmentGlsl(filled)
+        : filled;
 
-  return resolveTransformTextureGlsl(name.startsWith('text-') && name.endsWith('.frag') ? composeTextAtlasFragmentGlsl(filled) : filled);
+  return resolveTransformTextureGlsl(composed);
 };
 
 const shaders: readonly ShaderEntry[] = Object.entries(shaderModules)
@@ -86,8 +96,9 @@ const shaders: readonly ShaderEntry[] = Object.entries(shaderModules)
 const sourceByName: Record<string, string> = Object.fromEntries(shaders.map(entry => [entry.name, entry.runtimeSource]));
 
 // Vertex/fragment pairs as wired up by the renderer sources; `text.vert` is
-// shared across all three text-fragment variants, while `particle.*` and
-// `ribbon.*` come from the particles package's two render modes. Every file the
+// shared across all three text-fragment variants, while `particle.*`,
+// `ribbon.*` and `trail.*` come from the particles package's render modes.
+// Every file the
 // globs pick up must appear here or in `standaloneStages` (guarded below) so a
 // dead `.vert`/`.frag` cannot sit in the folder being compiled-but-never-used:
 // it has to be wired, declared or removed.
@@ -98,6 +109,7 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['mesh.vert', 'mesh.frag'],
   ['particle.vert', 'particle.frag'],
   ['ribbon.vert', 'ribbon.frag'],
+  ['trail.vert', 'trail.frag'],
   ['text.vert', 'text-color.frag'],
   ['text.vert', 'text-sdf.frag'],
   ['text.vert', 'text-msdf.frag'],
@@ -110,11 +122,16 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['stencil-clip.vert', 'stencil-clip.frag'],
   ['mask-compose.vert', 'mask-compose.frag'],
   ['backdrop-blend.vert', 'backdrop-blend.frag'],
-  // The built-in filters: one pass-through fullscreen-quad vertex stage, three
-  // fragment stages, exactly as `ShaderFilter` assembles them.
+  // The built-in filters: one pass-through fullscreen-quad vertex stage, one
+  // fragment stage each, exactly as `ShaderFilter` assembles them.
   ['default-vertex.vert', 'color-matrix.frag'],
+  ['default-vertex.vert', 'displacement.frag'],
+  ['default-vertex.vert', 'drop-shadow.frag'],
   ['default-vertex.vert', 'lut-3d.frag'],
   ['default-vertex.vert', 'lut-rgb1d.frag'],
+  // The custom sprite-material path: the engine owns the vertex stage, and the
+  // lighting package's lit fragment is the in-repo counterpart it links with.
+  ['sprite-material.vert', 'lit-sprite.frag'],
 ];
 
 const referencedShaderFiles = new Set(programPairs.flat());
@@ -125,9 +142,7 @@ const referencedShaderFiles = new Set(programPairs.flat());
 // production-stripped text - from the two compile cases above; only the link
 // case has no meaning for them. An entry is a claim that the missing half is
 // the caller's, not that the stage is untested.
-const standaloneStages: ReadonlyMap<string, string> = new Map([
-  ['sprite-material.vert', 'the custom SpriteMaterial path takes its fragment stage from the application'],
-]);
+const standaloneStages: ReadonlyMap<string, string> = new Map();
 
 interface CompiledShader {
   readonly shader: WebGLShader;

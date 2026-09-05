@@ -15,6 +15,8 @@
  * where silent drift produces a wrong-looking or outright broken second backend.
  */
 import { colorMatrixShaderSource } from '#rendering/filters/ColorMatrixFilter';
+import { displacementShaderSource } from '#rendering/filters/DisplacementFilter';
+import { dropShadowShaderSource } from '#rendering/filters/DropShadowFilter';
 import { lut3dShaderSource, lutRgb1dShaderSource } from '#rendering/filters/LutFilter';
 import type { ShaderSource } from '#rendering/material/ShaderSource';
 
@@ -26,13 +28,15 @@ const pairs: ReadonlyArray<{ readonly name: string; readonly source: ShaderSourc
   { name: 'ColorMatrixFilter', source: colorMatrixShaderSource },
   { name: "LutFilter 'rgb1d'", source: lutRgb1dShaderSource },
   { name: "LutFilter '3d'", source: lut3dShaderSource },
+  { name: 'DropShadowFilter', source: dropShadowShaderSource },
+  { name: 'DisplacementFilter', source: displacementShaderSource },
 ];
 
 /**
  * Uniforms both languages receive automatically, bound by the filter rather
  * than by the author, and therefore excluded from the user-uniform comparison.
  */
-const autoBoundNames = new Set(['uTexture', 'uSampler', 'uResolution']);
+const autoBoundNames = new Set(['uTexture', 'uSampler', 'uResolution', 'uOrientation']);
 
 /** GLSL sampler types, which become texture bindings rather than UBO members. */
 const glslSamplerTypes = new Set(['sampler2D', 'sampler2DArray', 'sampler3D', 'samplerCube']);
@@ -153,7 +157,7 @@ describe.each(pairs)('$name shader pair', ({ source }) => {
   });
 
   test('declares the same fullscreen-quad attributes on both sides', () => {
-    const glslAttributes = glslStageVariables(source.glsl!.vertex, 'in');
+    const glslAttributes = glslStageVariables(source.glsl!.vertex ?? '', 'in');
     const wgslAttributes = wgslEntryPoint(source.wgsl!, 'vertex')!.parameters;
 
     expect(glslAttributes.map(a => a.name)).toEqual(['aPosition', 'aUv']);
@@ -183,6 +187,19 @@ describe.each(pairs)('$name shader pair', ({ source }) => {
     expect(autoBindings.find(b => b.name === 'uTexture')).toMatchObject({ binding: 1, type: 'texture_2d<f32>' });
     expect(autoBindings.find(b => b.name === 'uSampler')).toMatchObject({ binding: 2, type: 'sampler' });
     expect(autoBindings.every(b => autoBoundNames.has(b.name))).toBe(true);
+
+    // The v-axis orientation follows at 3. A pair declares it on both sides or
+    // on neither: a source that turns a directional offset the right way up on
+    // one backend only is exactly the drift this file exists to catch.
+    const wgslOrientation = autoBindings.find(b => b.name === 'uOrientation');
+    const glslOrientation = glslUniforms(source.glsl!.fragment).find(u => u.name === 'uOrientation');
+
+    expect(wgslOrientation === undefined).toBe(glslOrientation === undefined);
+
+    if (wgslOrientation !== undefined) {
+      expect(wgslOrientation).toMatchObject({ binding: 3, type: 'f32' });
+      expect(glslOrientation!.type).toBe('float');
+    }
   });
 
   test('declares the same user uniforms, in the same order and of matching types', () => {

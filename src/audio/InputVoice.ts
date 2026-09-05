@@ -1,3 +1,5 @@
+import type { Seconds } from '#core/units';
+
 import type { AudioBus } from './AudioBus';
 import { decodeAudioData } from './audioContext';
 import { BaseVoice, type BaseVoiceInit } from './BaseVoice';
@@ -20,8 +22,6 @@ export interface InputVoiceInit extends BaseVoiceInit {
  * A live stream cannot be seeked, paused, looped, or rate-shifted, so it only
  * mixes in {@link Spatializable} (via {@link BaseVoice}) on top of the base
  * Voice surface (volume / fade / stop / effects / output tap / bus).
- *
- * @internal
  */
 export class InputVoice extends BaseVoice {
   private readonly _sourceNode: MediaStreamAudioSourceNode;
@@ -48,11 +48,11 @@ export class InputVoice extends BaseVoice {
   }
 
   /**
-   * Record `durationMs` (in milliseconds) of the live input and resolve
-   * with a playable {@link Sound}. Uses `MediaRecorder` under the hood, then
-   * decodes the captured blob into an `AudioBuffer`.
+   * Record `duration` of the live input and resolve with a playable
+   * {@link Sound}. Uses `MediaRecorder` under the hood, then decodes the
+   * captured blob into an `AudioBuffer`.
    */
-  public async record(durationMs: number): Promise<Sound> {
+  public async record(duration: Seconds): Promise<Sound> {
     const recorder = new MediaRecorder(this._stream);
     const chunks: Blob[] = [];
 
@@ -79,7 +79,7 @@ export class InputVoice extends BaseVoice {
         () => {
           if (recorder.state !== 'inactive') recorder.stop();
         },
-        Math.max(0, durationMs),
+        Math.max(0, duration * 1000),
       );
     });
   }

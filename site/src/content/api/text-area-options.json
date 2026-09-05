@@ -6,11 +6,11 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 8,
+  "memberCount": 11,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 8,
+    "properties": 11,
     "events": 0
   },
   "sections": [
@@ -174,6 +174,56 @@
           "description": "When set, the field renders and takes focus but rejects every edit. Default false."
         },
         {
+          "name": "scrollbar",
+          "signature": "scrollbar?: boolean",
+          "signatureTokens": [
+            {
+              "text": "scrollbar",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether a scrollbar appears along the right edge once the value is taller than the field. Default true."
+        },
+        {
+          "name": "scrollbarThickness",
+          "signature": "scrollbarThickness?: number",
+          "signatureTokens": [
+            {
+              "text": "scrollbarThickness",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Scrollbar width in pixels. Default 10."
+        },
+        {
           "name": "textStyle",
           "signature": "textStyle?: TextStyleOptions",
           "signatureTokens": [
@@ -247,6 +297,31 @@
           "params": [],
           "returnType": null,
           "description": "Visible width in pixels. Default 200."
+        },
+        {
+          "name": "wrap",
+          "signature": "wrap?: boolean",
+          "signatureTokens": [
+            {
+              "text": "wrap",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether a line too long for the field breaks at a word boundary instead of scrolling horizontally. Default true."
         }
       ],
       "paragraphs": [],

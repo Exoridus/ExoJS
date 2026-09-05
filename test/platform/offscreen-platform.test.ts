@@ -181,6 +181,31 @@ describe('OffscreenPlatform', () => {
     platform.destroy();
   });
 
+  it('reports the ratio the host forwards, and nothing until it does', () => {
+    const platform = new OffscreenPlatform(createSurface());
+    const seen: number[] = [];
+
+    platform.onPixelRatioChange(ratio => void seen.push(ratio));
+
+    // jsdom's realm reports 1, which is also the fallback for a worker realm
+    // that reports nothing at all.
+    expect(platform.devicePixelRatio).toBe(1);
+
+    platform.setPixelRatio(3);
+
+    expect(platform.devicePixelRatio).toBe(3);
+    expect(seen).toEqual([3]);
+
+    // Re-forwarding the same ratio, or a nonsensical one, changes nothing.
+    platform.setPixelRatio(3);
+    platform.setPixelRatio(0);
+
+    expect(platform.devicePixelRatio).toBe(3);
+    expect(seen).toEqual([3]);
+
+    platform.destroy();
+  });
+
   describe('in a realm that schedules no display frames', () => {
     let realRequest: typeof requestAnimationFrame;
     let realCancel: typeof cancelAnimationFrame;

@@ -35,7 +35,7 @@ import { clampResolutionToTextureSize, resolveBarrierResolution } from './target
 
 /**
  * Collect-time view of the backend's retained-batch hooks.
- * `_replayRetainedBatch` gates the splice tier, the capture pair gates record
+ * `replayRetainedBatch` gates the splice tier, the capture pair gates record
  * arming, and `_validateRetainedInstructionSet` is the backend's optional
  * extra collect-time validation (e.g. WebGPU texture-view identity) on
  * top of the plan-level generation check.
@@ -61,7 +61,7 @@ import { clampResolutionToTextureSize, resolveBarrierResolution } from './target
 interface RetainedBackendHooks {
   _beginRetainedCapture?(set: RetainedInstructionSet): void;
   _endRetainedCapture?(set: RetainedInstructionSet): void;
-  _replayRetainedBatch?(batch: unknown): void;
+  replayRetainedBatch?(batch: unknown): void;
   _validateRetainedInstructionSet?(set: RetainedInstructionSet): boolean;
 }
 
@@ -148,7 +148,16 @@ const appendScopeEntry = (scope: MutableGroupScope, entry: ScopeEntry): void => 
   }
 };
 
-/** @internal */
+/**
+ * Collector a scene hands its draw submissions to while a render plan is being
+ * built. A custom {@link RenderNode} receives one in `_collectContent` and
+ * submits through {@link emitDraw} (for its own drawables) and
+ * {@link emitNode} (for children it owns); the builder decides ordering,
+ * culling and batching from there.
+ *
+ * Instances are pooled and reused across frames. Never retain one past the
+ * `_collectContent` call it arrived in.
+ */
 export class RenderPlanBuilder {
   /**
    * Free list of released builders, held with an explicit logical length: the
@@ -316,19 +325,13 @@ export class RenderPlanBuilder {
     return this._captureCullActive ? this._captureCullRect : this._viewUnobserved().getBounds();
   }
 
+  /** @internal */
   public build(root: RenderNode, backend: RenderBackend): RenderPlan {
     this.backend = backend;
     this._view = null;
     this._resolutionStack.length = 0;
     this._plan.reset();
-    this._groupPoolCursor = 0;
-    this._drawEntryPoolCursor = 0;
-    this._groupEntryPoolCursor = 0;
-    this._barrierEntryPoolCursor = 0;
-    this._barrierScopePoolCursor = 0;
-    this._effectDescriptorPoolCursor = 0;
-    this._drainScopeStack();
-    this._hasPending = false;
+    this._rewindPools();
     this._viewCullSuppression = 0;
     this._retentionRoot = root._supportsRootRetention() ? root : null;
     this._trackedRoot = null;
@@ -354,7 +357,7 @@ export class RenderPlanBuilder {
     const rootScope = this._acquireGroupScope(false);
 
     this._pushScope(rootScope);
-    root._collect(this);
+    root.collect(this);
     this._popScope();
 
     this._plan.setSinglePass(rootScope.entries.length > 0 ? this._viewUnobserved() : null, rootScope);
@@ -502,7 +505,16 @@ export class RenderPlanBuilder {
         this._resolutionStack.push(resolution);
 
         try {
-          node._collectForRenderPlan(this);
+          // The barrier's CONTENT is an ordinary subtree and gets the same
+          // persistent representation a render root does. Without this the
+          // effect was a retention floor: a filter or clip above a scene made
+          // everything below it a scene-graph walk on every frame. The effect
+          // stays outside it, resolved live by the barrier entry.
+          if (node._supportsRootRetention()) {
+            this._collectRetainedRoot(node);
+          } else {
+            node._collectForRenderPlan(this);
+          }
         } finally {
           this._resolutionStack.pop();
           this._popScope();
@@ -840,7 +852,7 @@ export class RenderPlanBuilder {
     // placement. A view-dependent producer therefore sees the CURRENT view and
     // rebuilds its coverage; a barrier or boundary keeps every bit of its own
     // semantics, including its own retention tier.
-    other.node._collect(this, other.seq);
+    other.node.collect(this, other.seq);
   }
 
   /**
@@ -1062,11 +1074,14 @@ export class RenderPlanBuilder {
     }
 
     const previousTracked = this._trackedRoot;
+    const previousCaptureCullActive = this._captureCullActive;
 
-    // Exactly one node per build is the retention root (`_retentionRoot` is
-    // compared by identity in `emitNode`), so the capture cull rect needs no
-    // stack - it is armed here and disarmed below.
+    // The rect needs no stack even though roots nest (a barrier's content is
+    // one): it derives from the view alone, so every root inflates it to the
+    // same value. Only the ARMED flag is per root - an inner capture must not
+    // leave an enclosing collect culling against the inflated rect.
     this._inflateCaptureCullRect(view);
+    this._captureCullActive = true;
     representation.beginCapture(this._captureCullRect);
     this._trackedRoot = representation;
 
@@ -1079,7 +1094,7 @@ export class RenderPlanBuilder {
       }
     } finally {
       this._trackedRoot = previousTracked;
-      this._captureCullActive = false;
+      this._captureCullActive = previousCaptureCullActive;
     }
 
     representation.commitCapture(
@@ -1157,7 +1172,6 @@ export class RenderPlanBuilder {
     // Admit against the view grown by the same margin a capture uses, so the
     // stream this selection produces stays valid for every view still inside it.
     this._inflateCaptureCullRect(view);
-    this._captureCullActive = false;
 
     const rect = this._captureCullRect;
 
@@ -1289,8 +1303,10 @@ export class RenderPlanBuilder {
   }
 
   /**
-   * Arm {@link _captureCullRect} as the view's rect grown by
-   * {@link RETAINED_CULL_MARGIN_RATIO} on every side.
+   * Set {@link _captureCullRect} to the view's rect grown by
+   * {@link RETAINED_CULL_MARGIN_RATIO} on every side. Arming it as the rect a
+   * collect culls against is the caller's: the persistent-indexed tier wants the
+   * rect without changing what an enclosing collect culls against.
    *
    * The margin is what lets a capture outlive a moving camera. Culling against
    * the tight view rect makes the resulting product valid for that rect and
@@ -1313,7 +1329,6 @@ export class RenderPlanBuilder {
     const marginY = rect.height * RETAINED_CULL_MARGIN_RATIO;
 
     this._captureCullRect.set(rect.x - marginX, rect.y - marginY, rect.width + 2 * marginX, rect.height + 2 * marginY);
-    this._captureCullActive = true;
   }
 
   /**
@@ -1411,7 +1426,7 @@ export class RenderPlanBuilder {
    * @internal - true while collecting below a transform-group boundary.
    * Inside a group, child bounds are group-local, so testing them against the
    * world-space view rect would be meaningless; the group is culled as a
-   * whole by RetainedContainer._collect instead.
+   * whole by RetainedContainer.collect instead.
    */
   public get _isViewCullSuppressed(): boolean {
     // Source discovery suppresses culling too, and must: the whole point of the
@@ -1515,7 +1530,7 @@ export class RenderPlanBuilder {
     if (
       typeof hooks._beginRetainedCapture !== 'function' ||
       typeof hooks._endRetainedCapture !== 'function' ||
-      typeof hooks._replayRetainedBatch !== 'function'
+      typeof hooks.replayRetainedBatch !== 'function'
     ) {
       return;
     }
@@ -1531,7 +1546,7 @@ export class RenderPlanBuilder {
   private _validateRetainedSet(set: RetainedInstructionSet): boolean {
     const hooks = this.backend as RenderBackend & RetainedBackendHooks;
 
-    if (typeof hooks._replayRetainedBatch !== 'function') {
+    if (typeof hooks.replayRetainedBatch !== 'function') {
       return false;
     }
 
@@ -1548,7 +1563,7 @@ export class RenderPlanBuilder {
    * no material keys - draws re-acquire pooled commands with fresh
    * frame-local nodeIndex values (multi-render() bases stay coherent), nested
    * groups re-acquire pooled scopes, and barrier nodes re-dispatch through a
-   * normal `_collect`.
+   * normal `collect`.
    */
   public _replayRetainedFragment(entries: readonly RetainedFragmentEntry[], entryCount = entries.length): void {
     for (let index = 0; index < entryCount; index++) {
@@ -1559,7 +1574,7 @@ export class RenderPlanBuilder {
       } else if (entry.kind === RenderEntryKind.Group) {
         this._replayRetainedGroup(entry);
       } else {
-        entry.node._collect(this, entry.seq);
+        entry.node.collect(this, entry.seq);
       }
     }
   }
@@ -1575,7 +1590,7 @@ export class RenderPlanBuilder {
 
     if (innerSet !== null && !this._validateRetainedSet(innerSet)) {
       if (fragment.transformNode !== null) {
-        fragment.transformNode._collect(this, fragment.seq);
+        fragment.transformNode.collect(this, fragment.seq);
 
         return;
       }
@@ -1611,16 +1626,25 @@ export class RenderPlanBuilder {
     }
   }
 
-  private _resetRuntimeState(): void {
+  /**
+   * Rewind the per-frame scope stack and object pools. Deliberately excludes the
+   * draw-command cursor, which is frame-global rather than plan-local (see
+   * {@link build}).
+   */
+  private _rewindPools(): void {
     this._drainScopeStack();
     this._hasPending = false;
     this._groupPoolCursor = 0;
-    this._commandPoolCursor = 0;
     this._drawEntryPoolCursor = 0;
     this._groupEntryPoolCursor = 0;
     this._barrierEntryPoolCursor = 0;
     this._barrierScopePoolCursor = 0;
     this._effectDescriptorPoolCursor = 0;
+  }
+
+  private _resetRuntimeState(): void {
+    this._rewindPools();
+    this._commandPoolCursor = 0;
     this._view = null;
     this._resolutionStack.length = 0;
     this._nodeIndex = 0;

@@ -471,16 +471,15 @@ export class Container extends RenderNode {
   }
 
   /**
-   * @internal - a grouping node handed to `render()` gets the automatic
-   * persistent render representation. Two exclusions: a transform-group
-   * boundary ({@link RetainedContainer}) already owns the group-level retention
-   * tier, and wrapping a second one around the same scope would fight it over
-   * the scope's record target; a barrier-bearing root never reaches the plan
-   * builder's group branch at all (it collects through the effect path), so
-   * excluding it here just keeps the predicate honest.
+   * @internal - a grouping node gets the automatic persistent render
+   * representation, both as the node handed to `render()` and as the content of
+   * its own barrier (filters, clipping, `cacheAsTexture`, backdrop blending).
+   * One exclusion: a transform-group boundary ({@link RetainedContainer})
+   * already owns the group-level retention tier, and wrapping a second one
+   * around the same scope would fight it over the scope's record target.
    */
   public override _supportsRootRetention(): boolean {
-    return !this._isTransformGroupBoundary && !this._renderPlanHasBarrierEffects();
+    return !this._isTransformGroupBoundary;
   }
 
   /** Part of the renderer SDK contract for extension renderers. */
@@ -498,7 +497,7 @@ export class Container extends RenderNode {
       // for - throwing away a valid capture in the process.
       for (let index = 0; index < this._childList.length; index++) {
         // In-bounds: index < length.
-        this._childList[index]!._collect(builder, index);
+        this._childList[index]!.collect(builder, index);
       }
 
       return;
@@ -528,7 +527,7 @@ export class Container extends RenderNode {
    * children with a captured slot are replayed without cull/bounds/
    * material-key work; every other direct child (Container, or a
    * barrier-having Drawable, or a child that was culled/invisible last
-   * capture) still goes through a normal `_collect` call, which recurses into
+   * capture) still goes through a normal `collect` call, which recurses into
    * its own independent skip decision.
    */
   private _replayRetainedChildren(builder: RenderPlanBuilder): void {
@@ -545,7 +544,7 @@ export class Container extends RenderNode {
         slotIndex++;
       } else {
         // In-bounds: index < length.
-        this._childList[index]!._collect(builder, index);
+        this._childList[index]!.collect(builder, index);
       }
     }
   }
@@ -573,7 +572,7 @@ export class Container extends RenderNode {
       // peek/capture bookkeeping entirely -- most containers have no direct
       // drawable children and would otherwise pay pure overhead here.
       if (!child._isDrawableForRenderPlan() || child._renderPlanHasBarrierEffects()) {
-        child._collect(builder, index);
+        child.collect(builder, index);
 
         continue;
       }
@@ -584,7 +583,7 @@ export class Container extends RenderNode {
       // the array itself may run past it (see `_peekCurrentScopeEntries`).
       const beforeCount = builder._peekCurrentScopeEntryCount();
 
-      child._collect(builder, index);
+      child.collect(builder, index);
 
       const afterCount = builder._peekCurrentScopeEntryCount();
 
@@ -611,7 +610,16 @@ export class Container extends RenderNode {
     }
   }
 
+  /**
+   * A container has no geometry of its own, so a point hits it when it hits any
+   * child. A {@link RenderNode.hitArea} replaces that union with the shape,
+   * which is how a bare layout container becomes clickable in its own right.
+   */
   public override contains(x: number, y: number): boolean {
+    if (this.hitArea !== null) {
+      return super.contains(x, y);
+    }
+
     const children = this._childList;
 
     for (let i = 0; i < children.length; i++) {

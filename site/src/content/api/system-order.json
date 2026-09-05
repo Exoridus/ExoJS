@@ -6,7 +6,7 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 10,
+  "memberCount": 11,
   "counts": {
     "constructors": 0,
     "methods": 0,
@@ -73,6 +73,19 @@
           "signatureTokens": [
             {
               "text": "CoreInteraction",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "CoreJobs",
+          "signature": "CoreJobs",
+          "signatureTokens": [
+            {
+              "text": "CoreJobs",
               "kind": "name"
             }
           ],

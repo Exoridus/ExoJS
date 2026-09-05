@@ -95,6 +95,7 @@ export {
 export {
   createLdtkIntGridCellSource,
   getLdtkIntGridValueAt,
+  isLdtkFieldEnumType,
   LDTK_FLIP_NONE,
   LDTK_FLIP_X,
   LDTK_FLIP_XY,
@@ -112,6 +113,12 @@ export {
   ldtkToMapWorld,
   ldtkToTileMap,
 } from '@codexo/exojs-ldtk';
+
+// ── Lighting ───────────────────────────────────────────────────────────────
+export * from '@codexo/exojs-lighting';
+
+// ── Pathfinding ────────────────────────────────────────────────────────────
+export * from '@codexo/exojs-pathfinding';
 
 // ── Tilemap physics bridge ────────────────────────────────────────────────────
 export { buildObjectLayerColliders, TileColliderStreamer } from '@codexo/exojs-tilemap-physics';

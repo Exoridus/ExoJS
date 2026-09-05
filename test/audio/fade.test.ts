@@ -3,6 +3,7 @@ import type { MockInstance } from 'vitest';
 import { getAudioContext } from '#audio/audioContext';
 import { AudioSystem } from '#audio/AudioSystem';
 import { Sound } from '#audio/Sound';
+import { Time } from '#core/units';
 
 const createAudioBufferStub = (): AudioBuffer => ({ duration: 5 }) as AudioBuffer;
 
@@ -54,14 +55,14 @@ describe('Audio fade helpers', () => {
     const voice = system.play(sound);
     expect(voice.ended).toBe(false);
 
-    voice.stop(0);
+    voice.stop(Time.seconds(0));
     expect(voice.ended).toBe(true);
 
     restore();
     sound.destroy();
   });
 
-  test('Voice.stop(500) schedules linearRamp to 0', () => {
+  test('Voice.stop(0.5) schedules linearRamp to 0', () => {
     vi.useFakeTimers();
     const { gainNode, restore } = setupGainSpy();
     const ctx = getAudioContext();
@@ -69,7 +70,7 @@ describe('Audio fade helpers', () => {
     const system = new AudioSystem();
 
     const voice = system.play(sound);
-    voice.stop(500);
+    voice.stop(Time.seconds(0.5));
 
     expect(gainNode.gain.cancelScheduledValues).toHaveBeenCalled();
     expect(gainNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0, ctx.currentTime + 0.5);
@@ -113,14 +114,14 @@ describe('Audio fade helpers', () => {
     sound.destroy();
   });
 
-  test('Voice.stop(fadeMs) with pending timer: stop() before timer fires marks ended', () => {
+  test('Voice.stop(fade) with pending timer: stop() before timer fires marks ended', () => {
     vi.useFakeTimers();
     const { restore } = setupGainSpy();
     const sound = new Sound(createAudioBufferStub());
     const system = new AudioSystem();
 
     const voice = system.play(sound);
-    voice.stop(500);
+    voice.stop(Time.seconds(0.5));
 
     // Stop before timer fires
     voice.stop();
@@ -141,7 +142,7 @@ describe('Audio fade helpers', () => {
     const system = new AudioSystem();
 
     const voice = system.play(sound);
-    voice.stop(500); // schedules a timer
+    voice.stop(Time.seconds(0.5)); // schedules a timer
 
     // Destroying Sound stops all voices without throwing
     expect(() => sound.destroy()).not.toThrow();

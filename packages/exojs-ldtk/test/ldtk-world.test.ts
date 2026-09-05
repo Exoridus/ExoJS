@@ -152,6 +152,22 @@ describe('LDtk object normalisation', () => {
     expect(descriptor?.layer.name).toBe('Entities');
   });
 
+  it('carries LDtk enum fields through as their entry identifiers', () => {
+    const map = ldtkToTileMap(loadFixture('world.ldtk') as LdtkData);
+    const [descriptor] = [...mapObjectDescriptors(map.levels[0]!)];
+
+    expect(descriptor?.properties.kind).toBe('Ranger');
+    expect(descriptor?.properties.faction).toBe('Rebels');
+    expect(descriptor?.properties.resistances).toEqual(['Fire', 'Ice']);
+  });
+
+  it('omits an enum field LDtk left unset', () => {
+    const map = ldtkToTileMap(loadFixture('world.ldtk') as LdtkData);
+    const [descriptor] = [...mapObjectDescriptors(map.levels[0]!)];
+
+    expect('curse' in descriptor!.properties).toBe(false);
+  });
+
   it('recovers the bounding-box corner from the pivot and exposes size and rotation', async () => {
     const project = await loadLdtkProject(makeContext([], STREAMING_FIXTURES, 'streaming.ldtk'));
     const runtime = project.createRuntime({ scope: fakeScope('root', [], STREAMING_FIXTURES) });

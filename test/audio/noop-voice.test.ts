@@ -3,6 +3,7 @@ import type { AudioEffect } from '#audio/AudioEffect';
 import { AudioSystem } from '#audio/AudioSystem';
 import { NoopVoice } from '#audio/NoopVoice';
 import { Sound } from '#audio/Sound';
+import { Time } from '#core/units';
 
 // ---------------------------------------------------------------------------
 // Direct unit coverage of NoopVoice - the already-ended, inert Voice returned
@@ -58,7 +59,7 @@ describe('NoopVoice', () => {
   test('fade() is a no-op', () => {
     const bus = new AudioBus('noop-bus-5');
     const voice = new NoopVoice(bus);
-    expect(() => voice.fade(1, 500)).not.toThrow();
+    expect(() => voice.fade(1, Time.seconds(0.5))).not.toThrow();
     expect(voice.volume).toBe(0);
     bus.destroy();
   });
@@ -67,7 +68,7 @@ describe('NoopVoice', () => {
     const bus = new AudioBus('noop-bus-6');
     const voice = new NoopVoice(bus);
     expect(() => voice.stop()).not.toThrow();
-    expect(() => voice.stop(500)).not.toThrow();
+    expect(() => voice.stop(Time.seconds(0.5))).not.toThrow();
     expect(voice.ended).toBe(true);
     bus.destroy();
   });
@@ -90,7 +91,7 @@ describe('NoopVoice', () => {
     voice.onEnd.add(handler);
 
     voice.stop();
-    voice.fade(0, 0);
+    voice.fade(0, Time.seconds(0));
 
     expect(handler).not.toHaveBeenCalled();
 
@@ -100,8 +101,8 @@ describe('NoopVoice', () => {
 
 // ---------------------------------------------------------------------------
 // Real trigger paths in the engine (see `grep -r "new NoopVoice"` under src/audio):
-// AudioGenerator._createVoice() when the AudioContext is still locked, and
-// Sound._createVoice() for a seek offset past the asset's duration.
+// AudioGenerator.createVoice() when the AudioContext is still locked, and
+// Sound.createVoice() for a seek offset past the asset's duration.
 // ---------------------------------------------------------------------------
 
 describe('NoopVoice — real trigger paths', () => {

@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 28,
+  "memberCount": 39,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 28,
+    "properties": 39,
     "events": 0
   },
   "sections": [
@@ -77,7 +77,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Break individual words that are wider than maxWidth at character boundaries. Only applies when maxWidth is set. Defaults to false."
+          "description": "Break individual words that are wider than maxWidth at grapheme-cluster boundaries. Only applies when maxWidth is set. Defaults to false."
         },
         {
           "name": "colorGlyphs",
@@ -103,6 +103,89 @@
           "params": [],
           "returnType": null,
           "description": "Use a colour-glyph (emoji) atlas + the text-color shader. Construction-only."
+        },
+        {
+          "name": "decorationColor",
+          "signature": "decorationColor?: Color | null",
+          "signatureTokens": [
+            {
+              "text": "decorationColor",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Rule colour. null (the default) takes the fill, gradient included, so a gradient-filled label gets a gradient-filled rule."
+        },
+        {
+          "name": "decorationOffset",
+          "signature": "decorationOffset?: number",
+          "signatureTokens": [
+            {
+              "text": "decorationOffset",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Extra downward offset in pixels applied to both rules, on top of the position the font's metrics put them at. Defaults to 0."
+        },
+        {
+          "name": "decorationThickness",
+          "signature": "decorationThickness?: number",
+          "signatureTokens": [
+            {
+              "text": "decorationThickness",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Rule thickness in pixels. 0 (the default) derives it from the font size."
         },
         {
           "name": "direction",
@@ -135,7 +218,32 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Text direction. Defaults to 'ltr'. 'rtl' reverses each line's glyphs visually after wrapping, which is correct for uniformly right-to-left text. Full bidi (mixed LTR/RTL runs), Arabic contextual shaping, and direction-relative alignment are not implemented - align stays literal in both directions."
+          "description": "Base direction for text layout. Defaults to 'ltr'. Direction-relative alignment is not derived from it - align stays literal in both directions."
+        },
+        {
+          "name": "ellipsis",
+          "signature": "ellipsis?: string",
+          "signatureTokens": [
+            {
+              "text": "ellipsis",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Marker appended to the last kept line under overflow: 'ellipsis'. Defaults to the horizontal ellipsis, U+2026. Set '...' for the three-period spelling, or '' to truncate without a marker. The marker is measured as text in the same font, so a long one eats proportionally more of the line it terminates. Truncation stops at grapheme-cluster boundaries, so a combining sequence or a flag is never cut in half."
         },
         {
           "name": "fillColor",
@@ -239,7 +347,7 @@
         },
         {
           "name": "fontStyle",
-          "signature": "fontStyle?: \"italic\" | \"normal\"",
+          "signature": "fontStyle?: FontStyle",
           "signatureTokens": [
             {
               "text": "fontStyle",
@@ -254,21 +362,38 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"italic\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"normal\"",
-              "kind": "keyword"
+              "text": "FontStyle",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "fontVariant",
+          "signature": "fontVariant?: FontVariant",
+          "signatureTokens": [
+            {
+              "text": "fontVariant",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontVariant",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "CSS font-variant-caps. Defaults to 'normal'."
         },
         {
           "name": "fontWeight",
@@ -296,11 +421,11 @@
           "description": "CSS font-weight. Defaults to 'normal' so that single-weight custom fonts render without browser-synthesised bold artefacts. Set explicitly to 'bold' for display / title text that intentionally requires bold."
         },
         {
-          "name": "gradientAxis",
-          "signature": "gradientAxis?: GradientAxis",
+          "name": "gradient",
+          "signature": "gradient?: TextGradient | null",
           "signatureTokens": [
             {
-              "text": "gradientAxis",
+              "text": "gradient",
               "kind": "name"
             },
             {
@@ -312,49 +437,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "GradientAxis",
+              "text": "TextGradient",
               "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Gradient orientation. Defaults to 'vertical'."
-        },
-        {
-          "name": "gradientColors",
-          "signature": "gradientColors?: [Color, Color] | null",
-          "signatureTokens": [
-            {
-              "text": "gradientColors",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Color",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Color",
-              "kind": "type"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
             },
             {
               "text": " | ",
@@ -367,7 +451,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Two-stop fill gradient. When set, overrides fillColor for the glyph interior. null disables the gradient. The first colour is the START of the ramp and the second its END, read along gradientAxis: [top, bottom] for 'vertical', [left, right] for 'horizontal'."
+          "description": "Multi-stop fill gradient. When set it overrides fillColor for the glyph interior; null disables it. The ramp spans the ink extent (getLocalBounds()), not the advance box."
         },
         {
           "name": "leading",
@@ -445,6 +529,31 @@
           "description": ""
         },
         {
+          "name": "locale",
+          "signature": "locale?: string",
+          "signatureTokens": [
+            {
+              "text": "locale",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Language tag ('en', 'ja', 'ar-EG') used for Unicode text segmentation - which clusters count as one character, and where a line may break. It selects no font and loads nothing; the platform default locale applies when it is absent."
+        },
+        {
           "name": "maxHeight",
           "signature": "maxHeight?: number",
           "signatureTokens": [
@@ -468,6 +577,31 @@
           "params": [],
           "returnType": null,
           "description": "Vertical boundary in pixels. Only whole lines that fit within it are kept. Has no effect on its own - pair it with an overflow policy."
+        },
+        {
+          "name": "maxLines",
+          "signature": "maxLines?: number",
+          "signatureTokens": [
+            {
+              "text": "maxLines",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Hard cap on the number of laid-out lines, counted after wrapping. Unlike maxHeight this clips on its own, whatever overflow says - capping the line count is the whole point of asking for one. Pair it with overflow: 'ellipsis' to mark the last kept line. When both a cap and a maxHeight apply, the smaller one wins. Must be a positive integer."
         },
         {
           "name": "maxWidth",
@@ -583,7 +717,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "What to do with lines that do not fit maxHeight. Defaults to 'visible'. - 'visible' - Keep every line; maxHeight is ignored. - 'clip' - Drop the lines that do not fit. - 'ellipsis' - Drop them and mark the last visible line with ..., shortening it so it still fits maxWidth when one is set."
+          "description": "What to do with lines that do not fit maxHeight or maxLines. Defaults to 'visible'. - 'visible' - Keep every line; maxHeight is ignored. A maxLines cap still applies, silently. - 'clip' - Drop the lines that do not fit. - 'ellipsis' - Drop them and mark the last visible line with ellipsis, shortening it so it still fits maxWidth when one is set. Under a line cap the marker also reaches a last line that overflows maxWidth with no line dropped at all - a single unbreakable word under maxLines: 1."
         },
         {
           "name": "pixelRatio",
@@ -759,6 +893,147 @@
           "params": [],
           "returnType": null,
           "description": "Vertical shadow offset in pixels."
+        },
+        {
+          "name": "shaping",
+          "signature": "shaping?: \"auto\" | \"browser\" | \"simple\"",
+          "signatureTokens": [
+            {
+              "text": "shaping",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"auto\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"browser\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"simple\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How glyph appearance is resolved. Defaults to 'auto'. - 'auto' - use the shared-glyph fast path for content that is safe to render one cluster at a time, and hand anything else to the browser's text engine as a whole line. The classification is deliberately conservative and may admit more content to the fast path over time. - 'simple' - always use the shared glyph cache. The cheapest path and the right one for controlled content; a right-to-left line is reversed cluster by cluster rather than reordered, and contextual scripts render in their isolated forms. - 'browser' - always shape the whole line through the browser, which resolves bidi order and contextual forms. Each line becomes one node-owned raster instead of a run of shared glyphs, so a line whose text changes is rasterized again. A browser-shaped line is one glyph as far as the layout is concerned, so align: 'justify' cannot stretch it and caret geometry resolves to line granularity."
+        },
+        {
+          "name": "strikethrough",
+          "signature": "strikethrough?: boolean",
+          "signatureTokens": [
+            {
+              "text": "strikethrough",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Draw a rule through each line. Defaults to false."
+        },
+        {
+          "name": "tabSize",
+          "signature": "tabSize?: number",
+          "signatureTokens": [
+            {
+              "text": "tabSize",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Tab stop spacing, counted in space characters. Defaults to 8, the CSS tab-size initial value. A tab advances the pen to the next multiple of tabSize space widths from the start of its line, so a run of tabs lines columns up instead of adding a fixed gap each. Only reachable under whiteSpace: 'pre'; the collapsing modes turn a tab into a single space before layout runs, as CSS does. Must be a positive finite number. Ignored for browser-shaped lines, which the platform's text engine lays out whole."
+        },
+        {
+          "name": "textTransform",
+          "signature": "textTransform?: TextTransform",
+          "signatureTokens": [
+            {
+              "text": "textTransform",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextTransform",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Case mapping applied before layout. Defaults to 'none'. The mapping is Unicode-aware and never touches the node's text: reading it back gives the string that was assigned, so a transformed label stays editable and a caret still lands where the reader clicked. 'capitalize' uppercases the first grapheme cluster of each word and leaves the rest of the word alone, matching CSS. Word boundaries and the case mapping both follow locale when LayoutOptions.locale sets one."
+        },
+        {
+          "name": "underline",
+          "signature": "underline?: boolean",
+          "signatureTokens": [
+            {
+              "text": "underline",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Draw a rule under each line. Defaults to false."
         },
         {
           "name": "whiteSpace",

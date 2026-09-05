@@ -27,6 +27,7 @@ export * from './Quadtree';
 export * from './Random';
 export * from './Rectangle';
 export type * from './RectangleLike';
+export type * from './ShapeLike';
 export * from './Size';
 export type { SweptHit } from './sweptCollision';
 export { Sweep } from './sweptCollision';

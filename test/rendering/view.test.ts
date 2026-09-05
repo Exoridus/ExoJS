@@ -1,3 +1,4 @@
+import { Time } from '#core/units';
 import { Rectangle } from '#math/Rectangle';
 import { View } from '#rendering/View';
 
@@ -35,7 +36,7 @@ describe('View', () => {
     const view = new View(0, 0, 100, 100);
     const baseline = view.getBounds().clone();
 
-    view.shake(8, 100, { frequency: 12 });
+    view.shake(8, Time.seconds(0.1), { frequency: 12 });
     view.update(16);
 
     const shaken = view.getBounds().clone();

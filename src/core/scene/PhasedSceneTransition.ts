@@ -1,6 +1,6 @@
 import { Ease } from '#animation/Ease';
 import type { EasingFunction } from '#animation/types';
-import type { Seconds } from '#core/units';
+import { type Seconds, seconds } from '#core/units';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import { Sprite } from '#rendering/sprite/Sprite';
 
@@ -46,8 +46,8 @@ export const mergeSceneTransitionRequirements = (a: SceneTransitionPhaseRequirem
 
 /** Construction options for {@link PhasedSceneTransition} and its subclasses. */
 export interface PhasedSceneTransitionOptions {
-  /** Duration of *each* phase (enter and exit run this long independently), in milliseconds. Default `220`. */
-  readonly duration?: number;
+  /** Duration of *each* phase (enter and exit run this long independently). Default `0.22` seconds. */
+  readonly duration?: Seconds;
   /** Applied to both phases' `progress` to produce `easedProgress`. Default {@link Ease.linear}. */
   readonly easing?: EasingFunction;
   /** Which render layer this transition's output composites against. Default `'screen'`. */
@@ -87,7 +87,7 @@ export interface SceneTransitionPhaseContext {
  * @stable
  */
 export abstract class PhasedSceneTransition<PhaseState = void> extends SceneTransition {
-  public readonly duration: number;
+  public readonly duration: Seconds;
   public readonly easing: EasingFunction;
   public readonly placement: 'scene' | 'screen';
 
@@ -102,7 +102,7 @@ export abstract class PhasedSceneTransition<PhaseState = void> extends SceneTran
    */
   public constructor(options: PhasedSceneTransitionOptions = {}) {
     super();
-    this.duration = options.duration ?? 220;
+    this.duration = seconds(options.duration ?? 0.22);
     this.easing = options.easing ?? Ease.linear;
     this.placement = options.placement ?? 'screen';
   }
@@ -136,6 +136,18 @@ export abstract class PhasedSceneTransition<PhaseState = void> extends SceneTran
   }
 
   /**
+   * Release whatever {@link PhasedSceneTransition.createPhaseState} allocated
+   * for one navigation. Called exactly once per session, on every exit path -
+   * normal completion, an abort before the commit, or the application being
+   * destroyed mid-transition. Override it whenever the phase state owns
+   * GPU-backed resources (a `Geometry`, a `Material`, a `Graphics`, a
+   * `RenderTexture` you created yourself); plain scratch objects need no
+   * override. Textures handed in through {@link SceneTransitionFrame} are
+   * borrowed and must not be released here.
+   */
+  protected destroyPhaseState(_state: PhaseState): void {}
+
+  /**
    * @internal Public forwarder for {@link PhasedSceneTransition.createPhaseState} -
    * mirrors {@link PhasedSceneTransition.getRequirementsForPhase}'s existing
    * pattern: `PhasedSceneTransitionSession` (and a composed sibling
@@ -144,6 +156,11 @@ export abstract class PhasedSceneTransition<PhaseState = void> extends SceneTran
    */
   public _createPhaseStateForSession(): PhaseState {
     return this.createPhaseState();
+  }
+
+  /** @internal Public forwarder for {@link PhasedSceneTransition.destroyPhaseState}, for the same reason {@link PhasedSceneTransition._createPhaseStateForSession} exists. */
+  public _destroyPhaseStateForSession(state: PhaseState): void {
+    this.destroyPhaseState(state);
   }
 
   /** Draw one frame of the `enter` phase. No-op by default - override for a visible enter effect. */
@@ -195,11 +212,12 @@ type PhasedTransitionPhaseState = 'exit' | 'holding' | 'enter' | 'done';
  */
 export class PhasedSceneTransitionSession implements SceneTransitionSession {
   private _phaseState: PhasedTransitionPhaseState = 'exit';
-  private _elapsedMs = 0;
+  private _elapsed: Seconds = seconds(0);
   /** Reusable sprite for the direct→texture identity-composite fallback - session-owned, never shared with the phase definitions. */
   private readonly _identitySprite = new Sprite(null);
   private readonly _exitPhaseState: unknown;
   private readonly _enterPhaseState: unknown;
+  private _phaseStateDestroyed = false;
 
   public constructor(
     private readonly _exitPhase: PhasedSceneTransition<unknown>,
@@ -234,14 +252,14 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
       // enter phase's own duration, but the frame that finally observes
       // `committed` should not be a second no-op frame on top of that.
       this._phaseState = 'enter';
-      this._elapsedMs = 0;
+      this._elapsed = seconds(0);
     }
 
     const activePhase = this._phaseState === 'exit' ? this._exitPhase : this._enterPhase;
 
-    this._elapsedMs = Math.min(activePhase.duration, this._elapsedMs + Math.max(0, delta * 1000));
+    this._elapsed = seconds(Math.min(activePhase.duration, this._elapsed + Math.max(0, delta)));
 
-    if (this._elapsedMs >= activePhase.duration) {
+    if (this._elapsed >= activePhase.duration) {
       if (this._phaseState === 'exit') {
         if (!this._environment.commitRequested) {
           this._environment.commit();
@@ -288,7 +306,7 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
       context.render(this._identitySprite, { view: context.screenView });
     }
 
-    const progress = activePhase.duration === 0 ? 1 : Math.min(1, this._elapsedMs / activePhase.duration);
+    const progress = activePhase.duration === 0 ? 1 : Math.min(1, this._elapsed / activePhase.duration);
     const easedProgress = activePhase.easing(progress);
     const presence = phase === 'enter' ? easedProgress : 1 - easedProgress;
 
@@ -300,6 +318,18 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
     // (Director-owned) and is never attached to a scene graph - dropping the
     // session's own reference is enough for GC to reclaim it, no explicit
     // Sprite.destroy() needed here.
+    //
+    // The two phase states are separate objects even when both phases are the
+    // same instance (each side got its own `_createPhaseStateForSession()`
+    // call), so both are released. The flag keeps a redundant `destroy()` from
+    // handing an author's `destroyPhaseState()` an already-released state.
+    if (this._phaseStateDestroyed) {
+      return;
+    }
+
+    this._phaseStateDestroyed = true;
+    this._exitPhase._destroyPhaseStateForSession(this._exitPhaseState);
+    this._enterPhase._destroyPhaseStateForSession(this._enterPhaseState);
   }
 }
 
@@ -351,7 +381,7 @@ class NoOpPhasedSceneTransition extends PhasedSceneTransition {
   }
 }
 
-const noOpPhasedSceneTransition = new NoOpPhasedSceneTransition({ duration: 0 });
+const noOpPhasedSceneTransition = new NoOpPhasedSceneTransition({ duration: seconds(0) });
 
 /**
  * Resolve an optional `{ enter, exit }` pair (either side may be omitted -
