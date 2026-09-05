@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 2,
+  "memberCount": 3,
   "counts": {
     "constructors": 0,
-    "methods": 2,
+    "methods": 3,
     "properties": 0,
     "events": 0
   },
@@ -29,6 +29,47 @@
       "id": "methods",
       "title": "Methods",
       "members": [
+        {
+          "name": "getSolidTexel",
+          "signature": "getSolidTexel?(): SolidTexel | null",
+          "signatureTokens": [
+            {
+              "text": "getSolidTexel",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SolidTexel",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "SolidTexel | null",
+          "description": "A solid texel on the pages this shaper rasterizes into, for decoration quads. A measurement-only shaper owns no pages and omits it, which reads as \"no decorations\", exactly as it does on a glyph provider."
+        },
         {
           "name": "measureLine",
           "signature": "measureLine(line: string, fontSize: number): number",

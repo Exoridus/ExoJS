@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 5,
+  "memberCount": 6,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 5,
+    "properties": 6,
     "events": 0
   },
   "sections": [
@@ -28,6 +28,27 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "decorations",
+          "signature": "decorations: Uint8Array",
+          "signatureTokens": [
+            {
+              "text": "decorations",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint8Array",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "One flag per quad: 1 for a decoration rule, 0 for a glyph. The renderers fold it into the packed per-vertex word so the fragment stage can give a rule its own colour. A rule samples solid ink, so without the flag it would be indistinguishable from a glyph interior."
+        },
         {
           "name": "indices",
           "signature": "indices: Uint32Array",

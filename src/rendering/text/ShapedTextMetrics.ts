@@ -1,8 +1,8 @@
 import type { CanvasTextState } from './canvasTextState';
 import { applyCanvasTextState } from './canvasTextState';
-import { cssFontString } from './GlyphMetrics';
+import { cssFontString } from './canvasTextState';
 import type { LineShaper } from './shaping';
-import type { GlyphInfo } from './types';
+import type { FontVariantKey, GlyphInfo } from './types';
 
 type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
@@ -44,14 +44,12 @@ const makeMeasureCtx = (): Ctx2D => {
  * operation. The numbers are logical, so they are independent of any raster
  * density and a line breaks in the same place at every `pixelRatio`.
  *
- * One instance per `family` x `fontStyle` x `fontWeight` x base direction x
- * letter spacing - see {@link GlyphAtlasPool.getShapedMetrics}.
+ * One instance per {@link FontVariantKey} x base direction x letter spacing -
+ * see {@link GlyphAtlasPool.getShapedMetrics}.
  * @advanced
  */
 export class ShapedTextMetrics implements LineShaper {
-  private readonly _family: string;
-  private readonly _fontStyle: 'normal' | 'italic';
-  private readonly _fontWeight: string;
+  private readonly _font: FontVariantKey;
   private readonly _direction: 'ltr' | 'rtl';
   private readonly _letterSpacing: number;
 
@@ -61,10 +59,8 @@ export class ShapedTextMetrics implements LineShaper {
   /** Created on first use - a variant that is never measured allocates no canvas. */
   private _ctx: Ctx2D | null = null;
 
-  public constructor(family: string, fontStyle: 'normal' | 'italic', fontWeight: string, direction: 'ltr' | 'rtl' = 'ltr', letterSpacing = 0) {
-    this._family = family;
-    this._fontStyle = fontStyle;
-    this._fontWeight = fontWeight;
+  public constructor(font: FontVariantKey, direction: 'ltr' | 'rtl' = 'ltr', letterSpacing = 0) {
+    this._font = font;
     this._direction = direction;
     this._letterSpacing = letterSpacing;
   }
@@ -72,9 +68,10 @@ export class ShapedTextMetrics implements LineShaper {
   /** The canvas text state this variant measures with, at `size` logical pixels. */
   public textState(size: number): CanvasTextState {
     return {
-      font: cssFontString(this._family, this._fontStyle, this._fontWeight, size),
+      font: cssFontString(this._font, size),
       direction: this._direction,
       letterSpacing: this._letterSpacing,
+      variantCaps: this._font.fontVariant ?? 'normal',
     };
   }
 

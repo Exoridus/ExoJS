@@ -1,23 +1,31 @@
 import { type BitmapText } from '#rendering/text/BitmapText';
 import { Text } from '#rendering/text/Text';
 
+import { textGradientMaxStops } from './TextStyle';
+
 // ── Shared per-node data layout ──────────────────────────────────────────────
 //
-// 10 texels (40 floats) per node, packed identically by WebGl2TextRenderer
+// 20 texels (80 floats) per node, packed identically by WebGl2TextRenderer
 // (an RGBA32F data texture) and WebGpuTextRenderer (a storage buffer) - only
 // the destination resource differs, never the bytes.
 //
-// Texel 0 : (a,  c,  0,  tx) - mat3 column-major: col0 + translate.x
-// Texel 1 : (b,  d,  0,  ty) - mat3 column-major: col1 + translate.y
-// Texel 2 : (r,  g,  b,  a ) - fillColor (linear 0-1)
-// Texel 3 : (r,  g,  b,  a ) - outlineColor
-// Texel 4 : (outlineMin, shadowAlpha, shadowBlur, gradientEnabled)
-//             outlineMin = 0.5 → disabled; < 0.5 → enabled with that threshold
-// Texel 5 : (r,  g,  b,  a ) - shadowColor
-// Texel 6 : (shadowOffX_px, shadowOffY_px, gradientVertical, sdfRadius_logical)
-// Texel 7 : (r,  g,  b,  a ) - gradientTop
-// Texel 8 : (r,  g,  b,  a ) - gradientBottom
-// Texel 9 : (minX, minY, w, h) - text block bounds (local space, for gradient UV)
+// Texel 0     : (a,  c,  snapMode,  tx) - mat3 column-major: col0 + translate.x
+// Texel 1     : (b,  d,  0,  ty) - mat3 column-major: col1 + translate.y
+// Texel 2     : (r,  g,  b,  a ) - fillColor (linear 0-1)
+// Texel 3     : (r,  g,  b,  a ) - outlineColor
+// Texel 4     : (outlineMin, shadowAlpha, shadowBlur, gradientStopCount)
+//                 outlineMin = 0.5 → disabled; < 0.5 → enabled with that threshold
+//                 gradientStopCount = 0 → the fill takes `fillColor`
+// Texel 5     : (r,  g,  b,  a ) - shadowColor
+// Texel 6     : (shadowOffX_px, shadowOffY_px, decorationOverride, sdfRadius_logical)
+//                 decorationOverride = 1 → a decoration quad takes texel 8
+// Texel 7     : (gradAxisX, gradAxisY, gradBias, 0)
+//                 ramp position t = dot(gradUV, gradAxis) + gradBias
+// Texel 8     : (r, g, b, a) - decorationColor
+// Texel 9     : (minX, minY, w, h) - text block bounds (local space, for gradient UV)
+// Texel 10-17 : (r, g, b, a) - gradient stop colours 0..7
+// Texel 18    : gradient stop offsets 0..3
+// Texel 19    : gradient stop offsets 4..7
 //
 // texel 0's spare `.z` carries the snap-mode flag the vertex shader reads to
 // decide whether to snap the glyph origin to the device-pixel grid. Both
@@ -25,9 +33,14 @@ import { Text } from '#rendering/text/Text';
 // uniform) to convert px → UV space.
 
 /** Texels per packed node row. @internal */
-export const textNodeDataTexels = 10;
+export const textNodeDataTexels = 20;
 /** Floats per packed node row (`textNodeDataTexels * 4`). @internal */
 export const textNodeDataFloats = textNodeDataTexels * 4;
+
+/** First texel of the gradient stop colours. @internal */
+export const textGradientColorTexel = 10;
+/** First texel of the packed gradient stop offsets. @internal */
+export const textGradientOffsetTexel = 18;
 
 /**
  * Packs texels 0-1 (8 floats: world transform + snap-mode flag) for `node`
@@ -53,9 +66,9 @@ export const packTextNodeTransform = (target: Float32Array, base: number, node: 
 };
 
 /**
- * Packs one node's full 10-texel (40-float) row - world transform, snap-mode
- * flag, fill/outline/shadow colors, shadow offset, gradient axis/colors, and
- * ink bounds - into `target` starting at float index `base`.
+ * Packs one node's full 20-texel (80-float) row - world transform, snap-mode
+ * flag, fill/outline/shadow colors, shadow offset, gradient ramp and stops,
+ * and ink bounds - into `target` starting at float index `base`.
  *
  * Backend-free: this is the single implementation both `WebGl2TextRenderer`
  * and `WebGpuTextRenderer` call to fill their respective per-node data
@@ -83,8 +96,9 @@ export const packTextNodeData = (target: Float32Array, base: number, node: Text 
   target[base + 14] = oc.b / 255;
   target[base + 15] = oc.a;
 
-  // Params (texel 4): outlineMin, shadowAlpha, shadowBlur, gradientEnabled
+  // Params (texel 4): outlineMin, shadowAlpha, shadowBlur, gradientStopCount
   // outlineMin = 0.5 → disabled; 0.5 - outlineWidth when enabled
+  const gradient = style.gradient;
   const outlineMin = style.outlineWidth > 0 ? Math.max(0, 0.5 - style.outlineWidth) : 0.5;
   target[base + 16] = outlineMin;
   target[base + 17] = style.shadowAlpha;
@@ -94,7 +108,7 @@ export const packTextNodeData = (target: Float32Array, base: number, node: Text 
   // fragment from the field's screen-space gradient, so a floor here would
   // only smear the shadow of a node that asked for none.
   target[base + 18] = style.shadowBlur * 0.1;
-  target[base + 19] = style.gradientColors !== null ? 1 : 0;
+  target[base + 19] = gradient === null ? 0 : gradient.stops.length;
 
   // Shadow color (texel 5)
   const sc = style.shadowColor;
@@ -103,7 +117,7 @@ export const packTextNodeData = (target: Float32Array, base: number, node: Text 
   target[base + 22] = sc.b / 255;
   target[base + 23] = sc.a;
 
-  // Shadow offset + gradient axis (texel 6)
+  // Shadow offset (texel 6)
   // Stored in ATLAS TEXELS; the shaders divide by the atlas page size to get
   // the UV offset. The style states the offset in LOGICAL pixels, and one
   // logical pixel is `rasterPixelRatio` texels - without the scale a shadow
@@ -111,29 +125,15 @@ export const packTextNodeData = (target: Float32Array, base: number, node: Text 
   const texelsPerLogicalPixel = node.rasterPixelRatio;
   target[base + 24] = style.shadowOffsetX * texelsPerLogicalPixel;
   target[base + 25] = style.shadowOffsetY * texelsPerLogicalPixel;
-  target[base + 26] = style.gradientAxis === 'vertical' ? 1 : 0;
+  // Zero means "a rule takes the fill", which is what makes an underline pick
+  // up the gradient for free rather than needing its own copy of the ramp.
+  target[base + 26] = style.decorationColor === null ? 0 : 1;
   // The node's SDF buffer radius in LOGICAL pixels, which is the field's scale:
   // the distance value moves by 1/radius per logical unit whatever the atlas
   // density. The fragment stage sizes its antialiased edge from it. Zero means
   // "unknown", which is the honest answer for a BitmapText - an offline MSDF
   // atlas carries no distance range - and selects the derivative fallback.
   target[base + 27] = node instanceof Text ? node.sdfRadius : 0;
-
-  // Gradient top (texel 7) / bottom (texel 8)
-  const gc = style.gradientColors;
-  if (gc !== null) {
-    target[base + 28] = gc[0].r / 255;
-    target[base + 29] = gc[0].g / 255;
-    target[base + 30] = gc[0].b / 255;
-    target[base + 31] = gc[0].a;
-    target[base + 32] = gc[1].r / 255;
-    target[base + 33] = gc[1].g / 255;
-    target[base + 34] = gc[1].b / 255;
-    target[base + 35] = gc[1].a;
-  } else {
-    target[base + 28] = target[base + 29] = target[base + 30] = target[base + 31] = 0;
-    target[base + 32] = target[base + 33] = target[base + 34] = target[base + 35] = 0;
-  }
 
   // Text ink bounds (texel 9): (minX, minY, width, height)
   // The vertex shader uses these to compute normalized gradient UV, so it
@@ -145,4 +145,79 @@ export const packTextNodeData = (target: Float32Array, base: number, node: Text 
   target[base + 37] = ink.y;
   target[base + 38] = ink.width;
   target[base + 39] = ink.height;
+
+  // Decoration color (texel 8)
+  const dc = style.decorationColor;
+  target[base + 32] = dc === null ? 0 : dc.r / 255;
+  target[base + 33] = dc === null ? 0 : dc.g / 255;
+  target[base + 34] = dc === null ? 0 : dc.b / 255;
+  target[base + 35] = dc === null ? 0 : dc.a;
+
+  // Gradient ramp (texel 7) and stops (texels 10-19)
+  packTextGradient(target, base, gradient, ink.width, ink.height);
+};
+
+/**
+ * Packs the gradient ramp axis and its stops.
+ *
+ * The angle is resolved into a plain dot product against the normalized ink UV
+ * because the fragment stage has no business re-deriving trigonometry per
+ * pixel, and because the box's aspect ratio belongs to the resolution: a
+ * 45-degree ramp is only 45 degrees on screen if the ink's width and height
+ * enter the projection, which they cannot once the UV has normalized them
+ * away. Following CSS, the ramp line spans the box corner to corner, so the
+ * first and last stops land on the box edges at every angle.
+ */
+const packTextGradient = (
+  target: Float32Array,
+  base: number,
+  gradient: {
+    readonly stops: ReadonlyArray<{ readonly offset: number; readonly color: { r: number; g: number; b: number; a: number } }>;
+    readonly angle: number;
+  } | null,
+  width: number,
+  height: number,
+): void => {
+  const axisBase = base + 28;
+  const colorBase = base + textGradientColorTexel * 4;
+  const offsetBase = base + textGradientOffsetTexel * 4;
+
+  target[axisBase + 0] = 0;
+  target[axisBase + 1] = 0;
+  target[axisBase + 2] = 0;
+  target[axisBase + 3] = 0;
+
+  for (let i = 0; i < textGradientMaxStops; i++) {
+    const at = colorBase + i * 4;
+
+    target[at + 0] = target[at + 1] = target[at + 2] = target[at + 3] = 0;
+    target[offsetBase + i] = 0;
+  }
+
+  if (gradient === null) return;
+
+  const radians = (gradient.angle * Math.PI) / 180;
+  // CSS reads 0 degrees as "towards the top" and grows clockwise; the ink box
+  // is y-down, which flips the vertical component.
+  const dirX = Math.sin(radians);
+  const dirY = -Math.cos(radians);
+  const lineLength = Math.abs(width * dirX) + Math.abs(height * dirY);
+
+  if (lineLength > 0) {
+    target[axisBase + 0] = (width * dirX) / lineLength;
+    target[axisBase + 1] = (height * dirY) / lineLength;
+    target[axisBase + 2] = 0.5 - (width * dirX + height * dirY) / (2 * lineLength);
+  }
+
+  for (let i = 0; i < gradient.stops.length; i++) {
+    // In-bounds: i < stops.length, and TextStyle caps it at textGradientMaxStops.
+    const stop = gradient.stops[i]!;
+    const at = colorBase + i * 4;
+
+    target[at + 0] = stop.color.r / 255;
+    target[at + 1] = stop.color.g / 255;
+    target[at + 2] = stop.color.b / 255;
+    target[at + 3] = stop.color.a;
+    target[offsetBase + i] = stop.offset;
+  }
 };

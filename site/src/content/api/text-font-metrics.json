@@ -1,0 +1,114 @@
+{
+  "title": "TextFontMetrics",
+  "description": "Vertical font metrics in logical pixels at one font size, as a glyph source reports them. Everything is measured from the line's own baseline: `ascent` is how far the baseline sits below the line box's top, `descent` how far the font reaches below it, `xHeight` the height of a lowercase letter above it. Text decorations are placed from these rather than from fractions of the font size, so a rule lands in the same relation to the letters in every typeface.",
+  "symbol": "TextFontMetrics",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Vertical font metrics in logical pixels at one font size, as a glyph source reports them.",
+        "Everything is measured from the line's own baseline: `ascent` is how far the baseline sits below the line box's top, `descent` how far the font reaches below it, `xHeight` the height of a lowercase letter above it. Text decorations are placed from these rather than from fractions of the font size, so a rule lands in the same relation to the letters in every typeface."
+      ],
+      "importLine": "import { TextFontMetrics } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "ascent",
+          "signature": "ascent: number",
+          "signatureTokens": [
+            {
+              "text": "ascent",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "descent",
+          "signature": "descent: number",
+          "signatureTokens": [
+            {
+              "text": "descent",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "xHeight",
+          "signature": "xHeight: number",
+          "signatureTokens": [
+            {
+              "text": "xHeight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/text/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/text/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/types.ts"
+}

@@ -34,17 +34,8 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
 //
 // Row index = nodeIndex (one row per node rendered this frame).
 //
-// Texel 0 : (a,  c,  0,  tx)  - mat3 column-major: col0 + translate.x
-// Texel 1 : (b,  d,  0,  ty)  - mat3 column-major: col1 + translate.y
-// Texel 2 : (r,  g,  b,  a )  - fillColor (linear 0-1)
-// Texel 3 : (r,  g,  b,  a )  - outlineColor
-// Texel 4 : (outlineMin, shadowAlpha, shadowBlur, gradientEnabled)
-//             outlineMin = 0.5 → disabled; < 0.5 → enabled with that threshold
-// Texel 5 : (r,  g,  b,  a )  - shadowColor
-// Texel 6 : (shadowOffX_px, shadowOffY_px, gradientVertical, sdfRadius_logical)
-// Texel 7 : (r,  g,  b,  a )  - gradientTop
-// Texel 8 : (r,  g,  b,  a )  - gradientBottom
-// Texel 9 : (minX, minY, w, h) - text block bounds (local space, for gradient UV)
+// The row layout itself lives in `#rendering/text/nodeDataPacker`, which both
+// backends pack through - see it for what each texel carries.
 //
 // The shaders divide shadowOffset by u_pageSize (a per-batch uniform shared by
 // compatible atlas textures) to convert px → UV space.
@@ -57,7 +48,7 @@ const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 // Per-vertex layout (20 bytes), mirrors WebGpuTextRenderer's vertex buffer exactly:
 //   a_position : vec2  f32  (offset  0,  8 bytes)  ← LOCAL space
 //   a_texcoord : vec2  f32  (offset  8,  8 bytes)
-//   a_packedNodeSlot: uint u32 (offset 16, 4 bytes) ← 24-bit node row + 8-bit atlas slot
+//   a_packedNodeSlot: uint u32 (offset 16, 4 bytes) ← 23-bit node row + decoration flag + 8-bit atlas slot
 //
 // The vertex shader reads the world transform live from the per-node data texture via
 // texelFetch (same texture the fragment stage already reads style from), keyed by
@@ -491,7 +482,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
         const { quads: batch, nodeIndex, atlasTexture } = quads[k]!;
         const atlasSlot = atlasSlots.get(atlasTexture)!;
         const qVerts = batch.quadCount * 4;
-        const { vertices, uvs, indices } = batch;
+        const { vertices, uvs, indices, decorations } = batch;
 
         for (let v = 0; v < qVerts; v++) {
           const w = (vOffset + v) * vertexStrideWords;
@@ -501,7 +492,8 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
           this._float32View[w + 1] = vertices[vp + 1]!;
           this._float32View[w + 2] = uvs[vp]!;
           this._float32View[w + 3] = uvs[vp + 1]!;
-          this._uint32View[w + 4] = packTextNodeAtlasSlot(nodeIndex, atlasSlot);
+          // Four vertices per quad, so the flag is read once per quad.
+          this._uint32View[w + 4] = packTextNodeAtlasSlot(nodeIndex, atlasSlot, decorations[v >> 2] === 1);
         }
 
         for (let x = 0; x < indices.length; x++) {

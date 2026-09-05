@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 18,
+  "memberCount": 24,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 18,
+    "properties": 24,
     "events": 0
   },
   "sections": [
@@ -52,6 +52,89 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "decorationColor",
+          "signature": "decorationColor?: Color | null",
+          "signatureTokens": [
+            {
+              "text": "decorationColor",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Rule colour. null (the default) takes the fill, gradient included, so a gradient-filled label gets a gradient-filled rule."
+        },
+        {
+          "name": "decorationOffset",
+          "signature": "decorationOffset?: number",
+          "signatureTokens": [
+            {
+              "text": "decorationOffset",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Extra downward offset in pixels applied to both rules, on top of the position the font's metrics put them at. Defaults to 0."
+        },
+        {
+          "name": "decorationThickness",
+          "signature": "decorationThickness?: number",
+          "signatureTokens": [
+            {
+              "text": "decorationThickness",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Rule thickness in pixels. 0 (the default) derives it from the font size."
         },
         {
           "name": "fillColor",
@@ -155,7 +238,7 @@
         },
         {
           "name": "fontStyle",
-          "signature": "fontStyle?: \"italic\" | \"normal\"",
+          "signature": "fontStyle?: FontStyle",
           "signatureTokens": [
             {
               "text": "fontStyle",
@@ -170,21 +253,38 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"italic\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"normal\"",
-              "kind": "keyword"
+              "text": "FontStyle",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "fontVariant",
+          "signature": "fontVariant?: FontVariant",
+          "signatureTokens": [
+            {
+              "text": "fontVariant",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontVariant",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "CSS font-variant-caps. Defaults to 'normal'."
         },
         {
           "name": "fontWeight",
@@ -212,11 +312,11 @@
           "description": "CSS font-weight. Defaults to 'normal' so that single-weight custom fonts render without browser-synthesised bold artefacts. Set explicitly to 'bold' for display / title text that intentionally requires bold."
         },
         {
-          "name": "gradientAxis",
-          "signature": "gradientAxis?: GradientAxis",
+          "name": "gradient",
+          "signature": "gradient?: TextGradient | null",
           "signatureTokens": [
             {
-              "text": "gradientAxis",
+              "text": "gradient",
               "kind": "name"
             },
             {
@@ -228,49 +328,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "GradientAxis",
+              "text": "TextGradient",
               "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Gradient orientation. Defaults to 'vertical'."
-        },
-        {
-          "name": "gradientColors",
-          "signature": "gradientColors?: [Color, Color] | null",
-          "signatureTokens": [
-            {
-              "text": "gradientColors",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Color",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Color",
-              "kind": "type"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
             },
             {
               "text": " | ",
@@ -283,7 +342,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Two-stop fill gradient. When set, overrides fillColor for the glyph interior. null disables the gradient. The first colour is the START of the ramp and the second its END, read along gradientAxis: [top, bottom] for 'vertical', [left, right] for 'horizontal'."
+          "description": "Multi-stop fill gradient. When set it overrides fillColor for the glyph interior; null disables it. The ramp spans the ink extent (getLocalBounds()), not the advance box."
         },
         {
           "name": "leading",
@@ -509,6 +568,81 @@
           "params": [],
           "returnType": null,
           "description": "Vertical shadow offset in pixels."
+        },
+        {
+          "name": "strikethrough",
+          "signature": "strikethrough?: boolean",
+          "signatureTokens": [
+            {
+              "text": "strikethrough",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Draw a rule through each line. Defaults to false."
+        },
+        {
+          "name": "textTransform",
+          "signature": "textTransform?: TextTransform",
+          "signatureTokens": [
+            {
+              "text": "textTransform",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextTransform",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Case mapping applied before layout. Defaults to 'none'. The mapping is Unicode-aware and never touches the node's text: reading it back gives the string that was assigned, so a transformed label stays editable and a caret still lands where the reader clicked. 'capitalize' uppercases the first grapheme cluster of each word and leaves the rest of the word alone, matching CSS. Word boundaries and the case mapping both follow locale when LayoutOptions.locale sets one."
+        },
+        {
+          "name": "underline",
+          "signature": "underline?: boolean",
+          "signatureTokens": [
+            {
+              "text": "underline",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Draw a rule under each line. Defaults to false."
         }
       ],
       "paragraphs": [],

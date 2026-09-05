@@ -5,7 +5,7 @@
  */
 
 import { Color } from '#core/Color';
-import { TextStyle } from '#rendering/text/TextStyle';
+import { textGradientMaxStops, TextStyle } from '#rendering/text/TextStyle';
 
 // ---------------------------------------------------------------------------
 // Constructor defaults
@@ -23,6 +23,7 @@ describe('TextStyle constructor defaults', () => {
     expect(style.outlineColor.equals(Color.black)).toBe(true);
     expect(style.outlineWidth).toBe(0);
     expect(style.align).toBe('left');
+    expect(style.textTransform).toBe('none');
     expect(style.lineHeight).toBe(1.2);
     expect(style.leading).toBe(0);
     expect(style.shadowColor.equals(Color.black)).toBe(true);
@@ -30,8 +31,12 @@ describe('TextStyle constructor defaults', () => {
     expect(style.shadowOffsetY).toBe(0);
     expect(style.shadowAlpha).toBe(0);
     expect(style.shadowBlur).toBe(0);
-    expect(style.gradientColors).toBeNull();
-    expect(style.gradientAxis).toBe('vertical');
+    expect(style.gradient).toBeNull();
+    expect(style.underline).toBe(false);
+    expect(style.strikethrough).toBe(false);
+    expect(style.decorationColor).toBeNull();
+    expect(style.decorationThickness).toBe(0);
+    expect(style.decorationOffset).toBe(0);
   });
 
   test('overrides every default when options are provided', () => {
@@ -44,6 +49,7 @@ describe('TextStyle constructor defaults', () => {
       outlineColor: Color.white,
       outlineWidth: 0.2,
       align: 'center',
+      textTransform: 'uppercase',
       lineHeight: 1.5,
       leading: 4,
       shadowColor: Color.white,
@@ -51,8 +57,13 @@ describe('TextStyle constructor defaults', () => {
       shadowOffsetY: 3,
       shadowAlpha: 0.5,
       shadowBlur: 0.4,
-      gradientColors: [Color.white, Color.black],
-      gradientAxis: 'horizontal',
+      gradient: {
+        stops: [
+          { offset: 0, color: Color.white },
+          { offset: 1, color: Color.black },
+        ],
+        angle: 90,
+      },
     });
 
     expect(style.fontFamily).toBe('Georgia');
@@ -63,6 +74,7 @@ describe('TextStyle constructor defaults', () => {
     expect(style.outlineColor.equals(Color.white)).toBe(true);
     expect(style.outlineWidth).toBe(0.2);
     expect(style.align).toBe('center');
+    expect(style.textTransform).toBe('uppercase');
     expect(style.lineHeight).toBe(1.5);
     expect(style.leading).toBe(4);
     expect(style.shadowColor.equals(Color.white)).toBe(true);
@@ -70,8 +82,8 @@ describe('TextStyle constructor defaults', () => {
     expect(style.shadowOffsetY).toBe(3);
     expect(style.shadowAlpha).toBe(0.5);
     expect(style.shadowBlur).toBe(0.4);
-    expect(style.gradientColors).not.toBeNull();
-    expect(style.gradientAxis).toBe('horizontal');
+    expect(style.gradient?.stops).toHaveLength(2);
+    expect(style.gradient?.angle).toBe(90);
   });
 
   test('clones color options so mutating the caller-owned instance does not affect the style', () => {
@@ -264,6 +276,24 @@ describe('setters', () => {
     expect(style.consumeDirty()).toBe('layout');
   });
 
+  test('fontVariant: same value is a no-op; different value marks font-dirty', () => {
+    const style = freshStyle();
+    style.fontVariant = 'normal';
+    expect(style.consumeDirty()).toBeNull();
+
+    style.fontVariant = 'small-caps';
+    expect(style.consumeDirty()).toBe('font');
+  });
+
+  test('textTransform: same value is a no-op; different value marks layout-dirty', () => {
+    const style = freshStyle();
+    style.textTransform = 'none';
+    expect(style.consumeDirty()).toBeNull();
+
+    style.textTransform = 'capitalize';
+    expect(style.consumeDirty()).toBe('layout');
+  });
+
   test('lineHeight: same value is a no-op; different value marks layout-dirty', () => {
     const style = freshStyle();
     style.lineHeight = 1.2; // default lineHeight — same value
@@ -340,28 +370,89 @@ describe('setters', () => {
     expect(style.consumeDirty()).toBe('tint');
   });
 
-  test('gradientColors: setting and clearing both clone and mark tint-dirty', () => {
+  test('underline: same value is a no-op; different value marks layout-dirty', () => {
     const style = freshStyle();
-    const stops: [Color, Color] = [Color.white, Color.black];
+    style.underline = false;
+    expect(style.consumeDirty()).toBeNull();
 
-    style.gradientColors = stops;
-    expect(style.gradientColors).not.toBeNull();
-    expect(style.gradientColors?.[0]).not.toBe(stops[0]);
-    expect(style.gradientColors?.[1]).not.toBe(stops[1]);
+    // A rule is a quad of its own, so turning one on has to rebuild geometry.
+    style.underline = true;
+    expect(style.consumeDirty()).toBe('layout');
+  });
+
+  test('decorationColor: cloned on the way in and marks tint-dirty', () => {
+    const style = freshStyle();
+    const color = Color.red;
+
+    style.decorationColor = color;
+    expect(style.decorationColor).not.toBe(color);
     expect(style.consumeDirty()).toBe('tint');
 
-    style.gradientColors = null;
-    expect(style.gradientColors).toBeNull();
+    style.decorationColor = null;
+    expect(style.decorationColor).toBeNull();
     expect(style.consumeDirty()).toBe('tint');
   });
 
-  test('gradientAxis: same value is a no-op; different value marks tint-dirty', () => {
+  test('gradient: setting and clearing both clone and mark tint-dirty', () => {
     const style = freshStyle();
-    style.gradientAxis = 'vertical';
-    expect(style.consumeDirty()).toBeNull();
+    const first = Color.white;
 
-    style.gradientAxis = 'horizontal';
+    style.gradient = {
+      stops: [
+        { offset: 0, color: first },
+        { offset: 1, color: Color.black },
+      ],
+    };
+    expect(style.gradient?.stops[0].color).not.toBe(first);
     expect(style.consumeDirty()).toBe('tint');
+
+    style.gradient = null;
+    expect(style.gradient).toBeNull();
+    expect(style.consumeDirty()).toBe('tint');
+  });
+
+  test('gradient: stops are clamped and ordered on the way in', () => {
+    const style = freshStyle();
+
+    style.gradient = {
+      stops: [
+        { offset: 2, color: Color.black },
+        { offset: -1, color: Color.white },
+        { offset: 0.5, color: Color.red },
+      ],
+    };
+
+    expect(style.gradient?.stops.map(stop => stop.offset)).toEqual([0, 0.5, 1]);
+  });
+
+  test('gradient: the angle defaults to a top-to-bottom ramp', () => {
+    const style = freshStyle();
+
+    style.gradient = {
+      stops: [
+        { offset: 0, color: Color.white },
+        { offset: 1, color: Color.black },
+      ],
+    };
+
+    expect(style.gradient?.angle).toBe(180);
+  });
+
+  test('gradient: rejects a single stop', () => {
+    const style = freshStyle();
+
+    expect(() => {
+      style.gradient = { stops: [{ offset: 0, color: Color.white }] };
+    }).toThrow(/2 colour stops/);
+  });
+
+  test('gradient: rejects more stops than the packed row can carry', () => {
+    const style = freshStyle();
+    const stops = Array.from({ length: textGradientMaxStops + 1 }, (_, i) => ({ offset: i / textGradientMaxStops, color: Color.white }));
+
+    expect(() => {
+      style.gradient = { stops };
+    }).toThrow(/at most/);
   });
 });
 
@@ -384,6 +475,16 @@ describe('font (derived CSS string)', () => {
     const style = new TextStyle({ fontFamily: 'Georgia', fontSize: 24, fontStyle: 'italic', fontWeight: 'bold' });
     expect(style.font).toBe('italic bold 24px Georgia');
   });
+
+  test('oblique style prepends "oblique " before the weight', () => {
+    const style = new TextStyle({ fontFamily: 'Georgia', fontSize: 24, fontStyle: 'oblique' });
+    expect(style.font).toBe('oblique normal 24px Georgia');
+  });
+
+  test('small caps sit between the style and the weight, as the CSS shorthand requires', () => {
+    const style = new TextStyle({ fontFamily: 'Georgia', fontSize: 24, fontStyle: 'italic', fontVariant: 'small-caps', fontWeight: 'bold' });
+    expect(style.font).toBe('italic small-caps bold 24px Georgia');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -396,10 +497,16 @@ describe('copy', () => {
       fontFamily: 'Georgia',
       fontSize: 40,
       align: 'right',
+      textTransform: 'capitalize',
       lineHeight: 1.8,
       leading: 2,
       fillColor: Color.black,
-      gradientColors: [Color.white, Color.black],
+      gradient: {
+        stops: [
+          { offset: 0, color: Color.white },
+          { offset: 1, color: Color.black },
+        ],
+      },
     });
     const target = new TextStyle();
     target.consumeDirty();
@@ -409,10 +516,11 @@ describe('copy', () => {
     expect(target.fontFamily).toBe('Georgia');
     expect(target.fontSize).toBe(40);
     expect(target.align).toBe('right');
+    expect(target.textTransform).toBe('capitalize');
     expect(target.lineHeight).toBe(1.8);
     expect(target.leading).toBe(2);
     expect(target.fillColor.equals(Color.black)).toBe(true);
-    expect(target.gradientColors).not.toBeNull();
+    expect(target.gradient).not.toBeNull();
     // Colors must be independently cloned, not shared references.
     expect(target.fillColor).not.toBe(source.fillColor);
     expect(target.consumeDirty()).toBe('font');
@@ -429,14 +537,21 @@ describe('copy', () => {
     expect(style.consumeDirty()).toBeNull(); // no self-inflicted dirty flag
   });
 
-  test('copy with null gradientColors on the source clears the target gradient', () => {
-    const source = new TextStyle({ gradientColors: null });
-    const target = new TextStyle({ gradientColors: [Color.white, Color.black] });
+  test('copy with a null gradient on the source clears the target gradient', () => {
+    const source = new TextStyle({ gradient: null });
+    const target = new TextStyle({
+      gradient: {
+        stops: [
+          { offset: 0, color: Color.white },
+          { offset: 1, color: Color.black },
+        ],
+      },
+    });
     target.consumeDirty();
 
     target.copy(source);
 
-    expect(target.gradientColors).toBeNull();
+    expect(target.gradient).toBeNull();
   });
 });
 
@@ -446,8 +561,14 @@ describe('clone', () => {
       fontFamily: 'Georgia',
       fontSize: 40,
       align: 'right',
+      textTransform: 'capitalize',
       fillColor: Color.black,
-      gradientColors: [Color.white, Color.black],
+      gradient: {
+        stops: [
+          { offset: 0, color: Color.white },
+          { offset: 1, color: Color.black },
+        ],
+      },
     });
 
     const cloned = source.clone();
@@ -456,10 +577,11 @@ describe('clone', () => {
     expect(cloned.fontFamily).toBe('Georgia');
     expect(cloned.fontSize).toBe(40);
     expect(cloned.align).toBe('right');
+    expect(cloned.textTransform).toBe('capitalize');
     expect(cloned.fillColor.equals(Color.black)).toBe(true);
     expect(cloned.fillColor).not.toBe(source.fillColor);
-    expect(cloned.gradientColors).not.toBeNull();
-    expect(cloned.gradientColors).not.toBe(source.gradientColors);
+    expect(cloned.gradient).not.toBeNull();
+    expect(cloned.gradient?.stops[0].color).not.toBe(source.gradient?.stops[0].color);
   });
 
   test('mutating the clone does not affect the source', () => {
@@ -476,7 +598,7 @@ describe('clone', () => {
     const source = new TextStyle();
     const cloned = source.clone();
 
-    expect(cloned.gradientColors).toBeNull();
+    expect(cloned.gradient).toBeNull();
   });
 
   test('is dirty with hint "font" immediately after cloning', () => {

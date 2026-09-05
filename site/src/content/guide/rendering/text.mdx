@@ -69,12 +69,14 @@ The visual appearance comes from [`TextStyleOptions`](/ExoJS/en/api/text-style-o
 | `font` | `FontFace` | — | Pre-loaded font face; takes precedence over `fontFamily` |
 | `fontFamily` | `string` | `'Arial'` | CSS font family name |
 | `fontWeight` | `FontWeight` | `'normal'` | CSS font weight (`'normal'`, `'bold'`, or `'100'`–`'900'`) |
-| `fontStyle` | `'normal' \| 'italic'` | `'normal'` | Font style |
+| `fontStyle` | `'normal' \| 'italic' \| 'oblique'` | `'normal'` | Font style. `'oblique'` asks for a fixed slant rather than the family's own italic |
+| `fontVariant` | `'normal' \| 'small-caps'` | `'normal'` | Caps variant. Small caps come from the family's own glyphs where it has them, otherwise from the browser's synthesis |
 | `fontSize` | `number` | `20` | Font size in pixels |
 | `fillColor` | `Color` | `Color.white` | Glyph fill colour |
 | `outlineColor` | `Color` | `Color.black` | SDF outline colour |
 | `outlineWidth` | `number` | `0` | Outline width in SDF units (`0`–`0.5`); `0` disables the outline |
 | `align` | [`TextAlignment`](/ExoJS/en/api/text-alignment/) — `'left' \| 'center' \| 'right' \| 'justify'` | `'left'` | Horizontal alignment |
+| `textTransform` | `'none' \| 'uppercase' \| 'lowercase' \| 'capitalize'` | `'none'` | Case mapping applied before layout; the node's `text` is untouched |
 | `lineHeight` | `number` | `1.2` | Line-height multiplier on `fontSize` |
 | `leading` | `number` | `0` | Extra pixel gap between lines |
 | `shadowColor` | `Color` | `Color.black` | Drop-shadow colour |
@@ -82,19 +84,64 @@ The visual appearance comes from [`TextStyleOptions`](/ExoJS/en/api/text-style-o
 | `shadowOffsetY` | `number` | `0` | Vertical shadow offset in pixels |
 | `shadowAlpha` | `number` | `0` | Shadow opacity (`0`–`1`); `0` disables the shadow |
 | `shadowBlur` | `number` | `0` | Shadow blur softness (`0`–`1`) |
-| `gradientColors` | `[Color, Color] \| null` | `null` | Two-stop fill gradient; overrides `fillColor`. First colour starts the ramp, second ends it |
-| `gradientAxis` | `'vertical' \| 'horizontal'` | `'vertical'` | Gradient orientation |
+| `underline` | `boolean` | `false` | Draw a rule under each line |
+| `strikethrough` | `boolean` | `false` | Draw a rule through each line |
+| `decorationColor` | `Color \| null` | `null` | Rule colour; `null` follows the fill, gradient included |
+| `decorationThickness` | `number` | `0` | Rule thickness in pixels; `0` derives it from the font size |
+| `decorationOffset` | `number` | `0` | Extra downward offset applied to both rules |
+| `gradient` | `TextGradient \| null` | `null` | Multi-stop fill gradient; overrides `fillColor` |
 
-`gradientColors` is ordered along `gradientAxis` and always runs start → end: `[top, bottom]` for the default `'vertical'` axis, `[left, right]` for `'horizontal'`. The ramp spans the ink extent (`getLocalBounds()`), not the advance.
+A `gradient` takes up to eight colour stops and an `angle` in degrees. The angle follows the CSS `linear-gradient` convention — `0` runs towards the top, `90` towards the right, increasing clockwise — and defaults to `180`, top to bottom. The ramp spans the ink extent (`getLocalBounds()`) corner to corner along that direction, not the advance box, so the first and last stops always land on the box edges:
 
 ```ts
 import { Color, Text } from '@codexo/exojs';
 
 const banner = new Text('Level Up', {
     fontSize: 48,
-    gradientColors: [Color.white, new Color(0xff6347)], // white on top, tomato at the bottom
+    gradient: {
+        stops: [
+            { offset: 0, color: Color.white },
+            { offset: 0.6, color: new Color(0xffd700) },
+            { offset: 1, color: new Color(0xff6347) },
+        ],
+        angle: 200,
+    },
 });
 ```
+
+Stop offsets are clamped to `0`–`1` and sorted on the way in, and the colours are cloned, so the object you pass is never aliased. Reading `style.gradient` back gives the normalized form. The ramp is evaluated in the fragment shader from the node's own packed style, so changing it costs no atlas work — it is a `'tint'` change like `fillColor`.
+
+### Underline and strikethrough
+
+Both rules are quads the layout emits per line, so they follow the alignment, the wrap and the letter spacing without any further work:
+
+```ts
+import { Color, Text } from '@codexo/exojs';
+
+const link = new Text('Read the manual', { fontSize: 18, underline: true });
+const removed = new Text('Old price', { fontSize: 18, strikethrough: true, decorationColor: Color.red });
+```
+
+Their position and thickness come from the font's own metrics rather than from a fraction of the font size: the underline sits inside the descender space and the strikethrough is centred on half the x-height, which is what keeps a rule in the same relation to the letters across typefaces. `decorationThickness` and `decorationOffset` override the two numbers when a design needs a specific one.
+
+A rule samples an opaque block in the glyph atlas, so by default it takes exactly the fill the glyphs take — including a gradient. `decorationColor` replaces that for the rules only.
+
+A [`BitmapText`](/ExoJS/en/api/bitmap-text/) draws from an offline atlas that has no opaque block reserved in it, so it renders no rules.
+
+### Style and caps variants
+
+`fontStyle` and `fontVariant` go into the CSS `font` shorthand the glyph rasterizer hands to Canvas 2D, so what you get is whatever the browser gets: a family's real italic or small-cap glyphs where it ships them, and the browser's synthesis where it does not.
+
+```ts
+import { Text } from '@codexo/exojs';
+
+const chapter = new Text('Chapter One', { fontSize: 28, fontVariant: 'small-caps' });
+const aside = new Text('a passing thought', { fontSize: 16, fontStyle: 'oblique' });
+```
+
+Both are part of a glyph atlas's identity, so a small-cap `a` and an ordinary `a` never share a cache entry, and `'oblique'` gets its own atlas rather than borrowing the italic one. That costs a second set of pages for a node that mixes variants — worth knowing before styling every label differently.
+
+A [`BitmapText`](/ExoJS/en/api/bitmap-text/) draws from an atlas somebody else baked, which contains exactly the glyphs it contains. Neither property has anything to act on there.
 
 Text flow and overflow come from [`LayoutOptions`](/ExoJS/en/api/layout-options/), merged into the same options object:
 
@@ -102,15 +149,36 @@ Text flow and overflow come from [`LayoutOptions`](/ExoJS/en/api/layout-options/
 |----------|------|---------|-------------|
 | `maxWidth` | `number` | — | Word-wrap boundary in pixels; longer lines break at word boundaries |
 | `maxHeight` | `number` | — | Vertical boundary in pixels; only whole lines that fit are kept. No effect on its own — pair it with `overflow` |
-| `overflow` | `'visible' \| 'clip' \| 'ellipsis'` | `'visible'` | What happens to lines that do not fit `maxHeight`: keep them all, drop them, or drop them and mark the last visible line with `…` |
+| `maxLines` | `number` | — | Hard cap on the laid-out line count, applied after wrapping. Clips on its own; pair with `overflow: 'ellipsis'` for a marker |
+| `overflow` | `'visible' \| 'clip' \| 'ellipsis'` | `'visible'` | What happens to lines that do not fit `maxHeight` or `maxLines`: keep them all, drop them, or drop them and mark the last visible line |
+| `ellipsis` | `string` | `'…'` | Marker appended under `overflow: 'ellipsis'`. `'...'` for the three-period spelling, `''` to truncate silently |
 | `letterSpacing` | `number` | `0` | Extra pixel gap between glyphs |
+| `tabSize` | `number` | `8` | Tab stop spacing in space widths, matching the CSS `tab-size` initial value. Only preserved tabs reach it — see `whiteSpace` |
 | `direction` | `'ltr' \| 'rtl'` | `'ltr'` | `'rtl'` reverses each line's glyphs after wrapping; no full bidi or Arabic shaping, and `align` stays literal |
 | `breakWords` | `boolean` | `false` | Break words wider than `maxWidth` at character boundaries |
 | `whiteSpace` | `'normal' \| 'pre' \| 'pre-line'` | `'pre-line'` | Whitespace handling |
 
+Under `whiteSpace: 'pre'` a tab advances the pen to the next `tabSize` stop measured from the start of its line, so a run of tab-separated values lines up as columns instead of drifting. The collapsing modes turn a tab into a single space before layout runs, exactly as CSS does, so `tabSize` has nothing to act on there. A browser-shaped line is laid out whole by the platform's text engine and ignores the setting.
+
 Layout options stay reachable as `text.layout`. Unlike `style`, this is a plain options object with no change tracking, and the node holds its own copy of it: assign a new one to re-flow the text — mutating the object you passed in, or the one the getter hands back, changes nothing.
 
 Glyphs are rasterized white into the shared SDF atlas and coloured at draw time, so `fillColor`, `outlineColor`, the shadow, and the gradient are shader work only — changing them never touches the atlas.
+
+### Case without rewriting the string
+
+`textTransform` maps case at layout time, exactly as CSS `text-transform` does. The node's `text` is untouched, so a label reads back the string you assigned and an editable widget keeps a caret that lands where the reader clicked:
+
+```ts
+import { Text } from '@codexo/exojs';
+
+const heading = new Text('level complete', { fontSize: 32, textTransform: 'uppercase' });
+
+heading.text; // 'level complete' — the mapping lives in the layout, not in the string
+```
+
+The mapping runs per grapheme cluster and is Unicode-aware, so a cluster that changes length under it — German `ß` uppercasing to `SS` — still traces back to the character it came from. `'capitalize'` raises the first cluster of each word and leaves the rest of the word alone, and word boundaries come from the platform segmenter rather than from splitting on spaces.
+
+Set [`locale`](#international-text) and both the case mapping and the word boundaries follow it, which is the difference between a Turkish `I` lowercasing to `ı` and to `i`.
 
 ## Multiline text and wrap settings
 
@@ -140,6 +208,37 @@ const wrapped = new Text(longString, {
     breakWords: true,
 });
 ```
+
+### Clamping to a line count
+
+`maxLines` caps how many lines survive, counted after wrapping. It clips on its own, so it needs no `overflow` policy; add `overflow: 'ellipsis'` when the truncation should be visible:
+
+```ts
+import { Text } from '@codexo/exojs';
+
+const body = 'A long article body that runs well past three lines of the layout width.';
+
+const summary = new Text(body, {
+    fontSize: 16,
+    maxWidth: 320,
+    maxLines: 3,
+    overflow: 'ellipsis',
+});
+```
+
+The marker defaults to `'…'` and `ellipsis` replaces it — `'...'` for the three-period spelling, `''` to truncate with no marker at all. Whatever it is, it is measured in the same font as the text, and the line gives up whole grapheme clusters until the two fit `maxWidth` together.
+
+Under a line cap the marker also reaches a line that no wrap could shorten. `maxLines: 1` on a single unbreakable word drops no line at all, yet the word still overflows `maxWidth` — and that is the case a one-line label wanted the marker for:
+
+```ts
+const label = new Text('Supercalifragilistic', {
+    maxWidth: 120,
+    maxLines: 1,
+    overflow: 'ellipsis',
+});
+```
+
+`maxHeight` expresses the same clamp in pixels and still requires an `overflow` policy. Set both and the tighter one wins.
 
 ## International text
 
@@ -327,6 +426,11 @@ A text node with a custom web font, updating its string each frame.
 <ExamplePreview chapter="text-fonts" slug="multiline-and-wrap" />
 
 Multiline text with alignment and line-height control.
+
+<a id="typographic-styling"></a>
+<ExamplePreview chapter="text-fonts" slug="typographic-styling" />
+
+The style sweep in one scene: an angled multi-stop gradient, small caps and oblique, underline and strikethrough, `textTransform`, a clamped paragraph with an ellipsis, and tab-aligned columns.
 
 ## Where to go next
 

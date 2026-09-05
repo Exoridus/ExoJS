@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 23,
+  "memberCount": 30,
   "counts": {
     "constructors": 1,
     "methods": 3,
-    "properties": 18,
+    "properties": 25,
     "events": 1
   },
   "sections": [
@@ -150,7 +150,7 @@
           ],
           "params": [],
           "returnType": "StyleChangeHint | null",
-          "description": "Returns the accumulated StyleChangeHint and clears the dirty flag, or null if nothing has changed since the last call. Call this once per frame from the owning node's update() method."
+          "description": "Returns the accumulated StyleChangeHint and clears the dirty flag, or null if nothing has changed since the last call. Call this once per frame from the owning node's layout pass."
         },
         {
           "name": "copy",
@@ -230,6 +230,77 @@
           "description": ""
         },
         {
+          "name": "decorationColor",
+          "signature": "decorationColor: Color | null",
+          "signatureTokens": [
+            {
+              "text": "decorationColor",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Rule colour, or null to follow the fill."
+        },
+        {
+          "name": "decorationOffset",
+          "signature": "decorationOffset: number",
+          "signatureTokens": [
+            {
+              "text": "decorationOffset",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Extra downward offset in pixels applied to both rules."
+        },
+        {
+          "name": "decorationThickness",
+          "signature": "decorationThickness: number",
+          "signatureTokens": [
+            {
+              "text": "decorationThickness",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Rule thickness in pixels; 0 derives it from the font size."
+        },
+        {
           "name": "fillColor",
           "signature": "fillColor: Color",
           "signatureTokens": [
@@ -269,7 +340,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "CSS font string used as CanvasRenderingContext2D.font during glyph rasterization. Includes fontStyle so italic fonts render correctly."
+          "description": "CSS font shorthand used as CanvasRenderingContext2D.font during glyph rasterization."
         },
         {
           "name": "fontFamily",
@@ -291,6 +362,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "fontKey",
+          "signature": "fontKey: FontVariantKey",
+          "signatureTokens": [
+            {
+              "text": "fontKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontVariantKey",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The typeface, slant, weight and caps variant this style selects, as the key a glyph atlas, a metrics cache or a line shaper is resolved by."
         },
         {
           "name": "fontSize",
@@ -315,7 +407,7 @@
         },
         {
           "name": "fontStyle",
-          "signature": "fontStyle: \"italic\" | \"normal\"",
+          "signature": "fontStyle: FontStyle",
           "signatureTokens": [
             {
               "text": "fontStyle",
@@ -326,16 +418,29 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"italic\"",
-              "kind": "keyword"
+              "text": "FontStyle",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "fontVariant",
+          "signature": "fontVariant: FontVariant",
+          "signatureTokens": [
+            {
+              "text": "fontVariant",
+              "kind": "name"
             },
             {
-              "text": " | ",
+              "text": ": ",
               "kind": "punctuation"
             },
             {
-              "text": "\"normal\"",
-              "kind": "keyword"
+              "text": "FontVariant",
+              "kind": "type"
             }
           ],
           "params": [],
@@ -364,11 +469,11 @@
           "description": ""
         },
         {
-          "name": "gradientAxis",
-          "signature": "gradientAxis: GradientAxis",
+          "name": "gradient",
+          "signature": "gradient: ResolvedTextGradient | null",
           "signatureTokens": [
             {
-              "text": "gradientAxis",
+              "text": "gradient",
               "kind": "name"
             },
             {
@@ -376,45 +481,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "GradientAxis",
+              "text": "ResolvedTextGradient",
               "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "gradientColors",
-          "signature": "gradientColors: [Color, Color] | null",
-          "signatureTokens": [
-            {
-              "text": "gradientColors",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Color",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Color",
-              "kind": "type"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
             },
             {
               "text": " | ",
@@ -427,7 +495,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Two-stop fill gradient. When set, overrides fillColor for the glyph interior. Assign null to disable. The first colour is the START of the ramp and the second its END, read along gradientAxis: [top, bottom] for 'vertical', [left, right] for 'horizontal'."
+          "description": "Multi-stop fill gradient, or null when the glyph interior takes fillColor. Read back normalized: stops cloned, offsets clamped to 0..1 and sorted, angle resolved. Assigning re-normalizes, so the object handed in is never aliased and mutating it afterwards changes nothing."
         },
         {
           "name": "leading",
@@ -617,6 +685,69 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "strikethrough",
+          "signature": "strikethrough: boolean",
+          "signatureTokens": [
+            {
+              "text": "strikethrough",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Rule through each line."
+        },
+        {
+          "name": "textTransform",
+          "signature": "textTransform: TextTransform",
+          "signatureTokens": [
+            {
+              "text": "textTransform",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextTransform",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Case mapping applied before layout. Changing it re-flows the text; the node's text is untouched."
+        },
+        {
+          "name": "underline",
+          "signature": "underline: boolean",
+          "signatureTokens": [
+            {
+              "text": "underline",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Rule under each line. Rebuilds the geometry: a rule is a quad of its own."
         }
       ],
       "paragraphs": [],

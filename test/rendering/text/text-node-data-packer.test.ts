@@ -114,8 +114,13 @@ const buildStyledText = (): Text => {
     shadowOffsetY: -5,
     shadowAlpha: 0.74,
     shadowBlur: 2,
-    gradientColors: [new Color(100, 110, 120, 0.85), new Color(130, 140, 150, 0.96)],
-    gradientAxis: 'horizontal',
+    gradient: {
+      stops: [
+        { offset: 0, color: new Color(100, 110, 120, 0.85) },
+        { offset: 1, color: new Color(130, 140, 150, 0.96) },
+      ],
+      angle: 90,
+    },
   });
 
   text.setPosition(12, 34);
@@ -128,8 +133,8 @@ const buildStyledText = (): Text => {
 
 describe('shared text node-data packer', () => {
   test('layout constants', () => {
-    expect(textNodeDataTexels).toBe(10);
-    expect(textNodeDataFloats).toBe(40);
+    expect(textNodeDataTexels).toBe(20);
+    expect(textNodeDataFloats).toBe(80);
   });
 
   describe('packTextNodeData — Text', () => {
@@ -169,11 +174,11 @@ describe('shared text node-data packer', () => {
       expect(target[base + 14]).toBeCloseTo(60 / 255);
       expect(target[base + 15]).toBeCloseTo(0.52);
 
-      // Params (texel 4): outlineMin, shadowAlpha, shadowBlur, gradientEnabled
+      // Params (texel 4): outlineMin, shadowAlpha, shadowBlur, gradientStopCount
       expect(target[base + 16]).toBeCloseTo(0.5 - 0.15); // outlineMin
       expect(target[base + 17]).toBeCloseTo(0.74); // shadowAlpha
       expect(target[base + 18]).toBeCloseTo(2 * 0.1); // shadowBlur * 0.1
-      expect(target[base + 19]).toBe(1); // gradientEnabled (gradientColors set)
+      expect(target[base + 19]).toBe(2); // two gradient stops
 
       // Shadow color (texel 5)
       expect(target[base + 20]).toBeCloseTo(70 / 255);
@@ -181,21 +186,32 @@ describe('shared text node-data packer', () => {
       expect(target[base + 22]).toBeCloseTo(90 / 255);
       expect(target[base + 23]).toBeCloseTo(0.63);
 
-      // Shadow offset + gradient axis (texel 6)
+      // Shadow offset (texel 6)
       expect(target[base + 24]).toBeCloseTo(3 * text.rasterPixelRatio);
       expect(target[base + 25]).toBeCloseTo(-5 * text.rasterPixelRatio);
-      expect(target[base + 26]).toBe(0); // gradientAxis 'horizontal' → 0 (only 'vertical' sets 1)
+      expect(target[base + 26]).toBe(0); // reserved
       expect(target[base + 27]).toBe(6); // sdfRadius
 
-      // Gradient top/bottom (texels 7-8)
-      expect(target[base + 28]).toBeCloseTo(100 / 255);
-      expect(target[base + 29]).toBeCloseTo(110 / 255);
-      expect(target[base + 30]).toBeCloseTo(120 / 255);
-      expect(target[base + 31]).toBeCloseTo(0.85);
-      expect(target[base + 32]).toBeCloseTo(130 / 255);
-      expect(target[base + 33]).toBeCloseTo(140 / 255);
-      expect(target[base + 34]).toBeCloseTo(150 / 255);
-      expect(target[base + 35]).toBeCloseTo(0.96);
+      // Gradient ramp (texel 7): 90 degrees is a left-to-right ramp, which
+      // resolves to t = gradUV.x with no bias.
+      expect(target[base + 28]).toBeCloseTo(1);
+      expect(target[base + 29]).toBeCloseTo(0);
+      expect(target[base + 30]).toBeCloseTo(0);
+
+      // Texel 8 is reserved and must stay zeroed.
+      expect(Array.from(target.slice(base + 32, base + 36))).toEqual([0, 0, 0, 0]);
+
+      // Gradient stop colours (texels 10-11) and their offsets (texel 18)
+      expect(target[base + 40]).toBeCloseTo(100 / 255);
+      expect(target[base + 41]).toBeCloseTo(110 / 255);
+      expect(target[base + 42]).toBeCloseTo(120 / 255);
+      expect(target[base + 43]).toBeCloseTo(0.85);
+      expect(target[base + 44]).toBeCloseTo(130 / 255);
+      expect(target[base + 45]).toBeCloseTo(140 / 255);
+      expect(target[base + 46]).toBeCloseTo(150 / 255);
+      expect(target[base + 47]).toBeCloseTo(0.96);
+      expect(target[base + 72]).toBeCloseTo(0);
+      expect(target[base + 73]).toBeCloseTo(1);
 
       // Ink bounds (texel 9)
       const ink = text.getLocalBounds();
@@ -213,17 +229,102 @@ describe('shared text node-data packer', () => {
       for (let i = base + textNodeDataFloats; i < target.length; i++) expect(target[i]).toBe(0);
     });
 
-    test('a vertical gradient axis and no outline/shadow/gradient produce the disabled sentinels', () => {
-      const text = new Text('Hi', { gradientAxis: 'vertical' });
+    test('no outline, shadow or gradient produces the disabled sentinels', () => {
+      const text = new Text('Hi');
       const target = new Float32Array(textNodeDataFloats);
 
       packTextNodeData(target, 0, text);
 
       expect(target[16]).toBe(0.5); // outlineMin disabled (outlineWidth === 0)
-      expect(target[19]).toBe(0); // gradientEnabled false (no gradientColors)
-      expect(target[26]).toBe(1); // gradientAxis 'vertical' → 1
-      // Disabled gradient still zeroes both gradient color texels, not garbage.
-      expect(Array.from(target.slice(28, 36))).toEqual(new Array(8).fill(0));
+      expect(target[19]).toBe(0); // no gradient stops
+      // A disabled gradient still zeroes the ramp and every stop slot, so a
+      // recycled row cannot leak a previous node's colours.
+      expect(Array.from(target.slice(28, 32))).toEqual([0, 0, 0, 0]);
+      expect(Array.from(target.slice(40, 80))).toEqual(new Array(40).fill(0));
+    });
+
+    test('an explicit decoration colour sets the override flag and its texel', () => {
+      const text = new Text('Hi', { underline: true, decorationColor: new Color(9, 19, 29, 0.39) });
+      const target = new Float32Array(textNodeDataFloats);
+
+      packTextNodeData(target, 0, text);
+
+      expect(target[26]).toBe(1);
+      expect(target[32]).toBeCloseTo(9 / 255);
+      expect(target[33]).toBeCloseTo(19 / 255);
+      expect(target[34]).toBeCloseTo(29 / 255);
+      expect(target[35]).toBeCloseTo(0.39);
+    });
+
+    test('no decoration colour leaves the rule taking the fill', () => {
+      const text = new Text('Hi', { underline: true });
+      const target = new Float32Array(textNodeDataFloats);
+
+      packTextNodeData(target, 0, text);
+
+      expect(target[26]).toBe(0);
+      expect(Array.from(target.slice(32, 36))).toEqual([0, 0, 0, 0]);
+    });
+
+    test('the default angle runs the ramp top to bottom', () => {
+      const text = new Text('Hi', {
+        gradient: {
+          stops: [
+            { offset: 0, color: Color.white },
+            { offset: 1, color: Color.black },
+          ],
+        },
+      });
+      const target = new Float32Array(textNodeDataFloats);
+
+      packTextNodeData(target, 0, text);
+
+      // t = gradUV.y: zero horizontal component, unit vertical one, no bias.
+      expect(target[28]).toBeCloseTo(0);
+      expect(target[29]).toBeCloseTo(1);
+      expect(target[30]).toBeCloseTo(0);
+    });
+
+    test('packs every stop colour and offset of a multi-stop ramp', () => {
+      const text = new Text('Hi', {
+        gradient: {
+          stops: [
+            { offset: 0, color: new Color(255, 0, 0, 1) },
+            { offset: 0.25, color: new Color(0, 255, 0, 1) },
+            { offset: 1, color: new Color(0, 0, 255, 1) },
+          ],
+        },
+      });
+      const target = new Float32Array(textNodeDataFloats);
+
+      packTextNodeData(target, 0, text);
+
+      expect(target[19]).toBe(3);
+      expect(Array.from(target.slice(40, 52))).toEqual([1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1]);
+      expect(Array.from(target.slice(72, 76))).toEqual([0, 0.25, 1, 0]);
+      // The unused stop slots stay zeroed rather than holding whatever the row
+      // carried before.
+      expect(Array.from(target.slice(52, 72))).toEqual(new Array(20).fill(0));
+    });
+
+    test('an angle of 0 runs the ramp bottom to top', () => {
+      const text = new Text('Hi', {
+        gradient: {
+          stops: [
+            { offset: 0, color: Color.white },
+            { offset: 1, color: Color.black },
+          ],
+          angle: 0,
+        },
+      });
+      const target = new Float32Array(textNodeDataFloats);
+
+      packTextNodeData(target, 0, text);
+
+      // t = 1 - gradUV.y, so the last stop lands on the top edge.
+      expect(target[28]).toBeCloseTo(0);
+      expect(target[29]).toBeCloseTo(-1);
+      expect(target[30]).toBeCloseTo(1);
     });
   });
 
@@ -239,8 +340,12 @@ describe('shared text node-data packer', () => {
         shadowOffsetY: -6,
         shadowAlpha: 0.75,
         shadowBlur: 3,
-        gradientColors: [new Color(101, 111, 121, 0.86), new Color(131, 141, 151, 0.97)],
-        gradientAxis: 'vertical',
+        gradient: {
+          stops: [
+            { offset: 0, color: new Color(101, 111, 121, 0.86) },
+            { offset: 1, color: new Color(131, 141, 151, 0.97) },
+          ],
+        },
       });
 
       bmp.setPosition(5, 6);
@@ -263,20 +368,20 @@ describe('shared text node-data packer', () => {
       expect(target[16]).toBeCloseTo(0.5 - 0.2);
       expect(target[17]).toBeCloseTo(0.75);
       expect(target[18]).toBeCloseTo(3 * 0.1);
-      expect(target[19]).toBe(1);
+      expect(target[19]).toBe(2);
       expect(target[20]).toBeCloseTo(71 / 255);
       expect(target[23]).toBeCloseTo(0.64);
       // BitmapText.rasterPixelRatio is always 1 (offline atlas - see AbstractText).
       expect(target[24]).toBeCloseTo(4);
       expect(target[25]).toBeCloseTo(-6);
-      expect(target[26]).toBe(1); // gradientAxis 'vertical'
+      expect(target[26]).toBe(0); // reserved
 
       // sdfRadius sentinel: 0 for anything that is not a `Text` (an offline
       // MSDF atlas carries no distance range).
       expect(target[27]).toBe(0);
 
-      expect(target[28]).toBeCloseTo(101 / 255);
-      expect(target[35]).toBeCloseTo(0.97);
+      expect(target[40]).toBeCloseTo(101 / 255);
+      expect(target[47]).toBeCloseTo(0.97);
 
       const ink = bmp.getLocalBounds();
       expect(target[36]).toBe(ink.x);

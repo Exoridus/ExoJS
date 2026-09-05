@@ -1,0 +1,80 @@
+{
+  "title": "FontStyle",
+  "description": "CSS font-style values accepted by Canvas 2D. `'oblique'` slants an upright face by a fixed angle. Where a family ships a real italic the browser resolves `'italic'` to it and `'oblique'` to the synthesised slant; where it does not, both end up synthesised and look the same.",
+  "symbol": "FontStyle",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "CSS font-style values accepted by Canvas 2D.",
+        "`'oblique'` slants an upright face by a fixed angle. Where a family ships a real italic the browser resolves `'italic'` to it and `'oblique'` to the synthesised slant; where it does not, both end up synthesised and look the same."
+      ],
+      "importLine": "import { FontStyle } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "FontStyle",
+          "signature": "\"italic\" | \"normal\" | \"oblique\"",
+          "signatureTokens": [
+            {
+              "text": "\"italic\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"normal\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"oblique\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/text/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/text/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/types.ts"
+}

@@ -11,10 +11,11 @@ import {
   textAtlasSlotShift,
   textAtlasTextureSlots,
   textAtlasTextureSlotWgsl,
+  textDecorationFlagBit,
   textNodeIndexMask,
 } from '#rendering/text/atlasTextureSlots';
 import { type BitmapText } from '#rendering/text/BitmapText';
-import { packTextNodeData, packTextNodeTransform, textNodeDataFloats } from '#rendering/text/nodeDataPacker';
+import { packTextNodeData, packTextNodeTransform, textNodeDataFloats, textNodeDataTexels } from '#rendering/text/nodeDataPacker';
 import type { TextPageQuads } from '#rendering/text/Text';
 import { Text } from '#rendering/text/Text';
 import type { Texture } from '#rendering/texture/Texture';
@@ -185,7 +186,9 @@ class TextRetainedReplayState implements WebGpuRetainedRendererReplayState {
 export const textShaderSource = fillShaderSource(textShaderTemplate, {
   atlasTextureSlots: textAtlasTextureSlotWgsl,
   nodeIndexMask: textNodeIndexMask,
+  decorationFlagBit: textDecorationFlagBit,
   atlasSlotShift: textAtlasSlotShift,
+  nodeDataTexels: textNodeDataTexels,
 });
 
 /**
@@ -409,7 +412,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
         const { quads: batch, nodeIndex, atlasTexture } = quads[k]!;
         const atlasSlot = atlasSlots.get(atlasTexture)!;
         const qVerts = batch.quadCount * 4;
-        const { vertices, uvs, indices } = batch;
+        const { vertices, uvs, indices, decorations } = batch;
 
         // vertices/uvs hold quadCount*4 vec2 entries; indices is fully iterated.
         for (let v = 0; v < qVerts; v++) {
@@ -419,7 +422,8 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
           this._float32View[w + 1] = vertices[vp + 1]!;
           this._float32View[w + 2] = uvs[vp]!;
           this._float32View[w + 3] = uvs[vp + 1]!;
-          this._uint32View[w + 4] = packTextNodeAtlasSlot(nodeIndex, atlasSlot);
+          // Four vertices per quad, so the flag is read once per quad.
+          this._uint32View[w + 4] = packTextNodeAtlasSlot(nodeIndex, atlasSlot, decorations[v >> 2] === 1);
         }
 
         for (let x = 0; x < indices.length; x++) {

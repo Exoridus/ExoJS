@@ -1,5 +1,59 @@
+/**
+ * CSS font-style values accepted by Canvas 2D.
+ *
+ * `'oblique'` slants an upright face by a fixed angle. Where a family ships a
+ * real italic the browser resolves `'italic'` to it and `'oblique'` to the
+ * synthesised slant; where it does not, both end up synthesised and look the
+ * same.
+ */
+export type FontStyle = 'normal' | 'italic' | 'oblique';
+
+/**
+ * CSS font-variant-caps values the glyph rasterizer honours.
+ *
+ * `'small-caps'` renders lowercase letters as reduced capitals - from the
+ * family's own small-cap glyphs where it has them, otherwise from the
+ * browser's synthesis. The variant is part of a glyph atlas's identity, so
+ * small-cap glyphs never share cache entries with the ordinary ones.
+ */
+export type FontVariant = 'normal' | 'small-caps';
+
+/**
+ * The typeface a glyph source draws from: a family, and the slant and weight
+ * selected within it.
+ *
+ * A loaded {@link FontFace} replaces every caps variant of the typeface at
+ * once, which is why the cache-clearing side of the text stack is expressed in
+ * these terms rather than in {@link FontVariantKey}.
+ */
+export interface FontTypefaceKey {
+  readonly family: string;
+  /** Defaults to `'normal'`. */
+  readonly fontStyle?: FontStyle;
+  /** Defaults to `'normal'`. */
+  readonly fontWeight?: string;
+}
+
+/**
+ * Everything that decides which glyphs a text run is drawn from.
+ *
+ * Named rather than positional because the four values are all strings and
+ * three of them default to `'normal'`: `{ family: 'Roboto', fontWeight: '700' }`
+ * says what a run of four bare strings could not.
+ */
+export interface FontVariantKey extends FontTypefaceKey {
+  /** Defaults to `'normal'`. */
+  readonly fontVariant?: FontVariant;
+}
+
 /** Horizontal alignment mode for multi-line text layout. */
 export type TextAlignment = 'left' | 'center' | 'right' | 'justify';
+
+/**
+ * Case mapping applied to the string before it is laid out. Mirrors the CSS
+ * `text-transform` values of the same names.
+ */
+export type TextTransform = 'none' | 'uppercase' | 'lowercase' | 'capitalize';
 
 /**
  * Minimal interface consumed by {@link layoutText}.
@@ -10,6 +64,48 @@ export interface TextLayoutStyle {
   readonly lineHeight: number;
   readonly leading: number;
   readonly align: TextAlignment;
+  /** Defaults to `'none'` when the style omits it. */
+  readonly textTransform?: TextTransform;
+  /** Defaults to `false`. */
+  readonly underline?: boolean;
+  /** Defaults to `false`. */
+  readonly strikethrough?: boolean;
+  /** `0` or omitted derives the thickness from the font's metrics. */
+  readonly decorationThickness?: number;
+  /** Extra downward offset in pixels applied to both rules. Defaults to `0`. */
+  readonly decorationOffset?: number;
+}
+
+/**
+ * Vertical font metrics in logical pixels at one font size, as a glyph source
+ * reports them.
+ *
+ * Everything is measured from the line's own baseline: `ascent` is how far the
+ * baseline sits below the line box's top, `descent` how far the font reaches
+ * below it, `xHeight` the height of a lowercase letter above it. Text
+ * decorations are placed from these rather than from fractions of the font
+ * size, so a rule lands in the same relation to the letters in every typeface.
+ */
+export interface TextFontMetrics {
+  readonly ascent: number;
+  readonly descent: number;
+  readonly xHeight: number;
+}
+
+/**
+ * A fully opaque point in a glyph source's texture, addressed as a single
+ * texel rather than a rectangle.
+ *
+ * Text decorations are plain filled quads and need somewhere in the atlas that
+ * reads as solid ink at every sample. A degenerate UV is what makes that hold
+ * under linear filtering: every sample of the quad reads the same texel, so no
+ * neighbouring glyph can bleed into a rule's edge.
+ */
+export interface SolidTexel {
+  /** Which {@link AtlasPage} within the source holds the texel. */
+  readonly page: number;
+  readonly u: number;
+  readonly v: number;
 }
 
 /**
@@ -27,6 +123,22 @@ export interface GlyphProvider {
    * Optional - callers treat a missing method as zero kerning.
    */
   getKerning?(prev: string, next: string, fontSize: number): number;
+  /**
+   * Vertical metrics of this source's font at `fontSize`.
+   *
+   * Optional - a caller without it falls back to fractions of the font size,
+   * which places a decoration plausibly but not typographically.
+   */
+  getFontMetrics?(fontSize: number): TextFontMetrics | null;
+  /**
+   * A solid texel decoration quads sample, or `null` when this source has
+   * none.
+   *
+   * A source that answers `null` renders no underline and no strikethrough:
+   * there is nowhere in its texture that is reliably opaque, and an offline
+   * atlas cannot be given one after the fact.
+   */
+  getSolidTexel?(): SolidTexel | null;
 }
 
 /**
@@ -42,6 +154,14 @@ export interface TextPageQuads {
   readonly uvs: Float32Array;
   /** Index buffer: 6 indices × quadCount. `Uint32` - a single node's own glyph count can exceed 16384 quads. */
   readonly indices: Uint32Array;
+  /**
+   * One flag per quad: `1` for a decoration rule, `0` for a glyph.
+   *
+   * The renderers fold it into the packed per-vertex word so the fragment
+   * stage can give a rule its own colour. A rule samples solid ink, so without
+   * the flag it would be indistinguishable from a glyph interior.
+   */
+  readonly decorations: Uint8Array;
   readonly quadCount: number;
 }
 
@@ -175,6 +295,13 @@ export interface GlyphPlacement {
   readonly y: number;
   readonly width: number;
   readonly height: number;
+  /**
+   * Whether this quad is a decoration rule rather than a glyph.
+   *
+   * Rules are appended after every glyph and belong to no line's placement
+   * range, so a caret or a hit test never has to skip one.
+   */
+  readonly decoration?: boolean;
   /**
    * Pen origin of this glyph on its line - the advance box's left edge, with
    * the alignment offset applied and the glyph's bearing excluded. This is the

@@ -1,15 +1,15 @@
 {
   "title": "GlyphMetrics",
-  "description": "The LOGICAL typographic metrics of one font variant - advances and kerning, in logical pixels, at the logical font size. This is the half of a glyph that layout consumes, and it is deliberately kept out of GlyphAtlas: an atlas is a RASTER resource whose identity includes a pixel density, while an advance is a property of the typeface and the font size alone. Splitting them is what makes the two invariants of HiDPI text hold by construction rather than by luck: - the same string lays out identically at every `pixelRatio`, because the numbers layout reads never went near a raster grid; - Text.measure answers without rasterizing anything, so a measurement cannot allocate an atlas, cannot claim atlas space, and cannot depend on which Application happens to exist. One instance per `family` × `fontStyle` × `fontWeight`, shared by every atlas of that variant regardless of mode, SDF radius or pixel ratio - see GlyphAtlasPool.getMetrics. Satisfies GlyphProvider so it can drive a measurement-only layout pass. The GlyphInfo it hands out carries a real `advance` and zero geometry: there is no tile, no page and no UV rectangle behind it, and a caller that needs those wants an atlas instead.",
+  "description": "The LOGICAL typographic metrics of one font variant - advances and kerning, in logical pixels, at the logical font size. This is the half of a glyph that layout consumes, and it is deliberately kept out of GlyphAtlas: an atlas is a RASTER resource whose identity includes a pixel density, while an advance is a property of the typeface and the font size alone. Splitting them is what makes the two invariants of HiDPI text hold by construction rather than by luck: - the same string lays out identically at every `pixelRatio`, because the numbers layout reads never went near a raster grid; - Text.measure answers without rasterizing anything, so a measurement cannot allocate an atlas, cannot claim atlas space, and cannot depend on which Application happens to exist. One instance per `family` x `fontStyle` x `fontVariant` x `fontWeight`, shared by every atlas of that variant regardless of mode, SDF radius or pixel ratio - see GlyphAtlasPool.getMetrics. Satisfies GlyphProvider so it can drive a measurement-only layout pass. The GlyphInfo it hands out carries a real `advance` and zero geometry: there is no tile, no page and no UV rectangle behind it, and a caller that needs those wants an atlas instead.",
   "symbol": "GlyphMetrics",
   "kind": "class",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 6,
+  "memberCount": 7,
   "counts": {
     "constructors": 1,
-    "methods": 5,
+    "methods": 6,
     "properties": 0,
     "events": 0
   },
@@ -22,7 +22,7 @@
         "The LOGICAL typographic metrics of one font variant - advances and kerning, in logical pixels, at the logical font size.",
         "This is the half of a glyph that layout consumes, and it is deliberately kept out of GlyphAtlas: an atlas is a RASTER resource whose identity includes a pixel density, while an advance is a property of the typeface and the font size alone. Splitting them is what makes the two invariants of HiDPI text hold by construction rather than by luck:",
         "- the same string lays out identically at every `pixelRatio`, because the numbers layout reads never went near a raster grid; - Text.measure answers without rasterizing anything, so a measurement cannot allocate an atlas, cannot claim atlas space, and cannot depend on which Application happens to exist.",
-        "One instance per `family` × `fontStyle` × `fontWeight`, shared by every atlas of that variant regardless of mode, SDF radius or pixel ratio - see GlyphAtlasPool.getMetrics.",
+        "One instance per `family` x `fontStyle` x `fontVariant` x `fontWeight`, shared by every atlas of that variant regardless of mode, SDF radius or pixel ratio - see GlyphAtlasPool.getMetrics.",
         "Satisfies GlyphProvider so it can drive a measurement-only layout pass. The GlyphInfo it hands out carries a real `advance` and zero geometry: there is no tile, no page and no UV rectangle behind it, and a caller that needs those wants an atlas instead."
       ],
       "importLine": "import { GlyphMetrics } from '@codexo/exojs'",
@@ -34,7 +34,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(family: string, fontStyle: \"italic\" | \"normal\", fontWeight: string): GlyphMetrics",
+          "signature": "new(font: FontVariantKey): GlyphMetrics",
           "signatureTokens": [
             {
               "text": "new",
@@ -45,7 +45,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "family",
+              "text": "font",
               "kind": "param"
             },
             {
@@ -53,48 +53,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "fontStyle",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"italic\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"normal\"",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "fontWeight",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
+              "text": "FontVariantKey",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -111,18 +71,8 @@
           ],
           "params": [
             {
-              "name": "family",
-              "type": "string",
-              "optional": false
-            },
-            {
-              "name": "fontStyle",
-              "type": "\"italic\" | \"normal\"",
-              "optional": false
-            },
-            {
-              "name": "fontWeight",
-              "type": "string",
+              "name": "font",
+              "type": "FontVariantKey",
               "optional": false
             }
           ],
@@ -281,6 +231,53 @@
           ],
           "returnType": "string",
           "description": "The CSS font shorthand for this variant at size logical pixels."
+        },
+        {
+          "name": "getFontMetrics",
+          "signature": "getFontMetrics(fontSize: number): TextFontMetrics",
+          "signatureTokens": [
+            {
+              "text": "getFontMetrics",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "fontSize",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextFontMetrics",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "fontSize",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "TextFontMetrics",
+          "description": "Vertical metrics of this variant at fontSize. The ascent and descent come from the font's own bounding box where the platform reports one, so every string of the variant shares one baseline; the x-height is measured from a lowercase letter's ink, which is the only way to get it from Canvas 2D at all. Where a measurement is missing the value degrades to a fraction of the font size."
         },
         {
           "name": "getGlyph",

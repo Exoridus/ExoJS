@@ -11,16 +11,55 @@ export interface LayoutOptions {
    */
   maxHeight?: number;
   /**
-   * What to do with lines that do not fit `maxHeight`. Defaults to `'visible'`.
+   * Hard cap on the number of laid-out lines, counted after wrapping.
    *
-   * - `'visible'`  - Keep every line; `maxHeight` is ignored.
+   * Unlike `maxHeight` this clips on its own, whatever `overflow` says -
+   * capping the line count is the whole point of asking for one. Pair it with
+   * `overflow: 'ellipsis'` to mark the last kept line. When both a cap and a
+   * `maxHeight` apply, the smaller one wins.
+   *
+   * Must be a positive integer.
+   */
+  maxLines?: number;
+  /**
+   * What to do with lines that do not fit `maxHeight` or `maxLines`. Defaults
+   * to `'visible'`.
+   *
+   * - `'visible'`  - Keep every line; `maxHeight` is ignored. A `maxLines` cap
+   *   still applies, silently.
    * - `'clip'`     - Drop the lines that do not fit.
-   * - `'ellipsis'` - Drop them and mark the last visible line with `...`,
-   *   shortening it so it still fits `maxWidth` when one is set.
+   * - `'ellipsis'` - Drop them and mark the last visible line with `ellipsis`,
+   *   shortening it so it still fits `maxWidth` when one is set. Under a line
+   *   cap the marker also reaches a last line that overflows `maxWidth` with no
+   *   line dropped at all - a single unbreakable word under `maxLines: 1`.
    */
   overflow?: 'visible' | 'clip' | 'ellipsis';
+  /**
+   * Marker appended to the last kept line under `overflow: 'ellipsis'`.
+   * Defaults to the horizontal ellipsis, U+2026. Set `'...'` for the
+   * three-period spelling, or `''` to truncate without a marker.
+   *
+   * The marker is measured as text in the same font, so a long one eats
+   * proportionally more of the line it terminates. Truncation stops at
+   * grapheme-cluster boundaries, so a combining sequence or a flag is never
+   * cut in half.
+   */
+  ellipsis?: string;
   /** Additional gap in pixels between glyphs (on top of the font's advance). */
   letterSpacing?: number;
+  /**
+   * Tab stop spacing, counted in space characters. Defaults to `8`, the CSS
+   * `tab-size` initial value.
+   *
+   * A tab advances the pen to the next multiple of `tabSize` space widths from
+   * the start of its line, so a run of tabs lines columns up instead of adding
+   * a fixed gap each. Only reachable under `whiteSpace: 'pre'`; the collapsing
+   * modes turn a tab into a single space before layout runs, as CSS does.
+   *
+   * Must be a positive finite number. Ignored for browser-shaped lines, which
+   * the platform's text engine lays out whole.
+   */
+  tabSize?: number;
   /**
    * Base direction for text layout. Defaults to `'ltr'`.
    *

@@ -62,7 +62,7 @@ const getAtlas = vi.fn(() => mockAtlas);
 const getMetrics = vi.fn(() => ({ getGlyph: () => glyphInfo, advance: () => glyphInfo.advance }));
 
 /** Every `pixelRatio` the node handed to the pool, in call order. */
-const requestedRatios = (): number[] => getAtlas.mock.calls.map(call => (call as unknown as unknown[])[5] as number);
+const requestedRatios = (): number[] => getAtlas.mock.calls.map(call => (call as unknown as unknown[])[3] as number);
 
 beforeEach(() => {
   getAtlas.mockClear();
@@ -245,7 +245,7 @@ describe('Text atlas acquisition', () => {
     text._setSurfacePixelRatio(3);
     text.syncDirty();
 
-    expect(getAtlas).toHaveBeenCalledWith('Arial', 'normal', 'normal', 'color', 8, 3);
+    expect(getAtlas).toHaveBeenCalledWith({ family: 'Arial', fontStyle: 'normal', fontWeight: 'normal', fontVariant: 'normal' }, 'color', 8, 3);
   });
 
   // A ratio nobody can rasterize into (an unsized canvas, a stand-in backend)

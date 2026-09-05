@@ -4,10 +4,10 @@ import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes, TextureFormat } from '#rendering/types';
 
 import type { CanvasTextState } from './canvasTextState';
-import { applyCanvasTextState } from './canvasTextState';
-import { cssFontString, GlyphMetrics } from './GlyphMetrics';
+import { applyCanvasTextState, cssFontString } from './canvasTextState';
+import { GlyphMetrics } from './GlyphMetrics';
 import { GlyphSdf } from './GlyphSdf';
-import type { GlyphInfo, GlyphKey, GlyphProvider } from './types';
+import type { FontVariantKey, GlyphInfo, GlyphKey, GlyphProvider, SolidTexel, TextFontMetrics } from './types';
 
 /**
  * Atlas rendering mode. Determines texture format and rasterization strategy.
@@ -26,6 +26,36 @@ export type AtlasMode = 'sdf' | 'color';
 export const SDF_RADIUS = 8;
 
 const glyphPadding = 2;
+
+/**
+ * Edge length in atlas texels of the opaque block decoration quads sample.
+ *
+ * Bigger than the one texel a degenerate UV actually reads: the surrounding
+ * ring keeps the sampled texel away from whatever the packer puts next to it,
+ * so no amount of filtering or texel-centre rounding can pull a neighbouring
+ * glyph into a rule.
+ */
+const solidBlockSize = 4;
+
+/**
+ * Claim a solid block from `allocate` and return the UV of its centre texel.
+ *
+ * Shared by {@link GlyphAtlas} and `ShapedTextSource`, which pack into pages
+ * the same way and need the same block on whichever of them a node draws from.
+ * @internal
+ */
+export const claimSolidTexel = (allocate: (w: number, h: number) => { page: AtlasPage; slot: { x: number; y: number } }): SolidTexel => {
+  const { page, slot } = allocate(solidBlockSize, solidBlockSize);
+
+  page.fillSolid(slot.x, slot.y, solidBlockSize, solidBlockSize);
+  page.uploadDirtyRegion();
+
+  return {
+    page: page.index,
+    u: (slot.x + solidBlockSize / 2) / page.width,
+    v: (slot.y + solidBlockSize / 2) / page.height,
+  };
+};
 
 // ── ShelfPacker ──────────────────────────────────────────────────────────────
 
@@ -94,9 +124,9 @@ const makeCtx = (width: number, height: number): { canvas: HTMLCanvasElement | O
  * A single texture page within a {@link GlyphAtlas}. Glyphs are packed into
  * the page using a shelf-bin algorithm.
  *
- * In `'sdf'` mode the page owns a `DataTexture` (`r8`) populated by tiny-sdf
- * output. In `'color'` mode a Canvas 2D context preserves full glyph colours
- * for emoji.
+ * In `'sdf'` mode the page owns a `DataTexture` (`r8`) filled with the
+ * single-channel distance field {@link GlyphSdf} computes. In `'color'` mode a
+ * Canvas 2D context preserves full glyph colours for emoji.
  * @advanced
  */
 export class AtlasPage {
@@ -212,6 +242,35 @@ export class AtlasPage {
     ctx.fillText(char, slotX + glyphPadding + bbLeft, slotY + glyphPadding + ascent);
   }
 
+  /**
+   * Fill a slot with fully opaque ink - the deepest inside value in `'sdf'`
+   * mode, opaque white in `'color'` mode - so a quad sampling it renders as a
+   * solid rectangle whichever fragment stage draws it.
+   */
+  public fillSolid(slotX: number, slotY: number, w: number, h: number): void {
+    if (this._sdfBuffer !== null && this._sdfTexture !== null) {
+      const dstW = this._width;
+
+      for (let row = 0; row < h; row++) {
+        const offset = (slotY + row) * dstW + slotX;
+
+        this._sdfBuffer.fill(255, offset, offset + w);
+      }
+
+      this._sdfTexture.commitRect(slotX, slotY, w, h);
+
+      return;
+    }
+
+    const ctx = this._ctx!;
+
+    // A colour page is tinted by the fill at draw time, so the block has to be
+    // white rather than any particular colour.
+    (ctx as CanvasRenderingContext2D).fillStyle = '#ffffff';
+    ctx.fillRect(slotX, slotY, w, h);
+    this.texture.updateSource();
+  }
+
   public uploadDirtyRegion(): void {
     if (this._sdfTexture !== null) {
       this._sdfTexture.commit();
@@ -271,9 +330,7 @@ export class GlyphAtlas implements GlyphProvider {
   private readonly _cache = new Map<GlyphKey, GlyphInfo>();
   private readonly _pageSize: number;
 
-  private readonly _family: string;
-  private readonly _fontStyle: 'normal' | 'italic';
-  private readonly _fontWeight: string;
+  private readonly _font: FontVariantKey;
   private readonly _mode: AtlasMode;
   private readonly _sdfRadius: number;
   private readonly _pixelRatio: number;
@@ -287,7 +344,7 @@ export class GlyphAtlas implements GlyphProvider {
    * or an oversized font size). The payload is the zero-based page index.
    *
    * ```ts
-   * const atlas = pool.getAtlas('Roboto', 'normal', '400');
+   * const atlas = pool.getAtlas({ family: 'Roboto', fontWeight: '400' });
    * atlas.onPageAdded.on(idx => console.warn(`Atlas page ${idx} added`));
    * ```
    */
@@ -306,19 +363,11 @@ export class GlyphAtlas implements GlyphProvider {
   /** {@link GlyphSdf} instances keyed by RASTER font size - only used in SDF mode. */
   private readonly _sdfInstances = new Map<number, GlyphSdf>();
 
-  public constructor(
-    family: string,
-    fontStyle: 'normal' | 'italic',
-    fontWeight: string,
-    pageSize = 1024,
-    mode: AtlasMode = 'sdf',
-    sdfRadius = SDF_RADIUS,
-    pixelRatio = 1,
-    metrics?: GlyphMetrics,
-  ) {
-    this._family = family;
-    this._fontStyle = fontStyle;
-    this._fontWeight = fontWeight;
+  /** Solid block for decoration quads, claimed on first use and dropped by {@link clear}. */
+  private _solidTexel: SolidTexel | null = null;
+
+  public constructor(font: FontVariantKey, pageSize = 1024, mode: AtlasMode = 'sdf', sdfRadius = SDF_RADIUS, pixelRatio = 1, metrics?: GlyphMetrics) {
+    this._font = font;
     this._pageSize = pageSize;
     this._mode = mode;
     this._sdfRadius = sdfRadius;
@@ -330,7 +379,7 @@ export class GlyphAtlas implements GlyphProvider {
     // A variant measured elsewhere hands its metrics in so every atlas of the
     // same typeface answers with the same advances; a standalone atlas measures
     // for itself.
-    this._metrics = metrics ?? new GlyphMetrics(family, fontStyle, fontWeight);
+    this._metrics = metrics ?? new GlyphMetrics(font);
 
     this._addPage();
   }
@@ -377,10 +426,21 @@ export class GlyphAtlas implements GlyphProvider {
     return this._metrics.getKerning(prev, next, fontSize);
   }
 
+  public getFontMetrics(fontSize: number): TextFontMetrics | null {
+    return this._metrics.getFontMetrics(fontSize);
+  }
+
+  public getSolidTexel(): SolidTexel {
+    return (this._solidTexel ??= claimSolidTexel((w, h) => this._allocateSlot(w, h, 'solid', 0)));
+  }
+
   public clear(): void {
     this._cache.clear();
     this._metrics.clear();
     this._sdfInstances.clear();
+    // Reset with the pages: the block's slot is about to be handed back to the
+    // packer, and a stale UV would point at whatever glyph lands there next.
+    this._solidTexel = null;
     // Pages are reset in place, not discarded: a fresh page would own a new
     // DataTexture/Texture (and GPU resource) while the old one leaks, and
     // reuse needs nothing a fresh page would have had anyway - `reset()`
@@ -402,7 +462,7 @@ export class GlyphAtlas implements GlyphProvider {
   }
 
   private _cssFont(size: number): string {
-    return cssFontString(this._family, this._fontStyle, this._fontWeight, size);
+    return cssFontString(this._font, size);
   }
 
   /** Raster font size, in device pixels, for a glyph asked for at `size` logical pixels. */
@@ -415,9 +475,10 @@ export class GlyphAtlas implements GlyphProvider {
     if (instance === undefined) {
       instance = new GlyphSdf({
         fontSize: rasterFontSize,
-        fontFamily: this._family,
-        fontWeight: this._fontWeight,
-        fontStyle: this._fontStyle,
+        fontFamily: this._font.family,
+        fontWeight: this._font.fontWeight ?? 'normal',
+        fontStyle: this._font.fontStyle ?? 'normal',
+        fontVariant: this._font.fontVariant ?? 'normal',
         buffer: this._rasterSdfRadius,
         radius: this._rasterSdfRadius,
         cutoff: 0.5,
@@ -469,7 +530,12 @@ export class GlyphAtlas implements GlyphProvider {
     // Colour glyphs are rasterized by the canvas at the RASTER size, so their
     // tile metrics have to be measured there too - the ratio-1 numbers would
     // size the slot for a glyph a third the size of the one actually drawn.
-    const state: CanvasTextState = { font: this._cssFont(rasterSize), direction: 'ltr', letterSpacing: 0 };
+    const state: CanvasTextState = {
+      font: this._cssFont(rasterSize),
+      direction: 'ltr',
+      letterSpacing: 0,
+      variantCaps: this._font.fontVariant ?? 'normal',
+    };
     // Invariant: a base page is always present (constructor + clear add one).
     const metrics = this._pages[0]!.measureGlyph(char, state);
 
