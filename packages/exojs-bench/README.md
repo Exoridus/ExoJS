@@ -18,8 +18,9 @@ Everything else the package offers:
 ```sh
 pnpm --filter @codexo/exojs-bench bench --domain=physics   # the CPU-only physics matrix
 pnpm --filter @codexo/exojs-bench bench:compare \
-  --rendering .workspace/output/baseline/results.json \
-  --physics .workspace/output/physics/results.json        # generate the published comparison
+  --rendering run-1/results.json \
+  --rendering run-2/results.json \
+  --rendering run-3/results.json                          # generate the published comparison
 pnpm gate:bench:structural                                # the structural counter gate (also a CI lane)
 pnpm --filter @codexo/exojs-bench gate:timing             # the manual timing gate
 ```
@@ -432,10 +433,43 @@ faults that look correct and are merely expensive.
 
 ## The published comparison
 
-`bench:compare` reads a run's `results.json` and generates the comparison
-document. It is generated, never hand-maintained, because a hand-written
-comparison drifts from the harness and once it drifts the honesty is gone
-without anyone noticing.
+`bench:compare` reads the `results.json` files of several runs and generates the
+comparison document. It is generated, never hand-maintained, because a
+hand-written comparison drifts from the harness and once it drifts the honesty
+is gone without anyone noticing.
+
+### A reference measurement is three runs
+
+A published claim is a ratio between two arms, and one run does not support one:
+the same code measured twice on this machine moved a physics cell's median by
+2.5x with byte-identical contact counts behind both runs, which was enough to
+reverse seven verdicts. So `--rendering` and `--physics` are **repeatable, once
+per run**, and the runs are pooled:
+
+```sh
+pnpm --filter @codexo/exojs-bench bench --out run-1
+pnpm --filter @codexo/exojs-bench bench --out run-2
+pnpm --filter @codexo/exojs-bench bench --out run-3
+pnpm --filter @codexo/exojs-bench bench:compare \
+  --rendering run-1/results.json --rendering run-2/results.json --rendering run-3/results.json
+```
+
+A single path still behaves exactly as it always did. The runs must come from
+**separate invocations**, each with its own `--out` directory: repeating a matrix
+inside one process shares JIT and heap state across the repetitions and measures
+the same warm state several times, which is the effect the repetition exists to
+expose.
+
+Per cell, the pooled comparison publishes the median of the per-run medians, the
+range those runs observed (printed in brackets beside the value), and a stability
+flag: the verdict is computed from each run separately, and the cell is stable
+only when every run reached the same one. **An unstable cell publishes no
+verdict** - it keeps its row, its value and its range, and states what each run
+said instead.
+
+`bench:compare` refuses to pool runs that are not repetitions of one measurement:
+a differing engine version, a differing set of arms or versions, or a differing
+set of measured cells.
 
 Rules the generator enforces rather than merely intends:
 
@@ -453,6 +487,18 @@ Rules the generator enforces rather than merely intends:
 - One column per competitor, no "best competitor" composite. Phaser occupies its
   own WebGL1 block, CPU time only, explicitly carrying no mechanism.
 - Cells where ExoJS loses are published exactly like the cells where it wins.
+
+### Machine profiles
+
+`bench:compare --profile` additionally writes the comparison as JSON into
+`results/`, one file per machine, named after the GPU, operating system and
+browser the provenance describes. The name is derived from the stamps, so
+re-measuring a machine overwrites its file and a different machine can only
+arrive as a new one. Each file carries every pooled run's provenance and a
+signature over its own contents, and `verify:bench-results` (in the `lint` gate
+group) rejects a file that pools fewer than three runs, or whose signature does
+not recompute - which is what keeps a typed number and a one-run claim out. See
+[`results/README.md`](./results/README.md).
 
 ## Cross-library numbers
 

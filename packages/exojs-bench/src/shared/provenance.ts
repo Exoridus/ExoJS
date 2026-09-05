@@ -15,6 +15,16 @@ import { dirname, resolve } from 'node:path';
  * {@link BaseProvenance}.
  */
 
+/**
+ * The browser every rendering measurement is taken in.
+ *
+ * The rendering driver launches this Playwright channel and no other, so the
+ * name is a property of the harness rather than of any one run - which is why
+ * the published machine profile can name it without a per-run stamp. Adding a
+ * second browser to the harness means stamping the choice per run instead.
+ */
+export const RENDERING_BROWSER = 'chromium';
+
 /** The provenance fields every domain records, regardless of what it measured. */
 export interface BaseProvenance {
   /** ISO-8601 timestamp of the run. */

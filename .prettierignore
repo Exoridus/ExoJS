@@ -17,6 +17,10 @@ site/public/**
 # Generated API reference; the generator owns its shape and a sync gate pins it.
 site/src/content/api/**
 
+# Measured benchmark profiles. The harness writes them and a signature gate pins
+# their contents, so their layout is the writer's output, not a style choice.
+packages/exojs-bench/results/*.json
+
 # Guide prose. Prettier reflows Markdown and rewrites JSX inside MDX, which is a
 # large edit with no formatting question behind it.
 *.mdx
