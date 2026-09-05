@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import type { BackendComparison, ComparisonSection } from '../comparison/build';
+import type { AggregatedPhysics, AggregatedRendering } from '../comparison/aggregate';
 import type { PhysicsProvenance } from '../physics/driver';
 import type { Provenance } from '../rendering/driver';
 import type { LibraryProvenance } from '../shared/provenance';
@@ -11,37 +11,23 @@ import { computeProfileSignature } from './signature';
 import { deriveProfileParts } from './slug';
 
 /**
- * Assembly of the published machine-profile document from a finished
- * comparison.
+ * Assembly of the published machine-profile document from a pooled comparison.
  *
- * Everything here is a projection of data the run already recorded: the
- * comparison model is passed through untouched, and the provenance is copied
- * field by field so a new field in a run artifact reaches the published
+ * Everything here is a projection of data the runs already recorded: the pooled
+ * comparison model is passed through untouched, and each run's provenance is
+ * copied field by field so a new field in a run artifact reaches the published
  * contract only when it is added here deliberately. The only computed values
- * are the profile parts, the agreed engine version and the signature.
+ * are the profile parts, the agreed engine version, the run count and the
+ * signature.
  */
 
 /** Version recorded when an arm's manifest could not be resolved during the run. */
 const NOT_INSTALLED = 'not-installed';
 
-/** The rendering half of a comparison, as `bench:compare` holds it. */
-export interface RenderingSource {
-  readonly provenance: readonly Provenance[];
-  readonly libraries: readonly LibraryProvenance[];
-  readonly backends: readonly BackendComparison[];
-}
-
-/** The physics half of a comparison, as `bench:compare` holds it. */
-export interface PhysicsSource {
-  readonly provenance: PhysicsProvenance;
-  readonly libraries: readonly LibraryProvenance[];
-  readonly section: ComparisonSection;
-}
-
 /** The domains a profile is being written from. At least one must be present. */
 export interface ProfileSources {
-  readonly rendering?: RenderingSource;
-  readonly physics?: PhysicsSource;
+  readonly rendering?: AggregatedRendering;
+  readonly physics?: AggregatedPhysics;
 }
 
 /** Keep the arm identity, drop the machine-local resolution path. */
@@ -92,21 +78,44 @@ const agreedEngineVersion = (stamps: ReadonlyArray<{ readonly engineVersion: str
 };
 
 /**
+ * The one run count the whole document speaks for.
+ *
+ * A document is one reference measurement, and its `runs` field is the reader's
+ * only handle on how much evidence stands behind every number in it. Domains
+ * pooled from a different number of runs would make that field true of one half
+ * of the file and false of the other.
+ */
+const agreedRunCount = (counts: readonly number[]): number => {
+  const distinct = [...new Set(counts)];
+
+  if (distinct.length !== 1 || distinct[0] === undefined) {
+    throw new Error(
+      `Cannot write a profile whose domains pool a different number of runs (${counts.map(String).join(', ')}). Pass the same number of runs per domain.`,
+    );
+  }
+
+  return distinct[0];
+};
+
+/**
  * Build the document for one machine profile.
  *
  * Throws when no domain is present, when the domains disagree on the engine
- * version, when an arm is missing its version, or when the provenance does not
- * name the machine well enough to derive a slug - each of which would otherwise
- * produce a published file that cannot be trusted or cannot be found again.
+ * version or on how many runs they pool, when an arm is missing its version, or
+ * when the provenance does not name the machine well enough to derive a slug -
+ * each of which would otherwise produce a published file that cannot be trusted
+ * or cannot be found again.
  */
 export const buildProfileDocument = (sources: ProfileSources): BenchProfileDocument => {
   if (sources.rendering === undefined && sources.physics === undefined) {
     throw new Error('Cannot write a profile without at least one measured domain.');
   }
 
-  const renderingStamps = sources.rendering?.provenance.map(toRenderingStamp) ?? [];
-  const physicsStamp = sources.physics === undefined ? undefined : toPhysicsStamp(sources.physics.provenance);
-  const stamps = [...renderingStamps, ...(physicsStamp === undefined ? [] : [physicsStamp])];
+  const renderingRuns = sources.rendering?.runs.map(run => ({ provenance: run.map(toRenderingStamp) })) ?? [];
+  const physicsRuns = sources.physics?.runs.map(toPhysicsStamp) ?? [];
+  const renderingStamps = renderingRuns.flatMap(run => run.provenance);
+  const physicsStamp = physicsRuns[0];
+  const stamps = [...renderingStamps, ...physicsRuns];
   const libraries = [...(sources.rendering?.libraries ?? []), ...(sources.physics?.libraries ?? [])];
   const missing = libraries.filter(library => library.version.length === 0 || library.version === NOT_INSTALLED);
 
@@ -121,24 +130,27 @@ export const buildProfileDocument = (sources: ProfileSources): BenchProfileDocum
     ...(physicsStamp !== undefined && { physics: physicsStamp }),
   });
   const timestamps = stamps.map(stamp => stamp.timestamp).sort();
+  const runs = agreedRunCount([
+    ...(sources.rendering === undefined ? [] : [renderingRuns.length]),
+    ...(sources.physics === undefined ? [] : [physicsRuns.length]),
+  ]);
   const unsigned = {
     schemaVersion: BENCH_PROFILE_SCHEMA_VERSION,
-    profile: { ...parts, engineVersion: agreedEngineVersion(stamps), measuredAt: timestamps.at(-1)! },
+    profile: { ...parts, engineVersion: agreedEngineVersion(stamps), measuredAt: timestamps.at(-1)!, runs },
     ...(sources.rendering !== undefined && {
       rendering: {
-        provenance: renderingStamps,
+        runs: renderingRuns,
         libraries: sources.rendering.libraries.map(toProfileLibrary),
         backends: sources.rendering.backends,
       },
     }),
-    ...(sources.physics !== undefined &&
-      physicsStamp !== undefined && {
-        physics: {
-          provenance: physicsStamp,
-          libraries: sources.physics.libraries.map(toProfileLibrary),
-          section: sources.physics.section,
-        },
-      }),
+    ...(sources.physics !== undefined && {
+      physics: {
+        runs: physicsRuns,
+        libraries: sources.physics.libraries.map(toProfileLibrary),
+        section: sources.physics.section,
+      },
+    }),
   };
 
   return { ...unsigned, signature: { algorithm: 'sha256', value: computeProfileSignature(unsigned) } };
