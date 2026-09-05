@@ -25,6 +25,7 @@ import { codecovRollupPlugin } from '@codecov/rollup-plugin';
 import { createShaderPlugin, createWorkletPlugin } from '@codexo/exojs-build';
 import { createBuildDefinesFromRepo } from '@codexo/exojs-config/build-defines';
 import { rolldown, watch, type OutputOptions, type Plugin, type PreRenderedChunk, type RolldownOptions } from 'rolldown';
+import { writeSourceStamp } from './source-hash.ts';
 
 const rootDir = resolvePath(dirname(fileURLToPath(import.meta.url)), '..');
 const watchMode = process.argv.includes('--watch');
@@ -233,6 +234,7 @@ if (watchMode) {
     await runJob(job);
   }
   await emitDeclarations();
+  writeSourceStamp(resolvePath(rootDir, 'src'), resolvePath(rootDir, 'dist'));
 
   if (process.env.EXOJS_FULL_BUNDLE === '1') {
     const fullBundleJobs = buildMode === 'production' ? [fullBundle(false), fullBundle(true)] : [fullBundle(false)];

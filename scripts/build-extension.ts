@@ -18,6 +18,7 @@ import { resolve as resolvePath } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { rolldown, type OutputOptions, type RolldownOptions } from 'rolldown';
+import { writeSourceStamp } from './source-hash.ts';
 
 const cwd = process.cwd();
 process.env.EXOJS_ENV = process.argv.includes('--dev') ? 'development' : 'production';
@@ -54,3 +55,5 @@ if (existsSync(buildTsconfig)) {
     throw new Error(`declaration emit failed (tsc exit ${result.status})`);
   }
 }
+
+writeSourceStamp(resolvePath(cwd, 'src'), resolvePath(cwd, 'dist'));
