@@ -326,7 +326,7 @@ describe('Text', () => {
     const currentFillColor = style.fillColor;
     style.fillColor = currentFillColor;
 
-    text.update(16);
+    text.update();
 
     // Geometry reference must be the same (no rebuild)
     expect(text.pageQuads[0]).toBe(quadsBefore);
@@ -339,7 +339,7 @@ describe('Text', () => {
 
     style.fontSize = 32; // layout hint
 
-    text.update(16);
+    text.update();
 
     expect(text.pageQuads[0]).not.toBe(quadsBefore);
   });
@@ -354,7 +354,7 @@ describe('Text', () => {
 
     expect(layoutPasses()).toBe(passesBefore);
 
-    text.update(16);
+    text.update();
 
     expect(layoutPasses()).toBe(passesBefore + 1);
     expect(text.pageQuads[0]).not.toBe(quadsBefore);

@@ -202,12 +202,11 @@ export abstract class AbstractText extends Drawable {
   }
 
   /**
-   * Advance the node by `dt` milliseconds.
-   *
-   * Delegates to {@link syncDirty} - kept for manual game-loop patterns,
-   * but no longer required; the renderer applies pending changes automatically.
+   * Alias for {@link syncDirty}, kept for game loops that tick their nodes
+   * explicitly. It takes no time step: a text node holds no animated state, so
+   * there is nothing for one to advance.
    */
-  public update(_dt: number): void {
+  public update(): void {
     this.syncDirty();
   }
 
