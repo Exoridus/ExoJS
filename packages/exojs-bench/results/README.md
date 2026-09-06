@@ -46,11 +46,14 @@ behind both runs. So a profile pools **at least three separate runs per domain**
 and for every cell it publishes:
 
 - the **pooled value**: the median of the per-run medians, so one unlucky run
-  cannot set the number;
+  cannot set the number, and beside it the median of the per-run p95s;
 - the **spread**: the smallest and largest per-run median, and their ratio - the
   measurement's own noise, printed beside the value it belongs to;
 - the **stability flag**: the verdict is computed from each run separately, and
-  the cell is stable only when every run reached the same one.
+  the cell is stable only when every run reached the same one;
+- the **frame-budget mark**: whether the pooled median is past 16.7 ms, a whole
+  60 fps frame. It is recomputed from the pooled value rather than inherited
+  from a run.
 
 **An unstable cell publishes no verdict.** It keeps its row, its pooled value and
 its range, and states what each run said instead. That the cell cannot be
@@ -79,10 +82,43 @@ rather than the spread the repetition exists to expose.
   disclosed caveats, engine version, timestamp);
 - the library arms with their exact installed versions;
 - the pooled comparison itself, per rendering backend and for physics, including
-  every published value with its spread and stability flag, the verdict where
-  the runs agreed on one, the mechanism behind each row, and the rows that were
+  every published median and p95 with its spread, stability flag and
+  frame-budget mark, the count each row was measured at, the verdict where the
+  runs agreed on one, the mechanism behind each row, and the rows that were
   measured but excluded, with the reason;
 - a signature over all of the above.
+
+## Two numbers, one line, one count per row
+
+Every value is published as a **median and a p95** of the same timed window. The
+median is the field-comparable number and the only one a verdict is computed
+from; the p95 is the step or frame a player feels as a hitch, so a pair far apart
+describes periodically expensive work that a median alone would report as cheap.
+There is no p99 - the largest cells time 120 steps, which makes a p99 there the
+second-worst sample rather than a percentile.
+
+A median past **16.7 ms** carries a mark. That is the whole 60 fps frame and not
+a fraction of it: how much of a frame a reader may spend on this work depends on
+everything else their frame does and is their decision, while a single step or
+frame that costs more than the frame it must fit in is unplayable whatever they
+decide. Nothing is derived from the mark - a file carries no "bodies at N ms"
+capacity figure, because that would interpolate between the ladder's rungs
+instead of reporting something measured.
+
+Every row states the **count it was measured at**, chosen from that archetype's
+ladder before any timing was read. A rendering block puts every row on one node
+count, because its archetypes share their ladders. The physics archetypes do not:
+each has its own body-count ladder, placed so its rungs straddle the frame
+budget, and they reach a frame at sizes that differ by nearly an order of
+magnitude. **Physics rows are therefore not comparable with one another** - only
+the arms within one row are, which is what a row is for. Two rows were always two
+different scenes; stating the count per row is what stops them looking otherwise.
+
+The physics ladders moved when they were placed against the frame budget, and a
+moved rung is a **different scene** rather than the same one measured again: the
+per-cell seed folds the body count in. No published file predates that, so there
+is nothing here to migrate and no conversion is offered; a physics number taken
+at an older ladder simply describes a world this directory does not contain.
 
 A file may carry one domain or both. `rendering` is absent when the profile was
 written from a physics measurement alone and `physics` when it was written from
@@ -121,10 +157,10 @@ moves them.
 
 `bench:compare` refuses to pool runs that are not repetitions of one
 measurement - a differing engine version, a differing set of arms or versions, a
-differing set of measured cells, or **a different machine, browser, platform
-version or pre-release status** - because a median over values that were never
-comparable describes the difference between two runs rather than the noise of
-one. What that tolerates within one machine: the timestamps, the driver and
+differing set of measured cells, a row that landed on a different count in one
+run than in another, or **a different machine, browser, platform version or
+pre-release status** - because a median over values that were never comparable
+describes the difference between two runs rather than the noise of one. What that tolerates within one machine: the timestamps, the driver and
 device-id tail of an adapter string, and the operating system's patch level.
 What it does not: a different GPU, a different operating system or major version
 of one, a different browser, or one run on a beta platform among runs on a

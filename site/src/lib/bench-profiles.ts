@@ -649,7 +649,11 @@ export const headlineFindings = (document: BenchProfileDocument): readonly Headl
 
     findings.push({
       tone: 'lead',
-      text: `In physics at ${String(widestPeerLead.count)} bodies, ExoJS leads the pure-JS peers (${listOf(armsIn(peers))}) in ${outOfSettled(peerLeads.length, peers.length)} comparisons whose runs agreed, by up to ${formatFactor(widestPeerLead.cell.verdict.factor)} against ${widestPeerLead.cell.competitor} on ${widestPeerLead.archetype}, and trails in ${String(behind)}.`,
+      // The body count belongs to the archetype the superlative names, not to
+      // the physics table: each archetype is measured on its own ladder, so a
+      // sentence that put one count in front of the whole paragraph would claim
+      // a scene size the other rows were not measured at.
+      text: `In physics, ExoJS leads the pure-JS peers (${listOf(armsIn(peers))}) in ${outOfSettled(peerLeads.length, peers.length)} comparisons whose runs agreed, by up to ${formatFactor(widestPeerLead.cell.verdict.factor)} against ${widestPeerLead.cell.competitor} on ${widestPeerLead.archetype} at ${String(widestPeerLead.count)} bodies, and trails in ${String(behind)}. Each archetype is measured on its own body-count ladder, so the counts differ per row.`,
     });
   }
 
@@ -662,7 +666,7 @@ export const headlineFindings = (document: BenchProfileDocument): readonly Headl
 
     findings.push({
       tone: 'loss',
-      text: `Against ${listOf(armsIn(ceiling))}, a Rust/WASM engine published here as a ceiling rather than as a peer, ExoJS trails in ${outOfSettled(ceilingLosses.length, ceiling.length)} comparisons whose runs agreed - by up to ${formatFactor(widestCeilingLoss.cell.verdict.factor)} on ${widestCeilingLoss.archetype} - and is level in ${String(level)}.`,
+      text: `Against ${listOf(armsIn(ceiling))}, a Rust/WASM engine published here as a ceiling rather than as a peer, ExoJS trails in ${outOfSettled(ceilingLosses.length, ceiling.length)} comparisons whose runs agreed - by up to ${formatFactor(widestCeilingLoss.cell.verdict.factor)} on ${widestCeilingLoss.archetype} at ${String(widestCeilingLoss.count)} bodies - and is level in ${String(level)}.`,
     });
   }
 

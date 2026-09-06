@@ -92,8 +92,7 @@ describe('body-churn', () => {
 
     // The impulses differ by construction - a body that lives one step gets
     // none - so the layout is what has to match for the delta to carry one cause.
-    const layout = (id: PhysicsArchetypeId, bodyCount: number): unknown =>
-      sceneFor(id, bodyCount).bodies.map(body => ({ ...body, perturb: undefined }));
+    const layout = (id: PhysicsArchetypeId, bodyCount: number): unknown => sceneFor(id, bodyCount).bodies.map(body => ({ ...body, perturb: undefined }));
 
     for (const bodyCount of shared) {
       expect(layout('body-churn', bodyCount)).toEqual(layout('many-dynamic', bodyCount));
@@ -249,7 +248,7 @@ describe('body-count ladders', () => {
   });
 
   test('every archetype read as a delta against another shares a rung with it', () => {
-    const deltas: ReadonlyArray<readonly [PhysicsArchetypeId, PhysicsArchetypeId]> = [
+    const deltas: readonly (readonly [PhysicsArchetypeId, PhysicsArchetypeId])[] = [
       ['raycast', 'mixed-static-dynamic'],
       ['body-churn', 'many-dynamic'],
       ['settling-pile', 'many-dynamic'],
@@ -272,7 +271,11 @@ describe('body-count ladders', () => {
         expect(archetype.warmupStepsOverride[bodyCount]).toBeDefined();
       }
 
-      expect(Object.keys(archetype.warmupStepsOverride).map(Number).sort((a, b) => a - b)).toEqual([...archetype.bodyCounts]);
+      expect(
+        Object.keys(archetype.warmupStepsOverride)
+          .map(Number)
+          .sort((a, b) => a - b),
+      ).toEqual([...archetype.bodyCounts]);
     }
   });
 });

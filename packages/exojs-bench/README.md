@@ -92,6 +92,44 @@ identical seed; the harness asserts that by comparing each arm's mutation-index
 signature against a canonical selection and failing the cell loudly on any
 divergence.
 
+### Physics body-count ladders
+
+Each physics archetype sweeps **its own body-count ladder**, placed so its rungs
+straddle a 60 fps frame: two inside the frame and one past it. They are not
+interchangeable — at a fixed body count the archetypes differ by nearly an order
+of magnitude, so `many-dynamic` reaches a whole frame at 2 200 bodies while
+`joints` does not until 15 000. One shared ladder therefore spends most of its
+rungs on scenes nobody could ship for the expensive archetypes and never reaches
+the interesting region for the cheap ones.
+
+| archetype              | ladder                 | native median per step  |
+| ---------------------- | ---------------------- | ----------------------- |
+| `box-stack`            | 3 000 / 5 500 / 10 000 | 4.05 / 9.02 / 18.88 ms  |
+| `many-dynamic`         | 800 / 1 500 / 2 200    | 4.57 / 10.59 / 17.31 ms |
+| `mixed-static-dynamic` | 900 / 1 700 / 3 200    | 4.08 / 8.51 / 17.17 ms  |
+| `raycast`              | 900 / 1 700 / 3 200    | 6.48 / 12.40 / 19.80 ms |
+| `body-churn`           | 800 / 1 500 / 2 400    | 2.67 / 9.14 / 18.99 ms  |
+| `joints`               | 4 500 / 9 000 / 15 000 | 6.28 / 10.52 / 17.44 ms |
+| `settling-pile`        | 1 500 / 3 000 / 5 800  | 3.04 / 8.43 / 17.23 ms  |
+
+The medians are a placement sweep of the native arm alone on one machine
+(Ryzen 7 3700X, Chromium) over a thin timed window. They locate each frame
+crossing and are not a published measurement.
+
+An archetype that is read as a **delta** against another shares at least one rung
+with it, which is what the delta needs: `seedFor` folds the body count in, so two
+archetypes that name the same scene build the identical world only at a count
+both ladders contain. `raycast` and `mixed-static-dynamic` share their whole
+ladder, `body-churn` shares two rungs with `many-dynamic`, and `settling-pile`
+shares one.
+
+**Moving a rung changes the scene, not just its size.** Because the seed folds in
+the body count, numbers taken at an earlier ladder describe different worlds and
+are not comparable with these; there is no conversion between them, and nothing
+published is carried across. `--bodies` filters the matrix rather than replacing
+a ladder (unlike the rendering domain's `--nodes`), so an off-ladder probe needs
+a source edit.
+
 The physics arms are not one flat field of competitors. **matter-js** and
 **planck** are the pure-JS **peers** — the libraries an ExoJS app would
 realistically attach instead of the native runtime, and what `exojs-physics` is
@@ -552,15 +590,17 @@ the same warm state several times, which is the effect the repetition exists to
 expose.
 
 Per cell, the pooled comparison publishes the median of the per-run medians, the
-range those runs observed (printed in brackets beside the value), and a stability
-flag: the verdict is computed from each run separately, and the cell is stable
-only when every run reached the same one. **An unstable cell publishes no
-verdict** - it keeps its row, its value and its range, and states what each run
-said instead.
+median of the per-run p95s, the range those runs observed (printed in brackets
+beside the value), the frame-budget mark where the pooled median is past 16.7 ms,
+and a stability flag: the verdict is computed from each run separately, and the
+cell is stable only when every run reached the same one. **An unstable cell
+publishes no verdict** - it keeps its row, its value and its range, and states
+what each run said instead.
 
 `bench:compare` refuses to pool runs that are not repetitions of one measurement:
 a differing engine version, a differing set of arms or versions, a differing set
-of measured cells, or a differing machine.
+of measured cells, a row that landed on a different count in one run than in
+another, or a differing machine.
 
 The machine check is what a second reference machine makes necessary — three
 runs from two machines would otherwise pool into a median belonging to neither,
@@ -589,9 +629,26 @@ Rules the generator enforces rather than merely intends:
 - Verdicts are computed from the two medians. A ratio inside 0.8-1.2 is `level`
   (the matrix's own noise band); outside it the faster arm `leads`, and at 5x or
   more `leads clearly` - a gap too large for machine mood to explain.
-- One node count for the whole table, chosen from the archetype ladders BEFORE
-  any timing is read, then lowered until every arm produced a valid cell. It can
-  never be picked per row.
+- A row's count is chosen from the archetype ladders BEFORE any timing is read -
+  the largest rung at which every arm produced a valid cell - so it can never be
+  picked to suit an outcome. A rendering table goes further and uses one node
+  count for every row, because its archetypes share their ladders.
+- Physics rows each state their OWN body count, because each physics archetype
+  has its own ladder and their intersection is empty. Rows are therefore not
+  comparable with one another; only the arms within a row are, which is what the
+  table is for. Two rows were always two different scenes — the shared count made
+  that look otherwise.
+- Every value is a median AND the p95 of the same timed window. Verdicts are
+  computed from the medians alone; the p95 is the step or frame a player feels,
+  so a pair far apart hitches where the median reads as comfortable. There is no
+  p99: the largest cells time 120 steps, so a p99 there is the second-worst
+  sample rather than a percentile.
+- A median past **16.7 ms** — a whole 60 fps frame — is marked. The line is the
+  entire frame deliberately: how much of a frame this work may take is the
+  reader's decision, but a step or frame costing more than the frame it has to
+  fit in is unplayable regardless of that decision. Nothing is derived from the
+  mark; a "bodies at N ms" capacity figure would interpolate between rungs rather
+  than report a measurement.
 - Every row names the mechanism behind its difference, drawn from the structural
   counters. A row whose mechanism cannot be evidenced is not published - it is
   listed under Omissions with the reason, so a dropped row stays auditable.
