@@ -1,4 +1,4 @@
-import type { UniformBufferViews, UniformFieldAccessors, UniformRevisionSink, UniformWritable } from './uniformAccessors';
+import type { UniformBufferViews, UniformFieldAccessors, UniformWritable } from './uniformAccessors';
 import { createUniformFieldAccessors, writeUniformValues } from './uniformAccessors';
 import type { UniformFields, UniformStructInput } from './uniformDeclarations';
 import type { UniformBlockLayout } from './uniformLayout';
@@ -16,7 +16,16 @@ import type { UniformBlockLayout } from './uniformLayout';
  * these values: each material or filter builds its own block.
  * @advanced
  */
-export class UniformBlockData<F extends UniformFields = UniformFields> implements UniformRevisionSink {
+// Structurally a `UniformRevisionSink`, deliberately without the `implements`
+// clause: that clause reaches the emitted declaration, and the interface is
+// marked internal, so the declaration emit drops it and leaves this file
+// importing a member a consumer cannot resolve. The type tests assert the
+// conformance instead.
+//
+// The marker itself must not appear in this comment either - the emit reads the
+// last comment before a declaration as its doc comment and would strip the
+// class along with it.
+export class UniformBlockData<F extends UniformFields = UniformFields> {
   /** The typed accessor for each declared field, under the field's own name. */
   public readonly uniforms: UniformFieldAccessors<F>;
 
