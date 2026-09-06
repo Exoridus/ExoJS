@@ -23,6 +23,7 @@
  */
 import { readdir, readFile } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { SHADER_EXTENSIONS, stripShaderSource } from '@codexo/exojs-build/shader-strip';
 
@@ -52,7 +53,7 @@ const ANY_PLACEHOLDER = /\{\{[^}]*\}\}/g;
 
 const EXO_DIRECTIVE_LINE = /^\s*\/\/\s*(#exo-[\w-]*)/;
 
-interface Problem {
+export interface Problem {
   readonly file: string;
   readonly line: number | null;
   readonly message: string;
@@ -240,9 +241,20 @@ const checkStripped = (file: string, text: string): Problem[] => {
   return [];
 };
 
-const main = async (): Promise<void> => {
-  console.log('Checking shader source hygiene...\n');
+/** What one scan saw: how many shader files it read, and what is wrong with them. */
+export interface ShaderScan {
+  readonly files: number;
+  readonly problems: readonly Problem[];
+}
 
+/** One problem rendered the way the gate reports it. */
+export const formatShaderProblem = (problem: Problem): string => `${problem.file}${problem.line === null ? '' : `:${problem.line}`}  ${problem.message}`;
+
+/**
+ * Check every tracked shader against the hygiene rules. An empty `problems`
+ * array means the tree is clean.
+ */
+export const scanShaderSources = async (): Promise<ShaderScan> => {
   const shaderFiles = (await Promise.all(SCAN_ROOTS.map(root => collectFiles(root, name => SHADER_EXTENSIONS.some(ext => name.endsWith(ext)))))).flat();
   const importerFiles = (await Promise.all(SCAN_ROOTS.map(root => collectFiles(root, name => IMPORTER_EXTENSIONS.some(ext => name.endsWith(ext)))))).flat();
   const importerText = (await Promise.all(importerFiles.map(path => readFile(path, 'utf8')))).join('\n');
@@ -265,17 +277,27 @@ const main = async (): Promise<void> => {
     }
   }
 
+  return { files: shaderFiles.length, problems };
+};
+
+const main = async (): Promise<void> => {
+  console.log('Checking shader source hygiene...\n');
+
+  const { files, problems } = await scanShaderSources();
+
   if (problems.length > 0) {
     console.error(`\x1b[31m${problems.length} shader source problem(s):\x1b[0m`);
 
     for (const problem of problems) {
-      console.error(`  ${problem.file}${problem.line === null ? '' : `:${problem.line}`}  ${problem.message}`);
+      console.error(`  ${formatShaderProblem(problem)}`);
     }
 
     process.exit(1);
   }
 
-  console.log(`\x1b[32m${shaderFiles.length} shader file(s) checked, no problems.\x1b[0m`);
+  console.log(`\x1b[32m${files} shader file(s) checked, no problems.\x1b[0m`);
 };
 
-await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await main();
+}

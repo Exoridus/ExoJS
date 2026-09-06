@@ -1,9 +1,10 @@
 // @vitest-environment node
-import { execFileSync } from 'node:child_process';
 import { copyFileSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
+
+import { formatShaderProblem, scanShaderSources } from '../../scripts/check-shader-sources';
 
 /**
  * Proves `scripts/check-shader-sources.ts` actually fails on each defect it
@@ -16,8 +17,6 @@ import { afterEach, describe, expect, it } from 'vitest';
  * in its place in the tree, which a fixture would not have.
  */
 const REPO_ROOT = resolve(__dirname, '../..');
-const SCANNER = 'scripts/check-shader-sources.ts';
-const TSX_CLI = join('node_modules', 'tsx', 'dist', 'cli.mjs');
 
 /** A GLSL shader with an entry point, a version line and an engine directive. */
 const GLSL_TARGET = 'src/rendering/webgl2/shaders/sprite.vert';
@@ -35,17 +34,11 @@ const mutate = (file: string, transform: (text: string) => string): void => {
   writeFileSync(path, transform(backups.get(file)!), 'utf8');
 };
 
-/** Runs the gate; returns its combined output on failure, or null when it passed. */
-const scan = (): string | null => {
-  try {
-    execFileSync('node', [TSX_CLI, SCANNER], { cwd: REPO_ROOT, encoding: 'utf8', stdio: 'pipe' });
+/** Runs the gate; returns its report on failure, or null when it passed. */
+const scan = async (): Promise<string | null> => {
+  const { problems } = await scanShaderSources();
 
-    return null;
-  } catch (error) {
-    const failure = error as { stdout?: string; stderr?: string };
-
-    return `${failure.stdout ?? ''}${failure.stderr ?? ''}`;
-  }
+  return problems.length === 0 ? null : problems.map(formatShaderProblem).join('\n');
 };
 
 afterEach(() => {
@@ -58,71 +51,71 @@ afterEach(() => {
 });
 
 describe('check-shader-sources', () => {
-  it('passes over the repository as it stands', () => {
-    expect(scan()).toBeNull();
+  it('passes over the repository as it stands', async () => {
+    expect(await scan()).toBeNull();
   });
 
-  it('rejects a GLSL entry-point shader whose first line is not the version directive', () => {
+  it('rejects a GLSL entry-point shader whose first line is not the version directive', async () => {
     mutate(GLSL_TARGET, text => text.replace('#version 300 es\n', ''));
 
-    expect(scan()).toContain('line 1 is not');
+    expect(await scan()).toContain('line 1 is not');
   });
 
-  it('rejects a #version directive inside WGSL', () => {
+  it('rejects a #version directive inside WGSL', async () => {
     mutate(WGSL_TARGET, text => `#version 300 es\n${text}`);
 
-    expect(scan()).toContain('WGSL has no preprocessor');
+    expect(await scan()).toContain('WGSL has no preprocessor');
   });
 
-  it('rejects a placeholder fillShaderSource would never substitute', () => {
+  it('rejects a placeholder fillShaderSource would never substitute', async () => {
     mutate(WGSL_TARGET, text => text.replace('{{nodeIndexMask}}', '{{ nodeIndexMask }}'));
 
-    expect(scan()).toContain('does not match the {{NAME}} form');
+    expect(await scan()).toContain('does not match the {{NAME}} form');
   });
 
-  it('rejects an unknown engine directive', () => {
+  it('rejects an unknown engine directive', async () => {
     mutate(GLSL_TARGET, text => text.replace('// #exo-include transform-texture', '// #exo-inclde transform-texture'));
 
-    expect(scan()).toContain("unknown engine directive '#exo-inclde'");
+    expect(await scan()).toContain("unknown engine directive '#exo-inclde'");
   });
 
-  it('rejects a tab', () => {
+  it('rejects a tab', async () => {
     mutate(GLSL_TARGET, text => text.replace('#version 300 es\n', '#version 300 es\n//\tnote\n'));
 
-    expect(scan()).toContain('contains a tab');
+    expect(await scan()).toContain('contains a tab');
   });
 
-  it('rejects trailing whitespace', () => {
+  it('rejects trailing whitespace', async () => {
     mutate(GLSL_TARGET, text => text.replace('#version 300 es\n', '#version 300 es \n'));
 
-    expect(scan()).toContain('has trailing whitespace');
+    expect(await scan()).toContain('has trailing whitespace');
   });
 
-  it('rejects a CR', () => {
+  it('rejects a CR', async () => {
     mutate(GLSL_TARGET, text => text.replace('#version 300 es\n', '#version 300 es\r\n'));
 
-    expect(scan()).toContain('LF-only');
+    expect(await scan()).toContain('LF-only');
   });
 
-  it('rejects an empty shader', () => {
+  it('rejects an empty shader', async () => {
     mutate(GLSL_TARGET, () => '');
 
-    expect(scan()).toContain('file is empty');
+    expect(await scan()).toContain('file is empty');
   });
 
-  it('rejects a shader that strips to nothing', () => {
+  it('rejects a shader that strips to nothing', async () => {
     // Comment-only: valid text, imported, and completely gone from the shipped
     // bundle. Only the strip-aware check sees it.
     mutate(GLSL_TARGET, () => '// nothing but a comment\n');
 
-    expect(scan()).toContain('strips to nothing');
+    expect(await scan()).toContain('strips to nothing');
   });
 
-  it('rejects an orphan shader nothing imports', () => {
+  it('rejects an orphan shader nothing imports', async () => {
     const orphan = 'src/rendering/webgl2/shaders/__orphan-probe.frag';
 
     copyFileSync(join(REPO_ROOT, 'src/rendering/webgl2/shaders/mesh.frag'), join(REPO_ROOT, orphan));
 
-    expect(scan()).toContain('is not imported by any module');
+    expect(await scan()).toContain('is not imported by any module');
   });
 });
