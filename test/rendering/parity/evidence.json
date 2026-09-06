@@ -1,10 +1,9 @@
 {
   "stamps": {
     "chromium": {
-      "measuredAt": "2026-09-05",
-      "commit": "f1d5fea24",
-      "platform": "win32",
-      "release": "0.17.0"
+      "measuredAt": "2026-09-06",
+      "commit": "561bf8ab0",
+      "platform": "win32"
     },
     "firefox": {
       "measuredAt": "2026-09-05",
@@ -146,6 +145,48 @@
       "delta": 0
     },
     {
+      "scene": "filter/color-matrix-bias",
+      "property": "cross-backend-parity",
+      "feature": "ColorMatrixFilter",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "oracle-agreement",
+      "feature": "ColorMatrixFilter",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "oracle",
+      "delta": 0,
+      "note": "1 computed pixel(s) within 2 of an identity colour matrix plus a per-channel bias, over an opaque (64, 128, 192) fill"
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "renders-something",
+      "feature": "ColorMatrixFilter",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "2304/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "repeat-render-determinism",
+      "feature": "ColorMatrixFilter",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
       "scene": "filter/color-matrix-channel-swap",
       "property": "cross-backend-parity",
       "feature": "ColorMatrixFilter",
@@ -181,6 +222,48 @@
       "scene": "filter/color-matrix-channel-swap",
       "property": "repeat-render-determinism",
       "feature": "ColorMatrixFilter",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "cross-backend-parity",
+      "feature": "DropShadowFilter",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "oracle-agreement",
+      "feature": "DropShadowFilter",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "oracle",
+      "delta": 0,
+      "note": "3 computed pixel(s) within 2 of an unblurred silhouette flattened to opaque red and shifted by (10, 10), with the source composited over it"
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "renders-something",
+      "feature": "DropShadowFilter",
+      "browser": "chromium",
+      "backend": "webgl2",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "956/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "repeat-render-determinism",
+      "feature": "DropShadowFilter",
       "browser": "chromium",
       "backend": "webgl2",
       "support": "supported",
@@ -1238,6 +1321,48 @@
       "delta": 0
     },
     {
+      "scene": "filter/color-matrix-bias",
+      "property": "cross-backend-parity",
+      "feature": "ColorMatrixFilter",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "oracle-agreement",
+      "feature": "ColorMatrixFilter",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "oracle",
+      "delta": 0,
+      "note": "1 computed pixel(s) within 2 of an identity colour matrix plus a per-channel bias, over an opaque (64, 128, 192) fill"
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "renders-something",
+      "feature": "ColorMatrixFilter",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "2304/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/color-matrix-bias",
+      "property": "repeat-render-determinism",
+      "feature": "ColorMatrixFilter",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
       "scene": "filter/color-matrix-channel-swap",
       "property": "cross-backend-parity",
       "feature": "ColorMatrixFilter",
@@ -1273,6 +1398,48 @@
       "scene": "filter/color-matrix-channel-swap",
       "property": "repeat-render-determinism",
       "feature": "ColorMatrixFilter",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "cross-backend-parity",
+      "feature": "DropShadowFilter",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "frame-equal",
+      "delta": 0
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "oracle-agreement",
+      "feature": "DropShadowFilter",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "oracle",
+      "delta": 0,
+      "note": "3 computed pixel(s) within 2 of an unblurred silhouette flattened to opaque red and shifted by (10, 10), with the source composited over it"
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "renders-something",
+      "feature": "DropShadowFilter",
+      "browser": "chromium",
+      "backend": "webgpu",
+      "support": "supported",
+      "evidence": "sampled",
+      "delta": null,
+      "note": "956/4096 pixels drawn"
+    },
+    {
+      "scene": "filter/drop-shadow-hard-offset",
+      "property": "repeat-render-determinism",
+      "feature": "DropShadowFilter",
       "browser": "chromium",
       "backend": "webgpu",
       "support": "supported",
