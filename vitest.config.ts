@@ -32,6 +32,10 @@ const aliasConfig = [
   { find: '@codexo/exojs-tilemap-physics', replacement: fileURLToPath(new URL('./packages/exojs-tilemap-physics/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-lighting', replacement: fileURLToPath(new URL('./packages/exojs-lighting/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-pathfinding', replacement: fileURLToPath(new URL('./packages/exojs-pathfinding/src/index.ts', import.meta.url)) },
+  // The CLI's `exo create` calls the scaffolder's library entry, whose package
+  // resolves to built output. The unit lane runs without building the packages,
+  // so an in-repo test would resolve nothing at all without this.
+  { find: 'create-exo-app', replacement: fileURLToPath(new URL('./packages/create-exo-app/src/scaffold.ts', import.meta.url)) },
 ] as const;
 
 // Loads every shader source (`.vert`/`.frag`/`.wgsl`) as its REAL text, exactly
