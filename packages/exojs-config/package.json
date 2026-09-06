@@ -10,6 +10,7 @@
     "./eslint/correctness": "./eslint/correctness.js",
     "./eslint/extension": "./eslint/extension.js",
     "./eslint/package-test": "./eslint/package-test.js",
+    "./eslint/plugin": "./eslint/plugin/index.js",
     "./eslint/react": "./eslint/react.js",
     "./eslint/vitest": "./eslint/vitest.js",
     "./prettier": "./prettier/index.js",
