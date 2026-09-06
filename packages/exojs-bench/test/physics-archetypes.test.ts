@@ -1,5 +1,5 @@
 import { describePhysicsScene, rayForStep } from '../src/physics/adapters/scene';
-import { PHYSICS_ARCHETYPES, seedFor } from '../src/physics/archetypes';
+import { PHYSICS_ARCHETYPES, seedFor, warmupStepsFor, warmupStepsForArchetype } from '../src/physics/archetypes';
 import type { PhysicsArchetypeId, PhysicsArchetypeSpec } from '../src/physics/PhysicsAdapter';
 
 const byId = Object.fromEntries(PHYSICS_ARCHETYPES.map(archetype => [archetype.id, archetype])) as Record<PhysicsArchetypeId, PhysicsArchetypeSpec>;
@@ -7,6 +7,16 @@ const byId = Object.fromEntries(PHYSICS_ARCHETYPES.map(archetype => [archetype.i
 /** Scene for a cell, at the deterministic seed the driver would give it. */
 const sceneFor = (id: PhysicsArchetypeId, bodyCount: number): ReturnType<typeof describePhysicsScene> =>
   describePhysicsScene(byId[id], bodyCount, seedFor(byId[id].scene, bodyCount));
+
+/**
+ * Body counts two archetypes can be read against each other at.
+ *
+ * `seedFor` keys on the scene AND the body count, so two archetypes that name
+ * the same scene build the byte-identical world only at a count both ladders
+ * contain. A pair meant to be read as a delta must therefore share at least one
+ * rung; identical ladders are one way to get that and not the requirement.
+ */
+const sharedRungs = (a: PhysicsArchetypeId, b: PhysicsArchetypeId): number[] => byId[a].bodyCounts.filter(count => byId[b].bodyCounts.includes(count));
 
 describe('raycast', () => {
   test('simulates the mixed scene unchanged, so the delta against it is query cost', () => {
@@ -17,6 +27,10 @@ describe('raycast', () => {
     expect(raycast.gravity).toEqual(base.gravity);
     expect(raycast.perturbFraction).toBe(base.perturbFraction);
     expect(raycast.bodyCounts).toEqual(base.bodyCounts);
+  });
+
+  test('shares a body count with the mixed scene, without which no delta could be taken', () => {
+    expect(sharedRungs('raycast', 'mixed-static-dynamic').length).toBeGreaterThan(0);
   });
 
   test('builds the byte-identical body list its base archetype does', () => {
@@ -71,6 +85,20 @@ describe('body-churn', () => {
     expect(churn.churn).toBe(true);
   });
 
+  test('shares a body count with many-dynamic, and builds the identical layout there', () => {
+    const shared = sharedRungs('body-churn', 'many-dynamic');
+
+    expect(shared.length).toBeGreaterThan(0);
+
+    // The impulses differ by construction - a body that lives one step gets
+    // none - so the layout is what has to match for the delta to carry one cause.
+    const layout = (id: PhysicsArchetypeId, bodyCount: number): unknown => sceneFor(id, bodyCount).bodies.map(body => ({ ...body, perturb: undefined }));
+
+    for (const bodyCount of shared) {
+      expect(layout('body-churn', bodyCount)).toEqual(layout('many-dynamic', bodyCount));
+    }
+  });
+
   test('churns a nonempty subset of the dynamic bodies, never all of them', () => {
     const scene = sceneFor('body-churn', 1_000);
 
@@ -119,6 +147,159 @@ describe('joints', () => {
       expect(joint.bodyA).not.toBe(joint.bodyB);
       expect(scene.bodies[joint.bodyA]).toBeDefined();
       expect(scene.bodies[joint.bodyB]).toBeDefined();
+    }
+  });
+});
+
+describe('settling-pile', () => {
+  test('simulates the many-dynamic scene unchanged except for its dynamic material', () => {
+    const settling = byId['settling-pile'];
+    const base = byId['many-dynamic'];
+
+    expect(settling.scene).toBe(base.scene);
+    expect(settling.gravity).toEqual(base.gravity);
+    expect(settling.perturbFraction).toBe(base.perturbFraction);
+    expect(settling.dynamicMaterial).not.toEqual(base.dynamicMaterial);
+  });
+
+  // The two archetypes reach the frame budget at body counts nearly three times
+  // apart, so they carry different ladders and cannot share all of one. What the
+  // sleeping comparison actually needs is a count at which both build the same
+  // world, and that is what is asserted.
+  test('shares a body count with many-dynamic, without which the sleeping delta could not be taken', () => {
+    expect(sharedRungs('settling-pile', 'many-dynamic').length).toBeGreaterThan(0);
+  });
+
+  test('gives its dynamic bodies nonzero friction and zero restitution, so the pile can come to rest', () => {
+    expect(byId['settling-pile'].dynamicMaterial).toEqual({ friction: 0.5, restitution: 0 });
+  });
+
+  test('builds the byte-identical layout its base archetype does, differing only in material', () => {
+    const shared = sharedRungs('settling-pile', 'many-dynamic')[0]!;
+    const settlingBodies = sceneFor('settling-pile', shared).bodies;
+    const baseBodies = sceneFor('many-dynamic', shared).bodies;
+
+    expect(settlingBodies).toHaveLength(baseBodies.length);
+
+    for (const [index, body] of settlingBodies.entries()) {
+      const baseBody = baseBodies[index]!;
+
+      expect({ ...body, friction: undefined, restitution: undefined }).toEqual({ ...baseBody, friction: undefined, restitution: undefined });
+    }
+  });
+
+  test('leaves many-dynamic itself frictionless and bouncy', () => {
+    const bodies = sceneFor('many-dynamic', 200).bodies;
+    const dynamicBodies = bodies.filter(body => body.type === 'dynamic');
+
+    expect(dynamicBodies.length).toBeGreaterThan(0);
+
+    for (const body of dynamicBodies) {
+      expect(body.friction).toBe(0);
+      expect(body.restitution).toBe(0.4);
+    }
+  });
+
+  test('applies the override to every dynamic body of the settling pile', () => {
+    const dynamicBodies = sceneFor('settling-pile', 200).bodies.filter(body => body.type === 'dynamic');
+
+    expect(dynamicBodies.length).toBeGreaterThan(0);
+
+    for (const body of dynamicBodies) {
+      expect(body.friction).toBe(0.5);
+      expect(body.restitution).toBe(0);
+    }
+  });
+
+  test('names a warmup override for every one of its body counts, each larger than the shared schedule', () => {
+    const settling = byId['settling-pile'];
+
+    expect(settling.warmupStepsOverride).toBeDefined();
+
+    for (const bodyCount of settling.bodyCounts) {
+      expect(settling.warmupStepsOverride![bodyCount]).toBeGreaterThan(warmupStepsFor(bodyCount));
+    }
+  });
+
+  test('warmupStepsForArchetype resolves the override for the settling pile', () => {
+    const settling = byId['settling-pile'];
+
+    for (const bodyCount of settling.bodyCounts) {
+      expect(warmupStepsForArchetype(settling, bodyCount)).toBe(settling.warmupStepsOverride![bodyCount]);
+    }
+  });
+});
+
+describe('body-count ladders', () => {
+  test('each archetype carries its own ladder, ascending and without a repeated rung', () => {
+    for (const archetype of PHYSICS_ARCHETYPES) {
+      const rungs = [...archetype.bodyCounts];
+
+      expect(rungs.length).toBeGreaterThan(0);
+      expect(new Set(rungs).size).toBe(rungs.length);
+      expect(rungs).toEqual([...rungs].sort((a, b) => a - b));
+    }
+  });
+
+  test('the ladders are not one shared ladder: the archetypes reach a frame at different sizes', () => {
+    const ladders = new Set(PHYSICS_ARCHETYPES.map(archetype => archetype.bodyCounts.join(',')));
+
+    expect(ladders.size).toBeGreaterThan(1);
+  });
+
+  test('every archetype read as a delta against another shares a rung with it', () => {
+    const deltas: readonly (readonly [PhysicsArchetypeId, PhysicsArchetypeId])[] = [
+      ['raycast', 'mixed-static-dynamic'],
+      ['body-churn', 'many-dynamic'],
+      ['settling-pile', 'many-dynamic'],
+    ];
+
+    for (const [archetype, base] of deltas) {
+      expect(byId[archetype].scene).toBe(byId[base].scene);
+      expect(sharedRungs(archetype, base).length).toBeGreaterThan(0);
+    }
+  });
+
+  test('an archetype naming a warmup override names one for every rung of its own ladder', () => {
+    for (const archetype of PHYSICS_ARCHETYPES) {
+      if (archetype.warmupStepsOverride === undefined) continue;
+
+      // An override keyed on a count the ladder no longer contains is silently
+      // inert: the cell falls back to the shared schedule, which for this
+      // archetype times a transient rather than its steady state.
+      for (const bodyCount of archetype.bodyCounts) {
+        expect(archetype.warmupStepsOverride[bodyCount]).toBeDefined();
+      }
+
+      expect(
+        Object.keys(archetype.warmupStepsOverride)
+          .map(Number)
+          .sort((a, b) => a - b),
+      ).toEqual([...archetype.bodyCounts]);
+    }
+  });
+});
+
+describe('warmupStepsForArchetype', () => {
+  test('falls back to the shared schedule for every archetype that names no override', () => {
+    for (const archetype of PHYSICS_ARCHETYPES) {
+      if (archetype.warmupStepsOverride !== undefined) continue;
+
+      for (const bodyCount of archetype.bodyCounts) {
+        expect(warmupStepsForArchetype(archetype, bodyCount)).toBe(warmupStepsFor(bodyCount));
+      }
+    }
+  });
+
+  test('leaves every pre-existing archetype on the shared schedule, unaffected by the settling-pile override', () => {
+    for (const id of ['box-stack', 'many-dynamic', 'mixed-static-dynamic', 'raycast', 'body-churn', 'joints'] as const) {
+      const archetype = byId[id];
+
+      expect(archetype.warmupStepsOverride).toBeUndefined();
+
+      for (const bodyCount of archetype.bodyCounts) {
+        expect(warmupStepsForArchetype(archetype, bodyCount)).toBe(warmupStepsFor(bodyCount));
+      }
     }
   });
 });

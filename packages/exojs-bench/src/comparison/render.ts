@@ -1,41 +1,63 @@
-import type { PhysicsProvenance } from '../physics/driver';
-import type { Provenance } from '../rendering/driver';
-import type { LibraryProvenance } from '../shared/provenance';
-import type { BackendComparison, ComparisonRow, ComparisonSection } from './build';
+import { FRAME_BUDGET_MS } from '../shared/frameBudget';
+import type { AggregatedPhysics, AggregatedRendering } from './aggregate';
+import type { AggregatedCell, AggregatedRow, RunSpread } from './pooled';
 import { NOISE_HIGH, NOISE_LOW, STRUCTURAL_FACTOR } from './verdict';
 
 /**
  * Markdown renderer for the published comparison.
  *
- * The document is generated in full, every run: a hand-maintained comparison
+ * The document is generated in full, every time: a hand-maintained comparison
  * drifts from the harness, and once it drifts the honesty is gone without anyone
  * noticing. Everything a reader needs to reject the numbers - GPU, driver,
  * software-rasterizer bit, headed/headless, library versions, timer resolution,
- * and the count every row was measured at - is in the document itself.
+ * the count every row was measured at, and how far each number moved between
+ * the runs behind it - is in the document itself.
  */
 
-/** Everything the renderer needs about a rendering run. */
-export interface RenderingInput {
-  /** One provenance stamp per backend exercised. */
-  readonly provenance: readonly Provenance[];
-  /** Version provenance for the competitor libraries. */
-  readonly libraries: readonly LibraryProvenance[];
-  /** The built per-backend comparisons. */
-  readonly backends: readonly BackendComparison[];
-}
+/** Everything the renderer needs about the rendering domain. */
+export type RenderingInput = AggregatedRendering;
 
-/** Everything the renderer needs about a physics run. */
-export interface PhysicsInput {
-  /** The run's provenance stamp. */
-  readonly provenance: PhysicsProvenance;
-  /** Version provenance for the physics arms. */
-  readonly libraries: readonly LibraryProvenance[];
-  /** The built physics section. */
-  readonly section: ComparisonSection;
-}
+/** Everything the renderer needs about the physics domain. */
+export type PhysicsInput = AggregatedPhysics;
 
 /** Format a millisecond median for the table. */
 const ms = (value: number | null): string => (value === null ? 'n/a' : `${value.toFixed(3)} ms`);
+
+/** The observed range behind a published median, as a bracketed suffix. */
+const range = (spread: RunSpread): string =>
+  Number.isFinite(spread.minMs) && Number.isFinite(spread.maxMs) ? ` [${spread.minMs.toFixed(3)}-${spread.maxMs.toFixed(3)}]` : '';
+
+/**
+ * One arm's published numbers: the median the verdict is drawn from, the range
+ * the pooled runs observed for it, the frame-budget mark where that median is
+ * past a whole 60 fps frame, and the p95 of the same timed window.
+ *
+ * The range sits directly behind the median because it belongs to the median
+ * alone - no range is retained for the p95 - and the mark sits behind the range
+ * because it is a statement about that median rather than about the pair.
+ *
+ * The mark is spelled out rather than symbolic. A Markdown table is read as
+ * plain text as often as it is rendered, and a glyph a reader has to look up in
+ * a legend is not a warning.
+ */
+const measurement = (medianMs: number | null, p95Ms: number | null, overFrameBudget: boolean, spread: RunSpread): string =>
+  [ms(medianMs), range(spread), overFrameBudget ? ` (over the ${String(FRAME_BUDGET_MS)} ms frame)` : '', `, p95 ${ms(p95Ms)}`].join('');
+
+/**
+ * The competitor column: the pooled median and p95 with their observed range,
+ * and either the verdict or, for a cell the runs disagreed on, what each of them
+ * said instead.
+ *
+ * An unstable cell prints no verdict at all. Publishing the pooled numbers'
+ * verdict would state as a result something part of the measurement contradicts,
+ * and dropping the row would hide the finding that the cell is not measurable to
+ * that resolution on this machine.
+ */
+const outcome = (cell: AggregatedCell): string => {
+  const value = measurement(cell.competitorMs, cell.competitorP95Ms, cell.competitorOverFrameBudget, cell.aggregate.competitor);
+
+  return cell.aggregate.stable ? `${value} - ${cell.verdict.label}` : `${value} - ${cell.verdict.label}: ${cell.aggregate.rungs.join(', ')}`;
+};
 
 /** One Markdown table row, padded only by the pipes - readers get the alignment from the renderer. */
 const tableRow = (cells: readonly string[]): string => `| ${cells.join(' | ')} |`;
@@ -43,15 +65,29 @@ const tableRow = (cells: readonly string[]): string => `| ${cells.join(' | ')} |
 /** Header plus separator for a table with the given column titles. */
 const tableHead = (columns: readonly string[]): string[] => [tableRow(columns), tableRow(columns.map(() => '---'))];
 
-/** Render one comparison row: the reference time, then each competitor's time and verdict. */
-const renderRow = (row: ComparisonRow, competitors: readonly string[]): string => {
-  const reference = row.cells[0]?.referenceMs ?? null;
-  const cells: string[] = [`\`${row.archetype}\``, ms(reference)];
+/**
+ * Render one comparison row: the reference times and their range, then each
+ * competitor's times, range and verdict.
+ *
+ * `withCount` prints the size the row was measured at as its own column. The
+ * physics block needs it - its archetypes carry per-archetype ladders, so its
+ * rows are measured at different body counts and a reader who cannot see each
+ * row's count would read the table as one scene at one size.
+ */
+const renderRow = (row: AggregatedRow, competitors: readonly string[], withCount = false): string => {
+  const reference = row.cells[0];
+  const cells: string[] = [
+    `\`${row.archetype}\``,
+    ...(withCount ? [String(row.count)] : []),
+    reference === undefined
+      ? 'n/a'
+      : measurement(reference.referenceMs, reference.referenceP95Ms, reference.referenceOverFrameBudget, reference.aggregate.reference),
+  ];
 
   for (const competitor of competitors) {
     const cell = row.cells.find(candidate => candidate.competitor === competitor);
 
-    cells.push(cell === undefined ? 'not comparable' : `${ms(cell.competitorMs)} - ${cell.verdict.label}`);
+    cells.push(cell === undefined ? 'not comparable' : outcome(cell));
   }
 
   cells.push(mechanismCell(row));
@@ -67,7 +103,7 @@ const renderRow = (row: ComparisonRow, competitors: readonly string[]): string =
  * attribute one arm's cause to another arm's number. Identical mechanisms
  * collapse to one sentence; differing ones are printed per competitor.
  */
-const mechanismCell = (row: ComparisonRow): string => {
+const mechanismCell = (row: AggregatedRow): string => {
   const evidenced = row.cells.filter((cell): cell is typeof cell & { mechanism: string } => cell.mechanism !== null);
 
   if (evidenced.length === 0) {
@@ -91,19 +127,30 @@ const readingRules = (): string[] => [
   `- Outside the band the faster arm \`leads\`. At ${STRUCTURAL_FACTOR}x or more it \`leads clearly\` - a gap that large cannot be explained by machine mood or driver state, so it is attributable to how the two libraries are built.`,
   '- Rows are archetypes. Category headings are headings, never rows: an average over a category hides its worst cell, so nothing here aggregates across archetypes.',
   '- Every row names the mechanism its difference comes from, drawn from the structural counters the harness collects. A row whose mechanism could not be evidenced is not published - it is listed under the omissions instead, with the reason.',
-  '- One count for the whole table, chosen from the archetype ladders before any timing was read. It is never picked per row.',
+  '- Every value is a median and a `p95` of the same timed window. The median is the field-comparable number and is what every verdict is computed from; the p95 is the step or frame a player feels as a hitch, so a pair that is far apart hitches even where the median reads as comfortable.',
+  `- A median past **${String(FRAME_BUDGET_MS)} ms** - a whole 60 fps frame - is marked \`over the ${String(FRAME_BUDGET_MS)} ms frame\`. How much of a frame this work may take is your decision; one that costs more than the entire frame is unplayable whatever you decide. Nothing is derived from the mark: there is no "how many bodies at N ms" figure here, because that would be an interpolation between rungs rather than something measured.`,
+  '- A rendering table uses one node count for all of its rows, chosen from the archetype ladders before any timing was read.',
+  "- Physics rows each state the body count they were measured at, because each physics archetype has its own ladder: they reach a frame at sizes that differ by nearly an order of magnitude, and one shared count would put most rows at a size chosen to suit a different archetype. A row still cannot pick its count to suit an outcome - it is the largest rung of that archetype's ladder at which every arm produced a valid cell. **Read the arms within a row against each other, never one row against another**: two rows are two different scenes at two different sizes.",
+  '- Every published time is the median of the per-run medians of several separate harness runs, and the bracket after it is the range those runs observed. A wide bracket is the measurement moving, not the library.',
+  '- A cell whose runs did not all reach the same verdict prints `unstable across runs` followed by what each run said, and no verdict. It stays in the table: that the cell cannot be measured to that resolution on this machine is itself the finding.',
   '- Cells where ExoJS loses are published exactly like the cells where it wins. A table in which one library wins everywhere is not credible and will not survive being re-run by anyone else.',
   '',
 ];
 
-/** Provenance block for a rendering run - what a reader needs in order to reject the numbers. */
+/** Provenance block for the rendering domain - what a reader needs in order to reject the numbers. */
 const renderingProvenance = (input: RenderingInput): string[] => {
-  const lines = ['## Provenance', ''];
+  const lines = ['## Provenance', '', `Pooled from **${String(input.runs.length)} separate rendering runs**.`, ''];
 
-  for (const entry of input.provenance) {
-    lines.push(
-      `- **${entry.backend}**: adapter \`${entry.adapter}\`, software rasterizer \`${String(entry.software)}\`, headless \`${String(entry.headless)}\`, flags \`${entry.flags.join(' ')}\`, engine \`${entry.engineVersion}\`${typeof entry.slotTier === 'number' ? `, sprite-batch slot tier \`${String(entry.slotTier)}\`` : ''}, measured \`${entry.timestamp}\``,
-    );
+  for (const [index, run] of input.runs.entries()) {
+    lines.push(`Run ${String(index + 1)}:`, '');
+
+    for (const entry of run) {
+      lines.push(
+        `- **${entry.backend}**: adapter \`${entry.adapter}\`, software rasterizer \`${String(entry.software)}\`, headless \`${String(entry.headless)}\`, flags \`${entry.flags.join(' ')}\`, engine \`${entry.engineVersion}\`${typeof entry.slotTier === 'number' ? `, sprite-batch slot tier \`${String(entry.slotTier)}\`` : ''}, measured \`${entry.timestamp}\``,
+      );
+    }
+
+    lines.push('');
   }
 
   lines.push('');
@@ -114,7 +161,7 @@ const renderingProvenance = (input: RenderingInput): string[] => {
     lines.push(`- \`${library.name}\` @ \`${library.version}\``);
   }
 
-  if (input.provenance.some(entry => entry.software)) {
+  if (input.runs.flat().some(entry => entry.software)) {
     lines.push('');
     lines.push('> **These timings ran on a software rasterizer and are not reportable.** Every number below describes the host CPU, not a GPU.');
   }
@@ -145,7 +192,7 @@ const renderRenderingBlocks = (input: RenderingInput): string[] => {
       '',
     );
 
-    const columns = ['archetype', 'exojs (median CPU)', ...backend.competitors.map(competitor => `${competitor} (median CPU)`), 'mechanism'];
+    const columns = ['archetype', 'exojs (median / p95 CPU)', ...backend.competitors.map(competitor => `${competitor} (median / p95 CPU)`), 'mechanism'];
 
     for (const section of backend.sections) {
       lines.push(`### ${section.title}`, '');
@@ -167,8 +214,8 @@ const renderRenderingBlocks = (input: RenderingInput): string[] => {
 
       const webgl1Columns = [
         'archetype',
-        'exojs (median CPU)',
-        ...[...new Set(backend.webgl1.flatMap(row => row.cells.map(cell => cell.competitor)))].map(name => `${name} (median CPU)`),
+        'exojs (median / p95 CPU)',
+        ...[...new Set(backend.webgl1.flatMap(row => row.cells.map(cell => cell.competitor)))].map(name => `${name} (median / p95 CPU)`),
         'mechanism',
       ];
       const webgl1Competitors = [...new Set(backend.webgl1.flatMap(row => row.cells.map(cell => cell.competitor)))];
@@ -206,8 +253,10 @@ const renderPhysicsBlock = (input: PhysicsInput): string[] => {
   const lines = ['## Physics', ''];
   const competitors = [...new Set(input.section.rows.flatMap(row => row.cells.map(cell => cell.competitor)))];
 
+  const host = input.runs[0]!;
+
   lines.push(
-    `Host \`${input.provenance.host.cpu}\` (${String(input.provenance.host.cpuCount)} logical), Node \`${input.provenance.host.node}\`, OS \`${input.provenance.host.os}\`, fixed step \`${input.provenance.fixedDelta.toFixed(6)} s\`, measured \`${input.provenance.timestamp}\`.`,
+    `Pooled from **${String(input.runs.length)} separate physics runs** in \`${host.browser} ${host.browserVersion}\` on host \`${host.host.cpu}\` (${String(host.host.cpuCount)} logical), OS \`${host.host.os}\`, fixed step \`${host.fixedDelta.toFixed(6)} s\`, measured \`${input.runs.map(run => run.timestamp).join('`, `')}\`.`,
     '',
   );
 
@@ -218,16 +267,27 @@ const renderPhysicsBlock = (input: PhysicsInput): string[] => {
   lines.push('');
 
   if (input.section.rows.length === 0) {
-    lines.push('No physics row qualified: no single body count produced a valid cell on every arm.', '');
+    lines.push('No physics row qualified: no archetype produced a valid cell on every arm at any rung of its ladder.', '');
 
     return lines;
   }
 
-  lines.push(`All rows measured at **${String(input.section.rows[0]!.count)} bodies**.`, '');
-  lines.push(...tableHead(['archetype', 'exojs-physics (median step)', ...competitors.map(competitor => `${competitor} (median step)`), 'mechanism']));
+  lines.push(
+    'Each archetype has its **own body-count ladder**, placed so that its rungs straddle the 60 fps frame: the archetypes reach a frame at sizes that differ by nearly an order of magnitude, so one shared count would put most rows at a size chosen to suit a different scene. Every row therefore states the count it was measured at, and **rows are not comparable with one another** - only the arms within a row are.',
+    '',
+  );
+  lines.push(
+    ...tableHead([
+      'archetype',
+      'bodies',
+      'exojs-physics (median / p95 step)',
+      ...competitors.map(competitor => `${competitor} (median / p95 step)`),
+      'mechanism',
+    ]),
+  );
 
   for (const row of input.section.rows) {
-    lines.push(renderRow(row, competitors));
+    lines.push(renderRow(row, competitors, true));
   }
 
   lines.push('');
@@ -240,9 +300,9 @@ const renderPhysicsBlock = (input: PhysicsInput): string[] => {
 };
 
 /**
- * Render the full comparison document. Either half may be absent - a rendering
- * run and a physics run are separate invocations of the harness, and a document
- * generated from one of them must not imply it covers the other.
+ * Render the full comparison document. Either half may be absent - rendering
+ * and physics are measured by separate invocations of the harness, and a
+ * document generated from one of them must not imply it covers the other.
  */
 export const renderComparison = (input: { rendering?: RenderingInput; physics?: PhysicsInput }): string => {
   const lines = ['# ExoJS cross-library comparison', ''];

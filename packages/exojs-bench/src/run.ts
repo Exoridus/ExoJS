@@ -1,13 +1,15 @@
 import { resolve } from 'node:path';
 
 // `./physics` is imported for TYPES only here (erased at runtime); its module
-// graph - the `@codexo/exojs-physics` source arm - is loaded lazily via a
-// dynamic `import()` inside `runPhysicsDomain`, so a rendering run never pays for it.
-import type { PhysicsAdapter, PhysicsCellResult, PhysicsCellSpec } from './physics';
-import type { ArchetypeId, Backend, CellResult, MatrixSelection } from './rendering';
-import { isHitching, profileCell, runMatrix, writeReport } from './rendering';
+// graph is loaded lazily via a dynamic `import()` inside `runPhysicsDomain`, so
+// a rendering run never pays for it.
+import type { PhysicsCellResult, PhysicsCellSpec } from './physics';
+import type { ArchetypeId, Backend, CellResult, MatrixSelection, RenderingBrowser } from './rendering';
+import { isHitching, parseRenderingBrowser, profileCell, runMatrix, writeReport } from './rendering';
 import { parseArgs } from './shared/args';
 import { createCheckpointWriter } from './shared/checkpoint';
+import type { PlatformDeclaration } from './shared/provenance';
+import { parsePlatformDeclaration, PLATFORM_DECLARATION_SYNTAX, readPlatformVersion } from './shared/provenance';
 
 /** Domains this CLI can drive. Each has its own archetypes + arms; the shared layer (timing, provenance, checkpoint, report skeleton) is reused across both. */
 const DOMAINS = ['rendering', 'physics'] as const;
@@ -34,6 +36,47 @@ const parseList = (raw: string | undefined): string[] | undefined => {
     .filter(value => value.length > 0);
 
   return values.length > 0 ? values : undefined;
+};
+
+/**
+ * Resolve the `--platform` declaration and refuse the flag it replaced.
+ *
+ * `--prerelease` used to declare a beta operating system without naming its
+ * version. Silently ignoring it would let a stale command line publish a beta
+ * measurement under a shipping platform's name, so it is rejected outright
+ * rather than dropped.
+ */
+const resolvePlatform = (args: Map<string, string>): PlatformDeclaration | undefined => {
+  if (args.has('prerelease')) {
+    throw new Error(`--prerelease has been replaced by ${PLATFORM_DECLARATION_SYNTAX}, which states the pre-release build together with the version it is of.`);
+  }
+
+  return parsePlatformDeclaration(args.get('platform'));
+};
+
+/**
+ * Refuse a reportable run whose platform version nothing established.
+ *
+ * The version is part of a published profile's file name, and it is only
+ * readable on some platforms. Failing here, before any measurement, costs the
+ * runner a command line; failing at `bench:compare` would cost them every run
+ * they had already taken. A narrowed run cannot be published anyway, so it only
+ * warns.
+ */
+const requirePlatformVersion = (declared: PlatformDeclaration | undefined, isSubset: boolean): void => {
+  if (readPlatformVersion(declared).source !== 'undetermined') {
+    return;
+  }
+
+  const message = `This platform does not report its own major version, which a published profile's file name carries. Declare it with ${PLATFORM_DECLARATION_SYNTAX}.`;
+
+  if (isSubset) {
+    console.warn(`\n${message}`);
+
+    return;
+  }
+
+  throw new Error(message);
 };
 
 /** Parse and validate the `--domain` selector (defaults to `rendering`). */
@@ -64,6 +107,7 @@ const runProfileMode = async (
   args: Map<string, string>,
   selection: { engines?: string[]; configs?: string[]; archetypes?: ArchetypeId[]; nodeCounts?: number[] },
   backends: readonly Backend[],
+  browser: RenderingBrowser,
 ): Promise<void> => {
   const frames = Number.parseInt(args.get('profile-frames') ?? '200', 10);
   const topRows = Number.parseInt(args.get('profile-top') ?? '25', 10);
@@ -80,6 +124,7 @@ const runProfileMode = async (
             const outcome = await profileCell({
               spec: { engine, config, backend, archetype, nodeCount, timedFrames: frames, warmupFrames: 30 },
               frames,
+              browser,
             });
 
             console.log(
@@ -116,6 +161,15 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
   const framesArg = args.get('frames');
   const engineArg = args.get('engine');
   const outDir = resolve(args.get('out') ?? DEFAULT_OUT_DIR);
+
+  // `--browser` selects the engine the run is measured in and is stamped into
+  // every provenance block, so a WebKit number can never be read as a Chromium
+  // one. `--platform` states the operating system's major version and whether
+  // that build is a beta, neither of which is observable at runtime on every
+  // platform; a preview BROWSER build is detected from its own version string
+  // and needs no flag.
+  const browser = parseRenderingBrowser(args.get('browser'));
+  const platform = resolvePlatform(args);
 
   const backends: readonly Backend[] = backendArg ? (backendArg.split(',').map(value => value.trim()) as Backend[]) : DEFAULT_BACKENDS;
 
@@ -176,6 +230,7 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
         ...(nodeCounts !== undefined && { nodeCounts }),
       },
       backends,
+      browser,
     );
 
     return;
@@ -187,8 +242,10 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
     console.warn('SUBSET RUN — not a reportable comparison (see the same-session rule).');
   }
 
+  requirePlatformVersion(platform, isSubset);
+
   console.log(
-    `Running rendering benchmark: backends=[${backends.join(', ')}]${engines ? `, engine=[${engines.join(', ')}]` : ''}${configs ? `, config=[${configs.join(', ')}]` : ''}${archetypes ? `, archetype=[${archetypes.join(', ')}]` : ''}${nodeCounts ? `, nodes=[${nodeCounts.join(', ')}]` : ''}${timedFramesOverride !== undefined ? `, frames=${timedFramesOverride} (OVERRIDE — thin sampling, not reportable)` : ''}`,
+    `Running rendering benchmark: browser=${browser}, backends=[${backends.join(', ')}]${engines ? `, engine=[${engines.join(', ')}]` : ''}${configs ? `, config=[${configs.join(', ')}]` : ''}${archetypes ? `, archetype=[${archetypes.join(', ')}]` : ''}${nodeCounts ? `, nodes=[${nodeCounts.join(', ')}]` : ''}${timedFramesOverride !== undefined ? `, frames=${timedFramesOverride} (OVERRIDE — thin sampling, not reportable)` : ''}`,
   );
 
   // Incremental, crash-safe checkpoint: each cell is persisted the instant it
@@ -198,6 +255,8 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
 
   const data = await runMatrix({
     backends,
+    browser,
+    ...(platform !== undefined && { platform }),
     ...(hasSelection && { selection }),
     ...(timedFramesOverride !== undefined && { timedFramesOverride }),
     onCellResult: result => checkpoint.append(result),
@@ -218,8 +277,12 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
 
   for (const entry of data.provenance) {
     console.log(
-      `  backend=${entry.backend} adapter="${entry.adapter}" software=${String(entry.software)} headless=${String(entry.headless)} flags=[${entry.flags.join(' ')}] engine=${entry.engineVersion}`,
+      `  backend=${entry.backend} browser=${entry.browser}/${entry.browserVersion} os=${entry.os} platformVersion=${String(entry.platformVersion.major)} (${entry.platformVersion.source}) prerelease=${String(entry.prerelease.value)} (${entry.prerelease.source}) adapter="${entry.adapter}" software=${String(entry.software)} headless=${String(entry.headless)} flags=[${entry.flags.join(' ')}] engine=${entry.engineVersion}`,
     );
+  }
+
+  if (data.provenance.some(entry => entry.prerelease.value)) {
+    console.warn('\nPRE-RELEASE PLATFORM — this profile does not describe a shipping platform. The stamp records how that was established.');
   }
 
   if (data.provenance.some(entry => entry.software)) {
@@ -243,24 +306,27 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
 /**
  * Run the physics benchmark domain end-to-end and write its report artifacts.
  *
- * Physics is CPU-only: no browser, no GPU. The whole matrix runs in THIS Node
- * process as a straight loop over `world.step`, so the domain module is imported
- * dynamically (only when selected) - a rendering run never loads the physics
- * arm's `@codexo/exojs-physics` source graph, and vice versa.
+ * Physics touches no GPU, but it is measured in a real browser all the same: the
+ * matrix runs inside a Playwright-driven harness page, so the numbers describe
+ * the runtime ExoJS ships to rather than the Node process that drives the run.
+ * The domain module is imported dynamically (only when selected), so a rendering
+ * run never loads it and vice versa.
  *
- * Flags mirror the rendering domain: `--archetype` and `--bodies` filter the
- * matrix (the `--bodies` node-sweep analogue), `--frames` overrides the timed-
- * step count for a fast spot-check (never a reportable run).
+ * Flags mirror the rendering domain: `--browser` selects the engine to measure
+ * in, `--archetype` and `--bodies` filter the matrix (the `--bodies` node-sweep
+ * analogue), `--frames` overrides the timed-step count for a fast spot-check
+ * (never a reportable run).
  */
 const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
-  const { createExoJsPhysicsAdapter, createMatterJsAdapter, createPlanckAdapter, createRapierAdapter, runPhysicsMatrix, writePhysicsReport } =
-    await import('./physics');
+  const { runPhysicsMatrix, writePhysicsReport } = await import('./physics');
 
   const archetypeArg = args.get('archetype');
   const bodiesArg = args.get('bodies');
   const framesArg = args.get('frames');
   const engineArg = args.get('engine');
   const outDir = resolve(args.get('out') ?? DEFAULT_PHYSICS_OUT_DIR);
+  const browser = parseRenderingBrowser(args.get('browser'));
+  const platform = resolvePlatform(args);
 
   const filter: { -readonly [K in keyof PhysicsCellSpec]?: PhysicsCellSpec[K] } = {};
 
@@ -309,48 +375,19 @@ const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
     console.warn('SUBSET RUN — not a reportable comparison (see the same-run rule).');
   }
 
+  requirePlatformVersion(platform, isSubset);
+
   console.log(
-    `Running physics benchmark: ${archetypeArg ? `archetype=${archetypeArg}` : 'all archetypes'}${engineArg ? `, engine=${engineArg}` : ''}${bodiesArg ? `, bodies=${bodiesArg}` : ''}${timedStepsOverride !== undefined ? `, frames=${timedStepsOverride} (OVERRIDE — thin sampling, not reportable)` : ''}`,
+    `Running physics benchmark: browser=${browser}, ${archetypeArg ? `archetype=${archetypeArg}` : 'all archetypes'}${engineArg ? `, engine=${engineArg}` : ''}${bodiesArg ? `, bodies=${bodiesArg}` : ''}${timedStepsOverride !== undefined ? `, frames=${timedStepsOverride} (OVERRIDE — thin sampling, not reportable)` : ''}`,
   );
-
-  // Resolve the arms: the native exojs-physics arm is always present; the
-  // matter, planck and rapier competitor arms are loaded lazily and degrade to a
-  // skipped arm (resolver returns null) when their library was never linked via
-  // bench:setup, so a checkout without the competitor deps still runs the native
-  // domain.
-  const adapters: PhysicsAdapter[] = [createExoJsPhysicsAdapter()];
-  const libraries: string[] = ['@codexo/exojs-physics'];
-
-  const matter = await createMatterJsAdapter();
-
-  if (matter !== null) {
-    adapters.push(matter);
-    libraries.push('matter-js');
-  }
-
-  const planck = await createPlanckAdapter();
-
-  if (planck !== null) {
-    adapters.push(planck);
-    libraries.push('planck');
-  }
-
-  const rapier = await createRapierAdapter();
-
-  if (rapier !== null) {
-    adapters.push(rapier);
-    libraries.push('@dimforge/rapier2d-compat');
-  }
-
-  console.log(`Arms: ${adapters.map(adapter => adapter.engine).join(', ')}`);
 
   // Incremental, crash-safe checkpoint: each cell is persisted the instant it
   // lands, reusing the same shared writer the rendering domain uses.
   const checkpoint = createCheckpointWriter<PhysicsCellResult>(outDir);
 
-  const data = runPhysicsMatrix({
-    adapters,
-    libraries,
+  const data = await runPhysicsMatrix({
+    browser,
+    ...(platform !== undefined && { platform }),
     ...(isSubset && { filter }),
     ...(timedStepsOverride !== undefined && { timedStepsOverride }),
     onCellResult: result => checkpoint.append(result),
@@ -366,8 +403,14 @@ const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
 
   console.log('\n=== Provenance ===');
   console.log(
-    `  node=${data.provenance.host.node} cpu="${data.provenance.host.cpu}" (${String(data.provenance.host.cpuCount)} logical) os=${data.provenance.host.os} engine=${data.provenance.engineVersion} fixedDelta=${String(data.provenance.fixedDelta)}`,
+    `  browser=${data.provenance.browser}/${data.provenance.browserVersion} cpu="${data.provenance.host.cpu}" (${String(data.provenance.host.cpuCount)} logical) os=${data.provenance.host.os} platformVersion=${String(data.provenance.host.platformVersion.major)} (${data.provenance.host.platformVersion.source}) prerelease=${String(data.provenance.prerelease.value)} (${data.provenance.prerelease.source}) engine=${data.provenance.engineVersion} fixedDelta=${String(data.provenance.fixedDelta)} clock=${(data.provenance.clock.resolutionMs * 1000).toFixed(1)}us (isolated=${String(data.provenance.clock.crossOriginIsolated)})`,
   );
+
+  if (!data.provenance.clock.crossOriginIsolated) {
+    console.warn(
+      '\nNOT CROSS-ORIGIN ISOLATED — performance.now() is running at the browser Spectre clamp, so the fastest cells are batched far harder than they need to be. Check the harness server headers.',
+    );
+  }
 
   writePhysicsReport(data, outDir);
 
@@ -375,7 +418,7 @@ const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
 
   for (const result of data.results) {
     console.log(
-      `  ${result.spec.engine.padEnd(14)} ${result.spec.config.padEnd(7)} ${result.spec.archetype.padEnd(20)} n=${String(result.spec.bodyCount).padStart(6)} bodies=${String(result.structural.bodyCount).padStart(6)} contacts=${String(result.structural.contactCount).padStart(6)} stepMsMedian=${result.stepMsMedian.toFixed(4)} stepMsP95=${result.stepMsP95.toFixed(4)} status=${result.status}`,
+      `  ${result.spec.engine.padEnd(14)} ${result.spec.config.padEnd(7)} ${result.spec.archetype.padEnd(20)} n=${String(result.spec.bodyCount).padStart(6)} bodies=${String(result.structural.bodyCount).padStart(6)} contacts=${String(result.structural.contactCount).padStart(6)} stepMsMedian=${result.stepMsMedian.toFixed(4)} stepMsP95=${result.stepMsP95.toFixed(4)} steps/sample=${String(result.stepsPerSample).padStart(3)} status=${result.status}${result.note === undefined ? '' : ` (${result.note})`}`,
     );
   }
 

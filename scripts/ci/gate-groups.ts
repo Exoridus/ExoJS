@@ -28,6 +28,7 @@ export const GATE_GROUPS = {
     'lint:config-paths',
     'lint:js-files',
     'lint:shaders',
+    'verify:bench-results',
     'format:check',
   ],
   // `perf:smoke` runs the benchmarks for their EXIT CODE, not their numbers -

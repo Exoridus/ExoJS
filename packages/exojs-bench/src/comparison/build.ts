@@ -2,6 +2,7 @@ import { PHYSICS_ARCHETYPES } from '../physics/archetypes';
 import type { PhysicsCellResult } from '../physics/PhysicsAdapter';
 import { ARCHETYPES } from '../rendering/archetypes';
 import type { ArchetypeCategory, Backend, CellResult, StructuralCounters } from '../rendering/EngineAdapter';
+import { exceedsFrameBudget } from '../shared/frameBudget';
 import { physicsMechanism, renderingMechanism } from './mechanism';
 import type { Verdict } from './verdict';
 import { compareMedians } from './verdict';
@@ -16,9 +17,11 @@ import { compareMedians } from './verdict';
  *
  * - No aggregation across archetypes, anywhere. Categories are section headings,
  *   never rows, because any mean over a category hides its worst cell.
- * - One node count for the whole headline table, chosen from the archetype
- *   ladders before any timing is read (see {@link chooseHeadlineCount}), so
- *   it can never be picked per row to suit the outcome.
+ * - A row's node or body count is chosen from the archetype LADDERS before any
+ *   timing is read (see {@link chooseRowCount}), so it can never be picked to
+ *   suit the outcome. A rendering block goes further and puts every row on one
+ *   count (see {@link chooseHeadlineCount}); the physics block cannot, and
+ *   states each row's count on the row instead.
  * - A row with no evidenced mechanism does not enter the table.
  */
 
@@ -63,27 +66,63 @@ const CATEGORY_TITLES: Readonly<Record<ArchetypeCategory, string>> = {
   submission: 'Submission paths',
 };
 
-/** One competitor's outcome on one row. */
+/**
+ * One competitor's outcome on one row.
+ *
+ * Each arm publishes two times, because they answer different questions. The
+ * median is the field-comparable number - independent published comparisons
+ * state a median at a fixed size - while the p95 is the step or frame a player
+ * actually feels, so a cell whose two numbers are far apart hitches even where
+ * its median reads as comfortable. Publishing the median alone would let a
+ * periodically expensive workload pass as a cheap one.
+ *
+ * The verdict is drawn from the two MEDIANS and from nothing else. The p95 is
+ * published beside them and never enters the ladder: it is the noisier of the
+ * two statistics, and a verdict computed from it would be a different claim
+ * wearing the same word.
+ */
 export interface ComparisonCell {
   /** Competitor arm label, e.g. `'pixi'`. */
   readonly competitor: string;
   /** Reference arm's median CPU time (ms), or `null` when it produced no comparable cell. */
   readonly referenceMs: number | null;
+  /** Reference arm's 95th-percentile CPU time (ms) over the same timed window, or `null`. */
+  readonly referenceP95Ms: number | null;
+  /**
+   * True when {@link referenceMs} is past a whole 60 fps frame; see
+   * {@link '../shared/frameBudget'.FRAME_BUDGET_MS}.
+   *
+   * Carried in the published model rather than left to each consumer, so every
+   * renderer of a document marks the same cells and the document states the line
+   * it was published against instead of inviting each reader to pick one.
+   */
+  readonly referenceOverFrameBudget: boolean;
   /** Competitor's median CPU time (ms), or `null` when it produced no comparable cell. */
   readonly competitorMs: number | null;
-  /** Computed ladder outcome. */
+  /** Competitor's 95th-percentile CPU time (ms) over the same timed window, or `null`. */
+  readonly competitorP95Ms: number | null;
+  /** True when {@link competitorMs} is past a whole 60 fps frame; see {@link referenceOverFrameBudget}. */
+  readonly competitorOverFrameBudget: boolean;
+  /** Computed ladder outcome, from the two medians. */
   readonly verdict: Verdict;
   /** Evidenced mechanism, or `null` when the counters carry none. */
   readonly mechanism: string | null;
 }
 
-/** One published row: an archetype at the headline node count, across every competitor. */
+/** One published row: an archetype at the count it was measured at, across every competitor. */
 export interface ComparisonRow {
   /** Archetype id - the row's identity. */
   readonly archetype: string;
   /** The category section this row sits under. */
   readonly category: string;
-  /** Node or body count the row was measured at. */
+  /**
+   * Node or body count this row was measured at.
+   *
+   * In a rendering block every row carries the block's single headline count. In
+   * the physics block the rows carry their OWN counts, because the physics
+   * archetypes have per-archetype ladders; two physics rows are therefore never
+   * comparable with each other, only the arms within one row are.
+   */
   readonly count: number;
   /** One entry per competitor arm, in a stable order. */
   readonly cells: readonly ComparisonCell[];
@@ -131,16 +170,30 @@ const cellKey = (engine: string, config: string, archetype: string, count: numbe
 const isComparable = (result: { status: string; note?: string }): boolean => result.status === 'ok';
 
 /**
- * The single count - nodes for a rendering block, bodies for the physics one -
- * that the headline table uses.
+ * The count one row is published at: the largest rung of its own LADDER at which
+ * every arm produced a valid cell.
  *
- * Chosen from the ARCHETYPE LADDERS first - the largest count present in every
- * comparable archetype's ladder - and then lowered until every arm actually
- * produced a valid cell there. Because the candidate set comes from the ladders
- * rather than from the timings, the choice cannot be steered by what the numbers
- * turned out to be; the only thing the measurements decide is whether the
- * candidate survives, and a candidate that some arm failed to measure is not a
- * comparison at all.
+ * The candidates come from the ladder rather than from the timings, so the
+ * choice cannot be steered by what the numbers turned out to be. The only thing
+ * the measurements decide is whether a candidate survives, and a candidate some
+ * arm failed to measure is not a comparison at all.
+ */
+export const chooseRowCount = (ladder: readonly number[], hasValidCell: (count: number) => boolean): number | null =>
+  [...ladder].sort((a, b) => b - a).find(count => hasValidCell(count)) ?? null;
+
+/**
+ * The single node count a rendering block's whole table uses.
+ *
+ * The rendering archetypes share their node ladders and are meaningful side by
+ * side at one size, so the block picks one count for every row: the largest
+ * present in every comparable archetype's ladder, then lowered by
+ * {@link chooseRowCount} until every arm produced a valid cell there. It can
+ * never be picked per row to suit an outcome.
+ *
+ * The physics block does NOT work this way. Its archetypes carry per-archetype
+ * ladders whose intersection is empty, and forcing one count on them would
+ * either publish nothing or publish rows at a size chosen for a different
+ * archetype; each physics row states its own count instead.
  */
 export const chooseHeadlineCount = (archetypeLadders: ReadonlyArray<readonly number[]>, hasValidCell: (count: number) => boolean): number | null => {
   if (archetypeLadders.length === 0) {
@@ -149,13 +202,7 @@ export const chooseHeadlineCount = (archetypeLadders: ReadonlyArray<readonly num
 
   const shared = archetypeLadders.reduce<number[]>((candidates, ladder) => candidates.filter(count => ladder.includes(count)), [...archetypeLadders[0]!]);
 
-  for (const count of [...shared].sort((a, b) => b - a)) {
-    if (hasValidCell(count)) {
-      return count;
-    }
-  }
-
-  return null;
+  return chooseRowCount(shared, hasValidCell);
 };
 
 /** Build one backend's comparison from the measured rendering results. */
@@ -251,7 +298,11 @@ const buildBackend = (backend: Backend, results: readonly CellResult[]): Backend
         cells.push({
           competitor,
           referenceMs: reference.cpuMsMedian,
+          referenceP95Ms: reference.cpuMsP95,
+          referenceOverFrameBudget: exceedsFrameBudget(reference.cpuMsMedian),
           competitorMs: competitorCell.cpuMsMedian,
+          competitorP95Ms: competitorCell.cpuMsP95,
+          competitorOverFrameBudget: exceedsFrameBudget(competitorCell.cpuMsMedian),
           verdict: compareMedians(reference.cpuMsMedian, competitorCell.cpuMsMedian),
           mechanism,
         });
@@ -309,7 +360,11 @@ const buildBackend = (backend: Backend, results: readonly CellResult[]): Backend
         cells.push({
           competitor,
           referenceMs: reference.cpuMsMedian,
+          referenceP95Ms: reference.cpuMsP95,
+          referenceOverFrameBudget: exceedsFrameBudget(reference.cpuMsMedian),
           competitorMs: competitorCell.cpuMsMedian,
+          competitorP95Ms: competitorCell.cpuMsP95,
+          competitorOverFrameBudget: exceedsFrameBudget(competitorCell.cpuMsMedian),
           verdict: compareMedians(reference.cpuMsMedian, competitorCell.cpuMsMedian),
           mechanism: null,
         });
@@ -331,42 +386,56 @@ export const buildRenderingComparison = (results: readonly CellResult[]): readon
   return backends.map(backend => buildBackend(backend, results));
 };
 
-/** The published comparison for a physics run. One block; physics has no backend axis. */
+/**
+ * The published comparison for a physics run. One block; physics has no backend
+ * axis.
+ *
+ * Each row is measured at its OWN body count, taken from that archetype's own
+ * ladder. The physics archetypes differ by nearly an order of magnitude in how
+ * many bodies fit a frame, so their ladders straddle the frame budget at
+ * different sizes and share no count at all; a single table-wide count would
+ * either publish nothing or publish every row at a size chosen to suit one
+ * archetype.
+ *
+ * The property the single count protected is kept by stating the count ON the
+ * row instead: a reader compares the arms WITHIN a row, which is like for like
+ * by construction, and never two rows against each other - which was never a
+ * valid comparison anyway, since two archetypes are two different scenes. What
+ * the single count actually prevented was the count being picked per row to
+ * suit an outcome, and that is still prevented: a row's count comes from its
+ * ladder, and the timings only decide whether the largest rung survives.
+ */
 export const buildPhysicsComparison = (results: readonly PhysicsCellResult[]): ComparisonSection => {
   const competitors = [...new Set(results.map(result => result.spec.engine))].filter(engine => engine !== 'exojs-physics').sort();
-  // As in the rendering block: an archetype the run did not measure cannot
-  // constrain the shared body count, or every subset run would produce an empty
-  // table. One that WAS measured and failed still lowers the choice.
+  // As in the rendering block: an archetype the run did not measure is absent
+  // rather than empty, or every subset run would produce an empty table.
   const measured = new Set(results.filter(result => result.spec.engine === 'exojs-physics').map(result => result.spec.archetype));
   const comparable = PHYSICS_ARCHETYPES.filter(archetype => measured.has(archetype.id));
-  const headlineCount = chooseHeadlineCount(
-    comparable.map(archetype => archetype.bodyCounts),
-    count =>
-      comparable.every(archetype => {
-        const cells = results.filter(result => result.spec.archetype === archetype.id && result.spec.bodyCount === count);
-
-        // A count with NO cell for a measured archetype is not a valid candidate.
-        // Testing only "every cell is ok" would accept it, since an empty set
-        // satisfies that vacuously - which is how a run at 200 bodies ended up
-        // choosing 4 000 and publishing nothing.
-        return cells.some(result => result.spec.engine === 'exojs-physics') && cells.every(result => isComparable(result));
-      }),
-  );
   const rows: ComparisonRow[] = [];
 
-  if (headlineCount === null) {
-    return { title: 'Physics', rows };
-  }
-
   for (const archetype of comparable) {
+    const count = chooseRowCount(archetype.bodyCounts, candidate => {
+      const cells = results.filter(result => result.spec.archetype === archetype.id && result.spec.bodyCount === candidate);
+
+      // A count with NO cell for this archetype is not a valid candidate.
+      // Testing only "every cell is ok" would accept it, since an empty set
+      // satisfies that vacuously - which is how a run at one body count ended up
+      // choosing another and publishing nothing.
+      return cells.some(result => result.spec.engine === 'exojs-physics') && cells.every(result => isComparable(result));
+    });
+
+    if (count === null) {
+      continue;
+    }
+
     const reference = results.find(
-      result => result.spec.engine === 'exojs-physics' && result.spec.archetype === archetype.id && result.spec.bodyCount === headlineCount,
+      result => result.spec.engine === 'exojs-physics' && result.spec.archetype === archetype.id && result.spec.bodyCount === count,
     );
     const cells: ComparisonCell[] = [];
 
     for (const competitor of competitors) {
       const competitorCell = results.find(
-        result => result.spec.engine === competitor && result.spec.archetype === archetype.id && result.spec.bodyCount === headlineCount,
+        result => result.spec.engine === competitor && result.spec.archetype === archetype.id && result.spec.bodyCount === count,
       );
 
       if (reference === undefined || competitorCell === undefined || !isComparable(reference) || !isComparable(competitorCell)) {
@@ -376,14 +445,18 @@ export const buildPhysicsComparison = (results: readonly PhysicsCellResult[]): C
       cells.push({
         competitor,
         referenceMs: reference.stepMsMedian,
+        referenceP95Ms: reference.stepMsP95,
+        referenceOverFrameBudget: exceedsFrameBudget(reference.stepMsMedian),
         competitorMs: competitorCell.stepMsMedian,
+        competitorP95Ms: competitorCell.stepMsP95,
+        competitorOverFrameBudget: exceedsFrameBudget(competitorCell.stepMsMedian),
         verdict: compareMedians(reference.stepMsMedian, competitorCell.stepMsMedian),
         mechanism: physicsMechanism(reference.structural, competitorCell.structural),
       });
     }
 
     if (cells.some(cell => cell.mechanism !== null)) {
-      rows.push({ archetype: archetype.id, category: 'Physics', count: headlineCount, cells });
+      rows.push({ archetype: archetype.id, category: 'Physics', count, cells });
     }
   }
 

@@ -18,8 +18,9 @@ Everything else the package offers:
 ```sh
 pnpm --filter @codexo/exojs-bench bench --domain=physics   # the CPU-only physics matrix
 pnpm --filter @codexo/exojs-bench bench:compare \
-  --rendering .workspace/output/baseline/results.json \
-  --physics .workspace/output/physics/results.json        # generate the published comparison
+  --rendering run-1/results.json \
+  --rendering run-2/results.json \
+  --rendering run-3/results.json                          # generate the published comparison
 pnpm gate:bench:structural                                # the structural counter gate (also a CI lane)
 pnpm --filter @codexo/exojs-bench gate:timing             # the manual timing gate
 ```
@@ -33,10 +34,23 @@ Two domains, selected with `--domain` (default `rendering`):
   — it builds a scene, warms it up, then renders a fixed number of timed frames
   from `requestAnimationFrame`, sampling per-frame CPU time, full-frame time and
   draw-call structure.
-- **`physics`** runs entirely in Node — no browser, no GPU: a straight loop over
-  `world.step`, sampling per-step CPU time plus body and contact counts.
+- **`physics`** drives a real headless browser too, but no GPU: a straight loop
+  over `world.step` inside the harness page, sampling per-step CPU time plus
+  body, contact, joint and ray-hit counts.
 
-Everything below describes the rendering domain.
+  It is measured in a browser rather than in the driver's Node process because
+  nobody runs ExoJS physics in Node, and because the runtime is part of what a
+  step time measures: heap limits, garbage collection and WASM compilation are
+  the browser's, and the JavaScript engine is whichever the selected browser
+  ships. Measured on the same machine, moving the matrix from Node into Chromium
+  moved per-step medians by −80% to +29% depending on the arm, which is enough to
+  reorder the arms against each other; measuring it in WebKit instead moves them
+  again. A physics number is therefore only comparable against another taken in
+  the same browser, and `--browser` applies to this domain exactly as it does to
+  rendering.
+
+Everything below describes the rendering domain, except the physics sections that
+name themselves.
 
 A cell's scene comes from a fixed **archetype** (`src/rendering/archetypes.ts`):
 `static-heavy`, `dynamic-heavy`, `deep-hierarchy`, `lifecycle-churn`,
@@ -77,6 +91,44 @@ carries one cause. Every arm builds the identical scene from the
 identical seed; the harness asserts that by comparing each arm's mutation-index
 signature against a canonical selection and failing the cell loudly on any
 divergence.
+
+### Physics body-count ladders
+
+Each physics archetype sweeps **its own body-count ladder**, placed so its rungs
+straddle a 60 fps frame: two inside the frame and one past it. They are not
+interchangeable — at a fixed body count the archetypes differ by nearly an order
+of magnitude, so `many-dynamic` reaches a whole frame at 2 200 bodies while
+`joints` does not until 15 000. One shared ladder therefore spends most of its
+rungs on scenes nobody could ship for the expensive archetypes and never reaches
+the interesting region for the cheap ones.
+
+| archetype              | ladder                 | native median per step  |
+| ---------------------- | ---------------------- | ----------------------- |
+| `box-stack`            | 3 000 / 5 500 / 10 000 | 4.05 / 9.02 / 18.88 ms  |
+| `many-dynamic`         | 800 / 1 500 / 2 200    | 4.57 / 10.59 / 17.31 ms |
+| `mixed-static-dynamic` | 900 / 1 700 / 3 200    | 4.08 / 8.51 / 17.17 ms  |
+| `raycast`              | 900 / 1 700 / 3 200    | 6.48 / 12.40 / 19.80 ms |
+| `body-churn`           | 800 / 1 500 / 2 400    | 2.67 / 9.14 / 18.99 ms  |
+| `joints`               | 4 500 / 9 000 / 15 000 | 6.28 / 10.52 / 17.44 ms |
+| `settling-pile`        | 1 500 / 3 000 / 5 800  | 3.04 / 8.43 / 17.23 ms  |
+
+The medians are a placement sweep of the native arm alone on one machine
+(Ryzen 7 3700X, Chromium) over a thin timed window. They locate each frame
+crossing and are not a published measurement.
+
+An archetype that is read as a **delta** against another shares at least one rung
+with it, which is what the delta needs: `seedFor` folds the body count in, so two
+archetypes that name the same scene build the identical world only at a count
+both ladders contain. `raycast` and `mixed-static-dynamic` share their whole
+ladder, `body-churn` shares two rungs with `many-dynamic`, and `settling-pile`
+shares one.
+
+**Moving a rung changes the scene, not just its size.** Because the seed folds in
+the body count, numbers taken at an earlier ladder describe different worlds and
+are not comparable with these; there is no conversion between them, and nothing
+published is carried across. `--bodies` filters the matrix rather than replacing
+a ladder (unlike the rendering domain's `--nodes`), so an off-ladder probe needs
+a source edit.
 
 The physics arms are not one flat field of competitors. **matter-js** and
 **planck** are the pure-JS **peers** — the libraries an ExoJS app would
@@ -233,9 +285,26 @@ mid-frame GPU-driver stall cannot be interrupted from inside the page.
 
 ## Browser and environment
 
-- Headless Chromium via Playwright (`channel: 'chromium'`), launched with
+- **`--browser=chromium` (default) or `--browser=webkit`**, both headless via
+  Playwright. The choice belongs to the run, not to the harness: it is stamped
+  into every provenance block and forms part of the published profile's file
+  name, so a WebKit number can never be read as a Chromium one and the two never
+  pool into one profile.
+- Chromium is launched on the `chromium` channel with
   `--force-device-scale-factor=1` so `devicePixelRatio` is 1 and the canvas
   backing size is deterministic. WebGPU adds `--enable-unsafe-webgpu`.
+- WebKit is launched with **no arguments at all**: every flag here is a Chromium
+  one, and its stamp records an empty flag set rather than claiming a launch
+  that never happened. Nothing is lost by it - the harness page sizes its own
+  1280x720 backing store and the Pixi arm pins `resolution: 1`, so no
+  measurement depends on a pinned device scale factor.
+- **A backend the selected browser does not expose produces no number.** WebKit
+  reaches WebGPU on macOS alone; elsewhere `navigator.gpu` is undefined and every
+  WebGPU cell is emitted `unavailable` with that reason attached, exactly as a
+  refused software adapter is.
+- `--profile` (the V8 CPU sampler) is Chromium-only, because the sampler is
+  driven over a CDP session. It refuses in any other browser rather than falling
+  back and attributing one engine's frame cost to another engine's name.
 - No software rasterizer is ever forced. `--use-angle=swiftshader` and
   `--enable-features=Vulkan` are deliberately absent; either would land the run
   on SwiftShader and make every timing worthless.
@@ -255,11 +324,28 @@ mid-frame GPU-driver stall cannot be interrupted from inside the page.
 
 `results.json` / `results.md` carry, per backend:
 
-- **GPU adapter identity.** On WebGL2 the unmasked `WEBGL_debug_renderer_info`
-  renderer string, read from the stage canvas's own context after the first
-  measured cell — not from a throwaway canvas, which can report a different
-  adapter on a multi-GPU machine. On WebGPU the adapter's vendor / architecture /
-  device / description.
+- **GPU adapter identity.** On WebGL2 the `WEBGL_debug_renderer_info` renderer
+  string, read from the stage canvas's own context after the first measured cell
+  — not from a throwaway canvas, which can report a different adapter on a
+  multi-GPU machine. On WebGPU the adapter's vendor / architecture / device /
+  description. How much this identifies is the browser's choice: Chromium
+  unmasks the device model, while WebKit substitutes a constant vendor-level
+  string (`Apple GPU`) for it on every platform — including a Windows machine
+  with an NVIDIA card — so a WebKit profile is named after the CPU model
+  instead, which the physics domain records.
+- **Browser and browser version**, as the browser reported it, plus the
+  operating system of the host that drove it.
+- **`platformVersion`** — the operating system's major version and what
+  established it: `detected` where the host reports one (Windows, whose
+  `10.0.<build>` release string names Windows 11 from build 22000 up), or
+  `declared` from `--platform`. It is separate from the `os` field because that
+  field carries the kernel release, which on macOS no longer tracks the product
+  version.
+- **`prerelease`** — whether the platform is a pre-release build, and a `source`
+  saying what that rests on: `detected` from a browser version string naming a
+  non-shipping build, `declared` from `--platform=<major>-beta` (needed for a
+  beta OS, which is not readable at runtime), or `assumed-stable`, which records
+  that nothing established it and is weaker than a stable platform.
 - **`software`** — the honesty bit. A WebGL2 run on a software rasterizer marks
   every timing column `UNTRUSTED` in the Markdown report; a software WebGPU
   adapter is refused outright and its cells are emitted `unavailable`.
@@ -269,12 +355,36 @@ mid-frame GPU-driver stall cannot be interrupted from inside the page.
   across machines.
 - Each competitor library's exact version and the path it resolved from.
 
-The physics domain additionally records the Node version, CPU model, logical CPU
-count and OS.
+The physics domain records the browser and browser version, the CPU model,
+logical CPU count, OS and architecture of the host that drove it, and what the
+measuring page's `performance.now()` could resolve. It does **not** record the
+driver process's Node version: no step was taken there, so a field naming it
+would describe nothing about where the numbers came from.
 
-**Gap worth knowing:** the rendering domain records the GPU, not the host. CPU
-model, RAM, OS build, GPU driver version and Chromium build are _not_ captured
-automatically — record them by hand alongside any run you intend to quote.
+### Physics timing resolution
+
+The fastest cells of the physics matrix step in single-digit microseconds, and
+`performance.now()` is clamped as a Spectre mitigation. The harness page is
+served cross-origin isolated (COOP/COEP), which lifts the clamp to 5 µs in
+Chromium and 20 µs in WebKit — measured per run, not assumed, and stamped into
+the provenance.
+
+A step that cannot clear that grid on its own is not timed on its own. Each cell
+estimates its per-step cost from the last 60 warmup steps and then times steps in
+batches large enough for one sample to span 20 clock ticks, dividing the sample
+by its batch. The batch is recorded per row as `stepsPerSample`; `1` means every
+step was timed individually and the row is byte-for-byte the old contract. The
+**timed-step budget is unchanged** — the batch only decides how finely the fixed
+window is sampled — and the batch stops growing once a cell would be left with
+fewer than 12 samples, because a median and a p95 need a distribution behind
+them. A cell that hits that cap before clearing the grid says so in its `note`,
+naming the quantisation it still carries, rather than reporting a coarse number
+that looks precise.
+
+**Gap worth knowing:** the rendering domain records the GPU, the browser and the
+operating system, but not the rest of the host. CPU model, RAM and GPU driver
+version are _not_ captured automatically — record them by hand alongside any run
+you intend to quote.
 
 ## Reproducing a single scenario
 
@@ -292,13 +402,30 @@ pnpm --filter @codexo/exojs-bench bench \
   --out=.workspace/output/my-run
 ```
 
-No `--` separator is needed; pnpm forwards these straight to the script. The run
-writes `results.json`, `results.csv` and `results.md` into `--out` (default
-`.workspace/output/baseline/`, gitignored), plus a `checkpoint.jsonl` appended per
-cell as it lands, so a crash never discards finished work.
+No `--` separator is needed with `pnpm --filter …`; pnpm forwards these straight
+to the script. Running the same script from inside `packages/exojs-bench`
+(`pnpm bench -- --out=…`) works too, and `--out` is then relative to the package
+directory either way. The root `pnpm bench` is a different thing entirely — the
+engine's own `vitest bench` micro-benchmarks — and there is no root
+`bench:compare`.
+
+The run writes `results.json`, `results.csv` and `results.md` into `--out`
+(default `.workspace/output/baseline/`, gitignored), plus a `checkpoint.jsonl`
+appended per cell as it lands, so a crash never discards finished work.
 
 Other flags:
 
+- `--browser=chromium` (default) / `--browser=webkit` — the engine to measure in.
+  Not a subset marker: a run in either browser is a full measurement of that
+  browser, published under its own profile.
+- `--platform=<major>` / `--platform=<major>-beta` — declare the operating
+  system's major version, and with the suffix that the build is a pre-release
+  one. Required on macOS and Linux, whose kernel version names no product
+  version; optional on Windows, which reports its own and refuses a declaration
+  contradicting it. A full run without it fails before measuring anything, a
+  narrowed run only warns. Pass it on **every** pooled run: both the version and
+  the beta marker are part of the profile's file name, and runs disagreeing on
+  either are refused rather than pooled.
 - `--backend=webgl2` / `--backend=webgpu` — omit for both.
 - `--engine`, `--config`, `--archetype`, `--nodes` — comma-separated selections.
 - `--frames=N` — override every cell's timed-frame count for a fast spot check.
@@ -432,10 +559,68 @@ faults that look correct and are merely expensive.
 
 ## The published comparison
 
-`bench:compare` reads a run's `results.json` and generates the comparison
-document. It is generated, never hand-maintained, because a hand-written
-comparison drifts from the harness and once it drifts the honesty is gone
-without anyone noticing.
+`bench:compare` reads the `results.json` files of several runs and generates the
+comparison document. It is generated, never hand-maintained, because a
+hand-written comparison drifts from the harness and once it drifts the honesty
+is gone without anyone noticing.
+
+### A reference measurement is three runs
+
+A published claim is a ratio between two arms, and one run does not support one:
+the same code measured twice on this machine moved a physics cell's median by
+2.5x with byte-identical contact counts behind both runs, which was enough to
+reverse seven verdicts. That spread was observed while physics still ran in the
+driver's Node process; it has not been re-derived since the matrix moved into the
+browser, so read it as the reason for pooling rather than as this harness's
+current noise figure. So `--rendering` and `--physics` are **repeatable, once
+per run**, and the runs are pooled:
+
+```sh
+pnpm --filter @codexo/exojs-bench bench --out run-1
+pnpm --filter @codexo/exojs-bench bench --out run-2
+pnpm --filter @codexo/exojs-bench bench --out run-3
+pnpm --filter @codexo/exojs-bench bench:compare \
+  --rendering run-1/results.json --rendering run-2/results.json --rendering run-3/results.json
+```
+
+A single path still behaves exactly as it always did. The runs must come from
+**separate invocations**, each with its own `--out` directory: repeating a matrix
+inside one process shares JIT and heap state across the repetitions and measures
+the same warm state several times, which is the effect the repetition exists to
+expose.
+
+Per cell, the pooled comparison publishes the median of the per-run medians, the
+median of the per-run p95s, the range those runs observed (printed in brackets
+beside the value), the frame-budget mark where the pooled median is past 16.7 ms,
+and a stability flag: the verdict is computed from each run separately, and the
+cell is stable only when every run reached the same one. **An unstable cell
+publishes no verdict** - it keeps its row, its value and its range, and states
+what each run said instead.
+
+`bench:compare` refuses to pool runs that are not repetitions of one measurement:
+a differing engine version, a differing set of arms or versions, a differing set
+of measured cells, a row that landed on a different count in one run than in
+another, or a differing machine.
+
+The machine check is what a second reference machine makes necessary — three
+runs from two machines would otherwise pool into a median belonging to neither,
+with a spread reporting the gap between two computers as the noise of one. A
+rendering run's identity is the normalized GPU the adapter string names, the
+operating system with its major version and pre-release bit, and the browser,
+using the same normalizations the profile slug uses, so runs may pool exactly
+when they would be written to one file. A physics run's identity is the CPU
+model, the same platform identity, the architecture, and the browser. Tolerated within one
+machine: timestamps, an adapter string's driver / device-id / shader-model tail,
+the OS patch level, and the browser's patch version, which a checkout pins and
+which every stamp records in full anyway. Assembling one profile from a
+rendering measurement on one machine and a physics measurement on another is
+refused for the same reason.
+
+One limit is inherent: where the browser reports a constant instead of the GPU,
+a rendering run identifies its machine no more precisely than that constant
+does, because the CPU model that names it in the file is recorded by the physics
+domain. Two such machines on the same operating system and browser are
+indistinguishable to the check.
 
 Rules the generator enforces rather than merely intends:
 
@@ -444,15 +629,47 @@ Rules the generator enforces rather than merely intends:
 - Verdicts are computed from the two medians. A ratio inside 0.8-1.2 is `level`
   (the matrix's own noise band); outside it the faster arm `leads`, and at 5x or
   more `leads clearly` - a gap too large for machine mood to explain.
-- One node count for the whole table, chosen from the archetype ladders BEFORE
-  any timing is read, then lowered until every arm produced a valid cell. It can
-  never be picked per row.
+- A row's count is chosen from the archetype ladders BEFORE any timing is read -
+  the largest rung at which every arm produced a valid cell - so it can never be
+  picked to suit an outcome. A rendering table goes further and uses one node
+  count for every row, because its archetypes share their ladders.
+- Physics rows each state their OWN body count, because each physics archetype
+  has its own ladder and their intersection is empty. Rows are therefore not
+  comparable with one another; only the arms within a row are, which is what the
+  table is for. Two rows were always two different scenes — the shared count made
+  that look otherwise.
+- Every value is a median AND the p95 of the same timed window. Verdicts are
+  computed from the medians alone; the p95 is the step or frame a player feels,
+  so a pair far apart hitches where the median reads as comfortable. There is no
+  p99: the largest cells time 120 steps, so a p99 there is the second-worst
+  sample rather than a percentile.
+- A median past **16.7 ms** — a whole 60 fps frame — is marked. The line is the
+  entire frame deliberately: how much of a frame this work may take is the
+  reader's decision, but a step or frame costing more than the frame it has to
+  fit in is unplayable regardless of that decision. Nothing is derived from the
+  mark; a "bodies at N ms" capacity figure would interpolate between rungs rather
+  than report a measurement.
 - Every row names the mechanism behind its difference, drawn from the structural
   counters. A row whose mechanism cannot be evidenced is not published - it is
   listed under Omissions with the reason, so a dropped row stays auditable.
 - One column per competitor, no "best competitor" composite. Phaser occupies its
   own WebGL1 block, CPU time only, explicitly carrying no mechanism.
 - Cells where ExoJS loses are published exactly like the cells where it wins.
+
+### Machine profiles
+
+`bench:compare --profile` additionally writes the comparison as JSON into
+`results/`, one file per machine, named
+`<machine>-<os>-<major>[-beta]-<browser>.json` after the provenance — the GPU or,
+where the browser reports a constant instead of one, the CPU model; the
+operating system with its major version and pre-release marker; and the browser.
+The name is derived from the stamps, so
+re-measuring a machine overwrites its file and a different machine can only
+arrive as a new one. Each file carries every pooled run's provenance and a
+signature over its own contents, and `verify:bench-results` (in the `lint` gate
+group) rejects a file that pools fewer than three runs, or whose signature does
+not recompute - which is what keeps a typed number and a one-run claim out. See
+[`results/README.md`](./results/README.md).
 
 ## Cross-library numbers
 
