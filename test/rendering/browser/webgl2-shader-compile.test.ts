@@ -15,10 +15,13 @@
 
 import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 
+import { colorMatrixShaderSource } from '#rendering/filters/ColorMatrixFilter';
+import { dropShadowShaderSource } from '#rendering/filters/DropShadowFilter';
 import { fillShaderSource } from '#rendering/shader/fillShaderSource';
 import { resolveTransformTextureGlsl } from '#rendering/shader/transformTextureLayout';
 import { composeSpriteMaterialFragmentGlsl } from '#rendering/sprite/materialSources';
 import { composeTextAtlasFragmentGlsl } from '#rendering/text/atlasTextureSlots';
+import { generateGlslUniformDeclarations, withGlslUniformDeclarations } from '#rendering/uniforms/uniformSource';
 
 import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../../../packages/exojs-tilemap/src/tileWord';
 
@@ -61,12 +64,23 @@ const placeholderValues: Readonly<Record<string, Readonly<Record<string, number>
   'tile-chunk.vert': { tileRowMask: TILE_ROW_MASK, tileDiagonalBit: TILE_DIAGONAL_BIT },
 };
 
+/**
+ * Filter fragments whose uniforms are declared on the shader source. Their
+ * authored text reads `uniforms.<field>` and declares nothing; the block those
+ * names resolve against is generated, and only the composed form compiles.
+ */
+const generatedUniformBlocks: ReadonlyMap<string, string> = new Map([
+  ['color-matrix.frag', generateGlslUniformDeclarations(colorMatrixShaderSource.uniformSchema!)],
+  ['drop-shadow.frag', generateGlslUniformDeclarations(dropShadowShaderSource.uniformSchema!)],
+]);
+
 // `WebGl2ShaderProgram` expands the engine's `#exo-include` directives before
 // handing a source to the driver, so a shader that reads the shared transform
 // store only compiles in its resolved form - the same form the renderer submits.
 const composeRuntimeSource = (name: string, source: string): string => {
   const values = placeholderValues[name];
   const filled = values ? fillShaderSource(source, values) : source;
+  const declarations = generatedUniformBlocks.get(name);
   // A sprite-material fragment is authored without the base-texture slot table
   // and `sampleBase()`: the renderer splices those in. `lit-sprite.frag` ships
   // from the lighting package and only compiles in that spliced form.
@@ -75,7 +89,9 @@ const composeRuntimeSource = (name: string, source: string): string => {
       ? composeTextAtlasFragmentGlsl(filled)
       : name === 'lit-sprite.frag'
         ? composeSpriteMaterialFragmentGlsl(filled)
-        : filled;
+        : declarations !== undefined
+          ? withGlslUniformDeclarations(filled, declarations)
+          : filled;
 
   return resolveTransformTextureGlsl(composed);
 };
