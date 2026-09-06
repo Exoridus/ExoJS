@@ -303,6 +303,13 @@ export class ShaderSource<const F extends UniformFields | undefined = undefined,
   }
 }
 
+/**
+ * A shader source with any uniform declaration - what a consumer that only
+ * reads its text should accept, since the bare class describes a source that
+ * declares none.
+ */
+export type AnyShaderSource = ShaderSource<UniformFields | undefined, UniformBlockRecord | undefined>;
+
 const autoBoundUniformNames = new Set<string>(['u_projection', 'u_translation', 'u_tint', 'u_texture', 'u_mesh']);
 
 const glslUniformPattern = /\buniform\s+(?:mediump\s+|highp\s+|lowp\s+|)(\w+)\s+(\w+)[^;]*;/g;

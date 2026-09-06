@@ -187,6 +187,61 @@ In WGSL, user uniforms belong to `@group(2)`. Scalar/vector/matrix uniforms decl
 When a uniform is spelled differently across your two shader sources it silently misbinds on one backend. `material.shader.detectUniformDrift()` reports names present in only one language — assert both lists empty in CI to catch the typo before it ships.
 </Callout>
 
+### Declaring uniforms on the shader source
+
+The record above is the manual mode: you write the GLSL declarations, you write the WGSL struct, and you keep both in step with the values you pass. Declare the uniforms on the `ShaderSource` instead and the engine owns all three. It computes one byte layout, generates the GLSL block and the WGSL struct from it, and hands the material typed accessors:
+
+```ts
+import { Matrix, MeshMaterial, ShaderSource, UniformStruct, UniformType } from '@codexo/exojs';
+
+const waveShader = new ShaderSource({
+    uniforms: {
+        u_time: UniformType.Float,
+        u_wave: new UniformStruct({
+            amplitude: { type: UniformType.Float, default: 12 },
+            frequency: UniformType.Float,
+        }),
+        u_uvTransform: UniformType.Mat3,
+    },
+    glsl: { vertex: '/* vertex source */', fragment: '/* fragment source */' },
+    wgsl: '/* wgsl source */',
+});
+
+const waveMaterial = new MeshMaterial({ shader: waveShader });
+const uvTransform = new Matrix();
+
+waveMaterial.uniforms.u_time.set(1.5);
+waveMaterial.uniforms.u_wave.amplitude.set(18);
+waveMaterial.uniforms.u_uvTransform.set(uvTransform.rotate(0.4, 0.5, 0.5));
+```
+
+Neither shader body declares those uniforms. Both read them through an instance named `uniforms`, which the generated declaration supplies:
+
+**GLSL:**
+```glsl
+float wave = sin(a_position.x * uniforms.u_wave.frequency + uniforms.u_time) * uniforms.u_wave.amplitude;
+```
+
+**WGSL:**
+```wgsl
+let wave = sin(input.position.x * uniforms.u_wave.frequency + uniforms.u_time) * uniforms.u_wave.amplitude;
+```
+
+What this buys you over the record:
+
+- Unknown names and wrong shapes are compile errors, and in a development build they throw with the field path, the expected type and what arrived.
+- The layout is `std140` on both backends, so a nested struct, a `mat3` or an array of `vec4` lands at the same offsets under WebGL2 and WebGPU. The record path instead gives every name its own 16-byte slot on WebGPU, which you have to reproduce by hand in WGSL.
+- Values live in the material's own buffer with a revision, so an unchanged material uploads nothing per frame, and a `ShaderSource` shared by many materials shares the declaration without sharing their values.
+- `default` on a field is the value a fresh material starts from. Everything else starts at zero, matrices included.
+
+Declare `uniformBlocks` instead of `uniforms` for several named blocks; each takes the next binding of `@group(2)`, and textures follow after them. Textures are bindings rather than block fields, so a material that declares a schema passes them in `textures` rather than in `uniforms`.
+
+<Callout type="warning" title="A declared source has no `setUniform`">
+`uniforms` on a shader source is a clean break, not an addition: `material.uniforms` becomes the accessor namespace and `material.setUniform` is gone from the type. A source without a declaration keeps the record and both languages' declarations stay yours to write.
+</Callout>
+
+<ExamplePreview chapter="geometry-graphics" slug="mesh-typed-uniforms" />
+
 ## Attaching to a Mesh
 
 Pass a `MeshMaterial` in the mesh constructor's `material` option:

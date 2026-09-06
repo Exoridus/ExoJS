@@ -87,24 +87,24 @@ export interface ShaderFilterSourceOptions {
  * source declares `uniforms`, the read-only value record when it declares no
  * schema, and nothing when it declares named blocks instead.
  */
-export type ShaderFilterUniformsView<F, B> = F extends UniformFields
-  ? UniformFieldAccessors<F>
-  : B extends UniformBlockRecord
-    ? never
-    : Readonly<Record<string, ShaderFilterUniformValue>>;
+export type ShaderFilterUniformsView<F, B> = F extends undefined
+  ? B extends undefined
+    ? Readonly<Record<string, ShaderFilterUniformValue>>
+    : never
+  : UniformFieldAccessors<Extract<F, UniformFields>>;
 
 /** What {@link ShaderFilter.uniformBlocks} exposes for a named-block schema. */
-export type ShaderFilterBlocksView<B> = B extends UniformBlockRecord ? UniformBlockDataRecord<B> : never;
+export type ShaderFilterBlocksView<B> = B extends undefined ? never : UniformBlockDataRecord<Extract<B, UniformBlockRecord>>;
 
 /** Starting values accepted for the filter's declared uniforms. */
-export type ShaderFilterUniformValues<F, B> = F extends UniformFields
-  ? UniformStructInput<F>
-  : B extends UniformBlockRecord
-    ? never
-    : Record<string, ShaderFilterUniformValue>;
+export type ShaderFilterUniformValues<F, B> = F extends undefined
+  ? B extends undefined
+    ? Record<string, ShaderFilterUniformValue>
+    : never
+  : UniformStructInput<Extract<F, UniformFields>>;
 
 /** A uniform name the raw path accepts; `never` once a schema is declared. */
-export type ShaderFilterRawUniformName<F, B> = F extends UniformFields ? never : B extends UniformBlockRecord ? never : string;
+export type ShaderFilterRawUniformName<F, B> = F extends undefined ? (B extends undefined ? string : never) : never;
 
 /** Construction options for a {@link ShaderFilter}. */
 export interface ShaderFilterOptions<
@@ -127,7 +127,7 @@ export interface ShaderFilterOptions<
   readonly uniforms?: ShaderFilterUniformValues<F, B>;
 
   /** Starting values per named block, for a source declaring `uniformBlocks`. */
-  readonly uniformBlocks?: B extends UniformBlockRecord ? UniformBlockInitialValues<B> : never;
+  readonly uniformBlocks?: B extends undefined ? never : UniformBlockInitialValues<Extract<B, UniformBlockRecord>>;
 
   /**
    * Textures bound after the uniform blocks, in declaration order, each

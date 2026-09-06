@@ -556,6 +556,16 @@
       "level": "advanced"
     },
     {
+      "slug": "mesh-typed-uniforms",
+      "path": "geometry-graphics/mesh-typed-uniforms.js",
+      "language": "typescript",
+      "title": "Mesh Typed Uniforms",
+      "description": "Declare a mesh material's uniforms once - a nested struct and a mat3 - and let the engine generate the matching GLSL block and WGSL struct for both backends.",
+      "backend": "core",
+      "tags": ["mesh", "shader", "rendering"],
+      "level": "advanced"
+    },
+    {
       "slug": "infinite-grid",
       "path": "geometry-graphics/infinite-grid.js",
       "language": "typescript",

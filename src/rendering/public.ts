@@ -69,7 +69,7 @@ export type {
   ShaderFilterUniformValue,
   ShaderFilterUniformValues,
 } from '#rendering/filters/ShaderFilter';
-export { ShaderFilter } from '#rendering/filters/ShaderFilter';
+export { createFilterShaderSource, ShaderFilter } from '#rendering/filters/ShaderFilter';
 export { ShaderFilterBackendError } from '#rendering/filters/ShaderFilterBackendError';
 export { Geometry } from '#rendering/geometry/Geometry';
 export type { AttributeType, GeometryAttribute, GeometryOptions, GeometryUsage, Topology } from '#rendering/geometry/GeometryAttribute';
@@ -89,7 +89,7 @@ export type {
 export { Material } from '#rendering/material/Material';
 export type { AnyMeshMaterial } from '#rendering/material/MeshMaterial';
 export { MeshMaterial } from '#rendering/material/MeshMaterial';
-export type { ShaderSourceOptions } from '#rendering/material/ShaderSource';
+export type { AnyShaderSource, ShaderSourceOptions } from '#rendering/material/ShaderSource';
 export { ShaderSource } from '#rendering/material/ShaderSource';
 export type { AnySpriteMaterial } from '#rendering/material/SpriteMaterial';
 export { SpriteMaterial } from '#rendering/material/SpriteMaterial';

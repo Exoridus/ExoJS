@@ -36,21 +36,30 @@ export const isTextureUniformValue = (value: UniformValue): value is Texture | R
  * What {@link Material.uniforms} exposes: typed accessors when the shader
  * source declares `uniforms`, the mutable value record when it declares no
  * schema, and nothing when it declares named blocks instead.
+ *
+ * The absence of a declaration is what is tested rather than its presence:
+ * under `strictNullChecks: false`, which snippet and guide programs use,
+ * `undefined` is assignable to every object type, so asking whether it extends
+ * `UniformFields` answers yes and hands an undeclared source the typed view.
  */
-export type MaterialUniformsView<F, B> = F extends UniformFields
-  ? UniformFieldAccessors<F>
-  : B extends UniformBlockRecord
-    ? never
-    : Record<string, UniformValue>;
+export type MaterialUniformsView<F, B> = F extends undefined
+  ? B extends undefined
+    ? Record<string, UniformValue>
+    : never
+  : UniformFieldAccessors<Extract<F, UniformFields>>;
 
 /** What {@link Material.uniformBlocks} exposes for a named-block schema. */
-export type MaterialUniformBlocksView<B> = B extends UniformBlockRecord ? UniformBlockDataRecord<B> : never;
+export type MaterialUniformBlocksView<B> = B extends undefined ? never : UniformBlockDataRecord<Extract<B, UniformBlockRecord>>;
 
 /** Starting values accepted for the declared uniforms. */
-export type MaterialUniformValues<F, B> = F extends UniformFields ? UniformStructInput<F> : B extends UniformBlockRecord ? never : Record<string, UniformValue>;
+export type MaterialUniformValues<F, B> = F extends undefined
+  ? B extends undefined
+    ? Record<string, UniformValue>
+    : never
+  : UniformStructInput<Extract<F, UniformFields>>;
 
 /** A uniform name the raw path accepts; `never` once a schema is declared. */
-export type MaterialRawUniformName<F, B> = F extends UniformFields ? never : B extends UniformBlockRecord ? never : string;
+export type MaterialRawUniformName<F, B> = F extends undefined ? (B extends undefined ? string : never) : never;
 
 /**
  * Immutable binding layout captured when a material is constructed. Values
@@ -84,7 +93,7 @@ export interface MaterialOptions<F extends UniformFields | undefined = undefined
   readonly uniforms?: MaterialUniformValues<F, B>;
 
   /** Starting values per named block, for a source declaring `uniformBlocks`. */
-  readonly uniformBlocks?: B extends UniformBlockRecord ? UniformBlockInitialValues<B> : never;
+  readonly uniformBlocks?: B extends undefined ? never : UniformBlockInitialValues<Extract<B, UniformBlockRecord>>;
 
   /** Declared texture slots claimed in addition to the drawable's own texture. */
   readonly textures?: Record<string, Texture | RenderTexture>;
