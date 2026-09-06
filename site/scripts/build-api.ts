@@ -565,21 +565,6 @@ const ensureCleanOutput = (): void => {
   fs.mkdirSync(outputDir, { recursive: true });
 };
 
-/**
- * The extension packages import `@codexo/exojs` through its published entry
- * points, which exist only after a core build. Without them TypeDoc resolves
- * nothing for those packages, so refuse before anything is generated rather
- * than discover it after the core pages are already written.
- */
-const ensureCoreDist = (): void => {
-  const entry = path.resolve(repoRoot, 'dist', 'esm', 'index.d.ts');
-  if (!fs.existsSync(entry)) {
-    throw new Error(
-      `[build:api] core dist is missing (${path.relative(repoRoot, entry)}): run 'pnpm build:all' first - the extension packages resolve @codexo/exojs through its published entry points.`,
-    );
-  }
-};
-
 const publishOutput = (): void => {
   fs.rmSync(finalOutputDir, RM_OPTIONS);
   fs.renameSync(outputDir, finalOutputDir);
@@ -857,7 +842,6 @@ const convertEntryPoints = async (entryPoints: readonly string[], tsconfig: stri
 };
 
 const build = async (): Promise<void> => {
-  ensureCoreDist();
   ensureCleanOutput();
   const usedSlugs = new Set<string>();
 

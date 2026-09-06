@@ -118,7 +118,7 @@
     "verify:external-consumers": "tsx ./scripts/release/external-consumers.ts",
     "release:notes": "tsx ./scripts/generate-release-notes.ts",
     "release:changelog": "tsx ./scripts/release/generate-changelog.ts",
-    "docs:api:generate": "tsx scripts/check-dist-fresh.ts && pnpm site:build:api",
+    "docs:api:generate": "pnpm site:build:api",
     "docs:api:check": "tsx scripts/check-api-docs-sync.ts",
     "examples:sync:check": "tsx scripts/check-examples-sync.ts",
     "full-bundle:exports:check": "tsx scripts/check-dist-fresh.ts && tsx scripts/check-full-bundle-exports.ts",

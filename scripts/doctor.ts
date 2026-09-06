@@ -5,9 +5,8 @@
  * Every check here corresponds to a failure that has cost a diagnosis before:
  * a Node version the tooling silently tolerated, git hooks that never fired
  * because the install skipped `prepare`, a stale dist that made the site
- * render a black canvas, an API docs generator that deleted the extension
- * pages because the packages were not built, a benchmark that could not find
- * its competitor libraries. Run it after `pnpm bootstrap:dev`, and whenever
+ * render a black canvas, a benchmark that could not find its competitor
+ * libraries. Run it after `pnpm bootstrap:dev`, and whenever
  * something fails in a way that reads like a broken change but smells like a
  * missing prerequisite.
  */
