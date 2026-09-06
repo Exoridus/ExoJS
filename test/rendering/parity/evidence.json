@@ -2,7 +2,7 @@
   "stamps": {
     "chromium": {
       "measuredAt": "2026-09-06",
-      "commit": "561bf8ab0",
+      "commit": "67cc9b8b6",
       "platform": "win32"
     },
     "firefox": {
