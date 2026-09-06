@@ -1,3 +1,4 @@
+import { FRAME_BUDGET_MS } from '../shared/frameBudget';
 import type { AggregatedPhysics, AggregatedRendering } from './aggregate';
 import type { AggregatedCell, AggregatedRow, RunSpread } from './pooled';
 import { NOISE_HIGH, NOISE_LOW, STRUCTURAL_FACTOR } from './verdict';
@@ -27,8 +28,25 @@ const range = (spread: RunSpread): string =>
   Number.isFinite(spread.minMs) && Number.isFinite(spread.maxMs) ? ` [${spread.minMs.toFixed(3)}-${spread.maxMs.toFixed(3)}]` : '';
 
 /**
- * The competitor column: the pooled median, its observed range, and either the
- * verdict or, for a cell the runs disagreed on, what each of them said instead.
+ * One arm's published numbers: the median the verdict is drawn from, the range
+ * the pooled runs observed for it, the frame-budget mark where that median is
+ * past a whole 60 fps frame, and the p95 of the same timed window.
+ *
+ * The range sits directly behind the median because it belongs to the median
+ * alone - no range is retained for the p95 - and the mark sits behind the range
+ * because it is a statement about that median rather than about the pair.
+ *
+ * The mark is spelled out rather than symbolic. A Markdown table is read as
+ * plain text as often as it is rendered, and a glyph a reader has to look up in
+ * a legend is not a warning.
+ */
+const measurement = (medianMs: number | null, p95Ms: number | null, overFrameBudget: boolean, spread: RunSpread): string =>
+  [ms(medianMs), range(spread), overFrameBudget ? ` (over the ${String(FRAME_BUDGET_MS)} ms frame)` : '', `, p95 ${ms(p95Ms)}`].join('');
+
+/**
+ * The competitor column: the pooled median and p95 with their observed range,
+ * and either the verdict or, for a cell the runs disagreed on, what each of them
+ * said instead.
  *
  * An unstable cell prints no verdict at all. Publishing the pooled numbers'
  * verdict would state as a result something part of the measurement contradicts,
@@ -36,7 +54,7 @@ const range = (spread: RunSpread): string =>
  * that resolution on this machine.
  */
 const outcome = (cell: AggregatedCell): string => {
-  const value = `${ms(cell.competitorMs)}${range(cell.aggregate.competitor)}`;
+  const value = measurement(cell.competitorMs, cell.competitorP95Ms, cell.competitorOverFrameBudget, cell.aggregate.competitor);
 
   return cell.aggregate.stable ? `${value} - ${cell.verdict.label}` : `${value} - ${cell.verdict.label}: ${cell.aggregate.rungs.join(', ')}`;
 };
@@ -47,10 +65,24 @@ const tableRow = (cells: readonly string[]): string => `| ${cells.join(' | ')} |
 /** Header plus separator for a table with the given column titles. */
 const tableHead = (columns: readonly string[]): string[] => [tableRow(columns), tableRow(columns.map(() => '---'))];
 
-/** Render one comparison row: the reference time and its range, then each competitor's time, range and verdict. */
-const renderRow = (row: AggregatedRow, competitors: readonly string[]): string => {
+/**
+ * Render one comparison row: the reference times and their range, then each
+ * competitor's times, range and verdict.
+ *
+ * `withCount` prints the size the row was measured at as its own column. The
+ * physics block needs it - its archetypes carry per-archetype ladders, so its
+ * rows are measured at different body counts and a reader who cannot see each
+ * row's count would read the table as one scene at one size.
+ */
+const renderRow = (row: AggregatedRow, competitors: readonly string[], withCount = false): string => {
   const reference = row.cells[0];
-  const cells: string[] = [`\`${row.archetype}\``, reference === undefined ? 'n/a' : `${ms(reference.referenceMs)}${range(reference.aggregate.reference)}`];
+  const cells: string[] = [
+    `\`${row.archetype}\``,
+    ...(withCount ? [String(row.count)] : []),
+    reference === undefined
+      ? 'n/a'
+      : measurement(reference.referenceMs, reference.referenceP95Ms, reference.referenceOverFrameBudget, reference.aggregate.reference),
+  ];
 
   for (const competitor of competitors) {
     const cell = row.cells.find(candidate => candidate.competitor === competitor);
@@ -95,7 +127,10 @@ const readingRules = (): string[] => [
   `- Outside the band the faster arm \`leads\`. At ${STRUCTURAL_FACTOR}x or more it \`leads clearly\` - a gap that large cannot be explained by machine mood or driver state, so it is attributable to how the two libraries are built.`,
   '- Rows are archetypes. Category headings are headings, never rows: an average over a category hides its worst cell, so nothing here aggregates across archetypes.',
   '- Every row names the mechanism its difference comes from, drawn from the structural counters the harness collects. A row whose mechanism could not be evidenced is not published - it is listed under the omissions instead, with the reason.',
-  '- One count for the whole table, chosen from the archetype ladders before any timing was read. It is never picked per row.',
+  '- Every value is a median and a `p95` of the same timed window. The median is the field-comparable number and is what every verdict is computed from; the p95 is the step or frame a player feels as a hitch, so a pair that is far apart hitches even where the median reads as comfortable.',
+  `- A median past **${String(FRAME_BUDGET_MS)} ms** - a whole 60 fps frame - is marked \`over the ${String(FRAME_BUDGET_MS)} ms frame\`. How much of a frame this work may take is your decision; one that costs more than the entire frame is unplayable whatever you decide. Nothing is derived from the mark: there is no "how many bodies at N ms" figure here, because that would be an interpolation between rungs rather than something measured.`,
+  '- A rendering table uses one node count for all of its rows, chosen from the archetype ladders before any timing was read.',
+  '- Physics rows each state the body count they were measured at, because each physics archetype has its own ladder: they reach a frame at sizes that differ by nearly an order of magnitude, and one shared count would put most rows at a size chosen to suit a different archetype. A row still cannot pick its count to suit an outcome - it is the largest rung of that archetype\'s ladder at which every arm produced a valid cell. **Read the arms within a row against each other, never one row against another**: two rows are two different scenes at two different sizes.',
   '- Every published time is the median of the per-run medians of several separate harness runs, and the bracket after it is the range those runs observed. A wide bracket is the measurement moving, not the library.',
   '- A cell whose runs did not all reach the same verdict prints `unstable across runs` followed by what each run said, and no verdict. It stays in the table: that the cell cannot be measured to that resolution on this machine is itself the finding.',
   '- Cells where ExoJS loses are published exactly like the cells where it wins. A table in which one library wins everywhere is not credible and will not survive being re-run by anyone else.',
@@ -157,7 +192,7 @@ const renderRenderingBlocks = (input: RenderingInput): string[] => {
       '',
     );
 
-    const columns = ['archetype', 'exojs (median CPU)', ...backend.competitors.map(competitor => `${competitor} (median CPU)`), 'mechanism'];
+    const columns = ['archetype', 'exojs (median / p95 CPU)', ...backend.competitors.map(competitor => `${competitor} (median / p95 CPU)`), 'mechanism'];
 
     for (const section of backend.sections) {
       lines.push(`### ${section.title}`, '');
@@ -179,8 +214,8 @@ const renderRenderingBlocks = (input: RenderingInput): string[] => {
 
       const webgl1Columns = [
         'archetype',
-        'exojs (median CPU)',
-        ...[...new Set(backend.webgl1.flatMap(row => row.cells.map(cell => cell.competitor)))].map(name => `${name} (median CPU)`),
+        'exojs (median / p95 CPU)',
+        ...[...new Set(backend.webgl1.flatMap(row => row.cells.map(cell => cell.competitor)))].map(name => `${name} (median / p95 CPU)`),
         'mechanism',
       ];
       const webgl1Competitors = [...new Set(backend.webgl1.flatMap(row => row.cells.map(cell => cell.competitor)))];
@@ -232,16 +267,27 @@ const renderPhysicsBlock = (input: PhysicsInput): string[] => {
   lines.push('');
 
   if (input.section.rows.length === 0) {
-    lines.push('No physics row qualified: no single body count produced a valid cell on every arm.', '');
+    lines.push('No physics row qualified: no archetype produced a valid cell on every arm at any rung of its ladder.', '');
 
     return lines;
   }
 
-  lines.push(`All rows measured at **${String(input.section.rows[0]!.count)} bodies**.`, '');
-  lines.push(...tableHead(['archetype', 'exojs-physics (median step)', ...competitors.map(competitor => `${competitor} (median step)`), 'mechanism']));
+  lines.push(
+    'Each archetype has its **own body-count ladder**, placed so that its rungs straddle the 60 fps frame: the archetypes reach a frame at sizes that differ by nearly an order of magnitude, so one shared count would put most rows at a size chosen to suit a different scene. Every row therefore states the count it was measured at, and **rows are not comparable with one another** - only the arms within a row are.',
+    '',
+  );
+  lines.push(
+    ...tableHead([
+      'archetype',
+      'bodies',
+      'exojs-physics (median / p95 step)',
+      ...competitors.map(competitor => `${competitor} (median / p95 step)`),
+      'mechanism',
+    ]),
+  );
 
   for (const row of input.section.rows) {
-    lines.push(renderRow(row, competitors));
+    lines.push(renderRow(row, competitors, true));
   }
 
   lines.push('');

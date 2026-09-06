@@ -72,7 +72,7 @@ const physicsStamp = (run: number) => ({
  * `bench:compare --profile` writes, pooling `runs` separate harness runs.
  */
 const validProfile = (runs = REQUIRED_RUNS): Record<string, unknown> => ({
-  schemaVersion: 5,
+  schemaVersion: 6,
   profile: {
     slug: SLUG,
     gpu: 'test-gpu',
@@ -103,7 +103,11 @@ const validProfile = (runs = REQUIRED_RUNS): Record<string, unknown> => ({
                   {
                     competitor: 'pixi',
                     referenceMs: 0.25,
+                    referenceP95Ms: 0.31,
+                    referenceOverFrameBudget: false,
                     competitorMs: 0.5,
+                    competitorP95Ms: 0.62,
+                    competitorOverFrameBudget: false,
                     verdict: { side: 'exojs', ratio: 0.5, factor: 2, label: 'ExoJS leads (2.00x)', structural: false },
                     mechanism: 'fewer draw calls',
                     aggregate: {
@@ -222,6 +226,12 @@ describe('verify-bench-results', () => {
 
   it('rejects a schema version 4 file outright: its physics numbers were measured in Node, not in the browser its name claims', () => {
     write({ ...validProfile(), schemaVersion: 4 });
+
+    expect(check()).toContain('which this repository does not understand');
+  });
+
+  it('rejects a schema version 5 file outright: it published no p95, no frame-budget mark, and physics rows on a body ladder that has since moved', () => {
+    write({ ...validProfile(), schemaVersion: 5 });
 
     expect(check()).toContain('which this repository does not understand');
   });

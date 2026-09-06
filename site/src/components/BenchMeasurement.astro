@@ -1,28 +1,38 @@
 ---
 /**
- * BenchMeasurement - one published median together with the range the pooled
- * runs observed behind it.
+ * BenchMeasurement - one published median together with the p95 of the same
+ * timed window and the range the pooled runs observed behind the median.
  *
- * The range is part of the value rather than an annotation on it. A median whose
+ * All three are part of the value rather than annotations on it. A median whose
  * runs agreed to three decimals and one whose runs moved by half again as much
  * as the band the verdict ladder calls noise are different kinds of claim, and a
- * reader shown only the median cannot tell them apart. A range that reaches that
- * far is marked, so a soft measurement is visible without the reader dividing
- * two numbers in their head.
+ * reader shown only the median cannot tell them apart. The p95 makes the same
+ * kind of distinction inside a single run: a workload that is periodically
+ * expensive has a comfortable median and a hitch the player feels.
  *
- * A value no run produced prints a dash and no range: an absence, never a zero.
+ * Two conditions are marked, in one visual language: a range that reaches into
+ * the ladder's own noise band, and a median past a whole 60 fps frame. Both
+ * print the fact rather than only colouring the number, so a reader scanning the
+ * column does not have to divide two numbers or hold a threshold in their head.
+ *
+ * A value no run produced prints a dash and nothing else: an absence, never a
+ * zero.
  */
 
-import { formatFactor, formatMs, formatRange, isWideSpread, type ProfileSpread } from '../lib/bench-profiles';
+import { formatFactor, formatMs, formatRange, FRAME_BUDGET_MS, isWideSpread, type ProfileSpread } from '../lib/bench-profiles';
 
 interface Props {
     /** The published value: median of the per-run medians. */
     ms: number | null;
+    /** The 95th percentile of the same timed window, pooled the same way. */
+    p95Ms?: number | null;
+    /** True when the median is past a whole 60 fps frame, as the profile recorded it. */
+    overFrameBudget?: boolean;
     /** Spread of the per-run medians behind it; omitted where the arm produced no cell. */
     spread?: ProfileSpread | undefined;
 }
 
-const { ms, spread } = Astro.props;
+const { ms, p95Ms = null, overFrameBudget = false, spread } = Astro.props;
 const range = spread === undefined ? '' : formatRange(spread);
 const wide = spread !== undefined && isWideSpread(spread);
 ---
@@ -32,7 +42,9 @@ const wide = spread !== undefined && isWideSpread(spread);
         <span class="value">-</span>
     ) : (
         <>
-            <span class="value">{formatMs(ms)}</span>
+            <span class:list={['value', overFrameBudget && 'over-budget']}>{formatMs(ms)}</span>
+            {p95Ms !== null && <span class="p95">p95 {formatMs(p95Ms)}</span>}
+            {overFrameBudget && <span class="budget">over the {FRAME_BUDGET_MS} ms frame</span>}
             {range !== '' && (
                 <span class:list={['range', wide && 'wide']}>
                     {range}
@@ -48,6 +60,7 @@ const wide = spread !== undefined && isWideSpread(spread);
         display: block;
     }
 
+    .p95,
     .range {
         display: block;
         margin-top: 0.15rem;
@@ -57,16 +70,24 @@ const wide = spread !== undefined && isWideSpread(spread);
     }
 
     /*
-     * The mark is a colour AND a printed factor, not a colour alone: the point
-     * is that a reader scanning the column sees which numbers are soft without
-     * having to divide the two ends of every range.
+     * Both marks are a colour AND a printed fact, never a colour alone: the point
+     * is that a reader scanning the column sees which numbers are soft, and which
+     * describe a scene that cannot hold 60 fps, without doing arithmetic.
      */
-    .range.wide {
+    .range.wide,
+    .value.over-budget {
         color: var(--amber);
     }
 
+    .budget,
     .factor {
         display: block;
         font-weight: 600;
+    }
+
+    .budget {
+        margin-top: 0.15rem;
+        color: var(--amber);
+        font-size: 0.7rem;
     }
 </style>

@@ -15,11 +15,17 @@
  * result and not a defect.
  *
  * Every published number is pooled from several separate runs, so every number
- * is printed with the range those runs observed underneath it, and a range wide
- * enough to reach into the verdict ladder's own noise band is marked rather than
- * left for the reader to compute. A cell whose runs reached different verdicts
- * prints none: it keeps its numbers and its range and states what each run
- * concluded instead.
+ * is printed with the p95 of the same timed window and the range those runs
+ * observed underneath it. Two conditions are marked rather than left for the
+ * reader to compute: a range wide enough to reach into the verdict ladder's own
+ * noise band, and a median past a whole 60 fps frame. A cell whose runs reached
+ * different verdicts prints no verdict: it keeps its numbers and its range and
+ * states what each run concluded instead.
+ *
+ * The physics table gives the body count its own column, because the physics
+ * archetypes carry per-archetype ladders and its rows are therefore measured at
+ * different sizes. The rendering tables state their single node count in the
+ * block note instead, which is where it belongs when every row shares it.
  */
 
 import BenchMeasurement from './BenchMeasurement.astro';
@@ -29,6 +35,7 @@ import {
     describeRungs,
     formatDay,
     formatRunTime,
+    FRAME_BUDGET_MS,
     type BenchProfileDocument,
     type ProfileCell,
     type ProfileRow,
@@ -85,6 +92,8 @@ const tableRows = (sections: readonly ProfileSection[], arms: readonly string[])
                 archetype: row.archetype,
                 count: row.count,
                 exojsMs: reference?.referenceMs ?? null,
+                exojsP95Ms: reference?.referenceP95Ms ?? null,
+                exojsOverFrameBudget: reference?.referenceOverFrameBudget ?? false,
                 exojsSpread: reference?.aggregate.reference,
                 entries: arms.map(arm => {
                     const cell = row.cells.find(candidate => candidate.competitor === arm) ?? null;
@@ -92,6 +101,8 @@ const tableRows = (sections: readonly ProfileSection[], arms: readonly string[])
                     return {
                         arm,
                         armMs: cell?.competitorMs ?? null,
+                        armP95Ms: cell?.competitorP95Ms ?? null,
+                        armOverFrameBudget: cell?.competitorOverFrameBudget ?? false,
                         armSpread: cell?.aggregate.competitor,
                         outcome: outcomeOf(cell),
                         mechanism: cell?.mechanism ?? null,
@@ -201,7 +212,7 @@ const runTimes = [
             <p class="block-note">
                 {block.backend.headlineCount === null
                     ? 'No single node count qualified for a headline table on this backend, so no rows are published for it.'
-                    : `Every row is measured at ${String(block.backend.headlineCount)} nodes, chosen from the archetype ladders before any timing was read. Times are CPU milliseconds per frame, pooled over ${String(profile.runs)} separate runs as the median of their per-run medians; lower is better. The range under a time is what those runs observed.`}
+                    : `Every row is measured at ${String(block.backend.headlineCount)} nodes, chosen from the archetype ladders before any timing was read. Times are CPU milliseconds per frame, pooled over ${String(profile.runs)} separate runs as the median of their per-run medians and of their per-run p95s; lower is better. The range under a time is what those runs observed.`}
             </p>
 
             {block.rows.length > 0 && (
@@ -229,12 +240,22 @@ const runTimes = [
                                         )}
                                         {index === 0 && (
                                             <td class="num" rowspan={row.entries.length}>
-                                                <BenchMeasurement ms={row.exojsMs} spread={row.exojsSpread} />
+                                                <BenchMeasurement
+                                                    ms={row.exojsMs}
+                                                    p95Ms={row.exojsP95Ms}
+                                                    overFrameBudget={row.exojsOverFrameBudget}
+                                                    spread={row.exojsSpread}
+                                                />
                                             </td>
                                         )}
                                         <td class="arm">{entry.arm}</td>
                                         <td class="num">
-                                            <BenchMeasurement ms={entry.armMs} spread={entry.armSpread} />
+                                            <BenchMeasurement
+                                                ms={entry.armMs}
+                                                p95Ms={entry.armP95Ms}
+                                                overFrameBudget={entry.armOverFrameBudget}
+                                                spread={entry.armSpread}
+                                            />
                                         </td>
                                         <td class="outcome">
                                             <span class:list={['verdict', entry.outcome.tone]}>{entry.outcome.label}</span>
@@ -283,12 +304,22 @@ const runTimes = [
                                             )}
                                             {index === 0 && (
                                                 <td class="num" rowspan={row.entries.length}>
-                                                    <BenchMeasurement ms={row.exojsMs} spread={row.exojsSpread} />
+                                                    <BenchMeasurement
+                                                    ms={row.exojsMs}
+                                                    p95Ms={row.exojsP95Ms}
+                                                    overFrameBudget={row.exojsOverFrameBudget}
+                                                    spread={row.exojsSpread}
+                                                />
                                                 </td>
                                             )}
                                             <td class="arm">{entry.arm}</td>
                                             <td class="num">
-                                                <BenchMeasurement ms={entry.armMs} spread={entry.armSpread} />
+                                                <BenchMeasurement
+                                                ms={entry.armMs}
+                                                p95Ms={entry.armP95Ms}
+                                                overFrameBudget={entry.armOverFrameBudget}
+                                                spread={entry.armSpread}
+                                            />
                                             </td>
                                             <td class="outcome">
                                                 <span class:list={['verdict', entry.outcome.tone]}>{entry.outcome.label}</span>
@@ -323,8 +354,8 @@ const runTimes = [
             <SubHeading id={`${profile.slug}-physics`}>Physics</SubHeading>
             <p class="block-note">
                 {physicsRows.length === 0
-                    ? 'No single body count qualified for a headline table, so no physics rows are published.'
-                    : `Every row is measured at ${String(physicsRows[0]?.count ?? 0)} bodies. Times are CPU milliseconds per fixed step, pooled over ${String(profile.runs)} separate runs as the median of their per-run medians; lower is better. The range under a time is what those runs observed.`}
+                    ? 'No physics archetype produced a valid cell on every arm at any rung of its ladder, so no physics rows are published.'
+                    : `Each archetype has its own body-count ladder, placed so its rungs straddle the 60 fps frame, so every row states the count it was measured at and rows are not comparable with one another - only the arms within a row are. Times are CPU milliseconds per fixed step, pooled over ${String(profile.runs)} separate runs as the median of their per-run medians and of their per-run p95s; lower is better. The range under a time is what those runs observed.`}
             </p>
 
             {physicsRows.length > 0 && (
@@ -333,6 +364,7 @@ const runTimes = [
                         <thead>
                             <tr>
                                 <th scope="col">Archetype</th>
+                                <th scope="col">Bodies</th>
                                 <th scope="col">ExoJS (ms)</th>
                                 <th scope="col">Against</th>
                                 <th scope="col">Arm (ms)</th>
@@ -351,12 +383,27 @@ const runTimes = [
                                         )}
                                         {index === 0 && (
                                             <td class="num" rowspan={row.entries.length}>
-                                                <BenchMeasurement ms={row.exojsMs} spread={row.exojsSpread} />
+                                                {row.count}
+                                            </td>
+                                        )}
+                                        {index === 0 && (
+                                            <td class="num" rowspan={row.entries.length}>
+                                                <BenchMeasurement
+                                                    ms={row.exojsMs}
+                                                    p95Ms={row.exojsP95Ms}
+                                                    overFrameBudget={row.exojsOverFrameBudget}
+                                                    spread={row.exojsSpread}
+                                                />
                                             </td>
                                         )}
                                         <td class="arm">{entry.arm}</td>
                                         <td class="num">
-                                            <BenchMeasurement ms={entry.armMs} spread={entry.armSpread} />
+                                            <BenchMeasurement
+                                                ms={entry.armMs}
+                                                p95Ms={entry.armP95Ms}
+                                                overFrameBudget={entry.armOverFrameBudget}
+                                                spread={entry.armSpread}
+                                            />
                                         </td>
                                         <td class="outcome">
                                             <span class:list={['verdict', entry.outcome.tone]}>{entry.outcome.label}</span>
@@ -396,9 +443,12 @@ const runTimes = [
         <span class="verdict absent">not comparable</span>
     </p>
     <p class="reading-key">
-        The smaller line under a time is the range the {profile.runs} pooled runs observed for it. A range marked in amber spans a factor of 1.2 or more - as
-        wide as the band the verdict ladder treats as noise - so the number above it is soft on this machine. A cell whose runs reached different verdicts
-        publishes none of them and lists what each run concluded instead.
+        Each time is published with the <strong>p95</strong> of the same timed window under it and, under that, the range the {profile.runs} pooled runs
+        observed for the median. Verdicts are computed from the medians alone; the p95 is the step or frame a player feels, so a pair far apart hitches even
+        where the median reads as comfortable. A range marked in amber spans a factor of 1.2 or more - as wide as the band the verdict ladder treats as noise -
+        so the number above it is soft on this machine. A median marked in amber as <em>over the {FRAME_BUDGET_MS} ms frame</em> costs more than a whole 60 fps
+        frame on its own: how much of a frame this work may take is your decision, but one that exceeds the entire frame is unplayable whatever you decide. A
+        cell whose runs reached different verdicts publishes none of them and lists what each run concluded instead.
     </p>
 </section>
 

@@ -1,8 +1,9 @@
 import { aggregatePhysicsRuns, aggregateRenderingRuns, IncomparableRunsError } from '../src/comparison/aggregate';
-import { buildPhysicsComparison, buildRenderingComparison, chooseHeadlineCount } from '../src/comparison/build';
+import { buildPhysicsComparison, buildRenderingComparison, chooseHeadlineCount, chooseRowCount } from '../src/comparison/build';
 import { physicsMechanism, renderingMechanism } from '../src/comparison/mechanism';
 import { renderComparison } from '../src/comparison/render';
 import { compareMedians, NOISE_HIGH, NOISE_LOW, STRUCTURAL_FACTOR } from '../src/comparison/verdict';
+import { PHYSICS_ARCHETYPES } from '../src/physics/archetypes';
 import type { PhysicsProvenance } from '../src/physics/driver';
 import type { PhysicsCellResult } from '../src/physics/PhysicsAdapter';
 import type { PhysicsReportData } from '../src/physics/report';
@@ -144,6 +145,21 @@ describe('compareMedians', () => {
     expect(compareMedians(0, 1).side).toBe('neither');
     expect(compareMedians(1, 0).label).toBe('not comparable');
     expect(compareMedians(Number.NaN, 1).label).toBe('not comparable');
+  });
+});
+
+describe('chooseRowCount', () => {
+  test('takes the largest rung of the ladder it is given', () => {
+    expect(chooseRowCount([200, 1_000, 5_000], () => true)).toBe(5_000);
+  });
+
+  test('lowers the choice when the larger rung has no valid cell', () => {
+    expect(chooseRowCount([200, 1_000, 5_000], count => count <= 1_000)).toBe(1_000);
+  });
+
+  test('returns null when no rung has a valid cell, rather than publishing one that was not measured', () => {
+    expect(chooseRowCount([200, 1_000], () => false)).toBeNull();
+    expect(chooseRowCount([], () => true)).toBeNull();
   });
 });
 
@@ -335,16 +351,75 @@ describe('buildRenderingComparison', () => {
 });
 
 describe('buildPhysicsComparison', () => {
-  test('publishes a row per archetype at one shared body count', () => {
-    const results = [200, 1_000, 4_000].flatMap(bodyCount => [
-      physicsCell({ engine: 'exojs-physics', archetype: 'box-stack', bodyCount, stepMsMedian: 1 }),
-      physicsCell({ engine: 'matter-js', archetype: 'box-stack', bodyCount, stepMsMedian: 3, contactCount: 50 }),
+  /** Every cell of one archetype's own ladder, on both arms. */
+  const ladderOf = (archetype: PhysicsCellResult['spec']['archetype']): readonly number[] =>
+    PHYSICS_ARCHETYPES.find(candidate => candidate.id === archetype)!.bodyCounts;
+
+  const sweep = (archetype: PhysicsCellResult['spec']['archetype'], stepMsMedian: number, competitorMs: number): PhysicsCellResult[] =>
+    ladderOf(archetype).flatMap(bodyCount => [
+      physicsCell({ engine: 'exojs-physics', archetype, bodyCount, stepMsMedian }),
+      physicsCell({ engine: 'matter-js', archetype, bodyCount, stepMsMedian: competitorMs, contactCount: 50 }),
     ]);
-    const section = buildPhysicsComparison(results);
+
+  test('publishes a row per archetype at the top of that archetype own ladder', () => {
+    const section = buildPhysicsComparison(sweep('box-stack', 1, 3));
 
     expect(section.rows).toHaveLength(1);
-    expect(section.rows[0]!.count).toBe(4_000);
+    expect(section.rows[0]!.count).toBe(ladderOf('box-stack').at(-1));
     expect(section.rows[0]!.cells[0]!.verdict.side).toBe('exojs');
+  });
+
+  test('gives each archetype the count from its OWN ladder, never one archetype the count of another', () => {
+    const section = buildPhysicsComparison([...sweep('box-stack', 1, 3), ...sweep('joints', 1, 3)]);
+    const counts = new Map(section.rows.map(row => [row.archetype, row.count]));
+
+    expect(counts.get('box-stack')).toBe(ladderOf('box-stack').at(-1));
+    expect(counts.get('joints')).toBe(ladderOf('joints').at(-1));
+    // The two ladders share no rung, so a single table-wide count would have had
+    // to publish one of these rows at the other's size, or publish neither.
+    expect(counts.get('box-stack')).not.toBe(counts.get('joints'));
+  });
+
+  test('lowers one archetype to its next rung without moving any other archetype', () => {
+    const ladder = ladderOf('box-stack');
+    const results = [...sweep('box-stack', 1, 3), ...sweep('joints', 1, 3)].map(result =>
+      result.spec.archetype === 'box-stack' && result.spec.bodyCount === ladder.at(-1) ? { ...result, status: 'exceeded' as const } : result,
+    );
+    const section = buildPhysicsComparison(results);
+    const counts = new Map(section.rows.map(row => [row.archetype, row.count]));
+
+    expect(counts.get('box-stack')).toBe(ladder.at(-2));
+    expect(counts.get('joints')).toBe(ladderOf('joints').at(-1));
+  });
+
+  test('publishes each arm p95 beside its median, and computes the verdict from the medians alone', () => {
+    const section = buildPhysicsComparison(sweep('box-stack', 1, 3));
+    const cell = section.rows[0]!.cells[0]!;
+
+    // The fixture puts every p95 at 1.2x its median, so a verdict drawn from the
+    // p95 pair would be the same ratio - which is why the assertion is that the
+    // p95 values are published, and that the ratio is the medians'.
+    expect(cell.referenceP95Ms).toBe(1.2);
+    expect(cell.competitorP95Ms).toBeCloseTo(3.6, 10);
+    expect(cell.verdict.ratio).toBeCloseTo(1 / 3, 10);
+  });
+
+  test('marks a median past a whole 60 fps frame, on either arm, and leaves one under it unmarked', () => {
+    const section = buildPhysicsComparison(sweep('box-stack', 16.6, 16.8));
+    const cell = section.rows[0]!.cells[0]!;
+
+    expect(cell.referenceOverFrameBudget).toBe(false);
+    expect(cell.competitorOverFrameBudget).toBe(true);
+  });
+
+  test('does not mark a median that only its p95 pushes past the frame', () => {
+    // 14 ms median, 16.8 ms p95: the mark states what the published median is,
+    // and reading it off the p95 instead would mark a scene that holds 60 fps in
+    // the typical step.
+    const cell = buildPhysicsComparison(sweep('box-stack', 14, 14))!.rows[0]!.cells[0]!;
+
+    expect(cell.referenceP95Ms).toBeCloseTo(16.8, 10);
+    expect(cell.referenceOverFrameBudget).toBe(false);
   });
 });
 
@@ -467,13 +542,16 @@ describe('aggregateRenderingRuns', () => {
 });
 
 describe('aggregatePhysicsRuns', () => {
-  const run = (competitorMs: number): PhysicsReportData =>
+  const boxStackLadder = PHYSICS_ARCHETYPES.find(archetype => archetype.id === 'box-stack')!.bodyCounts;
+  /** One run of a two-arm `box-stack` sweep at both arms' given medians. */
+  const runAt = (referenceMs: number, competitorMs = referenceMs * 3): PhysicsReportData =>
     physicsRun(
-      [200, 1_000, 4_000].flatMap(bodyCount => [
-        physicsCell({ engine: 'exojs-physics', archetype: 'box-stack', bodyCount, stepMsMedian: 1 }),
+      boxStackLadder.flatMap(bodyCount => [
+        physicsCell({ engine: 'exojs-physics', archetype: 'box-stack', bodyCount, stepMsMedian: referenceMs }),
         physicsCell({ engine: 'matter-js', archetype: 'box-stack', bodyCount, stepMsMedian: competitorMs, contactCount: 50 }),
       ]),
     );
+  const run = (competitorMs: number): PhysicsReportData => runAt(1, competitorMs);
 
   test('pools the section the same way the rendering blocks are pooled', () => {
     const pooled = aggregatePhysicsRuns([run(1.1), run(3), run(3)]).section.rows[0]!.cells[0]!;
@@ -492,6 +570,32 @@ describe('aggregatePhysicsRuns', () => {
     const older = physicsRun(run(2).results, { platformVersion: { major: 25, source: 'declared', evidence: `the runner declared '25'` } });
 
     expect(() => aggregatePhysicsRuns([run(2), older])).toThrow(/different machine/);
+  });
+
+  test('pools each archetype at the count its own ladder produced, and publishes its p95', () => {
+    const pooled = aggregatePhysicsRuns([run(3), run(3), run(3)]).section.rows[0]!;
+
+    expect(pooled.count).toBe(boxStackLadder.at(-1));
+    expect(pooled.cells[0]!.referenceP95Ms).toBe(1.2);
+    expect(pooled.cells[0]!.competitorP95Ms).toBeCloseTo(3.6, 10);
+  });
+
+  test('rejects runs whose rows landed on different counts, which would pool medians of different scenes', () => {
+    const lowered = physicsRun(
+      run(3).results.map(result => (result.spec.bodyCount === boxStackLadder.at(-1) ? { ...result, status: 'exceeded' as const } : result)),
+    );
+
+    expect(() => aggregatePhysicsRuns([run(3), run(3), lowered])).toThrow(/at different counts/);
+  });
+
+  test('recomputes the frame-budget mark from the pooled median, not from any one run', () => {
+    // 16.0, 16.6 and 20.0 pool to 16.6, which is inside the frame even though a
+    // run that measured 20.0 was over it. Carrying a run mark over would publish
+    // an unplayable label on a number that is not.
+    const pooled = aggregatePhysicsRuns([16, 16.6, 20].map(stepMs => runAt(stepMs))).section.rows[0]!.cells[0]!;
+
+    expect(pooled.referenceMs).toBe(16.6);
+    expect(pooled.referenceOverFrameBudget).toBe(false);
   });
 });
 
@@ -545,6 +649,48 @@ describe('renderComparison', () => {
     expect(row).toContain('2.000 ms [1.050-2.000]');
     expect(row).toContain('unstable across runs: level, exojs-leads, exojs-leads');
     expect(row).not.toContain('ExoJS leads');
+  });
+
+  test('prints the p95 beside every median', () => {
+    const document = renderComparison({
+      rendering: aggregateRenderingRuns([
+        renderingRun([
+          cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 1 }),
+          cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 1_000, cpuMsMedian: 2, drawCalls: 40 }),
+        ]),
+      ]),
+    });
+
+    expect(document).toContain('p95 1.200 ms');
+    expect(document).toContain('p95 2.400 ms');
+    expect(document).toContain('median / p95 CPU');
+  });
+
+  test('gives each physics row its own body count and marks a median past a whole frame', () => {
+    const ladder = PHYSICS_ARCHETYPES.find(archetype => archetype.id === 'box-stack')!.bodyCounts;
+    const document = renderComparison({
+      physics: aggregatePhysicsRuns(
+        Array.from({ length: 3 }, () =>
+          physicsRun(
+            ladder.flatMap(bodyCount => [
+              physicsCell({ engine: 'exojs-physics', archetype: 'box-stack', bodyCount, stepMsMedian: 4 }),
+              physicsCell({ engine: 'matter-js', archetype: 'box-stack', bodyCount, stepMsMedian: 20, contactCount: 50 }),
+            ]),
+          ),
+        ),
+      ),
+    });
+    const row = document.split('\n').find(line => line.startsWith('| `box-stack`'))!;
+
+    expect(document).toContain('own body-count ladder');
+    expect(document).toContain('rows are not comparable with one another');
+    expect(row).toContain(`| ${String(ladder.at(-1))} |`);
+    expect(row).toContain('20.000 ms');
+    expect(row).toContain('over the 16.7 ms frame');
+    // The ExoJS arm is inside the frame in the same row, so the mark is per
+    // value and not a property of the row.
+    expect(row).toContain('4.000 ms');
+    expect(row.indexOf('over the 16.7 ms frame')).toBeGreaterThan(row.indexOf('20.000 ms'));
   });
 
   test('marks a software-rasterizer run as not reportable', () => {

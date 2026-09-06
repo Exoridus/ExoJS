@@ -21,7 +21,7 @@
  */
 
 /** Schema version this reader understands; anything else is refused. */
-const SUPPORTED_SCHEMA_VERSION = 5;
+const SUPPORTED_SCHEMA_VERSION = 6;
 
 /**
  * Arms that stand as a reference ceiling rather than as a peer.
@@ -72,13 +72,28 @@ export interface ProfileAggregate {
   readonly rungs: readonly string[];
 }
 
-/** One competitor's outcome on one row. */
+/**
+ * One competitor's outcome on one row.
+ *
+ * Each arm carries two times. The median is the field-comparable number and the
+ * only one a verdict is drawn from; the p95 of the same timed window is the step
+ * or frame a player feels, so a pair far apart hitches even where the median
+ * reads as comfortable.
+ */
 export interface ProfileCell {
   readonly competitor: string;
   /** Median of the per-run medians. */
   readonly referenceMs: number | null;
+  /** Median of the per-run p95s. */
+  readonly referenceP95Ms: number | null;
+  /** True when `referenceMs` is past a whole 60 fps frame; see `FRAME_BUDGET_MS`. */
+  readonly referenceOverFrameBudget: boolean;
   /** Median of the per-run medians. */
   readonly competitorMs: number | null;
+  /** Median of the per-run p95s. */
+  readonly competitorP95Ms: number | null;
+  /** True when `competitorMs` is past a whole 60 fps frame; see `FRAME_BUDGET_MS`. */
+  readonly competitorOverFrameBudget: boolean;
   readonly verdict: ProfileVerdict;
   /** Structural evidence behind the difference, or `null` when the counters carry none. */
   readonly mechanism: string | null;
@@ -86,7 +101,14 @@ export interface ProfileCell {
   readonly aggregate: ProfileAggregate;
 }
 
-/** One published row: an archetype at the block's single node or body count. */
+/**
+ * One published row: an archetype at the count it was measured at.
+ *
+ * A rendering row carries its block's single node count. A physics row carries
+ * its own body count, because the physics archetypes have per-archetype ladders -
+ * so two physics rows are never comparable with each other, only the arms within
+ * one row are.
+ */
 export interface ProfileRow {
   readonly archetype: string;
   readonly category: string;
@@ -337,6 +359,19 @@ export const BACKEND_LABELS: Readonly<Record<ProfileBackendName, string>> = { we
  * threshold is the ladder's, not a second opinion about what counts as noisy.
  */
 export const WIDE_SPREAD_RATIO = 1.2;
+
+/**
+ * One 60 fps frame, in milliseconds - the line past which a published value is
+ * marked as unplayable.
+ *
+ * It is the whole frame and not a fraction of it. How much of a frame a reader
+ * may spend on physics, or on the CPU side of rendering, depends on everything
+ * else their frame does and is their decision; a single step or frame that costs
+ * more than the frame it has to fit in is beyond rescue whatever they decide.
+ * The value the harness marks against is stored per cell in the profile, and
+ * this constant only spells the threshold out in the page's own prose.
+ */
+export const FRAME_BUDGET_MS = 16.7;
 
 /** A ratio in the form the verdict labels print it, or a dash when the pair produced none. */
 export const formatFactor = (factor: number | null): string => (factor === null || !Number.isFinite(factor) ? '-' : `${factor.toFixed(2)}x`);

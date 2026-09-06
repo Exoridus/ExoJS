@@ -3,6 +3,7 @@ import type { PhysicsReportData } from '../physics/report';
 import { isIdentifyingPart, normalizeCpuModel, normalizeGpuAdapter, normalizeOsName, PRERELEASE_SEGMENT } from '../profile/slug';
 import type { Provenance } from '../rendering/driver';
 import type { ReportData } from '../rendering/report';
+import { exceedsFrameBudget } from '../shared/frameBudget';
 import type { LibraryProvenance, PlatformVersionStamp, PrereleaseStamp } from '../shared/provenance';
 import { median } from '../shared/timing';
 import type { BackendComparison, ComparisonCell, ComparisonRow, ComparisonSection, ExcludedRow } from './build';
@@ -23,15 +24,17 @@ import { compareMedians, NO_VERDICT, UNSTABLE_VERDICT, verdictRung } from './ver
  * model by the existing single-run code, and the models are then merged cell by
  * cell.
  *
- * The merge publishes three things per cell:
+ * The merge publishes per cell:
  *
  * - the **median of the per-run medians**, so one unlucky run cannot set the
- *   published number;
+ *   published number, and the median of the per-run p95s beside it;
  * - the **observed spread** of those per-run medians, so a reader sees how far
  *   the number moved between the quietest and the noisiest run;
  * - a **stability flag**, computed by placing every run on the verdict ladder
  *   independently. A cell whose runs disagree carries {@link UNSTABLE_VERDICT}
- *   and prints no verdict at all.
+ *   and prints no verdict at all;
+ * - the **frame-budget mark**, recomputed from the pooled median rather than
+ *   inherited from any one run.
  *
  * The runs must come from SEPARATE harness invocations. Repeating a matrix
  * inside one process shares JIT and heap state across the repetitions and
@@ -253,6 +256,8 @@ const aggregateCell = (perRun: readonly ComparisonCell[], runCount: number): Agg
   const first = perRun[0]!;
   const references = perRun.map(cell => cell.referenceMs).filter(measured);
   const competitors = perRun.map(cell => cell.competitorMs).filter(measured);
+  const referenceP95s = perRun.map(cell => cell.referenceP95Ms).filter(measured);
+  const competitorP95s = perRun.map(cell => cell.competitorP95Ms).filter(measured);
   const rungs = perRun.map(cell => verdictRung(cell.verdict));
   const referenceMs = references.length > 0 ? median(references) : null;
   const competitorMs = competitors.length > 0 ? median(competitors) : null;
@@ -262,7 +267,18 @@ const aggregateCell = (perRun: readonly ComparisonCell[], runCount: number): Agg
   return {
     competitor: first.competitor,
     referenceMs,
+    // The p95 is pooled the way the median is - the median of the per-run p95s -
+    // so one run's worst window cannot set it either. It is a tail statistic
+    // pooled across runs, not a tail across the pooled samples, which no
+    // published artifact retains.
+    referenceP95Ms: referenceP95s.length > 0 ? median(referenceP95s) : null,
+    // Recomputed from the POOLED median rather than carried over from a run: the
+    // published number is the one the mark has to describe, and a run's own mark
+    // can disagree with it near the line.
+    referenceOverFrameBudget: exceedsFrameBudget(referenceMs),
     competitorMs,
+    competitorP95Ms: competitorP95s.length > 0 ? median(competitorP95s) : null,
+    competitorOverFrameBudget: exceedsFrameBudget(competitorMs),
     verdict: stable ? pooled : UNSTABLE_VERDICT,
     mechanism: first.mechanism,
     aggregate: {
@@ -293,8 +309,26 @@ const groupBy = <T>(values: readonly T[], key: (value: T) => string): Map<string
   return groups;
 };
 
-const aggregateRow = (perRun: readonly ComparisonRow[], runCount: number): AggregatedRow => {
+/**
+ * Pool one archetype's row across the runs that produced it.
+ *
+ * The runs have to agree on the row's count. Each run picks it from the
+ * archetype's ladder and lowers it only when some arm failed to produce a valid
+ * cell, so a disagreement means the runs measured different scenes - and pooling
+ * their medians would publish a number belonging to neither at a size only some
+ * of them used.
+ */
+const aggregateRow = (perRun: readonly ComparisonRow[], runCount: number, domain: string): AggregatedRow => {
   const first = perRun[0]!;
+  const counts = [...new Set(perRun.map(row => row.count))];
+
+  if (counts.length > 1) {
+    throw new IncomparableRunsError(
+      domain,
+      `${domain} runs measured '${first.archetype}' at different counts (${counts.map(String).join(', ')}), so their medians describe different scenes. Re-measure: a row's count only moves when an arm failed to produce a valid cell.`,
+    );
+  }
+
   const cells = groupBy(
     perRun.flatMap(row => row.cells),
     cell => cell.competitor,
@@ -303,14 +337,15 @@ const aggregateRow = (perRun: readonly ComparisonRow[], runCount: number): Aggre
   return { archetype: first.archetype, category: first.category, count: first.count, cells: [...cells.values()].map(group => aggregateCell(group, runCount)) };
 };
 
-const aggregateRows = (perRun: ReadonlyArray<readonly ComparisonRow[]>, runCount: number): readonly AggregatedRow[] =>
-  [...groupBy(perRun.flat(), row => row.archetype).values()].map(group => aggregateRow(group, runCount));
+const aggregateRows = (perRun: ReadonlyArray<readonly ComparisonRow[]>, runCount: number, domain: string): readonly AggregatedRow[] =>
+  [...groupBy(perRun.flat(), row => row.archetype).values()].map(group => aggregateRow(group, runCount, domain));
 
-const aggregateSection = (perRun: readonly ComparisonSection[], runCount: number): AggregatedSection => ({
+const aggregateSection = (perRun: readonly ComparisonSection[], runCount: number, domain: string): AggregatedSection => ({
   title: perRun[0]!.title,
   rows: aggregateRows(
     perRun.map(section => section.rows),
     runCount,
+    domain,
   ),
 });
 
@@ -342,7 +377,7 @@ const aggregateBackend = (perRun: readonly BackendComparison[], runCount: number
       perRun.flatMap(block => block.sections),
       section => section.title,
     ).values(),
-  ].map(group => aggregateSection(group, runCount));
+  ].map(group => aggregateSection(group, runCount, domain));
 
   return {
     backend: first.backend,
@@ -353,6 +388,7 @@ const aggregateBackend = (perRun: readonly BackendComparison[], runCount: number
     webgl1: aggregateRows(
       perRun.map(block => block.webgl1),
       runCount,
+      domain,
     ),
   };
 };
@@ -436,6 +472,7 @@ export const aggregatePhysicsRuns = (runs: readonly PhysicsReportData[]): Aggreg
     section: aggregateSection(
       runs.map(run => buildPhysicsComparison(run.results)),
       runs.length,
+      'physics',
     ),
   };
 };
