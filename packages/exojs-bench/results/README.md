@@ -142,10 +142,10 @@ pnpm bench:compare -- \
   --profile
 ```
 
-The harness scripts live in `packages/exojs-bench` and are run from there: the
-root `pnpm bench` is the engine's own micro-benchmark suite, not this harness.
-The `--` separates the harness's flags from pnpm's own, and output directories
-are relative to the package.
+The harness scripts live in `packages/exojs-bench`; the root `pnpm bench` forwards
+to the same harness, while `bench:compare` is run from the package. The `--`
+separates the harness's flags from pnpm's own, and output directories are
+relative to the package either way.
 
 `--rendering` and `--physics` are repeatable, once per run, in run order. Repeat
 the same three-run pattern for `--domain=physics` and pass both sets to one

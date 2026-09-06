@@ -52,7 +52,7 @@ import { createWebGl2Harness } from './harness';
  * slice DELIBERATELY changes allocation, and record the reason next to the
  * number the way the entries below do.
  *
- * The standalone `pnpm perf:renderers:alloc` launcher measures the same scenes
+ * The standalone `pnpm perf renderers:alloc` launcher measures the same scenes
  * the same way and is source-accurate too (it passes `--conditions=@codexo/exojs-source`,
  * so `#*` resolves to `src`, not a `dist` build). It reports ONE window per
  * scene rather than a median, and it additionally covers the nine-slice /

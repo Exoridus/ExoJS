@@ -4,10 +4,10 @@
  * repeating, tilemap), and writes the numbers to the perf output directory,
  * printing the resolved path on completion.
  *
- *   pnpm perf:renderers:alloc                 # gate archetypes + extra families
- *   pnpm perf:renderers:alloc --reference     # ...plus the 1M scrolling-world stage
+ *   pnpm perf renderers:alloc                 # gate archetypes + extra families
+ *   pnpm perf renderers:alloc --reference     # ...plus the 1M scrolling-world stage
  *
- * SOURCE-ACCURATE. The `perf:renderers:alloc` script passes
+ * SOURCE-ACCURATE. The `perf renderers:alloc` run passes
  * `--conditions=@codexo/exojs-source` (so the `#*` imports resolve to `src`, NOT to a
  * `dist` build) and `--import ./scripts/glsl-register.ts` - a node ESM loader
  * hook that loads `.vert`/`.frag` as source text (the node/tsx counterpart of the

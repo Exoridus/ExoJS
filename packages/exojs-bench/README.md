@@ -203,8 +203,8 @@ matrix cell; both share the harness's page, server and launch flags so their
 numbers are produced under the same conditions.
 
 ```sh
-pnpm perf:webgpu:stall   # per-frame selection/capacity/upload/allocation counters
-pnpm perf:webgpu:timer   # per-frame timer methodology: raw vs attributed queue
+pnpm perf webgpu:alloc   # per-frame allocation, wall-clock or work-unit counters, one browser per cell
+pnpm perf webgpu:timer   # per-frame timer methodology: raw vs attributed queue
                          # latency vs hardware timestamps, plus serialized /
                          # canvas-clear / offscreen-clear control arms and the
                          # clock + scheduler controls behind the floor above
@@ -405,8 +405,8 @@ pnpm --filter @codexo/exojs-bench bench \
 No `--` separator is needed with `pnpm --filter …`; pnpm forwards these straight
 to the script. Running the same script from inside `packages/exojs-bench`
 (`pnpm bench -- --out=…`) works too, and `--out` is then relative to the package
-directory either way. The root `pnpm bench` is a different thing entirely — the
-engine's own `vitest bench` micro-benchmarks — and there is no root
+directory either way. The root `pnpm bench` forwards here as well; the engine's
+own `vitest bench` micro-benchmarks are `pnpm bench:micro`, and there is no root
 `bench:compare`.
 
 The run writes `results.json`, `results.csv` and `results.md` into `--out`
