@@ -123,7 +123,7 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
 
   protected onDisconnect(): void {
     this.flush();
-    this.shader.disconnect();
+    this.shader.destroy();
 
     this.indexBuffer?.destroy();
     this.indexBuffer = null;

@@ -685,8 +685,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   }
 
   protected onDisconnect(): void {
-    this._shader.disconnect();
-    this._indexedShader.disconnect();
+    this._shader.destroy();
+    this._indexedShader.destroy();
     this._indexedVao?.destroy();
     this._indexedVao = null;
 
