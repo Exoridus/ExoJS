@@ -8,14 +8,86 @@ import type { PhysicsArchetypeSpec, PhysicsArmIdentity, PhysicsCellSpec, Physics
 export const STEP_DELTA = 1 / 60;
 
 /**
- * Dynamic-body counts swept per archetype. Capped in the low thousands on
- * purpose: `@codexo/exojs-physics`'s broad phase is a stateless O(n log n)
- * sort-and-sweep (no spatial hash), so tens of thousands of simultaneously-live
- * colliders leave the node-scaling regime this benchmark measures. Three
- * geometric steps are enough to fit a slope and spot a knee without an
- * exhaustive matrix.
+ * Body-count ladders, one per archetype.
+ *
+ * Each ladder STRADDLES the 60 fps frame - see
+ * {@link '../shared/frameBudget'.FRAME_BUDGET_MS} - with two rungs inside it and
+ * one past it, so a reader sees both the slope and the point where the archetype
+ * stops being viable, instead of extrapolating from three rungs that all sit on
+ * one side of the line.
+ *
+ * The rungs are derived from that archetype's own measured per-step cost,
+ * because the archetypes differ by nearly an order of magnitude in bodies per
+ * frame: `many-dynamic` reaches the frame at 2200 bodies and `joints` not until
+ * 15000. A single shared ladder cannot serve both - it spends most of its rungs
+ * on scenes nobody could ship for the expensive archetypes and never reaches the
+ * interesting region for the cheap ones.
+ *
+ * Rung counts stay at three: enough to fit a slope and spot a knee, and a cell's
+ * wall clock grows faster than its body count.
+ *
+ * Two consequences worth knowing:
+ *
+ * - {@link seedFor} folds the body count in, so a rung that moves is a DIFFERENT
+ *   scene. Numbers measured at an earlier ladder are not comparable with these,
+ *   and no conversion exists between them.
+ * - An archetype read as a delta against another one must share a rung with it,
+ *   or the two rows never simulate the same world and no delta can be taken.
+ *
+ * Each ladder below states the per-step medians that placed it, taken on a
+ * Ryzen 7 3700X under Chromium with the native arm measured on its own over a
+ * thin timed window. They locate the frame crossing; they are not themselves a
+ * published measurement, and a reportable run pools full matrices instead.
  */
-const BODY_COUNTS = [200, 1_000, 4_000] as const;
+
+/** `box-stack`: 4.05 ms at 3000 bodies, 9.02 ms at 5500, 18.88 ms at 10000. */
+const BOX_STACK_COUNTS = [3_000, 5_500, 10_000] as const;
+
+/**
+ * `many-dynamic`: 4.57 ms at 800 bodies, 10.59 ms at 1500, 17.31 ms at 2200 -
+ * the most expensive layout per body in the matrix, and the reason a shared
+ * ladder cannot work: at the count `joints` needs to reach the same frame it
+ * would be six times over it.
+ */
+const MANY_DYNAMIC_COUNTS = [800, 1_500, 2_200] as const;
+
+/**
+ * `mixed-static-dynamic` and `raycast` share one ladder, because `raycast` is
+ * read as a delta against the mixed scene and a delta needs a common body count.
+ * One ladder straddles both: the mixed scene costs 4.08 / 8.51 / 17.17 ms across
+ * these rungs, the ray-casting one 6.48 / 12.40 / 19.80 ms.
+ */
+const MIXED_COUNTS = [900, 1_700, 3_200] as const;
+
+/**
+ * `body-churn`: 2.67 ms at 800 bodies, 9.14 ms at 1500, 18.99 ms at 2400. Shares
+ * 800 and 1500 with {@link MANY_DYNAMIC_COUNTS}, so the churn delta against
+ * `many-dynamic` stays readable, and reaches past the frame on a rung of its own.
+ */
+const BODY_CHURN_COUNTS = [800, 1_500, 2_400] as const;
+
+/**
+ * `joints`: 6.28 ms at 4500 bodies, 10.52 ms at 9000, 17.44 ms at 15000 - the
+ * cheapest archetype per body by a wide margin, because a chain scene has few
+ * contacts and its cost is constraint solving rather than broad phase. Reaching
+ * the frame therefore takes an order of magnitude more bodies than the
+ * contact-bound archetypes need, which is itself the finding.
+ *
+ * It is the one ladder that leaves the low thousands, and it can:
+ * `@codexo/exojs-physics` runs a stateless O(n log n) sort-and-sweep broad phase
+ * with no spatial hash, so counts this high would leave the regime the matrix
+ * measures in a DENSE scene - a field of hanging chains is not one.
+ */
+const JOINTS_COUNTS = [4_500, 9_000, 15_000] as const;
+
+/**
+ * `settling-pile`: 3.04 ms at 1500 bodies, 8.43 ms at 3000, 17.23 ms at 5800 -
+ * cheap for its size once the pile sleeps, which is why it needs nearly three
+ * times `many-dynamic`'s bodies to cost the same frame. Shares 1500 with
+ * {@link MANY_DYNAMIC_COUNTS}, so the sleeping delta against `many-dynamic` is
+ * still taken on a shared world.
+ */
+const SETTLING_PILE_COUNTS = [1_500, 3_000, 5_800] as const;
 
 /**
  * The physics archetypes. Kept to three representative scenes (review-note
@@ -29,9 +101,9 @@ const BODY_COUNTS = [200, 1_000, 4_000] as const;
  *   onto it: the common game mix of immovable level + active bodies.
  */
 export const PHYSICS_ARCHETYPES: readonly PhysicsArchetypeSpec[] = [
-  { id: 'box-stack', scene: 'box-stack', bodyCounts: BODY_COUNTS, gravity: { x: 0, y: 1_000 }, perturbFraction: 0 },
-  { id: 'many-dynamic', scene: 'many-dynamic', bodyCounts: BODY_COUNTS, gravity: { x: 0, y: 300 }, perturbFraction: 1 },
-  { id: 'mixed-static-dynamic', scene: 'mixed-static-dynamic', bodyCounts: BODY_COUNTS, gravity: { x: 0, y: 1_000 }, perturbFraction: 0 },
+  { id: 'box-stack', scene: 'box-stack', bodyCounts: BOX_STACK_COUNTS, gravity: { x: 0, y: 1_000 }, perturbFraction: 0 },
+  { id: 'many-dynamic', scene: 'many-dynamic', bodyCounts: MANY_DYNAMIC_COUNTS, gravity: { x: 0, y: 300 }, perturbFraction: 1 },
+  { id: 'mixed-static-dynamic', scene: 'mixed-static-dynamic', bodyCounts: MIXED_COUNTS, gravity: { x: 0, y: 1_000 }, perturbFraction: 0 },
   // QUERY THROUGHPUT. Simulates the `mixed-static-dynamic` scene unchanged and
   // additionally casts `raysPerStep` rays through it, so the delta between the
   // two rows is query cost with the solver held fixed - the acceleration
@@ -42,7 +114,7 @@ export const PHYSICS_ARCHETYPES: readonly PhysicsArchetypeSpec[] = [
   // smallest body count they are a minority of the step, at the largest a
   // measurable fraction. The rays sweep the world rather than repeating one path,
   // so no arm can answer them out of a single cached traversal.
-  { id: 'raycast', scene: 'mixed-static-dynamic', bodyCounts: BODY_COUNTS, gravity: { x: 0, y: 1_000 }, perturbFraction: 0, raysPerStep: 64 },
+  { id: 'raycast', scene: 'mixed-static-dynamic', bodyCounts: MIXED_COUNTS, gravity: { x: 0, y: 1_000 }, perturbFraction: 0, raysPerStep: 64 },
   // STRUCTURAL CHURN, the physics counterpart of the rendering `lifecycle-churn`.
   // Simulates the `many-dynamic` scene and destroys plus rebuilds 5 % of its
   // dynamic bodies every step, which forces the broad-phase structure to be
@@ -53,7 +125,11 @@ export const PHYSICS_ARCHETYPES: readonly PhysicsArchetypeSpec[] = [
   // differs from `many-dynamic` in one field. `perturbFraction` is 0.05 rather
   // than `many-dynamic`'s 1: churning every body per step would rebuild the whole
   // world each step and measure construction, not the broad phase.
-  { id: 'body-churn', scene: 'many-dynamic', bodyCounts: BODY_COUNTS, gravity: { x: 0, y: 300 }, perturbFraction: 0.05, churn: true },
+  //
+  // Its ladder shares 800 and 1500 with `many-dynamic`, which is what keeps the
+  // delta takeable: `seedFor` keys on the scene and the body count, so the two
+  // rows only simulate the same world at a count both ladders contain.
+  { id: 'body-churn', scene: 'many-dynamic', bodyCounts: BODY_CHURN_COUNTS, gravity: { x: 0, y: 300 }, perturbFraction: 0.05, churn: true },
   // CONSTRAINT CHAINS. The only archetype with joints, and the only one whose
   // cost is dominated by constraint solving rather than by contacts: chains of 8
   // bodies hanging from static anchors, each link a revolute joint, so the solver
@@ -64,7 +140,7 @@ export const PHYSICS_ARCHETYPES: readonly PhysicsArchetypeSpec[] = [
   // propagate tension to the free end (which is the behaviour worth comparing)
   // and short enough that every arm remains stable at its own default iteration
   // count.
-  { id: 'joints', scene: 'joint-chains', bodyCounts: BODY_COUNTS, gravity: { x: 0, y: 1_000 }, perturbFraction: 0, jointChainLength: 8 },
+  { id: 'joints', scene: 'joint-chains', bodyCounts: JOINTS_COUNTS, gravity: { x: 0, y: 1_000 }, perturbFraction: 0, jointChainLength: 8 },
   // SLEEPING VISIBILITY. Simulates the `many-dynamic` scene unchanged - same
   // layout, same perturbed impulses, same seed (`seedFor` keys on scene, not
   // archetype) - except its dynamic bodies get a resting material (nonzero
@@ -78,7 +154,9 @@ export const PHYSICS_ARCHETYPES: readonly PhysicsArchetypeSpec[] = [
   // perturbed impulse dissipates into the floor and walls and the pile comes
   // to rest, which is the one condition under which sleeping is observable at
   // all: falling contact counts and falling step time on an arm that sleeps,
-  // and neither on one that does not.
+  // and neither on one that does not. Its ladder shares the 1500-body rung with
+  // `many-dynamic`, which is the count at which the two rows simulate the
+  // identical world and the sleeping difference is the only thing between them.
   //
   // It also needs materially more warmup than the shared `warmupStepsFor`
   // schedule gives every other archetype. Every dynamic body starts with a
@@ -92,18 +170,22 @@ export const PHYSICS_ARCHETYPES: readonly PhysicsArchetypeSpec[] = [
   // arrival re-triggers a brief wake across the whole pile around step
   // 690-730 before it goes back to sleep for good by step 750. Warming only
   // to the shared schedule would time that unsettled transition - neither
-  // this archetype's steady state nor `many-dynamic`'s - so `warmupStepsOverride`
-  // gives each body count its own budget, set with headroom past the last
-  // observed wake: 360 (n=200), 900 (n=1000, clearing the ~730 re-wake), 720
-  // (n=4000).
+  // this archetype's steady state nor `many-dynamic`'s.
+  //
+  // The last-observed wake does not track the body count - the latest one
+  // belongs to the middle count, not the largest - so a per-rung budget fitted
+  // to n would be fitting noise. Every rung therefore carries 900, the largest
+  // budget any directly observed count needed. Over-warming costs wall clock
+  // and nothing else; under-warming times a transient and publishes it as a
+  // steady state.
   {
     id: 'settling-pile',
     scene: 'many-dynamic',
-    bodyCounts: BODY_COUNTS,
+    bodyCounts: SETTLING_PILE_COUNTS,
     gravity: { x: 0, y: 300 },
     perturbFraction: 1,
     dynamicMaterial: { friction: 0.5, restitution: 0 },
-    warmupStepsOverride: { 200: 360, 1_000: 900, 4_000: 720 },
+    warmupStepsOverride: { 1_500: 900, 3_000: 900, 5_800: 900 },
   },
 ];
 
