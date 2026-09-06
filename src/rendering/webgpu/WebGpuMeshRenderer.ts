@@ -4,7 +4,7 @@ import { Matrix } from '#math/Matrix';
 import { packAffineMat3Std140 } from '#rendering/affinePacking';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
-import type { Material } from '#rendering/material/Material';
+import type { AnyMaterial } from '#rendering/material/Material';
 import type { MeshIndexArray, MeshIndexFormat } from '#rendering/mesh/indices';
 import { createIndexArray, meshIndexBytes } from '#rendering/mesh/indices';
 import type { Mesh } from '#rendering/mesh/Mesh';
@@ -15,6 +15,7 @@ import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { Texture as TextureClass } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
+import { materialUniformGroup } from '#rendering/uniforms/uniformLayout';
 import type { View } from '#rendering/View';
 
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
@@ -30,17 +31,17 @@ import instancedMeshShaderSourceModule from './shaders/mesh-instanced.wgsl';
 import { packSnapViewport } from './snapViewport';
 import { stencilContentDepthStencilState } from './stencilState';
 import {
+  addUserUniformBuffersInPass,
   applyUserUniformUpload,
-  collectScalarUniforms,
   collectTextureBindings,
   createUserUniformState,
-  packUserUniforms,
+  destroyUserUniformBuffers,
   planUserUniformUpload,
   resetUserUniformState,
   resolveUserUniformBindGroup,
-  userUniformBufferBytes,
+  userUniformLayoutEntries,
   type UserUniformState,
-  type UserUniformUpload,
+  userUniformWriteWouldAlias,
 } from './userUniforms';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { WebGpuPassArena } from './WebGpuPassArena';
@@ -85,7 +86,7 @@ const customMeshUniformBytes = 112;
 
 interface MeshDrawCall {
   readonly mesh: Mesh;
-  readonly customShader: Material | null;
+  readonly customShader: AnyMaterial | null;
   readonly command: DrawCommand | null;
   readonly blendMode: BlendModes;
   readonly texture: Texture | RenderTexture;
@@ -191,8 +192,6 @@ interface CustomShaderResources {
   meshUniformBindGroup: GPUBindGroup | null;
   // User-uniform UBO: buffer reused across frames; the persistent scratch +
   // cached user bind group re-upload/rebuild only on an actual change.
-  userUniformBuffer: GPUBuffer | null;
-  userUniformBufferCapacity: number;
   userUniform: UserUniformState;
   // Mesh texture bind group cache keyed by texture identity, paired with the
   // texture view it was built from so a mutable texture (DataTexture content
@@ -293,7 +292,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   private readonly _instancedPipelines = new Map<string, GPURenderPipeline>();
   private readonly _geometryCache = new Map<Geometry, GeometryCacheEntry>();
   private _textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView }>();
-  private readonly _customShaders = new Map<Material, CustomShaderResources>();
+  private readonly _customShaders = new Map<AnyMaterial, CustomShaderResources>();
 
   private _device: GPUDevice | null = null;
   private _shaderModule: GPUShaderModule | null = null;
@@ -363,8 +362,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   private _defaultUniformStaging: ArrayBuffer = new ArrayBuffer(0);
   private _defaultUniformStagingF32: Float32Array = new Float32Array(0);
   /** Reused per-flush cursors for the custom-material paths - see `flush`. */
-  private readonly _customVertexCursors = new Map<Material, number>();
-  private readonly _customIndexCursors = new Map<Material, number>();
+  private readonly _customVertexCursors = new Map<AnyMaterial, number>();
+  private readonly _customIndexCursors = new Map<AnyMaterial, number>();
   private _float32View: Float32Array = new Float32Array(this._vertexData);
   private _uint32View: Uint32Array = new Uint32Array(this._vertexData);
   private _indexStaging: ArrayBuffer = new ArrayBuffer(0);
@@ -381,7 +380,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     const customShader = mesh.material;
 
-    if (customShader !== null && customShader.shader.wgsl === null) {
+    if (customShader !== null && customShader.shader._resolveWgsl(materialUniformGroup) === null) {
       throw new Error('Mesh material shader has no `wgsl` source; cannot render through the WebGPU backend.');
     }
 
@@ -487,7 +486,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const resources = material === null ? null : this._getOrCreateCustomShaderResources(material);
     // Packed, not uploaded: the write is a hazard against draws already in the
     // pass, so it has to be decided before anything below is recorded.
-    const uniformPlan = resources === null ? null : planUserUniformUpload(material!, resources, device, 'mesh:material-user-uniform-buffer');
+    if (resources !== null) {
+      planUserUniformUpload(material!, resources, device, 'mesh:material-user-uniform-buffer');
+    }
 
     const maxNodeIndex = (startNodeIndex + count - 1) >>> 0;
     const nodeIndexBytes = count * Uint32Array.BYTES_PER_ELEMENT;
@@ -530,7 +531,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
           this._instancedNodeIndexWouldGrow(targetNodeIndexBytes) ||
           this._instancedUniformWouldGrow(targetUniformSlots) ||
           (attributeBytes > 0 && !this._instancedAttributeArena.fits(attributeBytes)) ||
-          (uniformPlan !== null && this._instancedBatchUniformWriteWouldAlias(uniformPlan))))
+          (resources !== null && userUniformWriteWouldAlias(resources.userUniform, this._instancedBatchUniformBuffersInPass))))
     ) {
       active = this._reopenInstancedBatchPass(backend);
     }
@@ -569,8 +570,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     } else {
       // Planned before the pass was settled; writes only when the material's
       // values actually changed since its last upload.
-      applyUserUniformUpload(uniformPlan!, resources, device);
-      this._instancedBatchUniformBuffersInPass.add(uniformPlan!.buffer);
+      applyUserUniformUpload(material!, resources, device);
+      addUserUniformBuffersInPass(resources.userUniform, this._instancedBatchUniformBuffersInPass);
 
       pass.setPipeline(this._getOrCreateCustomInstancedPipeline(resources, blendMode, renderTargetFormat, stencil, instances));
       pass.setBindGroup(1, this._getOrCreateMeshTextureBindGroup(resources, backend, texture, material!.sampler));
@@ -639,19 +640,6 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     this._syncInstancedBatchPass(active);
 
     return active;
-  }
-
-  /**
-   * Whether this batch's planned user-uniform write would land on a buffer a
-   * draw already recorded into the open pass reads. A buffer being replaced
-   * counts too: the apply step destroys the outgrown one.
-   */
-  private _instancedBatchUniformWriteWouldAlias(upload: UserUniformUpload): boolean {
-    if (upload.staleBuffer !== null && this._instancedBatchUniformBuffersInPass.has(upload.staleBuffer)) {
-      return true;
-    }
-
-    return upload.writes && this._instancedBatchUniformBuffersInPass.has(upload.buffer);
   }
 
   public flush(): void {
@@ -909,13 +897,13 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // stencil-enabled variants to match it.
     const stencil = backend._passCoordinator.stencilActive;
 
-    let lastShader: Material | 'default' | 'instanced' | null = null;
+    let lastShader: AnyMaterial | 'default' | 'instanced' | null = null;
     let lastBlendMode: BlendModes | null = null;
     let lastFormat: GPUTextureFormat | null = null;
     let lastTexture: Texture | RenderTexture | null = null;
     let defaultDrawCursor = 0;
     let instancedDrawCursor = 0;
-    const customDrawCursors = new Map<Material, number>();
+    const customDrawCursors = new Map<AnyMaterial, number>();
 
     for (let i = 0; i < this._drawCallCount; i++) {
       // i < _drawCallCount, and slots 0.._drawCallCount-1 are always populated.
@@ -1062,9 +1050,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         // pass stays open - which it now does past the end of this flush. A
         // later `drawInstancedBatch` with the same material consults exactly
         // this set before writing that buffer.
-        if (resources.userUniformBuffer !== null) {
-          this._instancedBatchUniformBuffersInPass.add(resources.userUniformBuffer);
-        }
+        addUserUniformBuffersInPass(resources.userUniform, this._instancedBatchUniformBuffersInPass);
 
         if (dc.texture !== lastTexture) {
           lastTexture = dc.texture;
@@ -2332,7 +2318,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     }
   }
 
-  private _getOrCreateCustomShaderResources(material: Material): CustomShaderResources {
+  private _getOrCreateCustomShaderResources(material: AnyMaterial): CustomShaderResources {
     let resources = this._customShaders.get(material);
     if (resources !== undefined) {
       return resources;
@@ -2342,14 +2328,16 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       throw new Error('WebGpuMeshRenderer is not connected to a backend.');
     }
 
-    if (material.shader.wgsl === null) {
+    const wgsl = material.shader._resolveWgsl(materialUniformGroup);
+
+    if (wgsl === null) {
       throw new Error('Mesh material shader has no `wgsl` source; cannot render through the WebGPU backend.');
     }
 
     const device = this._device;
     // Routed through the backend so WGSL compilation errors in user-supplied
     // material shaders surface via backend.onRenderError.
-    const shaderModule = this.getBackend()._createShaderModule(material.shader.wgsl, 'mesh:material-shader');
+    const shaderModule = this.getBackend()._createShaderModule(wgsl, 'mesh:material-shader');
 
     const meshUniformLayout = device.createBindGroupLayout({
       label: 'mesh:material-bind-group-layout:uniform',
@@ -2409,8 +2397,6 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       meshUniformBuffer: null,
       meshUniformBufferCapacity: 0,
       meshUniformBindGroup: null,
-      userUniformBuffer: null,
-      userUniformBufferCapacity: 0,
       userUniform: createUserUniformState(),
       meshTextureBindGroups: new WeakMap(),
       drawCount: 0,
@@ -2512,7 +2498,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     }
   }
 
-  private _writeCustomMeshUniform(_material: Material, resources: CustomShaderResources, drawCursor: number, mesh: Mesh, backend: WebGpuBackend): void {
+  private _writeCustomMeshUniform(_material: AnyMaterial, resources: CustomShaderResources, drawCursor: number, mesh: Mesh, backend: WebGpuBackend): void {
     // Layout: mat3x3 projection (48B) + mat3x3 translation (48B) + vec4 tint (16B) = 112B.
     // WGSL mat3x3 stores 3 vec3 columns padded to vec4 alignment.
     const slotBytes = meshUniformAlignment;
@@ -2613,7 +2599,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     resources: CustomShaderResources,
     backend: WebGpuBackend,
     texture: Texture | RenderTexture,
-    samplerOverride: Material['sampler'],
+    samplerOverride: AnyMaterial['sampler'],
   ): GPUBindGroup {
     // Always resolve the binding so a mutable base texture uploads its dirty
     // region before sampling; reuse the cached group only while the view holds.
@@ -2638,105 +2624,45 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     return group;
   }
 
-  private _buildUserBindGroupLayout(device: GPUDevice, material: Material): GPUBindGroupLayout {
-    const entries: GPUBindGroupLayoutEntry[] = [];
-
-    // Binding 0 always reserved for the user UBO (even if empty), so the
-    // bind-group layout is stable across user-uniform mutations.
-    entries.push({
-      binding: 0,
-      visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-      buffer: { type: 'uniform' },
-    });
-
+  private _buildUserBindGroupLayout(device: GPUDevice, material: AnyMaterial): GPUBindGroupLayout {
     const textureBindings = collectTextureBindings(material);
 
     if (textureBindings.length > maxCustomTextureSlots) {
       throw new Error(`Mesh material requested more than ${maxCustomTextureSlots} user texture bindings.`);
     }
 
-    let bindingIndex = 1;
-
-    for (let t = 0; t < textureBindings.length; t++) {
-      entries.push({
-        binding: bindingIndex,
-        visibility: GPUShaderStage.FRAGMENT,
-        texture: { sampleType: 'float' },
-      });
-      bindingIndex++;
-      entries.push({
-        binding: bindingIndex,
-        visibility: GPUShaderStage.FRAGMENT,
-        sampler: { type: 'filtering' },
-      });
-      bindingIndex++;
-    }
-
-    return device.createBindGroupLayout({ label: 'mesh:material-bind-group-layout:user', entries });
+    return device.createBindGroupLayout({
+      label: 'mesh:material-bind-group-layout:user',
+      entries: userUniformLayoutEntries(material, textureBindings.length),
+    });
   }
 
-  private _uploadUserUniforms(material: Material, resources: CustomShaderResources): void {
+  private _uploadUserUniforms(material: AnyMaterial, resources: CustomShaderResources): void {
     const device = this._device!;
-    const scalarValues = collectScalarUniforms(material);
 
-    // Always keep a UBO (even if empty) since binding 0 of the user layout is
-    // fixed. Min size 16 bytes to satisfy WebGPU's minimum buffer size. The
-    // buffer is reused across frames - only (re)created on capacity growth.
-    const bufferBytes = userUniformBufferBytes(scalarValues.length);
-    let forceWrite = false;
-
-    if (resources.userUniformBuffer === null || resources.userUniformBufferCapacity < bufferBytes) {
-      resources.userUniformBuffer?.destroy();
-      resources.userUniformBufferCapacity = bufferBytes;
-      resources.userUniformBuffer = device.createBuffer({
-        label: 'mesh:material-user-uniform-buffer',
-        size: bufferBytes,
-        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-      });
-      // A fresh buffer holds undefined contents and voids any bind group that
-      // referenced the old identity.
-      forceWrite = true;
-      resources.userUniform.bindGroup = null;
-      resources.userUniform.bindGroupBuffer = null;
-    }
-
-    // Pack into the reused scratch and upload only when the values changed.
-    if (packUserUniforms(scalarValues, resources.userUniform, forceWrite)) {
-      const data = resources.userUniform.data;
-
-      device.queue.writeBuffer(resources.userUniformBuffer, 0, data.buffer, data.byteOffset, bufferBytes);
-    }
+    planUserUniformUpload(material, resources, device, 'mesh:material-user-uniform-buffer');
+    applyUserUniformUpload(material, resources, device);
   }
 
-  private _getUserBindGroup(backend: WebGpuBackend, material: Material, resources: CustomShaderResources): GPUBindGroup {
-    return resolveUserUniformBindGroup(
-      this._device!,
-      backend,
-      material,
-      resources.userLayout,
-      'mesh:material-user-bind-group',
-      resources.userUniformBuffer!,
-      resources.userUniform,
-    );
+  private _getUserBindGroup(backend: WebGpuBackend, material: AnyMaterial, resources: CustomShaderResources): GPUBindGroup {
+    return resolveUserUniformBindGroup(this._device!, backend, material, resources.userLayout, 'mesh:material-user-bind-group', resources.userUniform);
   }
 
   private _releaseCustomShaderResources(resources: CustomShaderResources): void {
     resources.vertexBuffer?.destroy();
     resources.indexBuffer?.destroy();
     resources.meshUniformBuffer?.destroy();
-    resources.userUniformBuffer?.destroy();
+    destroyUserUniformBuffers(resources.userUniform);
     resources.pipelines.clear();
     resources.instancedPipelines.clear();
     resources.meshTextureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView; sampler: GPUSampler }>();
     resources.vertexBuffer = null;
     resources.indexBuffer = null;
     resources.meshUniformBuffer = null;
-    resources.userUniformBuffer = null;
     resources.meshUniformBindGroup = null;
     resources.vertexBufferCapacity = 0;
     resources.indexBufferCapacity = 0;
     resources.meshUniformBufferCapacity = 0;
-    resources.userUniformBufferCapacity = 0;
     resetUserUniformState(resources.userUniform);
   }
 }

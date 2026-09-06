@@ -1,3 +1,5 @@
+import type { UniformBlockData } from '#rendering/uniforms/UniformBlockData';
+
 import type { ShaderAttribute } from './ShaderAttribute';
 import type { ShaderUniform } from './ShaderUniform';
 
@@ -32,6 +34,15 @@ export class Shader {
   public readonly attributes: Map<string, ShaderAttribute> = new Map<string, ShaderAttribute>();
   /** Uniform metadata populated by the backend after {@link connect}. */
   public readonly uniforms: Map<string, ShaderUniform> = new Map<string, ShaderUniform>();
+
+  /**
+   * Typed uniform blocks the owning material or filter supplies, in declaration
+   * order. Assign before {@link connect}: the backend binds each block to its
+   * declaration index and uploads it from the block's own buffer whenever the
+   * block's revision moves.
+   * @internal
+   */
+  public uniformBlockData: readonly UniformBlockData[] = [];
 
   private readonly _vertexSource: string;
   private readonly _fragmentSource: string;

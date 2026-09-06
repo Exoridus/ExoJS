@@ -1,3 +1,14 @@
+import type { UniformBlockRecord, UniformFields } from '#rendering/uniforms/uniformDeclarations';
+import type { UniformSchemaLayout } from '#rendering/uniforms/uniformLayout';
+import type { UniformSchemaOptions } from '#rendering/uniforms/uniformSchema';
+import { buildUniformSchemaLayout } from '#rendering/uniforms/uniformSchema';
+import {
+  generateGlslUniformDeclarations,
+  generateWgslUniformDeclarations,
+  withGlslUniformDeclarations,
+  withWgslUniformDeclarations,
+} from '#rendering/uniforms/uniformSource';
+
 /**
  * Construction options for {@link ShaderSource}.
  *
@@ -6,7 +17,10 @@
  * is compiled lazily on first use against the active backend; an
  * unsupported backend at draw time throws with a clear error.
  */
-export interface ShaderSourceOptions {
+export interface ShaderSourceOptions<
+  F extends UniformFields | undefined = undefined,
+  B extends UniformBlockRecord | undefined = undefined,
+> extends UniformSchemaOptions<F, B> {
   /**
    * GLSL ES 3.00 sources for the WebGL2 backend. `fragment` is required;
    * `vertex` may be omitted where the consumer owns the vertex stage - a
@@ -107,7 +121,7 @@ let nextShaderSourceId = 1;
  *   in declaration order, alongside its sampler at `@binding(N+1)`.
  * @advanced
  */
-export class ShaderSource {
+export class ShaderSource<const F extends UniformFields | undefined = undefined, const B extends UniformBlockRecord | undefined = undefined> {
   /**
    * GLSL sources for the WebGL2 backend, or `null` if not provided. `vertex`
    * is `null` when the author left the vertex stage to the consumer.
@@ -117,9 +131,24 @@ export class ShaderSource {
   /** WGSL source for the WebGPU backend, or `null` if not provided. */
   public readonly wgsl: string | null;
 
-  private readonly _id: number;
+  /**
+   * The canonical layout of the declared uniform blocks, or `null` for a source
+   * that manages its own uniform declarations.
+   */
+  public readonly uniformSchema: UniformSchemaLayout | null;
 
-  public constructor(options: ShaderSourceOptions) {
+  /** The implicit block's field declaration, as supplied. */
+  public readonly uniforms: F;
+
+  /** The named block declarations, as supplied. */
+  public readonly uniformBlocks: B;
+
+  private readonly _id: number;
+  private readonly _glslDeclarations: string | null;
+  private readonly _wgslByGroup = new Map<number, string>();
+  private _resolvedGlsl: { readonly vertex: string | null; readonly fragment: string } | null = null;
+
+  public constructor(options: ShaderSourceOptions<F, B>) {
     if (options.glsl === undefined && options.wgsl === undefined) {
       throw new Error('ShaderSource requires at least one of `glsl` or `wgsl`.');
     }
@@ -139,6 +168,10 @@ export class ShaderSource {
 
     this.glsl = options.glsl !== undefined ? { vertex: options.glsl.vertex ?? null, fragment: options.glsl.fragment } : null;
     this.wgsl = options.wgsl ?? null;
+    this.uniforms = options.uniforms as F;
+    this.uniformBlocks = options.uniformBlocks as B;
+    this.uniformSchema = buildUniformSchemaLayout(options.uniforms, options.uniformBlocks);
+    this._glslDeclarations = this.uniformSchema !== null ? generateGlslUniformDeclarations(this.uniformSchema) : null;
     this._id = nextShaderSourceId++;
   }
 
@@ -148,6 +181,56 @@ export class ShaderSource {
    */
   public get id(): number {
     return this._id;
+  }
+
+  /**
+   * The GLSL a backend compiles: {@link glsl} with the declared uniform blocks
+   * prepended, or {@link glsl} verbatim for a source without a schema. The
+   * declarations are inserted after the leading `#version`/`#extension` run.
+   * @internal
+   */
+  public _resolveGlsl(): { readonly vertex: string | null; readonly fragment: string } | null {
+    if (this.glsl === null) {
+      return null;
+    }
+
+    if (this._glslDeclarations === null) {
+      return this.glsl;
+    }
+
+    this._resolvedGlsl ??= {
+      vertex: this.glsl.vertex !== null ? withGlslUniformDeclarations(this.glsl.vertex, this._glslDeclarations) : null,
+      fragment: withGlslUniformDeclarations(this.glsl.fragment, this._glslDeclarations),
+    };
+
+    return this._resolvedGlsl;
+  }
+
+  /**
+   * The WGSL a backend compiles, with the declared blocks bound in `group`.
+   *
+   * The group is the consumer's, not the source's: a material's user uniforms
+   * live in `@group(2)` and a filter's in `@group(1)`, and the same source can
+   * legitimately be compiled for either.
+   * @internal
+   */
+  public _resolveWgsl(group: number): string | null {
+    if (this.wgsl === null) {
+      return null;
+    }
+
+    if (this.uniformSchema === null) {
+      return this.wgsl;
+    }
+
+    let resolved = this._wgslByGroup.get(group);
+
+    if (resolved === undefined) {
+      resolved = withWgslUniformDeclarations(this.wgsl, generateWgslUniformDeclarations(this.uniformSchema, group));
+      this._wgslByGroup.set(group, resolved);
+    }
+
+    return resolved;
   }
 
   /**

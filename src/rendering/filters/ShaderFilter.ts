@@ -4,6 +4,12 @@ import { RenderBackendType } from '#rendering/RenderBackendType';
 import { upgradeFragmentShaderToGl300 } from '#rendering/shader/upgradeFragmentShaderToGl300';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
+import type { UniformFieldAccessors } from '#rendering/uniforms/uniformAccessors';
+import type { UniformBlockData } from '#rendering/uniforms/UniformBlockData';
+import type { UniformBlockRecord, UniformFields, UniformStructInput } from '#rendering/uniforms/uniformDeclarations';
+import { filterUniformGroup } from '#rendering/uniforms/uniformLayout';
+import type { UniformBlockDataRecord, UniformBlockInitialValues } from '#rendering/uniforms/uniformSchema';
+import { createUniformBlockData, uniformBlockRecord } from '#rendering/uniforms/uniformSchema';
 
 import { Filter } from './Filter';
 import { ShaderFilterBackendError } from './ShaderFilterBackendError';
@@ -76,22 +82,69 @@ export interface ShaderFilterSourceOptions {
   readonly autoUpgrade?: boolean;
 }
 
+/**
+ * What {@link ShaderFilter.uniforms} exposes: typed accessors when the shader
+ * source declares `uniforms`, the read-only value record when it declares no
+ * schema, and nothing when it declares named blocks instead.
+ */
+export type ShaderFilterUniformsView<F, B> = F extends UniformFields
+  ? UniformFieldAccessors<F>
+  : B extends UniformBlockRecord
+    ? never
+    : Readonly<Record<string, ShaderFilterUniformValue>>;
+
+/** What {@link ShaderFilter.uniformBlocks} exposes for a named-block schema. */
+export type ShaderFilterBlocksView<B> = B extends UniformBlockRecord ? UniformBlockDataRecord<B> : never;
+
+/** Starting values accepted for the filter's declared uniforms. */
+export type ShaderFilterUniformValues<F, B> = F extends UniformFields
+  ? UniformStructInput<F>
+  : B extends UniformBlockRecord
+    ? never
+    : Record<string, ShaderFilterUniformValue>;
+
+/** A uniform name the raw path accepts; `never` once a schema is declared. */
+export type ShaderFilterRawUniformName<F, B> = F extends UniformFields ? never : B extends UniformBlockRecord ? never : string;
+
 /** Construction options for a {@link ShaderFilter}. */
-export interface ShaderFilterOptions extends ShaderFilterSourceOptions {
+export interface ShaderFilterOptions<
+  F extends UniformFields | undefined = undefined,
+  B extends UniformBlockRecord | undefined = undefined,
+> extends ShaderFilterSourceOptions {
   /**
    * A ready-made source pair, the way {@link Material} takes one. Takes the
    * place of {@link ShaderFilterSourceOptions.glsl}/{@link ShaderFilterSourceOptions.wgsl}
    * and is used verbatim - no default vertex stage is filled in, and no GLSL
    * upgrade is run.
    */
-  readonly shader?: ShaderSource;
+  readonly shader?: ShaderSource<F, B>;
 
   /**
-   * Initial uniform values. Update them at runtime through
-   * {@link ShaderFilter.setUniform} / {@link ShaderFilter.setUniforms}, which
-   * also invalidate the nodes rendering the filter.
+   * Starting values for the declared uniforms, or - on a source without a
+   * schema - the initial uniform record, updated at runtime through
+   * {@link ShaderFilter.setUniform} / {@link ShaderFilter.setUniforms}.
    */
-  readonly uniforms?: Record<string, ShaderFilterUniformValue>;
+  readonly uniforms?: ShaderFilterUniformValues<F, B>;
+
+  /** Starting values per named block, for a source declaring `uniformBlocks`. */
+  readonly uniformBlocks?: B extends UniformBlockRecord ? UniformBlockInitialValues<B> : never;
+
+  /**
+   * Textures bound after the uniform blocks, in declaration order, each
+   * followed by its sampler. Use this rather than texture-valued `uniforms`
+   * entries whenever the source declares a uniform schema.
+   */
+  readonly textures?: Record<string, Texture | RenderTexture>;
+}
+
+/**
+ * What a filter pass binds, owned by the filter and read live on every draw.
+ * @internal
+ */
+export interface ShaderFilterBindings {
+  readonly uniforms: Readonly<Record<string, ShaderFilterUniformValue>>;
+  readonly blocks: readonly UniformBlockData[];
+  readonly textures: Readonly<Record<string, Texture | RenderTexture>>;
 }
 
 /**
@@ -249,44 +302,73 @@ export const createFilterShaderSource = (options: ShaderFilterSourceOptions): Sh
  * other one - before it compiles or allocates anything.
  * @stable
  */
-export class ShaderFilter extends Filter {
+export class ShaderFilter<F extends UniformFields | undefined = undefined, B extends UniformBlockRecord | undefined = undefined> extends Filter {
   /**
    * Build a filter from an existing {@link ShaderSource}, so one source can back
    * several filters. The source must already carry complete sources per language
    * - no default vertex stage is filled in.
    */
-  public static from(source: ShaderSource, options?: { readonly uniforms?: Record<string, ShaderFilterUniformValue> }): ShaderFilter {
-    return new ShaderFilter({ shader: source, ...(options?.uniforms !== undefined ? { uniforms: options.uniforms } : {}) });
+  public static from<F extends UniformFields | undefined, B extends UniformBlockRecord | undefined>(
+    source: ShaderSource<F, B>,
+    options?: Omit<ShaderFilterOptions<F, B>, 'shader' | 'glsl' | 'wgsl' | 'autoUpgrade'>,
+  ): ShaderFilter<F, B> {
+    return new ShaderFilter<F, B>({ shader: source, ...options });
   }
 
   private readonly _uniforms: Record<string, ShaderFilterUniformValue>;
-  private readonly _shader: ShaderSource;
+  private readonly _shader: ShaderSource<F, B>;
+  private readonly _bindings: ShaderFilterBindings;
+  private readonly _uniformsView: unknown;
+  private readonly _uniformBlocksView: unknown;
 
   private _glslPass: ShaderFilterPass | null = null;
   private _wgslPass: ShaderFilterPass | null = null;
 
-  public constructor(options: ShaderFilterOptions = {}) {
+  public constructor(options: ShaderFilterOptions<F, B> = {}) {
     super();
 
-    this._shader = options.shader ?? createFilterShaderSource(options);
-    this._uniforms = { ...options.uniforms };
+    this._shader = options.shader ?? (createFilterShaderSource(options) as ShaderSource<F, B>);
+
+    const schema = this._shader.uniformSchema;
+    // A typed write reaches the GPU through the block's revision, but a cached
+    // or retained representation of the owning node would keep replaying the
+    // frame the old value produced unless the block reports the change too.
+    const blocks = schema === null ? [] : createUniformBlockData(schema, () => this.invalidate());
+
+    this._uniforms = schema === null ? { ...(options.uniforms as Record<string, ShaderFilterUniformValue> | undefined) } : {};
+    this._bindings = { uniforms: this._uniforms, blocks, textures: { ...options.textures } };
+
+    if (schema === null) {
+      this._uniformsView = this._uniforms;
+      this._uniformBlocksView = undefined;
+    } else {
+      applyInitialFilterValues(blocks, schema.implicit, options.uniforms, options.uniformBlocks);
+      this._uniformsView = schema.implicit ? blocks[0]!.uniforms : undefined;
+      this._uniformBlocksView = schema.implicit ? undefined : uniformBlockRecord(blocks);
+    }
   }
 
   /** The source pair this filter runs, with the default stages already filled in. */
-  public get shader(): ShaderSource {
+  public get shader(): ShaderSource<F, B> {
     return this._shader;
   }
 
   /**
-   * The current uniform values, for reading.
+   * The typed accessors of the declared uniform block, or - on a source without
+   * a schema - the current uniform values, for reading.
    *
-   * Deliberately not writable: a value written straight into this record would
-   * reach the GPU on the next draw but tell nobody, so a cached or retained
-   * representation of the owning node would keep replaying the frame the old
-   * value produced. Write through {@link setUniform} / {@link setUniforms}.
+   * The untyped record is deliberately not writable: a value written straight
+   * into it would reach the GPU on the next draw but tell nobody, so a cached or
+   * retained representation of the owning node would keep replaying the frame
+   * the old value produced. Write through {@link setUniform} / {@link setUniforms}.
    */
-  public get uniforms(): Readonly<Record<string, ShaderFilterUniformValue>> {
-    return this._uniforms;
+  public get uniforms(): ShaderFilterUniformsView<F, B> {
+    return this._uniformsView as ShaderFilterUniformsView<F, B>;
+  }
+
+  /** The declared named uniform blocks, each owning its own values. */
+  public get uniformBlocks(): ShaderFilterBlocksView<B> {
+    return this._uniformBlocksView as ShaderFilterBlocksView<B>;
   }
 
   /** Whether this filter carries a source the given backend can run. */
@@ -294,9 +376,15 @@ export class ShaderFilter extends Filter {
     return backendType === RenderBackendType.WebGpu ? this._shader.wgsl !== null : this._shader.glsl !== null;
   }
 
-  /** Set one uniform and notify every node rendering this filter. */
-  public setUniform(name: string, value: ShaderFilterUniformValue): this {
-    this._uniforms[name] = value;
+  /**
+   * Set one uniform and notify every node rendering this filter.
+   *
+   * Only available on a source that declares no uniform schema; a typed filter
+   * writes through {@link uniforms} instead.
+   */
+  public setUniform(name: ShaderFilterRawUniformName<F, B>, value: ShaderFilterUniformValue): this {
+    this._assertRawUniforms();
+    this._uniforms[name as string] = value;
     this.invalidate();
 
     return this;
@@ -304,6 +392,8 @@ export class ShaderFilter extends Filter {
 
   /** Set several uniforms, notifying once for the batch. */
   public setUniforms(values: Readonly<Record<string, ShaderFilterUniformValue>>): this {
+    this._assertRawUniforms();
+
     for (const name of Object.keys(values)) {
       // In-bounds: `name` comes from `values`' own keys.
       this._uniforms[name] = values[name]!;
@@ -346,17 +436,52 @@ export class ShaderFilter extends Filter {
    */
   private _attach(backend: RenderBackend): ShaderFilterPass {
     if (backend.backendType === RenderBackendType.WebGpu) {
-      if (this._shader.wgsl === null) {
+      const wgsl = this._shader._resolveWgsl(filterUniformGroup);
+
+      if (wgsl === null) {
         throw new ShaderFilterBackendError(RenderBackendType.WebGpu, 'wgsl');
       }
 
-      return (this._wgslPass ??= new WebGpuShaderFilterPass(this._shader.wgsl, this._uniforms));
+      return (this._wgslPass ??= new WebGpuShaderFilterPass(wgsl, this._bindings));
     }
 
-    if (this._shader.glsl === null) {
+    const glsl = this._shader._resolveGlsl();
+
+    if (glsl === null) {
       throw new ShaderFilterBackendError(backend.backendType, 'glsl');
     }
 
-    return (this._glslPass ??= new WebGl2ShaderFilterPass(this._shader.glsl.vertex ?? defaultGlslVertexSource, this._shader.glsl.fragment, this._uniforms));
+    return (this._glslPass ??= new WebGl2ShaderFilterPass(glsl.vertex ?? defaultGlslVertexSource, glsl.fragment, this._bindings));
+  }
+
+  private _assertRawUniforms(): void {
+    if (this._bindings.blocks.length > 0) {
+      throw new Error('ShaderFilter.setUniform is not available on a shader source that declares uniforms; write through `filter.uniforms` instead.');
+    }
   }
 }
+
+/** Write the caller's starting values into the freshly built blocks. */
+const applyInitialFilterValues = (blocks: readonly UniformBlockData[], implicit: boolean, uniforms: unknown, uniformBlocks: unknown): void => {
+  if (implicit) {
+    if (uniforms !== undefined) {
+      blocks[0]!._setValues(uniforms as Record<string, unknown>);
+    }
+
+    return;
+  }
+
+  if (uniformBlocks === undefined) {
+    return;
+  }
+
+  const values = uniformBlocks as Record<string, Record<string, unknown>>;
+
+  for (const block of blocks) {
+    const initial = values[block.layout.key];
+
+    if (initial !== undefined) {
+      block._setValues(initial);
+    }
+  }
+};

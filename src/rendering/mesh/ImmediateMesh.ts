@@ -1,7 +1,7 @@
 import { Color } from '#core/Color';
 import type { Matrix } from '#math/Matrix';
 import type { Geometry } from '#rendering/geometry/Geometry';
-import type { MeshMaterial } from '#rendering/material/MeshMaterial';
+import type { AnyMeshMaterial } from '#rendering/material/MeshMaterial';
 
 import { meshIndexFormatFor } from './indices';
 import { Mesh, readGeometry } from './Mesh';
@@ -47,7 +47,7 @@ export class ImmediateMesh extends Mesh {
    * draw synchronously, so the caller cannot mutate it before it is consumed.
    * @internal
    */
-  public configure(geometry: Geometry, transform: Matrix, material: MeshMaterial | null, tint: Color | null): void {
+  public configure(geometry: Geometry, transform: Matrix, material: AnyMeshMaterial | null, tint: Color | null): void {
     this._flattenGeometry(geometry);
     // Single immediate draws go through the dynamic (non-static-cached) path, so
     // the geometry reference is left off the mesh - only the flattened arrays are
@@ -68,7 +68,7 @@ export class ImmediateMesh extends Mesh {
    * transform store per instance by `drawBatch`).
    * @internal
    */
-  public configureBatchSource(geometry: Geometry, material: MeshMaterial | null): void {
+  public configureBatchSource(geometry: Geometry, material: AnyMeshMaterial | null): void {
     this._flattenGeometry(geometry);
     this._geometry = geometry;
     this._material = material;

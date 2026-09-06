@@ -1,7 +1,7 @@
 import { Matrix } from '#math/Matrix';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
-import type { Material, UniformValue } from '#rendering/material/Material';
+import type { AnyMaterial, UniformValue } from '#rendering/material/Material';
 import type { MeshIndexArray, MeshIndexFormat } from '#rendering/mesh/indices';
 import { createIndexArray } from '#rendering/mesh/indices';
 import type { Mesh } from '#rendering/mesh/Mesh';
@@ -56,7 +56,7 @@ interface MeshRendererConnection {
 interface PendingMeshDraw {
   mesh: Mesh;
   command: DrawCommand | null;
-  material: Material | null;
+  material: AnyMaterial | null;
   shader: Shader;
   blendMode: BlendModes;
   texture: Texture | RenderTexture;
@@ -121,7 +121,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   private readonly _retainedTextureScratch: [Texture | RenderTexture] = [Texture.white];
 
   private readonly _defaultShader: Shader = new Shader(vertexSource, fragmentSource);
-  private readonly _customShaders = new Map<Material, Shader>();
+  private readonly _customShaders = new Map<AnyMaterial, Shader>();
   private readonly _compatibilityCache = new Map<Shader, boolean>();
   private readonly _textureUnitScratch: Int32Array = new Int32Array([0]);
   private readonly _transformUnitScratch: Int32Array = new Int32Array([transformTextureUnit]);
@@ -625,7 +625,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   private _bindInstancedShaderState(
     shader: Shader,
     texture: Texture | RenderTexture,
-    material: Material | null,
+    material: AnyMaterial | null,
     backend: WebGl2Backend,
     maxNodeIndex: number,
   ): void {
@@ -663,13 +663,13 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     shader.sync();
   }
 
-  private _bindBaseTextureSampler(backend: WebGl2Backend, material: Material | null): void {
+  private _bindBaseTextureSampler(backend: WebGl2Backend, material: AnyMaterial | null): void {
     if (material?.sampler !== null && material?.sampler !== undefined) {
       backend.bindMaterialSampler(material.sampler, 0);
     }
   }
 
-  private _unbindBaseTextureSampler(backend: WebGl2Backend, material: Material | null): void {
+  private _unbindBaseTextureSampler(backend: WebGl2Backend, material: AnyMaterial | null): void {
     if (material?.sampler !== null && material?.sampler !== undefined) {
       backend.unbindMaterialSampler(0);
     }
@@ -1247,13 +1247,13 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     };
   }
 
-  private _getOrCreateCustomShader(material: Material, gl: WebGL2RenderingContext): Shader {
+  private _getOrCreateCustomShader(material: AnyMaterial, gl: WebGL2RenderingContext): Shader {
     const cached = this._customShaders.get(material);
     if (cached !== undefined) {
       return cached;
     }
 
-    const glsl = material.shader.glsl;
+    const glsl = material.shader._resolveGlsl();
 
     if (glsl === null) {
       throw new Error('Mesh material shader has no `glsl` source; cannot render through the WebGL2 backend.');
@@ -1264,6 +1264,8 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     }
 
     const shader = new Shader(glsl.vertex, glsl.fragment);
+
+    shader.uniformBlockData = material._blocks;
     shader.connect(createWebGl2ShaderProgram(gl));
     // Force first finalize so getUniform()/uniforms.has() are usable below.
     shader.sync();
@@ -1282,7 +1284,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     return shader;
   }
 
-  private _bindCustomUniforms(shader: Shader, material: Material, backend: WebGl2Backend): void {
+  private _bindCustomUniforms(shader: Shader, material: AnyMaterial, backend: WebGl2Backend): void {
     // Texture bindings take consecutive slots starting at 1 (slot 0 belongs to
     // the mesh's own `u_texture`). Texture-valued uniforms bind first, then the
     // entries of the material's dedicated `textures` map.

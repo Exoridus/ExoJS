@@ -3,8 +3,8 @@ import { Interval } from '#math/Interval';
 import { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
 import { Drawable } from '#rendering/Drawable';
-import type { Material } from '#rendering/material/Material';
-import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import type { AnyMaterial } from '#rendering/material/Material';
+import type { AnySpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { RenderNode } from '#rendering/RenderNode';
 import { invalidateOnTextureLoad } from '#rendering/texture/deferredTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -57,7 +57,7 @@ export class Sprite extends Drawable {
    * instance.
    */
   private readonly _resetFrameScratch: Rectangle = new Rectangle();
-  private _material: SpriteMaterial | null = null;
+  private _material: AnySpriteMaterial | null = null;
   /**
    * Quad corner cache, built on the first {@link vertices} read. Nothing on the
    * render path reads it - the renderers pack their own quad through
@@ -156,13 +156,13 @@ export class Sprite extends Drawable {
    * into a single instanced draw call; the base texture stays on the sprite and
    * is bound per batch. Assigning a non-sprite material throws.
    */
-  public get material(): SpriteMaterial | null {
+  public get material(): AnySpriteMaterial | null {
     return this._material;
   }
 
-  public set material(material: SpriteMaterial | null) {
-    if (material !== null && (material as Material).target !== 'sprite') {
-      throw new Error(`Sprite requires a SpriteMaterial (got a ${(material as Material).target} material).`);
+  public set material(material: AnySpriteMaterial | null) {
+    if (material !== null && (material as AnyMaterial).target !== 'sprite') {
+      throw new Error(`Sprite requires a SpriteMaterial (got a ${(material as AnyMaterial).target} material).`);
     }
 
     this._material = material;

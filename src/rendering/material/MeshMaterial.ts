@@ -1,5 +1,6 @@
 import type { SamplerOptions } from '#rendering/texture/TextureOptions';
 import type { BlendModes } from '#rendering/types';
+import type { UniformBlockRecord, UniformFields } from '#rendering/uniforms/uniformDeclarations';
 
 import type { MaterialOptions, UniformValue } from './Material';
 import { Material } from './Material';
@@ -15,10 +16,10 @@ import { ShaderSource } from './ShaderSource';
  * Renderer wiring is added in a later phase.
  * @advanced
  */
-export class MeshMaterial extends Material {
+export class MeshMaterial<F extends UniformFields | undefined = undefined, B extends UniformBlockRecord | undefined = undefined> extends Material<F, B> {
   public readonly target = 'mesh';
 
-  public constructor(options: MaterialOptions) {
+  public constructor(options: MaterialOptions<F, B>) {
     super(options);
   }
 
@@ -26,7 +27,10 @@ export class MeshMaterial extends Material {
    * Build a `MeshMaterial` from an existing {@link ShaderSource}.
    * Equivalent to `new MeshMaterial({ shader, ...options })`.
    */
-  public static from(source: ShaderSource, options?: Omit<MaterialOptions, 'shader'>): MeshMaterial;
+  public static from<F extends UniformFields | undefined, B extends UniformBlockRecord | undefined>(
+    source: ShaderSource<F, B>,
+    options?: Omit<MaterialOptions<F, B>, 'shader'>,
+  ): MeshMaterial<F, B>;
   /**
    * Build a `MeshMaterial` from raw GLSL vertex and fragment source strings.
    * Wraps them in a new {@link ShaderSource}; pass `options.wgsl` to also
@@ -43,7 +47,7 @@ export class MeshMaterial extends Material {
     },
   ): MeshMaterial;
   public static from(
-    sourceOrGlslVertex: ShaderSource | string,
+    sourceOrGlslVertex: ShaderSource<UniformFields | undefined, UniformBlockRecord | undefined> | string,
     optionsOrGlslFragment?: Omit<MaterialOptions, 'shader'> | string,
     glslOptions?: {
       readonly wgsl?: string;
@@ -51,7 +55,7 @@ export class MeshMaterial extends Material {
       readonly blendMode?: BlendModes;
       readonly sampler?: SamplerOptions | null;
     },
-  ): MeshMaterial {
+  ): MeshMaterial<UniformFields | undefined, UniformBlockRecord | undefined> {
     if (sourceOrGlslVertex instanceof ShaderSource) {
       const opts = optionsOrGlslFragment as Omit<MaterialOptions, 'shader'> | undefined;
       return new MeshMaterial({ shader: sourceOrGlslVertex, ...(opts !== undefined ? opts : {}) });
@@ -70,3 +74,9 @@ export class MeshMaterial extends Material {
     });
   }
 }
+
+/**
+ * A mesh material of any uniform schema - what a consumer that only needs to draw
+ * with it should accept, since the bare class describes the untyped path.
+ */
+export type AnyMeshMaterial = MeshMaterial<UniformFields | undefined, UniformBlockRecord | undefined>;

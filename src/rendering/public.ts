@@ -59,7 +59,16 @@ export { DropShadowFilter } from '#rendering/filters/DropShadowFilter';
 export { Filter } from '#rendering/filters/Filter';
 export type { LutFilterOptions, LutMode } from '#rendering/filters/LutFilter';
 export { LutFilter } from '#rendering/filters/LutFilter';
-export type { ShaderFilterLanguage, ShaderFilterOptions, ShaderFilterSourceOptions, ShaderFilterUniformValue } from '#rendering/filters/ShaderFilter';
+export type {
+  ShaderFilterBlocksView,
+  ShaderFilterLanguage,
+  ShaderFilterOptions,
+  ShaderFilterRawUniformName,
+  ShaderFilterSourceOptions,
+  ShaderFilterUniformsView,
+  ShaderFilterUniformValue,
+  ShaderFilterUniformValues,
+} from '#rendering/filters/ShaderFilter';
 export { ShaderFilter } from '#rendering/filters/ShaderFilter';
 export { ShaderFilterBackendError } from '#rendering/filters/ShaderFilterBackendError';
 export { Geometry } from '#rendering/geometry/Geometry';
@@ -68,11 +77,21 @@ export type { GradientStop, GradientToTextureOptions, GradientType } from '#rend
 export { Gradient } from '#rendering/gradient/Gradient';
 export { LinearGradient } from '#rendering/gradient/LinearGradient';
 export { RadialGradient } from '#rendering/gradient/RadialGradient';
-export type { MaterialOptions, UniformValue } from '#rendering/material/Material';
+export type {
+  AnyMaterial,
+  MaterialOptions,
+  MaterialRawUniformName,
+  MaterialUniformBlocksView,
+  MaterialUniformsView,
+  MaterialUniformValues,
+  UniformValue,
+} from '#rendering/material/Material';
 export { Material } from '#rendering/material/Material';
+export type { AnyMeshMaterial } from '#rendering/material/MeshMaterial';
 export { MeshMaterial } from '#rendering/material/MeshMaterial';
 export type { ShaderSourceOptions } from '#rendering/material/ShaderSource';
 export { ShaderSource } from '#rendering/material/ShaderSource';
+export type { AnySpriteMaterial } from '#rendering/material/SpriteMaterial';
 export { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 export type { MeshIndexArray, MeshIndexFormat } from '#rendering/mesh/indices';
 export { maxUint16VertexCount, meshIndexBytes, meshIndexFormatFor } from '#rendering/mesh/indices';
@@ -150,4 +169,45 @@ export { Texture } from '#rendering/texture/Texture';
 export type { SamplerOptions, TextureOptions, TextureUploadOptions } from '#rendering/texture/TextureOptions';
 export type { TextureRegionInsets, TextureRegionOptions } from '#rendering/texture/TextureRegion';
 export { TextureRegion } from '#rendering/texture/TextureRegion';
+export type {
+  UniformAccessorFor,
+  UniformArrayAccessor,
+  UniformFieldAccessors,
+  UniformMatrix3,
+  UniformMatrix4,
+  UniformScalar,
+  UniformStructAccessor,
+  UniformStructWriter,
+  UniformVector2,
+  UniformVector3,
+  UniformVector4,
+} from '#rendering/uniforms/uniformAccessors';
+export { UniformBlockData } from '#rendering/uniforms/UniformBlockData';
+export type {
+  UniformArrayElement,
+  UniformBlockRecord,
+  UniformFieldDeclaration,
+  UniformFieldOptions,
+  UniformFields,
+  UniformFieldType,
+  UniformInput,
+  UniformMat3Input,
+  UniformMat4Input,
+  UniformStructInput,
+  UniformVec2Input,
+  UniformVec3Input,
+  UniformVec4Input,
+} from '#rendering/uniforms/uniformDeclarations';
+export { UniformArray, UniformBlock, UniformStruct } from '#rendering/uniforms/uniformDeclarations';
+export type {
+  UniformArrayLayout,
+  UniformBlockLayout,
+  UniformLeafLayout,
+  UniformMemberLayout,
+  UniformNodeLayout,
+  UniformSchemaLayout,
+  UniformStructLayout,
+} from '#rendering/uniforms/uniformLayout';
+export type { UniformBlockDataRecord, UniformBlockInitialValues, UniformSchemaOptions } from '#rendering/uniforms/uniformSchema';
+export { UniformType } from '#rendering/uniforms/UniformType';
 export { Video } from '#rendering/video/Video';

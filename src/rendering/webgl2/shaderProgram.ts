@@ -6,6 +6,8 @@ import { ShaderAttribute } from '#rendering/shader/ShaderAttribute';
 import { ShaderUniform } from '#rendering/shader/ShaderUniform';
 import { resolveTransformTextureGlsl } from '#rendering/shader/transformTextureLayout';
 import { ShaderPrimitives } from '#rendering/types';
+import type { UniformBlockData } from '#rendering/uniforms/UniformBlockData';
+import { generatedUniformBlockPrefix } from '#rendering/uniforms/uniformLayout';
 
 import { webGl2PrimitiveArrayConstructors, webGl2PrimitiveByteSizeMapping } from './shaderMappings';
 import { WebGl2ShaderBlock } from './WebGl2ShaderBlock';
@@ -104,6 +106,7 @@ export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: st
   let compiledFragmentSource = '';
   const managedUniforms: ManagedUniform[] = [];
   const uniformBlocks: WebGl2ShaderBlock[] = [];
+  const schemaBlocks: SchemaBlockBinding[] = [];
 
   // Detect KHR_parallel_shader_compile. When present, the GL driver may
   // compile shaders on a worker thread; we can poll completion via
@@ -182,6 +185,7 @@ export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: st
     extractAttributes(gl, program, pendingShader);
     extractUniforms(gl, program, pendingShader, managedUniforms);
     extractUniformBlocks(gl, program, uniformBlocks);
+    bindSchemaBlocks(gl, program, pendingShader.uniformBlockData, schemaBlocks);
 
     pendingShader = null;
   };
@@ -201,6 +205,20 @@ export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: st
 
     for (let i = 0; i < uniformBlocks.length; i++) {
       uniformBlocks[i]!.upload();
+    }
+
+    // Binding points are re-established on every sync: they are context state
+    // shared by every program, so the block another material bound to the same
+    // point last draw would otherwise still be the one this draw reads.
+    for (let i = 0; i < schemaBlocks.length; i++) {
+      const binding = schemaBlocks[i]!;
+
+      gl.bindBufferBase(gl.UNIFORM_BUFFER, binding.point, binding.buffer);
+
+      if (binding.revision !== binding.data.revision) {
+        gl.bufferSubData(gl.UNIFORM_BUFFER, 0, binding.data.float32);
+        binding.revision = binding.data.revision;
+      }
     }
   };
 
@@ -239,12 +257,17 @@ export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: st
         block.destroy();
       }
 
+      for (const binding of schemaBlocks) {
+        gl.deleteBuffer(binding.buffer);
+      }
+
       vertexShader = null;
       fragmentShader = null;
       program = null;
       pendingShader = null;
       managedUniforms.length = 0;
       uniformBlocks.length = 0;
+      schemaBlocks.length = 0;
 
       shader.disconnect();
     },
@@ -346,7 +369,52 @@ const extractUniformBlocks = (gl: WebGL2RenderingContext, program: WebGLProgram,
   const activeBlocks = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);
 
   for (let index = 0; index < activeBlocks; index++) {
+    // A block generated from a typed uniform schema is uploaded from the
+    // schema's own std140 buffer, so reflecting it here would allocate a second
+    // buffer and re-upload it on every sync for bytes nothing reads.
+    if ((gl.getActiveUniformBlockName(program, index) ?? '').startsWith(generatedUniformBlockPrefix)) {
+      continue;
+    }
+
     const block = new WebGl2ShaderBlock(gl, program, index);
     uniformBlocks.push(block);
+  }
+};
+
+/** One typed uniform block's GPU buffer and the revision it last received. */
+interface SchemaBlockBinding {
+  readonly data: UniformBlockData;
+  readonly buffer: WebGLBuffer;
+  /** Uniform-buffer binding point, which is the block's declaration index. */
+  readonly point: number;
+  revision: number;
+}
+
+/**
+ * Give each declared block a buffer and a binding point on this program.
+ *
+ * A block the linker dropped - declared but never read by either stage - has no
+ * index and is skipped: allocating for it would cost a buffer per material for
+ * bytes the program cannot address.
+ */
+const bindSchemaBlocks = (gl: WebGL2RenderingContext, program: WebGLProgram, blocks: readonly UniformBlockData[], bindings: SchemaBlockBinding[]): void => {
+  for (const [point, data] of blocks.entries()) {
+    const index = gl.getUniformBlockIndex(program, data.layout.typeName);
+
+    if (index === gl.INVALID_INDEX) {
+      continue;
+    }
+
+    const buffer = gl.createBuffer();
+
+    if (buffer === null) {
+      throw new Error(`[ExoJS] could not create the uniform buffer for block ${data.layout.typeName}.`);
+    }
+
+    gl.uniformBlockBinding(program, index, point);
+    gl.bindBuffer(gl.UNIFORM_BUFFER, buffer);
+    gl.bufferData(gl.UNIFORM_BUFFER, data.byteLength, gl.DYNAMIC_DRAW);
+
+    bindings.push({ data, buffer, point, revision: -1 });
   }
 };

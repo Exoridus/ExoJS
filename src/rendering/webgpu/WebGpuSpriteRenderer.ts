@@ -10,7 +10,7 @@ import {
   isRetainedMaterialStateValid,
   type RetainedMaterialState,
 } from '#rendering/material/RetainedMaterialState';
-import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import type { AnySpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import {
   buildSpriteTextureSlotWgsl,
@@ -26,6 +26,7 @@ import { isSampleableTexture } from '#rendering/texture/deferredTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
+import { materialUniformGroup } from '#rendering/uniforms/uniformLayout';
 import type { View } from '#rendering/View';
 
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
@@ -43,14 +44,17 @@ import spritePersistentVertexMainWgsl from './shaders/sprite-persistent-vertex-m
 import { packSnapViewport } from './snapViewport';
 import { stencilContentDepthStencilState } from './stencilState';
 import {
+  addUserUniformBuffersInPass,
   applyUserUniformUpload,
   collectTextureBindings,
   createUserUniformState,
+  destroyUserUniformBuffers,
   planUserUniformUpload,
   resetUserUniformState,
   resolveUserUniformBindGroup,
+  userUniformLayoutEntries,
   type UserUniformState,
-  type UserUniformUpload,
+  userUniformWriteWouldAlias,
 } from './userUniforms';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { WebGpuPassArena } from './WebGpuPassArena';
@@ -225,8 +229,6 @@ interface CustomSpriteResources {
   userLayout: GPUBindGroupLayout;
   pipelineLayout: GPUPipelineLayout;
   pipelines: Map<string, GPURenderPipeline>;
-  userUniformBuffer: GPUBuffer | null;
-  userUniformBufferCapacity: number;
   // Persistent UBO scratch + cached user bind group, reused across frames and
   // re-uploaded/rebuilt only when the material's uniform values or bound
   // texture views actually change.
@@ -323,9 +325,9 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
   // Custom-material state. Per-material pipelines/bind groups are cached; the
   // current batch's material/base-texture decide when to flush.
-  private readonly _customMaterials = new Map<SpriteMaterial, CustomSpriteResources>();
+  private readonly _customMaterials = new Map<AnySpriteMaterial, CustomSpriteResources>();
   private _customTextureBindGroupLayout: GPUBindGroupLayout | null = null;
-  private _currentMaterial: SpriteMaterial | null = null;
+  private _currentMaterial: AnySpriteMaterial | null = null;
   // Material uniform buffers a draw already recorded into the currently open
   // pass reads from. A batch about to rewrite one of them has to end that pass
   // first - see the hazard checks in flush(). Keyed to the pass identity so a
@@ -862,8 +864,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   }
 
   /** Custom-material path: rotate the base texture through the material slot table on group(1), instanced. */
-  private _renderCustom(sprite: Sprite, texture: Texture | RenderTexture, material: SpriteMaterial, backend: WebGpuBackend, nodeIndex: number): void {
-    if (material.shader.wgsl === null) {
+  private _renderCustom(sprite: Sprite, texture: Texture | RenderTexture, material: AnySpriteMaterial, backend: WebGpuBackend, nodeIndex: number): void {
+    if (material.shader._resolveWgsl(materialUniformGroup) === null) {
       throw new Error('SpriteMaterial shader has no `wgsl` source; cannot render through the WebGPU backend.');
     }
 
@@ -971,7 +973,9 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       // hazard below can be answered before anything is recorded into the pass.
       const material = this._currentMaterial;
       const customResources = material === null ? null : this._getOrCreateCustomResources(material, device);
-      const uniformPlan = material === null ? null : planUserUniformUpload(material, customResources!, device, 'sprite:material-user-uniform-buffer');
+      if (material !== null) {
+        planUserUniformUpload(material, customResources!, device, 'sprite:material-user-uniform-buffer');
+      }
 
       // A texture this batch samples whose content/size changed since it was last
       // uploaded will have its re-upload land on the queue timeline before the
@@ -996,7 +1000,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       // write it at offset 0, and a draw already recorded into the open pass reads
       // that exact buffer - writes land on the queue timeline ahead of the whole
       // submit, so the earlier draw would silently pick up this batch's values.
-      if (customResources !== null && uniformPlan !== null && this._uniformWriteWouldAlias(uniformPlan)) {
+      if (customResources !== null && userUniformWriteWouldAlias(customResources.userUniform, this._uniformBuffersInPass)) {
         active = this._reopenPass(backend);
       }
 
@@ -1037,12 +1041,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
         pass.drawIndexed(indicesPerSprite, this._instanceCount, 0, 0, 0);
       } else {
         pass.pushDebugGroup('SpriteMaterial (custom)');
-        this._drawCustomBatch(pass, device, backend, material, customResources!, uniformPlan!, transformBindGroup, stencil, instanceBuffer, offset);
+        this._drawCustomBatch(pass, device, backend, material, customResources!, transformBindGroup, stencil, instanceBuffer, offset);
         pass.popDebugGroup();
 
         // This draw now reads the material's uniform buffer for as long as the
         // pass stays open, which is what the alias check above consults.
-        this._uniformBuffersInPass.add(customResources!.userUniformBuffer!);
+        addUserUniformBuffersInPass(customResources!.userUniform, this._uniformBuffersInPass);
       }
 
       coordinator.markPassDraws();
@@ -1174,21 +1178,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     this._syncUniformHazardPass(active);
 
     return active;
-  }
-
-  /**
-   * Whether this batch's planned uniform write would land on a buffer a draw
-   * already recorded into the open pass reads. `queue.writeBuffer` is ordered
-   * against the *submit*, not against the individual draws inside it, so the
-   * earlier draw would sample this batch's values. A buffer being replaced
-   * counts too: the apply step destroys the outgrown one.
-   */
-  private _uniformWriteWouldAlias(upload: UserUniformUpload): boolean {
-    if (upload.staleBuffer !== null && this._uniformBuffersInPass.has(upload.staleBuffer)) {
-      return true;
-    }
-
-    return upload.writes && this._uniformBuffersInPass.has(upload.buffer);
   }
 
   /**
@@ -1347,14 +1336,14 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
           }
         }
 
-        const uniformPlan = planUserUniformUpload(material, customResources, device, 'sprite:material-user-uniform-buffer');
+        planUserUniformUpload(material, customResources, device, 'sprite:material-user-uniform-buffer');
 
-        if (this._uniformWriteWouldAlias(uniformPlan)) {
+        if (userUniformWriteWouldAlias(customResources.userUniform, this._uniformBuffersInPass)) {
           coordinator.endPass();
           this._instanceArena.resetPass();
         }
 
-        applyUserUniformUpload(uniformPlan, customResources, device);
+        applyUserUniformUpload(material, customResources, device);
         customResources.replayBindGroup = this._getUserBindGroup(material, customResources, backend, device);
         customResources.replayEpoch = backend.renderPlanEpoch;
       }
@@ -1423,7 +1412,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     pass.drawIndexed(indicesPerSprite, payload.instanceCount, 0, 0, 0);
 
     if (customResources !== null) {
-      this._uniformBuffersInPass.add(customResources.userUniformBuffer!);
+      addUserUniformBuffersInPass(customResources.userUniform, this._uniformBuffersInPass);
     }
 
     bundle.drawsInPass = active;
@@ -1442,8 +1431,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     return state === null || isRetainedMaterialStateValid(state);
   }
 
-  private _retainedMaterialState(payload: WebGpuRetainedBatchPayload): RetainedMaterialState<SpriteMaterial> | null {
-    return isRetainedMaterialState(payload.rendererData) ? (payload.rendererData as RetainedMaterialState<SpriteMaterial>) : null;
+  private _retainedMaterialState(payload: WebGpuRetainedBatchPayload): RetainedMaterialState<AnySpriteMaterial> | null {
+    return isRetainedMaterialState(payload.rendererData) ? (payload.rendererData as RetainedMaterialState<AnySpriteMaterial>) : null;
   }
 
   public destroy(): void {
@@ -1611,7 +1600,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     backend: WebGpuBackend,
     textures: ReadonlyArray<Texture | RenderTexture | null | undefined>,
     custom = false,
-    samplerOverride: SpriteMaterial['sampler'] = null,
+    samplerOverride: AnySpriteMaterial['sampler'] = null,
   ): GPUBindGroup {
     // Slots beyond the active count get the slot-0 texture as a filler so
     // the bind-group layout always sees N valid texture views and samplers.
@@ -1862,9 +1851,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     pass: GPURenderPassEncoder,
     device: GPUDevice,
     backend: WebGpuBackend,
-    material: SpriteMaterial,
+    material: AnySpriteMaterial,
     resources: CustomSpriteResources,
-    uniformUpload: UserUniformUpload,
     transformBindGroup: GPUBindGroup,
     stencil: boolean,
     instanceBuffer: GPUBuffer,
@@ -1872,7 +1860,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   ): void {
     // Planned before the pass was settled; the write only happens when the
     // material's values actually changed since its last upload.
-    applyUserUniformUpload(uniformUpload, resources, device);
+    applyUserUniformUpload(material, resources, device);
 
     const pipeline = this._getOrCreateCustomPipeline(resources, this._currentBlendMode!, backend.renderTargetFormats, stencil, device);
 
@@ -1885,7 +1873,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     pass.drawIndexed(indicesPerSprite, this._instanceCount, 0, 0, 0);
   }
 
-  private _getOrCreateCustomResources(material: SpriteMaterial, device: GPUDevice): CustomSpriteResources {
+  private _getOrCreateCustomResources(material: AnySpriteMaterial, device: GPUDevice): CustomSpriteResources {
     const existing = this._customMaterials.get(material);
 
     if (existing !== undefined) {
@@ -1901,7 +1889,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       return existing;
     }
 
-    const wgsl = material.shader.wgsl;
+    const wgsl = material.shader._resolveWgsl(materialUniformGroup);
 
     if (wgsl === null) {
       throw new Error('SpriteMaterial shader has no `wgsl` source; cannot render through the WebGPU backend.');
@@ -1924,8 +1912,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       userLayout,
       pipelineLayout,
       pipelines: new Map(),
-      userUniformBuffer: null,
-      userUniformBufferCapacity: 0,
       userUniform: createUserUniformState(),
       textureSlots: spriteMaterialTextureSlots,
       replayEpoch: -1,
@@ -2008,52 +1994,23 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     return pipeline;
   }
 
-  private _buildUserBindGroupLayout(device: GPUDevice, material: SpriteMaterial): GPUBindGroupLayout {
-    const entries: GPUBindGroupLayoutEntry[] = [];
-
-    // Binding 0 always reserved for the user UBO (even if empty), so the layout
-    // is stable across user-uniform mutations.
-    entries.push({
-      binding: 0,
-      visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-      buffer: { type: 'uniform' },
-    });
-
+  private _buildUserBindGroupLayout(device: GPUDevice, material: AnySpriteMaterial): GPUBindGroupLayout {
     const textureBindings = collectTextureBindings(material);
 
     if (textureBindings.length > maxCustomTextureSlots) {
       throw new Error(`SpriteMaterial requested more than ${maxCustomTextureSlots} user texture bindings.`);
     }
 
-    let bindingIndex = 1;
-
-    for (let t = 0; t < textureBindings.length; t++) {
-      entries.push({ binding: bindingIndex, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } });
-      bindingIndex++;
-      entries.push({ binding: bindingIndex, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } });
-      bindingIndex++;
-    }
-
-    return device.createBindGroupLayout({ label: 'sprite:material-bind-group-layout', entries });
+    return device.createBindGroupLayout({ label: 'sprite:material-bind-group-layout', entries: userUniformLayoutEntries(material, textureBindings.length) });
   }
 
-  private _getUserBindGroup(material: SpriteMaterial, resources: CustomSpriteResources, backend: WebGpuBackend, device: GPUDevice): GPUBindGroup {
-    return resolveUserUniformBindGroup(
-      device,
-      backend,
-      material,
-      resources.userLayout,
-      'sprite:material-user-bind-group',
-      resources.userUniformBuffer!,
-      resources.userUniform,
-    );
+  private _getUserBindGroup(material: AnySpriteMaterial, resources: CustomSpriteResources, backend: WebGpuBackend, device: GPUDevice): GPUBindGroup {
+    return resolveUserUniformBindGroup(device, backend, material, resources.userLayout, 'sprite:material-user-bind-group', resources.userUniform);
   }
 
   private _releaseCustomResources(resources: CustomSpriteResources): void {
-    resources.userUniformBuffer?.destroy();
+    destroyUserUniformBuffers(resources.userUniform);
     resources.pipelines.clear();
-    resources.userUniformBuffer = null;
-    resources.userUniformBufferCapacity = 0;
     resetUserUniformState(resources.userUniform);
     resources.replayEpoch = -1;
     resources.replayBindGroup = null;
