@@ -301,6 +301,27 @@ export default defineConfig({
         },
       },
 
+      // ── exojs-cli: the published command line package ──────────────────
+      // Plain Node, because the subject under test is a Node CLI: an HTTP
+      // server, a scaffolder and a file packer, none of which want a jsdom
+      // window. The engine aliases and the real-shader loader are wired in for
+      // one spec - the `assets pack` round trip reads a packed container back
+      // through Core's own `Loader.loadContainer`, which is what proves the
+      // writer in `@codexo/exojs-build` and the reader in Core cannot drift.
+      {
+        resolve: { alias: aliasConfig, conditions: srcConditions },
+        ssr: { resolve: { conditions: srcConditions } },
+        plugins: [realShaderPlugin],
+        define: { __DEV__: JSON.stringify(true), __VERSION__: JSON.stringify('0.0.0'), __REVISION__: JSON.stringify('test') },
+        test: {
+          name: 'exojs-cli',
+          environment: 'node',
+          globals: true,
+          include: ['packages/exojs-cli/test/**/*.test.ts'],
+          testTimeout: 30_000,
+        },
+      },
+
       // ── rendering-perf - Node renderer benchmark harness (real shaders) ──
       // Runs the real WebGL2 renderers against a recording fake GL context for
       // deterministic, GPU-free structural metrics. Uses the real-shader loader

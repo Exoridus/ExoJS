@@ -91,7 +91,7 @@
     "build:dev": "pnpm build:tooling && pnpm clean && tsx scripts/build.ts --dev",
     "build:watch": "tsx scripts/build.ts --dev --watch",
     "build:tooling": "pnpm --filter @codexo/exojs-build build",
-    "build:packages": "pnpm -r --filter \"./packages/**\" --filter \"!@codexo/exojs-build\" --filter \"!@codexo/exojs-bench\" --filter \"!create-exo-app\" build",
+    "build:packages": "pnpm -r --filter \"./packages/**\" --filter \"!@codexo/exojs-build\" --filter \"!@codexo/exojs-bench\" build",
     "build:all": "pnpm build && pnpm build:packages",
     "typecheck": "tsc --noEmit",
     "typecheck:examples": "tsc --noEmit -p tsconfig.examples.json",

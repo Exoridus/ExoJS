@@ -14,6 +14,7 @@ packages:
   - packages/exojs-tilemap-physics
   - packages/exojs-lighting
   - packages/exojs-pathfinding
+  - packages/exojs-cli
   - packages/create-exo-app
 
 # Packages permitted to run install/build scripts. pnpm v10+ blocks build

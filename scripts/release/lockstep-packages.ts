@@ -81,6 +81,11 @@ export const INDEPENDENT_PACKAGES = [
     dir: 'packages/create-exo-app',
     reason: 'app scaffolder; run once via npx, never pinned to an engine version',
   },
+  {
+    name: '@codexo/exojs-cli',
+    dir: 'packages/exojs-cli',
+    reason: 'project tooling; installed once via npx and never pinned to an engine version, and it depends on no engine API',
+  },
 ] as const satisfies readonly IndependentPackage[];
 
 /** Union of the official package names (literal type, preserved for `OfficialPackageName`). */

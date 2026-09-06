@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // The package's own tests. `dom` is added on top of the package's Node-only
+  // libs because the container round-trip drives the engine's loader, which is
+  // typed against browser APIs even where the spec runs in Node.
+  //
+  // `@codexo/exojs` resolves to Core's source here, and only here: the package
+  // itself must not depend on the engine, but the round-trip spec reads a
+  // packed container back through Core's loader, and Vitest resolves that
+  // import to source as well. Typing it against the built declarations instead
+  // would check the spec against a different program than the one it runs.
+  "extends": ["./tsconfig.json", "@codexo/exojs-config/typescript/package-test.json"],
+  "compilerOptions": {
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "types": ["node", "vitest/globals"],
+    "allowImportingTsExtensions": true,
+    "customConditions": ["@codexo/exojs-source"],
+    "paths": {
+      "create-exo-app": ["../create-exo-app/src/scaffold.ts"],
+      "@codexo/exojs": ["../../src/index.ts"]
+    }
+  },
+  // Core's ambient declarations come with its source: the engine reads the
+  // compile-time build constants, which are not declared in this package.
+  "include": ["src/**/*", "test/**/*", "../../src/typings.d.ts", "../../src/build-constants.d.ts"],
+  "exclude": ["dist", "node_modules"]
+}
