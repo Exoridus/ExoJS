@@ -89,7 +89,7 @@ jobs:
       # No install: the planner is dependency-free TypeScript that node strips.
       - uses: actions/setup-node@v6
         with:
-          node-version: '24.x'
+          node-version-file: .nvmrc
 
       - id: plan
         env:
@@ -303,7 +303,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: '24.x'
+          node-version-file: .nvmrc
       - env:
           NEEDS: ${{ toJSON(needs) }}
           PLAN: ${{ toJSON(needs.plan.outputs) }}

@@ -2,9 +2,6 @@ name: Set up the workspace
 description: pnpm, Node, dependencies, and optionally a Playwright browser, the Naga validator and the built dist.
 
 inputs:
-  node-version:
-    description: Node version for setup-node
-    default: '24.x'
   browser:
     description: Playwright browser to install (chromium or firefox); empty installs none
     default: ''
@@ -26,9 +23,11 @@ runs:
       with:
         run_install: false
 
+    # The Node version comes from `.nvmrc`, the same file `devEngines` in
+    # package.json enforces locally, so CI and a contributor's shell agree.
     - uses: actions/setup-node@v6
       with:
-        node-version: ${{ inputs.node-version }}
+        node-version-file: .nvmrc
         check-latest: true
         cache: pnpm
         cache-dependency-path: pnpm-lock.yaml

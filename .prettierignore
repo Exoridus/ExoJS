@@ -27,3 +27,6 @@ packages/exojs-bench/results/*.json
 
 *.min.*
 pnpm-lock.yaml
+
+# API docs are generated here before being moved into src/content/api.
+site/.api-staging
