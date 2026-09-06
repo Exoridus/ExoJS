@@ -34,10 +34,23 @@ Two domains, selected with `--domain` (default `rendering`):
   — it builds a scene, warms it up, then renders a fixed number of timed frames
   from `requestAnimationFrame`, sampling per-frame CPU time, full-frame time and
   draw-call structure.
-- **`physics`** runs entirely in Node — no browser, no GPU: a straight loop over
-  `world.step`, sampling per-step CPU time plus body and contact counts.
+- **`physics`** drives a real headless browser too, but no GPU: a straight loop
+  over `world.step` inside the harness page, sampling per-step CPU time plus
+  body, contact, joint and ray-hit counts.
 
-Everything below describes the rendering domain.
+  It is measured in a browser rather than in the driver's Node process because
+  nobody runs ExoJS physics in Node, and because the runtime is part of what a
+  step time measures: heap limits, garbage collection and WASM compilation are
+  the browser's, and the JavaScript engine is whichever the selected browser
+  ships. Measured on the same machine, moving the matrix from Node into Chromium
+  moved per-step medians by −80% to +29% depending on the arm, which is enough to
+  reorder the arms against each other; measuring it in WebKit instead moves them
+  again. A physics number is therefore only comparable against another taken in
+  the same browser, and `--browser` applies to this domain exactly as it does to
+  rendering.
+
+Everything below describes the rendering domain, except the physics sections that
+name themselves.
 
 A cell's scene comes from a fixed **archetype** (`src/rendering/archetypes.ts`):
 `static-heavy`, `dynamic-heavy`, `deep-hierarchy`, `lifecycle-churn`,
@@ -304,8 +317,31 @@ mid-frame GPU-driver stall cannot be interrupted from inside the page.
   across machines.
 - Each competitor library's exact version and the path it resolved from.
 
-The physics domain additionally records the Node version, CPU model, logical CPU
-count and OS.
+The physics domain records the browser and browser version, the CPU model,
+logical CPU count, OS and architecture of the host that drove it, and what the
+measuring page's `performance.now()` could resolve. It does **not** record the
+driver process's Node version: no step was taken there, so a field naming it
+would describe nothing about where the numbers came from.
+
+### Physics timing resolution
+
+The fastest cells of the physics matrix step in single-digit microseconds, and
+`performance.now()` is clamped as a Spectre mitigation. The harness page is
+served cross-origin isolated (COOP/COEP), which lifts the clamp to 5 µs in
+Chromium and 20 µs in WebKit — measured per run, not assumed, and stamped into
+the provenance.
+
+A step that cannot clear that grid on its own is not timed on its own. Each cell
+estimates its per-step cost from the last 60 warmup steps and then times steps in
+batches large enough for one sample to span 20 clock ticks, dividing the sample
+by its batch. The batch is recorded per row as `stepsPerSample`; `1` means every
+step was timed individually and the row is byte-for-byte the old contract. The
+**timed-step budget is unchanged** — the batch only decides how finely the fixed
+window is sampled — and the batch stops growing once a cell would be left with
+fewer than 12 samples, because a median and a p95 need a distribution behind
+them. A cell that hits that cap before clearing the grid says so in its `note`,
+naming the quantisation it still carries, rather than reporting a coarse number
+that looks precise.
 
 **Gap worth knowing:** the rendering domain records the GPU, the browser and the
 operating system, but not the rest of the host. CPU model, RAM and GPU driver
@@ -495,7 +531,10 @@ is gone without anyone noticing.
 A published claim is a ratio between two arms, and one run does not support one:
 the same code measured twice on this machine moved a physics cell's median by
 2.5x with byte-identical contact counts behind both runs, which was enough to
-reverse seven verdicts. So `--rendering` and `--physics` are **repeatable, once
+reverse seven verdicts. That spread was observed while physics still ran in the
+driver's Node process; it has not been re-derived since the matrix moved into the
+browser, so read it as the reason for pooling rather than as this harness's
+current noise figure. So `--rendering` and `--physics` are **repeatable, once
 per run**, and the runs are pooled:
 
 ```sh
@@ -530,7 +569,7 @@ rendering run's identity is the normalized GPU the adapter string names, the
 operating system with its major version and pre-release bit, and the browser,
 using the same normalizations the profile slug uses, so runs may pool exactly
 when they would be written to one file. A physics run's identity is the CPU
-model, the same platform identity, and the architecture. Tolerated within one
+model, the same platform identity, the architecture, and the browser. Tolerated within one
 machine: timestamps, an adapter string's driver / device-id / shader-model tail,
 the OS patch level, and the browser's patch version, which a checkout pins and
 which every stamp records in full anyway. Assembling one profile from a

@@ -47,22 +47,16 @@ import { describePhysicsScene } from './scene';
  *
  * The library bundles its WASM and requires an async `RAPIER.init()` before any
  * world is built; both the dynamic `import()` and `init()` happen once in
- * {@link createRapierAdapter}. A checkout that never ran `bench:setup` (the
- * library is not linked) degrades to a skipped arm instead of crashing.
+ * {@link createRapierAdapter}. Either can reject - an unlinked library, or a
+ * browser that refuses the WASM compilation - and the rejection carries the
+ * reason the harness records against the arm.
  */
-export const createRapierAdapter = async (): Promise<PhysicsAdapter | null> => {
-  let R: typeof RAPIER;
+export const createRapierAdapter = async (): Promise<PhysicsAdapter> => {
+  const R = (await import('@dimforge/rapier2d-compat')) as typeof RAPIER;
 
-  try {
-    R = (await import('@dimforge/rapier2d-compat')) as typeof RAPIER;
-    // One-time WASM initialisation, before any world is constructed. The bundled
-    // glue prints a harmless upstream deprecation notice here - it is not an error.
-    await R.init();
-  } catch {
-    console.warn("[physics] rapier arm unavailable — '@dimforge/rapier2d-compat' is not linked or failed to init (run bench:setup). Skipping the rapier arm.");
-
-    return null;
-  }
+  // One-time WASM initialisation, before any world is constructed. The bundled
+  // glue prints a harmless upstream deprecation notice here - it is not an error.
+  await R.init();
 
   let world: RAPIER.World | null = null;
   let perturbedSignature = '';

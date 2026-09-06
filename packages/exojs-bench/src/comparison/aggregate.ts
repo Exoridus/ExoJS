@@ -197,9 +197,16 @@ const renderingMachine = (stamps: readonly Provenance[]): string => {
   return [gpu, platformIdentity(first?.os ?? '', first?.platformVersion, first?.prerelease), first?.browser ?? 'unknown-browser'].join(' / ');
 };
 
-/** The machine a physics run belongs to: no GPU is exercised, so the CPU host names it. */
+/**
+ * The measurement condition a physics run belongs to: no GPU is exercised, so
+ * the CPU host names the machine - and the browser names the JavaScript engine
+ * that executed the steps, which two runs must share before their medians can be
+ * pooled into one.
+ */
 const physicsMachine = (stamp: PhysicsProvenance): string =>
-  [normalizeCpuModel(stamp.host.cpu), platformIdentity(stamp.host.os, stamp.host.platformVersion, stamp.prerelease), stamp.host.arch].join(' / ');
+  [normalizeCpuModel(stamp.host.cpu), platformIdentity(stamp.host.os, stamp.host.platformVersion, stamp.prerelease), stamp.host.arch, stamp.browser].join(
+    ' / ',
+  );
 
 /** Reject runs measured against different trees: their timings describe different code. */
 const requireSameEngineVersion = (perRun: ReadonlyArray<readonly string[]>, domain: string): void => {

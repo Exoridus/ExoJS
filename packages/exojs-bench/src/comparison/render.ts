@@ -221,7 +221,7 @@ const renderPhysicsBlock = (input: PhysicsInput): string[] => {
   const host = input.runs[0]!;
 
   lines.push(
-    `Pooled from **${String(input.runs.length)} separate physics runs** on host \`${host.host.cpu}\` (${String(host.host.cpuCount)} logical), Node \`${host.host.node}\`, OS \`${host.host.os}\`, fixed step \`${host.fixedDelta.toFixed(6)} s\`, measured \`${input.runs.map(run => run.timestamp).join('`, `')}\`.`,
+    `Pooled from **${String(input.runs.length)} separate physics runs** in \`${host.browser} ${host.browserVersion}\` on host \`${host.host.cpu}\` (${String(host.host.cpuCount)} logical), OS \`${host.host.os}\`, fixed step \`${host.fixedDelta.toFixed(6)} s\`, measured \`${input.runs.map(run => run.timestamp).join('`, `')}\`.`,
     '',
   );
 

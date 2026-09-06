@@ -34,13 +34,17 @@ const renderingStamp = (adapter: string, backend: RenderingStamp['backend'] = 'w
   ...overrides,
 });
 
-const physicsStamp = (cpu: string, os: string, platformVersion: PlatformVersionStamp = WINDOWS_11): PhysicsStamp => ({
-  host: { node: 'v24.14.1', cpu, cpuCount: 16, os, platformVersion, arch: 'x64' },
+const physicsStamp = (cpu: string, os: string, platformVersion: PlatformVersionStamp = WINDOWS_11, overrides: Partial<PhysicsStamp> = {}): PhysicsStamp => ({
+  browser: 'chromium',
+  browserVersion: '151.0.7922.34',
+  host: { cpu, cpuCount: 16, os, platformVersion, arch: 'x64' },
   prerelease: { value: false, source: 'assumed-stable', evidence: 'no marker, none declared' },
   fixedDelta: 1 / 60,
+  clock: { resolutionMs: 0.005, crossOriginIsolated: true },
   caveats: [],
   engineVersion: '0.17.0',
   timestamp: '2026-01-01T00:00:00.000Z',
+  ...overrides,
 });
 
 /** The WebKit-on-macOS-beta pair: a masked adapter, and the CPU model that has to name the machine instead. */
@@ -103,8 +107,26 @@ describe('deriveProfileParts', () => {
     expect(deriveProfileParts({ rendering: [stamp] }).slug).toBe('m3-max-macos-26-chromium');
   });
 
-  it('names a physics-only profile after its CPU and the runtime it was measured in', () => {
-    expect(deriveProfileParts({ physics: physicsStamp('AMD Ryzen 7 3700X 8-Core Processor', 'win32 10.0.26200') }).slug).toBe('ryzen-7-3700x-windows-11-node');
+  it('names a physics-only profile after its CPU and the browser it was measured in', () => {
+    expect(deriveProfileParts({ physics: physicsStamp('AMD Ryzen 7 3700X 8-Core Processor', 'win32 10.0.26200') }).slug).toBe(
+      'ryzen-7-3700x-windows-11-chromium',
+    );
+  });
+
+  it('names a physics-only profile measured in WebKit after WebKit, so it cannot overwrite the Chromium one', () => {
+    const stamp = physicsStamp('Apple M3 Max', 'darwin 25.0.0', MACOS_27_BETA, { browser: 'webkit', browserVersion: '26.5' });
+
+    expect(deriveProfileParts({ physics: stamp }).slug).toBe('m3-max-macos-27-webkit');
+  });
+
+  it('refuses a document whose domains were measured in different browsers rather than picking one', () => {
+    const sources = {
+      rendering: [renderingStamp('ANGLE (NVIDIA, NVIDIA GeForce RTX 5070 Ti (0x00002C05) Direct3D11 vs_5_0 ps_5_0, D3D11)')],
+      physics: physicsStamp('AMD Ryzen 7 3700X 8-Core Processor', 'win32 10.0.26200', WINDOWS_11, { browser: 'webkit', browserVersion: '26.5' }),
+    };
+
+    expect(() => deriveProfileParts(sources)).toThrow(ProfileSlugError);
+    expect(() => deriveProfileParts(sources)).toThrow(/different browsers/);
   });
 
   it('refuses to guess an operating system a rendering-only run does not evidence', () => {
@@ -114,7 +136,7 @@ describe('deriveProfileParts', () => {
   it('falls back to the CPU model when the browser reports a constant instead of the GPU', () => {
     const parts = deriveProfileParts({
       rendering: [webkitBetaStamp()],
-      physics: physicsStamp('Apple M3 Max', 'darwin 25.0.0', MACOS_27_BETA),
+      physics: physicsStamp('Apple M3 Max', 'darwin 25.0.0', MACOS_27_BETA, { browser: 'webkit', browserVersion: '26.5' }),
     });
 
     expect(parts).toEqual({
@@ -141,8 +163,8 @@ describe('deriveProfileParts', () => {
     const onShipping = physicsStamp('Apple M3 Max', 'darwin 25.0.0', MACOS_27_BETA);
     const onBeta: PhysicsStamp = { ...onShipping, prerelease: { value: true, source: 'declared', evidence: `the runner declared the platform as '27-beta'` } };
 
-    expect(deriveProfileParts({ physics: onShipping }).slug).toBe('m3-max-macos-27-node');
-    expect(deriveProfileParts({ physics: onBeta }).slug).toBe('m3-max-macos-27-beta-node');
+    expect(deriveProfileParts({ physics: onShipping }).slug).toBe('m3-max-macos-27-chromium');
+    expect(deriveProfileParts({ physics: onBeta }).slug).toBe('m3-max-macos-27-beta-chromium');
   });
 });
 

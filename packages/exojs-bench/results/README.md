@@ -31,8 +31,11 @@ machine can only ever arrive as a new one.
 - **beta** - present when the platform is a pre-release build.
 - **browser** - part of the name because it is part of the measurement: the same
   machine measured in Chromium and in WebKit publishes two files, and their
-  numbers are not comparable with each other. A profile written from physics
-  alone reads `node`, the runtime its numbers were taken in.
+  numbers are not comparable with each other. Both domains are measured in a
+  browser - physics touches no GPU, but the JavaScript engine is what executes
+  its steps - so a profile written from physics alone names its browser too, and
+  a document whose two domains were measured in different browsers is refused
+  rather than named after one of them.
 
 ## A reference measurement is three runs
 
@@ -71,8 +74,9 @@ rather than the spread the repetition exists to expose.
   adapter string, browser and browser version, operating system and its major
   version, pre-release status, launch flags, headless and software-rasterizer
   bits, engine version, timestamp) and one physics provenance stamp per run
-  (Node and CPU host with the same platform version, pre-release status, fixed
-  timestep, disclosed caveats, engine version, timestamp);
+  (browser and browser version, CPU host with the same platform version,
+  pre-release status, fixed timestep, the measuring page's clock resolution,
+  disclosed caveats, engine version, timestamp);
 - the library arms with their exact installed versions;
 - the pooled comparison itself, per rendering backend and for physics, including
   every published value with its spread and stability flag, the verdict where
@@ -136,15 +140,22 @@ pnpm bench -- --browser=webkit --out=run-1
 the run is measured in, is stamped into every provenance block, and lands in the
 file name, so the two never merge into one profile.
 
+`--browser` applies to `--domain=physics` as well. Physics involves no GPU, but
+its numbers are not runtime-neutral: the same matrix under a different JavaScript
+engine moves per-step medians by multiples and reorders the arms against each
+other, which is exactly what a second reference machine exists to find out.
+
 The choice is not free of consequences, and the harness does not hide them. A
 backend the selected browser does not expose is emitted as `unavailable` cells
 carrying the reason - WebKit reaches WebGPU on macOS alone, so a WebKit run
 elsewhere publishes an empty WebGPU block rather than a number under the wrong
-heading. Launch flags are Chromium's; a WebKit stamp records an empty set rather
-than claiming flags it never passed. CPU profiling (`--profile`) needs the V8
-sampler and refuses outright in any other browser. WebKit also substitutes a
-constant for the GPU, so a WebKit profile is named after the CPU model and needs
-a physics measurement of the same machine beside the rendering one.
+heading. A physics arm the browser cannot construct is emitted the same way,
+carrying the loader's reason, rather than dropped from the matrix. Launch flags
+are Chromium's; a WebKit stamp records an empty set rather than claiming flags it
+never passed. CPU profiling (`--profile`) needs the V8 sampler and refuses
+outright in any other browser. WebKit also substitutes a constant for the GPU, so
+a WebKit profile is named after the CPU model and needs a physics measurement of
+the same machine beside the rendering one.
 
 ## Declaring the platform
 

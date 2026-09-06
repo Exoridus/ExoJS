@@ -1,4 +1,4 @@
-import type { PhysicsAdapter, PhysicsArchetypeSpec, PhysicsCellSpec, PhysicsSceneShape } from './PhysicsAdapter';
+import type { PhysicsArchetypeSpec, PhysicsArmIdentity, PhysicsCellSpec, PhysicsSceneShape } from './PhysicsAdapter';
 
 /**
  * Fixed physics timestep, seconds. `PhysicsWorld` defaults to `1/60` and owns a
@@ -161,16 +161,22 @@ const SCENE_SHAPES: readonly PhysicsSceneShape[] = ['box-stack', 'many-dynamic',
 export const seedFor = (scene: PhysicsSceneShape, bodyCount: number): number =>
   0x9e37_79b1 ^ (Math.max(0, SCENE_SHAPES.indexOf(scene)) * 0x0100_0193) ^ bodyCount;
 
-/** Cross-product of arms × archetypes × body counts. */
-export const buildPhysicsMatrix = (adapters: readonly PhysicsAdapter[]): PhysicsCellSpec[] => {
+/**
+ * Cross-product of arms × archetypes × body counts.
+ *
+ * Takes arm IDENTITIES rather than built adapters, so an arm the measuring
+ * browser could not construct still contributes its cells - recorded as
+ * unavailable with the reason it failed - instead of vanishing from the matrix.
+ */
+export const buildPhysicsMatrix = (arms: readonly PhysicsArmIdentity[]): PhysicsCellSpec[] => {
   const cells: PhysicsCellSpec[] = [];
 
-  for (const adapter of adapters) {
+  for (const arm of arms) {
     for (const archetype of PHYSICS_ARCHETYPES) {
       for (const bodyCount of archetype.bodyCounts) {
         cells.push({
-          engine: adapter.engine,
-          config: adapter.config,
+          engine: arm.engine,
+          config: arm.config,
           archetype: archetype.id,
           bodyCount,
           warmupSteps: warmupStepsForArchetype(archetype, bodyCount),

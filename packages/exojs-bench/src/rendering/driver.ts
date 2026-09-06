@@ -14,7 +14,7 @@ import {
   readPlatformVersion,
 } from '../shared/provenance';
 import type { ViteDevServer } from '../shared/viteServer';
-import { LIBRARY_ARMS, readEngineVersion, startViteServer as startPageServer } from '../shared/viteServer';
+import { readEngineVersion, RENDERING_LIBRARY_ARMS, startViteServer as startPageServer } from '../shared/viteServer';
 import { buildMatrix } from './archetypes';
 import type { ArchetypeSpec, Backend, CellResult, CellSpec, EngineAdapter } from './EngineAdapter';
 import type { MatrixSelection } from './selection';
@@ -270,7 +270,8 @@ const requestedCalibrationArms = (selection: MatrixSelection | undefined): reado
  * COEP isolation headers) is identical for every page this package serves, so it
  * lives in one place; only the page root differs.
  */
-export const startViteServer = async (version: string): Promise<ViteDevServer> => startPageServer({ pageDir: PAGE_DIR, version });
+export const startViteServer = async (version: string): Promise<ViteDevServer> =>
+  startPageServer({ pageDir: PAGE_DIR, version, libraryArms: RENDERING_LIBRARY_ARMS });
 
 /**
  * In-page snippet: read the unmasked WebGL2 renderer string for provenance
@@ -972,7 +973,7 @@ export const runMatrix = async (options: {
   launchFlags?: readonly string[];
 }): Promise<MatrixOutcome> => {
   const engineVersion = readEngineVersion();
-  const libraries = readLibraryProvenance(LIBRARY_ARMS);
+  const libraries = readLibraryProvenance(RENDERING_LIBRARY_ARMS);
   const allCells = buildMatrix([...ADAPTER_CAPABILITIES, ...requestedCalibrationArms(options.selection)], options.backends);
   const filtered = options.filter ? applyFilter(allCells, options.filter) : allCells;
   const selected = options.selection ? applySelection(filtered, options.selection) : filtered;

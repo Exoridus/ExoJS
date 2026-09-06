@@ -29,14 +29,12 @@ import type { PhysicsStamp, ProfilePlatform, RenderingStamp } from './schema';
  *   separate files instead of letting the second silently replace the first.
  *   Only a document whose stamps recorded no platform falls back to inferring
  *   the name from the graphics API in the adapter string.
- * - **browser** - the browser the run selected, or `node` for a physics-only
- *   document, whose numbers were taken in the Node process itself. Two browsers
- *   on one machine therefore produce two files, which is the point: their
- *   numbers are not comparable with each other.
+ * - **browser** - the browser the run selected. Both domains are measured in
+ *   one, so every document names it, and a document carrying both domains must
+ *   have taken them in the same browser or it describes no single measurement
+ *   condition. Two browsers on one machine therefore produce two files, which is
+ *   the point: their numbers are not comparable with each other.
  */
-
-/** Runtime part used when a document carries physics alone. */
-export const PHYSICS_RUNTIME = 'node';
 
 /** Marks the operating-system part of a slug as a pre-release build. */
 export const PRERELEASE_SEGMENT = 'beta';
@@ -238,6 +236,32 @@ const deriveMachine = (stamps: readonly RenderingStamp[], physics: PhysicsStamp 
   );
 };
 
+/**
+ * The one browser the whole document was measured in.
+ *
+ * Every stamp of one run names the same browser - one run drives one engine -
+ * but a document is assembled from a rendering run and a physics run, and
+ * nothing forces those to have selected the same one. A disagreement is refused
+ * rather than resolved: the slug carries a single browser, so publishing a
+ * mixed document would attribute one domain's numbers to the other domain's
+ * JavaScript engine.
+ */
+const chooseBrowser = (stamps: readonly RenderingStamp[], physics: PhysicsStamp | undefined): string => {
+  const named = [...new Set([...stamps.map(stamp => stamp.browser), ...(physics === undefined ? [] : [physics.browser])])];
+
+  if (named.length > 1) {
+    throw new ProfileSlugError(
+      `Cannot derive the profile slug: the document's domains were measured in different browsers (${named.join(', ')}). A profile describes one measurement condition; measure both domains in the same browser.`,
+    );
+  }
+
+  if (named[0] === undefined) {
+    throw new ProfileSlugError('Cannot derive the profile slug: no stamp names the browser the numbers were measured in.');
+  }
+
+  return named[0];
+};
+
 /** The platform version the document's stamps agree on, preferring one the host reported. */
 const choosePlatformVersion = (stamps: readonly RenderingStamp[], physics: PhysicsStamp | undefined): PlatformVersionStamp | undefined => {
   const candidates = [...(physics === undefined ? [] : [physics.host.platformVersion]), ...stamps.map(stamp => stamp.platformVersion)];
@@ -279,10 +303,7 @@ export const deriveProfileParts = (sources: SlugSources): ProfileParts => {
   const prerelease = stamps.some(stamp => stamp.prerelease.value) || sources.physics?.prerelease.value === true;
   const platform: ProfilePlatform = { name, version: version.major, versionSource: version.source === 'detected' ? 'detected' : 'declared', prerelease };
   const os = platformSegment(platform);
-
-  // Every stamp of one run names the same browser - one run drives one engine -
-  // so the first stamp speaks for the document.
-  const browser = stamps[0]?.browser ?? PHYSICS_RUNTIME;
+  const browser = chooseBrowser(stamps, sources.physics);
 
   return { slug: `${gpu}-${os}-${browser}`, gpu, os, browser, platform };
 };

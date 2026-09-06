@@ -1,13 +1,29 @@
-import { mutationSignature, selectMutationIndices } from '../shared/mutation';
-import type { BaseProvenance, HostInfo, LibraryProvenance, PlatformDeclaration, PrereleaseStamp } from '../shared/provenance';
-import { classifyPrerelease, declaredPrereleaseOf, readHostInfo, readLibraryProvenance, readPlatformVersion } from '../shared/provenance';
-import { createCpuTimer, median, percentile, shouldAbort } from '../shared/timing';
-import { createExoJsPhysicsAdapter } from './adapters/exojs-physics';
-import { buildPhysicsMatrix, PHYSICS_ARCHETYPES, seedFor, STEP_DELTA } from './archetypes';
-import type { PhysicsAdapter, PhysicsCellResult, PhysicsCellSpec } from './PhysicsAdapter';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import type { Browser } from 'playwright';
+import { chromium, webkit } from 'playwright';
+
+import type { BaseProvenance, HostInfo, LibraryProvenance, PlatformDeclaration, PrereleaseStamp, RenderingBrowser } from '../shared/provenance';
+import {
+  classifyPrerelease,
+  declaredPrereleaseOf,
+  DEFAULT_RENDERING_BROWSER,
+  readHostInfo,
+  readLibraryProvenance,
+  readPlatformVersion,
+} from '../shared/provenance';
+import type { ViteDevServer } from '../shared/viteServer';
+import { PHYSICS_LIBRARY_ARMS, startViteServer as startPageServer } from '../shared/viteServer';
+import { buildPhysicsMatrix, STEP_DELTA } from './archetypes';
+import type { PhysicsArmReport, PhysicsClockReport } from './page/contract';
+import type { PhysicsCellResult, PhysicsCellSpec } from './PhysicsAdapter';
 
 /** npm package name of the native physics arm, resolved for version provenance. */
 const NATIVE_PHYSICS_PACKAGE = '@codexo/exojs-physics';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const PAGE_DIR = resolve(HERE, 'page');
 
 /**
  * Per-arm methodology disclosure, keyed by the arm's `engine` label. Each arm is
@@ -29,52 +45,69 @@ const ARM_DISCLOSURES: Readonly<Record<string, string>> = {
   'exojs-physics':
     'exojs-physics arm (native runtime, pure JS): TGS-Soft solver, 4 sub-steps per fixed step, sleeping ON by default (resting bodies deactivate). Contact count = solid contacts in the world contact graph.',
   'matter-js':
-    "matter-js arm (pure-JS peer): constraint solver at matter defaults (6 position / 4 velocity / 2 constraint iterations), sleeping OFF by default (a settled stack keeps paying full solve cost); matter's default per-step air drag (frictionAir) is zeroed so all arms integrate the same pure-gravity field; gravity (px/s²) and perturbation velocity (px/s) are mapped into matter's px-per-step unit model. Contact count = active colliding pairs (engine.pairs.collisionActive), a pair-level proxy, not identical in semantics to the exojs solid-contact count.",
+    "matter-js arm (pure-JS peer): constraint solver at matter defaults (6 position / 4 velocity / 2 constraint iterations), sleeping OFF by default (a settled stack keeps paying full solve cost); matter's default per-step air drag (frictionAir) is zeroed so all arms integrate the same pure-gravity field; gravity (px/s^2) and perturbation velocity (px/s) are mapped into matter's px-per-step unit model. Contact count = active colliding pairs (engine.pairs.collisionActive), a pair-level proxy, not identical in semantics to the exojs solid-contact count.",
   planck:
-    "planck arm (pure-JS peer): Box2D port at planck defaults (8 velocity / 3 position iterations per step), sleeping ON by default; Settings.lengthUnitsPerMeter is set to 30 so planck's absolute MKS tolerances are interpreted at the scene's pixel scale, which is the knob planck gives a pixel-coordinate game - positions, gravity (px/s²) and velocity (px/s) then carry over unconverted. Contact count = the world contact list filtered by isTouching(), a touching collider-pair count. Rays are answered from planck's dynamic tree, but World.rayCast is Box2D's non-solid ray (an origin inside a fixture is not a hit). Continuous collision runs for every body (planck's default), where exojs and rapier restrict it to bullets and matter has none.",
+    "planck arm (pure-JS peer): Box2D port at planck defaults (8 velocity / 3 position iterations per step), sleeping ON by default; Settings.lengthUnitsPerMeter is set to 30 so planck's absolute MKS tolerances are interpreted at the scene's pixel scale, which is the knob planck gives a pixel-coordinate game - positions, gravity (px/s^2) and velocity (px/s) then carry over unconverted. Contact count = the world contact list filtered by isTouching(), a touching collider-pair count. Rays are answered from planck's dynamic tree, but World.rayCast is Box2D's non-solid ray (an origin inside a fixture is not a hit). Continuous collision runs for every body (planck's default), where exojs and rapier restrict it to bullets and matter has none.",
   rapier:
     'rapier arm (WASM reference ceiling, not a pure-JS peer): TGS-Soft solver at rapier defaults (4 solver / 1 internal PGS iterations), auto-sleeping ON; default lengthUnit=1 is fed a px-scale world (tuned for ~1-unit objects), exactly what attaching rapier with pixel coordinates yields. Contact count = collider pairs with a solid narrow-phase manifold (numContacts > 0), deduped.',
 };
 
 /**
- * Catastrophic-regression step budget (ms). The physics domain is CPU-bound and
- * fast; a cell whose last-window median blows past this is a runaway (a
- * pathological body count or an accidental O(n²) regression), so it aborts to
- * `exceeded` rather than hanging the run. Deliberately loose - it is a hang
- * guard, not a performance gate.
+ * Node-side wall-clock cap on a single cell, above the heaviest cell this matrix
+ * is known to contain.
+ *
+ * The in-page abort guard bounds a runaway TIMED window, but it cannot bound the
+ * warmup, and it only fires between steps - never inside one that does not
+ * return. This cap lets the driver abandon a wedged page as `unavailable` and
+ * relaunch, so one pathological cell can never hang the whole matrix. The
+ * slowest trusted cell measured so far runs a few minutes (a 4000-body settling
+ * pile on the slowest pure-JS arm), so the cap sits well above that: it is a
+ * hang guard, not a budget.
  */
-const STEP_BUDGET_MS = 250;
-/** Sliding window (steps) `shouldAbort` medians over, so one GC spike cannot trip the abort. */
-const ABORT_WINDOW = 30;
+const CELL_TIMEOUT_MS = 900_000;
+
+/** Sentinel returned when a cell exceeds {@link CELL_TIMEOUT_MS} and the page is presumed wedged. */
+const CELL_WEDGED = Symbol('physics-cell-wedged');
 
 /**
  * Provenance stamped onto every physics run. Extends the shared
- * {@link BaseProvenance} (timestamp + engine version) with the CPU-domain host
- * (Node runtime + CPU) and the fixed timestep the step-time medians are measured
- * against. There is no GPU adapter or software-rasterizer bit here - physics is
- * pure CPU, so the honesty concern is instead the host CPU/Node identity.
+ * {@link BaseProvenance} (timestamp + engine version) with the browser the
+ * matrix was measured in, the CPU host that drove it, and the fixed timestep the
+ * step-time medians are measured against.
+ *
+ * There is no GPU adapter or software-rasterizer bit here - physics is pure CPU
+ * work - but the JavaScript engine is now part of the measurement condition: the
+ * same matrix produces different numbers under V8 and under JavaScriptCore, so a
+ * number is only comparable against another taken in the same browser.
  */
 export interface PhysicsProvenance extends BaseProvenance {
-  /** Node runtime + CPU host the step-time numbers were measured on. */
+  /** Browser engine the step times were measured in. */
+  readonly browser: RenderingBrowser;
+  /** Browser build the step times were measured in, as the browser reported it. */
+  readonly browserVersion: string;
+  /** CPU host that drove the browser. */
   readonly host: HostInfo;
-  /**
-   * Whether the platform is a pre-release build, and what that rests on.
-   *
-   * No browser is involved, so nothing here can be detected from a version
-   * string: the value rests on the runner's declaration or records that nothing
-   * established it. It is carried because a published profile's file name marks
-   * a pre-release platform whether or not the profile has a rendering half.
-   */
+  /** Whether the platform is a pre-release build, and what that rests on. */
   readonly prerelease: PrereleaseStamp;
   /** Fixed physics timestep (seconds) each timed `step` advanced. */
   readonly fixedDelta: number;
+  /**
+   * What the page's clock could resolve, and whether it reached a
+   * cross-origin-isolated context.
+   *
+   * The fastest cells in this matrix step in single-digit microseconds, within
+   * an order of magnitude of the browser's `performance.now()` grid, so the
+   * resolution is part of what a step-time median means. It is also what the
+   * per-cell `stepsPerSample` was derived from.
+   */
+  readonly clock: PhysicsClockReport;
   /** Disclosed caveats about how these numbers were produced. */
   readonly caveats: readonly string[];
 }
 
 /** Full outcome of a physics matrix run: provenance, arm-version provenance, and every cell result. */
 export interface PhysicsMatrixOutcome {
-  /** The single provenance stamp for the run (one Node process, one host). */
+  /** The single provenance stamp for the run (one browser session, one host). */
   readonly provenance: PhysicsProvenance;
   /** Version + resolution provenance for each physics engine arm. */
   readonly libraries: readonly LibraryProvenance[];
@@ -92,99 +125,134 @@ const applyFilter = (cells: readonly PhysicsCellSpec[], filter: Partial<PhysicsC
   return cells.filter(cell => entries.every(([key, value]) => cell[key as keyof PhysicsCellSpec] === value));
 };
 
-/** The archetype spec for a cell. */
-const archetypeFor = (id: PhysicsCellSpec['archetype']): (typeof PHYSICS_ARCHETYPES)[number] => {
-  const spec = PHYSICS_ARCHETYPES.find(archetype => archetype.id === id);
-
-  if (spec === undefined) {
-    throw new Error(`Unknown physics archetype '${id}'.`);
-  }
-
-  return spec;
-};
-
-/**
- * Measure one cell: build the scene, assert its cross-arm determinism, warm it
- * to steady state, then time `timedSteps` `step`s and reduce to median/p95.
- * Aborts to `exceeded` on a sustained runaway (see {@link STEP_BUDGET_MS}).
- */
-const runCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec): PhysicsCellResult => {
-  const archetype = archetypeFor(spec.archetype);
-  const seed = seedFor(archetype.scene, spec.bodyCount);
-
-  adapter.setup(archetype, spec.bodyCount, seed);
-
-  // Cross-arm determinism guard: the perturbed-body set the arm
-  // selected must match the canonical shared selection for this cell. With one
-  // arm today this is a self-check; it is what a future matter/rapier arm is
-  // asserted against so a divergent RNG path fails loudly instead of silently
-  // simulating a different scene. An arm that omits the signature is skipped.
-  const armSignature = adapter.mutationSignature?.();
-
-  if (armSignature !== undefined) {
-    const canonical = mutationSignature(selectMutationIndices(spec.bodyCount, archetype.perturbFraction, seed));
-
-    if (armSignature !== canonical) {
-      adapter.teardown();
-      throw new Error(`Determinism divergence for ${spec.engine}/${spec.archetype}/${spec.bodyCount}: arm=${armSignature} canonical=${canonical}.`);
-    }
-  }
-
-  for (let i = 0; i < spec.warmupSteps; i++) {
-    adapter.step(STEP_DELTA);
-  }
-
-  const timer = createCpuTimer();
-  let exceeded = false;
-
-  for (let i = 0; i < spec.timedSteps; i++) {
-    timer.begin();
-    adapter.step(STEP_DELTA);
-    timer.end();
-
-    if (shouldAbort(timer.samples, STEP_BUDGET_MS, ABORT_WINDOW)) {
-      exceeded = true;
-      break;
-    }
-  }
-
-  const structural = adapter.sampleStructural();
-
-  adapter.teardown();
-
-  const samples = timer.samples;
-  const stepMsMedian = median(samples);
-  const stepMsP95 = percentile(samples, 95);
-
-  return {
-    spec,
-    stepMsMedian,
-    stepMsP95,
-    structural,
-    status: exceeded ? 'exceeded' : 'ok',
-    ...(exceeded && { note: `aborted: last-${ABORT_WINDOW}-step median exceeded ${STEP_BUDGET_MS}ms/step` }),
-  };
-};
+/** A cell that could not be measured: zeroed timings/structure, `unavailable` status, and an explanatory note. */
+const unavailableCell = (spec: PhysicsCellSpec, note: string): PhysicsCellResult => ({
+  spec,
+  stepMsMedian: 0,
+  stepMsP95: 0,
+  stepsPerSample: 0,
+  structural: { bodyCount: 0, contactCount: 0, jointCount: 0, rayHits: 0 },
+  status: 'unavailable',
+  note,
+});
 
 /**
- * Run the whole physics matrix end-to-end in this Node process.
+ * Thrown when an arm simulated a different scene from the canonical one.
  *
- * Unlike the rendering domain there is no browser and no GPU: physics is pure
- * CPU work, so the harness is a straight loop calling `world.step`. Every cell
- * runs in the SAME process back-to-back (same-run discipline: JIT warmth and
- * allocator state are shared and comparable), and `onCellResult` fires after
- * each cell so the caller can checkpoint it immediately.
+ * It fails the run rather than degrading to a missing cell: the cross-arm
+ * comparison the matrix exists to make rests on every arm stepping the identical
+ * world, so a divergence invalidates the run rather than one datapoint of it.
  */
-export const runPhysicsMatrix = (
+export class PhysicsDeterminismError extends Error {
+  public constructor(message: string) {
+    super(message);
+    this.name = 'PhysicsDeterminismError';
+  }
+}
+
+/** Launch the selected browser engine. Neither engine takes launch flags here - physics touches no GPU. */
+const launchBrowser = async (browser: RenderingBrowser): Promise<Browser> => (browser === 'webkit' ? webkit.launch() : chromium.launch());
+
+/** Starts the programmatic Vite dev server rooted at the physics harness page. */
+export const startViteServer = async (version: string): Promise<ViteDevServer> =>
+  startPageServer({ pageDir: PAGE_DIR, version, libraryArms: PHYSICS_LIBRARY_ARMS });
+
+/**
+ * Run one cell in the page, degrading a thrown cell to an `unavailable` result
+ * instead of letting it reject - except a determinism divergence, which the page
+ * reports as its own outcome kind and which fails the run.
+ */
+const runCellInPage = async (page: import('playwright').Page, spec: PhysicsCellSpec, resolutionMs: number): Promise<PhysicsCellResult> => {
+  let outcome;
+
+  try {
+    outcome = await page.evaluate(([cell, resolution]) => globalThis.__runPhysicsCell!(cell, resolution), [spec, resolutionMs] as const);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    return unavailableCell(spec, `cell errored (isolated; run continued): ${message}`);
+  }
+
+  if (outcome.kind === 'divergence') {
+    throw new PhysicsDeterminismError(outcome.message);
+  }
+
+  return outcome.kind === 'unavailable' ? unavailableCell(spec, outcome.reason) : outcome.result;
+};
+
+/**
+ * Run one cell, resolving to {@link CELL_WEDGED} if it does not finish within
+ * {@link CELL_TIMEOUT_MS}. The still-pending evaluate is left to reject when the
+ * browser closes; its rejection is swallowed so it never surfaces as an
+ * unhandled rejection.
+ */
+const runCellOrWedge = async (
+  page: import('playwright').Page,
+  spec: PhysicsCellSpec,
+  resolutionMs: number,
+): Promise<PhysicsCellResult | typeof CELL_WEDGED> => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<typeof CELL_WEDGED>(resolvePromise => {
+    timer = setTimeout(() => resolvePromise(CELL_WEDGED), CELL_TIMEOUT_MS);
+  });
+
+  const run = runCellInPage(page, spec, resolutionMs).then(result => {
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
+
+    return result;
+  });
+
+  run.catch(() => {
+    /* intentionally ignored */
+  });
+
+  return Promise.race([run, timeout]);
+};
+
+/** A page ready to drive cells, plus what it reported about itself. */
+interface HarnessSession {
+  readonly browser: Browser;
+  readonly page: import('playwright').Page;
+  readonly arms: readonly PhysicsArmReport[];
+  readonly clock: PhysicsClockReport;
+  readonly version: string;
+}
+
+/** Open the harness page and read the arms it could build plus the clock it can time with. */
+const openSession = async (baseUrl: string, browserName: RenderingBrowser): Promise<HarnessSession> => {
+  const browser = await launchBrowser(browserName);
+  const page = await browser.newPage();
+
+  await page.goto(baseUrl, { waitUntil: 'load' });
+  await page.waitForFunction(() => typeof globalThis.__runPhysicsCell === 'function');
+
+  const clock = await page.evaluate(() => globalThis.__physicsClock!());
+  const arms = await page.evaluate(() => globalThis.__physicsArms!());
+
+  return { browser, page, arms, clock, version: browser.version() };
+};
+
+/**
+ * Run the whole physics matrix end-to-end in one browser page.
+ *
+ * Physics is pure CPU work with no GPU API involved, but nobody runs it in Node:
+ * the heap limits, the garbage collector and - for the WASM arm - the module
+ * compilation strategy are the browser's, and the JIT is whichever the selected
+ * engine ships. The matrix is therefore driven through Playwright exactly as the
+ * rendering matrix is, and the browser it ran in is stamped into its provenance.
+ *
+ * Every cell of every arm runs in the SAME page back to back (same-run
+ * discipline: JIT warmth and allocator state are shared and comparable). A cell
+ * that wedges the page is abandoned as `unavailable` and the page relaunched for
+ * the remainder, which breaks that discipline - so the run discloses it in the
+ * caveats rather than presenting the remaining cells as if nothing happened.
+ */
+export const runPhysicsMatrix = async (
   options: {
-    adapters?: readonly PhysicsAdapter[];
-    /**
-     * npm package names whose installed versions are recorded in the report header
-     * (one per arm). Defaults to the native physics package alone; the CLI passes
-     * the competitor package names for whichever adapter arms actually resolved, so
-     * a run never claims a version for an arm it did not include.
-     */
-    libraries?: readonly string[];
+    /** Browser engine to measure in. Defaults to the shared harness default. */
+    browser?: RenderingBrowser;
     /**
      * The runner's statement about the operating system: its major version and
      * whether that build is a pre-release one. Neither is readable at runtime on
@@ -196,55 +264,117 @@ export const runPhysicsMatrix = (
     timedStepsOverride?: number;
     onCellResult?: PhysicsCellResultSink;
   } = {},
-): PhysicsMatrixOutcome => {
-  const adapters = options.adapters ?? [createExoJsPhysicsAdapter()];
-  const libraries = readLibraryProvenance(options.libraries ?? [NATIVE_PHYSICS_PACKAGE]);
-  const engineVersion = libraries.find(library => library.name === NATIVE_PHYSICS_PACKAGE)?.version ?? libraries[0]?.version ?? 'unknown';
+): Promise<PhysicsMatrixOutcome> => {
+  const browserName = options.browser ?? DEFAULT_RENDERING_BROWSER;
+  const engineVersionSource = readLibraryProvenance([NATIVE_PHYSICS_PACKAGE]);
+  const server = await startViteServer(engineVersionSource[0]?.version ?? '0.0.0');
+  const baseUrl = server.resolvedUrls?.local[0];
 
-  const allCells = buildPhysicsMatrix(adapters);
-  const filtered = options.filter ? applyFilter(allCells, options.filter) : allCells;
-  const cells = options.timedStepsOverride === undefined ? filtered : filtered.map(cell => ({ ...cell, timedSteps: options.timedStepsOverride! }));
-
-  if (cells.length === 0) {
-    throw new Error('The physics matrix is empty: no arm/archetype/body-count matched the requested filter.');
+  if (baseUrl === undefined) {
+    await server.close();
+    throw new Error('The physics harness server started without a local URL to drive.');
   }
 
-  const adaptersByEngine = new Map(adapters.map(adapter => [`${adapter.engine}/${adapter.config}`, adapter]));
   const onCellResult: PhysicsCellResultSink = options.onCellResult ?? ((): void => undefined);
   const results: PhysicsCellResult[] = [];
+  const timestamp = new Date().toISOString();
 
-  for (const cell of cells) {
-    const adapter = adaptersByEngine.get(`${cell.engine}/${cell.config}`);
+  let session = await openSession(baseUrl, browserName);
+  let relaunched = false;
 
-    if (adapter === undefined) {
-      throw new Error(`No physics adapter registered for ${cell.engine}/${cell.config}.`);
+  try {
+    const { arms, clock } = session;
+    const available = new Set(arms.filter(arm => arm.available).map(arm => `${arm.engine}/${arm.config}`));
+    const reasons = new Map(arms.map(arm => [`${arm.engine}/${arm.config}`, arm.reason]));
+
+    const allCells = buildPhysicsMatrix(arms);
+    const filtered = options.filter ? applyFilter(allCells, options.filter) : allCells;
+    const cells = options.timedStepsOverride === undefined ? filtered : filtered.map(cell => ({ ...cell, timedSteps: options.timedStepsOverride! }));
+
+    if (cells.length === 0) {
+      throw new Error('The physics matrix is empty: no arm/archetype/body-count matched the requested filter.');
     }
 
-    const result = runCell(adapter, cell);
+    let remaining = cells;
 
-    results.push(result);
-    onCellResult(result);
+    while (remaining.length > 0) {
+      const cell = remaining[0]!;
+      const key = `${cell.engine}/${cell.config}`;
+
+      if (!available.has(key)) {
+        const result = unavailableCell(cell, reasons.get(key) ?? `no physics arm is registered for ${key}`);
+
+        results.push(result);
+        onCellResult(result);
+        remaining = remaining.slice(1);
+        continue;
+      }
+
+      const outcome = await runCellOrWedge(session.page, cell, clock.resolutionMs);
+
+      if (outcome === CELL_WEDGED) {
+        const result = unavailableCell(
+          cell,
+          `cell wedged the browser (no result after ${String(CELL_TIMEOUT_MS)}ms); isolated as unavailable, page relaunched for the remaining cells`,
+        );
+
+        results.push(result);
+        onCellResult(result);
+        remaining = remaining.slice(1);
+        relaunched = true;
+
+        await session.browser.close();
+        session = await openSession(baseUrl, browserName);
+        continue;
+      }
+
+      results.push(outcome);
+      onCellResult(outcome);
+      remaining = remaining.slice(1);
+    }
+
+    // Disclosures and arm versions only for the arms this browser could build,
+    // in matrix order: a run never claims a version for an arm it did not run.
+    const measuredArms = arms.filter(arm => arm.available);
+    const libraries = readLibraryProvenance([NATIVE_PHYSICS_PACKAGE, ...measuredArms.map(arm => arm.library).filter(name => name !== NATIVE_PHYSICS_PACKAGE)]);
+    const armCaveats = [...new Set(measuredArms.map(arm => arm.engine))]
+      .map(engine => ARM_DISCLOSURES[engine])
+      .filter((caveat): caveat is string => caveat !== undefined);
+    const unavailableArms = arms.filter(arm => !arm.available);
+
+    const provenance: PhysicsProvenance = {
+      timestamp,
+      engineVersion: libraries.find(library => library.name === NATIVE_PHYSICS_PACKAGE)?.version ?? libraries[0]?.version ?? 'unknown',
+      browser: browserName,
+      browserVersion: session.version,
+      host: readHostInfo(readPlatformVersion(options.platform)),
+      prerelease: classifyPrerelease({ browserVersion: session.version, declared: declaredPrereleaseOf(options.platform) }),
+      fixedDelta: STEP_DELTA,
+      clock,
+      caveats: [
+        `Step time is CPU wall-clock per step() over the timed window (median/p95), measured in one ${browserName} page (same-run discipline). No number here was taken in Node.`,
+        `The page's performance.now() resolves to ${(clock.resolutionMs * 1000).toFixed(1)}us (cross-origin isolated: ${String(clock.crossOriginIsolated)}). A cell whose step is too fast to time individually at that resolution batches steps per timing sample and records the batch as stepsPerSample; median and p95 are then per-step averages over that batch.`,
+        'Scenes are warmed to steady state before timing; the per-cell warmupSteps/timedSteps counts are recorded for honesty.',
+        'All arms build the byte-identical scene (bodies, positions, shapes, sizes, static/dynamic split, gravity, perturbed-body set) from the shared deterministic RNG, and the perturbed-body selection is asserted equal across arms before each cell is timed.',
+        'Each arm runs at its own engine defaults for solver iterations, contact model and sleeping - those engine differences are the measured quantity in a native-vs-adapter comparison, disclosed per arm below.',
+        'Arm roles: matter-js and planck are the PURE-JS PEERS exojs-physics is compared against; rapier is a Rust/WASM engine and stands as the REFERENCE CEILING for what leaving JavaScript buys, not as a peer a JS solver is expected to match.',
+        ...(unavailableArms.length > 0
+          ? [
+              `Arms this browser could not run, recorded as unavailable cells rather than omitted: ${unavailableArms.map(arm => `${arm.engine} (${arm.reason})`).join('; ')}`,
+            ]
+          : []),
+        ...(relaunched
+          ? [
+              'A cell wedged the page and the browser was relaunched mid-run, so the cells after it did not share the JIT and allocator state of the cells before it.',
+            ]
+          : []),
+        ...armCaveats,
+      ],
+    };
+
+    return { provenance, libraries, results };
+  } finally {
+    await session.browser.close();
+    await server.close();
   }
-
-  // Disclosures only for the arms actually present, in matrix order, de-duplicated.
-  const armEngines = [...new Set(adapters.map(adapter => adapter.engine))];
-  const armCaveats = armEngines.map(engine => ARM_DISCLOSURES[engine]).filter((caveat): caveat is string => caveat !== undefined);
-
-  const provenance: PhysicsProvenance = {
-    timestamp: new Date().toISOString(),
-    engineVersion,
-    host: readHostInfo(readPlatformVersion(options.platform)),
-    prerelease: classifyPrerelease({ declared: declaredPrereleaseOf(options.platform) }),
-    fixedDelta: STEP_DELTA,
-    caveats: [
-      'Step time is CPU wall-clock per step() over the timed window (median/p95), measured in one Node process (same-run discipline).',
-      'Scenes are warmed to steady state before timing; the per-cell warmupSteps/timedSteps counts are recorded for honesty.',
-      'All arms build the byte-identical scene (bodies, positions, shapes, sizes, static/dynamic split, gravity, perturbed-body set) from the shared deterministic RNG, and the perturbed-body selection is asserted equal across arms before each cell is timed.',
-      'Each arm runs at its own engine defaults for solver iterations, contact model and sleeping — those engine differences are the measured quantity in a native-vs-adapter comparison, disclosed per arm below.',
-      'Arm roles: matter-js and planck are the PURE-JS PEERS exojs-physics is compared against; rapier is a Rust/WASM engine and stands as the REFERENCE CEILING for what leaving JavaScript buys, not as a peer a JS solver is expected to match.',
-      ...armCaveats,
-    ],
-  };
-
-  return { provenance, libraries, results };
 };

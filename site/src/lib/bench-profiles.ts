@@ -21,7 +21,7 @@
  */
 
 /** Schema version this reader understands; anything else is refused. */
-const SUPPORTED_SCHEMA_VERSION = 4;
+const SUPPORTED_SCHEMA_VERSION = 5;
 
 /**
  * Arms that stand as a reference ceiling rather than as a peer.
@@ -177,9 +177,8 @@ export interface RenderingStamp {
   readonly timestamp: string;
 }
 
-/** Node and CPU host the physics numbers were measured on. */
+/** CPU host the physics numbers were measured on. */
 export interface ProfileHost {
-  readonly node: string;
   readonly cpu: string;
   readonly cpuCount: number;
   readonly os: string;
@@ -187,12 +186,25 @@ export interface ProfileHost {
   readonly arch: string;
 }
 
+/** What the measuring page's clock could resolve, which decides how finely a step is timed. */
+export interface PhysicsClock {
+  /** Smallest non-zero `performance.now()` difference the page observed, in milliseconds. */
+  readonly resolutionMs: number;
+  /** Whether the page reached a cross-origin-isolated context, which lifts the coarse clamp. */
+  readonly crossOriginIsolated: boolean;
+}
+
 /** Physics provenance; physics has no backend axis, so there is one stamp. */
 export interface PhysicsStamp {
+  /** Browser engine the step times were measured in. */
+  readonly browser: string;
+  /** Browser build the step times were measured in. */
+  readonly browserVersion: string;
   readonly host: ProfileHost;
-  /** Whether the platform is a pre-release build; a physics run drives no browser, so nothing here is detected. */
+  /** Whether the platform is a pre-release build, and what established that. */
   readonly prerelease: PrereleaseStamp;
   readonly fixedDelta: number;
+  readonly clock: PhysicsClock;
   readonly caveats: readonly string[];
   readonly engineVersion: string;
   readonly timestamp: string;

@@ -168,7 +168,17 @@ const pooledRuns = referenceProfile?.profile.runs ?? REPRODUCTION_RUNS;
                     texture binds, buffer uploads, solved contacts. A row whose difference could not be evidenced that way is not published as a
                     comparison; it appears among the omissions instead.
                 </li>
-                <li>One profile describes <strong>one machine</strong>. Numbers from different machines are never mixed into one table or averaged together.</li>
+                <li>
+                    One profile describes <strong>one machine measured in one browser</strong>. Numbers from different machines are never mixed into one
+                    table or averaged together, and neither are numbers from different browsers - including for physics, which touches no GPU but whose
+                    per-step times depend on which JavaScript engine executed the steps.
+                </li>
+                <li>
+                    Physics is measured <strong>in the browser</strong>, not in the process that drives the harness. Nobody runs ExoJS physics in Node, and
+                    the runtime is part of the measurement: heap limits, garbage collection and WebAssembly compilation are the browser's. The fastest cells
+                    step in microseconds, close to the browser's clock resolution, so a step too fast to time on its own is timed in batches large enough to
+                    clear that resolution, with the batch published beside the number and the timed-step budget unchanged.
+                </li>
                 <li>
                     Phaser renders through a <strong>WebGL1</strong> context, so its rows sit in their own block, compare CPU time only, and carry no
                     mechanism - the structural probe cannot attach to that context to say whether the backend generation or the engine caused the gap.
@@ -222,11 +232,12 @@ pnpm bench:compare -- \
                 an otherwise idle machine: these are wall-clock comparisons and background load moves them.
             </p>
             <p>
-                <code>pnpm bench -- --browser=webkit</code> measures in WebKit instead of the default Chromium. The browser is part of the profile's name,
-                so the same machine measured in both publishes two files rather than overwriting one with the other, and the harness refuses to pool runs
-                taken in different browsers. A backend the browser does not expose is published as not measured, never as a number: WebKit reaches WebGPU
-                on macOS alone. WebKit also reports a constant in place of the GPU, so a WebKit profile is named after the machine's CPU model and needs a
-                physics measurement of the same machine alongside the rendering one.
+                <code>pnpm bench -- --browser=webkit</code> measures in WebKit instead of the default Chromium, for both domains - a physics run takes the
+                flag too, and the two domains of one profile have to agree on it. The browser is part of the profile's name, so the same machine measured in
+                both publishes two files rather than overwriting one with the other, and the harness refuses to pool runs taken in different browsers. A
+                backend the browser does not expose is published as not measured, never as a number: WebKit reaches WebGPU on macOS alone. A physics arm the
+                browser cannot load is published the same way, with the reason it failed. WebKit also reports a constant in place of the GPU, so a WebKit
+                profile is named after the machine's CPU model and needs a physics measurement of the same machine alongside the rendering one.
             </p>
             <p>
                 On macOS and Linux, add <code>--platform=26</code> to every run - or <code>--platform=26-beta</code> on a pre-release build. The profile's

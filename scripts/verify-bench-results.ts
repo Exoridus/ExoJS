@@ -183,8 +183,8 @@ const checkRenderingStampShape = (stamp: unknown, where: string, problems: strin
   checkPrereleaseShape(stamp['prerelease'], `${where}.prerelease`, problems);
   checkPlatformVersion(stamp, where, problems);
 };
-const PHYSICS_STAMP_FIELDS = ['host', 'prerelease', 'fixedDelta', 'caveats', 'engineVersion', 'timestamp'] as const;
-const HOST_FIELDS = ['node', 'cpu', 'cpuCount', 'os', 'platformVersion', 'arch'] as const;
+const PHYSICS_STAMP_FIELDS = ['browser', 'browserVersion', 'host', 'prerelease', 'fixedDelta', 'clock', 'caveats', 'engineVersion', 'timestamp'] as const;
+const HOST_FIELDS = ['cpu', 'cpuCount', 'os', 'platformVersion', 'arch'] as const;
 const PROFILE_FIELDS = ['slug', 'gpu', 'os', 'browser', 'platform', 'engineVersion', 'measuredAt', 'runs'] as const;
 const PLATFORM_FIELDS = ['name', 'version', 'versionSource', 'prerelease'] as const;
 

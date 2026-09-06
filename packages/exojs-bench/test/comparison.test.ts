@@ -54,6 +54,7 @@ const physicsCell = (options: {
   spec: { engine: options.engine, config: 'default', archetype: options.archetype, bodyCount: options.bodyCount, warmupSteps: 10, timedSteps: 60 },
   stepMsMedian: options.stepMsMedian,
   stepMsP95: options.stepMsMedian * 1.2,
+  stepsPerSample: 1,
   structural: { bodyCount: 100, contactCount: options.contactCount ?? 50, jointCount: 0, rayHits: options.rayHits ?? 0 },
   status: 'ok',
 });
@@ -75,8 +76,9 @@ const stamp = (engineVersion = '0.17.0', overrides: Partial<Provenance> = {}): P
 });
 
 const physicsStamp = (engineVersion = '0.17.0', host: Partial<PhysicsProvenance['host']> = {}): PhysicsProvenance => ({
+  browser: 'chromium',
+  browserVersion: '151.0.7922.34',
   host: {
-    node: 'v24.14.1',
     cpu: 'Test CPU',
     cpuCount: 16,
     os: 'linux 6.1.0',
@@ -86,6 +88,7 @@ const physicsStamp = (engineVersion = '0.17.0', host: Partial<PhysicsProvenance[
   },
   prerelease: { value: false, source: 'assumed-stable', evidence: 'no marker, none declared' },
   fixedDelta: 1 / 60,
+  clock: { resolutionMs: 0.005, crossOriginIsolated: true },
   caveats: [],
   engineVersion,
   timestamp: '2026-01-01T00:00:00.000Z',

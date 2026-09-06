@@ -25,13 +25,26 @@ const ENGINE_SRC = resolve(REPO_ROOT, 'src');
 const SHADER_EXTENSIONS = ['.vert', '.frag', '.glsl', '.wgsl'] as const;
 
 /**
- * Competitor library arms whose installed version + resolution are stamped into
- * every report header (via the shared `readLibraryProvenance`) and, when
- * resolvable, pre-bundled by Vite (see {@link resolvableCompetitors}). Pinned
- * exact in `@codexo/exojs-bench`'s devDependencies, so an "ExoJS vs X" number is
- * auditable against a reproducible build.
+ * Competitor library arms of the rendering domain, whose installed version +
+ * resolution are stamped into every rendering report header (via the shared
+ * `readLibraryProvenance`) and, when resolvable, pre-bundled by Vite (see
+ * {@link resolvableCompetitors}). Pinned exact in `@codexo/exojs-bench`'s
+ * devDependencies, so an "ExoJS vs X" number is auditable against a reproducible
+ * build.
  */
-export const LIBRARY_ARMS = ['pixi.js', 'phaser', 'excalibur'] as const;
+export const RENDERING_LIBRARY_ARMS = ['pixi.js', 'phaser', 'excalibur'] as const;
+
+/**
+ * Competitor library arms of the physics domain, resolved and pre-bundled by the
+ * same mechanism as the rendering ones because that domain is measured in the
+ * page too. `matter-js` is CommonJS and `@dimforge/rapier2d-compat` carries its
+ * own WASM, so both only reach the browser's native ESM loader through the
+ * optimizer.
+ */
+export const PHYSICS_LIBRARY_ARMS = ['matter-js', 'planck', '@dimforge/rapier2d-compat'] as const;
+
+/** Every competitor arm this package can measure, across both domains. */
+export const LIBRARY_ARMS = [...RENDERING_LIBRARY_ARMS, ...PHYSICS_LIBRARY_ARMS] as const;
 
 /** ExoJS package version, read from the repository root manifest. */
 export const readEngineVersion = (): string => {
@@ -41,16 +54,16 @@ export const readEngineVersion = (): string => {
 };
 
 /**
- * The subset of {@link LIBRARY_ARMS} actually resolvable from this package, so
- * Vite's `optimizeDeps.include` only pre-bundles competitors that are present. A
+ * The subset of `arms` actually resolvable from this package, so Vite's
+ * `optimizeDeps.include` only pre-bundles competitors that are present. A
  * competitor left unlinked (no `bench:setup`) is simply omitted rather than
  * crashing esbuild's optimizer at server startup - an ExoJS-only run then needs
  * none of the competitor deps present.
  */
-const resolvableCompetitors = (): string[] => {
+const resolvableCompetitors = (arms: readonly string[]): string[] => {
   const nodeRequire = createRequire(import.meta.url);
 
-  return LIBRARY_ARMS.filter(name => {
+  return arms.filter(name => {
     try {
       nodeRequire.resolve(name);
 
@@ -183,11 +196,17 @@ export interface StartViteServerOptions {
    * repository directly instead of being copied across devices by hand.
    */
   readonly extraPlugins?: readonly unknown[];
+  /**
+   * Competitor arms this page can import, pre-bundled when resolvable. Defaults
+   * to every arm; a domain passes its own subset so a run never pays the
+   * optimizer cost of the other domain's libraries.
+   */
+  readonly libraryArms?: readonly string[];
 }
 
 /** Starts a programmatic Vite dev server rooted at a harness page directory. */
 export const startViteServer = async (options: StartViteServerOptions): Promise<ViteDevServer> => {
-  const { pageDir, version, host = '127.0.0.1', https, extraDefine, extraPlugins = [] } = options;
+  const { pageDir, version, host = '127.0.0.1', https, extraDefine, extraPlugins = [], libraryArms = LIBRARY_ARMS } = options;
   const vite = await loadVite();
   const server = await vite.createServer({
     configFile: false,
@@ -227,7 +246,7 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     // (see `resolvableCompetitors`) rather than crashing the optimizer. Engine
     // source still resolves to local `.ts` files via the `#*` alias and is never
     // pre-bundled.
-    optimizeDeps: { noDiscovery: true, include: resolvableCompetitors() },
+    optimizeDeps: { noDiscovery: true, include: resolvableCompetitors(libraryArms) },
     define: { __DEV__: String(ENGINE_DEV_BUILD), __VERSION__: JSON.stringify(version), __REVISION__: JSON.stringify('baseline'), ...extraDefine },
     plugins: [realShaderPlugin, devGlobalsPlugin(version), ...extraPlugins],
   });
