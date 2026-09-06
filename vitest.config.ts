@@ -206,6 +206,22 @@ export default defineConfig({
         name: 'exojs-physics',
         alias: aliasConfig,
         include: ['packages/exojs-physics/test/**/*.test.ts'],
+        // The sleeping gate is its own project - see `physics-perf`.
+        exclude: ['packages/exojs-physics/test/sleeping-perf.test.ts'],
+      }),
+
+      // -- physics-perf - the sleeping-vs-awake step-time gate ---------------
+      // Separate project for exactly one reason: this is the only physics
+      // assertion that reads wall-clock time, and wall-clock is load-dependent.
+      // Run inside the parallel suite, the light sleeping arm loses more to
+      // scheduling gaps than the heavy awake arm and the ratio collapses (3.4x
+      // measured alone, 1.8x under the suite) - a failing push with nothing
+      // regressed. Kept out of `test` and run by `test:physics-perf` after it,
+      // so the measurement has the machine to itself.
+      createJsdomTestProject({
+        name: 'physics-perf',
+        alias: aliasConfig,
+        include: ['packages/exojs-physics/test/sleeping-perf.test.ts'],
       }),
       createJsdomTestProject({
         name: 'exojs-tilemap-physics',

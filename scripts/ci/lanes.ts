@@ -58,11 +58,11 @@ export const LANES: readonly Lane[] = [
     id: 'unit',
     stage: 'test',
     when: 'unit',
-    run: 'pnpm test && pnpm test:alloc',
+    run: 'pnpm test && pnpm test:alloc && pnpm test:physics-perf',
     // The WGSL tests validate through Naga when it is on PATH and skip
     // otherwise; CI installs it and refuses the skip.
-    ciRun: `EXOJS_REQUIRE_NAGA=1 pnpm test ${junit('unit')} && pnpm test:alloc`,
-    coverageRun: `EXOJS_REQUIRE_NAGA=1 pnpm test:coverage ${junit('unit')} && pnpm test:alloc`,
+    ciRun: `EXOJS_REQUIRE_NAGA=1 pnpm test ${junit('unit')} && pnpm test:alloc && pnpm test:physics-perf`,
+    coverageRun: `EXOJS_REQUIRE_NAGA=1 pnpm test:coverage ${junit('unit')} && pnpm test:alloc && pnpm test:physics-perf`,
     naga: true,
     junit: true,
   },
@@ -133,7 +133,12 @@ export const LANES: readonly Lane[] = [
     id: 'bench',
     stage: 'test',
     when: 'benchStructural',
-    run: 'pnpm gate:bench:structural',
+    // The harness typecheck needs the competitor libraries (the adapters are
+    // typed against them, which is what catches an upstream API change on a
+    // version bump), so it lives here, path-gated, rather than in
+    // `typecheck:packages`. The harness's unit tests need none of them and run
+    // in the ordinary `test` project list.
+    run: 'pnpm typecheck:bench && pnpm gate:bench:structural',
     browser: 'chromium',
     local: 'browser',
     timeoutMinutes: 30,

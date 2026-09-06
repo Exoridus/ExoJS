@@ -214,13 +214,27 @@ new Application({ backend: { type: 'auto' } }); // default
 
 ## Development
 
+Prerequisites: Node 24 (`.nvmrc`; `devEngines` in `package.json` refuses any other major) and
+pnpm (`packageManager` pins the version; with Corepack enabled, or any installed pnpm 10+, it
+switches itself).
+
 ```bash
-pnpm bootstrap
+pnpm bootstrap:dev   # dependencies, git hooks, every build, the bench competitors, a Chromium
+pnpm doctor          # what is missing, and the command that fixes it
+```
+
+`pnpm bootstrap` alone is what CI runs: dependencies and the build tooling, nothing else. It
+installs with scripts disabled, so whether a clone ends up with git hooks depends on whether pnpm
+ran an install of its own first - and it builds nothing. `pnpm doctor` reports the actual state
+either way.
+
+```bash
 pnpm typecheck
 pnpm lint
 pnpm test
-pnpm build
+pnpm build:all       # core plus every extension package
 pnpm verify:package
+pnpm clean:artifacts # what a local test, benchmark or release run left behind
 ```
 
 Package-internal imports use Node `package.json#imports` subpath imports: `./X` for the same directory, `#dir/X` for any other path in the same package, and the public bare specifier (`@codexo/exojs`) across packages. See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full import policy, per-package commands, and the shared `@codexo/exojs-config` tooling. Building the library requires TypeScript 6.

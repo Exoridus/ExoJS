@@ -32,8 +32,16 @@ the file. `pnpm release:changelog` previews what the cut would add.
 Run this once per clone:
 
 ```sh
+pnpm bootstrap:dev
 git config pull.ff only
 ```
+
+`bootstrap:dev` installs the dependencies, the git hooks, every build output, the benchmark
+competitor libraries and a Chromium for the browser lanes, then runs `pnpm doctor` - which
+you can run again at any time to see what a clone is missing and how to fix it. The plain
+`pnpm bootstrap` is the CI form: dependencies and build tooling only, with install scripts
+disabled - which means it does not itself install the git hooks. `pnpm exec husky` adds them,
+and `pnpm doctor` says whether they are there.
 
 `main` and `next` only ever advance through a reviewed PR, so a local commit on
 either cannot reach the remote — it just makes the branch diverge from its
