@@ -141,6 +141,7 @@ describe('WebGL2 untextured mesh rendering', () => {
       scenes: { ParityScene },
       canvas: { width: 128, height: 128, mount: container },
       clearColor: Color.black,
+      backend: { type: 'webgl2' },
       rendering: { webglAttributes: { ...defaultWebGlAttributes } },
     } as ConstructorParameters<typeof Application>[0]);
 
@@ -237,6 +238,7 @@ describe('WebGL2 untextured mesh rendering', () => {
       scenes: { BoxScene },
       canvas: { width: 128, height: 128, mount: container },
       clearColor: Color.black,
+      backend: { type: 'webgl2' },
       rendering: { webglAttributes: { ...defaultWebGlAttributes } },
     } as ConstructorParameters<typeof Application>[0]);
 
