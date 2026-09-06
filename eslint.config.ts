@@ -1,14 +1,26 @@
+import { globSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { coreInternalDirs, createImportBoundaries } from '@codexo/exojs-config/eslint';
 import { languageBaselineConfig, nodeToolingConfig } from '@codexo/exojs-config/eslint/base';
 import { typeAwareCorrectnessRules } from '@codexo/exojs-config/eslint/correctness';
 import { extensionSourceConfig } from '@codexo/exojs-config/eslint/extension';
 import { packageTestConfig } from '@codexo/exojs-config/eslint/package-test';
+import { collectDeprecatedExports, exoRulesConfig } from '@codexo/exojs-config/eslint/plugin';
 import { vitestConfig } from '@codexo/exojs-config/eslint/vitest';
 import { defineConfig } from 'eslint/config';
 import prettier from 'eslint-config-prettier';
 import security from 'eslint-plugin-security';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+
+// `no-deprecated-api`'s table, read from the engine's own JSDoc rather than
+// hand-maintained: every exported symbol under `src/` whose doc comment
+// carries `@deprecated`. Computed once, from this repository's own sources -
+// a consumer package generating the same table for its installed dependency
+// would point `collectDeprecatedExports` at that dependency's shipped
+// `.d.ts` files instead (see `deprecatedApi.js`'s doc comment).
+const deprecatedApi = collectDeprecatedExports(globSync('src/**/*.ts', { cwd: import.meta.dirname }).map(file => resolve(import.meta.dirname, file)));
 
 export default defineConfig([
   {
@@ -369,6 +381,12 @@ export default defineConfig([
   // Extension package source (runtime packages: particles, tilemap, tiled, ...).
   // `packages/exojs-react` lints its own tree with the same shared policy.
   ...extensionSourceConfig({ files: ['packages/exojs-*/src/**/*.ts'], tsconfigRootDir: import.meta.dirname }),
+
+  // ExoJS's own rules (`@codexo/exojs-config/eslint/plugin`), over the engine
+  // and every extension package's source. One call, covering both globs at
+  // once: `exoRulesConfig` registers the plugin as well as the rules, and a
+  // second call in the same resolved config would register it twice.
+  ...exoRulesConfig({ files: ['src/**/*.ts', 'packages/exojs-*/src/**/*.ts'], deprecatedApi }),
 
   // The published build tooling runs in Node: it drives esbuild and reads the
   // filesystem. The generic `packages/exojs-*/src` block grants browser
