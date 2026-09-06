@@ -28,10 +28,10 @@ export type UniformVec3Input = readonly [number, number, number];
 export type UniformVec4Input = readonly [number, number, number, number] | Color;
 
 /** A `mat3x3<f32>` value: nine components in column-major order, or a {@link Matrix}. */
-export type UniformMat3Input = ArrayLike<number> | Matrix;
+export type UniformMat3Input = readonly number[] | Float32Array | Matrix;
 
 /** A `mat4x4<f32>` value: sixteen components in column-major order. */
-export type UniformMat4Input = ArrayLike<number>;
+export type UniformMat4Input = readonly number[] | Float32Array;
 
 /** Element types allowed in a {@link UniformArray} - see its constructor. */
 export type UniformArrayElement = UniformType.Vec4 | UniformType.Mat3 | UniformType.Mat4 | UniformStruct;

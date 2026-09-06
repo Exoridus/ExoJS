@@ -8,7 +8,7 @@ import type { UniformFieldAccessors } from '#rendering/uniforms/uniformAccessors
 import type { UniformBlockData } from '#rendering/uniforms/UniformBlockData';
 import type { UniformBlockRecord, UniformFields, UniformStructInput } from '#rendering/uniforms/uniformDeclarations';
 import { filterUniformGroup } from '#rendering/uniforms/uniformLayout';
-import type { UniformBlockDataRecord, UniformBlockInitialValues } from '#rendering/uniforms/uniformSchema';
+import type { UniformBlockDataRecord, UniformBlockInitialValues, UniformSchemaOptions } from '#rendering/uniforms/uniformSchema';
 import { createUniformBlockData, uniformBlockRecord } from '#rendering/uniforms/uniformSchema';
 
 import { Filter } from './Filter';
@@ -172,13 +172,27 @@ const withWgslVertexStage = (source: string): string => (wgslVertexStagePattern.
 
 /**
  * Build the {@link ShaderSource} behind a filter pass: fills in the default
- * vertex stage per language, and upgrades legacy GLSL when asked.
+ * vertex stage per language, upgrades legacy GLSL when asked, and carries any
+ * uniform declaration through to the source.
  *
- * Shared with the stock filters so their sources are the same objects the
- * structural parity checks read.
- * @internal
+ * This is how a filter declares typed uniforms: {@link ShaderFilterOptions.uniforms}
+ * carries starting VALUES, so the declaration has to reach the source, and the
+ * source is what the filter is then built from with {@link ShaderFilter.from}.
+ *
+ * ```ts
+ * const shader = createFilterShaderSource({
+ *   glsl: { fragment },
+ *   wgsl,
+ *   uniforms: { uTime: UniformType.Float },
+ * });
+ *
+ * const filter = ShaderFilter.from(shader, { uniforms: { uTime: 0 } });
+ * ```
+ * @advanced
  */
-export const createFilterShaderSource = (options: ShaderFilterSourceOptions): ShaderSource => {
+export const createFilterShaderSource = <const F extends UniformFields | undefined = undefined, const B extends UniformBlockRecord | undefined = undefined>(
+  options: ShaderFilterSourceOptions & UniformSchemaOptions<F, B>,
+): ShaderSource<F, B> => {
   const autoUpgrade = options.autoUpgrade !== false;
   const glsl =
     options.glsl !== undefined
@@ -189,9 +203,11 @@ export const createFilterShaderSource = (options: ShaderFilterSourceOptions): Sh
       : undefined;
   const wgsl = options.wgsl !== undefined ? withWgslVertexStage(options.wgsl) : undefined;
 
-  return new ShaderSource({
+  return new ShaderSource<F, B>({
     ...(glsl !== undefined ? { glsl } : {}),
     ...(wgsl !== undefined ? { wgsl } : {}),
+    ...(options.uniforms !== undefined ? { uniforms: options.uniforms } : {}),
+    ...(options.uniformBlocks !== undefined ? { uniformBlocks: options.uniformBlocks } : {}),
   });
 };
 
@@ -327,7 +343,15 @@ export class ShaderFilter<F extends UniformFields | undefined = undefined, B ext
   public constructor(options: ShaderFilterOptions<F, B> = {}) {
     super();
 
-    this._shader = options.shader ?? (createFilterShaderSource(options) as ShaderSource<F, B>);
+    // The inline-source form carries no declaration: `uniforms` means starting
+    // values there, so only the source fields may reach the source factory.
+    this._shader =
+      options.shader ??
+      (createFilterShaderSource({
+        ...(options.glsl !== undefined ? { glsl: options.glsl } : {}),
+        ...(options.wgsl !== undefined ? { wgsl: options.wgsl } : {}),
+        ...(options.autoUpgrade !== undefined ? { autoUpgrade: options.autoUpgrade } : {}),
+      }) as unknown as ShaderSource<F, B>);
 
     const schema = this._shader.uniformSchema;
     // A typed write reaches the GPU through the block's revision, but a cached

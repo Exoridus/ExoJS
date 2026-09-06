@@ -172,8 +172,12 @@ const rejectValue = (path: string, expected: string, value: unknown): never => {
   throw new Error(`[ExoJS] Uniform \`${path}\` expects ${expected}, received ${describeValue(value)}.`);
 };
 
-const isArrayLike = (value: unknown): value is ArrayLike<number> =>
-  Array.isArray(value) || (ArrayBuffer.isView(value) && !(value instanceof DataView)) || (typeof value === 'object' && value !== null && 'length' in value);
+/**
+ * Components arrive as a real array or a typed array, never as an arbitrary
+ * object carrying a `length`: `Vector.length` is its magnitude, so a duck-typed
+ * check would read a vector's components as `undefined`.
+ */
+const isComponentList = (value: unknown): value is ArrayLike<number> => Array.isArray(value) || (ArrayBuffer.isView(value) && !(value instanceof DataView));
 
 abstract class UniformAccessorBase implements UniformWritable {
   protected readonly _sink: UniformRevisionSink;
@@ -274,7 +278,7 @@ class Vector2Accessor extends VectorAccessor implements UniformVector2 {
   }
 
   public _write(value: unknown): boolean {
-    if (isArrayLike(value)) {
+    if (isComponentList(value)) {
       return this._writeComponents(value[0]!, value[1]!);
     }
 
@@ -338,7 +342,7 @@ class Vector3Accessor extends VectorAccessor implements UniformVector3 {
   }
 
   public _write(value: unknown): boolean {
-    if (isArrayLike(value)) {
+    if (isComponentList(value)) {
       return this._writeComponents(value[0]!, value[1]!, value[2]!);
     }
 
@@ -407,7 +411,7 @@ class Vector4Accessor extends VectorAccessor implements UniformVector4 {
   }
 
   public _write(value: unknown): boolean {
-    if (isArrayLike(value)) {
+    if (isComponentList(value)) {
       return this._writeComponents(value[0]!, value[1]!, value[2]!, value[3]!);
     }
 
@@ -469,7 +473,7 @@ class Matrix3Accessor extends UniformAccessorBase implements UniformMatrix3 {
       return this._writeColumns(m.a, m.c, m.e, m.b, m.d, m.f, m.x, m.y, m.z);
     }
 
-    if (isArrayLike(value) && value.length >= 9) {
+    if (isComponentList(value) && value.length >= 9) {
       return this._writeColumns(value[0]!, value[1]!, value[2]!, value[3]!, value[4]!, value[5]!, value[6]!, value[7]!, value[8]!);
     }
 
@@ -518,7 +522,7 @@ class Matrix4Accessor extends UniformAccessorBase implements UniformMatrix4 {
   }
 
   public _write(value: unknown): boolean {
-    if (isArrayLike(value) && value.length >= 16) {
+    if (isComponentList(value) && value.length >= 16) {
       let changed = false;
 
       for (let index = 0; index < 16; index++) {
@@ -566,7 +570,7 @@ class ArrayAccessor extends UniformAccessorBase implements UniformArrayAccessor<
   }
 
   public _write(value: unknown): boolean {
-    if (!isArrayLike(value)) {
+    if (!isComponentList(value)) {
       if (__DEV__) {
         rejectValue(this._path, `up to ${this.length} array elements`, value);
       }
