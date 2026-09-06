@@ -13,6 +13,11 @@ test/perf/results/*.json
 test/perf/results/*.md
 .workspace/output/baseline/
 packages/exojs-bench/.workspace/
+# Benchmark runs written by `pnpm bench -- --out=<dir>`, which the results README
+# tells a runner to place beside the package. Only the pooled profiles under
+# results/ are published.
+packages/exojs-bench/run-*/
+packages/exojs-bench/physics-*/
 
 # Local scratch / ad-hoc debug artifacts (probe scripts, screenshot montages).
 codexo-probe*
