@@ -16,6 +16,7 @@ import { runParityMatrix } from './runner';
 import { clippingScenes } from './scenes/clipping';
 import { colourScenes } from './scenes/colour';
 import { computedColourScenes } from './scenes/computedColour';
+import { filterScenes } from './scenes/filters';
 import { graphicsScenes } from './scenes/graphics';
 import { meshScenes } from './scenes/mesh';
 import { nineSliceScenes } from './scenes/nineSlice';
@@ -40,6 +41,7 @@ const scenes: readonly Scene[] = [
   ...graphicsScenes,
   ...colourScenes,
   ...computedColourScenes,
+  ...filterScenes,
   ...clippingScenes,
   ...textScenes,
   ...tilemapScenes,
