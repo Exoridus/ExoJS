@@ -11,12 +11,13 @@
 
 import type { Color } from '#core/Color';
 import type { Matrix } from '#math/Matrix';
+import type { PointLike } from '#math/PointLike';
 import type { Vector } from '#math/Vector';
 
 import { UniformType } from './UniformType';
 
-/** A `vec2<f32>` value: components, a tuple, or any `x`/`y` carrier. */
-export type UniformVec2Input = readonly [number, number] | Vector | { readonly x: number; readonly y: number };
+/** A `vec2<f32>` value: a tuple, a {@link Vector}, or any `x`/`y` carrier. */
+export type UniformVec2Input = readonly [number, number] | Vector | Readonly<PointLike>;
 
 /** A `vec3<f32>` value. */
 export type UniformVec3Input = readonly [number, number, number];
