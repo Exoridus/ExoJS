@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { BoxShape, PhysicsWorld } from '../src/index';
-import { PhysicsBody } from '../src/PhysicsBody';
 import { measureAllocationRate } from './allocationSampler';
+import { buildField, FRAME, stepTimes } from './fields';
 
 /**
  * Performance gates: steady-state allocation and 1,000-body step time. The
@@ -21,49 +20,6 @@ import { measureAllocationRate } from './allocationSampler';
  * the scalar float hot loops (solver block LCP, narrow-phase clip - both verified
  * allocation-free), removable only by an invasive typed-array rewrite (post-1.0).
  */
-
-const FRAME = 1 / 60;
-
-/** A wide field of `columns` independent `rows`-high box stacks on a static floor. */
-const buildField = (columns: number, rows: number, worldOptions: { enableSleeping?: boolean } = {}): { world: PhysicsWorld; bodies: PhysicsBody[] } => {
-  const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 }, ...worldOptions });
-  const size = 16;
-  const spacing = 20;
-  const floorTop = 1000;
-  const width = columns * spacing + 200;
-
-  world.add(new PhysicsBody({ type: 'static', position: { x: width / 2, y: floorTop + 20 }, colliders: [{ shape: new BoxShape(width, 40), friction: 0.5 }] }));
-
-  const bodies: PhysicsBody[] = [];
-
-  for (let c = 0; c < columns; c++) {
-    const x = 100 + c * spacing;
-
-    for (let r = 0; r < rows; r++) {
-      const body = world.add(
-        new PhysicsBody({
-          type: 'dynamic',
-          position: { x, y: floorTop - size / 2 - 1 - r * size },
-          colliders: [{ shape: new BoxShape(size, size), density: 1, friction: 0.5 }],
-        }),
-      );
-
-      bodies.push(body);
-    }
-  }
-
-  return { world, bodies };
-};
-
-const stepTimes = (world: PhysicsWorld, steps: number): number => {
-  const start = performance.now();
-
-  for (let i = 0; i < steps; i++) {
-    world.step(FRAME);
-  }
-
-  return (performance.now() - start) / steps;
-};
 
 describe('physics dynamics performance', () => {
   it('1,000-body settled field: step time + steady-state allocation', async () => {
@@ -135,49 +91,4 @@ describe('physics dynamics performance', () => {
     // (~484 KB/step) trips it.
     expect(bytesPerStep).toBeLessThan(250 * 1024);
   });
-
-  it('5,000-mostly-sleeping field: sleeping sharply cuts step time', () => {
-    // Baseline: the identical field with sleeping disabled stays fully active.
-    const awake = buildField(1000, 5, { enableSleeping: false });
-
-    // Skipped entirely under istanbul coverage: instrumentation inflates the
-    // per-step cost enough (see the identical `cov_` guard above) that the full
-    // 840-step awake+sleeping budget across two 5,000-body fields blows even the
-    // 60s timeout below. The sharp gate runs in the normal `pnpm test` run +
-    // `verify:ci`.
-    if (awake.world.step.toString().includes('cov_')) {
-      console.log('sleeping-vs-awake perf gate skipped under coverage (instrumentation slows the measurement past the timeout)');
-
-      return;
-    }
-
-    for (let i = 0; i < 240; i++) {
-      awake.world.step(FRAME);
-    }
-
-    const awakeMs = stepTimes(awake.world, 120);
-
-    // Sleeping on (default): let the field settle and nap.
-    const sleeping = buildField(1000, 5, { enableSleeping: true });
-
-    for (let i = 0; i < 360; i++) {
-      sleeping.world.step(FRAME);
-    }
-
-    const sleptCount = sleeping.bodies.filter(body => body.isSleeping).length;
-    const sleepingMs = stepTimes(sleeping.world, 120);
-
-    expect(sleeping.bodies.length).toBe(5000);
-    console.log(
-      `awake ${awakeMs.toFixed(3)} ms/step vs sleeping ${sleepingMs.toFixed(3)} ms/step · ${sleptCount}/5000 asleep (${(awakeMs / sleepingMs).toFixed(1)}× faster)`,
-    );
-
-    // The vast majority of a settled field naps, and skipping their integration
-    // and constraint solve sharply cuts the per-step cost (measured ~3.4× faster
-    // on the reference machine - the remainder is detection, which still runs).
-    // The gate is a relative ratio (same machine, sleeping vs awake), so it is
-    // machine-independent; ≥2× leaves headroom for variance.
-    expect(sleptCount).toBeGreaterThan(4500);
-    expect(sleepingMs).toBeLessThan(awakeMs * 0.5);
-  }, 60_000);
 });

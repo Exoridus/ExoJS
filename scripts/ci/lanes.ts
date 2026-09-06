@@ -58,11 +58,11 @@ export const LANES: readonly Lane[] = [
     id: 'unit',
     stage: 'test',
     when: 'unit',
-    run: 'pnpm test && pnpm test:alloc',
+    run: 'pnpm test && pnpm test:alloc && pnpm test:physics-perf',
     // The WGSL tests validate through Naga when it is on PATH and skip
     // otherwise; CI installs it and refuses the skip.
-    ciRun: `EXOJS_REQUIRE_NAGA=1 pnpm test ${junit('unit')} && pnpm test:alloc`,
-    coverageRun: `EXOJS_REQUIRE_NAGA=1 pnpm test:coverage ${junit('unit')} && pnpm test:alloc`,
+    ciRun: `EXOJS_REQUIRE_NAGA=1 pnpm test ${junit('unit')} && pnpm test:alloc && pnpm test:physics-perf`,
+    coverageRun: `EXOJS_REQUIRE_NAGA=1 pnpm test:coverage ${junit('unit')} && pnpm test:alloc && pnpm test:physics-perf`,
     naga: true,
     junit: true,
   },
