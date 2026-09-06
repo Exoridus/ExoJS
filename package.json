@@ -108,7 +108,7 @@
     "typecheck:bench": "pnpm bench:setup && pnpm --filter @codexo/exojs-bench typecheck",
     "typecheck:site": "pnpm --filter @codexo/exojs-examples check-ts",
     "typecheck:site-scripts": "pnpm --filter @codexo/exojs-examples check-ts:scripts",
-    "lint": "eslint --max-warnings=0 \"src/**/*.ts\" \"test/**/*.ts\" \"examples/**/*.ts\" \"scripts/**/*.{ts,mts,cts,mjs}\" \"*.config.ts\" \"packages/exojs-*/src/**/*.{ts,tsx}\" \"packages/exojs-*/test/**/*.{ts,tsx}\" \"packages/exojs-bench/competitors/*.ts\" \"packages/create-exo-app/src/**/*.ts\"",
+    "lint": "tsx ./scripts/lint.ts",
     "lint:fast": "pnpm lint --cache --cache-location .cache/eslintcache",
     "lint:site": "pnpm --filter @codexo/exojs-examples lint",
     "lint:all": "pnpm lint && pnpm lint:site",
