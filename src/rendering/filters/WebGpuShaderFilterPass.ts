@@ -411,7 +411,10 @@ export class WebGpuShaderFilterPass {
     const blocks = this._bindings.blocks;
 
     if (blocks.length > 0) {
-      for (const [index, block] of blocks.entries()) {
+      // Indexed rather than `for...of`: a filter pass runs at least once per
+      // filtered node per frame, and the array iterator would allocate.
+      for (let index = 0; index < blocks.length; index++) {
+        const block = blocks[index]!;
         let buffer = conn.userUniformBuffers[index] ?? null;
 
         if (buffer === null) {

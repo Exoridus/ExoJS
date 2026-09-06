@@ -218,7 +218,11 @@ export const planUserUniformUpload = (material: AnyMaterial, resources: UserUnif
 
   ensureBindingCapacity(state, blocks.length);
 
-  for (const [index, block] of blocks.entries()) {
+  // Indexed rather than `for...of`: this runs once per batch, and the array
+  // iterator is an allocation V8 does not scalar-replace here.
+  for (let index = 0; index < blocks.length; index++) {
+    const block = blocks[index]!;
+
     ensureBuffer(state, index, block.byteLength, device, label);
     state.pendingWrites[index] = state.revisions[index] !== block.revision;
   }
@@ -229,8 +233,10 @@ export const applyUserUniformUpload = (material: AnyMaterial, resources: UserUni
   const state = resources.userUniform;
   const blocks = material._blocks;
 
-  for (const [index, stale] of state.pendingStale.entries()) {
-    if (stale !== null) {
+  for (let index = 0; index < state.pendingStale.length; index++) {
+    const stale = state.pendingStale[index];
+
+    if (stale !== null && stale !== undefined) {
       stale.destroy();
       state.pendingStale[index] = null;
     }
@@ -247,8 +253,9 @@ export const applyUserUniformUpload = (material: AnyMaterial, resources: UserUni
     return;
   }
 
-  for (const [index, block] of blocks.entries()) {
+  for (let index = 0; index < blocks.length; index++) {
     if (state.pendingWrites[index] === true) {
+      const block = blocks[index]!;
       const data = block.float32;
 
       device.queue.writeBuffer(state.buffers[index]!, 0, data.buffer, data.byteOffset, block.byteLength);
