@@ -1,4 +1,5 @@
 import type { AggregatedBackendComparison, AggregatedSection } from '../comparison/pooled';
+import type { PhysicsClockReport } from '../physics/page/contract';
 import type { Backend } from '../rendering/EngineAdapter';
 import type { PlatformVersionStamp, PrereleaseStamp, RenderingBrowser } from '../shared/provenance';
 
@@ -28,7 +29,7 @@ import type { PlatformVersionStamp, PrereleaseStamp, RenderingBrowser } from '..
  */
 
 /** Schema version `bench:compare` stamps into a new document. */
-export const BENCH_PROFILE_SCHEMA_VERSION = 4;
+export const BENCH_PROFILE_SCHEMA_VERSION = 5;
 
 /**
  * Schema versions a reader accepts. A document carrying anything else is
@@ -43,7 +44,11 @@ export const BENCH_PROFILE_SCHEMA_VERSION = 4;
  * engine is worse than a missing one. Version 3 named no platform version, so a
  * measurement taken on a pre-release operating system and the shipping
  * platform's later one wrote the same file, the second silently replacing
- * numbers taken under conditions it does not share.
+ * numbers taken under conditions it does not share. Version 4 measured physics
+ * in the driver's Node process and recorded its runtime version, so a profile
+ * whose name claimed a browser carried physics numbers taken in a different
+ * JavaScript engine entirely - which is not a relabelling but a different
+ * measurement.
  */
 export const SUPPORTED_BENCH_PROFILE_SCHEMA_VERSIONS: readonly number[] = [BENCH_PROFILE_SCHEMA_VERSION];
 
@@ -77,9 +82,10 @@ export interface ProfilePlatform {
  * from.
  *
  * The slug is `<machine>-<os>-<browser>` and is also the file's base name, so a
- * re-measurement of the same machine overwrites the file it belongs to and a
- * different machine can only ever arrive as a new file. Every part is derived
- * from the stamped provenance; none of them is typed by hand.
+ * re-measurement of the same machine in the same browser overwrites the file it
+ * belongs to, and a different machine or a different browser can only ever
+ * arrive as a new file. Every part is derived from the stamped provenance; none
+ * of them is typed by hand.
  */
 export interface BenchProfile {
   /** `<gpu>-<os>-<browser>`, and the file's base name without the extension. */
@@ -101,11 +107,12 @@ export interface BenchProfile {
    */
   readonly os: string;
   /**
-   * JavaScript runtime the numbers were taken in: the browser this run selected
-   * for the rendering harness, or `node` for a physics-only document.
+   * Browser the numbers were taken in. Both domains are measured in one, and a
+   * document that carries both was measured in the same one.
    *
    * It is part of the slug, so the same machine measured in two browsers
-   * publishes two files rather than overwriting one with the other.
+   * publishes two files rather than overwriting one with the other - which is
+   * the point: their numbers are not comparable with each other.
    */
   readonly browser: string;
   /** The operating system behind {@link BenchProfile.os}, in parts, including what its version rests on. */
@@ -193,10 +200,14 @@ export interface RenderingStamp {
   readonly timestamp: string;
 }
 
-/** Host the physics numbers were measured on. */
+/**
+ * Host the physics numbers were measured on.
+ *
+ * The machine, not the runtime: which JavaScript engine executed the steps is
+ * recorded by the stamp's browser fields, because that is what the numbers
+ * depend on.
+ */
 export interface ProfileHost {
-  /** Node runtime version. */
-  readonly node: string;
   /** CPU model string. */
   readonly cpu: string;
   /** Logical CPU count. */
@@ -211,19 +222,31 @@ export interface ProfileHost {
 
 /** Physics provenance. One stamp per run: physics has no backend axis. */
 export interface PhysicsStamp {
-  /** Node runtime and CPU host the step times were measured on. */
-  readonly host: ProfileHost;
   /**
-   * Whether the platform is a pre-release build, and what established that.
+   * Browser engine the step times were measured in.
    *
-   * A physics run drives no browser, so nothing here can be detected; the value
-   * rests on the runner's declaration or records that nothing established it.
-   * It is carried all the same, because the slug's OS part marks a pre-release
-   * platform for a physics-only profile exactly as it does for a rendering one.
+   * Physics touches no GPU, but it is measured in a browser all the same,
+   * because the JavaScript engine is part of what a step time measures: the same
+   * matrix produces different numbers under V8 and under JavaScriptCore.
    */
+  readonly browser: RenderingBrowser;
+  /** Browser build the step times were measured in, as the browser reported it. */
+  readonly browserVersion: string;
+  /** CPU host that drove the browser. */
+  readonly host: ProfileHost;
+  /** Whether the platform is a pre-release build, and what established that; see {@link RenderingStamp.prerelease}. */
   readonly prerelease: PrereleaseStamp;
   /** Fixed physics timestep (seconds) each timed step advanced. */
   readonly fixedDelta: number;
+  /**
+   * What the measuring page's clock could resolve.
+   *
+   * The fastest cells of this matrix step in single-digit microseconds, within
+   * an order of magnitude of a browser's `performance.now()` grid, so the
+   * resolution is part of what a step-time median means and is what each cell's
+   * `stepsPerSample` was derived from.
+   */
+  readonly clock: PhysicsClockReport;
   /** Caveats the run disclosed about how the numbers were produced. */
   readonly caveats: readonly string[];
   /** Physics engine version under test. */

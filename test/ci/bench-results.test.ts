@@ -50,8 +50,9 @@ const renderingStamp = (run: number) => ({
 });
 
 const physicsStamp = (run: number) => ({
+  browser: 'chromium',
+  browserVersion: '151.0.7922.34',
   host: {
-    node: 'v24.14.1',
     cpu: 'Test CPU',
     cpuCount: 16,
     os: 'linux 6.1.0',
@@ -60,7 +61,8 @@ const physicsStamp = (run: number) => ({
   },
   prerelease: { value: false, source: 'assumed-stable', evidence: 'no pre-release marker, and none declared' },
   fixedDelta: 0.016666666666666666,
-  caveats: ['Measured in one Node process.'],
+  clock: { resolutionMs: 0.005, crossOriginIsolated: true },
+  caveats: ['Measured in one chromium page.'],
   engineVersion: '0.17.0',
   timestamp: `2026-01-0${String(run + 1)}T00:00:00.000Z`,
 });
@@ -70,7 +72,7 @@ const physicsStamp = (run: number) => ({
  * `bench:compare --profile` writes, pooling `runs` separate harness runs.
  */
 const validProfile = (runs = REQUIRED_RUNS): Record<string, unknown> => ({
-  schemaVersion: 4,
+  schemaVersion: 5,
   profile: {
     slug: SLUG,
     gpu: 'test-gpu',
@@ -214,6 +216,12 @@ describe('verify-bench-results', () => {
 
   it('rejects a schema version 3 file outright: its file name carried no platform version', () => {
     write({ ...validProfile(), schemaVersion: 3 });
+
+    expect(check()).toContain('which this repository does not understand');
+  });
+
+  it('rejects a schema version 4 file outright: its physics numbers were measured in Node, not in the browser its name claims', () => {
+    write({ ...validProfile(), schemaVersion: 4 });
 
     expect(check()).toContain('which this repository does not understand');
   });

@@ -15,17 +15,18 @@ import { dirname, resolve } from 'node:path';
  * {@link BaseProvenance}.
  */
 
-/** Browsers the rendering harness can measure in. */
+/** Browsers the harness can measure in. */
 export const RENDERING_BROWSERS = ['chromium', 'webkit'] as const;
 
 /**
- * The browser one rendering run was measured in.
+ * The browser one run was measured in.
  *
  * The choice belongs to the run, not to the harness: the two engines differ in
- * which backends they expose, in what they disclose about the GPU, and in how
- * fast they are, so a number is only comparable against another taken in the
- * same one. Every rendering stamp therefore names its browser, and the machine
- * profile's slug carries it.
+ * which backends they expose, in what they disclose about the GPU, in which
+ * JavaScript engine executes the work, and in how fast they are, so a number is
+ * only comparable against another taken in the same one. Both domains are
+ * measured in a browser, so every stamp names it and the machine profile's slug
+ * carries it.
  */
 export type RenderingBrowser = (typeof RENDERING_BROWSERS)[number];
 
@@ -90,8 +91,8 @@ const PRERELEASE_BROWSER_MARKER = /\b(?:alpha|beta|canary|dev|nightly|preview|tp
  * becomes - so a beta OS has to be declared by whoever measured on it, and the
  * result records that it was declared rather than observed.
  *
- * `browserVersion` is absent for a domain that runs no browser; the status then
- * rests on the declaration alone.
+ * `browserVersion` is absent only where no browser was launched at all; the
+ * status then rests on the declaration alone.
  */
 export const classifyPrerelease = (options: { browserVersion?: string | undefined; declared?: string | undefined }): PrereleaseStamp => {
   const marker = options.browserVersion === undefined ? null : PRERELEASE_BROWSER_MARKER.exec(options.browserVersion);
@@ -335,14 +336,16 @@ export const readLibraryProvenance = (names: readonly string[]): LibraryProvenan
 };
 
 /**
- * Host + runtime provenance for a CPU-bound (Node) benchmark domain. A physics
- * step-time number is only comparable across runs if the CPU and Node version
- * that produced it are on the record - the CPU-domain analogue of rendering's
- * GPU adapter string.
+ * Host provenance for a CPU-bound benchmark domain. A physics step-time number
+ * is only comparable across runs if the CPU that produced it is on the record -
+ * the CPU-domain analogue of rendering's GPU adapter string.
+ *
+ * The Node runtime is deliberately absent. Physics is measured in a browser, so
+ * the version of the process that merely drove the run would describe nothing
+ * about where the numbers came from; the browser and its version are recorded
+ * beside this instead.
  */
 export interface HostInfo {
-  /** `process.version`, e.g. `v24.14.1`. */
-  readonly node: string;
   /** First logical CPU's model string (all cores are assumed identical). */
   readonly cpu: string;
   /** Number of logical CPUs reported by the OS. */
@@ -356,7 +359,7 @@ export interface HostInfo {
 }
 
 /**
- * Snapshot the Node runtime + CPU host for a CPU-bound domain's provenance header.
+ * Snapshot the CPU host for a CPU-bound domain's provenance header.
  *
  * The platform version is passed in rather than read here so one run resolves
  * the runner's declaration against the host once, and every stamp it writes
@@ -366,7 +369,6 @@ export const readHostInfo = (platformVersion: PlatformVersionStamp): HostInfo =>
   const logicalCpus = cpus();
 
   return {
-    node: process.version,
     cpu: logicalCpus[0]?.model.trim() ?? 'unknown',
     cpuCount: logicalCpus.length,
     os: readOsRelease(),

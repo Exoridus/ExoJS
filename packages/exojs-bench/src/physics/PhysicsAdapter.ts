@@ -137,8 +137,35 @@ export interface PhysicsCellResult extends BaseCellResult<PhysicsCellSpec> {
   readonly stepMsMedian: number;
   /** 95th-percentile per-`step` CPU time in milliseconds. */
   readonly stepMsP95: number;
+  /**
+   * `step`s one timing sample covered, the sample divided by this to give the
+   * per-step times above.
+   *
+   * `1` means every step was timed on its own, which is what a cell whose step
+   * cost comfortably clears the browser clock's grid does. A larger value means
+   * the step was too fast to time individually at the available resolution and
+   * the harness batched steps per sample instead; the median and p95 are then
+   * per-step averages over that batch, so their tail detail is coarser. The
+   * timed-step budget is unaffected - the batch only decides how finely the
+   * fixed window is sampled.
+   */
+  readonly stepsPerSample: number;
   /** Structural counters sampled after the timed window. */
   readonly structural: PhysicsStructuralCounters;
+}
+
+/**
+ * The two labels that name one physics engine arm in the matrix.
+ *
+ * Separate from {@link PhysicsAdapter} because the matrix is built before any
+ * arm is constructed: an arm the measuring browser cannot build still has an
+ * identity, and its cells are recorded as unavailable under it.
+ */
+export interface PhysicsArmIdentity {
+  /** Physics engine arm label, e.g. `'exojs-physics'`. */
+  readonly engine: string;
+  /** Arm configuration label, e.g. `'native'`. */
+  readonly config: string;
 }
 
 /**
@@ -146,16 +173,13 @@ export interface PhysicsCellResult extends BaseCellResult<PhysicsCellSpec> {
  * identically across arms - the CPU-domain counterpart of the rendering
  * {@link '../rendering/EngineAdapter'.EngineAdapter}.
  *
- * The native `@codexo/exojs-physics` arm is the only implementation today; the
- * planned matter.js + rapier adapter arms (a separate follow-on) implement this
- * same interface so a stay-native vs. attach-an-adapter comparison drops in
- * without the driver or archetypes changing.
+ * Every arm - the native `@codexo/exojs-physics` runtime and the matter.js,
+ * planck and rapier libraries an app would attach instead - implements this one
+ * interface, so the stay-native vs. attach-an-adapter comparison rests on the
+ * harness driving all of them through the identical calls. Implementations run
+ * in the browser page, not in the driver process.
  */
-export interface PhysicsAdapter {
-  /** Physics engine arm label, e.g. `'exojs-physics'`. */
-  readonly engine: string;
-  /** Arm configuration label, e.g. `'native'`. */
-  readonly config: string;
+export interface PhysicsAdapter extends PhysicsArmIdentity {
   /**
    * Build the world and its bodies for the given archetype/body count from the
    * shared deterministic RNG seed, so every arm simulates the identical scene.

@@ -5,7 +5,7 @@ import type { PhysicsCellResult } from './PhysicsAdapter';
 
 /** Everything one physics run produces: the provenance stamp, arm versions, and per-cell results. */
 export interface PhysicsReportData {
-  /** The run's provenance stamp (host, engine version, timestep, caveats). */
+  /** The run's provenance stamp (browser, host, engine version, timestep, caveats). */
   readonly provenance: PhysicsProvenance;
   /** Version + resolution provenance for each physics engine arm. */
   readonly libraries: readonly LibraryProvenance[];
@@ -21,6 +21,7 @@ const COLUMNS = [
   'bodyCount',
   'warmupSteps',
   'timedSteps',
+  'stepsPerSample',
   'stepMsMedian',
   'stepMsP95',
   'bodies',
@@ -41,6 +42,7 @@ const toRow = (result: PhysicsCellResult): string[] => {
     String(spec.bodyCount),
     String(spec.warmupSteps),
     String(spec.timedSteps),
+    String(result.stepsPerSample),
     ms(result.stepMsMedian),
     ms(result.stepMsP95),
     count(structural.bodyCount),
@@ -55,10 +57,10 @@ const toRow = (result: PhysicsCellResult): string[] => {
 const toCsv = (data: PhysicsReportData): string => [COLUMNS.join(','), ...data.results.map(result => toRow(result).map(csvField).join(','))].join('\n');
 
 /**
- * Human-readable Markdown: the arm versions and the host/provenance block first
- * (a step-time number is only comparable if the CPU + Node + exojs-physics
- * version that produced it are on the record), the disclosed caveats, then one
- * table with the structural counters (bodies, contacts, joints, ray hits)
+ * Human-readable Markdown: the arm versions and the browser/host provenance
+ * block first (a step-time number is only comparable if the browser, the CPU and
+ * the exojs-physics version that produced it are on the record), the disclosed
+ * caveats, then one table with the structural counters (bodies, contacts, joints, ray hits)
  * sitting BESIDE the timings - a fast step that came from fewer contacts, or a
  * query row whose rays all missed, must be visible in the same row.
  */
@@ -84,10 +86,13 @@ const toMarkdown = (data: PhysicsReportData): string => {
 
   lines.push('## Provenance', '');
   lines.push(`- Engine version (exojs-physics): ${provenance.engineVersion}`);
-  lines.push(`- Node: ${provenance.host.node}`);
+  lines.push(`- Browser: ${provenance.browser} ${provenance.browserVersion}`);
   lines.push(`- CPU: ${provenance.host.cpu} (${String(provenance.host.cpuCount)} logical)`);
   lines.push(`- OS: ${provenance.host.os} (${provenance.host.arch})`);
   lines.push(`- Fixed timestep: ${String(provenance.fixedDelta)} s`);
+  lines.push(
+    `- Clock resolution: ${(provenance.clock.resolutionMs * 1000).toFixed(1)} us (cross-origin isolated: ${String(provenance.clock.crossOriginIsolated)})`,
+  );
   lines.push(`- Timestamp: ${provenance.timestamp}`);
   lines.push('');
 

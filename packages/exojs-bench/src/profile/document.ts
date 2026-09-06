@@ -50,8 +50,9 @@ const toRenderingStamp = (provenance: Provenance): RenderingStamp => ({
 });
 
 const toPhysicsStamp = (provenance: PhysicsProvenance): PhysicsStamp => ({
+  browser: provenance.browser,
+  browserVersion: provenance.browserVersion,
   host: {
-    node: provenance.host.node,
     cpu: provenance.host.cpu,
     cpuCount: provenance.host.cpuCount,
     os: provenance.host.os,
@@ -60,6 +61,7 @@ const toPhysicsStamp = (provenance: PhysicsProvenance): PhysicsStamp => ({
   },
   prerelease: { ...provenance.prerelease },
   fixedDelta: provenance.fixedDelta,
+  clock: { ...provenance.clock },
   caveats: [...provenance.caveats],
   engineVersion: provenance.engineVersion,
   timestamp: provenance.timestamp,
