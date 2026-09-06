@@ -1,6 +1,6 @@
 {
   "title": "UniformVec2Input",
-  "description": "A `vec2<f32>` value: components, a tuple, or any `x`/`y` carrier.",
+  "description": "A `vec2<f32>` value: a tuple, a Vector, or any `x`/`y` carrier.",
   "symbol": "UniformVec2Input",
   "kind": "type",
   "subsystem": "rendering",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A `vec2<f32>` value: components, a tuple, or any `x`/`y` carrier."
+        "A `vec2<f32>` value: a tuple, a Vector, or any `x`/`y` carrier."
       ],
       "importLine": "import { UniformVec2Input } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,8 +30,28 @@
       "members": [
         {
           "name": "UniformVec2Input",
-          "signature": "Vector | readonly [number, number] | { x: number; y: number }",
+          "signature": "Readonly<PointLike> | Vector | readonly [number, number]",
           "signatureTokens": [
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
             {
               "text": "Vector",
               "kind": "type"
@@ -66,46 +86,6 @@
             },
             {
               "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "{ ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "x",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": "; ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "y",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": " }",
               "kind": "punctuation"
             }
           ],
