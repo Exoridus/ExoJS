@@ -1,4 +1,5 @@
-﻿import type { MockInstance } from 'vitest';
+﻿import { encodeContainer } from '@codexo/exojs-build/asset-container';
+import type { MockInstance } from 'vitest';
 
 import { Asset } from '#assets/Asset';
 import type { AssetInput } from '#assets/AssetDefinitions';
@@ -6,7 +7,6 @@ import { AssetRef } from '#assets/AssetRef';
 import { Assets } from '#assets/Assets';
 import { AssetCache } from '#assets/cache/AssetCache';
 import type { CacheRecordKey } from '#assets/cache/CacheRecordKey';
-import { encodeContainer } from '#assets/container/assetContainer';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, LoadPriority } from '#assets/Loader';
 import type { LoadingQueue } from '#assets/LoadingQueue';

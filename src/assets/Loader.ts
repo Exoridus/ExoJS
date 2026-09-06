@@ -2,7 +2,7 @@ import { AssetCache } from '#assets/cache/AssetCache';
 import type { AssetCacheError } from '#assets/cache/AssetCacheError';
 import type { CacheLayout } from '#assets/cache/CacheLayout';
 import type { CacheStore } from '#assets/cache/CacheStore';
-import { parseContainer } from '#assets/container/assetContainer';
+import { decodeContainerEntry, parseContainer } from '#assets/container/assetContainer';
 import type { Connectivity } from '#core/Connectivity';
 import { Signal } from '#core/Signal';
 
@@ -532,10 +532,19 @@ export class Loader {
       return { entry, asset: this._canonicalize(type, entry.source, entry.options) };
     });
 
+    // Decoding happens before anything touches residency. It is the only
+    // asynchronous step in the unpack, and the claim/inject loop below must run
+    // without an await between the in-flight check and the injection it guards -
+    // a `get()` slipping into that gap would build a second payload for one
+    // identity.
+    const unpacked = await Promise.all(
+      resolved.map(async ({ entry, asset }) => ({ entry, asset, payload: await decodeContainerEntry(entry, buffer, dataStart) })),
+    );
+
     // Claim before unpacking: an entry that is already resident (loaded over the
     // network earlier) is kept alive by this claim even though nothing stores it
     // again, and an entry nobody claims would otherwise be freed on arrival.
-    for (const { asset } of resolved) {
+    for (const { asset } of unpacked) {
       this._claim(asset, claimer);
     }
 
@@ -549,14 +558,12 @@ export class Loader {
     // rather than racing it with a fetch of its own.
     const pending: Array<Promise<unknown>> = [];
 
-    for (const { entry, asset } of resolved) {
+    for (const { entry, asset, payload } of unpacked) {
       if (this._residency._isMaterializing(asset.key)) {
         continue;
       }
 
-      const start = dataStart + entry.offset;
-      const slice = buffer.slice(start, start + entry.length);
-      const injection = this._decoder._injectSource(asset, slice, this._residency._dependencyScopeFor(asset), entry.options);
+      const injection = this._decoder._injectSource(asset, payload, this._residency._dependencyScopeFor(asset), entry.options);
 
       pending.push(this._residency._trackInjection(asset, injection));
     }

@@ -1,7 +1,7 @@
 {
   "name": "@codexo/exojs-build",
   "version": "0.1.0",
-  "description": "Build-time Vite/Rollup plugins that load ExoJS shader files and inline typed AudioWorklet and Web Worker TypeScript modules as source strings.",
+  "description": "Build-time tooling for ExoJS: Vite/Rollup plugins that load shader files and inline typed AudioWorklet and Web Worker TypeScript modules as source strings, plus the writer for the .exoa asset container.",
   "keywords": [
     "audioworklet",
     "glsl",
@@ -29,6 +29,11 @@
       "types": "./dist/esm/index.d.ts",
       "import": "./dist/esm/index.js",
       "default": "./dist/esm/index.js"
+    },
+    "./asset-container": {
+      "types": "./dist/esm/assetContainer.d.ts",
+      "import": "./dist/esm/assetContainer.js",
+      "default": "./dist/esm/assetContainer.js"
     },
     "./client": {
       "types": "./client.d.ts"
