@@ -133,7 +133,12 @@ export const LANES: readonly Lane[] = [
     id: 'bench',
     stage: 'test',
     when: 'benchStructural',
-    run: 'pnpm gate:bench:structural',
+    // The harness typecheck needs the competitor libraries (the adapters are
+    // typed against them, which is what catches an upstream API change on a
+    // version bump), so it lives here, path-gated, rather than in
+    // `typecheck:packages`. The harness's unit tests need none of them and run
+    // in the ordinary `test` project list.
+    run: 'pnpm typecheck:bench && pnpm gate:bench:structural',
     browser: 'chromium',
     local: 'browser',
     timeoutMinutes: 30,

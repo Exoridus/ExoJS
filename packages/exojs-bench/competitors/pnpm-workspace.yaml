@@ -1,0 +1,6 @@
+# Standalone install root for the benchmark competitor libraries. Keeping a
+# workspace file here makes pnpm stop its upward lookup at this directory, so
+# the install never joins the repository workspace - and it applies the same
+# supply-chain quarantine the root workspace enforces, which an
+# --ignore-workspace install would silently skip.
+minimumReleaseAge: 4320

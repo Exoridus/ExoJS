@@ -681,65 +681,38 @@ caveats stated with the result, and a defined process for re-measuring when any 
 those move. Until that exists, a cross-library number measured here is an
 engineering signal for the maintainers, not a claim.
 
-## Why this package is out of required CI
+## What runs in CI, and what does not
 
-`bench:setup` runs `pnpm install --dir competitors --ignore-workspace`. That
-`--ignore-workspace` install:
+Three different things live in this package, and CI treats them differently.
 
-- resolves a **separate lockfile** outside `pnpm-workspace.yaml`, so it
-  bypasses the root workspace's `minimumReleaseAge` supply-chain quarantine
-  (see `pnpm-workspace.yaml`) — a version bump here needs a manual release-age
-  sanity check instead of the automatic gate everything else gets;
-- pulls in ~235MB of competitor libraries that a normal contributor should
-  never have to download just to typecheck their own PR.
+**The harness's own tests** (`test/`) exercise the profile contract, the slug,
+the signature, the run pooling and the archetype definitions. They need none
+of the competitor libraries - the adapters that import those are loaded by
+`import()` inside the benchmark page, never by a test - so they run in the
+ordinary `pnpm test` project list on every push, like any other package.
 
-Running that inside the shared-CI trust boundary (a required, always-on gate)
-would mean every contributor's PR — and the shared CI runners — install and
-trust third-party libraries whose only purpose is being compared against, not
-shipped. So `@codexo/exojs-bench` is deliberately excluded from
-`typecheck:packages` / `verify:quick` / CI. A standalone `typecheck:bench`
-root script exists for on-demand/manual runs:
+**The typecheck** does need the competitors: the adapters are typed against
+their APIs, which is exactly what catches an upstream change on a version
+bump. `pnpm typecheck:bench` installs them first. It runs in the path-gated
+`bench` CI lane, alongside the structural gate, whenever a change touches this
+package, the rendering source or the baselines.
 
-**The one exception is the structural gate**, and it is an exception precisely
-because it needs none of that: it measures only the ExoJS arms on the software
-rasterizer, so its CI job installs no competitor library and needs no GPU.
-Nothing in that job runs `bench:setup`, so the competitor packages never enter
-the CI trust boundary. It is path-gated on the rendering source, the harness and
-the baseline itself — narrower than the `engine` area, since a change to audio or
-input cannot move a draw-call count.
+**Measurements** never run in CI. A shared runner is neither idle nor a known
+machine, and a number it produced would carry provenance nobody can reproduce.
+Reference profiles are measured by hand on an idle machine and committed as
+signed files - see `results/README.md`.
 
-```sh
-pnpm typecheck:bench   # bench:setup + typecheck, in one step
-```
+## The competitor install and the supply-chain gate
 
-## Local backstop: the pre-push hook
+`bench:setup` runs `pnpm install --dir competitors --frozen-lockfile`. The
+`competitors/` directory is its own workspace root (it carries a
+`pnpm-workspace.yaml`), which does two things: a plain root `pnpm install`
+never resolves or downloads anything in it, so a contributor who never
+benchmarks pays nothing for ~235MB of libraries whose only purpose is being
+compared against; and the install applies the same `minimumReleaseAge`
+quarantine the repository workspace enforces, so a version bump here is held
+back exactly as long as any other dependency. The lockfile is frozen in both
+CI and local use: a new version enters through a reviewed lockfile change, not
+through an install.
 
-`.husky/pre-push` runs a **path-gated, local-only** check on branch pushes:
-
-- it fires **only** when the commits being pushed touch
-  `packages/exojs-bench/**` — zero cost for every other push;
-- if the competitor deps are already linked locally (i.e.
-  `packages/exojs-bench/node_modules/pixi.js` exists from a prior
-  `bench:setup`), it runs `pnpm --filter @codexo/exojs-bench typecheck` and
-  **fails the push** on a type error;
-- if they aren't linked, it prints a warning telling you to run `bench:setup`
-  and **skips without failing** — an optional, uninstalled dependency should
-  never block an unrelated push.
-
-## Known gap
-
-This is a local, path-gated backstop, not a CI gate — it only runs on the
-machine that pushes a bench-touching commit, and only if that machine has
-already run `bench:setup`. An engine API change under `src/` that breaks the
-bench adapters' types, without a commit that also touches
-`packages/exojs-bench/**`, is not caught by this hook.
-
-The structural-gate CI lane closes part of that gap, but only part: a change
-under `src/rendering/` now runs the harness (and therefore compiles and executes
-the ExoJS adapters) in CI, so a break there fails a PR. A change elsewhere under
-`src/` still does not, and neither does anything that only affects a competitor
-adapter. This is
-an accepted trade-off to keep the bench package's ~235MB of competitor
-dependencies out of the shared-CI trust boundary entirely. A future
-self-hosted-GPU bench tier (see the engine's perf-tracking roadmap) is the
-right place to run a full, unconditional `typecheck:bench` as a real backstop.
+`pnpm doctor` reports whether the competitors are linked.
