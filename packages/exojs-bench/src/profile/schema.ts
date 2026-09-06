@@ -29,7 +29,7 @@ import type { PlatformVersionStamp, PrereleaseStamp, RenderingBrowser } from '..
  */
 
 /** Schema version `bench:compare` stamps into a new document. */
-export const BENCH_PROFILE_SCHEMA_VERSION = 5;
+export const BENCH_PROFILE_SCHEMA_VERSION = 6;
 
 /**
  * Schema versions a reader accepts. A document carrying anything else is
@@ -48,7 +48,11 @@ export const BENCH_PROFILE_SCHEMA_VERSION = 5;
  * in the driver's Node process and recorded its runtime version, so a profile
  * whose name claimed a browser carried physics numbers taken in a different
  * JavaScript engine entirely - which is not a relabelling but a different
- * measurement.
+ * measurement. Version 5 published a median alone, with no p95 beside it and no
+ * mark on a value past a whole 60 fps frame, and put every physics row on one
+ * shared body count; its physics numbers were additionally taken on ladders that
+ * have since moved, and because the per-cell seed folds the body count in, a
+ * moved rung is a different scene rather than the same one measured again.
  */
 export const SUPPORTED_BENCH_PROFILE_SCHEMA_VERSIONS: readonly number[] = [BENCH_PROFILE_SCHEMA_VERSION];
 
