@@ -273,8 +273,8 @@ const probeSupport = (binding: RendererBinding): BindingSupport => {
  * `describe` block.
  *
  * The scenarios are the contract `AbstractWebGl2Renderer`, `RendererRegistry`,
- * `materializeRendererBindings` and the retained-batch hooks state, but which
- * nothing enforces per renderer:
+ * `materializeRendererBindings` and the retained-batch hooks state, and that
+ * nothing else enforces per renderer:
  *
  * - the binding declares a usable target list and hands every backend its own
  *   renderer instance, never a shared one;
