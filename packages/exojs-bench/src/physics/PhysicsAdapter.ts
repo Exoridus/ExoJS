@@ -9,7 +9,7 @@ import type { BaseCellResult } from '../shared/result';
  * ExoJS user cares about when deciding stay-native vs. attach an adapter -
  * resting-contact solving, wide broad-phase + many active contacts, and a mix.
  */
-export type PhysicsArchetypeId = 'box-stack' | 'many-dynamic' | 'mixed-static-dynamic' | 'raycast' | 'body-churn' | 'joints';
+export type PhysicsArchetypeId = 'box-stack' | 'many-dynamic' | 'mixed-static-dynamic' | 'raycast' | 'body-churn' | 'joints' | 'settling-pile';
 
 /**
  * Body layout an archetype simulates, independent of what its per-step work is.
@@ -65,6 +65,31 @@ export interface PhysicsArchetypeSpec {
    * from its own static anchor.
    */
   readonly jointChainLength?: number;
+  /**
+   * Material override applied to every DYNAMIC body a scene builds, replacing
+   * that scene's own default friction/restitution.
+   *
+   * This is what lets an archetype reuse an existing {@link PhysicsSceneShape}
+   * (body layout, RNG draws and therefore `seedFor` seed) unchanged while
+   * differing from it in exactly one property - how contacts behave rather
+   * than where bodies start. `undefined` leaves the scene's own defaults in
+   * place.
+   */
+  readonly dynamicMaterial?: { readonly friction: number; readonly restitution: number };
+  /**
+   * Per-body-count warmup override, in fixed `1/60 s` steps, keyed by the
+   * exact values in {@link bodyCounts}. Replaces the shared `warmupStepsFor`
+   * schedule for this archetype's cells only; every other archetype keeps
+   * that schedule unchanged.
+   *
+   * `warmupStepsFor` is sized for a scene that reaches ITS steady state well
+   * inside the shared budget - a settled stack, a bouncing field, a resting
+   * mix. An archetype whose steady state takes longer needs its own number:
+   * a warmup that stops mid-transition times a mix of still-active and
+   * already-steady bodies, which is neither cost regime and not a number
+   * worth reporting.
+   */
+  readonly warmupStepsOverride?: Readonly<Record<number, number>>;
 }
 
 /** One physics matrix cell: an (engine, config, archetype, body count) combination to measure. */
@@ -112,8 +137,35 @@ export interface PhysicsCellResult extends BaseCellResult<PhysicsCellSpec> {
   readonly stepMsMedian: number;
   /** 95th-percentile per-`step` CPU time in milliseconds. */
   readonly stepMsP95: number;
+  /**
+   * `step`s one timing sample covered, the sample divided by this to give the
+   * per-step times above.
+   *
+   * `1` means every step was timed on its own, which is what a cell whose step
+   * cost comfortably clears the browser clock's grid does. A larger value means
+   * the step was too fast to time individually at the available resolution and
+   * the harness batched steps per sample instead; the median and p95 are then
+   * per-step averages over that batch, so their tail detail is coarser. The
+   * timed-step budget is unaffected - the batch only decides how finely the
+   * fixed window is sampled.
+   */
+  readonly stepsPerSample: number;
   /** Structural counters sampled after the timed window. */
   readonly structural: PhysicsStructuralCounters;
+}
+
+/**
+ * The two labels that name one physics engine arm in the matrix.
+ *
+ * Separate from {@link PhysicsAdapter} because the matrix is built before any
+ * arm is constructed: an arm the measuring browser cannot build still has an
+ * identity, and its cells are recorded as unavailable under it.
+ */
+export interface PhysicsArmIdentity {
+  /** Physics engine arm label, e.g. `'exojs-physics'`. */
+  readonly engine: string;
+  /** Arm configuration label, e.g. `'native'`. */
+  readonly config: string;
 }
 
 /**
@@ -121,16 +173,13 @@ export interface PhysicsCellResult extends BaseCellResult<PhysicsCellSpec> {
  * identically across arms - the CPU-domain counterpart of the rendering
  * {@link '../rendering/EngineAdapter'.EngineAdapter}.
  *
- * The native `@codexo/exojs-physics` arm is the only implementation today; the
- * planned matter.js + rapier adapter arms (a separate follow-on) implement this
- * same interface so a stay-native vs. attach-an-adapter comparison drops in
- * without the driver or archetypes changing.
+ * Every arm - the native `@codexo/exojs-physics` runtime and the matter.js,
+ * planck and rapier libraries an app would attach instead - implements this one
+ * interface, so the stay-native vs. attach-an-adapter comparison rests on the
+ * harness driving all of them through the identical calls. Implementations run
+ * in the browser page, not in the driver process.
  */
-export interface PhysicsAdapter {
-  /** Physics engine arm label, e.g. `'exojs-physics'`. */
-  readonly engine: string;
-  /** Arm configuration label, e.g. `'native'`. */
-  readonly config: string;
+export interface PhysicsAdapter extends PhysicsArmIdentity {
   /**
    * Build the world and its bodies for the given archetype/body count from the
    * shared deterministic RNG seed, so every arm simulates the identical scene.
