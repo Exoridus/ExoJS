@@ -1,12 +1,6 @@
-struct Uniforms {
-    uShift: vec4<f32>,
-    uColor: vec4<f32>,
-};
-
 @group(0) @binding(1) var uTexture: texture_2d<f32>;
 @group(0) @binding(2) var uSampler: sampler;
 @group(0) @binding(3) var<uniform> uOrientation: f32;
-@group(1) @binding(0) var<uniform> uniforms: Uniforms;
 
 @fragment
 fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {

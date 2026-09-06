@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 5,
+  "memberCount": 7,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 5,
+    "properties": 7,
     "events": 0
   },
   "sections": [
@@ -116,7 +116,7 @@
         },
         {
           "name": "shader",
-          "signature": "shader?: ShaderSource",
+          "signature": "shader?: ShaderSource<F, B>",
           "signatureTokens": [
             {
               "text": "shader",
@@ -133,6 +133,26 @@
             {
               "text": "ShaderSource",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
@@ -140,11 +160,11 @@
           "description": "A ready-made source pair, the way Material takes one. Takes the place of ShaderFilterSourceOptions.glsl/ShaderFilterSourceOptions.wgsl and is used verbatim - no default vertex stage is filled in, and no GLSL upgrade is run."
         },
         {
-          "name": "uniforms",
-          "signature": "uniforms?: Record<string, ShaderFilterUniformValue>",
+          "name": "textures",
+          "signature": "textures?: Record<string, RenderTexture | Texture>",
           "signatureTokens": [
             {
-              "text": "uniforms",
+              "text": "textures",
               "kind": "name"
             },
             {
@@ -172,7 +192,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "ShaderFilterUniformValue",
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
               "kind": "type"
             },
             {
@@ -182,7 +210,217 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Initial uniform values. Update them at runtime through ShaderFilter.setUniform / ShaderFilter.setUniforms, which also invalidate the nodes rendering the filter."
+          "description": "Textures bound after the uniform blocks, in declaration order, each followed by its sampler. Use this rather than texture-valued uniforms entries whenever the source declares a uniform schema."
+        },
+        {
+          "name": "uniformBlocks",
+          "signature": "uniformBlocks?: B extends undefined ? never : UniformBlockInitialValues<Extract<B, Readonly<Record<string, UniformBlock<Readonly<Record<string, UniformFieldDeclaration>>>>>>>",
+          "signatureTokens": [
+            {
+              "text": "uniformBlocks",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformBlockInitialValues",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Extract",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformBlock",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformFieldDeclaration",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Starting values per named block, for a source declaring uniformBlocks."
+        },
+        {
+          "name": "uniforms",
+          "signature": "uniforms?: ShaderFilterUniformValues<F, B>",
+          "signatureTokens": [
+            {
+              "text": "uniforms",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderFilterUniformValues",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Starting values for the declared uniforms, or - on a source without a schema - the initial uniform record, updated at runtime through ShaderFilter.setUniform / ShaderFilter.setUniforms."
         },
         {
           "name": "wgsl",

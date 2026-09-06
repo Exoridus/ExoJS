@@ -2522,7 +2522,7 @@
         },
         {
           "name": "material",
-          "signature": "material: SpriteMaterial | null",
+          "signature": "material: AnySpriteMaterial | null",
           "signatureTokens": [
             {
               "text": "material",
@@ -2533,7 +2533,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "SpriteMaterial",
+              "text": "AnySpriteMaterial",
               "kind": "type"
             },
             {

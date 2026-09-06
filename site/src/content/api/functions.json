@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 85,
+  "memberCount": 86,
   "counts": {
     "constructors": 0,
-    "methods": 51,
+    "methods": 52,
     "properties": 34,
     "events": 0
   },
@@ -796,6 +796,101 @@
           "params": [],
           "returnType": "GamepadMapping",
           "description": "Generic arcade-stick controllers. Covers the standard 8-button plus shoulder/trigger layout common to most fightsticks. No analog sticks are present, so the axis list is empty and the D-pad is exposed as discrete buttons (indices 12-15)."
+        },
+        {
+          "name": "createFilterShaderSource",
+          "signature": "createFilterShaderSource(options: ShaderFilterSourceOptions & UniformSchemaOptions<F, B>): ShaderSource<F, B>",
+          "signatureTokens": [
+            {
+              "text": "createFilterShaderSource",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderFilterSourceOptions",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformSchemaOptions",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderSource",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "ShaderFilterSourceOptions & UniformSchemaOptions<F, B>",
+              "optional": false
+            }
+          ],
+          "returnType": "ShaderSource<F, B>",
+          "description": "Build the ShaderSource behind a filter pass: fills in the default vertex stage per language, upgrades legacy GLSL when asked, and carries any uniform declaration through to the source. This is how a filter declares typed uniforms: ShaderFilterOptions.uniforms carries starting VALUES, so the declaration has to reach the source, and the source is what the filter is then built from with ShaderFilter.from. ts const shader = createFilterShaderSource({ glsl: { fragment }, wgsl, uniforms: { uTime: UniformType.Float }, }); const filter = ShaderFilter.from(shader, { uniforms: { uTime: 0 } }); "
         },
         {
           "name": "createJoyConLeftGamepadMapping",

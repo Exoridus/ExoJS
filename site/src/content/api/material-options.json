@@ -1,16 +1,16 @@
 {
   "title": "MaterialOptions",
-  "description": "Construction options shared by every Material. Only `shader` is required. Textures may be supplied either through the dedicated `textures` map or as texture-valued entries in `uniforms`; both are honoured by the bind-key derivation.",
+  "description": "Construction options shared by every Material. Only `shader` is required. What `uniforms` means follows from the shader source: on a source that declares a uniform schema it carries starting values for the declared fields, and textures must go in `textures`; on a source without one it is the mutable value record, where texture-valued entries also claim a texture binding.",
   "symbol": "MaterialOptions",
   "kind": "interface",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 5,
+  "memberCount": 6,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 5,
+    "properties": 6,
     "events": 0
   },
   "sections": [
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Construction options shared by every Material.",
-        "Only `shader` is required. Textures may be supplied either through the dedicated `textures` map or as texture-valued entries in `uniforms`; both are honoured by the bind-key derivation."
+        "Only `shader` is required. What `uniforms` means follows from the shader source: on a source that declares a uniform schema it carries starting values for the declared fields, and textures must go in `textures`; on a source without one it is the mutable value record, where texture-valued entries also claim a texture binding."
       ],
       "importLine": "import { MaterialOptions } from '@codexo/exojs'",
       "sourceLink": null
@@ -89,7 +89,7 @@
         },
         {
           "name": "shader",
-          "signature": "shader: ShaderSource",
+          "signature": "shader: ShaderSource<F, B>",
           "signatureTokens": [
             {
               "text": "shader",
@@ -102,6 +102,26 @@
             {
               "text": "ShaderSource",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
@@ -162,11 +182,11 @@
           "description": "Declared texture slots claimed in addition to the drawable's own texture."
         },
         {
-          "name": "uniforms",
-          "signature": "uniforms?: Record<string, UniformValue>",
+          "name": "uniformBlocks",
+          "signature": "uniformBlocks?: B extends undefined ? never : UniformBlockInitialValues<Extract<B, Readonly<Record<string, UniformBlock<Readonly<Record<string, UniformFieldDeclaration>>>>>>>",
           "signatureTokens": [
             {
-              "text": "uniforms",
+              "text": "uniformBlocks",
               "kind": "name"
             },
             {
@@ -175,6 +195,70 @@
             },
             {
               "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformBlockInitialValues",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Extract",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
               "kind": "punctuation"
             },
             {
@@ -194,7 +278,108 @@
               "kind": "punctuation"
             },
             {
-              "text": "UniformValue",
+              "text": "UniformBlock",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformFieldDeclaration",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Starting values per named block, for a source declaring uniformBlocks."
+        },
+        {
+          "name": "uniforms",
+          "signature": "uniforms?: MaterialUniformValues<F, B>",
+          "signatureTokens": [
+            {
+              "text": "uniforms",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MaterialUniformValues",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
               "kind": "type"
             },
             {
@@ -204,7 +389,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Declared uniform slots and their initial values. Names and scalar/texture kinds form a fixed construction-time schema; values remain mutable."
+          "description": "Starting values for the declared uniforms, or - on a source without a schema - the declared uniform slots and their initial values, whose names and scalar/texture kinds form a fixed construction-time schema."
         }
       ],
       "paragraphs": [],

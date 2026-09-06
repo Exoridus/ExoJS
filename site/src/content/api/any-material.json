@@ -1,0 +1,100 @@
+{
+  "title": "AnyMaterial",
+  "description": "A material of any uniform schema. The bare `Material` type describes the untyped path, so a typed material is not one of them; code that accepts either - a renderer, a helper taking any material - names this instead.",
+  "symbol": "AnyMaterial",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A material of any uniform schema.",
+        "The bare `Material` type describes the untyped path, so a typed material is not one of them; code that accepts either - a renderer, a helper taking any material - names this instead."
+      ],
+      "importLine": "import { AnyMaterial } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "AnyMaterial",
+          "signature": "Material<UniformFields | undefined, UniformBlockRecord | undefined>",
+          "signatureTokens": [
+            {
+              "text": "Material",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformFields",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformBlockRecord",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/material/Material.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/Material.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/material/Material.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/Material.ts"
+}

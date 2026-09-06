@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 2,
+  "memberCount": 4,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 2,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -89,6 +89,56 @@
           "params": [],
           "returnType": null,
           "description": "GLSL ES 3.00 sources for the WebGL2 backend. fragment is required; vertex may be omitted where the consumer owns the vertex stage - a SpriteMaterial (the sprite vertex program is engine-owned) or a ShaderFilter (the fullscreen quad). A mesh or particle material needs both."
+        },
+        {
+          "name": "uniformBlocks",
+          "signature": "uniformBlocks?: B",
+          "signatureTokens": [
+            {
+              "text": "uniformBlocks",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Named blocks the shader reads through their record keys. Blocks take bindings 0..n-1 of the consumer's user bind group in declaration order, with texture bindings following after them."
+        },
+        {
+          "name": "uniforms",
+          "signature": "uniforms?: F",
+          "signatureTokens": [
+            {
+              "text": "uniforms",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fields of a single block the shader reads through the instance name uniforms. Declaring it switches materials and filters built on this source to typed accessors and generates the block's GLSL and WGSL declarations."
         },
         {
           "name": "wgsl",

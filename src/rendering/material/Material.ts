@@ -2,16 +2,21 @@ import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import type { SamplerOptions } from '#rendering/texture/TextureOptions';
 import { BlendModes } from '#rendering/types';
+import type { UniformFieldAccessors } from '#rendering/uniforms/uniformAccessors';
+import type { UniformBlockData } from '#rendering/uniforms/UniformBlockData';
+import type { UniformBlockRecord, UniformFields, UniformStructInput } from '#rendering/uniforms/uniformDeclarations';
+import type { UniformBlockDataRecord, UniformBlockInitialValues } from '#rendering/uniforms/uniformSchema';
+import { createUniformBlockData, uniformBlockRecord } from '#rendering/uniforms/uniformSchema';
 
 import { deriveBindKey, derivePipelineKey } from './MaterialKey';
 import type { ShaderSource } from './ShaderSource';
 
 /**
- * Value accepted by a material uniform. Scalars and small tuples
- * auto-marshal to the appropriate `Float32Array`/`Int32Array` for the
- * backend's uniform call. `Texture`/`RenderTexture` values are bound to
- * texture slots starting at slot 1 - slot 0 is reserved for the drawable's
- * own `texture`.
+ * Value accepted by a material uniform on a shader source that declares no
+ * uniform schema. Scalars and small tuples auto-marshal to the appropriate
+ * `Float32Array`/`Int32Array` for the backend's uniform call.
+ * `Texture`/`RenderTexture` values are bound to texture slots starting at slot
+ * 1 - slot 0 is reserved for the drawable's own `texture`.
  */
 export type UniformValue =
   | number
@@ -28,6 +33,35 @@ export const isTextureUniformValue = (value: UniformValue): value is Texture | R
   typeof value === 'object' && value !== null && !Array.isArray(value) && !ArrayBuffer.isView(value);
 
 /**
+ * What {@link Material.uniforms} exposes: typed accessors when the shader
+ * source declares `uniforms`, the mutable value record when it declares no
+ * schema, and nothing when it declares named blocks instead.
+ *
+ * The absence of a declaration is what is tested rather than its presence:
+ * under `strictNullChecks: false`, which snippet and guide programs use,
+ * `undefined` is assignable to every object type, so asking whether it extends
+ * `UniformFields` answers yes and hands an undeclared source the typed view.
+ */
+export type MaterialUniformsView<F, B> = F extends undefined
+  ? B extends undefined
+    ? Record<string, UniformValue>
+    : never
+  : UniformFieldAccessors<Extract<F, UniformFields>>;
+
+/** What {@link Material.uniformBlocks} exposes for a named-block schema. */
+export type MaterialUniformBlocksView<B> = B extends undefined ? never : UniformBlockDataRecord<Extract<B, UniformBlockRecord>>;
+
+/** Starting values accepted for the declared uniforms. */
+export type MaterialUniformValues<F, B> = F extends undefined
+  ? B extends undefined
+    ? Record<string, UniformValue>
+    : never
+  : UniformStructInput<Extract<F, UniformFields>>;
+
+/** A uniform name the raw path accepts; `never` once a schema is declared. */
+export type MaterialRawUniformName<F, B> = F extends undefined ? (B extends undefined ? string : never) : never;
+
+/**
  * Immutable binding layout captured when a material is constructed. Values
  * behind these names stay live; only the name/order/kind contract is fixed.
  * @internal
@@ -41,19 +75,25 @@ export interface MaterialBindingSchema {
 /**
  * Construction options shared by every {@link Material}.
  *
- * Only `shader` is required. Textures may be supplied either through the
- * dedicated `textures` map or as texture-valued entries in `uniforms`;
- * both are honoured by the bind-key derivation.
+ * Only `shader` is required. What `uniforms` means follows from the shader
+ * source: on a source that declares a uniform schema it carries starting values
+ * for the declared fields, and textures must go in `textures`; on a source
+ * without one it is the mutable value record, where texture-valued entries also
+ * claim a texture binding.
  */
-export interface MaterialOptions {
+export interface MaterialOptions<F extends UniformFields | undefined = undefined, B extends UniformBlockRecord | undefined = undefined> {
   /** GLSL/WGSL source pair backing this material. */
-  readonly shader: ShaderSource;
+  readonly shader: ShaderSource<F, B>;
 
   /**
-   * Declared uniform slots and their initial values. Names and scalar/texture
-   * kinds form a fixed construction-time schema; values remain mutable.
+   * Starting values for the declared uniforms, or - on a source without a
+   * schema - the declared uniform slots and their initial values, whose names
+   * and scalar/texture kinds form a fixed construction-time schema.
    */
-  readonly uniforms?: Record<string, UniformValue>;
+  readonly uniforms?: MaterialUniformValues<F, B>;
+
+  /** Starting values per named block, for a source declaring `uniformBlocks`. */
+  readonly uniformBlocks?: B extends undefined ? never : UniformBlockInitialValues<Extract<B, UniformBlockRecord>>;
 
   /** Declared texture slots claimed in addition to the drawable's own texture. */
   readonly textures?: Record<string, Texture | RenderTexture>;
@@ -86,22 +126,43 @@ let nextMaterialId = 1;
  * stable across repeated reads and change exactly when the relevant state
  * changes - even when {@link uniforms}, {@link textures}, {@link blendMode},
  * or {@link sampler} are mutated in place.
+ *
+ * # Typed and raw uniforms
+ *
+ * A shader source that declares a uniform schema gives its materials typed
+ * accessors: `material.uniforms.time.set(seconds)` for the implicit block, or
+ * `material.uniformBlocks.camera.uniforms.projection.set(matrix)` for named
+ * blocks. Writes go into the material's own std140 buffer and are uploaded only
+ * when a value changed, and {@link setUniform} is not available.
+ *
+ * A source without a schema keeps the untyped record: `material.uniforms` is a
+ * live map of the names declared at construction, and both languages' uniform
+ * declarations are the author's responsibility.
+ *
+ * Write a function that takes materials of either kind against
+ * {@link AnyMaterial} rather than the bare class, whose defaults describe the
+ * raw path.
  * @advanced
  */
-export abstract class Material {
+export abstract class Material<F extends UniformFields | undefined = undefined, B extends UniformBlockRecord | undefined = undefined> {
   /** GLSL/WGSL source pair backing this material. */
-  public readonly shader: ShaderSource;
+  public readonly shader: ShaderSource<F, B>;
 
   /**
-   * Live user uniform values. Construction declares the fixed set of names and
-   * each name's scalar/texture kind; existing values can be replaced between
-   * frames and typed arrays can be mutated in place.
+   * The typed accessors of the declared uniform block, or - on a source without
+   * a schema - the live user uniform values, where construction declares the
+   * fixed set of names and each name's scalar/texture kind:
    *
    *   material.uniforms.u_time = performance.now() / 1000;
    *   material.uniforms.u_color = [1, 0.5, 0, 1];
    */
-  public get uniforms(): Record<string, UniformValue> {
-    return this._uniformView;
+  public get uniforms(): MaterialUniformsView<F, B> {
+    return this._uniformsView as MaterialUniformsView<F, B>;
+  }
+
+  /** The declared named uniform blocks, each owning its own values. */
+  public get uniformBlocks(): MaterialUniformBlocksView<B> {
+    return this._uniformBlocksView as MaterialUniformBlocksView<B>;
   }
 
   /** Live identities behind the fixed named texture slots. */
@@ -118,25 +179,42 @@ export abstract class Material {
   /** Which drawable class this material can serve; renderers check compatibility. */
   public abstract readonly target: 'mesh' | 'sprite' | 'particle';
 
+  /** The declared uniform blocks in declaration order; empty on the raw path. @internal */
+  public readonly _blocks: readonly UniformBlockData[];
+
   private readonly _id: number;
   private readonly _disposeCallbacks = new Set<() => void>();
   private readonly _uniformValues: Record<string, UniformValue>;
   private readonly _textureValues: Record<string, Texture | RenderTexture>;
-  private readonly _uniformView: Record<string, UniformValue>;
+  private readonly _uniformsView: unknown;
+  private readonly _uniformBlocksView: unknown;
   private readonly _textureView: Record<string, Texture | RenderTexture>;
   /** Fixed construction-time binding schema used by both backends. @internal */
   public readonly _bindingSchema: MaterialBindingSchema;
 
-  protected constructor(options: MaterialOptions) {
+  protected constructor(options: MaterialOptions<F, B>) {
     if (options.shader === undefined || options.shader === null) {
       throw new Error('Material requires a `shader` ShaderSource.');
     }
 
+    const schema = options.shader.uniformSchema;
+
     this.shader = options.shader;
-    this._uniformValues = { ...options.uniforms };
+    this._uniformValues = schema === null ? { ...(options.uniforms as Record<string, UniformValue> | undefined) } : {};
     this._textureValues = { ...options.textures };
-    this._uniformView = this._createUniformView();
+    this._blocks = schema === null ? [] : createUniformBlockData(schema);
     this._textureView = this._createTextureView();
+
+    if (schema === null) {
+      this._uniformsView = this._createUniformView();
+      this._uniformBlocksView = undefined;
+    } else {
+      const blocks = uniformBlockRecord(this._blocks);
+
+      applyInitialBlockValues(this._blocks, schema.implicit, options.uniforms, options.uniformBlocks);
+      this._uniformsView = schema.implicit ? this._blocks[0]!.uniforms : undefined;
+      this._uniformBlocksView = schema.implicit ? undefined : blocks;
+    }
 
     const scalarUniformNames: string[] = [];
     const textureUniformNames: string[] = [];
@@ -190,13 +268,20 @@ export abstract class Material {
   /**
    * Replace a declared uniform value, returning `this` for chaining. Unknown
    * names and scalar↔texture kind changes are rejected.
+   *
+   * Only available on a material whose shader source declares no uniform
+   * schema; a typed material writes through {@link uniforms} instead.
    */
-  public setUniform(name: string, value: UniformValue): this {
-    if (!Object.prototype.hasOwnProperty.call(this._uniformView, name)) {
-      throw new Error(`Material uniform \`${name}\` is not part of this material's fixed binding schema.`);
+  public setUniform(name: MaterialRawUniformName<F, B>, value: UniformValue): this {
+    if (this._blocks.length > 0) {
+      throw new Error('Material.setUniform is not available on a shader source that declares uniforms; write through `material.uniforms` instead.');
     }
 
-    this._uniformView[name] = value;
+    if (!Object.prototype.hasOwnProperty.call(this._uniformValues, name)) {
+      throw new Error(`Material uniform \`${String(name)}\` is not part of this material's fixed binding schema.`);
+    }
+
+    (this._uniformsView as Record<string, UniformValue>)[name as string] = value;
 
     return this;
   }
@@ -296,3 +381,37 @@ export abstract class Material {
     return Object.preventExtensions(view);
   }
 }
+
+/**
+ * A material of any uniform schema.
+ *
+ * The bare `Material` type describes the untyped path, so a typed material is
+ * not one of them; code that accepts either - a renderer, a helper taking any
+ * material - names this instead.
+ */
+export type AnyMaterial = Material<UniformFields | undefined, UniformBlockRecord | undefined>;
+
+/** Write the caller's starting values into the freshly built blocks. */
+const applyInitialBlockValues = (blocks: readonly UniformBlockData[], implicit: boolean, uniforms: unknown, uniformBlocks: unknown): void => {
+  if (implicit) {
+    if (uniforms !== undefined) {
+      blocks[0]!._setValues(uniforms as Record<string, unknown>);
+    }
+
+    return;
+  }
+
+  if (uniformBlocks === undefined) {
+    return;
+  }
+
+  const values = uniformBlocks as Record<string, Record<string, unknown>>;
+
+  for (const block of blocks) {
+    const initial = values[block.layout.key];
+
+    if (initial !== undefined) {
+      block._setValues(initial);
+    }
+  }
+};

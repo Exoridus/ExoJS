@@ -2,7 +2,7 @@ import type { Color } from '#core/Color';
 import type { Seconds } from '#core/units';
 import type { Matrix } from '#math/Matrix';
 import type { Geometry } from '#rendering/geometry/Geometry';
-import type { MeshMaterial } from '#rendering/material/MeshMaterial';
+import type { AnyMeshMaterial } from '#rendering/material/MeshMaterial';
 import { ImmediateMesh } from '#rendering/mesh/ImmediateMesh';
 import type { RenderPassCoordinatorHost } from '#rendering/pass/RenderPassCoordinator';
 import { StencilAttachmentMode } from '#rendering/pass/RenderPassDescriptor';
@@ -42,7 +42,7 @@ export interface DrawGeometryOptions {
    * target `'mesh'`. Defaults to the standard mesh material (vertex colors,
    * optional texture), so an untextured colored geometry needs no material.
    */
-  material?: MeshMaterial;
+  material?: AnyMeshMaterial;
 
   /** Tint multiplied into the geometry's vertex colors. Defaults to white (no tint). */
   tint?: Color;

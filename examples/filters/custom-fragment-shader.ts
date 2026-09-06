@@ -1,29 +1,42 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Seconds, ShaderFilter, Sprite } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  createFilterShaderSource,
+  FixedResolutionCanvasSizing,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+  ShaderFilter,
+  Sprite,
+  UniformType,
+} from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const HUE_RAMP = assets.technical.color.hueRamp;
 
+// Neither source declares the uniform: the schema below generates the GLSL
+// block and the WGSL struct from one layout, and both bodies read it through
+// the same `uniforms` instance.
 const glsl = `#version 300 es
 precision mediump float;
 uniform sampler2D uTexture;
-uniform float uTime;
 in vec2 vUv;
 out vec4 fragColor;
-void main(){ vec2 uv=vUv; uv.y += sin((uv.x*12.0)+uTime*3.0)*0.03; fragColor=texture(uTexture,uv); }`;
+void main(){ vec2 uv=vUv; uv.y += sin((uv.x*12.0)+uniforms.uTime*3.0)*0.03; fragColor=texture(uTexture,uv); }`;
 const wgsl = `
 @group(0) @binding(1) var uTexture:texture_2d<f32>;
 @group(0) @binding(2) var uSampler:sampler;
-struct Uniforms { uTime:f32 };
-@group(1) @binding(0) var<uniform> uniforms:Uniforms;
 @fragment fn fragmentMain(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{
     var uv=vUv;
     uv.y = uv.y + sin((uv.x*12.0)+uniforms.uTime*3.0)*0.03;
     return textureSample(uTexture,uSampler,uv);
 }`;
 
+const warpShader = createFilterShaderSource({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: UniformType.Float } });
+
 class CustomFragmentShaderScene extends Scene {
   private time = 0;
-  private filter!: ShaderFilter;
+  private filter!: ShaderFilter<typeof warpShader.uniforms>;
   private sprite!: Sprite;
   private hud!: ReturnType<typeof mountControls>;
 
@@ -31,7 +44,7 @@ class CustomFragmentShaderScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0 } });
+    this.filter = ShaderFilter.from(warpShader);
     this.sprite = new Sprite(this.loader.get(HUE_RAMP))
       .setAnchor(0.5)
       .setScale(4)
@@ -41,13 +54,13 @@ class CustomFragmentShaderScene extends Scene {
     this.hud = mountControls({
       title: 'Custom Fragment Shader',
       status: 'A time-driven sine warp drives the sprite UVs each frame.',
-      hint: 'One ShaderFilter carries both the GLSL and the WGSL source; uTime updates per frame.',
+      hint: 'One shader source declares `uTime` once; both languages get a matching uniform block generated for them.',
     });
   }
 
   override update(delta: Seconds): void {
     this.time += delta;
-    this.filter.setUniform('uTime', this.time);
+    this.filter.uniforms.uTime.set(this.time);
   }
 
   override draw(context: RenderingContext): void {

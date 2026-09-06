@@ -1,0 +1,99 @@
+{
+  "title": "AnySpriteMaterial",
+  "description": "A sprite material of any uniform schema - what a consumer that only needs to draw with it should accept, since the bare class describes the untyped path.",
+  "symbol": "AnySpriteMaterial",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A sprite material of any uniform schema - what a consumer that only needs to draw with it should accept, since the bare class describes the untyped path."
+      ],
+      "importLine": "import { AnySpriteMaterial } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "AnySpriteMaterial",
+          "signature": "SpriteMaterial<UniformFields | undefined, UniformBlockRecord | undefined>",
+          "signatureTokens": [
+            {
+              "text": "SpriteMaterial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformFields",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformBlockRecord",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/material/SpriteMaterial.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/SpriteMaterial.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/material/SpriteMaterial.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/SpriteMaterial.ts"
+}

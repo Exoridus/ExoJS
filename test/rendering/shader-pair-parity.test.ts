@@ -18,13 +18,13 @@ import { colorMatrixShaderSource } from '#rendering/filters/ColorMatrixFilter';
 import { displacementShaderSource } from '#rendering/filters/DisplacementFilter';
 import { dropShadowShaderSource } from '#rendering/filters/DropShadowFilter';
 import { lut3dShaderSource, lutRgb1dShaderSource } from '#rendering/filters/LutFilter';
-import type { ShaderSource } from '#rendering/material/ShaderSource';
+import type { AnyShaderSource } from '#rendering/material/ShaderSource';
 
 // ---------------------------------------------------------------------------
 // The pairs under test
 // ---------------------------------------------------------------------------
 
-const pairs: ReadonlyArray<{ readonly name: string; readonly source: ShaderSource }> = [
+const pairs: ReadonlyArray<{ readonly name: string; readonly source: AnyShaderSource }> = [
   { name: 'ColorMatrixFilter', source: colorMatrixShaderSource },
   { name: "LutFilter 'rgb1d'", source: lutRgb1dShaderSource },
   { name: "LutFilter '3d'", source: lut3dShaderSource },

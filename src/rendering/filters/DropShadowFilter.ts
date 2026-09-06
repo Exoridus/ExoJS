@@ -6,6 +6,7 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { BlendModes } from '#rendering/types';
+import { UniformType } from '#rendering/uniforms/UniformType';
 
 import { BlurFilter } from './BlurFilter';
 import { Filter } from './Filter';
@@ -17,7 +18,11 @@ import wgslFragment from './shaders/drop-shadow.wgsl';
  * The silhouette source pair, built once and shared by every instance.
  * @internal
  */
-export const dropShadowShaderSource = createFilterShaderSource({ glsl: { fragment: glslFragment }, wgsl: wgslFragment });
+export const dropShadowShaderSource = createFilterShaderSource({
+  glsl: { fragment: glslFragment },
+  wgsl: wgslFragment,
+  uniforms: { uShift: UniformType.Vec2, uColor: UniformType.Vec4 },
+});
 
 /** Construction-time options for a {@link DropShadowFilter}. */
 export interface DropShadowFilterOptions {
@@ -56,13 +61,10 @@ export interface DropShadowFilterOptions {
  */
 export class DropShadowFilter extends Filter {
   /**
-   * Shift and colour, bound live: `uShift` is the offset in UV units of the
-   * pass target, `uColor` the straight shadow colour with its opacity in alpha.
-   * Insertion order is the WGSL struct order.
+   * `uShift` is the offset in UV units of the pass target, `uColor` the straight
+   * shadow colour with its opacity in alpha.
    */
-  private readonly _shift = new Float32Array(4);
-  private readonly _shadowColor = new Float32Array(4);
-  private readonly _silhouette: ShaderFilter;
+  private readonly _silhouette = ShaderFilter.from(dropShadowShaderSource);
   private readonly _blur: BlurFilter;
   // One sprite per draw: both are batched and resolved at flush, so a single
   // sprite re-pointed between the two draws would sample the same texture twice.
@@ -85,7 +87,6 @@ export class DropShadowFilter extends Filter {
     this._shadowOnly = options.shadowOnly ?? false;
     this._color = options.color?.clone() ?? new Color(0, 0, 0, 0.5);
     this._blur = new BlurFilter({ radius: options.blur ?? 4, quality: options.quality ?? 1 });
-    this._silhouette = ShaderFilter.from(dropShadowShaderSource, { uniforms: { uShift: this._shift, uColor: this._shadowColor } });
     this._writeColor();
   }
 
@@ -166,10 +167,7 @@ export class DropShadowFilter extends Filter {
   private _writeColor(): void {
     const { r, g, b, a } = this._color;
 
-    this._shadowColor[0] = r / 255;
-    this._shadowColor[1] = g / 255;
-    this._shadowColor[2] = b / 255;
-    this._shadowColor[3] = a;
+    this._silhouette.uniforms.uColor.set(r / 255, g / 255, b / 255, a);
   }
 
   /**
@@ -202,8 +200,7 @@ export class DropShadowFilter extends Filter {
       // draw covers its whole target and none has to hang over an edge. It
       // stays a DOWNWARD offset here: the shader turns it into the right v
       // direction for the running backend through `uOrientation`.
-      this._shift[0] = (this._offsetX * resolution) / output.width;
-      this._shift[1] = (this._offsetY * resolution) / output.height;
+      this._silhouette.uniforms.uShift.set((this._offsetX * resolution) / output.width, (this._offsetY * resolution) / output.height);
       this._silhouette.apply(backend, input, silhouette, resolution);
       this._blur.apply(backend, silhouette, shadow, resolution);
 

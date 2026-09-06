@@ -10,7 +10,7 @@ import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { WebGl2RenderBuffer } from '#rendering/webgl2/WebGl2RenderBuffer';
 import { WebGl2VertexArrayObject } from '#rendering/webgl2/WebGl2VertexArrayObject';
 
-import type { ShaderFilterUniformValue } from './ShaderFilter';
+import type { ShaderFilterBindings, ShaderFilterUniformValue } from './ShaderFilter';
 
 /**
  * Interleaved position+UV data for a fullscreen TRIANGLE_STRIP quad.
@@ -61,6 +61,8 @@ export class WebGl2ShaderFilterPass {
 
   private readonly _vertexSource: string;
   private readonly _fragmentSource: string;
+  /** The filter's live bindings, read on every draw. */
+  private readonly _bindings: ShaderFilterBindings;
   /** The filter's live uniform record, read on every draw. */
   private readonly _uniforms: Readonly<Record<string, ShaderFilterUniformValue>>;
 
@@ -70,10 +72,11 @@ export class WebGl2ShaderFilterPass {
   private _passInput: RenderTexture | null = null;
   private _passOutput: RenderTexture | null = null;
 
-  public constructor(vertexSource: string, fragmentSource: string, uniforms: Readonly<Record<string, ShaderFilterUniformValue>>) {
+  public constructor(vertexSource: string, fragmentSource: string, bindings: ShaderFilterBindings) {
     this._vertexSource = vertexSource;
     this._fragmentSource = fragmentSource;
-    this._uniforms = uniforms;
+    this._bindings = bindings;
+    this._uniforms = bindings.uniforms;
   }
 
   /**
@@ -159,6 +162,20 @@ export class WebGl2ShaderFilterPass {
       }
     }
 
+    // Textures declared alongside a uniform schema follow the record's own
+    // texture entries, matching the order the WebGPU half binds them in.
+    for (const name in this._bindings.textures) {
+      if (!shader.uniforms.has(name)) {
+        continue;
+      }
+
+      // In-bounds: `name` comes from the record's own keys.
+      gl2.bindTexture(this._bindings.textures[name]!, textureSlot);
+      this._slotScratch[0] = textureSlot;
+      shader.getUniform(name).setValue(this._slotScratch);
+      textureSlot++;
+    }
+
     // Flush dirty uniforms to the GPU
     shader.sync();
 
@@ -184,6 +201,7 @@ export class WebGl2ShaderFilterPass {
     // Create and connect the shader
     const shader = new Shader(this._vertexSource, this._fragmentSource);
 
+    shader.uniformBlockData = this._bindings.blocks;
     shader.connect(createWebGl2ShaderProgram(gl));
 
     // Force shader finalization so attributes are populated before VAO setup.

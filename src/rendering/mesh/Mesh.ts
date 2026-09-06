@@ -1,7 +1,7 @@
 import { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { GeometryAttribute } from '#rendering/geometry/GeometryAttribute';
-import type { MeshMaterial } from '#rendering/material/MeshMaterial';
+import type { AnyMeshMaterial } from '#rendering/material/MeshMaterial';
 import { invalidateOnTextureLoad } from '#rendering/texture/deferredTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
@@ -48,7 +48,7 @@ export interface MeshOptions {
   readonly geometry?: Geometry;
   readonly texture?: Texture | RenderTexture | null;
   /** Custom look (shader/uniforms/textures/blendMode); `null` uses the default mesh material. */
-  readonly material?: MeshMaterial;
+  readonly material?: AnyMeshMaterial;
 }
 
 /**
@@ -95,7 +95,7 @@ export class Mesh extends Drawable {
   protected _indexFormat: MeshIndexFormat;
   protected _uvs: Float32Array | null;
   protected _colors: Uint32Array | null;
-  protected _material: MeshMaterial | null;
+  protected _material: AnyMeshMaterial | null;
   protected _geometry: Geometry | null;
 
   public get vertices(): Float32Array {
@@ -127,7 +127,7 @@ export class Mesh extends Drawable {
   }
 
   /** Custom material attached to this mesh, or `null` for the default mesh path. */
-  public get material(): MeshMaterial | null {
+  public get material(): AnyMeshMaterial | null {
     return this._material;
   }
 

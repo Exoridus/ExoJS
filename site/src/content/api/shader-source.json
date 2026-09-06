@@ -1,16 +1,16 @@
 {
   "title": "ShaderSource",
-  "description": "Immutable shader source pair shared by Material instances. `ShaderSource` owns only the GLSL/WGSL text and its stable identity; it carries no uniform/texture state (that lives on the Material). One `ShaderSource` can back many materials, and renderers key their compiled program/pipeline caches on the source identity exposed via id. # Vertex layout The vertex layout for the mesh path is fixed and shared with the default mesh material, so custom vertex shaders MUST pin the standard attribute locations: ## GLSL (location-qualified) ```glsl layout(location = 0) in vec2 a_position; layout(location = 1) in vec2 a_texcoord; layout(location = 2) in vec4 a_color; ``` ## WGSL (location-qualified) ```wgsl struct VertexInput { @location(0) position: vec2<f32>, @location(1) texcoord: vec2<f32>, @location(2) color: vec4<f32>, }; ``` # Auto-bound uniforms Renderers auto-bind these when the source declares them. Declared but unused is fine; absent is fine too. Both backends carry the same logical uniforms, only the binding scheme differs. ## GLSL ```glsl uniform mat3 u_projection; // active view's projection uniform mat3 u_translation; // drawable's global transform uniform vec4 u_tint; // tint as RGBA in 0..1 uniform sampler2D u_texture; // bound to texture slot 0 ``` ## WGSL ```wgsl struct MeshUniforms { projection: mat3x3<f32>, translation: mat3x3<f32>, tint: vec4<f32>, }; @group(0) @binding(0) var<uniform> u_mesh: MeshUniforms; @group(1) @binding(0) var u_texture: texture_2d<f32>; @group(1) @binding(1) var u_sampler: sampler; ``` # User uniforms Anything in Material.uniforms is set after the auto-binds. `Texture`/`RenderTexture` values claim slots 1..N (slot 0 belongs to the drawable's own texture). ## WGSL user-uniform contract User uniforms live in `@group(2)`: - `@group(2) @binding(0) var<uniform> u_user: <UserUniformsStruct>;` for the packed scalar/vector/matrix uniforms. - `@group(2) @binding(N)` for each `Texture`/`RenderTexture` uniform, in declaration order, alongside its sampler at `@binding(N+1)`.",
+  "description": "Immutable shader source pair shared by Material instances. `ShaderSource` owns only the GLSL/WGSL text and its stable identity; it carries no uniform/texture state (that lives on the Material). One `ShaderSource` can back many materials, and renderers key their compiled program/pipeline caches on the source identity exposed via id. # Vertex layout The vertex layout for the mesh path is fixed and shared with the default mesh material, so custom vertex shaders MUST pin the standard attribute locations: ## GLSL (location-qualified) ```glsl layout(location = 0) in vec2 a_position; layout(location = 1) in vec2 a_texcoord; layout(location = 2) in vec4 a_color; ``` ## WGSL (location-qualified) ```wgsl struct VertexInput { @location(0) position: vec2<f32>, @location(1) texcoord: vec2<f32>, @location(2) color: vec4<f32>, }; ``` # Auto-bound uniforms Renderers auto-bind these when the source declares them. Declared but unused is fine; absent is fine too. Both backends carry the same logical uniforms, only the binding scheme differs. ## GLSL ```glsl uniform mat3 u_projection; // active view's projection uniform mat3 u_translation; // drawable's global transform uniform vec4 u_tint; // tint as RGBA in 0..1 uniform sampler2D u_texture; // bound to texture slot 0 ``` ## WGSL ```wgsl struct MeshUniforms { projection: mat3x3<f32>, translation: mat3x3<f32>, tint: vec4<f32>, }; @group(0) @binding(0) var<uniform> u_mesh: MeshUniforms; @group(1) @binding(0) var u_texture: texture_2d<f32>; @group(1) @binding(1) var u_sampler: sampler; ``` # Declared user uniforms Supplying `uniforms` (one block) or `uniformBlocks` (several named ones) makes this source the single source of truth for their names, types, layout and defaults. The engine computes one canonical `std140` layout and prepends the matching GLSL block and WGSL struct to the stages, so neither body declares them; both read through the instance name - `uniforms` for the implicit block, the record key for a named one. ```ts const shader = new ShaderSource({ uniforms: { u_time: UniformType.Float, u_tint: UniformType.Vec4 }, glsl: { vertex, fragment }, wgsl, }); ``` Materials and filters built on such a source expose typed accessors instead of the value record, and textures are declared in `textures` rather than among the uniforms. Blocks take bindings `0..n-1` of the consumer's user bind group in declaration order, with texture bindings following after them. # Raw user uniforms Without a declaration the source keeps full control and correspondingly weaker guarantees. Anything in Material.uniforms is set after the auto-binds, and `Texture`/`RenderTexture` values claim slots 1..N (slot 0 belongs to the drawable's own texture). ## WGSL user-uniform contract User uniforms live in `@group(2)`: - `@group(2) @binding(0) var<uniform> u_user: <UserUniformsStruct>;` for the packed scalar/vector/matrix uniforms, each in its own 16-byte slot in declaration order. - `@group(2) @binding(N)` for each `Texture`/`RenderTexture` uniform, in declaration order, alongside its sampler at `@binding(N+1)`.",
   "symbol": "ShaderSource",
   "kind": "class",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 7,
+  "memberCount": 10,
   "counts": {
     "constructors": 1,
     "methods": 3,
-    "properties": 3,
+    "properties": 6,
     "events": 0
   },
   "sections": [
@@ -35,11 +35,15 @@
         "```wgsl struct MeshUniforms { projection: mat3x3<f32>, translation: mat3x3<f32>, tint: vec4<f32>, };",
         "@group(0) @binding(0) var<uniform> u_mesh: MeshUniforms;",
         "@group(1) @binding(0) var u_texture: texture_2d<f32>; @group(1) @binding(1) var u_sampler: sampler; ```",
-        "# User uniforms",
-        "Anything in Material.uniforms is set after the auto-binds. `Texture`/`RenderTexture` values claim slots 1..N (slot 0 belongs to the drawable's own texture).",
+        "# Declared user uniforms",
+        "Supplying `uniforms` (one block) or `uniformBlocks` (several named ones) makes this source the single source of truth for their names, types, layout and defaults. The engine computes one canonical `std140` layout and prepends the matching GLSL block and WGSL struct to the stages, so neither body declares them; both read through the instance name - `uniforms` for the implicit block, the record key for a named one.",
+        "```ts const shader = new ShaderSource({ uniforms: { u_time: UniformType.Float, u_tint: UniformType.Vec4 }, glsl: { vertex, fragment }, wgsl, }); ```",
+        "Materials and filters built on such a source expose typed accessors instead of the value record, and textures are declared in `textures` rather than among the uniforms. Blocks take bindings `0..n-1` of the consumer's user bind group in declaration order, with texture bindings following after them.",
+        "# Raw user uniforms",
+        "Without a declaration the source keeps full control and correspondingly weaker guarantees. Anything in Material.uniforms is set after the auto-binds, and `Texture`/`RenderTexture` values claim slots 1..N (slot 0 belongs to the drawable's own texture).",
         "## WGSL user-uniform contract",
         "User uniforms live in `@group(2)`:",
-        "- `@group(2) @binding(0) var<uniform> u_user: <UserUniformsStruct>;` for the packed scalar/vector/matrix uniforms. - `@group(2) @binding(N)` for each `Texture`/`RenderTexture` uniform, in declaration order, alongside its sampler at `@binding(N+1)`."
+        "- `@group(2) @binding(0) var<uniform> u_user: <UserUniformsStruct>;` for the packed scalar/vector/matrix uniforms, each in its own 16-byte slot in declaration order. - `@group(2) @binding(N)` for each `Texture`/`RenderTexture` uniform, in declaration order, alongside its sampler at `@binding(N+1)`."
       ],
       "importLine": "import { ShaderSource } from '@codexo/exojs'",
       "sourceLink": null
@@ -50,7 +54,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(options: ShaderSourceOptions): ShaderSource",
+          "signature": "new(options: ShaderSourceOptions<F, B>): ShaderSource<F, B>",
           "signatureTokens": [
             {
               "text": "new",
@@ -73,6 +77,26 @@
               "kind": "type"
             },
             {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -83,16 +107,36 @@
             {
               "text": "ShaderSource",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [
             {
               "name": "options",
-              "type": "ShaderSourceOptions",
+              "type": "ShaderSourceOptions<F, B>",
               "optional": false
             }
           ],
-          "returnType": "ShaderSource",
+          "returnType": "ShaderSource<F, B>",
           "description": ""
         }
       ],
@@ -444,6 +488,77 @@
           "params": [],
           "returnType": null,
           "description": "GLSL sources for the WebGL2 backend, or null if not provided. vertex is null when the author left the vertex stage to the consumer."
+        },
+        {
+          "name": "uniformBlocks",
+          "signature": "uniformBlocks: B",
+          "signatureTokens": [
+            {
+              "text": "uniformBlocks",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The named block declarations, as supplied."
+        },
+        {
+          "name": "uniforms",
+          "signature": "uniforms: F",
+          "signatureTokens": [
+            {
+              "text": "uniforms",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The implicit block's field declaration, as supplied."
+        },
+        {
+          "name": "uniformSchema",
+          "signature": "uniformSchema: UniformSchemaLayout | null",
+          "signatureTokens": [
+            {
+              "text": "uniformSchema",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformSchemaLayout",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The canonical layout of the declared uniform blocks, or null for a source that manages its own uniform declarations."
         },
         {
           "name": "wgsl",

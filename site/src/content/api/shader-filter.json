@@ -1,16 +1,16 @@
 {
   "title": "ShaderFilter",
-  "description": "A Filter that renders its input through a user-supplied shader, in whichever language the active backend speaks. One filter carries both sources - GLSL for WebGL2, WGSL for WebGPU - on the same ShaderSource contract materials use, and picks between them internally. Supply both and the filter runs unchanged under `backend: 'auto'`, where the engine decides which backend it gets. ## Usage ```ts const filter = new ShaderFilter({ glsl: { fragment: `#version 300 es precision mediump float; uniform sampler2D uTexture; uniform float uTime; in vec2 vUv; out vec4 fragColor; void main() { fragColor = texture(uTexture, vUv); } `, }, wgsl: ` struct Uniforms { uTime: f32 }; @group(0) @binding(1) var uTexture: texture_2d<f32>; @group(0) @binding(2) var uSampler: sampler; @group(1) @binding(0) var<uniform> uniforms: Uniforms; @fragment fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> { return textureSample(uTexture, uSampler, vUv); } `, uniforms: { uTime: 0 }, }); filter.setUniform('uTime', performance.now() / 1000); sprite.filters = [filter]; ``` ## Auto-bound entries Both languages receive the filter's input texture, the output dimensions and the v-axis orientation, and both see a `vUv` varying running 0..1 across the quad. Declare only the ones the source reads. ### GLSL ```glsl uniform sampler2D uTexture; // the filter's input, texture slot 0 uniform vec2 uResolution; // output dimensions in texels uniform float uOrientation; // sign of the v axis against the effect domain in vec2 vUv; ``` ### WGSL ```wgsl @group(0) @binding(0) var<uniform> uResolution: vec2<f32>; @group(0) @binding(1) var uTexture: texture_2d<f32>; @group(0) @binding(2) var uSampler: sampler; @group(0) @binding(3) var<uniform> uOrientation: f32; ``` ## Sampling and the v axis `vUv` addresses the input in TEXEL space: sampling `uTexture` at `vUv` reproduces the input unchanged, whatever the effect domain looks like. The two backends store that domain the other way up, though - a WebGL2 render texture bottom-up, a WebGPU one top-down - so `v` runs downwards through the effect on one and upwards on the other. `uOrientation` is the sign that relates the two: `+1` where `v` grows ALONG the effect domain's y axis (downwards) and `-1` where it grows against it. Multiply the v component of any DIRECTIONAL offset by it and one source behaves identically on both backends: ```glsl // Read the texel `dy` below this one, on either backend. vec4 below = texture(uTexture, vUv + vec2(0.0, dy * uOrientation)); ``` Offsets that are not directional - a radial blur kernel, a symmetric neighbourhood, anything that only recolours its own texel - need nothing. The same sign also maps `vUv` onto a texture sampled ALONGSIDE the input (a displacement or mask map, whose own row 0 is its top on both backends): `0.5 + (vUv.y - 0.5) * uOrientation` is that texture's v. ## User uniforms Anything in uniforms is bound after the auto-binds. GLSL resolves them by name, with texture uniforms claiming slots 1..N. WGSL packs every non-texture uniform into one buffer at `@group(1) @binding(0)`, each in a 16-byte slot **in declaration order**, and binds texture uniforms from `@group(1) @binding(1)` onwards, each followed by its sampler. ## Missing sources A filter that carries only one language throws ShaderFilterBackendError when it attaches to a backend speaking the other one - before it compiles or allocates anything.",
+  "description": "A Filter that renders its input through a user-supplied shader, in whichever language the active backend speaks. One filter carries both sources - GLSL for WebGL2, WGSL for WebGPU - on the same ShaderSource contract materials use, and picks between them internally. Supply both and the filter runs unchanged under `backend: 'auto'`, where the engine decides which backend it gets. ## Usage ```ts const filter = new ShaderFilter({ glsl: { fragment: `#version 300 es precision mediump float; uniform sampler2D uTexture; uniform float uTime; in vec2 vUv; out vec4 fragColor; void main() { fragColor = texture(uTexture, vUv); } `, }, wgsl: ` struct Uniforms { uTime: f32 }; @group(0) @binding(1) var uTexture: texture_2d<f32>; @group(0) @binding(2) var uSampler: sampler; @group(1) @binding(0) var<uniform> uniforms: Uniforms; @fragment fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> { return textureSample(uTexture, uSampler, vUv); } `, uniforms: { uTime: 0 }, }); filter.setUniform('uTime', performance.now() / 1000); sprite.filters = [filter]; ``` ## Auto-bound entries Both languages receive the filter's input texture, the output dimensions and the v-axis orientation, and both see a `vUv` varying running 0..1 across the quad. Declare only the ones the source reads. ### GLSL ```glsl uniform sampler2D uTexture; // the filter's input, texture slot 0 uniform vec2 uResolution; // output dimensions in texels uniform float uOrientation; // sign of the v axis against the effect domain in vec2 vUv; ``` ### WGSL ```wgsl @group(0) @binding(0) var<uniform> uResolution: vec2<f32>; @group(0) @binding(1) var uTexture: texture_2d<f32>; @group(0) @binding(2) var uSampler: sampler; @group(0) @binding(3) var<uniform> uOrientation: f32; ``` ## Sampling and the v axis `vUv` addresses the input in TEXEL space: sampling `uTexture` at `vUv` reproduces the input unchanged, whatever the effect domain looks like. The two backends store that domain the other way up, though - a WebGL2 render texture bottom-up, a WebGPU one top-down - so `v` runs downwards through the effect on one and upwards on the other. `uOrientation` is the sign that relates the two: `+1` where `v` grows ALONG the effect domain's y axis (downwards) and `-1` where it grows against it. Multiply the v component of any DIRECTIONAL offset by it and one source behaves identically on both backends: ```glsl // Read the texel `dy` below this one, on either backend. vec4 below = texture(uTexture, vUv + vec2(0.0, dy * uOrientation)); ``` Offsets that are not directional - a radial blur kernel, a symmetric neighbourhood, anything that only recolours its own texel - need nothing. The same sign also maps `vUv` onto a texture sampled ALONGSIDE the input (a displacement or mask map, whose own row 0 is its top on both backends): `0.5 + (vUv.y - 0.5) * uOrientation` is that texture's v. ## User uniforms A source built with createFilterShaderSource can declare its uniforms, in which case the engine generates both languages' declarations from one layout and uniforms becomes a namespace of typed accessors: ```ts const shader = createFilterShaderSource({ glsl: { fragment }, wgsl, uniforms: { uTime: UniformType.Float }, }); const filter = ShaderFilter.from(shader); filter.uniforms.uTime.set(elapsed); ``` Both bodies then read through the instance name `uniforms`, textures are declared in `textures`, and setUniform is gone from the type. Without a declaration the source keeps today's contract: anything in uniforms is bound after the auto-binds, GLSL resolves them by name with texture uniforms claiming slots 1..N, and WGSL packs every non-texture uniform into one buffer at `@group(1) @binding(0)`, each in a 16-byte slot **in declaration order**, binding texture uniforms from `@group(1) @binding(1)` onwards, each followed by its sampler. ## Missing sources A filter that carries only one language throws ShaderFilterBackendError when it attaches to a backend speaking the other one - before it compiles or allocates anything.",
   "symbol": "ShaderFilter",
   "kind": "class",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 12,
+  "memberCount": 13,
   "counts": {
     "constructors": 1,
     "methods": 8,
-    "properties": 3,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -38,7 +38,12 @@
         "```glsl // Read the texel `dy` below this one, on either backend. vec4 below = texture(uTexture, vUv + vec2(0.0, dy * uOrientation)); ```",
         "Offsets that are not directional - a radial blur kernel, a symmetric neighbourhood, anything that only recolours its own texel - need nothing. The same sign also maps `vUv` onto a texture sampled ALONGSIDE the input (a displacement or mask map, whose own row 0 is its top on both backends): `0.5 + (vUv.y - 0.5) * uOrientation` is that texture's v.",
         "## User uniforms",
-        "Anything in uniforms is bound after the auto-binds. GLSL resolves them by name, with texture uniforms claiming slots 1..N. WGSL packs every non-texture uniform into one buffer at `@group(1) @binding(0)`, each in a 16-byte slot **in declaration order**, and binds texture uniforms from `@group(1) @binding(1)` onwards, each followed by its sampler.",
+        "A source built with createFilterShaderSource can declare its uniforms, in which case the engine generates both languages' declarations from one layout and uniforms becomes a namespace of typed accessors:",
+        "```ts const shader = createFilterShaderSource({ glsl: { fragment }, wgsl, uniforms: { uTime: UniformType.Float }, });",
+        "const filter = ShaderFilter.from(shader);",
+        "filter.uniforms.uTime.set(elapsed); ```",
+        "Both bodies then read through the instance name `uniforms`, textures are declared in `textures`, and setUniform is gone from the type.",
+        "Without a declaration the source keeps today's contract: anything in uniforms is bound after the auto-binds, GLSL resolves them by name with texture uniforms claiming slots 1..N, and WGSL packs every non-texture uniform into one buffer at `@group(1) @binding(0)`, each in a 16-byte slot **in declaration order**, binding texture uniforms from `@group(1) @binding(1)` onwards, each followed by its sampler.",
         "## Missing sources",
         "A filter that carries only one language throws ShaderFilterBackendError when it attaches to a backend speaking the other one - before it compiles or allocates anything."
       ],
@@ -51,7 +56,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(options: ShaderFilterOptions): ShaderFilter",
+          "signature": "new(options: ShaderFilterOptions<F, B>): ShaderFilter<F, B>",
           "signatureTokens": [
             {
               "text": "new",
@@ -74,6 +79,26 @@
               "kind": "type"
             },
             {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -84,16 +109,36 @@
             {
               "text": "ShaderFilter",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [
             {
               "name": "options",
-              "type": "ShaderFilterOptions",
+              "type": "ShaderFilterOptions<F, B>",
               "optional": false
             }
           ],
-          "returnType": "ShaderFilter",
+          "returnType": "ShaderFilter<F, B>",
           "description": ""
         }
       ],
@@ -343,7 +388,7 @@
         },
         {
           "name": "setUniform",
-          "signature": "setUniform(name: string, value: ShaderFilterUniformValue): this",
+          "signature": "setUniform(name: ShaderFilterRawUniformName<F, B>, value: ShaderFilterUniformValue): this",
           "signatureTokens": [
             {
               "text": "setUniform",
@@ -362,8 +407,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
-              "kind": "keyword"
+              "text": "ShaderFilterRawUniformName",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ", ",
@@ -397,7 +462,7 @@
           "params": [
             {
               "name": "name",
-              "type": "string",
+              "type": "ShaderFilterRawUniformName<F, B>",
               "optional": false
             },
             {
@@ -407,7 +472,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Set one uniform and notify every node rendering this filter."
+          "description": "Set one uniform and notify every node rendering this filter. Only available on a source that declares no uniform schema; a typed filter writes through uniforms instead."
         },
         {
           "name": "setUniforms",
@@ -537,7 +602,7 @@
         },
         {
           "name": "from",
-          "signature": "from(source: ShaderSource, options?: { uniforms?: Record<string, ShaderFilterUniformValue> }): ShaderFilter",
+          "signature": "from(source: ShaderSource<F, B>, options?: Omit<ShaderFilterOptions<F, B>, \"autoUpgrade\" | \"glsl\" | \"shader\" | \"wgsl\">): ShaderFilter<F, B>",
           "signatureTokens": [
             {
               "text": "from",
@@ -560,6 +625,26 @@
               "kind": "type"
             },
             {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": ", ",
               "kind": "punctuation"
             },
@@ -576,23 +661,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "{ ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "uniforms",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Record",
+              "text": "Omit",
               "kind": "type"
             },
             {
@@ -600,15 +669,23 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
-              "kind": "keyword"
+              "text": "ShaderFilterOptions",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
             },
             {
               "text": ", ",
               "kind": "punctuation"
             },
             {
-              "text": "ShaderFilterUniformValue",
+              "text": "B",
               "kind": "type"
             },
             {
@@ -616,7 +693,39 @@
               "kind": "punctuation"
             },
             {
-              "text": " }",
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"autoUpgrade\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"glsl\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"shader\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"wgsl\"",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
               "kind": "punctuation"
             },
             {
@@ -630,21 +739,41 @@
             {
               "text": "ShaderFilter",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [
             {
               "name": "source",
-              "type": "ShaderSource",
+              "type": "ShaderSource<F, B>",
               "optional": false
             },
             {
               "name": "options",
-              "type": "{ uniforms?: Record<string, ShaderFilterUniformValue> }",
+              "type": "Omit<ShaderFilterOptions<F, B>, \"autoUpgrade\" | \"glsl\" | \"shader\" | \"wgsl\">",
               "optional": true
             }
           ],
-          "returnType": "ShaderFilter",
+          "returnType": "ShaderFilter<F, B>",
           "description": "Build a filter from an existing ShaderSource, so one source can back several filters. The source must already carry complete sources per language - no default vertex stage is filled in."
         }
       ],
@@ -679,7 +808,7 @@
         },
         {
           "name": "shader",
-          "signature": "shader: ShaderSource",
+          "signature": "shader: ShaderSource<F, B>",
           "signatureTokens": [
             {
               "text": "shader",
@@ -692,6 +821,26 @@
             {
               "text": "ShaderSource",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
@@ -699,8 +848,41 @@
           "description": "The source pair this filter runs, with the default stages already filled in."
         },
         {
+          "name": "uniformBlocks",
+          "signature": "uniformBlocks: ShaderFilterBlocksView<B>",
+          "signatureTokens": [
+            {
+              "text": "uniformBlocks",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderFilterBlocksView",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The declared named uniform blocks, each owning its own values."
+        },
+        {
           "name": "uniforms",
-          "signature": "uniforms: Readonly<Record<string, ShaderFilterUniformValue>>",
+          "signature": "uniforms: ShaderFilterUniformsView<F, B>",
           "signatureTokens": [
             {
               "text": "uniforms",
@@ -711,7 +893,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Readonly",
+              "text": "ShaderFilterUniformsView",
               "kind": "type"
             },
             {
@@ -719,28 +901,16 @@
               "kind": "punctuation"
             },
             {
-              "text": "Record",
+              "text": "F",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
             },
             {
               "text": ", ",
               "kind": "punctuation"
             },
             {
-              "text": "ShaderFilterUniformValue",
+              "text": "B",
               "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             },
             {
               "text": ">",
@@ -749,7 +919,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The current uniform values, for reading. Deliberately not writable: a value written straight into this record would reach the GPU on the next draw but tell nobody, so a cached or retained representation of the owning node would keep replaying the frame the old value produced. Write through setUniform / setUniforms."
+          "description": "The typed accessors of the declared uniform block, or - on a source without a schema - the current uniform values, for reading. The untyped record is deliberately not writable: a value written straight into it would reach the GPU on the next draw but tell nobody, so a cached or retained representation of the owning node would keep replaying the frame the old value produced. Write through setUniform / setUniforms."
         }
       ],
       "paragraphs": [],

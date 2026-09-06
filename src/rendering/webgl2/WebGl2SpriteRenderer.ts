@@ -8,7 +8,7 @@ import {
   isRetainedMaterialStateValid,
   type RetainedMaterialState,
 } from '#rendering/material/RetainedMaterialState';
-import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import type { AnySpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import { Shader } from '#rendering/shader/Shader';
 import { composeSpriteMaterialFragmentGlsl, spriteMaterialTextureSlots, spriteVertexGlsl } from '#rendering/sprite/materialSources';
@@ -145,15 +145,15 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
   // Custom-material state. Compiled fragment programs are cached per material
   // instance; the current batch's material/base-texture decide when to flush.
-  private readonly _customShaders = new Map<SpriteMaterial, Shader>();
+  private readonly _customShaders = new Map<AnySpriteMaterial, Shader>();
   // Texture-unit index scratches reused for sampler-uniform binds so the
   // per-batch path stays allocation-free.
   private readonly _slotScratches: Int32Array[] = Array.from({ length: maxBatchTextures }, (_, i) => new Int32Array([i]));
   // Pinned unit index for the shared transform buffer sampler.
   private readonly _transformUnitScratch: Int32Array = new Int32Array([transformTextureUnit]);
   private readonly _tintUnitScratch: Int32Array = new Int32Array([transformTintTextureUnit]);
-  private _currentMaterial: SpriteMaterial | null = null;
-  private readonly _retainedPreparedEpoch = new WeakMap<SpriteMaterial, number>();
+  private _currentMaterial: AnySpriteMaterial | null = null;
+  private readonly _retainedPreparedEpoch = new WeakMap<AnySpriteMaterial, number>();
   // Local bounds resolved for the sprite currently being packed. Geometry-mode
   // boundary snapping now happens in the vertex shader, so this is always the
   // sprite's logical local bounds; the field lets _packInstance read the value
@@ -599,7 +599,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     this._unbindBaseTextureSamplers(backend, material, textures.length);
   }
 
-  private _bindBaseTextureSamplers(backend: WebGl2Backend, material: SpriteMaterial | null, slotCount: number): void {
+  private _bindBaseTextureSamplers(backend: WebGl2Backend, material: AnySpriteMaterial | null, slotCount: number): void {
     const sampler = material?.sampler;
 
     if (sampler === null || sampler === undefined) {
@@ -611,7 +611,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     }
   }
 
-  private _unbindBaseTextureSamplers(backend: WebGl2Backend, material: SpriteMaterial | null, slotCount: number): void {
+  private _unbindBaseTextureSamplers(backend: WebGl2Backend, material: AnySpriteMaterial | null, slotCount: number): void {
     if (material?.sampler === null || material?.sampler === undefined) {
       return;
     }
@@ -628,8 +628,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     return state === null || isRetainedMaterialStateValid(state);
   }
 
-  private _retainedMaterialState(payload: WebGl2RetainedBatchPayload): RetainedMaterialState<SpriteMaterial> | null {
-    return isRetainedMaterialState(payload.rendererData) ? (payload.rendererData as RetainedMaterialState<SpriteMaterial>) : null;
+  private _retainedMaterialState(payload: WebGl2RetainedBatchPayload): RetainedMaterialState<AnySpriteMaterial> | null {
+    return isRetainedMaterialState(payload.rendererData) ? (payload.rendererData as RetainedMaterialState<AnySpriteMaterial>) : null;
   }
 
   protected onConnect(backend: WebGl2Backend): void {
@@ -744,7 +744,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   }
 
   /** Custom-material path: rotate the base texture through the material slot table, instanced. */
-  private _renderCustom(sprite: Sprite, texture: Texture | RenderTexture, material: SpriteMaterial, backend: WebGl2Backend, nodeIndex: number): void {
+  private _renderCustom(sprite: Sprite, texture: Texture | RenderTexture, material: AnySpriteMaterial, backend: WebGl2Backend, nodeIndex: number): void {
     // The material owns its blend mode; the sprite's own blendMode overrides it
     // when set away from the default (Normal).
     const blendMode = sprite.blendMode === BlendModes.Normal ? material.blendMode : sprite.blendMode;
@@ -821,14 +821,14 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     }
   }
 
-  private _getOrCreateCustomShader(material: SpriteMaterial, gl: WebGL2RenderingContext): Shader {
+  private _getOrCreateCustomShader(material: AnySpriteMaterial, gl: WebGL2RenderingContext): Shader {
     const cached = this._customShaders.get(material);
 
     if (cached !== undefined) {
       return cached;
     }
 
-    const glsl = material.shader.glsl;
+    const glsl = material.shader._resolveGlsl();
 
     if (glsl === null) {
       throw new Error('SpriteMaterial shader has no `glsl` source; cannot render through the WebGL2 backend.');
@@ -842,6 +842,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     // them.
     const shader = new Shader(spriteVertexGlsl, composeSpriteMaterialFragmentGlsl(glsl.fragment));
 
+    shader.uniformBlockData = material._blocks;
     shader.connect(createWebGl2ShaderProgram(gl));
     // Links the program and populates `shader.uniforms`; the slot samplers can
     // only be pinned once that table exists (same order as `onConnect`).
@@ -876,7 +877,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     return shader;
   }
 
-  private _stageCustomUniforms(shader: Shader, material: SpriteMaterial): void {
+  private _stageCustomUniforms(shader: Shader, material: AnySpriteMaterial): void {
     for (const name of material._bindingSchema.scalarUniformNames) {
       if (shader.uniforms.has(name)) {
         shader.getUniform(name).setValue(this._marshalUniformValue(material._getUniformValue(name) as Exclude<UniformValue, Texture | RenderTexture>));
@@ -904,7 +905,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     }
   }
 
-  private _bindCustomTextures(shader: Shader, material: SpriteMaterial, backend: WebGl2Backend): void {
+  private _bindCustomTextures(shader: Shader, material: AnySpriteMaterial, backend: WebGl2Backend): void {
     let textureSlot = customTextureUnitBase;
 
     for (const name of material._bindingSchema.textureUniformNames) {

@@ -1,6 +1,8 @@
 import type { Color } from '#core/Color';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import { UniformArray } from '#rendering/uniforms/uniformDeclarations';
+import { UniformType } from '#rendering/uniforms/UniformType';
 
 import { Filter } from './Filter';
 import { createFilterShaderSource, ShaderFilter } from './ShaderFilter';
@@ -25,7 +27,11 @@ const IDENTITY: ColorMatrixEntries = [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 
  * runs rather than a copy of it.
  * @internal
  */
-export const colorMatrixShaderSource = createFilterShaderSource({ glsl: { fragment: glslFragment }, wgsl: wgslFragment });
+export const colorMatrixShaderSource = createFilterShaderSource({
+  glsl: { fragment: glslFragment },
+  wgsl: wgslFragment,
+  uniforms: { uRows: new UniformArray(UniformType.Vec4, 4), uBias: UniformType.Vec4 },
+});
 
 /**
  * A {@link Filter} that runs one affine colour transform over everything it is
@@ -59,32 +65,12 @@ export const colorMatrixShaderSource = createFilterShaderSource({ glsl: { fragme
  */
 export class ColorMatrixFilter extends Filter {
   private readonly _matrix = new Float32Array(ENTRIES);
-  /**
-   * The matrix split the way the shaders bind it: one `vec4` per row plus the
-   * offset column. Kept as live buffers so a frame uploads them without
-   * marshalling anything, and rewritten whenever the matrix changes.
-   */
-  private readonly _rows: readonly Float32Array[] = [new Float32Array(4), new Float32Array(4), new Float32Array(4), new Float32Array(4)];
-  private readonly _bias = new Float32Array(4);
-  private readonly _shaderFilter: ShaderFilter;
+  private readonly _shaderFilter = ShaderFilter.from(colorMatrixShaderSource);
 
   public constructor(matrix: ColorMatrixEntries = IDENTITY) {
     super();
 
     this._write(matrix);
-
-    // Insertion order matters on WebGPU: the packer lays each uniform out in a
-    // 16-byte slot, in declaration order, which is what the WGSL struct above
-    // spells out.
-    this._shaderFilter = ShaderFilter.from(colorMatrixShaderSource, {
-      uniforms: {
-        uRow0: this._rows[0]!,
-        uRow1: this._rows[1]!,
-        uRow2: this._rows[2]!,
-        uRow3: this._rows[3]!,
-        uBias: this._bias,
-      },
-    });
   }
 
   /** The current 4×5 matrix. Assign a new one, or use the conveniences. */
@@ -198,7 +184,7 @@ export class ColorMatrixFilter extends Filter {
     return this;
   }
 
-  /** Validate, store, and re-split the matrix into the shader's row/bias buffers. */
+  /** Validate, store, and re-split the matrix into the shader's row and bias fields. */
   private _write(matrix: ColorMatrixEntries): void {
     if (matrix.length !== ENTRIES) {
       throw new Error('ColorMatrixFilter: a colour matrix needs exactly 20 entries (4 rows of 5).');
@@ -206,23 +192,23 @@ export class ColorMatrixFilter extends Filter {
 
     this._matrix.set(matrix);
 
+    const rows = this._shaderFilter.uniforms.uRows;
+    const bias = this._matrix;
+
     for (let row = 0; row < 4; row++) {
       const base = row * 5;
-      // In-bounds: `row` < 4 === this._rows.length.
-      const target = this._rows[row]!;
 
-      target[0] = this._matrix[base]!;
-      target[1] = this._matrix[base + 1]!;
-      target[2] = this._matrix[base + 2]!;
-      target[3] = this._matrix[base + 3]!;
-      this._bias[row] = this._matrix[base + 4]!;
+      // In-bounds: `row` < 4 === the declared array length.
+      rows.at(row).set(bias[base]!, bias[base + 1]!, bias[base + 2]!, bias[base + 3]!);
     }
+
+    this._shaderFilter.uniforms.uBias.set(bias[4]!, bias[9]!, bias[14]!, bias[19]!);
   }
 
   /**
-   * Tell the owners the output changed. The shader reads the row buffers this
-   * class owns, so nothing has to be re-uploaded by hand - but a cached or
-   * retained node still has to be told to re-run the filter.
+   * Tell the owners the output changed. The uniform writes already reached the
+   * block the shader uploads from, but a cached or retained node still has to be
+   * told to re-run the filter.
    */
   private _publish(): void {
     this.invalidate();

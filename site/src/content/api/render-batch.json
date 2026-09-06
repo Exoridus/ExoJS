@@ -33,7 +33,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(geometry: Geometry, material: MeshMaterial | null, options: RenderBatchOptions): RenderBatch",
+          "signature": "new(geometry: Geometry, material: AnyMeshMaterial | null, options: RenderBatchOptions): RenderBatch",
           "signatureTokens": [
             {
               "text": "new",
@@ -68,7 +68,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "MeshMaterial",
+              "text": "AnyMeshMaterial",
               "kind": "type"
             },
             {
@@ -116,7 +116,7 @@
             },
             {
               "name": "material",
-              "type": "MeshMaterial | null",
+              "type": "AnyMeshMaterial | null",
               "optional": false
             },
             {
@@ -364,7 +364,7 @@
         },
         {
           "name": "material",
-          "signature": "material: MeshMaterial | null",
+          "signature": "material: AnyMeshMaterial | null",
           "signatureTokens": [
             {
               "text": "material",
@@ -375,7 +375,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "MeshMaterial",
+              "text": "AnyMeshMaterial",
               "kind": "type"
             },
             {

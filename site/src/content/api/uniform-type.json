@@ -1,0 +1,157 @@
+{
+  "title": "UniformType",
+  "description": "Field types a typed uniform block can hold. The values are the WGSL spellings, so a diagnostic naming a type reads the same as the generated shader declaration. GLSL declarations are derived from them (`f32` becomes `float`, `mat4x4<f32>` becomes `mat4`, and so on). Every field starts at zero, matrices included: one rule for the whole schema rather than a special case, and it matches a freshly allocated GPU buffer. A caller who wants the identity assigns it, or declares it as the field's `default`. Textures, samplers and vertex attributes are bindings rather than uniform-buffer fields and are declared separately.",
+  "symbol": "UniformType",
+  "kind": "enum",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Field types a typed uniform block can hold.",
+        "The values are the WGSL spellings, so a diagnostic naming a type reads the same as the generated shader declaration. GLSL declarations are derived from them (`f32` becomes `float`, `mat4x4<f32>` becomes `mat4`, and so on).",
+        "Every field starts at zero, matrices included: one rule for the whole schema rather than a special case, and it matches a freshly allocated GPU buffer. A caller who wants the identity assigns it, or declares it as the field's `default`.",
+        "Textures, samplers and vertex attributes are bindings rather than uniform-buffer fields and are declared separately."
+      ],
+      "importLine": "import { UniformType } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "Float",
+          "signature": "Float",
+          "signatureTokens": [
+            {
+              "text": "Float",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Int",
+          "signature": "Int",
+          "signatureTokens": [
+            {
+              "text": "Int",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Mat3",
+          "signature": "Mat3",
+          "signatureTokens": [
+            {
+              "text": "Mat3",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Mat4",
+          "signature": "Mat4",
+          "signatureTokens": [
+            {
+              "text": "Mat4",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Uint",
+          "signature": "Uint",
+          "signatureTokens": [
+            {
+              "text": "Uint",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Vec2",
+          "signature": "Vec2",
+          "signatureTokens": [
+            {
+              "text": "Vec2",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Vec3",
+          "signature": "Vec3",
+          "signatureTokens": [
+            {
+              "text": "Vec3",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Vec4",
+          "signature": "Vec4",
+          "signatureTokens": [
+            {
+              "text": "Vec4",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/uniforms/UniformType.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/uniforms/UniformType.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/uniforms/UniformType.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/uniforms/UniformType.ts"
+}

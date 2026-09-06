@@ -296,7 +296,7 @@ void main() { vUv = aUv; gl_Position = vec4(aPosition, 0.0, 1.0); }
 
 /** Marshal a value through the WebGL2 pass, which owns the scratch buffers. */
 const marshalOn = (name: string, value: ShaderFilterUniformValue): unknown => {
-  const pass = new WebGl2ShaderFilterPass(customVertSrc, minimalFragSrc, {});
+  const pass = new WebGl2ShaderFilterPass(customVertSrc, minimalFragSrc, { uniforms: {}, blocks: [], textures: {} });
 
   return (pass as unknown as Record<string, (n: string, v: ShaderFilterUniformValue) => unknown>)['_marshalValue']!.call(pass, name, value);
 };
