@@ -57,7 +57,15 @@ export class SpriteMaterial<F extends UniformFields | undefined = undefined, B e
   ): SpriteMaterial<UniformFields | undefined, UniformBlockRecord | undefined> {
     if (sourceOrGlslVertex instanceof ShaderSource) {
       const opts = optionsOrGlslFragment as Omit<MaterialOptions, 'shader'> | undefined;
-      return new SpriteMaterial({ shader: sourceOrGlslVertex, ...(opts !== undefined ? opts : {}) });
+      // The overloads above carry the real contract. Here the source's
+      // declaration has been erased to "any of them", so the values that come
+      // with it no longer describe one instantiation's uniforms.
+      const options = { shader: sourceOrGlslVertex, ...(opts !== undefined ? opts : {}) } as unknown as MaterialOptions<
+        UniformFields | undefined,
+        UniformBlockRecord | undefined
+      >;
+
+      return new SpriteMaterial(options);
     }
 
     const shader = new ShaderSource({
