@@ -105,18 +105,42 @@ let nextShaderSourceId = 1;
  * @group(1) @binding(1) var u_sampler: sampler;
  * ```
  *
- * # User uniforms
+ * # Declared user uniforms
  *
- * Anything in {@link Material.uniforms} is set after the auto-binds.
- * `Texture`/`RenderTexture` values claim slots 1..N (slot 0 belongs to the
- * drawable's own texture).
+ * Supplying `uniforms` (one block) or `uniformBlocks` (several named ones)
+ * makes this source the single source of truth for their names, types, layout
+ * and defaults. The engine computes one canonical `std140` layout and prepends
+ * the matching GLSL block and WGSL struct to the stages, so neither body
+ * declares them; both read through the instance name - `uniforms` for the
+ * implicit block, the record key for a named one.
+ *
+ * ```ts
+ * const shader = new ShaderSource({
+ *     uniforms: { u_time: UniformType.Float, u_tint: UniformType.Vec4 },
+ *     glsl: { vertex, fragment },
+ *     wgsl,
+ * });
+ * ```
+ *
+ * Materials and filters built on such a source expose typed accessors instead
+ * of the value record, and textures are declared in `textures` rather than
+ * among the uniforms. Blocks take bindings `0..n-1` of the consumer's user bind
+ * group in declaration order, with texture bindings following after them.
+ *
+ * # Raw user uniforms
+ *
+ * Without a declaration the source keeps full control and correspondingly
+ * weaker guarantees. Anything in {@link Material.uniforms} is set after the
+ * auto-binds, and `Texture`/`RenderTexture` values claim slots 1..N (slot 0
+ * belongs to the drawable's own texture).
  *
  * ## WGSL user-uniform contract
  *
  * User uniforms live in `@group(2)`:
  *
  * - `@group(2) @binding(0) var<uniform> u_user: <UserUniformsStruct>;`
- *   for the packed scalar/vector/matrix uniforms.
+ *   for the packed scalar/vector/matrix uniforms, each in its own 16-byte slot
+ *   in declaration order.
  * - `@group(2) @binding(N)` for each `Texture`/`RenderTexture` uniform,
  *   in declaration order, alongside its sampler at `@binding(N+1)`.
  * @advanced

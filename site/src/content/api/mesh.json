@@ -2469,7 +2469,7 @@
         },
         {
           "name": "material",
-          "signature": "material: MeshMaterial | null",
+          "signature": "material: AnyMeshMaterial | null",
           "signatureTokens": [
             {
               "text": "material",
@@ -2480,7 +2480,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "MeshMaterial",
+              "text": "AnyMeshMaterial",
               "kind": "type"
             },
             {

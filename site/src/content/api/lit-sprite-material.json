@@ -6,11 +6,11 @@
   "subsystem": "lighting",
   "importPath": "@codexo/exojs-lighting",
   "tier": "stable",
-  "memberCount": 17,
+  "memberCount": 18,
   "counts": {
     "constructors": 1,
     "methods": 6,
-    "properties": 10,
+    "properties": 11,
     "events": 0
   },
   "sections": [
@@ -317,11 +317,11 @@
             }
           ],
           "returnType": "this",
-          "description": "Replace a declared uniform value, returning this for chaining. Unknown names and scalar↔texture kind changes are rejected."
+          "description": "Replace a declared uniform value, returning this for chaining. Unknown names and scalar↔texture kind changes are rejected. Only available on a material whose shader source declares no uniform schema; a typed material writes through uniforms instead."
         },
         {
           "name": "from",
-          "signature": "from(source: ShaderSource, options?: Omit<MaterialOptions, \"shader\">): SpriteMaterial",
+          "signature": "from(source: ShaderSource<F, B>, options?: Omit<MaterialOptions<F, B>, \"shader\">): SpriteMaterial<F, B>",
           "signatureTokens": [
             {
               "text": "from",
@@ -342,6 +342,26 @@
             {
               "text": "ShaderSource",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ", ",
@@ -372,6 +392,26 @@
               "kind": "type"
             },
             {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": ", ",
               "kind": "punctuation"
             },
@@ -394,21 +434,41 @@
             {
               "text": "SpriteMaterial",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [
             {
               "name": "source",
-              "type": "ShaderSource",
+              "type": "ShaderSource<F, B>",
               "optional": false
             },
             {
               "name": "options",
-              "type": "Omit<MaterialOptions, \"shader\">",
+              "type": "Omit<MaterialOptions<F, B>, \"shader\">",
               "optional": true
             }
           ],
-          "returnType": "SpriteMaterial",
+          "returnType": "SpriteMaterial<F, B>",
           "description": "Build a SpriteMaterial from an existing ShaderSource. Equivalent to new SpriteMaterial({ shader, ...options })."
         },
         {
@@ -694,7 +754,7 @@
         },
         {
           "name": "shader",
-          "signature": "shader: ShaderSource",
+          "signature": "shader: ShaderSource<undefined, undefined>",
           "signatureTokens": [
             {
               "text": "shader",
@@ -707,6 +767,26 @@
             {
               "text": "ShaderSource",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
@@ -847,8 +927,41 @@
           "description": "Live identities behind the fixed named texture slots."
         },
         {
+          "name": "uniformBlocks",
+          "signature": "uniformBlocks: MaterialUniformBlocksView<B>",
+          "signatureTokens": [
+            {
+              "text": "uniformBlocks",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MaterialUniformBlocksView",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The declared named uniform blocks, each owning its own values."
+        },
+        {
           "name": "uniforms",
-          "signature": "uniforms: Record<string, UniformValue>",
+          "signature": "uniforms: MaterialUniformsView<F, B>",
           "signatureTokens": [
             {
               "text": "uniforms",
@@ -859,7 +972,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Record",
+              "text": "MaterialUniformsView",
               "kind": "type"
             },
             {
@@ -867,15 +980,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
-              "kind": "keyword"
+              "text": "F",
+              "kind": "type"
             },
             {
               "text": ", ",
               "kind": "punctuation"
             },
             {
-              "text": "UniformValue",
+              "text": "B",
               "kind": "type"
             },
             {
@@ -885,7 +998,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Live user uniform values. Construction declares the fixed set of names and each name's scalar/texture kind; existing values can be replaced between frames and typed arrays can be mutated in place. material.uniforms.u_time = performance.now() / 1000; material.uniforms.u_color = [1, 0.5, 0, 1];"
+          "description": "The typed accessors of the declared uniform block, or - on a source without a schema - the live user uniform values, where construction declares the fixed set of names and each name's scalar/texture kind: material.uniforms.u_time = performance.now() / 1000; material.uniforms.u_color = [1, 0.5, 0, 1];"
         }
       ],
       "paragraphs": [],

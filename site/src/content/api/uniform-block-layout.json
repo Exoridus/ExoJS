@@ -1,0 +1,249 @@
+{
+  "title": "UniformBlockLayout",
+  "description": "One uniform block: its shader-visible names, its size, and its fields.",
+  "symbol": "UniformBlockLayout",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One uniform block: its shader-visible names, its size, and its fields."
+      ],
+      "importLine": "import { UniformBlockLayout } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "byteLength",
+          "signature": "byteLength: number",
+          "signatureTokens": [
+            {
+              "text": "byteLength",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Total size in bytes, padded to a multiple of 16."
+        },
+        {
+          "name": "defaults",
+          "signature": "defaults: Record<string, unknown> | null",
+          "signatureTokens": [
+            {
+              "text": "defaults",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Declared starting values as one nested record, or null when all are zero."
+        },
+        {
+          "name": "instance",
+          "signature": "instance: string",
+          "signatureTokens": [
+            {
+              "text": "instance",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Shader-visible instance name the shader body reads through."
+        },
+        {
+          "name": "key",
+          "signature": "key: string",
+          "signatureTokens": [
+            {
+              "text": "key",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Record key this block is addressed by at runtime; uniforms for the implicit block."
+        },
+        {
+          "name": "members",
+          "signature": "members: readonly UniformMemberLayout[]",
+          "signatureTokens": [
+            {
+              "text": "members",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformMemberLayout",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "structs",
+          "signature": "structs: readonly UniformStructLayout[]",
+          "signatureTokens": [
+            {
+              "text": "structs",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformStructLayout",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Nested struct declarations this block needs, innermost first."
+        },
+        {
+          "name": "typeName",
+          "signature": "typeName: string",
+          "signatureTokens": [
+            {
+              "text": "typeName",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Interface-block / struct type name shared by both generated declarations."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/uniforms/uniformLayout.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/uniforms/uniformLayout.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/uniforms/uniformLayout.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/uniforms/uniformLayout.ts"
+}

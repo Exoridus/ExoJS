@@ -1,0 +1,87 @@
+{
+  "title": "UniformArrayElement",
+  "description": "Element types allowed in a UniformArray - see its constructor.",
+  "symbol": "UniformArrayElement",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Element types allowed in a UniformArray - see its constructor."
+      ],
+      "importLine": "import { UniformArrayElement } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "UniformArrayElement",
+          "signature": "UniformStruct | UniformType.Mat3 | UniformType.Mat4 | UniformType.Vec4",
+          "signatureTokens": [
+            {
+              "text": "UniformStruct",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformType.Mat3",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformType.Mat4",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformType.Vec4",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/uniforms/uniformDeclarations.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/uniforms/uniformDeclarations.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/uniforms/uniformDeclarations.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/uniforms/uniformDeclarations.ts"
+}

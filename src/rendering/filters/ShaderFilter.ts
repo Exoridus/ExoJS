@@ -305,11 +305,31 @@ export const createFilterShaderSource = <const F extends UniformFields | undefin
  *
  * ## User uniforms
  *
- * Anything in {@link uniforms} is bound after the auto-binds. GLSL resolves them
- * by name, with texture uniforms claiming slots 1..N. WGSL packs every
- * non-texture uniform into one buffer at `@group(1) @binding(0)`, each in a
- * 16-byte slot **in declaration order**, and binds texture uniforms from
- * `@group(1) @binding(1)` onwards, each followed by its sampler.
+ * A source built with {@link createFilterShaderSource} can declare its uniforms,
+ * in which case the engine generates both languages' declarations from one
+ * layout and {@link uniforms} becomes a namespace of typed accessors:
+ *
+ * ```ts
+ * const shader = createFilterShaderSource({
+ *   glsl: { fragment },
+ *   wgsl,
+ *   uniforms: { uTime: UniformType.Float },
+ * });
+ *
+ * const filter = ShaderFilter.from(shader);
+ *
+ * filter.uniforms.uTime.set(elapsed);
+ * ```
+ *
+ * Both bodies then read through the instance name `uniforms`, textures are
+ * declared in `textures`, and {@link setUniform} is gone from the type.
+ *
+ * Without a declaration the source keeps today's contract: anything in
+ * {@link uniforms} is bound after the auto-binds, GLSL resolves them by name
+ * with texture uniforms claiming slots 1..N, and WGSL packs every non-texture
+ * uniform into one buffer at `@group(1) @binding(0)`, each in a 16-byte slot
+ * **in declaration order**, binding texture uniforms from `@group(1) @binding(1)`
+ * onwards, each followed by its sampler.
  *
  * ## Missing sources
  *
