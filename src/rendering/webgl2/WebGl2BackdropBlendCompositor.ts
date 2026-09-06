@@ -89,7 +89,7 @@ export class WebGl2BackdropBlendCompositor {
     connection.indexBuffer.destroy();
     connection.vertexBuffer.destroy();
     connection.vao.destroy();
-    this._shader.disconnect();
+    this._shader.destroy();
     this._connection = null;
   }
 

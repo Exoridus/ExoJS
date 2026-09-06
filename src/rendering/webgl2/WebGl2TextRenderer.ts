@@ -278,9 +278,9 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     const c = this._connection;
     if (!c) return;
 
-    this._sdfShader.disconnect();
-    this._msdfShader.disconnect();
-    this._colorShader.disconnect();
+    this._sdfShader.destroy();
+    this._msdfShader.destroy();
+    this._colorShader.destroy();
     c.indexBuffer.destroy();
     c.vertexBuffer.destroy();
     c.vao.destroy();

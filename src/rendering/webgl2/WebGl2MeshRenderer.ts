@@ -405,9 +405,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       return;
     }
 
-    this._defaultShader.disconnect();
+    this._defaultShader.destroy();
     for (const customShader of this._customShaders.values()) {
-      customShader.disconnect();
+      customShader.destroy();
     }
 
     for (const entry of this._geometryCache.values()) {
@@ -426,6 +426,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     connection.dynamicNodeIndexBuffer.destroy();
     connection.dynamicIndexBuffer.destroy();
     connection.dynamicVertexBuffer.destroy();
+    connection.dynamicInstanceBuffer.destroy();
     connection.dynamicVao.destroy();
 
     this._connection = null;

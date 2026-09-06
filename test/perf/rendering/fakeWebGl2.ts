@@ -115,6 +115,69 @@ export const reflectShaderSources = (vertexSource: string, fragmentSource: strin
   return { attributes, uniforms };
 };
 
+/** A GL object class the fake hands out handles for. */
+export type GlObjectKind = 'buffer' | 'vertexArray' | 'program' | 'shader' | 'texture' | 'framebuffer' | 'renderbuffer' | 'sampler';
+
+/**
+ * A recorded GL call whose ORDER, not its count, carries a contract: object
+ * lifetime (`create:*` / `delete:*`) and the state a draw is issued under
+ * (`useProgram`, `bindVertexArray`, `draw`).
+ */
+export type GlOp = `create:${GlObjectKind}` | `delete:${GlObjectKind}` | 'useProgram' | 'bindVertexArray' | 'draw';
+
+/** One entry of a {@link GlEventLog}. */
+export interface GlEvent {
+  readonly op: GlOp;
+  /** The object the call created, deleted or bound; `null` for an unbind. */
+  readonly handle: object | null;
+}
+
+/**
+ * Ordered trace of the GL calls above.
+ *
+ * Off unless a caller attaches one to {@link GlRecorder.log}: an entry is an
+ * allocation, and the benchmark scenes exist to measure allocation. Attach it
+ * for a structural assertion, leave it `null` for anything measured.
+ */
+export class GlEventLog {
+  public readonly events: GlEvent[] = [];
+
+  public reset(): this {
+    this.events.length = 0;
+
+    return this;
+  }
+
+  /** Handles this log saw created for `kind`, in creation order. */
+  public created(kind: GlObjectKind): object[] {
+    return this._handlesOf(`create:${kind}`);
+  }
+
+  /** Handles this log saw deleted for `kind`, in deletion order. */
+  public deleted(kind: GlObjectKind): object[] {
+    return this._handlesOf(`delete:${kind}`);
+  }
+
+  /** Handles created but never deleted within this log, in creation order. */
+  public leaked(kind: GlObjectKind): object[] {
+    const deleted = new Set(this.deleted(kind));
+
+    return this.created(kind).filter(handle => !deleted.has(handle));
+  }
+
+  private _handlesOf(op: GlOp): object[] {
+    const handles: object[] = [];
+
+    for (const event of this.events) {
+      if (event.op === op && event.handle !== null) {
+        handles.push(event.handle);
+      }
+    }
+
+    return handles;
+  }
+}
+
 /** A single recorded GPU upload, classified by target. */
 export interface RecordedUpload {
   readonly kind: 'buffer' | 'texture';
@@ -150,6 +213,14 @@ export class GlRecorder {
   public transformUploadBytes = 0;
   /** Number of transform-texture uploads (zero when the frame's transforms are unchanged). */
   public transformUploads = 0;
+
+  /**
+   * Ordered call trace, when a caller attached one. `null` (the default) is
+   * what keeps a measured frame free of harness allocations - see
+   * {@link GlEventLog}. Not touched by {@link reset}: the log's span is the
+   * caller's scenario, not the recorder's frame.
+   */
+  public log: GlEventLog | null = null;
 
   private _lastProgram: object | null = null;
 
@@ -294,14 +365,39 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
   const transformStores = new WeakSet<object>();
   const boundTexture = (): object | null => boundByUnit.get(activeUnit) ?? null;
 
+  // One `null` check per call when no log is attached, which is the benchmark
+  // configuration - see GlEventLog. Handles are recorded by identity, so a
+  // caller can tell one renderer's GL objects from another's.
+  const note = (op: GlOp, handle: object | null): void => {
+    recorder.log?.events.push({ op, handle });
+  };
+
+  const created = (kind: GlObjectKind, handle: object): object => {
+    recorder.log?.events.push({ op: `create:${kind}`, handle });
+
+    return handle;
+  };
+
   const base: Record<string, unknown> = {
     // ── object lifecycle ────────────────────────────────────────────────
-    createShader: (type: number): FakeShader => ({ glType: type, source: '' }),
+    createShader: (type: number): FakeShader => {
+      const shader: FakeShader = { glType: type, source: '' };
+
+      note('create:shader', shader);
+
+      return shader;
+    },
     shaderSource: (shader: FakeShader, source: string): void => {
       shader.source = source;
     },
     compileShader: (): void => {},
-    createProgram: (): FakeProgram => ({ shaders: [], reflection: null }),
+    createProgram: (): FakeProgram => {
+      const program: FakeProgram = { shaders: [], reflection: null };
+
+      note('create:program', program);
+
+      return program;
+    },
     attachShader: (program: FakeProgram, shader: FakeShader): void => {
       program.shaders.push(shader);
     },
@@ -311,20 +407,20 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
 
       program.reflection = reflectShaderSources(vertex, fragment);
     },
-    deleteShader: (): void => {},
-    deleteProgram: (): void => {},
-    createBuffer: (): object => newHandle('buffer'),
-    deleteBuffer: (): void => {},
-    createVertexArray: (): object => newHandle('vao'),
-    deleteVertexArray: (): void => {},
-    createTexture: (): object => newHandle('texture'),
-    deleteTexture: (): void => {},
-    createFramebuffer: (): object => newHandle('framebuffer'),
-    deleteFramebuffer: (): void => {},
-    createRenderbuffer: (): object => newHandle('renderbuffer'),
-    deleteRenderbuffer: (): void => {},
-    createSampler: (): object => newHandle('sampler'),
-    deleteSampler: (): void => {},
+    deleteShader: (shader: FakeShader | null): void => note('delete:shader', shader),
+    deleteProgram: (program: FakeProgram | null): void => note('delete:program', program),
+    createBuffer: (): object => created('buffer', newHandle('buffer')),
+    deleteBuffer: (handle: object | null): void => note('delete:buffer', handle),
+    createVertexArray: (): object => created('vertexArray', newHandle('vao')),
+    deleteVertexArray: (handle: object | null): void => note('delete:vertexArray', handle),
+    createTexture: (): object => created('texture', newHandle('texture')),
+    deleteTexture: (handle: object | null): void => note('delete:texture', handle),
+    createFramebuffer: (): object => created('framebuffer', newHandle('framebuffer')),
+    deleteFramebuffer: (handle: object | null): void => note('delete:framebuffer', handle),
+    createRenderbuffer: (): object => created('renderbuffer', newHandle('renderbuffer')),
+    deleteRenderbuffer: (handle: object | null): void => note('delete:renderbuffer', handle),
+    createSampler: (): object => created('sampler', newHandle('sampler')),
+    deleteSampler: (handle: object | null): void => note('delete:sampler', handle),
 
     // ── reflection / queries ────────────────────────────────────────────
     getShaderParameter: (_shader: FakeShader, pname: number): unknown => (pname === C.COMPILE_STATUS ? true : 0),
@@ -360,16 +456,20 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
     drawArraysInstanced: (_mode: number, _first: number, _count: number, instanceCount: number): void => {
       recorder.drawCalls++;
       recorder.instances += instanceCount;
+      note('draw', null);
     },
     drawElementsInstanced: (_mode: number, _count: number, _type: number, _offset: number, instanceCount: number): void => {
       recorder.drawCalls++;
       recorder.instances += instanceCount;
+      note('draw', null);
     },
     drawArrays: (): void => {
       recorder.drawCalls++;
+      note('draw', null);
     },
     drawElements: (): void => {
       recorder.drawCalls++;
+      note('draw', null);
     },
     // The WebGL2 `(srcData, srcOffset, length)` overloads upload a RANGE of the
     // view, not all of it - `length` is in elements. Ignoring the extra
@@ -412,7 +512,11 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
     },
     useProgram: (program: object | null): void => {
       recorder._recordProgram(program);
+      note('useProgram', program);
     },
+    // Explicit rather than a Proxy no-op: which vertex array a draw runs under
+    // is part of the renderer state-ownership contract, so its order matters.
+    bindVertexArray: (vao: object | null): void => note('bindVertexArray', vao),
     blendFunc: (): void => {
       recorder.blendChanges++;
     },

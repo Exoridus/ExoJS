@@ -461,7 +461,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
   }
 
   protected onDisconnect(): void {
-    this._shader.disconnect();
+    this._shader.destroy();
     this._instanceBuffer?.destroy();
     this._instanceBuffer = null;
     this._vao?.destroy();

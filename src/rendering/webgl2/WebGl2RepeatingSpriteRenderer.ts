@@ -697,8 +697,8 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     }
     this._samplers.clear();
 
-    this._shaderPathShader.disconnect();
-    this._geoPathShader.disconnect();
+    this._shaderPathShader.destroy();
+    this._geoPathShader.destroy();
     this._shaderBuf?.destroy();
     this._shaderBuf = null;
     this._shaderVao?.destroy();

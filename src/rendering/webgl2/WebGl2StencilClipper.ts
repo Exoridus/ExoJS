@@ -78,7 +78,7 @@ export class WebGl2StencilClipper {
 
     connection.vertexBuffer.destroy();
     connection.vao.destroy();
-    this._shader.disconnect();
+    this._shader.destroy();
     this._connection = null;
     // Drop the memoised view so a disconnected clipper holds no clip shape's
     // vertex data alive.
