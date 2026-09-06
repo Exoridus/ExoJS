@@ -5,7 +5,7 @@
  * accept.
  *
  * A declaration is data, not state. It is shared by every material or filter
- * built on the same {@link ShaderSource}, and it never holds a value - only the
+ * built on the same {@link Shader}, and it never holds a value - only the
  * `default` a fresh instance starts from.
  */
 

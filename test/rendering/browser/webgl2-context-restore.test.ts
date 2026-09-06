@@ -26,7 +26,7 @@ import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
-// Shader mocks (see webgl2-sprite-solid-color.test.ts - the registry compiles
+// WebGl2Shader mocks (see webgl2-sprite-solid-color.test.ts - the registry compiles
 // every core renderer's program on connect, so all core shaders need real GLSL).
 // ---------------------------------------------------------------------------
 

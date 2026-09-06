@@ -19,7 +19,7 @@
  */
 
 // ---------------------------------------------------------------------------
-// Shader stubs (sprite + mesh + text, mirroring the production attribute
+// WebGl2Shader stubs (sprite + mesh + text, mirroring the production attribute
 // locations so the GL program compiles and VAOs bind correctly). Must be
 // hoisted so vi.mock calls are processed before imports.
 // ---------------------------------------------------------------------------

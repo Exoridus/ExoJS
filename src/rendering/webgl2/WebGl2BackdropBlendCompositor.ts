@@ -1,7 +1,7 @@
-import { Shader } from '#rendering/shader/Shader';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage } from '#rendering/types';
+import { WebGl2Shader } from '#rendering/webgl2/WebGl2Shader';
 
 import { createWebGl2ShaderProgram } from './shaderProgram';
 import fragmentSource from './shaders/backdrop-blend.frag';
@@ -36,7 +36,7 @@ const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
  * directly by the backend and never participates in renderer-registry dispatch.
  */
 export class WebGl2BackdropBlendCompositor {
-  private readonly _shader: Shader = new Shader(vertexSource, fragmentSource);
+  private readonly _shader: WebGl2Shader = new WebGl2Shader(vertexSource, fragmentSource);
   private readonly _vertexData: ArrayBuffer = new ArrayBuffer(4 * vertexStrideBytes);
   private readonly _float32View: Float32Array = new Float32Array(this._vertexData);
   private readonly _sourceSamplerSlot: Int32Array = new Int32Array([0]);

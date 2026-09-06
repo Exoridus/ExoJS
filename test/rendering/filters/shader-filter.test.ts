@@ -8,9 +8,9 @@
  */
 import { ShaderFilter } from '#rendering/filters/ShaderFilter';
 import { ShaderFilterBackendError } from '#rendering/filters/ShaderFilterBackendError';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
+import { Shader } from '#rendering/shader/Shader';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 
 const glslFragment = `#version 300 es
@@ -64,10 +64,10 @@ describe('ShaderFilter — source selection', () => {
     wgslOnly.destroy();
   });
 
-  test('a filter carrying both sources exposes both on its ShaderSource', () => {
+  test('a filter carrying both sources exposes both on its Shader', () => {
     const filter = new ShaderFilter({ glsl: { fragment: glslFragment }, wgsl: wgslFragment });
 
-    expect(filter.shader).toBeInstanceOf(ShaderSource);
+    expect(filter.shader).toBeInstanceOf(Shader);
     expect(filter.shader.glsl).not.toBeNull();
     expect(filter.shader.wgsl).not.toBeNull();
 
@@ -127,8 +127,8 @@ describe('ShaderFilter — source selection', () => {
 });
 
 describe('ShaderFilter.from', () => {
-  test('runs a ready-made ShaderSource verbatim', () => {
-    const source = new ShaderSource({ glsl: { vertex: '#version 300 es\nvoid main() {}\n', fragment: glslFragment }, wgsl: wgslFragment });
+  test('runs a ready-made Shader verbatim', () => {
+    const source = new Shader({ glsl: { vertex: '#version 300 es\nvoid main() {}\n', fragment: glslFragment }, wgsl: wgslFragment });
     const filter = ShaderFilter.from(source, { uniforms: { uTime: 1 } });
 
     expect(filter.shader).toBe(source);
@@ -138,7 +138,7 @@ describe('ShaderFilter.from', () => {
   });
 
   test('two filters can share one source', () => {
-    const source = new ShaderSource({ glsl: { vertex: '#version 300 es\nvoid main() {}\n', fragment: glslFragment } });
+    const source = new Shader({ glsl: { vertex: '#version 300 es\nvoid main() {}\n', fragment: glslFragment } });
     const first = ShaderFilter.from(source);
     const second = ShaderFilter.from(source);
 

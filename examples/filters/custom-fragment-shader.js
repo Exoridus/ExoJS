@@ -1,5 +1,5 @@
 // Auto-generated from custom-fragment-shader.ts - edit the .ts source, not this file.
-import { Application, Color, createFilterShaderSource, FixedResolutionCanvasSizing, Scene, ShaderFilter, Sprite, UniformType } from '@codexo/exojs';
+import { Application, Color, createFilterShader, FixedResolutionCanvasSizing, Scene, ShaderFilter, Sprite, UniformType } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const HUE_RAMP = assets.technical.color.hueRamp;
 // Neither source declares the uniform: the schema below generates the GLSL
@@ -19,7 +19,7 @@ const wgsl = `
     uv.y = uv.y + sin((uv.x*12.0)+uniforms.uTime*3.0)*0.03;
     return textureSample(uTexture,uSampler,uv);
 }`;
-const warpShader = createFilterShaderSource({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: UniformType.Float } });
+const warpShader = createFilterShader({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: UniformType.Float } });
 class CustomFragmentShaderScene extends Scene {
   time = 0;
   filter;
@@ -35,7 +35,7 @@ class CustomFragmentShaderScene extends Scene {
       .setPosition(width / 2, height / 2);
     this.sprite.filters = [this.filter];
     this.hud = mountControls({
-      title: 'Custom Fragment Shader',
+      title: 'Custom Fragment WebGl2Shader',
       status: 'A time-driven sine warp drives the sprite UVs each frame.',
       hint: 'One shader source declares `uTime` once; both languages get a matching uniform block generated for them.',
     });

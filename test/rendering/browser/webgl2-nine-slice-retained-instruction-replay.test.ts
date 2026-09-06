@@ -36,7 +36,7 @@ import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
-// Shader mocks (Sprite/Mesh/Text - the nine-slice renderer uses inline GLSL).
+// WebGl2Shader mocks (Sprite/Mesh/Text - the nine-slice renderer uses inline GLSL).
 // The sprite vertex mock keeps u_group so the OUTSIDE sprite stays correct
 // under camera-pan / group-move cells; the transform texel 2 carries its tint.
 // ---------------------------------------------------------------------------

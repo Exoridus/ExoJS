@@ -116,7 +116,7 @@
         },
         {
           "name": "shader",
-          "signature": "shader?: ShaderSource<F, B>",
+          "signature": "shader?: Shader<F, B>",
           "signatureTokens": [
             {
               "text": "shader",
@@ -131,7 +131,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "ShaderSource",
+              "text": "Shader",
               "kind": "type"
             },
             {
@@ -445,7 +445,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "WGSL source for the WebGPU backend - one module carrying both entry points, the same convention ShaderSource uses for materials. The fragment entry point must be fragmentMain. A module that declares no @vertex stage gets the default fullscreen-quad vertex stage (vertexMain, plus its VsOut struct) prepended; a module that declares one must name it vertexMain and emit @location(0) vUv: vec2<f32>."
+          "description": "WGSL source for the WebGPU backend - one module carrying both entry points, the same convention Shader uses for materials. The fragment entry point must be fragmentMain. A module that declares no @vertex stage gets the default fullscreen-quad vertex stage (vertexMain, plus its VsOut struct) prepended; a module that declares one must name it vertexMain and emit @location(0) vUv: vec2<f32>."
         }
       ],
       "paragraphs": [],

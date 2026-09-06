@@ -1,6 +1,6 @@
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import { Shader } from '#rendering/shader/Shader';
 import { Sprite } from '#rendering/sprite/Sprite';
 
 const minimalGlsl = {
@@ -8,7 +8,7 @@ const minimalGlsl = {
   fragment: '#version 300 es\nprecision lowp float;out vec4 c;void main(){c=vec4(1.0);}',
 };
 
-const createSpriteMaterial = (): SpriteMaterial => new SpriteMaterial({ shader: new ShaderSource({ glsl: minimalGlsl }) });
+const createSpriteMaterial = (): SpriteMaterial => new SpriteMaterial({ shader: new Shader({ glsl: minimalGlsl }) });
 
 describe('Sprite.material', () => {
   test('defaults to null', () => {
@@ -30,7 +30,7 @@ describe('Sprite.material', () => {
 
   test('rejects a material whose target is not "sprite"', () => {
     const sprite = new Sprite(null);
-    const meshMaterial = new MeshMaterial({ shader: new ShaderSource({ glsl: minimalGlsl }) });
+    const meshMaterial = new MeshMaterial({ shader: new Shader({ glsl: minimalGlsl }) });
 
     // Simulate a JS caller passing the wrong material subclass.
     expect(() => {

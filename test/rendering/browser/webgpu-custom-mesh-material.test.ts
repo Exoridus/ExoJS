@@ -16,8 +16,8 @@ import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
 import { Geometry } from '#rendering/geometry/Geometry';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { Mesh } from '#rendering/mesh/Mesh';
+import { Shader } from '#rendering/shader/Shader';
 import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes, WrapModes } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -161,7 +161,7 @@ describe('custom MeshMaterial WebGPU browser', () => {
 
     const pattern = createPatternTexture();
     const material = new MeshMaterial({
-      shader: new ShaderSource({ wgsl: customWgsl }),
+      shader: new Shader({ wgsl: customWgsl }),
       uniforms: { u_userColor: [1, 0, 0.5, 1] as const },
       textures: { u_pattern: pattern },
       sampler: { scaleMode: ScaleModes.Nearest, wrapMode: WrapModes.Repeat },

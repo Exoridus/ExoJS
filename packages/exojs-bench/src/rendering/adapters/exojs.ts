@@ -8,7 +8,6 @@ import { BlurFilter } from '#rendering/filters/BlurFilter';
 import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import type { Filter } from '#rendering/filters/Filter';
 import { Geometry } from '#rendering/geometry/Geometry';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
@@ -17,6 +16,7 @@ import { RenderBatch } from '#rendering/RenderBatch';
 import { RenderNodePass } from '#rendering/RenderNodePass';
 import { RenderPipeline } from '#rendering/RenderPipeline';
 import { RetainedContainer } from '#rendering/RetainedContainer';
+import { Shader } from '#rendering/shader/Shader';
 import { spriteVertexGlsl } from '#rendering/sprite/materialSources';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Text } from '#rendering/text/Text';
@@ -143,7 +143,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 /** Build one of `total` distinct custom sprite materials (distinct instances - the batcher keys on identity). */
 const createDistinctMaterial = (index: number, total: number): SpriteMaterial =>
   new SpriteMaterial({
-    shader: new ShaderSource({ glsl: { vertex: spriteVertexGlsl, fragment: materialFragmentGlsl }, wgsl: materialFragmentWgsl }),
+    shader: new Shader({ glsl: { vertex: spriteVertexGlsl, fragment: materialFragmentGlsl }, wgsl: materialFragmentWgsl }),
     uniforms: { u_userColor: [1, 1 - index / Math.max(1, total), 1, 1] },
   });
 

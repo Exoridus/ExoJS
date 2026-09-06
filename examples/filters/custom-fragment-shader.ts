@@ -1,7 +1,7 @@
 import {
   Application,
   Color,
-  createFilterShaderSource,
+  createFilterShader,
   FixedResolutionCanvasSizing,
   type RenderingContext,
   Scene,
@@ -32,7 +32,7 @@ const wgsl = `
     return textureSample(uTexture,uSampler,uv);
 }`;
 
-const warpShader = createFilterShaderSource({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: UniformType.Float } });
+const warpShader = createFilterShader({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: UniformType.Float } });
 
 class CustomFragmentShaderScene extends Scene {
   private time = 0;
@@ -52,7 +52,7 @@ class CustomFragmentShaderScene extends Scene {
     this.sprite.filters = [this.filter];
 
     this.hud = mountControls({
-      title: 'Custom Fragment Shader',
+      title: 'Custom Fragment WebGl2Shader',
       status: 'A time-driven sine warp drives the sprite UVs each frame.',
       hint: 'One shader source declares `uTime` once; both languages get a matching uniform block generated for them.',
     });

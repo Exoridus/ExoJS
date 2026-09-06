@@ -6,13 +6,13 @@ import { Container } from '#rendering/Container';
 import type { Drawable } from '#rendering/Drawable';
 import { Geometry } from '#rendering/geometry/Geometry';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { Mesh } from '#rendering/mesh/Mesh';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBatch } from '#rendering/RenderBatch';
 import { RenderingContext } from '#rendering/RenderingContext';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
+import { Shader } from '#rendering/shader/Shader';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
@@ -501,7 +501,7 @@ const createStandardGeometry = (): Geometry => {
 
 const minimalMeshMaterial = (): MeshMaterial =>
   new MeshMaterial({
-    shader: new ShaderSource({
+    shader: new Shader({
       glsl: {
         vertex: '#version 300 es\nvoid main(){gl_Position=vec4(0.0);}',
         fragment: '#version 300 es\nprecision lowp float;out vec4 c;void main(){c=vec4(1.0);}',

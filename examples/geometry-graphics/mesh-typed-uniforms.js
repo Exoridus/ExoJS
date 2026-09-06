@@ -1,12 +1,12 @@
 // Auto-generated from mesh-typed-uniforms.ts - edit the .ts source, not this file.
-import { Application, Color, FixedResolutionCanvasSizing, Matrix, Mesh, MeshMaterial, Scene, ShaderSource, UniformStruct, UniformType } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Matrix, Mesh, MeshMaterial, Scene, Shader, UniformStruct, UniformType } from '@codexo/exojs';
 const UV_GRID = assets.technical.filtering.uvGrid256;
 const SIZE = 420;
 // The declaration is the single source of truth for names, types and layout.
 // The engine lays the block out once - a nested struct aligned to 16 bytes, a
 // mat3 as three 16-byte columns - and generates a matching GLSL block and WGSL
 // struct, so neither shader body declares a user uniform of its own.
-const shader = new ShaderSource({
+const shader = new Shader({
   uniforms: {
     time: UniformType.Float,
     warp: new UniformStruct({ amplitude: UniformType.Float, frequency: UniformType.Float }),

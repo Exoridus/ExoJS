@@ -25,7 +25,7 @@ export interface RenderErrorOptions {
   readonly message: string;
   /** Raw driver log and/or a numbered source excerpt. */
   readonly detail?: string;
-  /** Shader/material/pipeline label when known. */
+  /** WebGl2Shader/material/pipeline label when known. */
   readonly resource?: string;
   /** Original error object, if any (passed through as {@link Error.cause}). */
   readonly cause?: unknown;
@@ -49,7 +49,7 @@ export class RenderError extends Error {
   public readonly backendType: RenderBackendType;
   /** Raw driver log and/or numbered source excerpt, or `null` when unavailable. */
   public readonly detail: string | null;
-  /** Shader/material/pipeline label, or `null` when unknown. */
+  /** WebGl2Shader/material/pipeline label, or `null` when unknown. */
   public readonly resource: string | null;
 
   public constructor(options: RenderErrorOptions) {

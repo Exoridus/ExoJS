@@ -12,7 +12,7 @@ import type { UniformBlockLayout } from './uniformLayout';
  * {@link revision} and skip the transfer when it has not moved, so a block whose
  * values are set once and then left alone costs no GPU traffic per frame.
  *
- * Sharing a {@link ShaderSource} across instances shares the declaration, never
+ * Sharing a {@link Shader} across instances shares the declaration, never
  * these values: each material or filter builds its own block.
  * @advanced
  */

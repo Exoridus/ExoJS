@@ -7,10 +7,10 @@ import { createIndexArray } from '#rendering/mesh/indices';
 import type { Mesh } from '#rendering/mesh/Mesh';
 import { type DrawCommand, RenderEntryKind } from '#rendering/plan/renderCommand';
 import type { InstanceDataView } from '#rendering/RenderBatch';
-import { Shader } from '#rendering/shader/Shader';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage, IndexElementTypes, RenderingPrimitives } from '#rendering/types';
+import { WebGl2Shader } from '#rendering/webgl2/WebGl2Shader';
 
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import { createWebGl2ShaderProgram } from './shaderProgram';
@@ -57,7 +57,7 @@ interface PendingMeshDraw {
   mesh: Mesh;
   command: DrawCommand | null;
   material: AnyMaterial | null;
-  shader: Shader;
+  shader: WebGl2Shader;
   blendMode: BlendModes;
   texture: Texture | RenderTexture;
   supportsInstancing: boolean;
@@ -72,7 +72,7 @@ interface GeometryCacheEntry {
   readonly indexBuffer: WebGl2RenderBuffer;
   // Keyed by shader, then by the batch's instance-attribute layout: the same
   // geometry+shader pair needs a distinct VAO per divisor-1 layout bound to it.
-  readonly vaos: Map<Shader, Map<string, WebGl2VertexArrayObject>>;
+  readonly vaos: Map<WebGl2Shader, Map<string, WebGl2VertexArrayObject>>;
   readonly disposeListener: () => void;
   indexCount: number;
   /** Index width the buffer currently holds; every VAO cached here draws with it. */
@@ -120,9 +120,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   /** Reusable single-slot texture list handed to the recorder (avoids a per-batch array). */
   private readonly _retainedTextureScratch: [Texture | RenderTexture] = [Texture.white];
 
-  private readonly _defaultShader: Shader = new Shader(vertexSource, fragmentSource);
-  private readonly _customShaders = new Map<AnyMaterial, Shader>();
-  private readonly _compatibilityCache = new Map<Shader, boolean>();
+  private readonly _defaultShader: WebGl2Shader = new WebGl2Shader(vertexSource, fragmentSource);
+  private readonly _customShaders = new Map<AnyMaterial, WebGl2Shader>();
+  private readonly _compatibilityCache = new Map<WebGl2Shader, boolean>();
   private readonly _textureUnitScratch: Int32Array = new Int32Array([0]);
   private readonly _transformUnitScratch: Int32Array = new Int32Array([transformTextureUnit]);
   private readonly _tintUnitScratch: Int32Array = new Int32Array([transformTintTextureUnit]);
@@ -623,7 +623,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   }
 
   private _bindInstancedShaderState(
-    shader: Shader,
+    shader: WebGl2Shader,
     texture: Texture | RenderTexture,
     material: AnyMaterial | null,
     backend: WebGl2Backend,
@@ -837,7 +837,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     );
   }
 
-  private _isInstancingCompatible(shader: Shader): boolean {
+  private _isInstancingCompatible(shader: WebGl2Shader): boolean {
     const cached = this._compatibilityCache.get(shader);
 
     if (cached !== undefined) {
@@ -856,7 +856,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   // individual conditions of _isInstancingCompatible rather than caching them.
   // Reflection reports the LINKED program, so a declared-but-unread uniform is
   // legitimately absent here - such a shader really cannot be instanced.
-  private _describeInstancingGap(shader: Shader): string {
+  private _describeInstancingGap(shader: WebGl2Shader): string {
     const gaps: string[] = [];
 
     if (!shader.attributes.has('a_nodeIndex')) {
@@ -995,7 +995,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
 
   private _getOrCreateStaticGeometryVao(
     entry: GeometryCacheEntry,
-    shader: Shader,
+    shader: WebGl2Shader,
     gl: WebGL2RenderingContext,
     nodeIndexBuffer: WebGl2RenderBuffer,
     instances: InstanceDataView | null = null,
@@ -1247,7 +1247,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     };
   }
 
-  private _getOrCreateCustomShader(material: AnyMaterial, gl: WebGL2RenderingContext): Shader {
+  private _getOrCreateCustomShader(material: AnyMaterial, gl: WebGL2RenderingContext): WebGl2Shader {
     const cached = this._customShaders.get(material);
     if (cached !== undefined) {
       return cached;
@@ -1263,7 +1263,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       throw new Error('Mesh material shader has no GLSL vertex stage; only sprite materials and shader filters may omit it.');
     }
 
-    const shader = new Shader(glsl.vertex, glsl.fragment);
+    const shader = new WebGl2Shader(glsl.vertex, glsl.fragment);
 
     shader.uniformBlockData = material._blocks;
     shader.connect(createWebGl2ShaderProgram(gl));
@@ -1284,7 +1284,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     return shader;
   }
 
-  private _bindCustomUniforms(shader: Shader, material: AnyMaterial, backend: WebGl2Backend): void {
+  private _bindCustomUniforms(shader: WebGl2Shader, material: AnyMaterial, backend: WebGl2Backend): void {
     // Texture bindings take consecutive slots starting at 1 (slot 0 belongs to
     // the mesh's own `u_texture`). Texture-valued uniforms bind first, then the
     // entries of the material's dedicated `textures` map.
@@ -1305,7 +1305,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     }
   }
 
-  private _bindCustomTexture(shader: Shader, name: string, texture: Texture | RenderTexture, textureSlot: number, backend: WebGl2Backend): number {
+  private _bindCustomTexture(shader: WebGl2Shader, name: string, texture: Texture | RenderTexture, textureSlot: number, backend: WebGl2Backend): number {
     if (textureSlot >= maxCustomTextureSlots) {
       throw new Error(`Mesh material requested more than ${maxCustomTextureSlots - 1} texture bindings.`);
     }

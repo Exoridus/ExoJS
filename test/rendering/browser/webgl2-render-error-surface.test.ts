@@ -8,9 +8,9 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { RenderError } from '#rendering/RenderError';
+import { Shader } from '#rendering/shader/Shader';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { wireCoreRenderers } from './_coreRenderers';
@@ -85,7 +85,7 @@ describe('render-error surface WebGL2 browser', () => {
   test('drawing a mesh with broken custom GLSL throws a structured RenderError from flush', async () => {
     const backend = await createBackend();
     const material = new MeshMaterial({
-      shader: new ShaderSource({ glsl: { vertex: validVertex, fragment: brokenFragment } }),
+      shader: new Shader({ glsl: { vertex: validVertex, fragment: brokenFragment } }),
     });
     const mesh = new Mesh({
       vertices: new Float32Array([0, 0, 16, 0, 16, 16, 0, 0, 16, 16, 0, 16]),

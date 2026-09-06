@@ -78,7 +78,7 @@ import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
-// Shader wiring - substitute the REAL shipped sprite GLSL via `?raw` (the stub
+// WebGl2Shader wiring - substitute the REAL shipped sprite GLSL via `?raw` (the stub
 // plugin only rewrites bare `.vert`/`.frag` ids), and hand-write valid mocks
 // for Mesh/Text because `WebGl2Backend#initialize` eagerly compiles the whole
 // renderer registry. This mirrors `webgl2-sprite-real-shader-tint.test.ts`.

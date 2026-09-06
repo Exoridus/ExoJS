@@ -1,10 +1,10 @@
+import { Shader } from '#rendering/shader/Shader';
 import type { SamplerOptions } from '#rendering/texture/TextureOptions';
 import type { BlendModes } from '#rendering/types';
 import type { UniformBlockRecord, UniformFields } from '#rendering/uniforms/uniformDeclarations';
 
 import type { MaterialOptions, UniformValue } from './Material';
 import { Material } from './Material';
-import { ShaderSource } from './ShaderSource';
 
 /**
  * Material specialization for {@link Mesh} drawables.
@@ -24,16 +24,16 @@ export class MeshMaterial<F extends UniformFields | undefined = undefined, B ext
   }
 
   /**
-   * Build a `MeshMaterial` from an existing {@link ShaderSource}.
+   * Build a `MeshMaterial` from an existing {@link Shader}.
    * Equivalent to `new MeshMaterial({ shader, ...options })`.
    */
   public static from<F extends UniformFields | undefined, B extends UniformBlockRecord | undefined>(
-    source: ShaderSource<F, B>,
+    source: Shader<F, B>,
     options?: Omit<MaterialOptions<F, B>, 'shader'>,
   ): MeshMaterial<F, B>;
   /**
    * Build a `MeshMaterial` from raw GLSL vertex and fragment source strings.
-   * Wraps them in a new {@link ShaderSource}; pass `options.wgsl` to also
+   * Wraps them in a new {@link Shader}; pass `options.wgsl` to also
    * cover the WebGPU backend.
    */
   public static from(
@@ -47,7 +47,7 @@ export class MeshMaterial<F extends UniformFields | undefined = undefined, B ext
     },
   ): MeshMaterial;
   public static from(
-    sourceOrGlslVertex: ShaderSource<UniformFields | undefined, UniformBlockRecord | undefined> | string,
+    sourceOrGlslVertex: Shader<UniformFields | undefined, UniformBlockRecord | undefined> | string,
     optionsOrGlslFragment?: Omit<MaterialOptions, 'shader'> | string,
     glslOptions?: {
       readonly wgsl?: string;
@@ -56,7 +56,7 @@ export class MeshMaterial<F extends UniformFields | undefined = undefined, B ext
       readonly sampler?: SamplerOptions | null;
     },
   ): MeshMaterial<UniformFields | undefined, UniformBlockRecord | undefined> {
-    if (sourceOrGlslVertex instanceof ShaderSource) {
+    if (sourceOrGlslVertex instanceof Shader) {
       const opts = optionsOrGlslFragment as Omit<MaterialOptions, 'shader'> | undefined;
       // The overloads above carry the real contract. Here the source's
       // declaration has been erased to "any of them", so the values that come
@@ -69,7 +69,7 @@ export class MeshMaterial<F extends UniformFields | undefined = undefined, B ext
       return new MeshMaterial(options);
     }
 
-    const shader = new ShaderSource({
+    const shader = new Shader({
       glsl: { vertex: sourceOrGlslVertex, fragment: optionsOrGlslFragment as string },
       ...(glslOptions?.wgsl !== undefined ? { wgsl: glslOptions.wgsl } : {}),
     });

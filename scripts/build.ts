@@ -97,7 +97,7 @@ const codecovBundlePlugin = (bundleName: string): Plugin[] => {
     : [];
 };
 
-// Shader text (`.vert`/`.frag`/`.wgsl`) ships verbatim inside the bundle -
+// WebGl2Shader text (`.vert`/`.frag`/`.wgsl`) ships verbatim inside the bundle -
 // minification never descends into a string literal - so the outputs that
 // minify get the comment-stripped variant and the readable ones keep the
 // source as authored.

@@ -5,7 +5,7 @@ import { UniformArray } from '#rendering/uniforms/uniformDeclarations';
 import { UniformType } from '#rendering/uniforms/UniformType';
 
 import { Filter } from './Filter';
-import { createFilterShaderSource, ShaderFilter } from './ShaderFilter';
+import { createFilterShader, ShaderFilter } from './ShaderFilter';
 import glslFragment from './shaders/color-matrix.frag';
 import wgslFragment from './shaders/color-matrix.wgsl';
 
@@ -27,7 +27,7 @@ const IDENTITY: ColorMatrixEntries = [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 
  * runs rather than a copy of it.
  * @internal
  */
-export const colorMatrixShaderSource = createFilterShaderSource({
+export const colorMatrixShader = createFilterShader({
   glsl: { fragment: glslFragment },
   wgsl: wgslFragment,
   uniforms: { uRows: new UniformArray(UniformType.Vec4, 4), uBias: UniformType.Vec4 },
@@ -65,7 +65,7 @@ export const colorMatrixShaderSource = createFilterShaderSource({
  */
 export class ColorMatrixFilter extends Filter {
   private readonly _matrix = new Float32Array(ENTRIES);
-  private readonly _shaderFilter = ShaderFilter.from(colorMatrixShaderSource);
+  private readonly _shaderFilter = ShaderFilter.from(colorMatrixShader);
 
   public constructor(matrix: ColorMatrixEntries = IDENTITY) {
     super();

@@ -1,16 +1,16 @@
 {
   "title": "Shader",
-  "description": "Backend-agnostic shader program descriptor. Holds raw GLSL source strings and, after connect is called, a live ShaderProgram with populated attributes and uniforms maps. Call bind before draw calls and sync after updating uniform values. Both maps are cleared on disconnect and destroy.",
+  "description": "Immutable shader source pair shared by Material instances. `Shader` owns only the GLSL/WGSL text and its stable identity; it carries no uniform/texture state (that lives on the Material). One `Shader` can back many materials, and renderers key their compiled program/pipeline caches on the source identity exposed via id. # Vertex layout The vertex layout for the mesh path is fixed and shared with the default mesh material, so custom vertex shaders MUST pin the standard attribute locations: ## GLSL (location-qualified) ```glsl layout(location = 0) in vec2 a_position; layout(location = 1) in vec2 a_texcoord; layout(location = 2) in vec4 a_color; ``` ## WGSL (location-qualified) ```wgsl struct VertexInput { @location(0) position: vec2<f32>, @location(1) texcoord: vec2<f32>, @location(2) color: vec4<f32>, }; ``` # Auto-bound uniforms Renderers auto-bind these when the source declares them. Declared but unused is fine; absent is fine too. Both backends carry the same logical uniforms, only the binding scheme differs. ## GLSL ```glsl uniform mat3 u_projection; // active view's projection uniform mat3 u_translation; // drawable's global transform uniform vec4 u_tint; // tint as RGBA in 0..1 uniform sampler2D u_texture; // bound to texture slot 0 ``` ## WGSL ```wgsl struct MeshUniforms { projection: mat3x3<f32>, translation: mat3x3<f32>, tint: vec4<f32>, }; @group(0) @binding(0) var<uniform> u_mesh: MeshUniforms; @group(1) @binding(0) var u_texture: texture_2d<f32>; @group(1) @binding(1) var u_sampler: sampler; ``` # Declared user uniforms Supplying `uniforms` (one block) or `uniformBlocks` (several named ones) makes this source the single source of truth for their names, types, layout and defaults. The engine computes one canonical `std140` layout and prepends the matching GLSL block and WGSL struct to the stages, so neither body declares them; both read through the instance name - `uniforms` for the implicit block, the record key for a named one. ```ts const shader = new Shader({ uniforms: { u_time: UniformType.Float, u_tint: UniformType.Vec4 }, glsl: { vertex, fragment }, wgsl, }); ``` Materials and filters built on such a source expose typed accessors instead of the value record, and textures are declared in `textures` rather than among the uniforms. Blocks take bindings `0..n-1` of the consumer's user bind group in declaration order, with texture bindings following after them. # Raw user uniforms Without a declaration the source keeps full control and correspondingly weaker guarantees. Anything in Material.uniforms is set after the auto-binds, and `Texture`/`RenderTexture` values claim slots 1..N (slot 0 belongs to the drawable's own texture). ## WGSL user-uniform contract User uniforms live in `@group(2)`: - `@group(2) @binding(0) var<uniform> u_user: <UserUniformsStruct>;` for the packed scalar/vector/matrix uniforms, each in its own 16-byte slot in declaration order. - `@group(2) @binding(N)` for each `Texture`/`RenderTexture` uniform, in declaration order, alongside its sampler at `@binding(N+1)`.",
   "symbol": "Shader",
   "kind": "class",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 13,
+  "memberCount": 10,
   "counts": {
     "constructors": 1,
-    "methods": 8,
-    "properties": 4,
+    "methods": 3,
+    "properties": 6,
     "events": 0
   },
   "sections": [
@@ -19,8 +19,31 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Backend-agnostic shader program descriptor.",
-        "Holds raw GLSL source strings and, after connect is called, a live ShaderProgram with populated attributes and uniforms maps. Call bind before draw calls and sync after updating uniform values. Both maps are cleared on disconnect and destroy."
+        "Immutable shader source pair shared by Material instances.",
+        "`Shader` owns only the GLSL/WGSL text and its stable identity; it carries no uniform/texture state (that lives on the Material). One `Shader` can back many materials, and renderers key their compiled program/pipeline caches on the source identity exposed via id.",
+        "# Vertex layout",
+        "The vertex layout for the mesh path is fixed and shared with the default mesh material, so custom vertex shaders MUST pin the standard attribute locations:",
+        "## GLSL (location-qualified)",
+        "```glsl layout(location = 0) in vec2 a_position; layout(location = 1) in vec2 a_texcoord; layout(location = 2) in vec4 a_color; ```",
+        "## WGSL (location-qualified)",
+        "```wgsl struct VertexInput { @location(0) position: vec2<f32>, @location(1) texcoord: vec2<f32>, @location(2) color: vec4<f32>, }; ```",
+        "# Auto-bound uniforms",
+        "Renderers auto-bind these when the source declares them. Declared but unused is fine; absent is fine too. Both backends carry the same logical uniforms, only the binding scheme differs.",
+        "## GLSL",
+        "```glsl uniform mat3 u_projection; // active view's projection uniform mat3 u_translation; // drawable's global transform uniform vec4 u_tint; // tint as RGBA in 0..1 uniform sampler2D u_texture; // bound to texture slot 0 ```",
+        "## WGSL",
+        "```wgsl struct MeshUniforms { projection: mat3x3<f32>, translation: mat3x3<f32>, tint: vec4<f32>, };",
+        "@group(0) @binding(0) var<uniform> u_mesh: MeshUniforms;",
+        "@group(1) @binding(0) var u_texture: texture_2d<f32>; @group(1) @binding(1) var u_sampler: sampler; ```",
+        "# Declared user uniforms",
+        "Supplying `uniforms` (one block) or `uniformBlocks` (several named ones) makes this source the single source of truth for their names, types, layout and defaults. The engine computes one canonical `std140` layout and prepends the matching GLSL block and WGSL struct to the stages, so neither body declares them; both read through the instance name - `uniforms` for the implicit block, the record key for a named one.",
+        "```ts const shader = new Shader({ uniforms: { u_time: UniformType.Float, u_tint: UniformType.Vec4 }, glsl: { vertex, fragment }, wgsl, }); ```",
+        "Materials and filters built on such a source expose typed accessors instead of the value record, and textures are declared in `textures` rather than among the uniforms. Blocks take bindings `0..n-1` of the consumer's user bind group in declaration order, with texture bindings following after them.",
+        "# Raw user uniforms",
+        "Without a declaration the source keeps full control and correspondingly weaker guarantees. Anything in Material.uniforms is set after the auto-binds, and `Texture`/`RenderTexture` values claim slots 1..N (slot 0 belongs to the drawable's own texture).",
+        "## WGSL user-uniform contract",
+        "User uniforms live in `@group(2)`:",
+        "- `@group(2) @binding(0) var<uniform> u_user: <UserUniformsStruct>;` for the packed scalar/vector/matrix uniforms, each in its own 16-byte slot in declaration order. - `@group(2) @binding(N)` for each `Texture`/`RenderTexture` uniform, in declaration order, alongside its sampler at `@binding(N+1)`."
       ],
       "importLine": "import { Shader } from '@codexo/exojs'",
       "sourceLink": null
@@ -31,7 +54,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(vertexSource: string, fragmentSource: string): Shader",
+          "signature": "new(options: ShaderOptions<F, B>): Shader<F, B>",
           "signatureTokens": [
             {
               "text": "new",
@@ -42,7 +65,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "vertexSource",
+              "text": "options",
               "kind": "param"
             },
             {
@@ -50,24 +73,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
-              "kind": "keyword"
+              "text": "ShaderOptions",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
             },
             {
               "text": ", ",
               "kind": "punctuation"
             },
             {
-              "text": "fragmentSource",
-              "kind": "param"
+              "text": "B",
+              "kind": "type"
             },
             {
-              "text": ": ",
+              "text": ">",
               "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
             },
             {
               "text": ")",
@@ -80,21 +107,36 @@
             {
               "text": "Shader",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [
             {
-              "name": "vertexSource",
-              "type": "string",
-              "optional": false
-            },
-            {
-              "name": "fragmentSource",
-              "type": "string",
+              "name": "options",
+              "type": "ShaderOptions<F, B>",
               "optional": false
             }
           ],
-          "returnType": "Shader",
+          "returnType": "Shader<F, B>",
           "description": ""
         }
       ],
@@ -107,11 +149,11 @@
       "title": "Methods",
       "members": [
         {
-          "name": "bind",
-          "signature": "bind(): this",
+          "name": "countFragmentOutputs",
+          "signature": "countFragmentOutputs(): { glsl: null | number; wgsl: null | number }",
           "signatureTokens": [
             {
-              "text": "bind",
+              "text": "countFragmentOutputs",
               "kind": "name"
             },
             {
@@ -127,67 +169,68 @@
               "kind": "punctuation"
             },
             {
-              "text": "this",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "glsl",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
               "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "wgsl",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             }
           ],
           "params": [],
-          "returnType": "this",
-          "description": ""
+          "returnType": "{ glsl: null | number; wgsl: null | number }",
+          "description": "Best-effort count of the color attachments each language's fragment stage writes, from its declared outputs - null for a language not supplied. Parsed via the same lightweight regex approach as getDeclaredUniforms, not a full grammar: intended for an early dev-build warning when a material is drawn into a multi-attachment target it cannot fully satisfy, not for driving pipeline creation."
         },
         {
-          "name": "connect",
-          "signature": "connect(program: ShaderProgram): this",
+          "name": "detectUniformDrift",
+          "signature": "detectUniformDrift(): { onlyInGlsl: readonly string[]; onlyInWgsl: readonly string[] }",
           "signatureTokens": [
             {
-              "text": "connect",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "program",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ShaderProgram",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "program",
-              "type": "ShaderProgram",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Attach a backend GPU program, compile/link it, and populate the attribute and uniform maps. Must be called before bind, sync, or accessing attributes/uniforms."
-        },
-        {
-          "name": "destroy",
-          "signature": "destroy(): void",
-          "signatureTokens": [
-            {
-              "text": "destroy",
+              "text": "detectUniformDrift",
               "kind": "name"
             },
             {
@@ -203,61 +246,23 @@
               "kind": "punctuation"
             },
             {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": ""
-        },
-        {
-          "name": "disconnect",
-          "signature": "disconnect(): this",
-          "signatureTokens": [
+              "text": "{ ",
+              "kind": "punctuation"
+            },
             {
-              "text": "disconnect",
+              "text": "onlyInGlsl",
               "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
             },
             {
               "text": ": ",
               "kind": "punctuation"
             },
             {
-              "text": "this",
+              "text": "readonly",
               "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "this",
-          "description": ""
-        },
-        {
-          "name": "getAttribute",
-          "signature": "getAttribute(name: string): ShaderAttribute",
-          "signatureTokens": [
-            {
-              "text": "getAttribute",
-              "kind": "name"
             },
             {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "name",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
+              "text": " ",
               "kind": "punctuation"
             },
             {
@@ -265,46 +270,27 @@
               "kind": "keyword"
             },
             {
-              "text": ")",
+              "text": "[]",
               "kind": "punctuation"
             },
             {
-              "text": ": ",
+              "text": "; ",
               "kind": "punctuation"
             },
             {
-              "text": "ShaderAttribute",
-              "kind": "type"
-            }
-          ],
-          "params": [
-            {
-              "name": "name",
-              "type": "string",
-              "optional": false
-            }
-          ],
-          "returnType": "ShaderAttribute",
-          "description": "Retrieve a named vertex attribute from the map populated by the backend."
-        },
-        {
-          "name": "getUniform",
-          "signature": "getUniform(name: string): ShaderUniform",
-          "signatureTokens": [
-            {
-              "text": "getUniform",
+              "text": "onlyInWgsl",
               "kind": "name"
             },
             {
-              "text": "(",
+              "text": ": ",
               "kind": "punctuation"
             },
             {
-              "text": "name",
-              "kind": "param"
+              "text": "readonly",
+              "kind": "keyword"
             },
             {
-              "text": ": ",
+              "text": " ",
               "kind": "punctuation"
             },
             {
@@ -312,6 +298,31 @@
               "kind": "keyword"
             },
             {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "{ onlyInGlsl: readonly string[]; onlyInWgsl: readonly string[] }",
+          "description": "Compare declared uniform names between the GLSL and WGSL sources. Returns lists of names declared in only one language. Use in CI to catch drift when both languages should expose the same logical uniforms. When only one language is provided, returns empty arrays. Auto-bound uniforms (u_projection, u_translation, u_tint, u_texture) are excluded from the comparison since the GLSL source declares them at the top-level uniform scope while the WGSL source receives them via the @group(0) mesh-uniforms struct and the @group(1) texture binding."
+        },
+        {
+          "name": "getDeclaredUniforms",
+          "signature": "getDeclaredUniforms(): { glsl: Record<string, string>; wgsl: Record<string, string> }",
+          "signatureTokens": [
+            {
+              "text": "getDeclaredUniforms",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -320,77 +331,85 @@
               "kind": "punctuation"
             },
             {
-              "text": "ShaderUniform",
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "glsl",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
               "kind": "type"
-            }
-          ],
-          "params": [
+            },
             {
-              "name": "name",
-              "type": "string",
-              "optional": false
-            }
-          ],
-          "returnType": "ShaderUniform",
-          "description": "Retrieve a named uniform from the map populated by the backend."
-        },
-        {
-          "name": "sync",
-          "signature": "sync(): this",
-          "signatureTokens": [
+              "text": "<",
+              "kind": "punctuation"
+            },
             {
-              "text": "sync",
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "wgsl",
               "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
             },
             {
               "text": ": ",
               "kind": "punctuation"
             },
             {
-              "text": "this",
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
               "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             }
           ],
           "params": [],
-          "returnType": "this",
-          "description": "Upload all dirty ShaderUniform values to the GPU. Call once per draw call after modifying uniform data."
-        },
-        {
-          "name": "unbind",
-          "signature": "unbind(): this",
-          "signatureTokens": [
-            {
-              "text": "unbind",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "this",
-          "description": ""
+          "returnType": "{ glsl: Record<string, string>; wgsl: Record<string, string> }",
+          "description": "Reflect declared uniforms from each language's source. Returns a per- language map of uniform-name → declared type, parsed from the shader sources via lightweight regex (not a full GLSL/WGSL grammar). Texture uniforms (sampler2D/texture_2d) are included; sampler bindings are not (they pair with textures by binding index). Reflection is best-effort and intended for CI drift-checks and editor tooling, not for runtime uniform binding decisions. The renderers do NOT consult this map; they bind uniforms by name from Material.uniforms and let the underlying API resolve declared- but-unused entries."
         }
       ],
       "paragraphs": [],
@@ -402,11 +421,11 @@
       "title": "Properties",
       "members": [
         {
-          "name": "attributes",
-          "signature": "attributes: Map<string, ShaderAttribute>",
+          "name": "glsl",
+          "signature": "glsl: null | { fragment: string; vertex: null | string }",
           "signatureTokens": [
             {
-              "text": "attributes",
+              "text": "glsl",
               "kind": "name"
             },
             {
@@ -414,11 +433,23 @@
               "kind": "punctuation"
             },
             {
-              "text": "Map",
-              "kind": "type"
+              "text": "null",
+              "kind": "keyword"
             },
             {
-              "text": "<",
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "fragment",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
               "kind": "punctuation"
             },
             {
@@ -426,25 +457,62 @@
               "kind": "keyword"
             },
             {
-              "text": ", ",
+              "text": "; ",
               "kind": "punctuation"
             },
             {
-              "text": "ShaderAttribute",
-              "kind": "type"
+              "text": "vertex",
+              "kind": "name"
             },
             {
-              "text": ">",
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
               "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Vertex attribute metadata populated by the backend after connect."
+          "description": "GLSL sources for the WebGL2 backend, or null if not provided. vertex is null when the author left the vertex stage to the consumer."
+        },
+        {
+          "name": "uniformBlocks",
+          "signature": "uniformBlocks: B",
+          "signatureTokens": [
+            {
+              "text": "uniformBlocks",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "B",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The named block declarations, as supplied."
         },
         {
           "name": "uniforms",
-          "signature": "uniforms: Map<string, ShaderUniform>",
+          "signature": "uniforms: F",
           "signatureTokens": [
             {
               "text": "uniforms",
@@ -455,40 +523,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "Map",
+              "text": "F",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ShaderUniform",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Uniform metadata populated by the backend after connect."
+          "description": "The implicit block's field declaration, as supplied."
         },
         {
-          "name": "fragmentSource",
-          "signature": "fragmentSource: string",
+          "name": "uniformSchema",
+          "signature": "uniformSchema: UniformSchemaLayout | null",
           "signatureTokens": [
             {
-              "text": "fragmentSource",
+              "text": "uniformSchema",
               "kind": "name"
             },
             {
@@ -496,24 +544,40 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "UniformSchemaLayout",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
               "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "The canonical layout of the declared uniform blocks, or null for a source that manages its own uniform declarations."
         },
         {
-          "name": "vertexSource",
-          "signature": "vertexSource: string",
+          "name": "wgsl",
+          "signature": "wgsl: null | string",
           "signatureTokens": [
             {
-              "text": "vertexSource",
+              "text": "wgsl",
               "kind": "name"
             },
             {
               "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
               "kind": "punctuation"
             },
             {
@@ -523,7 +587,28 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "WGSL source for the WebGPU backend, or null if not provided."
+        },
+        {
+          "name": "id",
+          "signature": "id: number",
+          "signatureTokens": [
+            {
+              "text": "id",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Stable per-instance identity. Identical id ⇒ same compiled program/ pipeline can be reused. Monotonic across the session; never reused."
         }
       ],
       "paragraphs": [],

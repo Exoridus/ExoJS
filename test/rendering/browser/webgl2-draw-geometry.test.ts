@@ -15,10 +15,10 @@ import { Color } from '#core/Color';
 import { Matrix } from '#math/Matrix';
 import { Geometry } from '#rendering/geometry/Geometry';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { RenderBatch } from '#rendering/RenderBatch';
 import { RenderingContext } from '#rendering/RenderingContext';
 import { INSTANCE_TRANSFORM_GLSL } from '#rendering/shader/instanceContract';
+import { Shader } from '#rendering/shader/Shader';
 import { View } from '#rendering/View';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
@@ -145,7 +145,7 @@ const mutableQuad = (x0: number, y0: number, x1: number, y1: number, stride: num
 // contract - the constant under test, not a copy of it.
 const contractMaterial = (vertexBody: string): MeshMaterial =>
   new MeshMaterial({
-    shader: new ShaderSource({
+    shader: new Shader({
       glsl: {
         vertex: `#version 300 es\n${INSTANCE_TRANSFORM_GLSL}\n${vertexBody}`,
         fragment: '#version 300 es\nprecision mediump float;\nin vec4 v_tint;\nout vec4 fragColor;\nvoid main(){fragColor=vec4(v_tint.rgb*v_tint.a,v_tint.a);}',
@@ -358,7 +358,7 @@ describe('WebGL2 RenderingContext.drawBatch', () => {
     const context = new RenderingContext(backend);
     const geometry = coloredQuad(0, 0, 16, 16, [255, 255, 255, 255]);
     const material = new MeshMaterial({
-      shader: new ShaderSource({
+      shader: new Shader({
         glsl: {
           vertex: '#version 300 es\nin vec2 a_position;\nvoid main(){gl_Position=vec4(a_position,0.0,1.0);}',
           fragment: '#version 300 es\nprecision mediump float;\nout vec4 c;\nvoid main(){c=vec4(1.0);}',

@@ -4,7 +4,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes, WrapModes } from '#rendering/types';
 
 import { Filter } from './Filter';
-import { createFilterShaderSource, ShaderFilter } from './ShaderFilter';
+import { createFilterShader, ShaderFilter } from './ShaderFilter';
 import glsl3dFragment from './shaders/lut-3d.frag';
 import wgsl3dFragment from './shaders/lut-3d.wgsl';
 import glslRgb1dFragment from './shaders/lut-rgb1d.frag';
@@ -37,13 +37,13 @@ export interface LutFilterOptions {
  * the filter runs rather than a copy of it.
  * @internal
  */
-export const lutRgb1dShaderSource = createFilterShaderSource({ glsl: { fragment: glslRgb1dFragment }, wgsl: wgslRgb1dFragment });
+export const lutRgb1dShaderSource = createFilterShader({ glsl: { fragment: glslRgb1dFragment }, wgsl: wgslRgb1dFragment });
 
 /**
  * The cube-lookup source pair, built once and shared by every `'3d'` instance.
  * @internal
  */
-export const lut3dShaderSource = createFilterShaderSource({ glsl: { fragment: glsl3dFragment }, wgsl: wgsl3dFragment });
+export const lut3dShaderSource = createFilterShader({ glsl: { fragment: glsl3dFragment }, wgsl: wgsl3dFragment });
 
 /**
  * A {@link Filter} that maps every pixel of the input through a Look-Up Table texture.

@@ -164,7 +164,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Shader/material/pipeline label when known."
+          "description": "WebGl2Shader/material/pipeline label when known."
         }
       ],
       "paragraphs": [],

@@ -10,7 +10,7 @@ import { UniformType } from '#rendering/uniforms/UniformType';
 
 import { BlurFilter } from './BlurFilter';
 import { Filter } from './Filter';
-import { createFilterShaderSource, ShaderFilter } from './ShaderFilter';
+import { createFilterShader, ShaderFilter } from './ShaderFilter';
 import glslFragment from './shaders/drop-shadow.frag';
 import wgslFragment from './shaders/drop-shadow.wgsl';
 
@@ -18,7 +18,7 @@ import wgslFragment from './shaders/drop-shadow.wgsl';
  * The silhouette source pair, built once and shared by every instance.
  * @internal
  */
-export const dropShadowShaderSource = createFilterShaderSource({
+export const dropShadowShader = createFilterShader({
   glsl: { fragment: glslFragment },
   wgsl: wgslFragment,
   uniforms: { uShift: UniformType.Vec2, uColor: UniformType.Vec4 },
@@ -64,7 +64,7 @@ export class DropShadowFilter extends Filter {
    * `uShift` is the offset in UV units of the pass target, `uColor` the straight
    * shadow colour with its opacity in alpha.
    */
-  private readonly _silhouette = ShaderFilter.from(dropShadowShaderSource);
+  private readonly _silhouette = ShaderFilter.from(dropShadowShader);
   private readonly _blur: BlurFilter;
   // One sprite per draw: both are batched and resolved at flush, so a single
   // sprite re-pointed between the two draws would sample the same texture twice.

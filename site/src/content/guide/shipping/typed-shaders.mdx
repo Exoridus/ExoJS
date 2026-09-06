@@ -7,7 +7,7 @@ import Callout from '../../../components/Callout.astro';
 
 # Typed Shaders
 
-Every shader-taking API in ExoJS - `ShaderFilter`, `ShaderSource`, `MeshMaterial`, `SpriteMaterial`, the WebGPU compute pipeline - takes source as a `string`. The guides show that string as a template literal, because a literal is the one form that always works. It is also the form your editor cannot help you with: no syntax highlighting, no GLSL or WGSL language service, no formatter, no shader linter, and an error the driver reports at line 34 is line 34 of a string embedded somewhere in a `.ts` file.
+Every shader-taking API in ExoJS - `ShaderFilter`, `Shader`, `MeshMaterial`, `SpriteMaterial`, the WebGPU compute pipeline - takes source as a `string`. The guides show that string as a template literal, because a literal is the one form that always works. It is also the form your editor cannot help you with: no syntax highlighting, no GLSL or WGSL language service, no formatter, no shader linter, and an error the driver reports at line 34 is line 34 of a string embedded somewhere in a `.ts` file.
 
 `@codexo/exojs-build` gives you the other form. The shader lives in a real `.vert`, `.frag` or `.wgsl` file, and the build hands its text to the same API as a string.
 
@@ -115,7 +115,7 @@ The text is inlined into your bundle. No shader is emitted as a separate file an
 For production, `exojs({ minify: true })` strips comments and layout whitespace from the shader text. This matters more than it looks: shader source travels inside a JavaScript string literal, and no JavaScript minifier descends into one, so without this step every explanatory comment you wrote is bytes every visitor downloads.
 
 <Callout type="warning" title="Stripping is not optimizing">
-The transform removes comments and whitespace and nothing else. It never renames an identifier, reorders an expression, reduces a precision or removes a branch, and there is no option that makes it do so. Shader optimization belongs to the driver, which is the only party that knows the target GPU; a build-time rewrite would only take information away from it. Make performance changes in the source, then measure them.
+The transform removes comments and whitespace and nothing else. It never renames an identifier, reorders an expression, reduces a precision or removes a branch, and there is no option that makes it do so. WebGl2Shader optimization belongs to the driver, which is the only party that knows the target GPU; a build-time rewrite would only take information away from it. Make performance changes in the source, then measure them.
 </Callout>
 
 ## Coexisting with your bundler
@@ -128,7 +128,7 @@ import shaderUrl from './ripple.frag?url';
 
 The two can appear in the same program. Use the bare import for source you compile, and a query when you genuinely want the file as something else.
 
-## Shader source you build at runtime
+## WebGl2Shader source you build at runtime
 
 Source assembled at runtime - a fragment stage composed from several strings, a variant switched on a feature flag - never passes through the plugin, so `minify` cannot reach it. Put it through the same transform explicitly and both halves ship on the same terms:
 

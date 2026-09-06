@@ -10,7 +10,7 @@ import Callout from '../../../components/Callout.astro';
 
 A [`Mesh`](/ExoJS/en/api/mesh/) normally renders with the engine's built-in batch shader — textured or untextured, vertex-colored or uniform-tinted, lit with the mesh's own tint and blend mode. That covers most use cases. When you need something the default shader does not do — procedural displacement, custom lighting, multi-texture mixing, a Shadertoy-style effect mapped onto geometry — you attach a custom [`MeshMaterial`](/ExoJS/en/api/mesh-material/).
 
-A custom look is two objects. A [`ShaderSource`](/ExoJS/en/api/shader-source/) holds the immutable shader text — one program for WebGL2 (GLSL), one for WebGPU (WGSL). A `MeshMaterial` wraps that `ShaderSource` together with a map of uniform values, extra textures, and a blend mode. One `ShaderSource` can back many materials, and one `MeshMaterial` can be shared across multiple meshes; the renderer caches the compiled program/pipeline per shader source and reuses it for every material that references it.
+A custom look is two objects. A [`Shader`](/ExoJS/en/api/shader-source/) holds the immutable shader text — one program for WebGL2 (GLSL), one for WebGPU (WGSL). A `MeshMaterial` wraps that `Shader` together with a map of uniform values, extra textures, and a blend mode. One `Shader` can back many materials, and one `MeshMaterial` can be shared across multiple meshes; the renderer caches the compiled program/pipeline per shader source and reuses it for every material that references it.
 
 <Callout type="warning" title="Ship both GLSL and WGSL, or the skipped backend throws">
 Shaders compile lazily on first draw, and if the active backend has no source for its language the renderer throws — it does not fall back to the default shader. A mesh that works in WebGL2 hard-fails on WebGPU unless you supply both `glsl` and `wgsl`.
@@ -26,13 +26,13 @@ A custom [`ShaderFilter`](/ExoJS/en/api/shader-filter/) applies a post-processin
 
 ## Construction
 
-Build a `ShaderSource` from the shader text, then wrap it in a `MeshMaterial` with the initial uniform values. At least one language source is required on the `ShaderSource`. Pass `glsl` for WebGL2, `wgsl` for WebGPU, or both for cross-backend meshes:
+Build a `Shader` from the shader text, then wrap it in a `MeshMaterial` with the initial uniform values. At least one language source is required on the `Shader`. Pass `glsl` for WebGL2, `wgsl` for WebGPU, or both for cross-backend meshes:
 
 ```ts
-import { MeshMaterial, ShaderSource } from '@codexo/exojs';
+import { MeshMaterial, Shader } from '@codexo/exojs';
 
 const waveMaterial = new MeshMaterial({
-    shader: new ShaderSource({
+    shader: new Shader({
         glsl: {
             vertex: `
                 #version 300 es
@@ -189,12 +189,12 @@ When a uniform is spelled differently across your two shader sources it silently
 
 ### Declaring uniforms on the shader source
 
-The record above is the manual mode: you write the GLSL declarations, you write the WGSL struct, and you keep both in step with the values you pass. Declare the uniforms on the `ShaderSource` instead and the engine owns all three. It computes one byte layout, generates the GLSL block and the WGSL struct from it, and hands the material typed accessors:
+The record above is the manual mode: you write the GLSL declarations, you write the WGSL struct, and you keep both in step with the values you pass. Declare the uniforms on the `Shader` instead and the engine owns all three. It computes one byte layout, generates the GLSL block and the WGSL struct from it, and hands the material typed accessors:
 
 ```ts
-import { Matrix, MeshMaterial, ShaderSource, UniformStruct, UniformType } from '@codexo/exojs';
+import { Matrix, MeshMaterial, Shader, UniformStruct, UniformType } from '@codexo/exojs';
 
-const waveShader = new ShaderSource({
+const waveShader = new Shader({
     uniforms: {
         u_time: UniformType.Float,
         u_wave: new UniformStruct({
@@ -231,7 +231,7 @@ What this buys you over the record:
 
 - Unknown names and wrong shapes are compile errors, and in a development build they throw with the field path, the expected type and what arrived.
 - The layout is `std140` on both backends, so a nested struct, a `mat3` or an array of `vec4` lands at the same offsets under WebGL2 and WebGPU. The record path instead gives every name its own 16-byte slot on WebGPU, which you have to reproduce by hand in WGSL.
-- Values live in the material's own buffer with a revision, so an unchanged material uploads nothing per frame, and a `ShaderSource` shared by many materials shares the declaration without sharing their values.
+- Values live in the material's own buffer with a revision, so an unchanged material uploads nothing per frame, and a `Shader` shared by many materials shares the declaration without sharing their values.
 - `default` on a field is the value a fresh material starts from. Everything else starts at zero, matrices included.
 
 Declare `uniformBlocks` instead of `uniforms` for several named blocks; each takes the next binding of `@group(2)`, and textures follow after them. Textures are bindings rather than block fields, so a material that declares a schema passes them in `textures` rather than in `uniforms`.
@@ -247,12 +247,12 @@ Declare `uniformBlocks` instead of `uniforms` for several named blocks; each tak
 Pass a `MeshMaterial` in the mesh constructor's `material` option:
 
 ```ts
-import { Mesh, MeshMaterial, ShaderSource } from '@codexo/exojs';
+import { Mesh, MeshMaterial, Shader } from '@codexo/exojs';
 
 // A minimal stand-in material — see the Construction section for the full
 // cross-backend shader. Only the wiring into `Mesh` matters here.
 const material = new MeshMaterial({
-    shader: new ShaderSource({
+    shader: new Shader({
         glsl: {
             vertex: `
                 #version 300 es
@@ -294,7 +294,7 @@ The mesh's `material` is set at construction and is read-only afterward. It rend
 
 ## Sharing and lifecycle
 
-One `MeshMaterial` can be attached to many meshes, and one `ShaderSource` can back many materials. The renderer compiles one program (WebGL2) or pipeline (WebGPU) per unique `ShaderSource`, then reuses it across every material that references that source.
+One `MeshMaterial` can be attached to many meshes, and one `Shader` can back many materials. The renderer compiles one program (WebGL2) or pipeline (WebGPU) per unique `Shader`, then reuses it across every material that references that source.
 
 Call `material.destroy()` to release cached GPU resources on every backend the material was used on. After `destroy`, the material can still be reused — renderers will recompile on the next draw — but the typical pattern is to drop the reference.
 
@@ -302,7 +302,7 @@ When a mesh is destroyed, its `MeshMaterial` is left untouched. The material out
 
 ## Detecting uniform drift
 
-When you write shaders for both GLSL and WGSL, keeping uniform names synchronized across languages becomes a manual task. The reflection helpers live on the `ShaderSource`, reachable through `material.shader`. `getDeclaredUniforms()` reflects uniform declarations from each language's source via lightweight regex parsing. Companion method `detectUniformDrift()` compares the two and reports names that appear in only one language:
+When you write shaders for both GLSL and WGSL, keeping uniform names synchronized across languages becomes a manual task. The reflection helpers live on the `Shader`, reachable through `material.shader`. `getDeclaredUniforms()` reflects uniform declarations from each language's source via lightweight regex parsing. Companion method `detectUniformDrift()` compares the two and reports names that appear in only one language:
 
 ```ts
 import { MeshMaterial } from '@codexo/exojs';

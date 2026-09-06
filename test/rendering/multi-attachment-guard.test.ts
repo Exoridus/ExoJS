@@ -1,10 +1,10 @@
 import { logger } from '#core/Logger';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { assertDrawsAllAttachments, assertSingleAttachmentCompose } from '#rendering/multiAttachmentGuard';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { RenderError } from '#rendering/RenderError';
+import { Shader } from '#rendering/shader/Shader';
 import { Sprite } from '#rendering/sprite/Sprite';
 
 const GLSL_VERTEX = /* glsl */ `#version 300 es
@@ -45,7 +45,7 @@ fn fs_main() -> FragmentOutput {
 `;
 
 const meshWithShader = (glslFragment: string, wgsl: string): Mesh => {
-  const shader = new ShaderSource({ glsl: { vertex: GLSL_VERTEX, fragment: glslFragment }, wgsl });
+  const shader = new Shader({ glsl: { vertex: GLSL_VERTEX, fragment: glslFragment }, wgsl });
   const material = new MeshMaterial({ shader });
 
   return new Mesh({ vertices: new Float32Array([0, 0, 10, 0, 10, 10]), material });

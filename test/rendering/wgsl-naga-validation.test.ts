@@ -33,8 +33,8 @@ import { spawnSync } from 'node:child_process';
 import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 import { describe, expect, test } from 'vitest';
 
-import { colorMatrixShaderSource } from '#rendering/filters/ColorMatrixFilter';
-import { dropShadowShaderSource } from '#rendering/filters/DropShadowFilter';
+import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
+import { dropShadowShader } from '#rendering/filters/DropShadowFilter';
 import { spriteMaterialPrologueWgsl } from '#rendering/sprite/materialSources';
 import { filterUniformGroup } from '#rendering/uniforms/uniformLayout';
 import { compositorShaderSource as backdropBlendCompositorWgsl } from '#rendering/webgpu/WebGpuBackdropBlendCompositor';
@@ -67,8 +67,8 @@ const shaders: ReadonlyArray<readonly [name: string, source: string]> = [
   // The two stock filters that declare a typed uniform schema: what a backend
   // compiles is the author's body plus the generated block, so that is what has
   // to validate.
-  ['ColorMatrixFilter (generated uniform block)', colorMatrixShaderSource._resolveWgsl(filterUniformGroup)!],
-  ['DropShadowFilter (generated uniform block)', dropShadowShaderSource._resolveWgsl(filterUniformGroup)!],
+  ['ColorMatrixFilter (generated uniform block)', colorMatrixShader._resolveWgsl(filterUniformGroup)!],
+  ['DropShadowFilter (generated uniform block)', dropShadowShader._resolveWgsl(filterUniformGroup)!],
 ];
 
 const nagaBinary = process.env['EXOJS_NAGA'] ?? 'naga';

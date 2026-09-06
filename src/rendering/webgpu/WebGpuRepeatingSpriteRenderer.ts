@@ -38,7 +38,7 @@ import type { WebGpuActiveRenderPass, WebGpuPassCoordinator } from './WebGpuPass
 export const commonWgsl: string = commonWgslModule;
 
 // ---------------------------------------------------------------------------
-// Shader path WGSL - one quad per sprite, UVs computed in vertex shader.
+// WebGl2Shader path WGSL - one quad per sprite, UVs computed in vertex shader.
 // ---------------------------------------------------------------------------
 
 /** WGSL entry points for the shader (one-quad-per-sprite) repeating-sprite path. @internal */
@@ -145,7 +145,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
   // layouts differ in stride).
   private readonly _instanceArena = new WebGpuPassArena('repeating-sprite:instance-buffer', initialBatchCapacity * shaderStrideBytes);
 
-  // Shader-path CPU staging
+  // WebGl2Shader-path CPU staging
   private _shaderInstCapacity = 0;
   private _shaderInstData: ArrayBuffer = new ArrayBuffer(0);
   private _shaderInstF32 = new Float32Array(this._shaderInstData);
@@ -160,7 +160,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
   private _geoQuadCount = 0;
   // Render nodes booked against the PENDING geometry batch. One node expands into
   // a Cartesian product of tile quads, so the recorded batch's `submittedNodes`
-  // contribution is this count and not `_geoQuadCount`. Shader-path sprites are
+  // contribution is this count and not `_geoQuadCount`. WebGl2Shader-path sprites are
   // never recorded (they poison the capture), so they are never booked either.
   private _geoBatchNodeCount = 0;
 
@@ -611,7 +611,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     // Retained recording: while a capture window is open,
     // hand the exact packed geometry-path bytes of this flush to the backend -
     // byte-identical to what just drew. A single base texture binds to group(1),
-    // so the recorded slot list is one entry. Shader-path batches never reach
+    // so the recorded slot list is one entry. WebGl2Shader-path batches never reach
     // here (render() poisoned the window if one appeared).
     if (backend._retainedCaptureActive && this._currentTexture !== null && this._currentBlendMode !== null) {
       this._recordTextureScratch[0] = this._currentTexture;

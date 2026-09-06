@@ -14,7 +14,7 @@
  * deterministic, seed-free particle placement across runs.
  *
  * The renderer itself draws from the render mode's WGSL, but the mode's
- * `Material` pairs that WGSL with the shipped GLSL - and `ShaderSource` rejects
+ * `Material` pairs that WGSL with the shipped GLSL - and `Shader` rejects
  * an empty source, so the package's `.vert`/`.frag` files have to load as their
  * real text even though nothing here compiles them.
  *

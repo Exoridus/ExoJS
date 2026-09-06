@@ -1,11 +1,11 @@
 import { packedGroupChanged } from '#rendering/affinePacking';
-import { Shader } from '#rendering/shader/Shader';
 import type { NineSliceQuad } from '#rendering/sprite/nineSlice';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
 import type { View } from '#rendering/View';
+import { WebGl2Shader } from '#rendering/webgl2/WebGl2Shader';
 
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import { createWebGl2ShaderProgram } from './shaderProgram';
@@ -41,7 +41,7 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
    */
   public readonly _supportsRetainedBatches = true;
 
-  private readonly _shader: Shader;
+  private readonly _shader: WebGl2Shader;
   private readonly _batchSize: number;
   private readonly _instanceData: ArrayBuffer;
   private readonly _instanceFloat32: Float32Array;
@@ -82,7 +82,7 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     super();
 
     this._batchSize = batchSize;
-    this._shader = new Shader(nineSliceVertexSource, nineSliceFragmentSource);
+    this._shader = new WebGl2Shader(nineSliceVertexSource, nineSliceFragmentSource);
     this._instanceData = new ArrayBuffer(batchSize * instanceStrideBytes);
     this._instanceFloat32 = new Float32Array(this._instanceData);
     this._instanceUint32 = new Uint32Array(this._instanceData);

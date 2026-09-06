@@ -27,8 +27,10 @@ export { RenderBackendType } from '#rendering/RenderBackendType';
 export type { InstanceAttributeBinding, InstanceDataView } from '#rendering/RenderBatch';
 export type { DrawableConstructor, Renderer } from '#rendering/Renderer';
 export { RendererRegistry } from '#rendering/RendererRegistry';
-export type { ShaderProgram } from '#rendering/shader/Shader';
-export { Shader } from '#rendering/shader/Shader';
+export type { WebGl2ShaderProgram } from '#rendering/webgl2/WebGl2Shader';
+export { WebGl2Shader } from '#rendering/webgl2/WebGl2Shader';
+export { WebGl2ShaderAttribute } from '#rendering/webgl2/WebGl2ShaderAttribute';
+export { WebGl2ShaderUniform } from '#rendering/webgl2/WebGl2ShaderUniform';
 // A renderer whose vertex stage reads the shared transform buffer must carry
 // this directive. The engine expands it at compile time into helpers that map a
 // logical `nodeIndex` onto whatever the transform/tint stores currently look

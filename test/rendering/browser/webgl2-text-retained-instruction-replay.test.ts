@@ -37,7 +37,7 @@ import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
-// Shader wiring - REAL shipped text GLSL via `?raw` (the stub plugin only
+// WebGl2Shader wiring - REAL shipped text GLSL via `?raw` (the stub plugin only
 // rewrites bare `.vert`/`.frag` ids), plus minimal valid Sprite/Mesh mocks so
 // `wireCoreRenderers()` can eagerly compile the whole registry.
 // ---------------------------------------------------------------------------

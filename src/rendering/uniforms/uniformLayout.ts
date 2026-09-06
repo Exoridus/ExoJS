@@ -33,7 +33,7 @@ export interface UniformMemberLayout {
 /** A nested struct field. `offset` is that of its first element. */
 export interface UniformStructLayout {
   readonly kind: 'struct';
-  /** Shader-visible type name of the generated struct declaration. */
+  /** WebGl2Shader-visible type name of the generated struct declaration. */
   readonly typeName: string;
   readonly offset: number;
   readonly size: number;
@@ -59,7 +59,7 @@ export type UniformNodeLayout = UniformLeafLayout | UniformStructLayout | Unifor
 export interface UniformBlockLayout {
   /** Interface-block / struct type name shared by both generated declarations. */
   readonly typeName: string;
-  /** Shader-visible instance name the shader body reads through. */
+  /** WebGl2Shader-visible instance name the shader body reads through. */
   readonly instance: string;
   /** Record key this block is addressed by at runtime; `uniforms` for the implicit block. */
   readonly key: string;

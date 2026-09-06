@@ -3,12 +3,12 @@ import { webGl2PrimitiveByteSizeMapping } from '#rendering/webgl2/shaderMappings
 /**
  * Metadata for a single vertex attribute declared in a GLSL vertex shader.
  *
- * Populated by the backend during {@link Shader.connect} using the values
+ * Populated by the backend during {@link WebGl2Shader.connect} using the values
  * returned by `gl.getActiveAttrib`. The `size` field is derived from `type`
  * via the backend's primitive-byte-size mapping and is used to stride vertex
  * buffer layouts.
  */
-export class ShaderAttribute {
+export class WebGl2ShaderAttribute {
   /** Zero-based index of this attribute within the shader program. */
   public readonly index: number;
   /** GLSL attribute name as declared in the vertex shader source. */

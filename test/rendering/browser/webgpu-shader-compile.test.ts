@@ -38,8 +38,8 @@
 
 import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 
-import { colorMatrixShaderSource } from '#rendering/filters/ColorMatrixFilter';
-import { dropShadowShaderSource } from '#rendering/filters/DropShadowFilter';
+import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
+import { dropShadowShader } from '#rendering/filters/DropShadowFilter';
 import { spriteMaterialPrologueWgsl } from '#rendering/sprite/materialSources';
 import { filterUniformGroup } from '#rendering/uniforms/uniformLayout';
 import { compositorShaderSource as backdropBlendCompositorWgsl } from '#rendering/webgpu/WebGpuBackdropBlendCompositor';
@@ -82,8 +82,8 @@ const shaders: readonly ShaderEntry[] = [
   // The two stock filters that declare a typed uniform schema: what a backend
   // compiles is the author's body plus the generated block, so that is what has
   // to compile.
-  { name: 'ColorMatrixFilter (generated uniform block)', source: colorMatrixShaderSource._resolveWgsl(filterUniformGroup)! },
-  { name: 'DropShadowFilter (generated uniform block)', source: dropShadowShaderSource._resolveWgsl(filterUniformGroup)! },
+  { name: 'ColorMatrixFilter (generated uniform block)', source: colorMatrixShader._resolveWgsl(filterUniformGroup)! },
+  { name: 'DropShadowFilter (generated uniform block)', source: dropShadowShader._resolveWgsl(filterUniformGroup)! },
 ];
 
 // On the software (swiftshader / lavapipe) adapter the WebGPU device can drop

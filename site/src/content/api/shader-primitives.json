@@ -1,6 +1,6 @@
 {
   "title": "ShaderPrimitives",
-  "description": "GLSL primitive type tokens used to describe ShaderAttribute and ShaderUniform data types. Values are WebGL2 GLenum constants returned by `gl.getActiveAttrib` / `gl.getActiveUniform`.",
+  "description": "GLSL primitive type tokens used to describe WebGl2ShaderAttribute and WebGl2ShaderUniform data types. Values are WebGL2 GLenum constants returned by `gl.getActiveAttrib` / `gl.getActiveUniform`.",
   "symbol": "ShaderPrimitives",
   "kind": "enum",
   "subsystem": "rendering",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "GLSL primitive type tokens used to describe ShaderAttribute and ShaderUniform data types. Values are WebGL2 GLenum constants returned by `gl.getActiveAttrib` / `gl.getActiveUniform`."
+        "GLSL primitive type tokens used to describe WebGl2ShaderAttribute and WebGl2ShaderUniform data types. Values are WebGL2 GLenum constants returned by `gl.getActiveAttrib` / `gl.getActiveUniform`."
       ],
       "importLine": "import { ShaderPrimitives } from '@codexo/exojs'",
       "sourceLink": null

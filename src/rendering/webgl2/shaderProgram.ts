@@ -1,13 +1,13 @@
 import type { TypedArray } from '#core/types';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { formatShaderError, RenderError } from '#rendering/RenderError';
-import type { Shader, ShaderProgram } from '#rendering/shader/Shader';
-import { ShaderAttribute } from '#rendering/shader/ShaderAttribute';
-import { ShaderUniform } from '#rendering/shader/ShaderUniform';
 import { resolveTransformTextureGlsl } from '#rendering/shader/transformTextureLayout';
 import { ShaderPrimitives } from '#rendering/types';
 import type { UniformBlockData } from '#rendering/uniforms/UniformBlockData';
 import { generatedUniformBlockPrefix } from '#rendering/uniforms/uniformLayout';
+import type { WebGl2Shader, WebGl2ShaderProgram } from '#rendering/webgl2/WebGl2Shader';
+import { WebGl2ShaderAttribute } from '#rendering/webgl2/WebGl2ShaderAttribute';
+import { WebGl2ShaderUniform } from '#rendering/webgl2/WebGl2ShaderUniform';
 
 import { webGl2PrimitiveArrayConstructors, webGl2PrimitiveByteSizeMapping } from './shaderMappings';
 import { WebGl2ShaderBlock } from './WebGl2ShaderBlock';
@@ -17,7 +17,7 @@ type UniformUploadFunction = (gl: WebGL2RenderingContext, location: WebGLUniform
 interface ManagedUniform {
   readonly location: WebGLUniformLocation;
   readonly uploadFn: UniformUploadFunction;
-  readonly uniform: ShaderUniform;
+  readonly uniform: WebGl2ShaderUniform;
 }
 
 interface ParallelCompileExtension {
@@ -88,18 +88,18 @@ const uniformUploadFunctions: Record<number, UniformUploadFunction> = {
 };
 
 /**
- * Create the WebGL2 {@link ShaderProgram} runtime for a {@link Shader}.
+ * Create the WebGL2 {@link WebGl2ShaderProgram} runtime for a {@link WebGl2Shader}.
  * Compilation/link status checks are deferred to first bind (see the
  * `KHR_parallel_shader_compile` note below); a compile or link failure at that
  * point throws a structured {@link RenderError} (`shader-compile` /
  * `shader-link`). `label` names the program in those errors (renderer name,
  * material label) - omit it when no cheap label is available.
  */
-export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: string): ShaderProgram => {
+export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: string): WebGl2ShaderProgram => {
   let program: WebGLProgram | null = null;
   let vertexShader: WebGLShader | null = null;
   let fragmentShader: WebGLShader | null = null;
-  let pendingShader: Shader | null = null;
+  let pendingShader: WebGl2Shader | null = null;
   // Sources after include expansion - what the driver actually compiled, so a
   // compile error's numbered excerpt lines up with the log's line numbers.
   let compiledVertexSource = '';
@@ -124,7 +124,7 @@ export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: st
   const parallelExt = gl.getExtension('KHR_parallel_shader_compile') as ParallelCompileExtension | null;
   const completionStatus = parallelExt?.COMPLETION_STATUS_KHR ?? completionStatusEnumKhr;
 
-  const initialize = (shader: Shader): void => {
+  const initialize = (shader: WebGl2Shader): void => {
     if (program) {
       return;
     }
@@ -224,7 +224,7 @@ export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: st
 
   return {
     initialize,
-    bind: (shader: Shader): void => {
+    bind: (shader: WebGl2Shader): void => {
       initialize(shader);
       finalize();
 
@@ -248,7 +248,7 @@ export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: st
       syncUniforms();
     },
 
-    destroy: (shader: Shader): void => {
+    destroy: (shader: WebGl2Shader): void => {
       gl.deleteShader(vertexShader);
       gl.deleteShader(fragmentShader);
       gl.deleteProgram(program);
@@ -316,7 +316,7 @@ const linkProgram = (gl: WebGL2RenderingContext, vertexShader: WebGLShader, frag
   return program;
 };
 
-const extractAttributes = (gl: WebGL2RenderingContext, program: WebGLProgram, shader: Shader): void => {
+const extractAttributes = (gl: WebGL2RenderingContext, program: WebGLProgram, shader: WebGl2Shader): void => {
   const activeAttributes = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
 
   for (let i = 0; i < activeAttributes; i++) {
@@ -326,13 +326,13 @@ const extractAttributes = (gl: WebGL2RenderingContext, program: WebGLProgram, sh
       continue;
     }
 
-    const attribute = new ShaderAttribute(i, info.name, info.type);
+    const attribute = new WebGl2ShaderAttribute(i, info.name, info.type);
     attribute.location = gl.getAttribLocation(program, info.name);
     shader.attributes.set(info.name, attribute);
   }
 };
 
-const extractUniforms = (gl: WebGL2RenderingContext, program: WebGLProgram, shader: Shader, managedUniforms: ManagedUniform[]): void => {
+const extractUniforms = (gl: WebGL2RenderingContext, program: WebGLProgram, shader: WebGl2Shader, managedUniforms: ManagedUniform[]): void => {
   const activeCount = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
   const activeIndices = new Uint8Array(activeCount).map((_, index) => index);
   const blocks = gl.getActiveUniforms(program, activeIndices, gl.UNIFORM_BLOCK_INDEX) as number[];
@@ -354,7 +354,7 @@ const extractUniforms = (gl: WebGL2RenderingContext, program: WebGLProgram, shad
     }
 
     const data = new arrayConstructor(byteSize * info.size);
-    const uniform = new ShaderUniform(index, info.type, info.size, info.name, data);
+    const uniform = new WebGl2ShaderUniform(index, info.type, info.size, info.name, data);
     const location = gl.getUniformLocation(program, uniform.name);
 
     shader.uniforms.set(uniform.name, uniform);
