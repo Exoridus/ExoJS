@@ -173,6 +173,12 @@ pnpm verify:lockstep  pnpm typecheck:examples  pnpm typecheck:guides
 pnpm site:build   pnpm test:examples:smoke
 ```
 
+Scripts forward their arguments, so a variant is an argument rather than a
+script of its own: `pnpm lint --fix`, `pnpm test --coverage`,
+`pnpm test:browser:webgl --reporter=verbose`. The measurement harnesses run
+through one runner, `pnpm perf <name>` (`pnpm perf` lists them); the
+cross-library benchmarks through `pnpm bench` (see `packages/exojs-bench`).
+
 ## Shared configuration
 
 `@codexo/exojs-config` (private, unpublished, never a runtime dependency) centralizes

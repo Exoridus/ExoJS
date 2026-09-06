@@ -40,11 +40,11 @@ pnpm test                       # includes the rendering-perf project
 npx vitest run --project=rendering-perf
 
 # Opt-in benchmark sweep (writes .workspace/output/render-perf/{results.json,csv}):
-pnpm perf:renderers:quick       # small matrix, ~5 s
-pnpm perf:renderers             # full matrix, ~4 min
+pnpm perf renderers:quick       # small matrix, ~5 s
+pnpm perf renderers             # full matrix, ~4 min
 
 # Cross-validate structural metrics against a real GL context (Chromium):
-pnpm perf:renderers:browser
+pnpm perf renderers:browser
 ```
 
 ## Metric tiers
@@ -67,7 +67,7 @@ fail CI. Only the deterministic Tier-A stats are asserted.
 
 ## Output
 
-`pnpm perf:renderers[:quick]` writes to `.workspace/output/render-perf/`:
+`pnpm perf renderers[:quick]` writes to `.workspace/output/render-perf/`:
 
 - `results.json` — full per-scenario records (metrics + timing + metadata).
 - `results.csv` — flat structural + timing summary.

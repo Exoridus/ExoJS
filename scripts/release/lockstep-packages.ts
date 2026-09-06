@@ -9,9 +9,10 @@
  *
  * NOT derivable from here (different runtimes - kept in sync manually, guarded
  * by `verify:release-matrix` where possible):
- *   - `.github/workflows/release.yml` / `ci.yml` build/typecheck/pack
- *     steps (YAML, enumerated `--filter`s; release.yml build lines are asserted
- *     by `verify:release-matrix`).
+ *   - `.github/workflows/release.yml` build steps (YAML, enumerated
+ *     `--filter`s, asserted by `verify:release-matrix`). The root
+ *     `build:packages` / `typecheck:packages` scripts select by workspace
+ *     directory instead and need no edit.
  *   - `scripts/ci/select-lanes.ts` RUNTIME_PACKAGES (dependency-free ESM that
  *     runs before any install, so it cannot import this TS module).
  *   - `site/scripts/sync-exo-vendor.ts` / `full-zip.ts` vendor tree - a smaller,

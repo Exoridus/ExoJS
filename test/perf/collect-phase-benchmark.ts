@@ -4,7 +4,7 @@
  *
  * MEASUREMENT ONLY (Tier B/C, informational - never a CI gate). Run via:
  *
- *   pnpm perf:bench:collect-phase   # or: npx tsx test/perf/collect-phase-benchmark.ts (needs a prior pnpm build)
+ *   pnpm perf collect-phase # or: npx tsx test/perf/collect-phase-benchmark.ts (needs a prior pnpm build)
  *
  * What this measures
  * -------------------

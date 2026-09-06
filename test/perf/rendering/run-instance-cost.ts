@@ -6,8 +6,8 @@
  * into the objects that actually make it up rather than attributed to whichever
  * constructor frame the sampler happened to label.
  *
- *   pnpm perf:renderers:instance-cost                # every type, fresh process each
- *   pnpm perf:renderers:instance-cost -- --type Sprite --n 200000
+ *   pnpm perf renderers:instance-cost                # every type, fresh process each
+ *   pnpm perf renderers:instance-cost --type Sprite --n 200000
  *
  * ── Method ──────────────────────────────────────────────────────────────────
  * Pre-size the holder array, settle the collector, read `heapUsed`, fill the

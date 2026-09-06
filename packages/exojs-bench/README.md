@@ -203,8 +203,8 @@ matrix cell; both share the harness's page, server and launch flags so their
 numbers are produced under the same conditions.
 
 ```sh
-pnpm perf:webgpu:stall   # per-frame selection/capacity/upload/allocation counters
-pnpm perf:webgpu:timer   # per-frame timer methodology: raw vs attributed queue
+pnpm perf webgpu:alloc   # per-frame allocation, wall-clock or work-unit counters, one browser per cell
+pnpm perf webgpu:timer   # per-frame timer methodology: raw vs attributed queue
                          # latency vs hardware timestamps, plus serialized /
                          # canvas-clear / offscreen-clear control arms and the
                          # clock + scheduler controls behind the floor above
