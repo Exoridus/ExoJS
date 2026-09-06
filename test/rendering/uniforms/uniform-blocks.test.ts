@@ -15,7 +15,7 @@ import { Color } from '#core/Color';
 import { Matrix } from '#math/Matrix';
 import { Vector } from '#math/Vector';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
-import { ShaderSource } from '#rendering/material/ShaderSource';
+import { Shader } from '#rendering/shader/Shader';
 import { UniformArray, UniformStruct } from '#rendering/uniforms/uniformDeclarations';
 import { UniformType } from '#rendering/uniforms/UniformType';
 
@@ -41,7 +41,7 @@ const declaration = {
   custom: new UniformStruct({ shift: UniformType.Vec2, strength: UniformType.Float }),
 } as const;
 
-const source = new ShaderSource({ glsl: { vertex: GLSL_VERTEX, fragment: GLSL }, uniforms: declaration });
+const source = new Shader({ glsl: { vertex: GLSL_VERTEX, fragment: GLSL }, uniforms: declaration });
 
 const build = (): MeshMaterial<typeof declaration> => new MeshMaterial({ shader: source });
 
@@ -55,7 +55,7 @@ describe('uniform block values', () => {
   });
 
   test('declared defaults reach a fresh instance, including nested ones', () => {
-    const withDefaults = new ShaderSource({
+    const withDefaults = new Shader({
       glsl: { vertex: GLSL_VERTEX, fragment: GLSL },
       uniforms: {
         time: { type: UniformType.Float, default: 2.5 },
@@ -240,7 +240,7 @@ describe('uniform block values', () => {
   });
 
   test('a source without a declaration keeps the untyped record', () => {
-    const raw = new ShaderSource({
+    const raw = new Shader({
       glsl: { vertex: GLSL_VERTEX, fragment: '#version 300 es\nprecision mediump float;\nout vec4 c;\nvoid main(){c=vec4(1);}' },
     });
     const material = new MeshMaterial({ shader: raw, uniforms: { u_time: 1 } });

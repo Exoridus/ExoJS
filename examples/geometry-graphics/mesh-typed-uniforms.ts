@@ -8,7 +8,7 @@ import {
   type RenderingContext,
   Scene,
   type Seconds,
-  ShaderSource,
+  Shader,
   UniformStruct,
   UniformType,
 } from '@codexo/exojs';
@@ -20,7 +20,7 @@ const SIZE = 420;
 // The engine lays the block out once - a nested struct aligned to 16 bytes, a
 // mat3 as three 16-byte columns - and generates a matching GLSL block and WGSL
 // struct, so neither shader body declares a user uniform of its own.
-const shader = new ShaderSource({
+const shader = new Shader({
   uniforms: {
     time: UniformType.Float,
     warp: new UniformStruct({ amplitude: UniformType.Float, frequency: UniformType.Float }),

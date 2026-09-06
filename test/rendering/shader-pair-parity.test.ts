@@ -14,22 +14,22 @@
  * checks that they agree on the interface the renderer binds against, which is
  * where silent drift produces a wrong-looking or outright broken second backend.
  */
-import { colorMatrixShaderSource } from '#rendering/filters/ColorMatrixFilter';
-import { displacementShaderSource } from '#rendering/filters/DisplacementFilter';
-import { dropShadowShaderSource } from '#rendering/filters/DropShadowFilter';
+import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
+import { displacementShader } from '#rendering/filters/DisplacementFilter';
+import { dropShadowShader } from '#rendering/filters/DropShadowFilter';
 import { lut3dShaderSource, lutRgb1dShaderSource } from '#rendering/filters/LutFilter';
-import type { AnyShaderSource } from '#rendering/material/ShaderSource';
+import type { AnyShader } from '#rendering/shader/Shader';
 
 // ---------------------------------------------------------------------------
 // The pairs under test
 // ---------------------------------------------------------------------------
 
-const pairs: ReadonlyArray<{ readonly name: string; readonly source: AnyShaderSource }> = [
-  { name: 'ColorMatrixFilter', source: colorMatrixShaderSource },
+const pairs: ReadonlyArray<{ readonly name: string; readonly source: AnyShader }> = [
+  { name: 'ColorMatrixFilter', source: colorMatrixShader },
   { name: "LutFilter 'rgb1d'", source: lutRgb1dShaderSource },
   { name: "LutFilter '3d'", source: lut3dShaderSource },
-  { name: 'DropShadowFilter', source: dropShadowShaderSource },
-  { name: 'DisplacementFilter', source: displacementShaderSource },
+  { name: 'DropShadowFilter', source: dropShadowShader },
+  { name: 'DisplacementFilter', source: displacementShader },
 ];
 
 /**

@@ -1,6 +1,6 @@
 {
   "title": "UniformBlockData",
-  "description": "One uniform block's values, owned by the material or filter that declared it. The block holds a single `ArrayBuffer` in the canonical layout, the typed accessors that write into it, and a revision that advances whenever a byte changes. Backends compare the revision they last uploaded against revision and skip the transfer when it has not moved, so a block whose values are set once and then left alone costs no GPU traffic per frame. Sharing a ShaderSource across instances shares the declaration, never these values: each material or filter builds its own block.",
+  "description": "One uniform block's values, owned by the material or filter that declared it. The block holds a single `ArrayBuffer` in the canonical layout, the typed accessors that write into it, and a revision that advances whenever a byte changes. Backends compare the revision they last uploaded against revision and skip the transfer when it has not moved, so a block whose values are set once and then left alone costs no GPU traffic per frame. Sharing a Shader across instances shares the declaration, never these values: each material or filter builds its own block.",
   "symbol": "UniformBlockData",
   "kind": "class",
   "subsystem": "rendering",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "One uniform block's values, owned by the material or filter that declared it.",
         "The block holds a single `ArrayBuffer` in the canonical layout, the typed accessors that write into it, and a revision that advances whenever a byte changes. Backends compare the revision they last uploaded against revision and skip the transfer when it has not moved, so a block whose values are set once and then left alone costs no GPU traffic per frame.",
-        "Sharing a ShaderSource across instances shares the declaration, never these values: each material or filter builds its own block."
+        "Sharing a Shader across instances shares the declaration, never these values: each material or filter builds its own block."
       ],
       "importLine": "import { UniformBlockData } from '@codexo/exojs'",
       "sourceLink": null

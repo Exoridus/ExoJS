@@ -64,7 +64,7 @@ export abstract class ParticleRenderMode {
    */
   public readonly vertexGeometry: Geometry | null = null;
 
-  /** Shader pair plus uniforms/textures for this mode. */
+  /** WebGl2Shader pair plus uniforms/textures for this mode. */
   public abstract readonly material: Material;
 
   /**

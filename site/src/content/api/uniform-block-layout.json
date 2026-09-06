@@ -117,7 +117,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Shader-visible instance name the shader body reads through."
+          "description": "WebGl2Shader-visible instance name the shader body reads through."
         },
         {
           "name": "key",

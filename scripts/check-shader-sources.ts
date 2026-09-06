@@ -1,5 +1,5 @@
 /**
- * Shader source hygiene: the objective facts about a `.vert`/`.frag`/`.wgsl`
+ * WebGl2Shader source hygiene: the objective facts about a `.vert`/`.frag`/`.wgsl`
  * file that no other gate is in a position to check.
  *
  * The existing gates cover meaning. Real GLSL compile/link and real WGSL

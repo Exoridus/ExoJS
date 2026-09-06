@@ -1,6 +1,6 @@
 {
   "title": "UniformSchemaOptions",
-  "description": "A uniform declaration on a ShaderSource. `uniforms` declares one engine-named block and is the common case; `uniformBlocks` declares one or more named blocks explicitly. The two are alternatives and cannot both be given.",
+  "description": "A uniform declaration on a Shader. `uniforms` declares one engine-named block and is the common case; `uniformBlocks` declares one or more named blocks explicitly. The two are alternatives and cannot both be given.",
   "symbol": "UniformSchemaOptions",
   "kind": "interface",
   "subsystem": "rendering",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A uniform declaration on a ShaderSource.",
+        "A uniform declaration on a Shader.",
         "`uniforms` declares one engine-named block and is the common case; `uniformBlocks` declares one or more named blocks explicitly. The two are alternatives and cannot both be given."
       ],
       "importLine": "import { UniformSchemaOptions } from '@codexo/exojs'",

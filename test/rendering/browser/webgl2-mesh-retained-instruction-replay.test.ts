@@ -41,7 +41,7 @@ import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
-// Shader mocks. The mesh instanced mock is FAITHFUL to the real instanced mesh
+// WebGl2Shader mocks. The mesh instanced mock is FAITHFUL to the real instanced mesh
 // shader: it applies u_projection * u_group * (transform-row * position) and
 // modulates by the vertex color and the transform-row tint (texel 2), so the
 // camera-pan / group-move cells exercise the live u_group / u_projection reads.

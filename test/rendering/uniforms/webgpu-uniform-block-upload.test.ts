@@ -14,9 +14,9 @@ import { describe, expect, test } from 'vitest';
 
 import { Color } from '#core/Color';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { Mesh } from '#rendering/mesh/Mesh';
 import type { RenderNode } from '#rendering/RenderNode';
+import { Shader } from '#rendering/shader/Shader';
 import { UniformType } from '#rendering/uniforms/UniformType';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
@@ -74,7 +74,7 @@ fn fragmentMain(in: VertexOutput) -> @location(0) vec4<f32> {
 `.trim();
 
 const declaration = { color: UniformType.Vec4, strength: UniformType.Float } as const;
-const source = new ShaderSource({ wgsl: meshWgsl, uniforms: declaration });
+const source = new Shader({ wgsl: meshWgsl, uniforms: declaration });
 
 const uniformLabel = 'mesh:material-user-uniform-buffer';
 const bindGroupLabel = 'mesh:material-user-bind-group';

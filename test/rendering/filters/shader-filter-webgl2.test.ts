@@ -318,7 +318,7 @@ describe('ShaderFilter on WebGL2', () => {
 
   // 2. Construction without any source - throws
   test('throws when constructed without any shader source', () => {
-    expect(() => new ShaderFilter()).toThrow('ShaderSource requires at least one of `glsl` or `wgsl`.');
+    expect(() => new ShaderFilter()).toThrow('Shader requires at least one of `glsl` or `wgsl`.');
   });
 
   // 3. Default vertex shader is used when none provided
@@ -578,7 +578,7 @@ describe('ShaderFilter on WebGL2', () => {
   });
 
   // 19. bindShader is called with the compiled shader during apply()
-  test('apply() calls bindShader with the internal Shader instance', () => {
+  test('apply() calls bindShader with the internal WebGl2Shader instance', () => {
     const backend = makeWebGl2Backend();
     const filter = new ShaderFilter({ glsl: { fragment: minimalFragSrc } });
     const input = new RenderTexture(16, 16);

@@ -19,7 +19,7 @@ import { buildRepeatingSpriteQuads, validateFit, validateMode, validateOffset, v
  *
  * | Source type       | Internal path                                         |
  * |-------------------|-------------------------------------------------------|
- * | Bare `Texture`    | **Shader path** - one quad, GPU sampler repeat wrap.  |
+ * | Bare `Texture`    | **WebGl2Shader path** - one quad, GPU sampler repeat wrap.  |
  * | `TextureRegion`   | **Geometry path** - Cartesian-product quads, clamped. |
  *
  * The public class identity and API do not change based on which path the

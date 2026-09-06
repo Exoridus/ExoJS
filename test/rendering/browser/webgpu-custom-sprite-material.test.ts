@@ -15,10 +15,10 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RenderNode } from '#rendering/RenderNode';
 import { RetainedContainer } from '#rendering/RetainedContainer';
+import { Shader } from '#rendering/shader/Shader';
 import { spriteMaterialTextureSlots } from '#rendering/sprite/materialSources';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
@@ -107,13 +107,13 @@ const createSplitTexture = (): Texture => {
 
 const createMaterial = (): SpriteMaterial =>
   new SpriteMaterial({
-    shader: new ShaderSource({ wgsl: customFragmentWgsl }),
+    shader: new Shader({ wgsl: customFragmentWgsl }),
     uniforms: { u_userColor: [1, 0, 0.5, 1] },
   });
 
 const createPassThroughMaterial = (): SpriteMaterial =>
   new SpriteMaterial({
-    shader: new ShaderSource({
+    shader: new Shader({
       wgsl: `
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
@@ -208,7 +208,7 @@ describe('custom SpriteMaterial WebGPU browser', () => {
     const texture = createSolidTexture(255, 255, 255);
     const values = new Float32Array([1, 0, 0, 1]);
     const material = new SpriteMaterial({
-      shader: new ShaderSource({ wgsl: customFragmentWgsl }),
+      shader: new Shader({ wgsl: customFragmentWgsl }),
       uniforms: { u_userColor: values },
     });
     const group = new RetainedContainer();
@@ -299,7 +299,7 @@ describe('custom SpriteMaterial WebGPU browser', () => {
     const firstPattern = createSolidTexture(255, 0, 0);
     const secondPattern = createSolidTexture(0, 255, 0);
     const material = new SpriteMaterial({
-      shader: new ShaderSource({ wgsl: materialTextureFragmentWgsl }),
+      shader: new Shader({ wgsl: materialTextureFragmentWgsl }),
       textures: { u_pattern: firstPattern },
     });
     const group = new RetainedContainer();
@@ -609,7 +609,7 @@ describe('custom SpriteMaterial WebGPU browser', () => {
 
     const texture = createSplitTexture();
     const material = new SpriteMaterial({
-      shader: new ShaderSource({
+      shader: new Shader({
         wgsl: `
 @fragment
 fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {

@@ -375,7 +375,7 @@
         },
         {
           "name": "shader",
-          "signature": "shader: ShaderSource<undefined, undefined>",
+          "signature": "shader: Shader<undefined, undefined>",
           "signatureTokens": [
             {
               "text": "shader",
@@ -386,7 +386,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "ShaderSource",
+              "text": "Shader",
               "kind": "type"
             },
             {

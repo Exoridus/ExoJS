@@ -3,7 +3,7 @@
  * for the in-repo perf benches - the node/tsx counterpart of the vitest config's
  * `realShaderPlugin` + `aliasConfig`. Two jobs:
  *
- *  1. **Shader imports.** Engine modules import shaders as
+ *  1. **WebGl2Shader imports.** Engine modules import shaders as
  *     `import src from '#rendering/.../x.frag'` (and the WGSL counterparts as
  *     `.wgsl`), which `package.json#imports` maps into `./src/`. Node resolves
  *     the path but has no loader for those extensions, so this hook loads the

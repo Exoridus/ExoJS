@@ -798,11 +798,11 @@
           "description": "Generic arcade-stick controllers. Covers the standard 8-button plus shoulder/trigger layout common to most fightsticks. No analog sticks are present, so the axis list is empty and the D-pad is exposed as discrete buttons (indices 12-15)."
         },
         {
-          "name": "createFilterShaderSource",
-          "signature": "createFilterShaderSource(options: ShaderFilterSourceOptions & UniformSchemaOptions<F, B>): ShaderSource<F, B>",
+          "name": "createFilterShader",
+          "signature": "createFilterShader(options: ShaderFilterSourceOptions & UniformSchemaOptions<F, B>): Shader<F, B>",
           "signatureTokens": [
             {
-              "text": "createFilterShaderSource",
+              "text": "createFilterShader",
               "kind": "name"
             },
             {
@@ -858,7 +858,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "ShaderSource",
+              "text": "Shader",
               "kind": "type"
             },
             {
@@ -889,8 +889,8 @@
               "optional": false
             }
           ],
-          "returnType": "ShaderSource<F, B>",
-          "description": "Build the ShaderSource behind a filter pass: fills in the default vertex stage per language, upgrades legacy GLSL when asked, and carries any uniform declaration through to the source. This is how a filter declares typed uniforms: ShaderFilterOptions.uniforms carries starting VALUES, so the declaration has to reach the source, and the source is what the filter is then built from with ShaderFilter.from. ts const shader = createFilterShaderSource({ glsl: { fragment }, wgsl, uniforms: { uTime: UniformType.Float }, }); const filter = ShaderFilter.from(shader, { uniforms: { uTime: 0 } }); "
+          "returnType": "Shader<F, B>",
+          "description": "Build the Shader behind a filter pass: fills in the default vertex stage per language, upgrades legacy GLSL when asked, and carries any uniform declaration through to the source. This is how a filter declares typed uniforms: ShaderFilterOptions.uniforms carries starting VALUES, so the declaration has to reach the source, and the source is what the filter is then built from with ShaderFilter.from. ts const shader = createFilterShader({ glsl: { fragment }, wgsl, uniforms: { uTime: UniformType.Float }, }); const filter = ShaderFilter.from(shader, { uniforms: { uTime: 0 } }); "
         },
         {
           "name": "createJoyConLeftGamepadMapping",

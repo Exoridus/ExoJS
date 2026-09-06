@@ -1,7 +1,7 @@
 {
-  "title": "AnyShaderSource",
+  "title": "AnyShader",
   "description": "A shader source with any uniform declaration - what a consumer that only reads its text should accept, since the bare class describes a source that declares none.",
-  "symbol": "AnyShaderSource",
+  "symbol": "AnyShader",
   "kind": "type",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A shader source with any uniform declaration - what a consumer that only reads its text should accept, since the bare class describes a source that declares none."
       ],
-      "importLine": "import { AnyShaderSource } from '@codexo/exojs'",
+      "importLine": "import { AnyShader } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,11 +29,11 @@
       "title": "Definition",
       "members": [
         {
-          "name": "AnyShaderSource",
-          "signature": "ShaderSource<UniformFields | undefined, UniformBlockRecord | undefined>",
+          "name": "AnyShader",
+          "signature": "Shader<UniformFields | undefined, UniformBlockRecord | undefined>",
           "signatureTokens": [
             {
-              "text": "ShaderSource",
+              "text": "Shader",
               "kind": "type"
             },
             {
@@ -89,11 +89,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/rendering/material/ShaderSource.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/ShaderSource.ts"
+        "label": "src/rendering/shader/Shader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/shader/Shader.ts"
       }
     }
   ],
-  "sourcePath": "src/rendering/material/ShaderSource.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/ShaderSource.ts"
+  "sourcePath": "src/rendering/shader/Shader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/shader/Shader.ts"
 }

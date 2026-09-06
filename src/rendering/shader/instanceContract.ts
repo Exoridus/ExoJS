@@ -1,5 +1,5 @@
 /**
- * Shader-side contract for custom {@link RenderBatch} materials.
+ * WebGl2Shader-side contract for custom {@link RenderBatch} materials.
  *
  * A batch draws one geometry N times and reaches each instance's transform and
  * tint through the engine's shared per-frame transform buffer, indexed by

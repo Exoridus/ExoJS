@@ -15,8 +15,8 @@
 
 import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 
-import { colorMatrixShaderSource } from '#rendering/filters/ColorMatrixFilter';
-import { dropShadowShaderSource } from '#rendering/filters/DropShadowFilter';
+import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
+import { dropShadowShader } from '#rendering/filters/DropShadowFilter';
 import { fillShaderSource } from '#rendering/shader/fillShaderSource';
 import { resolveTransformTextureGlsl } from '#rendering/shader/transformTextureLayout';
 import { composeSpriteMaterialFragmentGlsl } from '#rendering/sprite/materialSources';
@@ -70,8 +70,8 @@ const placeholderValues: Readonly<Record<string, Readonly<Record<string, number>
  * names resolve against is generated, and only the composed form compiles.
  */
 const generatedUniformBlocks: ReadonlyMap<string, string> = new Map([
-  ['color-matrix.frag', generateGlslUniformDeclarations(colorMatrixShaderSource.uniformSchema!)],
-  ['drop-shadow.frag', generateGlslUniformDeclarations(dropShadowShaderSource.uniformSchema!)],
+  ['color-matrix.frag', generateGlslUniformDeclarations(colorMatrixShader.uniformSchema!)],
+  ['drop-shadow.frag', generateGlslUniformDeclarations(dropShadowShader.uniformSchema!)],
 ]);
 
 // `WebGl2ShaderProgram` expands the engine's `#exo-include` directives before

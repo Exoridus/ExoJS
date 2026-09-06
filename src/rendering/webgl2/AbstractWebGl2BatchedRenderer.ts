@@ -1,11 +1,11 @@
 import type { Drawable } from '#rendering/Drawable';
-import { Shader } from '#rendering/shader/Shader';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import type { BlendModes } from '#rendering/types';
 import { BufferTypes, BufferUsage } from '#rendering/types';
 import { createQuadIndices } from '#rendering/utils';
 import type { View } from '#rendering/View';
+import { WebGl2Shader } from '#rendering/webgl2/WebGl2Shader';
 
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import { createWebGl2ShaderProgram } from './shaderProgram';
@@ -38,7 +38,7 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
   protected readonly vertexData: ArrayBuffer;
   protected readonly float32View: Float32Array;
   protected readonly uint32View: Uint32Array;
-  protected readonly shader: Shader;
+  protected readonly shader: WebGl2Shader;
   protected batchIndex = 0;
   protected currentTexture: Texture | RenderTexture | null = null;
   protected currentBlendMode: BlendModes | null = null;
@@ -58,7 +58,7 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
     this.float32View = new Float32Array(this.vertexData);
     this.uint32View = new Uint32Array(this.vertexData);
     this.indexData = createQuadIndices(batchSize);
-    this.shader = new Shader(vertexSource, fragmentSource);
+    this.shader = new WebGl2Shader(vertexSource, fragmentSource);
   }
 
   public flush(): void {

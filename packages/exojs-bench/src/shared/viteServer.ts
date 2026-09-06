@@ -21,7 +21,7 @@ const REPO_ROOT = resolve(HERE, '..', '..', '..', '..');
 /** The engine's TypeScript source root every harness page benchmarks (`<repo>/src`). */
 const ENGINE_SRC = resolve(REPO_ROOT, 'src');
 
-/** Shader extensions the engine imports as text. */
+/** WebGl2Shader extensions the engine imports as text. */
 const SHADER_EXTENSIONS = ['.vert', '.frag', '.glsl', '.wgsl'] as const;
 
 /**

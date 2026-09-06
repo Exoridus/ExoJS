@@ -321,7 +321,7 @@
         },
         {
           "name": "from",
-          "signature": "from(source: ShaderSource<F, B>, options?: Omit<MaterialOptions<F, B>, \"shader\">): SpriteMaterial<F, B>",
+          "signature": "from(source: Shader<F, B>, options?: Omit<MaterialOptions<F, B>, \"shader\">): SpriteMaterial<F, B>",
           "signatureTokens": [
             {
               "text": "from",
@@ -340,7 +340,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "ShaderSource",
+              "text": "Shader",
               "kind": "type"
             },
             {
@@ -459,7 +459,7 @@
           "params": [
             {
               "name": "source",
-              "type": "ShaderSource<F, B>",
+              "type": "Shader<F, B>",
               "optional": false
             },
             {
@@ -469,7 +469,7 @@
             }
           ],
           "returnType": "SpriteMaterial<F, B>",
-          "description": "Build a SpriteMaterial from an existing ShaderSource. Equivalent to new SpriteMaterial({ shader, ...options })."
+          "description": "Build a SpriteMaterial from an existing Shader. Equivalent to new SpriteMaterial({ shader, ...options })."
         },
         {
           "name": "from",
@@ -670,7 +670,7 @@
             }
           ],
           "returnType": "SpriteMaterial",
-          "description": "Build a SpriteMaterial from raw GLSL vertex and fragment source strings. Wraps them in a new ShaderSource; pass options.wgsl to also cover the WebGPU backend."
+          "description": "Build a SpriteMaterial from raw GLSL vertex and fragment source strings. Wraps them in a new Shader; pass options.wgsl to also cover the WebGPU backend."
         }
       ],
       "paragraphs": [],
@@ -754,7 +754,7 @@
         },
         {
           "name": "shader",
-          "signature": "shader: ShaderSource<undefined, undefined>",
+          "signature": "shader: Shader<undefined, undefined>",
           "signatureTokens": [
             {
               "text": "shader",
@@ -765,7 +765,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "ShaderSource",
+              "text": "Shader",
               "kind": "type"
             },
             {

@@ -2,7 +2,7 @@ import type { AttributeType, GeometryUsage, Material, Topology } from '@codexo/e
 import type { View } from '@codexo/exojs/renderer-sdk';
 import type { WebGl2Backend } from '@codexo/exojs/renderer-sdk';
 import { BufferTypes, BufferUsage, RenderingPrimitives } from '@codexo/exojs/renderer-sdk';
-import { Shader } from '@codexo/exojs/renderer-sdk';
+import { WebGl2Shader } from '@codexo/exojs/renderer-sdk';
 import { AbstractWebGl2Renderer } from '@codexo/exojs/renderer-sdk';
 import { uploadBufferRange, uploadBufferStore, WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from '@codexo/exojs/renderer-sdk';
 import { createWebGl2ShaderProgram } from '@codexo/exojs/renderer-sdk';
@@ -61,7 +61,7 @@ interface ParticleRendererConnection {
  * mode's material is its stable identity, and its `destroy()` evicts the entry.
  */
 interface ParticleModeResources {
-  readonly shader: Shader;
+  readonly shader: WebGl2Shader;
   readonly vao: WebGl2VertexArrayObject;
   readonly vertexBuffer: WebGl2RenderBuffer;
   /** Per-vertex buffer for a mode that supplies its own geometry, else null. */
@@ -340,7 +340,7 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
       throw new Error('Particle render mode shader has no GLSL vertex stage; particle materials need both stages.');
     }
 
-    const shader = new Shader(glsl.vertex, glsl.fragment);
+    const shader = new WebGl2Shader(glsl.vertex, glsl.fragment);
 
     shader.connect(createWebGl2ShaderProgram(gl));
     // Force the first finalize so the attribute/uniform maps read below are populated.

@@ -164,7 +164,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Shader-visible type name of the generated struct declaration."
+          "description": "WebGl2Shader-visible type name of the generated struct declaration."
         }
       ],
       "paragraphs": [],

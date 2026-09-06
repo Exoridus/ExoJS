@@ -1,4 +1,4 @@
-import { ShaderUniform } from '#rendering/shader/ShaderUniform';
+import { WebGl2ShaderUniform } from '#rendering/webgl2/WebGl2ShaderUniform';
 
 import { webGl2PrimitiveArrayConstructors, webGl2PrimitiveByteSizeMapping } from './shaderMappings';
 
@@ -12,7 +12,7 @@ export class WebGl2ShaderBlock {
   private readonly _program: WebGLProgram;
   private readonly _blockData: ArrayBuffer;
   private readonly _uniformBuffer: WebGLBuffer | null;
-  private readonly _uniforms: Map<string, ShaderUniform> = new Map<string, ShaderUniform>();
+  private readonly _uniforms: Map<string, WebGl2ShaderUniform> = new Map<string, WebGl2ShaderUniform>();
 
   public constructor(gl: WebGL2RenderingContext, program: WebGLProgram, index: number) {
     this._context = gl;
@@ -32,7 +32,7 @@ export class WebGl2ShaderBlock {
     gl.uniformBlockBinding(this._program, this.index, this.binding);
   }
 
-  public getUniform(name: string): ShaderUniform {
+  public getUniform(name: string): WebGl2ShaderUniform {
     if (!this._uniforms.has(name)) {
       throw new Error(`Uniform "${name}" is not available.`);
     }
@@ -79,7 +79,7 @@ export class WebGl2ShaderBlock {
       }
 
       const data = new arrayConstructor(blockData, offsets[i], byteSize * size);
-      const uniform = new ShaderUniform(index, type, size, name, data);
+      const uniform = new WebGl2ShaderUniform(index, type, size, name, data);
 
       this._uniforms.set(uniform.propName, uniform);
     }

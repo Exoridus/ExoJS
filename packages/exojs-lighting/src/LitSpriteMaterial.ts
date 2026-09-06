@@ -1,5 +1,5 @@
 import type { BlendModes, SamplerOptions, Texture } from '@codexo/exojs';
-import { ShaderSource, SpriteMaterial } from '@codexo/exojs';
+import { Shader, SpriteMaterial } from '@codexo/exojs';
 
 import type { LightingSystem } from './LightingSystem';
 import fragmentGlsl from './shaders/lit-sprite.frag';
@@ -7,10 +7,10 @@ import fragmentWgsl from './shaders/lit-sprite.wgsl';
 
 /**
  * The one shader pair behind every `LitSpriteMaterial`. Renderers key their
- * compiled program and pipeline caches on `ShaderSource` identity, so N lit
+ * compiled program and pipeline caches on `Shader` identity, so N lit
  * materials cost one compile per backend rather than N.
  */
-const litSpriteShader = new ShaderSource({
+const litSpriteShader = new Shader({
   glsl: { fragment: fragmentGlsl },
   wgsl: fragmentWgsl,
 });

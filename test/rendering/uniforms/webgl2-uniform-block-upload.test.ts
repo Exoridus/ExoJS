@@ -16,10 +16,10 @@
 import { describe, expect, test, vi } from 'vitest';
 
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { Shader } from '#rendering/shader/Shader';
 import { UniformType } from '#rendering/uniforms/UniformType';
 import { createWebGl2ShaderProgram } from '#rendering/webgl2/shaderProgram';
+import { WebGl2Shader } from '#rendering/webgl2/WebGl2Shader';
 
 const GLSL_VERTEX = /* glsl */ `#version 300 es
 layout(location = 0) in vec2 a_position;
@@ -83,9 +83,9 @@ const createStubContext = (): { gl: WebGL2RenderingContext; calls: Array<ReturnT
   return { gl, calls: [bufferData, bufferSubData, bindBufferBase, uniformBlockBinding] };
 };
 
-const connect = (material: MeshMaterial<typeof declaration>, gl: WebGL2RenderingContext): Shader => {
+const connect = (material: MeshMaterial<typeof declaration>, gl: WebGL2RenderingContext): WebGl2Shader => {
   const glsl = material.shader._resolveGlsl()!;
-  const shader = new Shader(glsl.vertex!, glsl.fragment);
+  const shader = new WebGl2Shader(glsl.vertex!, glsl.fragment);
 
   shader.uniformBlockData = material._blocks;
   shader.connect(createWebGl2ShaderProgram(gl));
@@ -94,7 +94,7 @@ const connect = (material: MeshMaterial<typeof declaration>, gl: WebGL2Rendering
 };
 
 describe('WebGL2 typed uniform block upload', () => {
-  const source = new ShaderSource({ glsl: { vertex: GLSL_VERTEX, fragment: GLSL_FRAGMENT }, uniforms: declaration });
+  const source = new Shader({ glsl: { vertex: GLSL_VERTEX, fragment: GLSL_FRAGMENT }, uniforms: declaration });
 
   test('the block gets one buffer, bound to its declaration index, sized to the layout', () => {
     const { gl, calls } = createStubContext();

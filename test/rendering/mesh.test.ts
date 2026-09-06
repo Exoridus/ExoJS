@@ -1,8 +1,8 @@
 import { Drawable } from '#rendering/Drawable';
 import { Geometry } from '#rendering/geometry/Geometry';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { Mesh } from '#rendering/mesh/Mesh';
+import { Shader } from '#rendering/shader/Shader';
 
 const validVertices = (): Float32Array => new Float32Array([0, 0, 100, 0, 50, 100]);
 
@@ -197,7 +197,7 @@ describe('Mesh', () => {
 
   test('material instance is exposed on the mesh', () => {
     const material = new MeshMaterial({
-      shader: new ShaderSource({ glsl: minimalGlsl }),
+      shader: new Shader({ glsl: minimalGlsl }),
       uniforms: { uTime: 0 },
     });
     const mesh = new Mesh({ vertices: validVertices(), material });
@@ -224,7 +224,7 @@ describe('Mesh', () => {
   });
 
   test('geometry form carries an optional material', () => {
-    const material = new MeshMaterial({ shader: new ShaderSource({ glsl: minimalGlsl }) });
+    const material = new MeshMaterial({ shader: new Shader({ glsl: minimalGlsl }) });
     const mesh = new Mesh({ geometry: createStandardGeometry(), material });
 
     expect(mesh.material).toBe(material);

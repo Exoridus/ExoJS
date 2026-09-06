@@ -11,7 +11,7 @@ import type { UniformBlockLayout, UniformSchemaLayout } from './uniformLayout';
 import { computeUniformBlockLayout, explicitUniformBlockTypeName, implicitUniformBlockInstance, implicitUniformBlockTypeName } from './uniformLayout';
 
 /**
- * A uniform declaration on a {@link ShaderSource}.
+ * A uniform declaration on a {@link Shader}.
  *
  * `uniforms` declares one engine-named block and is the common case;
  * `uniformBlocks` declares one or more named blocks explicitly. The two are
@@ -50,7 +50,7 @@ export type UniformBlockInitialValues<B extends UniformBlockRecord> = {
  */
 export const buildUniformSchemaLayout = (uniforms: UniformFields | undefined, uniformBlocks: UniformBlockRecord | undefined): UniformSchemaLayout | null => {
   if (uniforms !== undefined && uniformBlocks !== undefined) {
-    throw new Error('ShaderSource accepts either `uniforms` or `uniformBlocks`, not both.');
+    throw new Error('Shader accepts either `uniforms` or `uniformBlocks`, not both.');
   }
 
   if (uniforms !== undefined) {
@@ -69,7 +69,7 @@ export const buildUniformSchemaLayout = (uniforms: UniformFields | undefined, un
   const keys = Object.keys(uniformBlocks);
 
   if (keys.length === 0) {
-    throw new Error('ShaderSource `uniformBlocks` declares no blocks.');
+    throw new Error('Shader `uniformBlocks` declares no blocks.');
   }
 
   const blocks: UniformBlockLayout[] = keys.map(key => {
@@ -77,7 +77,7 @@ export const buildUniformSchemaLayout = (uniforms: UniformFields | undefined, un
     const block = uniformBlocks[key]!;
 
     if (!(block instanceof UniformBlock)) {
-      throw new Error(`ShaderSource \`uniformBlocks.${key}\` must be a UniformBlock.`);
+      throw new Error(`Shader \`uniformBlocks.${key}\` must be a UniformBlock.`);
     }
 
     return computeUniformBlockLayout(block.fields, key, key, explicitUniformBlockTypeName(key));

@@ -18,10 +18,10 @@ import {
   fillShaderSource,
   packedGroupChanged,
   RenderingPrimitives,
-  Shader,
   uploadBufferRange,
   uploadBufferStore,
   WebGl2RenderBuffer,
+  WebGl2Shader,
   WebGl2VertexArrayObject,
 } from '@codexo/exojs/renderer-sdk';
 
@@ -67,7 +67,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
    */
   public readonly _supportsRetainedBatches = true;
 
-  private readonly _shader: Shader;
+  private readonly _shader: WebGl2Shader;
   private readonly _batchSize: number;
   private readonly _instanceData: ArrayBuffer;
   private readonly _instanceFloat32: Float32Array;
@@ -108,7 +108,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     super();
 
     this._batchSize = batchSize;
-    this._shader = new Shader(tileVertexSource, tileFragmentSource);
+    this._shader = new WebGl2Shader(tileVertexSource, tileFragmentSource);
     this._instanceData = new ArrayBuffer(batchSize * instanceStrideBytes);
     this._instanceFloat32 = new Float32Array(this._instanceData);
     this._instanceUint32 = new Uint32Array(this._instanceData);

@@ -1,6 +1,6 @@
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
+import { Shader } from '#rendering/shader/Shader';
 import { upgradeFragmentShaderToGl300 } from '#rendering/shader/upgradeFragmentShaderToGl300';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
@@ -47,7 +47,7 @@ export interface ShaderFilterPass {
 /** The shader languages a {@link ShaderFilter} can carry. */
 export type ShaderFilterLanguage = 'glsl' | 'wgsl';
 
-/** Shader sources for a {@link ShaderFilter}, one entry per language. */
+/** WebGl2Shader sources for a {@link ShaderFilter}, one entry per language. */
 export interface ShaderFilterSourceOptions {
   /**
    * GLSL ES 3.00 sources for the WebGL2 backend.
@@ -62,7 +62,7 @@ export interface ShaderFilterSourceOptions {
 
   /**
    * WGSL source for the WebGPU backend - one module carrying both entry points,
-   * the same convention {@link ShaderSource} uses for materials.
+   * the same convention {@link Shader} uses for materials.
    *
    * The fragment entry point must be `fragmentMain`. A module that declares no
    * `@vertex` stage gets the default fullscreen-quad vertex stage (`vertexMain`,
@@ -117,7 +117,7 @@ export interface ShaderFilterOptions<
    * and is used verbatim - no default vertex stage is filled in, and no GLSL
    * upgrade is run.
    */
-  readonly shader?: ShaderSource<F, B>;
+  readonly shader?: Shader<F, B>;
 
   /**
    * Starting values for the declared uniforms, or - on a source without a
@@ -161,7 +161,7 @@ export const defaultGlslVertexSource: string = defaultGlslVertexSourceModule;
  */
 export const defaultWgslVertexSource: string = defaultWgslVertexSourceModule;
 
-/** `@vertex` outside a comment - see {@link createFilterShaderSource}. */
+/** `@vertex` outside a comment - see {@link createFilterShader}. */
 const wgslVertexStagePattern = /@vertex\b/;
 
 /** Strip line and block comments so a commented-out `@vertex` does not count. */
@@ -171,7 +171,7 @@ const stripComments = (source: string): string => source.replaceAll(/\/\*[\s\S]*
 const withWgslVertexStage = (source: string): string => (wgslVertexStagePattern.test(stripComments(source)) ? source : `${defaultWgslVertexSource}\n${source}`);
 
 /**
- * Build the {@link ShaderSource} behind a filter pass: fills in the default
+ * Build the {@link Shader} behind a filter pass: fills in the default
  * vertex stage per language, upgrades legacy GLSL when asked, and carries any
  * uniform declaration through to the source.
  *
@@ -180,7 +180,7 @@ const withWgslVertexStage = (source: string): string => (wgslVertexStagePattern.
  * source is what the filter is then built from with {@link ShaderFilter.from}.
  *
  * ```ts
- * const shader = createFilterShaderSource({
+ * const shader = createFilterShader({
  *   glsl: { fragment },
  *   wgsl,
  *   uniforms: { uTime: UniformType.Float },
@@ -190,9 +190,9 @@ const withWgslVertexStage = (source: string): string => (wgslVertexStagePattern.
  * ```
  * @advanced
  */
-export const createFilterShaderSource = <const F extends UniformFields | undefined = undefined, const B extends UniformBlockRecord | undefined = undefined>(
+export const createFilterShader = <const F extends UniformFields | undefined = undefined, const B extends UniformBlockRecord | undefined = undefined>(
   options: ShaderFilterSourceOptions & UniformSchemaOptions<F, B>,
-): ShaderSource<F, B> => {
+): Shader<F, B> => {
   const autoUpgrade = options.autoUpgrade !== false;
   const glsl =
     options.glsl !== undefined
@@ -203,7 +203,7 @@ export const createFilterShaderSource = <const F extends UniformFields | undefin
       : undefined;
   const wgsl = options.wgsl !== undefined ? withWgslVertexStage(options.wgsl) : undefined;
 
-  return new ShaderSource<F, B>({
+  return new Shader<F, B>({
     ...(glsl !== undefined ? { glsl } : {}),
     ...(wgsl !== undefined ? { wgsl } : {}),
     ...(options.uniforms !== undefined ? { uniforms: options.uniforms } : {}),
@@ -216,7 +216,7 @@ export const createFilterShaderSource = <const F extends UniformFields | undefin
  * whichever language the active backend speaks.
  *
  * One filter carries both sources - GLSL for WebGL2, WGSL for WebGPU - on the
- * same {@link ShaderSource} contract materials use, and picks between them
+ * same {@link Shader} contract materials use, and picks between them
  * internally. Supply both and the filter runs unchanged under
  * `backend: 'auto'`, where the engine decides which backend it gets.
  *
@@ -305,12 +305,12 @@ export const createFilterShaderSource = <const F extends UniformFields | undefin
  *
  * ## User uniforms
  *
- * A source built with {@link createFilterShaderSource} can declare its uniforms,
+ * A source built with {@link createFilterShader} can declare its uniforms,
  * in which case the engine generates both languages' declarations from one
  * layout and {@link uniforms} becomes a namespace of typed accessors:
  *
  * ```ts
- * const shader = createFilterShaderSource({
+ * const shader = createFilterShader({
  *   glsl: { fragment },
  *   wgsl,
  *   uniforms: { uTime: UniformType.Float },
@@ -340,19 +340,19 @@ export const createFilterShaderSource = <const F extends UniformFields | undefin
  */
 export class ShaderFilter<F extends UniformFields | undefined = undefined, B extends UniformBlockRecord | undefined = undefined> extends Filter {
   /**
-   * Build a filter from an existing {@link ShaderSource}, so one source can back
+   * Build a filter from an existing {@link Shader}, so one source can back
    * several filters. The source must already carry complete sources per language
    * - no default vertex stage is filled in.
    */
   public static from<F extends UniformFields | undefined, B extends UniformBlockRecord | undefined>(
-    source: ShaderSource<F, B>,
+    source: Shader<F, B>,
     options?: Omit<ShaderFilterOptions<F, B>, 'shader' | 'glsl' | 'wgsl' | 'autoUpgrade'>,
   ): ShaderFilter<F, B> {
     return new ShaderFilter<F, B>({ shader: source, ...options });
   }
 
   private readonly _uniforms: Record<string, ShaderFilterUniformValue>;
-  private readonly _shader: ShaderSource<F, B>;
+  private readonly _shader: Shader<F, B>;
   private readonly _bindings: ShaderFilterBindings;
   private readonly _uniformsView: unknown;
   private readonly _uniformBlocksView: unknown;
@@ -367,11 +367,11 @@ export class ShaderFilter<F extends UniformFields | undefined = undefined, B ext
     // values there, so only the source fields may reach the source factory.
     this._shader =
       options.shader ??
-      (createFilterShaderSource({
+      (createFilterShader({
         ...(options.glsl !== undefined ? { glsl: options.glsl } : {}),
         ...(options.wgsl !== undefined ? { wgsl: options.wgsl } : {}),
         ...(options.autoUpgrade !== undefined ? { autoUpgrade: options.autoUpgrade } : {}),
-      }) as unknown as ShaderSource<F, B>);
+      }) as unknown as Shader<F, B>);
 
     const schema = this._shader.uniformSchema;
     // A typed write reaches the GPU through the block's revision, but a cached
@@ -393,7 +393,7 @@ export class ShaderFilter<F extends UniformFields | undefined = undefined, B ext
   }
 
   /** The source pair this filter runs, with the default stages already filled in. */
-  public get shader(): ShaderSource<F, B> {
+  public get shader(): Shader<F, B> {
     return this._shader;
   }
 

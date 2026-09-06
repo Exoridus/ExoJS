@@ -18,10 +18,10 @@ import { Color } from '#core/Color';
 import { Matrix } from '#math/Matrix';
 import { Geometry } from '#rendering/geometry/Geometry';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { RenderBatch } from '#rendering/RenderBatch';
 import { RenderingContext } from '#rendering/RenderingContext';
 import { INSTANCE_TRANSFORM_WGSL } from '#rendering/shader/instanceContract';
+import { Shader } from '#rendering/shader/Shader';
 import { View } from '#rendering/View';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
@@ -420,7 +420,7 @@ describe('WebGPU RenderingContext.drawGeometry', () => {
     // against the shared transform storage under a custom pipeline. The free
     // attribute sits at location 7 per FIRST_INSTANCE_ATTRIBUTE_LOCATION.
     const material = new MeshMaterial({
-      shader: new ShaderSource({
+      shader: new Shader({
         wgsl: `${INSTANCE_TRANSFORM_WGSL}
 
 struct VertexInput {

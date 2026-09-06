@@ -120,7 +120,7 @@ export interface ArchetypeSpec {
    * leaves, or `undefined`/`0` for the default (material-less) sprite path.
    *
    * ExoJS-ONLY, like `viewCount`: Pixi 8 has no per-Sprite custom-shader API
-   * (its equivalent is a `Mesh` with its own `Shader`, a different geometry
+   * (its equivalent is a `Mesh` with its own `WebGl2Shader`, a different geometry
    * path entirely), so the Pixi arm renders the same scene WITHOUT materials.
    * An archetype that sets this is therefore an ExoJS-internal probe on the
    * material dimension - read it against the otherwise-identical

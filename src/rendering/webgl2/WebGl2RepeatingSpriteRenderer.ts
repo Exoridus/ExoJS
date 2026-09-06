@@ -1,12 +1,12 @@
 import { packedGroupChanged } from '#rendering/affinePacking';
 import type { Drawable } from '#rendering/Drawable';
-import { Shader } from '#rendering/shader/Shader';
 import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingPlan';
 import type { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { RepeatMode } from '#rendering/texture/repeat';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives, ScaleModes, WrapModes } from '#rendering/types';
+import { WebGl2Shader } from '#rendering/webgl2/WebGl2Shader';
 
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import { createWebGl2ShaderProgram } from './shaderProgram';
@@ -19,7 +19,7 @@ import type { WebGl2RetainedBatchPayload, WebGl2RetainedBatchReplayer, WebGl2Ret
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 
 // ---------------------------------------------------------------------------
-// Shader path: one quad per sprite, UVs computed in vertex shader.
+// WebGl2Shader path: one quad per sprite, UVs computed in vertex shader.
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
@@ -99,11 +99,11 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     return (drawable as RepeatingSprite).resolvedStrategy !== 'shader';
   }
 
-  private readonly _shaderPathShader: Shader;
-  private readonly _geoPathShader: Shader;
+  private readonly _shaderPathShader: WebGl2Shader;
+  private readonly _geoPathShader: WebGl2Shader;
   private readonly _batchSize: number;
 
-  // Shader-path buffers
+  // WebGl2Shader-path buffers
   private readonly _shaderData: ArrayBuffer;
   private readonly _shaderF32: Float32Array;
   private readonly _shaderU32: Uint32Array;
@@ -123,7 +123,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
   // into a Cartesian product of tile quads, so the recorded batch's
   // `submittedNodes` contribution is this count and not `_geoQuadCount`. A sprite
   // whose quads chunk across several batches is booked once, against the batch
-  // its first chunk lands in. Shader-path sprites are never recorded (they poison
+  // its first chunk lands in. WebGl2Shader-path sprites are never recorded (they poison
   // the capture), so they are never booked either.
   private _geoBatchNodeCount = 0;
   private _geoNodeBooked = false;
@@ -164,8 +164,8 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
   public constructor(batchSize: number) {
     super();
     this._batchSize = batchSize;
-    this._shaderPathShader = new Shader(shaderPathVertSource, sharedFragSource);
-    this._geoPathShader = new Shader(geoPathVertSource, sharedFragSource);
+    this._shaderPathShader = new WebGl2Shader(shaderPathVertSource, sharedFragSource);
+    this._geoPathShader = new WebGl2Shader(geoPathVertSource, sharedFragSource);
 
     this._shaderData = new ArrayBuffer(batchSize * shaderStrideBytes);
     this._shaderF32 = new Float32Array(this._shaderData);
@@ -462,7 +462,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     // Retained recording: while a capture window is open,
     // hand the exact packed geometry-path words of this flush to the backend -
     // byte-identical to what just drew. A single base texture binds to unit 0,
-    // so the recorded slot list is one entry. Shader-path batches are never
+    // so the recorded slot list is one entry. WebGl2Shader-path batches are never
     // recorded (render() poisoned the window if one appeared).
     if (backend._isRetainedCapturing && this._currentTexture !== null) {
       this._recordTextureScratch[0] = this._currentTexture;
@@ -660,7 +660,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     const conn = this._createConnection(gl);
     this._connection = conn;
 
-    // Shader-path VAO (uses float4 uvParams, not packed unorm16)
+    // WebGl2Shader-path VAO (uses float4 uvParams, not packed unorm16)
     this._shaderBuf = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._shaderData, BufferUsage.DynamicDraw).connect(
       this._createBufRuntime(conn, 'shader'),
       backend.accountant,

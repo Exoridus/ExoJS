@@ -10,7 +10,7 @@ import { RenderError } from './RenderError';
  * Warn once per shader/attachment-count pairing when a material's fragment
  * shader declares fewer outputs than the active target has attachments.
  *
- * Parsed via {@link ShaderSource.countFragmentOutputs}, which is regex-based
+ * Parsed via {@link Shader.countFragmentOutputs}, which is regex-based
  * and best-effort - `null` (language not supplied, or the declared struct
  * could not be resolved) is treated as "cannot tell" and never warns. This
  * is diagnostic only: it does not change what the backend accepts, and a

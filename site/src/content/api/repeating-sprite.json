@@ -1,6 +1,6 @@
 {
   "title": "RepeatingSprite",
-  "description": "A sprite that fills its destination by repeating, mirroring, or stretching a source texture or atlas region. Supports independent per-axis modes (`modeX`, `modeY`) and fit strategies (`fitX`, `fitY`). ## Internal rendering strategy (selected automatically) | Source type | Internal path | |-------------------|-------------------------------------------------------| | Bare `Texture` | **Shader path** - one quad, GPU sampler repeat wrap. | | `TextureRegion` | **Geometry path** - Cartesian-product quads, clamped. | The public class identity and API do not change based on which path the renderer uses.",
+  "description": "A sprite that fills its destination by repeating, mirroring, or stretching a source texture or atlas region. Supports independent per-axis modes (`modeX`, `modeY`) and fit strategies (`fitX`, `fitY`). ## Internal rendering strategy (selected automatically) | Source type | Internal path | |-------------------|-------------------------------------------------------| | Bare `Texture` | **WebGl2Shader path** - one quad, GPU sampler repeat wrap. | | `TextureRegion` | **Geometry path** - Cartesian-product quads, clamped. | The public class identity and API do not change based on which path the renderer uses.",
   "symbol": "RepeatingSprite",
   "kind": "class",
   "subsystem": "rendering",
@@ -22,7 +22,7 @@
         "A sprite that fills its destination by repeating, mirroring, or stretching a source texture or atlas region.",
         "Supports independent per-axis modes (`modeX`, `modeY`) and fit strategies (`fitX`, `fitY`).",
         "## Internal rendering strategy (selected automatically)",
-        "| Source type | Internal path | |-------------------|-------------------------------------------------------| | Bare `Texture` | **Shader path** - one quad, GPU sampler repeat wrap. | | `TextureRegion` | **Geometry path** - Cartesian-product quads, clamped. |",
+        "| Source type | Internal path | |-------------------|-------------------------------------------------------| | Bare `Texture` | **WebGl2Shader path** - one quad, GPU sampler repeat wrap. | | `TextureRegion` | **Geometry path** - Cartesian-product quads, clamped. |",
         "The public class identity and API do not change based on which path the renderer uses."
       ],
       "importLine": "import { RepeatingSprite } from '@codexo/exojs'",

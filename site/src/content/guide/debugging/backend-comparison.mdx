@@ -85,7 +85,7 @@ On WebGL2, or when any update module lacks `wgsl()`, the system runs on CPU. The
 
 ## Custom shaders
 
-A [`ShaderSource`](/ExoJS/en/api/shader-source/) accepts both `glsl: { vertex, fragment }` and `wgsl` source; wrap it in a [`MeshMaterial`](/ExoJS/en/api/mesh-material/) to bind uniforms and attach it to a `Mesh`. The renderer picks the appropriate language for the active backend. Provide both for cross-backend portability. [`ShaderSource.detectUniformDrift()`](/ExoJS/en/api/shader-source/#methods) compares declared uniforms across languages for CI-style verification.
+A [`Shader`](/ExoJS/en/api/shader/) accepts both `glsl: { vertex, fragment }` and `wgsl` source; wrap it in a [`MeshMaterial`](/ExoJS/en/api/mesh-material/) to bind uniforms and attach it to a `Mesh`. The renderer picks the appropriate language for the active backend. Provide both for cross-backend portability. [`Shader.detectUniformDrift()`](/ExoJS/en/api/shader/#methods) compares declared uniforms across languages for CI-style verification.
 
 For screen-space effects, use `ShaderFilter` and give it both a `glsl` and a `wgsl` source. The uniform-value types are the same either way — only the shader language differs, and the filter picks the one the active backend needs. A filter carrying only one language throws `ShaderFilterBackendError` when it attaches to the other backend.
 

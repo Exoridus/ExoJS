@@ -392,7 +392,7 @@ describe('external consumer', () => {
     // The transitive helper, reached only through the worklet's own import.
     expect(bundle).toContain('Math.tanh');
     expect(emitted.filter(file => /worklet|worker/i.test(file))).toStrictEqual([]);
-    // Shader text is bundle payload, never a fetched asset - the single emitted
+    // WebGl2Shader text is bundle payload, never a fetched asset - the single emitted
     // chunk is what says so.
     expect(emitted).toStrictEqual(['consumer.js']);
   });

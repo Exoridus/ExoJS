@@ -401,7 +401,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         ],
         prerequisites: ['rendering/graphics'],
         examples: ['geometry-graphics/immediate-mode-rendering'],
-        apiLinks: ['rendering-context', 'render-batch', 'geometry', 'mesh', 'mesh-material', 'shader-source', 'matrix', 'color'],
+        apiLinks: ['rendering-context', 'render-batch', 'geometry', 'mesh', 'mesh-material', 'shader', 'matrix', 'color'],
       },
       {
         slug: 'retained-containers',

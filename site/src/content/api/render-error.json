@@ -250,7 +250,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Shader/material/pipeline label, or null when unknown."
+          "description": "WebGl2Shader/material/pipeline label, or null when unknown."
         },
         {
           "name": "stack",

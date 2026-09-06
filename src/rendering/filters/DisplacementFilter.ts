@@ -4,7 +4,7 @@ import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 
 import { Filter } from './Filter';
-import { createFilterShaderSource, ShaderFilter } from './ShaderFilter';
+import { createFilterShader, ShaderFilter } from './ShaderFilter';
 import glslFragment from './shaders/displacement.frag';
 import wgslFragment from './shaders/displacement.wgsl';
 
@@ -12,7 +12,7 @@ import wgslFragment from './shaders/displacement.wgsl';
  * The displacement source pair, built once and shared by every instance.
  * @internal
  */
-export const displacementShaderSource = createFilterShaderSource({ glsl: { fragment: glslFragment }, wgsl: wgslFragment });
+export const displacementShader = createFilterShader({ glsl: { fragment: glslFragment }, wgsl: wgslFragment });
 
 /** Construction-time options for a {@link DisplacementFilter}. */
 export interface DisplacementFilterOptions {
@@ -96,7 +96,7 @@ export class DisplacementFilter extends Filter {
 
     // Insertion order matters on WebGPU: the packer lays each non-texture
     // uniform out in a 16-byte slot, in declaration order, and textures follow.
-    this._shaderFilter = ShaderFilter.from(displacementShaderSource, {
+    this._shaderFilter = ShaderFilter.from(displacementShader, {
       uniforms: { uScale: scaleUniform, uOffset: offsetUniform, uMap: this._map },
     });
   }

@@ -1,3 +1,4 @@
+import type { Shader } from '#rendering/shader/Shader';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import type { SamplerOptions } from '#rendering/texture/TextureOptions';
@@ -9,7 +10,6 @@ import type { UniformBlockDataRecord, UniformBlockInitialValues } from '#renderi
 import { createUniformBlockData, uniformBlockRecord } from '#rendering/uniforms/uniformSchema';
 
 import { deriveBindKey, derivePipelineKey } from './MaterialKey';
-import type { ShaderSource } from './ShaderSource';
 
 /**
  * Value accepted by a material uniform on a shader source that declares no
@@ -83,7 +83,7 @@ export interface MaterialBindingSchema {
  */
 export interface MaterialOptions<F extends UniformFields | undefined = undefined, B extends UniformBlockRecord | undefined = undefined> {
   /** GLSL/WGSL source pair backing this material. */
-  readonly shader: ShaderSource<F, B>;
+  readonly shader: Shader<F, B>;
 
   /**
    * Starting values for the declared uniforms, or - on a source without a
@@ -146,7 +146,7 @@ let nextMaterialId = 1;
  */
 export abstract class Material<F extends UniformFields | undefined = undefined, B extends UniformBlockRecord | undefined = undefined> {
   /** GLSL/WGSL source pair backing this material. */
-  public readonly shader: ShaderSource<F, B>;
+  public readonly shader: Shader<F, B>;
 
   /**
    * The typed accessors of the declared uniform block, or - on a source without
@@ -194,7 +194,7 @@ export abstract class Material<F extends UniformFields | undefined = undefined, 
 
   protected constructor(options: MaterialOptions<F, B>) {
     if (options.shader === undefined || options.shader === null) {
-      throw new Error('Material requires a `shader` ShaderSource.');
+      throw new Error('Material requires a `shader` Shader.');
     }
 
     const schema = options.shader.uniformSchema;

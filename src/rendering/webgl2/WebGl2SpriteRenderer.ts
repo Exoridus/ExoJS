@@ -10,7 +10,6 @@ import {
 } from '#rendering/material/RetainedMaterialState';
 import type { AnySpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
-import { Shader } from '#rendering/shader/Shader';
 import { composeSpriteMaterialFragmentGlsl, spriteMaterialTextureSlots, spriteVertexGlsl } from '#rendering/sprite/materialSources';
 import { fillPersistentSpriteSlotTable, writePersistentSpriteSlots } from '#rendering/sprite/persistentSlots';
 import type { Sprite } from '#rendering/sprite/Sprite';
@@ -18,6 +17,7 @@ import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
 import type { View } from '#rendering/View';
+import { WebGl2Shader } from '#rendering/webgl2/WebGl2Shader';
 
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import { createWebGl2ShaderProgram } from './shaderProgram';
@@ -119,9 +119,9 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     return (drawable as Sprite).material !== null;
   }
 
-  private readonly _shader: Shader;
+  private readonly _shader: WebGl2Shader;
   /** Persistent-indexed program: same fragment stage, slot-fetching vertex stage. */
-  private readonly _indexedShader: Shader;
+  private readonly _indexedShader: WebGl2Shader;
   private _indexedVao: WebGl2VertexArrayObject | null = null;
   private _indexedVaoBuffer: WebGl2RenderBuffer | null = null;
   private readonly _slotAttributeUnitScratch: Int32Array = new Int32Array([slotAttributeTextureUnit]);
@@ -145,7 +145,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
   // Custom-material state. Compiled fragment programs are cached per material
   // instance; the current batch's material/base-texture decide when to flush.
-  private readonly _customShaders = new Map<AnySpriteMaterial, Shader>();
+  private readonly _customShaders = new Map<AnySpriteMaterial, WebGl2Shader>();
   // Texture-unit index scratches reused for sampler-uniform binds so the
   // per-batch path stays allocation-free.
   private readonly _slotScratches: Int32Array[] = Array.from({ length: maxBatchTextures }, (_, i) => new Int32Array([i]));
@@ -181,8 +181,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     super();
 
     this._batchSize = batchSize;
-    this._shader = new Shader(vertexSource, fragmentSource);
-    this._indexedShader = new Shader(indexedVertexSource, fragmentSource);
+    this._shader = new WebGl2Shader(vertexSource, fragmentSource);
+    this._indexedShader = new WebGl2Shader(indexedVertexSource, fragmentSource);
     this._instanceData = new ArrayBuffer(batchSize * instanceStrideBytes);
     this._instanceFloat32 = new Float32Array(this._instanceData);
     this._instanceUint32 = new Uint32Array(this._instanceData);
@@ -821,7 +821,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     }
   }
 
-  private _getOrCreateCustomShader(material: AnySpriteMaterial, gl: WebGL2RenderingContext): Shader {
+  private _getOrCreateCustomShader(material: AnySpriteMaterial, gl: WebGL2RenderingContext): WebGl2Shader {
     const cached = this._customShaders.get(material);
 
     if (cached !== undefined) {
@@ -840,7 +840,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     // the engine's base-texture slot table spliced in, so `sampleBase` and the
     // `u_texture0..N-1` samplers behind it exist without the author declaring
     // them.
-    const shader = new Shader(spriteVertexGlsl, composeSpriteMaterialFragmentGlsl(glsl.fragment));
+    const shader = new WebGl2Shader(spriteVertexGlsl, composeSpriteMaterialFragmentGlsl(glsl.fragment));
 
     shader.uniformBlockData = material._blocks;
     shader.connect(createWebGl2ShaderProgram(gl));
@@ -877,7 +877,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     return shader;
   }
 
-  private _stageCustomUniforms(shader: Shader, material: AnySpriteMaterial): void {
+  private _stageCustomUniforms(shader: WebGl2Shader, material: AnySpriteMaterial): void {
     for (const name of material._bindingSchema.scalarUniformNames) {
       if (shader.uniforms.has(name)) {
         shader.getUniform(name).setValue(this._marshalUniformValue(material._getUniformValue(name) as Exclude<UniformValue, Texture | RenderTexture>));
@@ -895,7 +895,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     }
   }
 
-  private _stageCustomTextureUnit(shader: Shader, name: string, textureSlot: number): void {
+  private _stageCustomTextureUnit(shader: WebGl2Shader, name: string, textureSlot: number): void {
     if (textureSlot >= customTextureUnitBase + maxCustomTextureSlots) {
       throw new Error(`SpriteMaterial requested more than ${maxCustomTextureSlots} texture bindings.`);
     }
@@ -905,7 +905,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     }
   }
 
-  private _bindCustomTextures(shader: Shader, material: AnySpriteMaterial, backend: WebGl2Backend): void {
+  private _bindCustomTextures(shader: WebGl2Shader, material: AnySpriteMaterial, backend: WebGl2Backend): void {
     let textureSlot = customTextureUnitBase;
 
     for (const name of material._bindingSchema.textureUniformNames) {

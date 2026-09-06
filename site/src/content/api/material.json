@@ -439,7 +439,7 @@
         },
         {
           "name": "shader",
-          "signature": "shader: ShaderSource<F, B>",
+          "signature": "shader: Shader<F, B>",
           "signatureTokens": [
             {
               "text": "shader",
@@ -450,7 +450,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "ShaderSource",
+              "text": "Shader",
               "kind": "type"
             },
             {

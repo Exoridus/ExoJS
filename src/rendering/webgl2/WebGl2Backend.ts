@@ -44,7 +44,6 @@ import type { RenderStats } from '#rendering/RenderStats';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RenderTexturePool } from '#rendering/RenderTexturePool';
-import type { Shader } from '#rendering/shader/Shader';
 import {
   createTransformTextureLayout,
   createTransformTextureRect,
@@ -61,6 +60,7 @@ import { type SamplerOptions, samplerStateKey } from '#rendering/texture/Texture
 import { TransformBuffer } from '#rendering/TransformBuffer';
 import { BlendModes, type ColorTextureFormat, TextureFormat } from '#rendering/types';
 import type { View } from '#rendering/View';
+import type { WebGl2Shader } from '#rendering/webgl2/WebGl2Shader';
 
 import { probeWebgl2CompressedFormats, type Webgl2CompressedFormatSupport } from './compressedFormat';
 import { createWebGl2GpuTimer } from './createWebGl2GpuTimer';
@@ -369,7 +369,7 @@ export class WebGl2Backend implements RenderBackend {
   private _renderer: Renderer | null = null;
   private _renderGroupTransform: Matrix | null = null;
   private _renderGroupTransformId = 0;
-  private _shader: Shader | null = null;
+  private _shader: WebGl2Shader | null = null;
   private _blendMode: BlendModes | null = null;
   // What GL currently has bound to TEXTURE_2D on each texture unit, indexed by
   // unit. Keyed on the `WebGLTexture` handle rather than the user-side
@@ -791,7 +791,7 @@ export class WebGl2Backend implements RenderBackend {
    *
    * Part of the renderer SDK contract for extension renderers.
    */
-  public stageViewportUniform(shader: Shader): void {
+  public stageViewportUniform(shader: WebGl2Shader): void {
     if (!shader.uniforms.has('u_viewport')) {
       return;
     }
@@ -1217,7 +1217,7 @@ export class WebGl2Backend implements RenderBackend {
     return this;
   }
 
-  public bindShader(shader: Shader | null): this {
+  public bindShader(shader: WebGl2Shader | null): this {
     if (this._shader !== shader) {
       if (this._shader) {
         this._shader.unbind();

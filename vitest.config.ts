@@ -38,7 +38,7 @@ const aliasConfig = [
 // as the production build does. Tests read what ships: the renderer performance
 // harness reflects attribute names out of the actual GLSL, the parity specs
 // compare the two languages' declarations against each other, and
-// `ShaderSource` rejects an empty source outright.
+// `Shader` rejects an empty source outright.
 const realShaderPlugin = createShaderPlugin();
 
 // Shared resolution/plugin wiring for the repository-local browser projects.
@@ -145,7 +145,7 @@ export default defineConfig({
       // `""`, which ran the biggest test project (`test:core`) against blank
       // shaders and made GLSL regressions invisible outside the 3 browser lanes
       // and `rendering-perf`; it also forced per-path `vi.mock` workarounds
-      // wherever `ShaderSource`'s non-empty-string validation ran at module
+      // wherever `Shader`'s non-empty-string validation ran at module
       // scope. jsdom has no WebGL2 context to actually compile against (that is
       // what the browser lanes are for), so
       // `test/rendering/shader-source-structure.test.ts` adds a GPU-free

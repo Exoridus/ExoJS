@@ -60,7 +60,7 @@ queries type-check:
 ## Shaders as files
 
 ExoJS takes shader source as a `string` everywhere - `ShaderFilter`,
-`ShaderSource`, `MeshMaterial`, `SpriteMaterial`, the WebGPU compute pipeline.
+`Shader`, `MeshMaterial`, `SpriteMaterial`, the WebGPU compute pipeline.
 This plugin is what lets that string live in a real shader file, where an
 editor's language service, a formatter and every shader-aware tool can reach
 it.
@@ -187,7 +187,7 @@ than import from a file, so both halves ship on the same terms.
 
 ## What the transforms guarantee
 
-- Shader files arrive as their own text, byte for byte, unless `minify` is on.
+- WebGl2Shader files arrive as their own text, byte for byte, unless `minify` is on.
 - TypeScript syntax and ordinary relative imports, to any depth.
 - No `import` or `export` token in the emitted string - neither an
   `AudioWorkletGlobalScope` nor a classic worker can resolve one.

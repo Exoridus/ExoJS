@@ -19,9 +19,9 @@
  */
 
 import { Color } from '#core/Color';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RenderNode } from '#rendering/RenderNode';
+import { Shader } from '#rendering/shader/Shader';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { BlendModes } from '#rendering/types';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -53,7 +53,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 
 const createMaterial = (color: Float32Array): SpriteMaterial =>
   new SpriteMaterial({
-    shader: new ShaderSource({ wgsl: spriteFragmentWgsl }),
+    shader: new Shader({ wgsl: spriteFragmentWgsl }),
     uniforms: { u_userColor: color },
   });
 

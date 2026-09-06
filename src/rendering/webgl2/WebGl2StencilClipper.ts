@@ -1,8 +1,8 @@
 import { Matrix } from '#math/Matrix';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { GeometryAttribute } from '#rendering/geometry/GeometryAttribute';
-import { Shader } from '#rendering/shader/Shader';
 import { BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
+import { WebGl2Shader } from '#rendering/webgl2/WebGl2Shader';
 
 import { createWebGl2ShaderProgram } from './shaderProgram';
 import fragmentSource from './shaders/stencil-clip.frag';
@@ -36,7 +36,7 @@ interface StencilClipperConnection {
  * state around the draw; this class only renders the shape.
  */
 export class WebGl2StencilClipper {
-  private readonly _shader: Shader = new Shader(vertexSource, fragmentSource);
+  private readonly _shader: WebGl2Shader = new WebGl2Shader(vertexSource, fragmentSource);
   private readonly _matrix: Matrix = new Matrix();
   private _positions: Float32Array = new Float32Array(64);
   private _view: DataView | null = null;

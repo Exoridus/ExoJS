@@ -17,12 +17,12 @@ import { afterEach, describe, expect, test } from 'vitest';
 
 import { Geometry } from '#rendering/geometry/Geometry';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
-import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { MultiRenderTarget } from '#rendering/MultiRenderTarget';
 import { RenderError } from '#rendering/RenderError';
 import { RenderingContext } from '#rendering/RenderingContext';
+import { Shader } from '#rendering/shader/Shader';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { ColorTextureFormat } from '#rendering/types';
@@ -34,7 +34,7 @@ import { createCanvasTexture, createMockBackend, createMockWebGpuEnvironment } f
 /** A fragment shader with one output per attachment - what a multi-attachment pass requires. */
 const twoOutputMaterial = (): MeshMaterial =>
   new MeshMaterial({
-    shader: new ShaderSource({
+    shader: new Shader({
       glsl: {
         vertex: `#version 300 es
 in vec2 a_position;
@@ -65,7 +65,7 @@ fn fragmentMain(input: VertexOutput) -> FragmentOut {
 /** The same two outputs from a sprite material - a 2D scene is sprites, not meshes. */
 const twoOutputSpriteMaterial = (): SpriteMaterial =>
   new SpriteMaterial({
-    shader: new ShaderSource({
+    shader: new Shader({
       glsl: {
         vertex: `#version 300 es
 in vec2 a_position;

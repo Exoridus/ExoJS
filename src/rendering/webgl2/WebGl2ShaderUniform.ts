@@ -3,14 +3,14 @@ import type { TypedArray } from '#core/types';
 /**
  * Metadata and current value for a single GLSL uniform variable.
  *
- * Populated by the backend during {@link Shader.connect}. The `dirty` flag is
+ * Populated by the backend during {@link WebGl2Shader.connect}. The `dirty` flag is
  * set to `true` on construction and on every {@link setValue} call; the backend
  * clears it via {@link markClean} after uploading the value to the GPU.
  * Array-type uniform names have their index suffix stripped (e.g. `uColors[0]`
  * becomes `uColors`).
  * @advanced
  */
-export class ShaderUniform {
+export class WebGl2ShaderUniform {
   /** Zero-based index of this uniform within the shader program. */
   public readonly index: number;
   /** WebGL2 GLenum type token (e.g. `gl.FLOAT_MAT4`). */
@@ -51,7 +51,7 @@ export class ShaderUniform {
 
   /**
    * Copy `value` into the internal typed-array buffer and mark the uniform dirty.
-   * The backend will upload the new value to the GPU on the next {@link Shader.sync} call.
+   * The backend will upload the new value to the GPU on the next {@link WebGl2Shader.sync} call.
    */
   public setValue(value: TypedArray): this {
     this._value.set(value);
