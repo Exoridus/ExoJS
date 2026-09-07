@@ -9,8 +9,6 @@ import { runAssetsPack } from '../src/commands/assetsPack';
 
 let workDir: string;
 
-const utf8 = (text: string): Uint8Array => new TextEncoder().encode(text);
-
 const write = (name: string, contents: string | Uint8Array): string => {
   const path = join(workDir, name);
 
@@ -22,10 +20,10 @@ const write = (name: string, contents: string | Uint8Array): string => {
 const writeManifest = (manifest: unknown): string => write('pack.json', JSON.stringify(manifest));
 
 /** Pack `manifest` and return the container bytes `exo assets pack` wrote. */
-const pack = (manifest: unknown, argv: readonly string[] = []): ArrayBuffer => {
+const pack = (manifest: unknown): ArrayBuffer => {
   const manifestPath = writeManifest(manifest);
 
-  expect(runAssetsPack([manifestPath, ...argv])).toBe(0);
+  expect(runAssetsPack([manifestPath])).toBe(0);
 
   const bytes = readFileSync(join(workDir, 'out.exoa'));
 
@@ -87,16 +85,16 @@ describe('exo assets pack round trip', () => {
     expect(loader.get(Asset.type('text', 'docs/readme.txt')).value).toBe('hello world');
   });
 
-  test('--compress stores a compressible asset gzipped and reads it back byte for byte', async () => {
+  test('a compressible pack is stored deflated and reads back byte for byte', async () => {
     const compressible = 'x'.repeat(4096);
 
     write('big.txt', compressible);
 
-    const container = pack({ output: 'out.exoa', assets: [{ source: 'docs/big.txt', type: 'text', file: 'big.txt' }] }, ['--compress']);
-    const { entries } = readIndex(container);
+    const container = pack({ output: 'out.exoa', assets: [{ source: 'docs/big.txt', type: 'text', file: 'big.txt' }] });
+    const { blocks } = readHead(container);
 
-    expect(entries[0]).toMatchObject({ codec: 'gzip', decodedLength: compressible.length });
-    expect(entries[0]!.length).toBeLessThan(compressible.length);
+    expect(blocks[0]).toMatchObject({ codec: 'deflate-raw' });
+    expect(blocks[0]!.storedLength as number).toBeLessThan(compressible.length);
 
     const loader = loaderReading(container);
     await loader.loadContainer('assets/pack.exoa');
@@ -104,8 +102,8 @@ describe('exo assets pack round trip', () => {
     expect(loader.get(Asset.type('text', 'docs/big.txt')).value).toBe(compressible);
   });
 
-  test('--compress stores an incompressible asset as it is', async () => {
-    // Random bytes stand in for PNG, KTX2, audio and video: gzip grows them,
+  test('an incompressible pack is stored as it is', async () => {
+    // Random bytes stand in for PNG, KTX2, audio and video: deflate grows them,
     // so the writer must keep the plain bytes rather than wrap them twice.
     const random = new Uint8Array(2048);
 
@@ -113,12 +111,10 @@ describe('exo assets pack round trip', () => {
 
     write('noise.bin', random);
 
-    const container = pack({ output: 'out.exoa', assets: [{ source: 'data/noise.bin', type: 'binary', file: 'noise.bin' }] }, ['--compress']);
-    const { entries } = readIndex(container);
+    const container = pack({ output: 'out.exoa', assets: [{ source: 'data/noise.bin', type: 'binary', file: 'noise.bin' }] });
+    const { blocks } = readHead(container);
 
-    expect(entries[0]!.codec).toBeUndefined();
-    expect(entries[0]!.decodedLength).toBeUndefined();
-    expect(entries[0]!.length).toBe(random.length);
+    expect(blocks[0]).toMatchObject({ codec: 'none', length: random.length, storedLength: random.length });
 
     const loader = loaderReading(container);
     await loader.loadContainer('assets/pack.exoa');
@@ -126,28 +122,24 @@ describe('exo assets pack round trip', () => {
     expect(new Uint8Array(loader.get(Asset.type('binary', 'data/noise.bin')).value)).toEqual(random);
   });
 
-  test('every entry records a SHA-256 of the asset bytes, whatever the codec', async () => {
+  test('every entry records a SHA-256 of the asset bytes', () => {
     write('big.txt', 'y'.repeat(4096));
 
-    const plain = readIndex(pack({ output: 'out.exoa', assets: [{ source: 'docs/big.txt', type: 'text', file: 'big.txt' }] }));
-    const gzipped = readIndex(pack({ output: 'out.exoa', assets: [{ source: 'docs/big.txt', type: 'text', file: 'big.txt' }] }, ['--compress']));
+    const { entries } = readHead(pack({ output: 'out.exoa', assets: [{ source: 'docs/big.txt', type: 'text', file: 'big.txt' }] }));
 
-    expect(gzipped.entries[0]!.codec).toBe('gzip');
-    expect(gzipped.entries[0]!.hash).toBe(plain.entries[0]!.hash);
-    expect(gzipped.entries[0]!.hash).toMatch(/^[\da-f]{64}$/);
+    expect(entries[0]!.hash).toMatch(/^[\da-f]{64}$/);
   });
 
-  test('rejects a payload that does not decode to its declared decodedLength', async () => {
+  test('rejects a truncated container instead of decoding part of it', async () => {
     write('big.txt', 'z'.repeat(4096));
 
-    const container = pack({ output: 'out.exoa', assets: [{ source: 'docs/big.txt', type: 'text', file: 'big.txt' }] }, ['--compress']);
-    const corrupted = withIndex(container, entries => entries.map(entry => ({ ...entry, decodedLength: (entry.decodedLength as number) - 1 })));
-    const loader = loaderReading(corrupted);
+    const container = pack({ output: 'out.exoa', assets: [{ source: 'docs/big.txt', type: 'text', file: 'big.txt' }] });
+    const loader = loaderReading(container.slice(0, container.byteLength - 8));
 
-    await expect(loader.loadContainer('assets/pack.exoa')).rejects.toThrow(/"decodedLength"/);
+    await expect(loader.loadContainer('assets/pack.exoa')).rejects.toThrow(/block 0 runs past the container/);
   });
 
-  test('rejects a version 2 container and names the command that rebuilds it', async () => {
+  test('rejects an earlier container version and names the command that rebuilds it', async () => {
     write('level.json', '{"score":42}');
 
     const container = pack({ output: 'out.exoa', assets: [{ source: 'data/level.json', type: 'json', file: 'level.json' }] });
@@ -193,28 +185,24 @@ describe('exo assets pack failures', () => {
 
     expect(() => runAssetsPack([writeManifest(manifest)])).toThrow('cannot read "gone.json" for "data/gone.json"');
   });
+
+  test('the command takes no options', () => {
+    write('level.json', '{}');
+
+    const manifest = { output: 'out.exoa', assets: [{ source: 'data/level.json', type: 'json', file: 'level.json' }] };
+
+    expect(() => runAssetsPack([writeManifest(manifest), '--compress'])).toThrow(/unknown option "--compress"/);
+  });
 });
 
-/** The index of a written container, read back the way the engine reads it. */
-const readIndex = (container: ArrayBuffer): { entries: Record<string, unknown>[]; indexLength: number } => {
-  const indexLength = new DataView(container).getUint32(8, true);
-  const entries = JSON.parse(new TextDecoder().decode(new Uint8Array(container, 12, indexLength))) as Record<string, unknown>[];
+interface ContainerHead {
+  readonly entries: Record<string, unknown>[];
+  readonly blocks: Record<string, unknown>[];
+}
 
-  return { entries, indexLength };
-};
+/** The JSON head of a written container, read straight out of the file the CLI produced. */
+const readHead = (container: ArrayBuffer): ContainerHead => {
+  const headLength = new DataView(container).getUint32(12, true);
 
-/** Rewrite a container's index, keeping the header and the data section intact. */
-const withIndex = (container: ArrayBuffer, transform: (entries: Record<string, unknown>[]) => Record<string, unknown>[]): ArrayBuffer => {
-  const { entries, indexLength } = readIndex(container);
-  const rewritten = utf8(JSON.stringify(transform(entries)));
-  const data = new Uint8Array(container, 12 + indexLength);
-  const buffer = new ArrayBuffer(12 + rewritten.byteLength + data.byteLength);
-  const bytes = new Uint8Array(buffer);
-
-  bytes.set(new Uint8Array(container, 0, 12));
-  new DataView(buffer).setUint32(8, rewritten.byteLength, true);
-  bytes.set(rewritten, 12);
-  bytes.set(data, 12 + rewritten.byteLength);
-
-  return buffer;
+  return JSON.parse(new TextDecoder().decode(new Uint8Array(container, 32, headLength))) as ContainerHead;
 };

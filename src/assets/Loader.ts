@@ -2,7 +2,7 @@ import { AssetCache } from '#assets/cache/AssetCache';
 import type { AssetCacheError } from '#assets/cache/AssetCacheError';
 import type { CacheLayout } from '#assets/cache/CacheLayout';
 import type { CacheStore } from '#assets/cache/CacheStore';
-import { decodeContainerEntry, parseContainer } from '#assets/container/assetContainer';
+import { decodeContainerData, parseContainer, readContainerEntry } from '#assets/container/assetContainer';
 import type { Connectivity } from '#core/Connectivity';
 import { Signal } from '#core/Signal';
 
@@ -519,7 +519,8 @@ export class Loader {
   /** Backs {@link loadContainer} and {@link LoaderScope.loadContainer}: unpack `url` and claim every entry under `claimer`. @internal */
   public async _loadContainerInto(claimer: LoaderScope, url: string): Promise<void> {
     const buffer = await this._decoder._acquireContainer(url);
-    const { entries, dataStart } = parseContainer(buffer);
+    const container = parseContainer(buffer);
+    const { entries } = container;
 
     // Resolve every type up front so an unknown type fails before any asset is stored.
     const resolved = entries.map(entry => {
@@ -537,9 +538,12 @@ export class Loader {
     // without an await between the in-flight check and the injection it guards -
     // a `get()` slipping into that gap would build a second payload for one
     // identity.
-    const unpacked = await Promise.all(
-      resolved.map(async ({ entry, asset }) => ({ entry, asset, payload: await decodeContainerEntry(entry, buffer, dataStart) })),
-    );
+    //
+    // The whole data section is decoded at once because a block spans many
+    // entries: decoding per entry would decompress the same block once per
+    // asset it holds.
+    const data = await decodeContainerData(container, buffer);
+    const unpacked = resolved.map(({ entry, asset }) => ({ entry, asset, payload: readContainerEntry(entry, data) }));
 
     // Claim before unpacking: an entry that is already resident (loaded over the
     // network earlier) is kept alive by this claim even though nothing stores it

@@ -1,8 +1,16 @@
-import { type ContainerInput, encodeContainer } from '@codexo/exojs-build/asset-container';
+import { CONTAINER_DEFAULT_BLOCK_SIZE, type ContainerInput, encodeContainer } from '@codexo/exojs-build/asset-container';
 
 import { Asset } from '#assets/Asset';
 import { AssetDecodeError } from '#assets/AssetDecodeError';
-import { CONTAINER_HEADER_SIZE, CONTAINER_MAGIC, CONTAINER_VERSION, parseContainer } from '#assets/container/assetContainer';
+import {
+  CONTAINER_ALIGNMENT,
+  CONTAINER_HEADER_SIZE,
+  CONTAINER_MAGIC,
+  CONTAINER_VERSION,
+  decodeContainerData,
+  parseContainer,
+  readContainerEntry,
+} from '#assets/container/assetContainer';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { materializeAssetTypes } from '#extensions/materialize';
@@ -26,43 +34,175 @@ const mockContainerFetch = (container: ArrayBuffer): ReturnType<typeof vi.fn> =>
   return spy;
 };
 
+/** Parse `container` and decode its whole data section, the way a single-request load does. */
+const readAll = async (container: ArrayBuffer): Promise<{ parsed: ReturnType<typeof parseContainer>; data: ArrayBuffer }> => {
+  const parsed = parseContainer(container);
+
+  return { parsed, data: await decodeContainerData(parsed, container) };
+};
+
+/** The bytes one packed source decodes to. */
+const readSource = async (container: ArrayBuffer, source: string): Promise<Uint8Array> => {
+  const { parsed, data } = await readAll(container);
+  const entry = parsed.entries.find(candidate => candidate.source === source);
+
+  expect(entry).toBeDefined();
+
+  return new Uint8Array(readContainerEntry(entry!, data));
+};
+
 // The writer ships in `@codexo/exojs-build` and the reader here, so the header
 // constants are stated twice on purpose - neither package may depend on the
 // other. This suite is one of the two guards that keeps them equal: it parses
 // what the published writer produces. The other is the CLI's `assets pack`
 // spec, which loads a packed file through `Loader.loadContainer`.
 describe('asset container format', () => {
-  test('encode → parse round-trips the index and data offsets', () => {
+  test('encode -> parse round-trips the head and the data section', async () => {
     const inputs: ContainerInput[] = [
       { source: 'level', type: 'json', bytes: utf8('{"score":1}'), mime: 'application/json' },
       { source: 'note', type: 'text', bytes: utf8('hello') },
     ];
+    const container = encodeContainer(inputs);
+    const { parsed, data } = await readAll(container);
 
-    const { version, entries, dataStart } = parseContainer(encodeContainer(inputs));
+    expect(parsed.version).toBe(CONTAINER_VERSION);
+    expect(parsed.entries).toHaveLength(2);
+    expect(parsed.entries[0]).toMatchObject({ source: 'level', type: 'json', offset: 0, length: 11, mime: 'application/json' });
+    // 11 bytes of the first entry, padded up to the next 8-byte boundary.
+    expect(parsed.entries[1]).toMatchObject({ source: 'note', type: 'text', offset: 16, length: 5 });
 
-    expect(version).toBe(3);
-    expect(entries).toHaveLength(2);
-    expect(entries[0]).toMatchObject({ source: 'level', type: 'json', offset: 0, length: 11, mime: 'application/json' });
-    expect(entries[1]).toMatchObject({ source: 'note', type: 'text', offset: 11, length: 5 });
-
-    const buffer = encodeContainer(inputs);
-    const second = entries[1]!;
-    const slice = buffer.slice(dataStart + second.offset, dataStart + second.offset + second.length);
-
-    expect(new TextDecoder().decode(slice)).toBe('hello');
+    expect(new TextDecoder().decode(readContainerEntry(parsed.entries[1]!, data))).toBe('hello');
   });
 
-  test('preserves arbitrary binary bytes (no JSON coercion of data)', () => {
+  test('the header states a block size, an aligned data offset and no flags', () => {
+    const container = encodeContainer([{ source: 'a', type: 'text', bytes: utf8('x') }]);
+    const view = new DataView(container);
+    const parsed = parseContainer(container);
+
+    expect(view.getUint32(8, true)).toBe(0);
+    expect(view.getUint32(16, true)).toBe(parsed.dataOffset);
+    expect(parsed.dataOffset % CONTAINER_ALIGNMENT).toBe(0);
+    expect(parsed.dataOffset).toBeGreaterThanOrEqual(CONTAINER_HEADER_SIZE + view.getUint32(12, true));
+    expect(parsed.blockSize).toBe(CONTAINER_DEFAULT_BLOCK_SIZE);
+    expect(view.getUint32(24, true)).toBe(0);
+    expect(view.getUint32(28, true)).toBe(0);
+  });
+
+  test('every entry starts on an 8-byte boundary inside the data section', () => {
+    const inputs: ContainerInput[] = [
+      { source: 'a', type: 'binary', bytes: new Uint8Array(1) },
+      { source: 'b', type: 'binary', bytes: new Uint8Array(3) },
+      { source: 'c', type: 'binary', bytes: new Uint8Array(9) },
+      { source: 'd', type: 'binary', bytes: new Uint8Array(16) },
+    ];
+    const { entries, dataLength } = parseContainer(encodeContainer(inputs));
+
+    expect(entries.map(entry => entry.offset)).toEqual([0, 8, 16, 32]);
+    expect(dataLength % CONTAINER_ALIGNMENT).toBe(0);
+  });
+
+  test('blocks tile the data section in order and hold whole entries', () => {
+    // Four entries of 512 bytes against a 1 KiB block: two entries per block.
+    const inputs: ContainerInput[] = ['a', 'b', 'c', 'd'].map(source => ({ source, type: 'binary', bytes: new Uint8Array(512) }));
+    const { entries, blocks, dataLength } = parseContainer(encodeContainer(inputs, { blockSize: 1024 }));
+
+    expect(blocks.map(block => [block.offset, block.length])).toEqual([
+      [0, 1024],
+      [1024, 1024],
+    ]);
+    expect(blocks.reduce((total, block) => total + block.length, 0)).toBe(dataLength);
+
+    // Every entry lies inside exactly one block, which is what makes a changed
+    // asset dirty its own blocks and nothing else.
+    for (const entry of entries) {
+      const holder = blocks.find(block => entry.offset >= block.offset && entry.offset + entry.length <= block.offset + block.length);
+
+      expect(holder).toBeDefined();
+    }
+  });
+
+  test('an entry larger than the block size gets a block of its own', () => {
+    const inputs: ContainerInput[] = [
+      { source: 'small', type: 'binary', bytes: new Uint8Array(64) },
+      { source: 'huge', type: 'binary', bytes: new Uint8Array(4096) },
+      { source: 'after', type: 'binary', bytes: new Uint8Array(64) },
+    ];
+    const { blocks } = parseContainer(encodeContainer(inputs, { blockSize: 1024 }));
+
+    expect(blocks.map(block => block.length)).toEqual([64, 4096, 64]);
+  });
+
+  test('a compressible block is deflated and decodes back byte for byte', async () => {
+    const text = 'compress me '.repeat(512);
+    const container = encodeContainer([{ source: 'big.txt', type: 'text', bytes: utf8(text) }]);
+    const { blocks } = parseContainer(container);
+
+    expect(blocks[0]).toMatchObject({ codec: 'deflate-raw' });
+    expect(blocks[0]!.storedLength).toBeLessThan(blocks[0]!.length);
+    expect(new TextDecoder().decode(await readSource(container, 'big.txt'))).toBe(text);
+  });
+
+  test('an incompressible block is stored as it is', async () => {
+    // Random bytes stand in for PNG, KTX2, audio and video: deflate grows them,
+    // so the writer keeps the plain bytes rather than wrap them twice.
+    const random = new Uint8Array(4096);
+
+    for (let i = 0; i < random.length; i++) random[i] = Math.floor(Math.random() * 256);
+
+    const container = encodeContainer([{ source: 'noise.bin', type: 'binary', bytes: random }]);
+    const { blocks } = parseContainer(container);
+
+    expect(blocks[0]).toMatchObject({ codec: 'none', length: 4096, storedLength: 4096 });
+    expect(await readSource(container, 'noise.bin')).toEqual(random);
+  });
+
+  test('preserves arbitrary binary bytes (no JSON coercion of data)', async () => {
     const raw = new Uint8Array([0, 255, 1, 254, 128]);
-    const { entries, dataStart } = parseContainer(encodeContainer([{ source: 'b', type: 'binary', bytes: raw }]));
-    const buffer = encodeContainer([{ source: 'b', type: 'binary', bytes: raw }]);
-    const first = entries[0]!;
 
-    expect(new Uint8Array(buffer.slice(dataStart + first.offset, dataStart + first.offset + first.length))).toEqual(raw);
+    expect(await readSource(encodeContainer([{ source: 'b', type: 'binary', bytes: raw }]), 'b')).toEqual(raw);
   });
 
-  test('an empty container round-trips', () => {
-    expect(parseContainer(encodeContainer([])).entries).toHaveLength(0);
+  test('an empty container round-trips', async () => {
+    const { parsed, data } = await readAll(encodeContainer([]));
+
+    expect(parsed.entries).toHaveLength(0);
+    expect(parsed.blocks).toHaveLength(0);
+    expect(data.byteLength).toBe(0);
+  });
+
+  test('a block hash names its stored bytes, so an unchanged block keeps its hash', () => {
+    const inputs = (payload: string): ContainerInput[] => [
+      { source: 'stable.txt', type: 'text', bytes: utf8('stable '.repeat(200)) },
+      { source: 'changing.txt', type: 'text', bytes: utf8(payload.repeat(200)) },
+    ];
+    const before = parseContainer(encodeContainer(inputs('before '), { blockSize: 1024 }));
+    const after = parseContainer(encodeContainer(inputs('after!! '), { blockSize: 1024 }));
+
+    // The first block holds only the unchanged asset, so a client already
+    // holding it re-fetches the second block alone.
+    expect(after.blocks[0]!.hash).toBe(before.blocks[0]!.hash);
+    expect(after.blocks[1]!.hash).not.toBe(before.blocks[1]!.hash);
+  });
+
+  test('encodeContainer records a SHA-256 of the asset bytes', () => {
+    const { entries } = parseContainer(encodeContainer([{ source: 'a', type: 'text', bytes: utf8('hello') }]));
+
+    // Known digest of "hello": the hash identifies the asset, so it must not
+    // depend on how this build happens to store it.
+    expect(entries[0]?.hash).toBe('2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824');
+  });
+
+  test('encodeContainer round-trips per-asset "options"', () => {
+    const inputs: ContainerInput[] = [{ source: 'a', type: 'json', bytes: utf8('{}'), options: { strict: true } }];
+
+    const { entries } = parseContainer(encodeContainer(inputs));
+
+    expect(entries[0]).toMatchObject({ options: { strict: true } });
+  });
+
+  test('rejects a block size the header cannot state', () => {
+    expect(() => encodeContainer([], { blockSize: 0 })).toThrow(/blockSize must be an integer/);
+    expect(() => encodeContainer([], { blockSize: 2 ** 32 })).toThrow(/blockSize must be an integer/);
   });
 
   test('rejects a buffer smaller than the header', () => {
@@ -83,73 +223,65 @@ describe('asset container format', () => {
     expect(() => parseContainer(buffer)).toThrow(/unsupported version/);
   });
 
-  test('rejects a version 1 container instead of misreading its index', () => {
-    const buffer = encodeContainer([]);
-    new DataView(buffer).setUint32(4, 1, true);
+  test('rejects an earlier version instead of misreading its frame', () => {
+    for (const version of [1, 2]) {
+      const buffer = encodeContainer([]);
+      new DataView(buffer).setUint32(4, version, true);
 
-    // v1 indexed entries by an opaque alias, which cannot be resolved to an
-    // asset identity at all - there is nothing to read partially.
-    expect(() => parseContainer(buffer)).toThrow(/unsupported version 1/);
-    expect(() => parseContainer(buffer)).toThrow(/exo assets pack/);
+      // Every earlier version framed the file differently, so there is nothing
+      // to read partially. Containers are build output: rebuild, do not migrate.
+      expect(() => parseContainer(buffer)).toThrow(new RegExp(`unsupported version ${version}`));
+      expect(() => parseContainer(buffer)).toThrow(/exo assets pack/);
+    }
   });
 
-  test('rejects a version 2 container instead of misreading its index', () => {
+  test('rejects a header that sets a reserved flag', () => {
     const buffer = encodeContainer([]);
-    new DataView(buffer).setUint32(4, 2, true);
+    new DataView(buffer).setUint32(8, 1, true);
 
-    // v2 predates the per-entry codec, so a reader cannot tell stored bytes
-    // from asset bytes. Containers are build output: rebuild, do not migrate.
-    expect(() => parseContainer(buffer)).toThrow(/unsupported version 2/);
-    expect(() => parseContainer(buffer)).toThrow(/exo assets pack/);
+    expect(() => parseContainer(buffer)).toThrow(/flags 1 are set/);
   });
 
-  test('rejects an index length that runs past the buffer', () => {
+  test('rejects a head length that runs past the buffer', () => {
     const buffer = encodeContainer([{ source: 'a', type: 'text', bytes: utf8('x') }]);
-    new DataView(buffer).setUint32(8, 0xffff, true);
+    new DataView(buffer).setUint32(12, 0xffff, true);
 
     expect(() => parseContainer(buffer)).toThrow(/runs past the buffer/);
   });
 
-  test('rejects an entry whose slice runs past the data section', () => {
-    const indexBytes = utf8(JSON.stringify([{ source: 'a', type: 'text', offset: 0, length: 999 }]));
-    const buffer = new ArrayBuffer(CONTAINER_HEADER_SIZE + indexBytes.byteLength + 2);
-    const bytes = new Uint8Array(buffer);
+  test('rejects a data offset that is not aligned', () => {
+    const buffer = encodeContainer([{ source: 'a', type: 'text', bytes: utf8('x') }]);
     const view = new DataView(buffer);
 
-    for (let i = 0; i < CONTAINER_MAGIC.length; i++) {
-      bytes[i] = CONTAINER_MAGIC.charCodeAt(i);
-    }
-    view.setUint32(4, CONTAINER_VERSION, true);
-    view.setUint32(8, indexBytes.byteLength, true);
-    bytes.set(indexBytes, CONTAINER_HEADER_SIZE);
+    view.setUint32(16, view.getUint32(16, true) + 1, true);
 
-    expect(() => parseContainer(buffer)).toThrow(/runs past the data section/);
+    expect(() => parseContainer(buffer)).toThrow(/not a multiple of 8/);
   });
 
-  test('rejects a non-array index', () => {
-    const indexBytes = utf8(JSON.stringify({ not: 'an array' }));
-    const buffer = new ArrayBuffer(CONTAINER_HEADER_SIZE + indexBytes.byteLength);
-    const bytes = new Uint8Array(buffer);
-    const view = new DataView(buffer);
+  test('rejects a data offset inside the head', () => {
+    const buffer = encodeContainer([{ source: 'a', type: 'text', bytes: utf8('x') }]);
 
-    for (let i = 0; i < CONTAINER_MAGIC.length; i++) {
-      bytes[i] = CONTAINER_MAGIC.charCodeAt(i);
-    }
-    view.setUint32(4, CONTAINER_VERSION, true);
-    view.setUint32(8, indexBytes.byteLength, true);
-    bytes.set(indexBytes, CONTAINER_HEADER_SIZE);
+    new DataView(buffer).setUint32(16, 0, true);
 
-    expect(() => parseContainer(buffer)).toThrow(/index is not an array/);
+    expect(() => parseContainer(buffer)).toThrow(/is outside the container/);
+  });
+
+  test('rejects a zero block size', () => {
+    const buffer = encodeContainer([]);
+    new DataView(buffer).setUint32(20, 0, true);
+
+    expect(() => parseContainer(buffer)).toThrow(/block size is zero/);
   });
 
   // -------------------------------------------------------------------------
-  // Raw (hand-built) index buffers - exercises readEntry()'s field-level
-  // validation guards directly, bypassing encodeContainer's own type safety.
+  // Hand-built heads - exercises the field-level validation guards directly,
+  // bypassing encodeContainer's own type safety.
   // -------------------------------------------------------------------------
 
-  /** Builds a container buffer (header + index) with an arbitrary raw index value, and no data section. */
-  const encodeRawIndexBuffer = (indexBytes: Uint8Array): ArrayBuffer => {
-    const buffer = new ArrayBuffer(CONTAINER_HEADER_SIZE + indexBytes.byteLength);
+  /** Builds a container (header + head) with an arbitrary raw head, over `storedBytes` of block area. */
+  const encodeRawHeadBuffer = (headBytes: Uint8Array, storedBytes = 0): ArrayBuffer => {
+    const dataOffset = Math.ceil((CONTAINER_HEADER_SIZE + headBytes.byteLength) / CONTAINER_ALIGNMENT) * CONTAINER_ALIGNMENT;
+    const buffer = new ArrayBuffer(dataOffset + storedBytes);
     const bytes = new Uint8Array(buffer);
     const view = new DataView(buffer);
 
@@ -157,41 +289,137 @@ describe('asset container format', () => {
       bytes[i] = CONTAINER_MAGIC.charCodeAt(i);
     }
     view.setUint32(4, CONTAINER_VERSION, true);
-    view.setUint32(8, indexBytes.byteLength, true);
-    bytes.set(indexBytes, CONTAINER_HEADER_SIZE);
+    view.setUint32(12, headBytes.byteLength, true);
+    view.setUint32(16, dataOffset, true);
+    view.setUint32(20, CONTAINER_DEFAULT_BLOCK_SIZE, true);
+    bytes.set(headBytes, CONTAINER_HEADER_SIZE);
 
     return buffer;
   };
 
-  const encodeRawIndex = (index: unknown): ArrayBuffer => {
-    return encodeRawIndexBuffer(utf8(JSON.stringify(index)));
-  };
+  const encodeRawHead = (head: unknown, storedBytes = 0): ArrayBuffer => encodeRawHeadBuffer(utf8(JSON.stringify(head)), storedBytes);
 
-  test('rejects an index entry that is not an object', () => {
-    expect(() => parseContainer(encodeRawIndex([42]))).toThrow(/index entry 0 is not an object/);
+  const HASH_A = 'a'.repeat(64);
+
+  /** A head whose single block describes `storedBytes` of block area, which is zeroed rather than valid. */
+  const headWithBlock = (entries: unknown[], block: Record<string, unknown>, storedBytes = 0): ArrayBuffer =>
+    encodeRawHead({ entries, blocks: [{ offset: 0, length: 0, storedOffset: 0, storedLength: 0, codec: 'none', hash: HASH_A, ...block }] }, storedBytes);
+
+  test('rejects a head region that is not valid JSON', () => {
+    expect(() => parseContainer(encodeRawHeadBuffer(utf8('{not valid json')))).toThrow(/head is not valid JSON/);
+  });
+
+  test('rejects a head that is not a JSON object', () => {
+    expect(() => parseContainer(encodeRawHead([]))).toThrow(/head is not a JSON object/);
+  });
+
+  test('rejects a head without entries or blocks', () => {
+    expect(() => parseContainer(encodeRawHead({ blocks: [] }))).toThrow(/no "entries" array/);
+    expect(() => parseContainer(encodeRawHead({ entries: [] }))).toThrow(/no "blocks" array/);
+  });
+
+  test('rejects a block table with a gap', () => {
+    const head = {
+      entries: [],
+      blocks: [
+        { offset: 0, length: 0, storedOffset: 0, storedLength: 0, codec: 'none', hash: HASH_A },
+        { offset: 8, length: 0, storedOffset: 0, storedLength: 0, codec: 'none', hash: HASH_A },
+      ],
+    };
+
+    expect(() => parseContainer(encodeRawHead(head))).toThrow(/block 1 covers the data section from 8, but the previous block ends at 0/);
+  });
+
+  test('rejects a block whose codec this build cannot decode', () => {
+    expect(() => parseContainer(headWithBlock([], { codec: 'zstd' }))).toThrow(/unsupported codec "zstd"/);
+  });
+
+  test('rejects an uncoded block whose stored length disagrees with what it covers', () => {
+    expect(() => parseContainer(headWithBlock([], { length: 8, storedLength: 4 }))).toThrow(/stores 4 bytes uncoded but covers 8/);
+  });
+
+  test('rejects a block with no usable hash', () => {
+    expect(() => parseContainer(headWithBlock([], { hash: 'ABC' }))).toThrow(/lowercase hex SHA-256 "hash"/);
+  });
+
+  test('rejects a block whose stored bytes run past the container', () => {
+    expect(() => parseContainer(headWithBlock([], { codec: 'deflate-raw', storedLength: 64 }))).toThrow(/block 0 runs past the container/);
+  });
+
+  test('rejects a block claiming more bytes than its codec can produce', () => {
+    // A few hundred bytes of file declaring a data section of gigabytes: the
+    // reader must refuse it in the head, not discover it at the allocation.
+    const hostile = headWithBlock([], { codec: 'deflate-raw', length: Number.MAX_SAFE_INTEGER, storedLength: 0 });
+
+    expect(() => parseContainer(hostile)).toThrow(AssetDecodeError);
+    expect(() => parseContainer(hostile)).toThrow(/past what deflate-raw can produce/);
+  });
+
+  test('accepts a block within what its codec can produce', () => {
+    // The bound has to leave the ratio real deflate reaches untouched, so it is
+    // checked from both sides rather than only where it rejects.
+    const stored = 16;
+    const block = (length: number): ArrayBuffer => headWithBlock([], { codec: 'deflate-raw', length, storedLength: stored }, stored);
+
+    expect(() => parseContainer(block(stored * 1032))).not.toThrow();
+    expect(() => parseContainer(block(stored * 1032 + 1))).toThrow(/can produce/);
+  });
+
+  test('rejects a fractional byte count instead of truncating it', () => {
+    // 15.999999999999998 passes every bounds check and then loses a byte in
+    // `slice`, handing out an asset one byte short of what the head declared.
+    const head = { entries: [{ source: 'a', type: 'text', offset: 0, length: 15.999_999_999_999_998 }], blocks: [] };
+
+    expect(() => parseContainer(encodeRawHead(head))).toThrow(/invalid "length"/);
+    expect(() => parseContainer(headWithBlock([], { length: 8.5, storedLength: 8.5 }))).toThrow(/invalid "length"/);
+    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 'a', type: 'text', offset: 0.5, length: 0 }], blocks: [] }))).toThrow(/invalid "offset"/);
+  });
+
+  test('rejects an entry that is not an object', () => {
+    expect(() => parseContainer(encodeRawHead({ entries: [42], blocks: [] }))).toThrow(/entry 0 is not an object/);
   });
 
   test('rejects an entry with a non-string source', () => {
-    expect(() => parseContainer(encodeRawIndex([{ source: 42, type: 'text', offset: 0, length: 0 }]))).toThrow(/non-string "source"/);
+    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 42, type: 'text', offset: 0, length: 0 }], blocks: [] }))).toThrow(/non-string "source"/);
   });
 
   test('rejects an entry with a non-string type', () => {
-    expect(() => parseContainer(encodeRawIndex([{ source: 'a', type: 42, offset: 0, length: 0 }]))).toThrow(/non-string "type"/);
+    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 'a', type: 42, offset: 0, length: 0 }], blocks: [] }))).toThrow(/non-string "type"/);
   });
 
   test('rejects an entry with an invalid (negative) offset', () => {
-    expect(() => parseContainer(encodeRawIndex([{ source: 'a', type: 'text', offset: -1, length: 0 }]))).toThrow(/invalid "offset"/);
+    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 'a', type: 'text', offset: -8, length: 0 }], blocks: [] }))).toThrow(/invalid "offset"/);
   });
 
   test('rejects an entry with an invalid (non-numeric) length', () => {
-    expect(() => parseContainer(encodeRawIndex([{ source: 'a', type: 'text', offset: 0, length: 'x' }]))).toThrow(/invalid "length"/);
+    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 'a', type: 'text', offset: 0, length: 'x' }], blocks: [] }))).toThrow(/invalid "length"/);
+  });
+
+  test('rejects an entry that does not start on an alignment boundary', () => {
+    const head = { entries: [{ source: 'a', type: 'text', offset: 4, length: 0 }], blocks: [] };
+
+    expect(() => parseContainer(encodeRawHead(head))).toThrow(/starts at 4, which is not a multiple of 8/);
+  });
+
+  test('rejects an entry whose slice runs past the data section', () => {
+    const head = { entries: [{ source: 'a', type: 'text', offset: 0, length: 999 }], blocks: [] };
+
+    expect(() => parseContainer(encodeRawHead(head))).toThrow(/runs past the data section/);
   });
 
   test('rejects an entry with a non-string mime', () => {
-    expect(() => parseContainer(encodeRawIndex([{ source: 'a', type: 'text', offset: 0, length: 0, mime: 123 }]))).toThrow(/non-string "mime"/);
+    const head = { entries: [{ source: 'a', type: 'text', offset: 0, length: 0, mime: 123 }], blocks: [] };
+
+    expect(() => parseContainer(encodeRawHead(head))).toThrow(/non-string "mime"/);
   });
 
-  test('rejects an index that packs one source twice', () => {
+  test('rejects an entry hash that is not a lowercase hex SHA-256', () => {
+    const head = { entries: [{ source: 'a', type: 'text', offset: 0, length: 0, hash: 'ABC' }], blocks: [] };
+
+    expect(() => parseContainer(encodeRawHead(head))).toThrow(/lowercase hex SHA-256/);
+  });
+
+  test('rejects a head that packs one source twice', () => {
     const duplicated = encodeContainer([
       { source: 'cfg.json', type: 'json', bytes: utf8('{"which":"first"}') },
       { source: 'cfg.json', type: 'json', bytes: utf8('{"which":"second"}') },
@@ -199,57 +427,51 @@ describe('asset container format', () => {
 
     // Both entries resolve to one asset identity, so the second unpack would
     // build a payload for it that no owner can ever release.
-    expect(() => parseContainer(duplicated)).toThrow(/index entry "cfg.json" is packed twice/);
+    expect(() => parseContainer(duplicated)).toThrow(/entry "cfg.json" is packed twice/);
   });
 
-  test('rejects an index region that is not valid JSON', () => {
-    expect(() => parseContainer(encodeRawIndexBuffer(utf8('{not valid json')))).toThrow(/index is not valid JSON/);
+  test('an entry carrying "options" round-trips through a raw head', () => {
+    const head = { entries: [{ source: 'a', type: 'text', offset: 0, length: 0, options: { mode: 'fast' } }], blocks: [] };
+
+    expect(parseContainer(encodeRawHead(head)).entries[0]).toMatchObject({ options: { mode: 'fast' } });
   });
 
-  test('an entry carrying "options" round-trips through the raw index', () => {
-    const { entries } = parseContainer(encodeRawIndex([{ source: 'a', type: 'text', offset: 0, length: 0, options: { mode: 'fast' } }]));
+  test('rejects stored bytes that do not decode to the region their block covers', async () => {
+    const container = encodeContainer([{ source: 'big.txt', type: 'text', bytes: utf8('shrink me '.repeat(512)) }]);
+    const parsed = parseContainer(container);
 
-    expect(entries[0]).toMatchObject({ options: { mode: 'fast' } });
+    expect(parsed.blocks[0]!.codec).toBe('deflate-raw');
+
+    const block = parsed.blocks[0]!;
+    const understated = { ...parsed, dataLength: parsed.dataLength - 8, blocks: [{ ...block, length: block.length - 8 }] };
+
+    await expect(decodeContainerData(understated, container)).rejects.toThrow(AssetDecodeError);
+    await expect(decodeContainerData(understated, container)).rejects.toThrow(/decodes to more than/);
   });
 
-  test('rejects an entry whose codec this build cannot decode', () => {
-    const index = [{ source: 'a', type: 'text', offset: 0, length: 0, codec: 'zstd', decodedLength: 4 }];
+  test('a corrupt block fails as a container error, not as a platform decoder error', async () => {
+    const container = encodeContainer([{ source: 'big.txt', type: 'text', bytes: utf8('flip a bit '.repeat(512)) }]);
+    const parsed = parseContainer(container);
+    const block = parsed.blocks[0]!;
 
-    expect(() => parseContainer(encodeRawIndex(index))).toThrow(/unsupported codec "zstd"/);
+    expect(block.codec).toBe('deflate-raw');
+
+    // Bit-flip in the middle of the deflate stream: the platform's decompressor
+    // rejects it with an error of its own, which the caller must not have to
+    // recognize - it branches on the container being unreadable.
+    new Uint8Array(container)[parsed.dataOffset + block.storedOffset + Math.floor(block.storedLength / 2)] ^= 0xff;
+
+    await expect(decodeContainerData(parsed, container)).rejects.toThrow(AssetDecodeError);
+    await expect(decodeContainerData(parsed, container)).rejects.toThrow(/block 0 is not readable as "deflate-raw"/);
   });
 
-  test('rejects an encoded entry with no decodedLength', () => {
-    const index = [{ source: 'a', type: 'text', offset: 0, length: 0, codec: 'gzip' }];
+  test('a truncated block fails as a container error too', async () => {
+    const container = encodeContainer([{ source: 'big.txt', type: 'text', bytes: utf8('cut me short '.repeat(512)) }]);
+    const parsed = parseContainer(container);
+    const block = parsed.blocks[0]!;
+    const cut = { ...parsed, blocks: [{ ...block, storedLength: block.storedLength - 4 }] };
 
-    expect(() => parseContainer(encodeRawIndex(index))).toThrow(/is "gzip"-encoded but has no valid "decodedLength"/);
-  });
-
-  test('rejects a decodedLength on an entry that declares no codec', () => {
-    const index = [{ source: 'a', type: 'text', offset: 0, length: 0, decodedLength: 4 }];
-
-    expect(() => parseContainer(encodeRawIndex(index))).toThrow(/has a "decodedLength" but no "codec"/);
-  });
-
-  test('rejects a hash that is not a lowercase hex SHA-256', () => {
-    const index = [{ source: 'a', type: 'text', offset: 0, length: 0, hash: 'ABC' }];
-
-    expect(() => parseContainer(encodeRawIndex(index))).toThrow(/lowercase hex SHA-256/);
-  });
-
-  test('encodeContainer records a SHA-256 of the asset bytes', () => {
-    const { entries } = parseContainer(encodeContainer([{ source: 'a', type: 'text', bytes: utf8('hello') }]));
-
-    // Known digest of "hello": the hash identifies the asset, so it must not
-    // depend on how this build happens to store it.
-    expect(entries[0]?.hash).toBe('2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824');
-  });
-
-  test('encodeContainer round-trips per-asset "options"', () => {
-    const inputs: ContainerInput[] = [{ source: 'a', type: 'json', bytes: utf8('{}'), options: { strict: true } }];
-
-    const { entries } = parseContainer(encodeContainer(inputs));
-
-    expect(entries[0]).toMatchObject({ options: { strict: true } });
+    await expect(decodeContainerData(cut, container)).rejects.toThrow(AssetDecodeError);
   });
 });
 
@@ -276,6 +498,26 @@ describe('Loader.loadContainer', () => {
     expect(loader.get(Asset.type('json', 'data/level.json')).value).toEqual({ score: 42 });
     expect(loader.get(Asset.type('text', 'docs/readme.txt')).value).toBe('hello world');
     expect(new Uint8Array(loader.get(Asset.type('binary', 'data/blob.bin')).value)).toEqual(new Uint8Array([1, 2, 3, 4]));
+  });
+
+  test('loads assets spread across several blocks', async () => {
+    const container = encodeContainer(
+      [
+        { source: 'data/level.json', type: 'json', bytes: utf8(`{"score":42,"pad":"${'x'.repeat(600)}"}`) },
+        { source: 'docs/readme.txt', type: 'text', bytes: utf8('hello world') },
+      ],
+      { blockSize: 256 },
+    );
+
+    expect(parseContainer(container).blocks.length).toBeGreaterThan(1);
+
+    mockContainerFetch(container);
+
+    const loader = createCoreLoader();
+    await loader.loadContainer('assets/pack.exoa');
+
+    expect(loader.get(Asset.type('json', 'data/level.json')).value).toMatchObject({ score: 42 });
+    expect(loader.get(Asset.type('text', 'docs/readme.txt')).value).toBe('hello world');
   });
 
   test('container entries are ordinary claimed assets, visible and releasable', async () => {

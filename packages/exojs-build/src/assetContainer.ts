@@ -1,21 +1,33 @@
 import { createHash } from 'node:crypto';
-import { gzipSync } from 'node:zlib';
+import { deflateRawSync } from 'node:zlib';
 
 /**
  * Writer for the ExoJS binary asset container (`.exoa`).
  *
- * A container packs N assets into one file so a single HTTP request yields all
- * of them. Layout:
+ * A container packs N assets into one file so a single request yields all of
+ * them, and compresses that file in **blocks**: a bounded run of the data
+ * section, compressed on its own and addressable on its own.
  *
  * ```
- * magic "EXOA" (4B) | version u32 LE | indexLength u32 LE | index (JSON, UTF-8)
- * data: concatenated asset bytes [slice0][slice1]...[sliceN]
+ * offset  contents
+ * 0       "EXOA"                     magic
+ * 4       version    u32 LE
+ * 8       flags      u32 LE          reserved, zero
+ * 12      headLength u32 LE          bytes of the JSON head that follows
+ * 16      dataOffset u32 LE          first byte of the block area
+ * 20      blockSize  u32 LE          uncompressed bytes a block aims for
+ * 24      reserved   u32 LE x2       zero
+ * 32      head                       JSON, UTF-8, uncompressed
+ * dataOffset
+ *         block 0, block 1, ...      each independently compressed
  * ```
  *
- * The index is a small JSON table of contents read once - zero-copy matters
- * only for the asset data, not the table. `offset` and `length` address an
- * entry's *stored* bytes within the data section, which are the asset's own
- * bytes unless `codec` says otherwise.
+ * An entry addresses the **uncompressed** data section; a block records where
+ * its stored bytes live in the file and which region of that section they
+ * produce. Block boundaries fall on entry boundaries and never inside an entry,
+ * so changing one asset dirties that asset's blocks and no others - which is
+ * what lets a client that already holds an older pack fetch only the blocks
+ * whose hash it does not have.
  *
  * The reader is `Loader.loadContainer` in `@codexo/exojs`. Neither package may
  * depend on the other (the engine must not pull in build tooling, and this
@@ -23,7 +35,7 @@ import { gzipSync } from 'node:zlib';
  * both sides and the round-trip specs are what keeps them equal: the engine's
  * container spec parses what `encodeContainer` writes, and the CLI's `assets
  * pack` spec loads a packed file through `Loader.loadContainer`. A change to
- * the magic, the version, the header size or the index shape on either side
+ * the magic, the version, the header size or the head shape on either side
  * fails both.
  */
 
@@ -33,26 +45,43 @@ export const CONTAINER_MAGIC = 'EXOA';
 /**
  * Container format version written by {@link encodeContainer}.
  *
- * Version 3 added the per-entry `codec`, `decodedLength` and `hash` fields.
  * Earlier versions are not migrated: a container is build output, so it is
  * rebuilt.
  */
 export const CONTAINER_VERSION = 3;
 
-/** Fixed header size: magic (4) + version (4) + indexLength (4). */
-export const CONTAINER_HEADER_SIZE = 12;
+/** Fixed header size, in bytes, ahead of the JSON head. */
+export const CONTAINER_HEADER_SIZE = 32;
 
 /**
- * How an entry's stored bytes are encoded.
- *
- * `gzip` is the only value: it decodes through the browser's
- * `DecompressionStream`, which needs no dependency and no WebAssembly. The
- * field exists so a decoder that arrives for another reason can be added
- * without a format break.
+ * Boundary every entry starts on inside the uncompressed data section, so a
+ * decoded block yields typed-array views over its entries without a copy. The
+ * head is padded to the same boundary, which is why `dataOffset` is stated in
+ * the header rather than derived from `headLength`.
  */
-export type ContainerCodec = 'gzip';
+export const CONTAINER_ALIGNMENT = 8;
 
-/** One asset to pack, with the metadata its index entry carries. */
+/**
+ * Uncompressed bytes a block aims for when {@link EncodeContainerOptions} names
+ * no other size.
+ *
+ * Large enough that compression sees shared context across many small assets,
+ * small enough that a client re-fetching one changed asset pays for a block
+ * rather than for the pack.
+ */
+export const CONTAINER_DEFAULT_BLOCK_SIZE = 262_144;
+
+/**
+ * How a block's stored bytes are encoded.
+ *
+ * `deflate-raw` decodes through the browser's `DecompressionStream` with no
+ * dependency and no WebAssembly; `none` is what a block of already-compressed
+ * payload (PNG, KTX2, H.264, AAC, Opus) stores, where deflating a second time
+ * costs decode time and wins nothing.
+ */
+export type ContainerCodec = 'deflate-raw' | 'none';
+
+/** One asset to pack, with the metadata its head entry carries. */
 export interface ContainerInput {
   /**
    * The logical source this entry stands in for - the same relative path a
@@ -63,85 +92,194 @@ export interface ContainerInput {
   /** Asset type name, lowercase, as the loader's type map spells it (`texture`, `sound`, `json`). */
   readonly type: string;
   readonly bytes: ArrayBuffer | Uint8Array;
-  /** MIME hint recorded in the index; informational, the factory decides from the bytes. */
+  /** MIME hint recorded in the head; informational, the factory decides from the bytes. */
   readonly mime?: string;
   /** Per-asset options forwarded to the asset handler at unpack time. */
   readonly options?: unknown;
 }
 
-/** One entry in a written container's index. `offset` is relative to the data section. */
-export interface ContainerIndexEntry {
+/** One asset in a written container's head. `offset` addresses the uncompressed data section. */
+export interface ContainerHeadEntry {
   readonly source: string;
   readonly type: string;
+  /** Byte offset within the uncompressed data section; a multiple of {@link CONTAINER_ALIGNMENT}. */
   readonly offset: number;
-  /** Stored byte length: what `offset` addresses, before decoding. */
+  /** Byte length of the asset's own bytes. */
   readonly length: number;
-  /** Absent when the stored bytes are the asset's own. */
-  readonly codec?: ContainerCodec;
-  /** Byte length after decoding. Present exactly when `codec` is. */
-  readonly decodedLength?: number;
   readonly mime?: string;
-  /** SHA-256 of the asset's own bytes, lowercase hex. Independent of how they are stored. */
-  readonly hash?: string;
+  /** SHA-256 of the asset's own bytes, lowercase hex. Independent of how a pack stored them. */
+  readonly hash: string;
   readonly options?: unknown;
 }
 
-/** Packing decisions {@link encodeContainer} takes per entry. */
+/** One independently compressed run of the data section, as written into the head. */
+export interface ContainerHeadBlock {
+  /** Byte offset of the region this block covers within the uncompressed data section. */
+  readonly offset: number;
+  /** Uncompressed byte length of that region. */
+  readonly length: number;
+  /** Byte offset of the stored bytes, relative to the header's `dataOffset`. */
+  readonly storedOffset: number;
+  /** Stored byte length; equal to `length` when the codec is `none`. */
+  readonly storedLength: number;
+  readonly codec: ContainerCodec;
+  /**
+   * SHA-256 of the **stored** bytes, lowercase hex. It names the bytes that
+   * travel, which is what lets a client tell a block it already holds from one
+   * it has to fetch.
+   */
+  readonly hash: string;
+}
+
+/** The uncompressed JSON head {@link encodeContainer} writes between the header and the block area. */
+export interface ContainerHead {
+  readonly entries: readonly ContainerHeadEntry[];
+  readonly blocks: readonly ContainerHeadBlock[];
+}
+
+/** Packing decisions {@link encodeContainer} takes. */
 export interface EncodeContainerOptions {
   /**
-   * Try gzip on every entry, keeping the compressed bytes only where they are
-   * actually smaller. Off by default: most real payload (PNG, KTX2, audio,
-   * video) is already compressed, and wrapping it again costs decode time for
-   * nothing.
+   * Uncompressed bytes a block aims for, defaulting to
+   * {@link CONTAINER_DEFAULT_BLOCK_SIZE}. A block always holds whole entries, so
+   * an asset larger than this gets a block of its own and the size is a target
+   * rather than a limit.
+   *
+   * Smaller blocks make an update cheaper and compression weaker; larger blocks
+   * do the reverse.
    */
-  readonly compress?: boolean;
+  readonly blockSize?: number;
 }
 
 const toUint8 = (bytes: ArrayBuffer | Uint8Array): Uint8Array => (bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
 
 const sha256Hex = (bytes: Uint8Array): string => createHash('sha256').update(bytes).digest('hex');
 
+const alignUp = (value: number): number => Math.ceil(value / CONTAINER_ALIGNMENT) * CONTAINER_ALIGNMENT;
+
+/** One entry laid out in the uncompressed data section, before blocks are cut. */
+interface PlacedEntry {
+  readonly entry: ContainerHeadEntry;
+  readonly bytes: Uint8Array;
+  /** Bytes this entry occupies including the padding that aligns the next one. */
+  readonly span: number;
+}
+
+const placeEntries = (inputs: readonly ContainerInput[]): PlacedEntry[] => {
+  const placed: PlacedEntry[] = [];
+  let offset = 0;
+
+  for (const input of inputs) {
+    const bytes = toUint8(input.bytes);
+    const span = alignUp(bytes.byteLength);
+
+    placed.push({
+      entry: {
+        source: input.source,
+        type: input.type,
+        offset,
+        length: bytes.byteLength,
+        ...(input.mime !== undefined && { mime: input.mime }),
+        hash: sha256Hex(bytes),
+        ...(input.options !== undefined && { options: input.options }),
+      },
+      bytes,
+      span,
+    });
+    offset += span;
+  }
+
+  return placed;
+};
+
+/**
+ * Cut the placed entries into runs of at most `blockSize` uncompressed bytes.
+ *
+ * An entry never straddles a boundary: that is what makes a changed asset dirty
+ * only its own blocks, and it costs nothing because a block that would overflow
+ * simply starts at the next entry instead.
+ */
+const cutBlocks = (placed: readonly PlacedEntry[], blockSize: number): Array<{ offset: number; length: number }> => {
+  const runs: Array<{ offset: number; length: number }> = [];
+  let offset = 0;
+  let length = 0;
+
+  for (const { span } of placed) {
+    if (length > 0 && length + span > blockSize) {
+      runs.push({ offset, length });
+      offset += length;
+      length = 0;
+    }
+
+    length += span;
+  }
+
+  if (length > 0) runs.push({ offset, length });
+
+  return runs;
+};
+
 /**
  * Pack assets into a container buffer, in the order given.
  *
- * Every entry records a `hash` of the asset's own bytes, so a later manifest can
- * address an asset by content regardless of how a particular pack stored it.
+ * Every entry records a `hash` of the asset's own bytes, so a manifest above the
+ * container can address an asset by content regardless of how a particular pack
+ * stored it; every block records a hash of its stored bytes, so a client can
+ * re-use the blocks it already holds.
+ *
+ * Compression is not a flag: each block is deflated and the result kept only
+ * where it is actually smaller, so a block of already-compressed payload is
+ * stored as it is and no caller has to know which of their assets those are.
  *
  * Duplicate sources are not rejected here; the reader refuses them, because one
  * source is one asset identity and a second payload for it would leak whatever
  * device resource the losing one owns.
  */
 export const encodeContainer = (inputs: readonly ContainerInput[], options: EncodeContainerOptions = {}): ArrayBuffer => {
-  const compress = options.compress ?? false;
-  const slices: Uint8Array[] = [];
-  const index: ContainerIndexEntry[] = [];
-  let offset = 0;
+  const blockSize = options.blockSize ?? CONTAINER_DEFAULT_BLOCK_SIZE;
 
-  for (const input of inputs) {
-    const plain = toUint8(input.bytes);
-    // Compressing an already-compressed payload usually grows it, so the
-    // comparison decides per entry rather than per pack.
-    const gzipped = compress ? new Uint8Array(gzipSync(plain)) : undefined;
-    const useGzip = gzipped !== undefined && gzipped.byteLength < plain.byteLength;
-    const stored = useGzip ? gzipped : plain;
-
-    index.push({
-      source: input.source,
-      type: input.type,
-      offset,
-      length: stored.byteLength,
-      ...(useGzip && { codec: 'gzip' as const, decodedLength: plain.byteLength }),
-      ...(input.mime !== undefined && { mime: input.mime }),
-      hash: sha256Hex(plain),
-      ...(input.options !== undefined && { options: input.options }),
-    });
-    slices.push(stored);
-    offset += stored.byteLength;
+  // The header states the block size in a u32, so a size it cannot hold would
+  // be written back as a different number than the one the blocks were cut at.
+  if (!Number.isInteger(blockSize) || blockSize < CONTAINER_ALIGNMENT || blockSize > 0xffff_ffff) {
+    throw new Error(`encodeContainer: blockSize must be an integer between ${CONTAINER_ALIGNMENT} and 4294967295, got ${blockSize}`);
   }
 
-  const indexBytes = new TextEncoder().encode(JSON.stringify(index));
-  const total = CONTAINER_HEADER_SIZE + indexBytes.byteLength + offset;
-  const buffer = new ArrayBuffer(total);
+  const placed = placeEntries(inputs);
+  const dataLength = placed.reduce((total, { span }) => total + span, 0);
+  const data = new Uint8Array(dataLength);
+
+  for (const { entry, bytes } of placed) {
+    data.set(bytes, entry.offset);
+  }
+
+  const blocks: ContainerHeadBlock[] = [];
+  const stored: Uint8Array[] = [];
+  let storedOffset = 0;
+
+  for (const run of cutBlocks(placed, blockSize)) {
+    const plain = data.subarray(run.offset, run.offset + run.length);
+    const deflated = deflateRawSync(plain);
+    // Deflating an already-compressed run grows it, so the comparison decides
+    // per block rather than per pack.
+    const useDeflate = deflated.byteLength < plain.byteLength;
+    const bytes = useDeflate ? new Uint8Array(deflated) : plain;
+
+    blocks.push({
+      offset: run.offset,
+      length: run.length,
+      storedOffset,
+      storedLength: bytes.byteLength,
+      codec: useDeflate ? 'deflate-raw' : 'none',
+      hash: sha256Hex(bytes),
+    });
+    stored.push(bytes);
+    storedOffset += bytes.byteLength;
+  }
+
+  const head: ContainerHead = { entries: placed.map(({ entry }) => entry), blocks };
+  const headBytes = new TextEncoder().encode(JSON.stringify(head));
+  const dataOffset = alignUp(CONTAINER_HEADER_SIZE + headBytes.byteLength);
+  const buffer = new ArrayBuffer(dataOffset + storedOffset);
   const bytes = new Uint8Array(buffer);
   const view = new DataView(buffer);
 
@@ -150,12 +288,14 @@ export const encodeContainer = (inputs: readonly ContainerInput[], options: Enco
   }
 
   view.setUint32(4, CONTAINER_VERSION, true);
-  view.setUint32(8, indexBytes.byteLength, true);
+  view.setUint32(12, headBytes.byteLength, true);
+  view.setUint32(16, dataOffset, true);
+  view.setUint32(20, blockSize, true);
 
-  bytes.set(indexBytes, CONTAINER_HEADER_SIZE);
+  bytes.set(headBytes, CONTAINER_HEADER_SIZE);
 
-  let cursor = CONTAINER_HEADER_SIZE + indexBytes.byteLength;
-  for (const slice of slices) {
+  let cursor = dataOffset;
+  for (const slice of stored) {
     bytes.set(slice, cursor);
     cursor += slice.byteLength;
   }

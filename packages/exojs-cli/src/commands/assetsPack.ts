@@ -3,7 +3,7 @@ import { dirname, resolve } from 'node:path';
 
 import { type ContainerInput, encodeContainer } from '@codexo/exojs-build/asset-container';
 
-import { flag, type OptionSpec, parseArgs } from '../args.js';
+import { type OptionSpec, parseArgs } from '../args.js';
 import { CliError } from '../CliError.js';
 
 export const ASSETS_USAGE = `Usage: exo assets pack <manifest>
@@ -26,14 +26,11 @@ Manifest shape - every path resolves against the manifest's own directory:
 load would use, so a packed asset and a loose one are one identity. "file" is
 where the bytes are read from. "type" is the loader type name, lowercase.
 
-Options:
-  --compress   gzip each asset, keeping the compressed bytes only where they are
-               actually smaller: PNG, KTX2, audio and video are already
-               compressed and are stored as they are. Over HTTP the transport
-               usually compresses the whole container anyway, so this is worth
-               it for offline and packaged distribution rather than for serving.`;
+The container is compressed in blocks that span several assets, and a block is
+kept compressed only where that is actually smaller, so already-compressed
+payload (PNG, KTX2, audio, video) is stored as it is.`;
 
-const OPTIONS: OptionSpec = new Map([['compress', 'boolean']]);
+const OPTIONS: OptionSpec = new Map();
 
 interface ManifestAsset {
   readonly source: string;
@@ -151,8 +148,7 @@ export const runAssetsPack = (argv: readonly string[]): number => {
     };
   });
 
-  const compress = flag(args, 'compress');
-  const container = encodeContainer(inputs, { compress });
+  const container = encodeContainer(inputs);
   const outputPath = resolve(manifestDir, manifest.output);
 
   try {
@@ -161,8 +157,8 @@ export const runAssetsPack = (argv: readonly string[]): number => {
     throw new CliError(`cannot write "${manifest.output}"`, { hint: 'Create the output directory first; the packer does not create it.', cause: error });
   }
 
-  // With --compress the two numbers differ by whatever gzip won, minus the
-  // index; without it they differ only by the header and the index.
+  // The two numbers differ by whatever the block compression won, minus the
+  // header, the head and the alignment padding.
   console.log(`Wrote ${inputs.length} asset(s) -> ${outputPath} (${container.byteLength} bytes from ${plainBytes} bytes of asset data)`);
 
   return 0;
