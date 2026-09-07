@@ -167,6 +167,28 @@ stays quiet. System-shaped is a name test (`System$`), not a type test.
 
 Configure with `pattern`, `registry`, `registerMethod` and `lifecycleMethods`.
 
+### `exo/no-deprecated-api`
+
+Flags an import of a name the engine's own JSDoc marks `@deprecated`, with that
+tag's replacement note as the message. In the `strict` tier only.
+
+Import specifiers only, matched against the imported name rather than the local
+binding, so an aliased import is caught too. A namespace import
+(`import * as Exo`) is not tracked.
+
+## Engine-internal rules
+
+`exo/engine/*` enforces contracts the ExoJS engine's own source makes - written
+promises in its doc comments, not promises made on your behalf. They are in no
+tier and nothing turns them on for you. `exoEngineRulesConfig` is a supported
+entry point if you want one anyway.
+
+### `exo/engine/no-allocation-in-hot-hook`
+
+Flags object and array literals, `new`, per-call closures, and array-returning
+standard-library calls inside a method named in its `methods` option. It cannot
+see an allocation behind a helper call and does not try.
+
 ## License
 
 MIT

@@ -25,6 +25,7 @@
 // have to widen into the same generic problem `unbound-method` already owns.
 import type { Linter } from 'eslint';
 
+import { engineNoAllocationInHotHook } from './rules/engine-no-allocation-in-hot-hook.js';
 import { noAsyncRenderHook } from './rules/no-async-render-hook.js';
 import { noAsyncUpdate } from './rules/no-async-update.js';
 import { noDeprecatedApi } from './rules/no-deprecated-api.js';
@@ -36,7 +37,8 @@ import { requireSuperDestroy } from './rules/require-super-destroy.js';
  * The ExoJS plugin object.
  *
  * Register it under the prefix `exo`; every rule name below and every message
- * in this package assumes it.
+ * in this package assumes it. The `engine/` rules are engine-internal and are
+ * in no consumer preset - see {@link exoEngineRulesConfig}.
  */
 export const exoPlugin = {
   rules: {
@@ -46,6 +48,10 @@ export const exoPlugin = {
     'no-self-enabled-check': noSelfEnabledCheck,
     'no-unregistered-system': noUnregisteredSystem,
     'require-super-destroy': requireSuperDestroy,
+    // ESLint splits a rule id at its FIRST slash, so a rule keyed with a slash
+    // under the `exo` plugin is addressed as `exo/engine/...` - a real second
+    // namespace segment rather than a naming convention.
+    'engine/no-allocation-in-hot-hook': engineNoAllocationInHotHook,
   },
 };
 
@@ -107,6 +113,35 @@ export function exoRulesConfig({ files, deprecatedApi = {}, tier = 'recommended'
   }
 
   return [{ files, plugins: { exo: exoPlugin }, rules }];
+}
+
+/** Options for {@link exoEngineRulesConfig}. */
+export interface ExoEngineRulesConfigOptions {
+  /** Globs the engine-internal rules apply to. */
+  readonly files: string[];
+  /** Methods `exo/engine/no-allocation-in-hot-hook` treats as allocation-free hooks. */
+  readonly allocationFreeHooks: string[];
+}
+
+/**
+ * Turns the `exo/engine/*` rules on for `files`.
+ *
+ * These enforce the ExoJS engine's own internal contracts and are deliberately
+ * absent from {@link exoRulesConfig}: the promises they check are written in
+ * the engine's source, not made on a consumer's behalf. A consumer who wants
+ * one anyway can call this directly - it is a supported entry point, not a
+ * private one - but nothing turns it on for them.
+ */
+export function exoEngineRulesConfig({ files, allocationFreeHooks }: ExoEngineRulesConfigOptions): Linter.Config[] {
+  return [
+    {
+      files,
+      plugins: { exo: exoPlugin },
+      rules: {
+        'exo/engine/no-allocation-in-hot-hook': ['error', { methods: allocationFreeHooks }],
+      },
+    },
+  ];
 }
 
 export { collectDeprecatedExports, collectDeprecatedExportsFromSource } from './deprecatedApi.js';

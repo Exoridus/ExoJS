@@ -1,7 +1,7 @@
 import { globSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { collectDeprecatedExports, exoRulesConfig } from '@codexo/eslint-plugin-exojs';
+import { collectDeprecatedExports, exoEngineRulesConfig, exoRulesConfig } from '@codexo/eslint-plugin-exojs';
 import { coreInternalDirs, createImportBoundaries } from '@codexo/exojs-config/eslint';
 import { languageBaselineConfig, nodeToolingConfig } from '@codexo/exojs-config/eslint/base';
 import { typeAwareCorrectnessRules } from '@codexo/exojs-config/eslint/correctness';
@@ -391,6 +391,17 @@ export default defineConfig([
   // must not still be imported from `src/` or from a package that ships beside
   // it. Consumers choose the tier that fits their own migration.
   ...exoRulesConfig({ files: ['src/**/*.ts', 'packages/exojs-*/src/**/*.ts'], deprecatedApi, tier: 'strict' }),
+
+  // The engine-internal tier, over the engine only. These enforce promises this
+  // repository's own doc comments make and are in no consumer preset - see the
+  // plugin's `exoEngineRulesConfig`.
+  //
+  // The hook list is the set of methods whose JSDoc states the prohibition:
+  // `Filter.getOutputBounds` runs once per frame for every filtered node, and
+  // `SceneNode._notifyEnclosingRetainedGroup` runs on every own-transform
+  // mutation. A hook joins this list when its documentation makes the promise,
+  // not the other way round.
+  ...exoEngineRulesConfig({ files: ['src/**/*.ts'], allocationFreeHooks: ['getOutputBounds', '_notifyEnclosingRetainedGroup'] }),
 
   // The published build tooling runs in Node: it drives esbuild and reads the
   // filesystem. The generic `packages/exojs-*/src` block grants browser
