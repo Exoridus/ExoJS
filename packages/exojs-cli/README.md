@@ -67,7 +67,6 @@ engine unpacks in a single request through `loader.loadContainer()`.
 
 ```sh
 npx exo assets pack assets/level1.json
-npx exo assets pack assets/level1.json --compress
 ```
 
 `source` is the logical path the entry stands in for - the same string a network
@@ -75,10 +74,10 @@ load would use, so a packed asset and a loose one are one identity. `file` is
 where the bytes are read from at pack time. Every path resolves against the
 manifest's own directory.
 
-`--compress` gzips each asset and keeps the compressed bytes only where they are
-actually smaller, so PNG, KTX2, audio and video are stored as they are. Over
-HTTP the transport usually compresses the whole container anyway; the gain is
-for offline and packaged distribution.
+The container is compressed in blocks that span several assets, so compression
+sees shared context across them, and each block is kept compressed only where
+that is actually smaller - already-compressed payload such as PNG, KTX2, audio
+and video is stored as it is. There is nothing to configure.
 
 ## Versioning
 
