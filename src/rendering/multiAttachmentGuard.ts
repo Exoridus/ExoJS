@@ -6,34 +6,20 @@ import type { Drawable } from './Drawable';
 import { RenderBackendType } from './RenderBackendType';
 import { RenderError } from './RenderError';
 
+const remedy = 'Give the drawable a material whose fragment shader declares one output per attachment, or render it into a single-attachment RenderTexture.';
+
 /**
- * Warn once per shader/attachment-count pairing when a material's fragment
- * shader declares fewer outputs than the active target has attachments.
+ * Note the one case the reflection cannot decide, in dev builds only.
  *
- * Parsed via {@link Shader.countFragmentOutputs}, which is regex-based
- * and best-effort - `null` (language not supplied, or the declared struct
- * could not be resolved) is treated as "cannot tell" and never warns. This
- * is diagnostic only: it does not change what the backend accepts, and a
- * shader with the reflection-defeating shape below simply misses the warning.
+ * Reaching this means the language for the active backend is supplied but its
+ * declared output count did not resolve, so the draw proceeds unchecked: a
+ * refusal here would reject correct shaders over a parser limitation.
  */
-const warnIfUnderDeclared = (drawable: Drawable, attachmentCount: number, backendType: RenderBackendType): void => {
-  const material = drawable instanceof Mesh || drawable instanceof Sprite ? drawable.material : null;
-
-  if (material === null) {
-    return;
-  }
-
-  const counts = material.shader.countFragmentOutputs();
-  const declared = backendType === RenderBackendType.WebGpu ? counts.wgsl : counts.glsl;
-
-  if (declared === null || declared >= attachmentCount) {
-    return;
-  }
-
+const warnUnresolvedOutputs = (shaderId: number, attachmentCount: number): void => {
   logger.warn(
-    `A material's fragment shader declares ${declared} output(s) but the active render target has ${attachmentCount} colour attachments. ` +
-      `Attachments beyond the declared outputs keep their previous contents (WebGL2) or are rejected at pipeline creation (WebGPU).`,
-    { source: 'multiAttachmentGuard', once: `multi-attachment-under-declared:${material.shader.id}:${attachmentCount}` },
+    `Could not determine how many outputs a material's fragment shader declares, so the draw into a render target with ${attachmentCount} colour attachments was not verified. ` +
+      `If it declares fewer, the attachments beyond them keep their previous contents (WebGL2) or the pipeline is rejected at creation (WebGPU).`,
+    { source: 'multiAttachmentGuard', once: `multi-attachment-unresolved:${shaderId}:${attachmentCount}` },
   );
 };
 
@@ -41,34 +27,62 @@ const warnIfUnderDeclared = (drawable: Drawable, attachmentCount: number, backen
  * Refuse a drawable that cannot write every colour attachment of the active
  * multi-attachment target.
  *
- * Only a mesh or a sprite with a custom material qualifies: every other
- * renderer, and both default materials, declares a single fragment output. On
- * WebGPU a pipeline must declare one target per attachment of the pass it runs
- * in, so those paths could not satisfy such a pass without pipeline variants
- * that write nothing to the extra slots. WebGL2 would silently accept them and
- * leave the other attachments at their cleared contents - a difference in
- * behaviour between the backends is worse than a refusal on both.
+ * Two conditions are refused, both because WebGPU already fails on them and a
+ * difference in behaviour between the backends is worse than a refusal on both:
+ *
+ * - No material. Every other renderer, and both default materials, declare a
+ *   single fragment output; on WebGPU a pipeline must declare one target per
+ *   attachment of the pass it runs in, so those paths could not satisfy such a
+ *   pass without pipeline variants that write nothing to the extra slots.
+ * - A material whose fragment shader declares fewer outputs than the target has
+ *   attachments, per {@link Shader.fragmentOutputs} for the active backend's
+ *   language. WebGPU rejects the pipeline at creation; WebGL2 would accept the
+ *   draw and write only the attachments the shader declares, leaving the rest
+ *   at their previous contents.
+ *
+ * A count of `null` means the reflection could not resolve the source, never
+ * that it declares none, so it proceeds with a dev-build warning rather than a
+ * refusal.
  *
  * Only reached while a multi-attachment target is bound; the backends keep that
  * as a cached flag so an ordinary frame never pays for the check.
  * @internal
  */
 export const assertDrawsAllAttachments = (drawable: Drawable, attachmentCount: number, backendType: RenderBackendType): void => {
-  if ((drawable instanceof Mesh || drawable instanceof Sprite) && drawable.material !== null) {
-    if (__DEV__) {
-      warnIfUnderDeclared(drawable, attachmentCount, backendType);
+  const material = drawable instanceof Mesh || drawable instanceof Sprite ? drawable.material : null;
+
+  if (material === null) {
+    throw new RenderError({
+      code: 'unsupported-format',
+      backendType,
+      message: `The active render target has ${attachmentCount} colour attachments, which only a Mesh or Sprite with a material can write. ${remedy}`,
+    });
+  }
+
+  const shader = material.shader;
+  const forWebGpu = backendType === RenderBackendType.WebGpu;
+  const declared = forWebGpu ? shader.fragmentOutputs.wgsl : shader.fragmentOutputs.glsl;
+
+  if (declared === null) {
+    // A shader that does not carry the active backend's language at all fails
+    // later with the backend's own, more specific error; warning here would
+    // only mislabel it as a reflection limitation.
+    if (__DEV__ && (forWebGpu ? shader.wgsl : shader.glsl) !== null) {
+      warnUnresolvedOutputs(shader.id, attachmentCount);
     }
 
     return;
   }
 
-  throw new RenderError({
-    code: 'unsupported-format',
-    backendType,
-    message:
-      `The active render target has ${attachmentCount} colour attachments, which only a Mesh or Sprite with a material can write. ` +
-      `Give the drawable a material whose fragment shader declares one output per attachment, or render it into a single-attachment RenderTexture.`,
-  });
+  if (declared < attachmentCount) {
+    throw new RenderError({
+      code: 'unsupported-format',
+      backendType,
+      message:
+        `A material's fragment shader declares ${declared} output(s) but the active render target has ${attachmentCount} colour attachments. ` +
+        `Attachments beyond the declared outputs would keep their previous contents (WebGL2) or be rejected at pipeline creation (WebGPU). ${remedy}`,
+    });
+  }
 };
 
 /**

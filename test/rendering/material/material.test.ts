@@ -112,11 +112,11 @@ describe('Shader', () => {
     expect(drift.onlyInWgsl).toContain('u_user');
   });
 
-  describe('countFragmentOutputs', () => {
+  describe('fragmentOutputs', () => {
     test('counts a single unqualified GLSL output as one', () => {
       const source = new Shader({ glsl: { vertex: GLSL_VERTEX, fragment: GLSL_FRAGMENT } });
 
-      expect(source.countFragmentOutputs().glsl).toBe(1);
+      expect(source.fragmentOutputs.glsl).toBe(1);
     });
 
     test('counts explicit layout(location = n) GLSL outputs', () => {
@@ -128,7 +128,7 @@ void main() {}
 `;
       const source = new Shader({ glsl: { vertex: GLSL_VERTEX, fragment } });
 
-      expect(source.countFragmentOutputs().glsl).toBe(2);
+      expect(source.fragmentOutputs.glsl).toBe(2);
     });
 
     test('counts a WGSL fragment entry that returns @location directly as one', () => {
@@ -140,7 +140,7 @@ fn fs_main() -> @location(0) vec4<f32> {
 `;
       const source = new Shader({ wgsl });
 
-      expect(source.countFragmentOutputs().wgsl).toBe(1);
+      expect(source.fragmentOutputs.wgsl).toBe(1);
     });
 
     test('counts @location fields on a WGSL fragment entry that returns a struct', () => {
@@ -157,7 +157,7 @@ fn fs_main() -> FragmentOutput {
 `;
       const source = new Shader({ wgsl });
 
-      expect(source.countFragmentOutputs().wgsl).toBe(2);
+      expect(source.fragmentOutputs.wgsl).toBe(2);
     });
 
     test('is null for a WGSL module with no @fragment entry', () => {
@@ -169,13 +169,61 @@ fn vs_main() -> @builtin(position) vec4<f32> {
 `;
       const source = new Shader({ wgsl });
 
-      expect(source.countFragmentOutputs().wgsl).toBeNull();
+      expect(source.fragmentOutputs.wgsl).toBeNull();
     });
 
     test('is null for a language the source does not supply', () => {
       const source = new Shader({ glsl: { vertex: GLSL_VERTEX, fragment: GLSL_FRAGMENT } });
 
-      expect(source.countFragmentOutputs().wgsl).toBeNull();
+      expect(source.fragmentOutputs.wgsl).toBeNull();
+    });
+
+    // An array output occupies one location per element, so this source really
+    // declares two - the regex sees none, and reporting that as `0` would turn
+    // a parser limitation into a refused draw.
+    test('is null rather than zero for a GLSL output the pattern cannot match', () => {
+      const fragment = /* glsl */ `#version 300 es
+precision highp float;
+layout(location = 0) out vec4 fragColor[2];
+void main() { fragColor[0] = vec4(1.0); fragColor[1] = vec4(0.0); }
+`;
+      const source = new Shader({ glsl: { vertex: GLSL_VERTEX, fragment } });
+
+      expect(source.fragmentOutputs.glsl).toBeNull();
+    });
+
+    test('is null rather than zero for a WGSL entry whose return struct declares no @location', () => {
+      const wgsl = /* wgsl */ `
+struct FragmentOutput {
+  @builtin(frag_depth) depth: f32,
+};
+
+@fragment
+fn fs_main() -> FragmentOutput {
+  return FragmentOutput(1.0);
+}
+`;
+      const source = new Shader({ wgsl });
+
+      expect(source.fragmentOutputs.wgsl).toBeNull();
+    });
+
+    test('is null for a WGSL entry whose return struct is not declared in the source', () => {
+      const wgsl = /* wgsl */ `
+@fragment
+fn fs_main() -> ImportedOutput {
+  return ImportedOutput();
+}
+`;
+      const source = new Shader({ wgsl });
+
+      expect(source.fragmentOutputs.wgsl).toBeNull();
+    });
+
+    test('reflects once and returns the same cached record', () => {
+      const source = createShader();
+
+      expect(source.fragmentOutputs).toBe(source.fragmentOutputs);
     });
   });
 });

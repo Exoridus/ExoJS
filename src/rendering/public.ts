@@ -97,7 +97,7 @@ export type { MeshOptions } from '#rendering/mesh/Mesh';
 export { Mesh } from '#rendering/mesh/Mesh';
 export { Graphics } from '#rendering/primitives/Graphics';
 export { INSTANCE_TRANSFORM_GLSL, INSTANCE_TRANSFORM_WGSL } from '#rendering/shader/instanceContract';
-export type { AnyShader, ShaderOptions } from '#rendering/shader/Shader';
+export type { AnyShader, FragmentOutputCounts, ShaderOptions } from '#rendering/shader/Shader';
 export { Shader } from '#rendering/shader/Shader';
 export type { AnimatedSpriteClipDefinition, AnimatedSpritePlayOptions } from '#rendering/sprite/AnimatedSprite';
 export { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
