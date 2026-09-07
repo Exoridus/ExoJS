@@ -402,12 +402,23 @@ pnpm --filter @codexo/exojs-bench bench \
   --out=.workspace/output/my-run
 ```
 
-No `--` separator is needed with `pnpm --filter …`; pnpm forwards these straight
-to the script. Running the same script from inside `packages/exojs-bench`
-(`pnpm bench -- --out=…`) works too, and `--out` is then relative to the package
-directory either way. The root `pnpm bench` forwards here as well; the engine's
-own `vitest bench` micro-benchmarks are `pnpm bench:micro`, and there is no root
-`bench:compare`.
+On a POSIX shell no `--` separator is needed with `pnpm --filter …`; pnpm forwards
+these straight to the script. Running the same script from inside
+`packages/exojs-bench` (`pnpm bench -- --out=…`) works too, and `--out` is then
+relative to the package directory either way. The root `pnpm bench` forwards here
+as well; the engine's own `vitest bench` micro-benchmarks are `pnpm bench:micro`,
+and there is no root `bench:compare`.
+
+> **PowerShell: quote every comma list.** PowerShell reads an unquoted `a,b`
+> argument as an array literal and rejoins it with spaces on the way through
+> pnpm's `.ps1` shim, so `--backend=webgl2,webgpu` arrives as
+> `--backend=webgl2 webgpu`. Write `"--backend=webgl2,webgpu"` instead. A `--`
+> separator does **not** help — the rewrite happens in the argument binder,
+> before pnpm sees anything — and a POSIX shell is unaffected. The CLI refuses a
+> selection value containing whitespace rather than acting on it, because
+> `--nodes` is the one flag where the damage is silent: `1000 5000` survives
+> `parseInt` as `1000`, and the run would publish one node count under the
+> provenance of two.
 
 The run writes `results.json`, `results.csv` and `results.md` into `--out`
 (default `.workspace/output/baseline/`, gitignored), plus a `checkpoint.jsonl`
