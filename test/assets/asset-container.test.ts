@@ -278,10 +278,10 @@ describe('asset container format', () => {
   // bypassing encodeContainer's own type safety.
   // -------------------------------------------------------------------------
 
-  /** Builds a container (header + head) with an arbitrary raw head, and no block area. */
-  const encodeRawHeadBuffer = (headBytes: Uint8Array): ArrayBuffer => {
+  /** Builds a container (header + head) with an arbitrary raw head, over `storedBytes` of block area. */
+  const encodeRawHeadBuffer = (headBytes: Uint8Array, storedBytes = 0): ArrayBuffer => {
     const dataOffset = Math.ceil((CONTAINER_HEADER_SIZE + headBytes.byteLength) / CONTAINER_ALIGNMENT) * CONTAINER_ALIGNMENT;
-    const buffer = new ArrayBuffer(dataOffset);
+    const buffer = new ArrayBuffer(dataOffset + storedBytes);
     const bytes = new Uint8Array(buffer);
     const view = new DataView(buffer);
 
@@ -297,13 +297,13 @@ describe('asset container format', () => {
     return buffer;
   };
 
-  const encodeRawHead = (head: unknown): ArrayBuffer => encodeRawHeadBuffer(utf8(JSON.stringify(head)));
+  const encodeRawHead = (head: unknown, storedBytes = 0): ArrayBuffer => encodeRawHeadBuffer(utf8(JSON.stringify(head)), storedBytes);
 
   const HASH_A = 'a'.repeat(64);
 
-  /** A head whose single block covers `length` bytes of data that is not actually there. */
-  const headWithBlock = (entries: unknown[], block: Record<string, unknown>): ArrayBuffer =>
-    encodeRawHead({ entries, blocks: [{ offset: 0, length: 0, storedOffset: 0, storedLength: 0, codec: 'none', hash: HASH_A, ...block }] });
+  /** A head whose single block describes `storedBytes` of block area, which is zeroed rather than valid. */
+  const headWithBlock = (entries: unknown[], block: Record<string, unknown>, storedBytes = 0): ArrayBuffer =>
+    encodeRawHead({ entries, blocks: [{ offset: 0, length: 0, storedOffset: 0, storedLength: 0, codec: 'none', hash: HASH_A, ...block }] }, storedBytes);
 
   test('rejects a head region that is not valid JSON', () => {
     expect(() => parseContainer(encodeRawHeadBuffer(utf8('{not valid json')))).toThrow(/head is not valid JSON/);
@@ -344,6 +344,35 @@ describe('asset container format', () => {
 
   test('rejects a block whose stored bytes run past the container', () => {
     expect(() => parseContainer(headWithBlock([], { codec: 'deflate-raw', storedLength: 64 }))).toThrow(/block 0 runs past the container/);
+  });
+
+  test('rejects a block claiming more bytes than its codec can produce', () => {
+    // A few hundred bytes of file declaring a data section of gigabytes: the
+    // reader must refuse it in the head, not discover it at the allocation.
+    const hostile = headWithBlock([], { codec: 'deflate-raw', length: Number.MAX_SAFE_INTEGER, storedLength: 0 });
+
+    expect(() => parseContainer(hostile)).toThrow(AssetDecodeError);
+    expect(() => parseContainer(hostile)).toThrow(/past what deflate-raw can produce/);
+  });
+
+  test('accepts a block within what its codec can produce', () => {
+    // The bound has to leave the ratio real deflate reaches untouched, so it is
+    // checked from both sides rather than only where it rejects.
+    const stored = 16;
+    const block = (length: number): ArrayBuffer => headWithBlock([], { codec: 'deflate-raw', length, storedLength: stored }, stored);
+
+    expect(() => parseContainer(block(stored * 1032))).not.toThrow();
+    expect(() => parseContainer(block(stored * 1032 + 1))).toThrow(/can produce/);
+  });
+
+  test('rejects a fractional byte count instead of truncating it', () => {
+    // 15.999999999999998 passes every bounds check and then loses a byte in
+    // `slice`, handing out an asset one byte short of what the head declared.
+    const head = { entries: [{ source: 'a', type: 'text', offset: 0, length: 15.999_999_999_999_998 }], blocks: [] };
+
+    expect(() => parseContainer(encodeRawHead(head))).toThrow(/invalid "length"/);
+    expect(() => parseContainer(headWithBlock([], { length: 8.5, storedLength: 8.5 }))).toThrow(/invalid "length"/);
+    expect(() => parseContainer(encodeRawHead({ entries: [{ source: 'a', type: 'text', offset: 0.5, length: 0 }], blocks: [] }))).toThrow(/invalid "offset"/);
   });
 
   test('rejects an entry that is not an object', () => {
@@ -418,6 +447,31 @@ describe('asset container format', () => {
 
     await expect(decodeContainerData(understated, container)).rejects.toThrow(AssetDecodeError);
     await expect(decodeContainerData(understated, container)).rejects.toThrow(/decodes to more than/);
+  });
+
+  test('a corrupt block fails as a container error, not as a platform decoder error', async () => {
+    const container = encodeContainer([{ source: 'big.txt', type: 'text', bytes: utf8('flip a bit '.repeat(512)) }]);
+    const parsed = parseContainer(container);
+    const block = parsed.blocks[0]!;
+
+    expect(block.codec).toBe('deflate-raw');
+
+    // Bit-flip in the middle of the deflate stream: the platform's decompressor
+    // rejects it with an error of its own, which the caller must not have to
+    // recognize - it branches on the container being unreadable.
+    new Uint8Array(container)[parsed.dataOffset + block.storedOffset + Math.floor(block.storedLength / 2)] ^= 0xff;
+
+    await expect(decodeContainerData(parsed, container)).rejects.toThrow(AssetDecodeError);
+    await expect(decodeContainerData(parsed, container)).rejects.toThrow(/block 0 is not readable as "deflate-raw"/);
+  });
+
+  test('a truncated block fails as a container error too', async () => {
+    const container = encodeContainer([{ source: 'big.txt', type: 'text', bytes: utf8('cut me short '.repeat(512)) }]);
+    const parsed = parseContainer(container);
+    const block = parsed.blocks[0]!;
+    const cut = { ...parsed, blocks: [{ ...block, storedLength: block.storedLength - 4 }] };
+
+    await expect(decodeContainerData(cut, container)).rejects.toThrow(AssetDecodeError);
   });
 });
 

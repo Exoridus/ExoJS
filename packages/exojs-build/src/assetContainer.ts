@@ -125,8 +125,8 @@ export interface ContainerHeadBlock {
   readonly codec: ContainerCodec;
   /**
    * SHA-256 of the **stored** bytes, lowercase hex. It names the bytes that
-   * travel, so a client can tell a block it already holds from one it has to
-   * fetch, and can verify what arrived before decoding it.
+   * travel, which is what lets a client tell a block it already holds from one
+   * it has to fetch.
    */
   readonly hash: string;
 }

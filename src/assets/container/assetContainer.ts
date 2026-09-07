@@ -128,9 +128,13 @@ export interface ContainerBlock {
   readonly storedLength: number;
   readonly codec: ContainerCodec;
   /**
-   * SHA-256 of the **stored** bytes, lowercase hex. It names the bytes that
-   * travel, so a client can tell a block it already holds from one it has to
-   * fetch, and can verify what arrived before decoding it.
+   * SHA-256 of the **stored** bytes, lowercase hex, as the writer computed it.
+   * It names the bytes that travel, which is what lets a client tell a block it
+   * already holds from one it has to fetch.
+   *
+   * Reading a container checks the shape of this field and nothing more: the
+   * digest is not recomputed, so it identifies a block rather than attesting to
+   * it. What guards a decode is the block's own framing.
    */
   readonly hash: string;
 }
@@ -156,7 +160,22 @@ const fail: Fail = detail => {
   throw new AssetDecodeError({ message: `Invalid asset container: ${detail}.`, assetType: 'container' });
 };
 
-const isSize = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0;
+/**
+ * A byte count has to be a non-negative integer, not merely a non-negative
+ * number: a fractional `length` would survive every bounds check and then be
+ * truncated by `ArrayBuffer.slice`, handing out an asset one byte short instead
+ * of rejecting the container that declared it.
+ */
+const isSize = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value >= 0;
+
+/**
+ * DEFLATE's maximum compression ratio: a 258-byte match costs at least two bits,
+ * so no stored byte can produce more than 1032 uncompressed ones. A block
+ * claiming more than that is provably lying about its own bytes, which is what
+ * lets the reader reject a head that would otherwise size an allocation from a
+ * number an attacker chose.
+ */
+const DEFLATE_MAX_EXPANSION = 1032;
 
 const isHash = (value: unknown): value is string => typeof value === 'string' && value.length === HASH_HEX_LENGTH && HASH_PATTERN.test(value);
 
@@ -219,6 +238,9 @@ const readBlock = (value: unknown, i: number, expectedOffset: number, storedLimi
     fail(`block ${i} has an unsupported codec ${JSON.stringify(codec)} (this build decodes ${[...CODECS].map(name => `"${name}"`).join(' and ')})`);
   }
   if (codec === 'none' && storedLength !== length) fail(`block ${i} stores ${storedLength} bytes uncoded but covers ${length} bytes`);
+  if (codec === 'deflate-raw' && length > storedLength * DEFLATE_MAX_EXPANSION) {
+    fail(`block ${i} claims ${length} bytes from ${storedLength} stored ones, past what ${codec} can produce`);
+  }
   if (!isHash(hash)) fail(`block ${i} has no ${HASH_HEX_LENGTH}-character lowercase hex SHA-256 "hash"`);
   if (storedOffset + storedLength > storedLimit) fail(`block ${i} runs past the container (${storedOffset} + ${storedLength} > ${storedLimit} bytes)`);
 
@@ -246,17 +268,27 @@ const decodeBlock = async (block: ContainerBlock, stored: Uint8Array<ArrayBuffer
   const reader = source.pipeThrough(new DecompressionStream(block.codec)).getReader();
   let written = 0;
 
-  for (;;) {
-    const { done, value } = await reader.read();
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
 
-    if (done) break;
-    if (written + value.byteLength > block.length) {
-      await reader.cancel();
-      fail(`block ${index} decodes to more than the ${block.length} bytes it covers`);
+      if (done) break;
+      if (written + value.byteLength > block.length) {
+        await reader.cancel();
+        fail(`block ${index} decodes to more than the ${block.length} bytes it covers`);
+      }
+
+      into.set(value, block.offset + written);
+      written += value.byteLength;
     }
+  } catch (error: unknown) {
+    // A corrupt stream rejects with whatever the platform's decompressor
+    // throws. Callers branch on the container being unreadable, not on which
+    // engine reported it, so the failure keeps the type every other malformed
+    // container has.
+    if (error instanceof AssetDecodeError) throw error;
 
-    into.set(value, block.offset + written);
-    written += value.byteLength;
+    fail(`block ${index} is not readable as "${block.codec}"`);
   }
 
   if (written !== block.length) {
@@ -271,11 +303,21 @@ const decodeBlock = async (block: ContainerBlock, stored: Uint8Array<ArrayBuffer
  * This is the whole-file path: it takes the entire container in memory and
  * produces the entire data section, which is what a single-request load wants.
  *
- * Throws when a block does not decode to the region it claims to cover, the
- * only signal that stored bytes are truncated or corrupt.
+ * Throws when a block is unreadable or does not decode to the region it claims
+ * to cover, the only signal that stored bytes are truncated or corrupt.
  */
 export const decodeContainerData = async (container: ParsedContainer, buffer: ArrayBuffer): Promise<ArrayBuffer> => {
-  const data = new ArrayBuffer(container.dataLength);
+  let data: ArrayBuffer;
+
+  // The size comes from the head, so it is attacker-controlled even after the
+  // per-block expansion bound: a container the runtime cannot hold is a bad
+  // container, not a crash.
+  try {
+    data = new ArrayBuffer(container.dataLength);
+  } catch {
+    fail(`data section of ${container.dataLength} bytes cannot be allocated`);
+  }
+
   const into = new Uint8Array(data);
 
   await Promise.all(
