@@ -3,6 +3,10 @@ import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// The package's public entry, by path: 'create-exo-app' is not a root
+// dependency, and this script is a root script.
+import { TEMPLATES as SCAFFOLDER_TEMPLATES } from '../packages/create-exo-app/src/scaffold.js';
+
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const rootDir = join(__dirname, '..');
 const tmpRoot = join(rootDir, '.workspace', 'tmp', 'create-exo-app');
@@ -13,7 +17,9 @@ const templatesDir = join(rootDir, 'packages', 'create-exo-app', 'templates');
 // the newest published @codexo/exojs without needing template edits per release.
 const EXPECTED_CORE_RANGE = 'latest';
 
-const TEMPLATES = ['minimal', 'game-starter', 'platformer', 'top-down', 'ui-app', 'audio-reactive'] as const;
+// Imported rather than repeated: a second list here would pass while the
+// scaffolder offered something else entirely.
+const TEMPLATES = SCAFFOLDER_TEMPLATES;
 type TemplateName = (typeof TEMPLATES)[number];
 
 const EXPECTED_FILES: Record<TemplateName, string[]> = {
