@@ -24,12 +24,12 @@ import type { AnyShader } from '#rendering/shader/Shader';
 // The pairs under test
 // ---------------------------------------------------------------------------
 
-const pairs: ReadonlyArray<{ readonly name: string; readonly source: AnyShader }> = [
-  { name: 'ColorMatrixFilter', source: colorMatrixShader },
-  { name: "LutFilter 'rgb1d'", source: lutRgb1dShaderSource },
-  { name: "LutFilter '3d'", source: lut3dShaderSource },
-  { name: 'DropShadowFilter', source: dropShadowShader },
-  { name: 'DisplacementFilter', source: displacementShader },
+const pairs: ReadonlyArray<{ readonly name: string; readonly source: AnyShader; readonly fragment: string }> = [
+  { name: 'ColorMatrixFilter', source: colorMatrixShader, fragment: 'color-matrix.frag' },
+  { name: "LutFilter 'rgb1d'", source: lutRgb1dShaderSource, fragment: 'lut-rgb1d.frag' },
+  { name: "LutFilter '3d'", source: lut3dShaderSource, fragment: 'lut-3d.frag' },
+  { name: 'DropShadowFilter', source: dropShadowShader, fragment: 'drop-shadow.frag' },
+  { name: 'DisplacementFilter', source: displacementShader, fragment: 'displacement.frag' },
 ];
 
 /**
@@ -223,5 +223,44 @@ describe.each(pairs)('$name shader pair', ({ source }) => {
 
     expect(wgslTextures.map(t => t.name)).toEqual(glslTextures.map(t => t.name));
     expect(wgslTextures.map(t => t.type)).toEqual(glslTextures.map(t => wgslTypeForGlsl[t.type]));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Coverage of the catalog itself
+// ---------------------------------------------------------------------------
+
+/**
+ * File names only. These globs are deliberately not eager: the completeness
+ * check compares names against the catalog above and never reads a source, so
+ * the shader files stay out of this module's graph and out of reach of the
+ * stub/real shader plugin wiring.
+ */
+const basenames = (modules: Readonly<Record<string, unknown>>): readonly string[] =>
+  Object.keys(modules)
+    .map(path => path.slice(path.lastIndexOf('/') + 1))
+    .sort((a, b) => a.localeCompare(b));
+
+const fragmentFiles = basenames(import.meta.glob('/src/rendering/filters/shaders/*.frag'));
+const vertexFiles = basenames(import.meta.glob('/src/rendering/filters/shaders/*.vert'));
+const wgslFiles = basenames(import.meta.glob('/src/rendering/filters/shaders/*.wgsl'));
+
+const withoutExtension = (file: string): string => file.slice(0, file.lastIndexOf('.'));
+
+const sorted = (names: readonly string[]): readonly string[] => [...names].sort((a, b) => a.localeCompare(b));
+
+describe('the filter shader catalog', () => {
+  test('covers every fragment stage the engine ships', () => {
+    // A new stock filter drops its `.frag` next to the existing ones. Deriving
+    // the expectation from the directory rather than from the list above is
+    // what stops that filter from shipping with an unchecked WGSL half: the
+    // list has to grow with the directory, or this fails.
+    expect(sorted(pairs.map(pair => pair.fragment))).toEqual(fragmentFiles);
+  });
+
+  test('pairs every GLSL stage with a WGSL source of the same name', () => {
+    // The shared fullscreen-quad vertex stage has no `.frag` and therefore no
+    // catalog entry, but it is half of a pair like any other file here.
+    expect(sorted([...fragmentFiles, ...vertexFiles].map(withoutExtension))).toEqual(wgslFiles.map(withoutExtension));
   });
 });
