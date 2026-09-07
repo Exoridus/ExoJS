@@ -13,17 +13,32 @@
   // template also ships its own `tsconfig.json`, which is the scaffolded
   // project's - deliberately not this program, which resolves the workspace
   // sources instead of an installed package.
+  //
+  // The path map covers the engine's SUBPATHS as well as its root, and it has to:
+  // an extension package's own source imports `@codexo/exojs/renderer-sdk` and
+  // `@codexo/exojs/extensions`, and with those unmapped they resolve through
+  // `node_modules` to built declarations instead. That makes the program pass or
+  // fail on whether `dist/` happens to be present and current, which is a green
+  // gate on a developer machine and a red one in CI.
   "extends": "@codexo/exojs-config/typescript/consumer.json",
   "compilerOptions": {
-    "customConditions": ["@codexo/exojs-source"],
+    "customConditions": ["@codexo/exojs-source", "@codexo/exojs-particles-source"],
     "paths": {
       "@codexo/exojs": ["./src/index.ts"],
-      "@codexo/exojs-audio-fx": ["./packages/exojs-audio-fx/src/index.ts"],
-      "@codexo/exojs-physics": ["./packages/exojs-physics/src/index.ts"],
-      "@codexo/exojs-pathfinding": ["./packages/exojs-pathfinding/src/index.ts"],
-      "@codexo/exojs-tilemap": ["./packages/exojs-tilemap/src/index.ts"],
+      "@codexo/exojs/extensions": ["./src/extensions/index.ts"],
+      "@codexo/exojs/renderer-sdk": ["./src/renderer-sdk.ts"],
+      "@codexo/exojs/debug": ["./src/debug/index.ts"],
+      "@codexo/exojs-particles": ["./packages/exojs-particles/src/index.ts"],
       "@codexo/exojs-tiled": ["./packages/exojs-tiled/src/index.ts"],
-      "@codexo/exojs-tilemap-physics": ["./packages/exojs-tilemap-physics/src/index.ts"]
+      "@codexo/exojs-tilemap": ["./packages/exojs-tilemap/src/index.ts"],
+      "@codexo/exojs-aseprite": ["./packages/exojs-aseprite/src/index.ts"],
+      "@codexo/exojs-ldtk": ["./packages/exojs-ldtk/src/index.ts"],
+      "@codexo/exojs-physics": ["./packages/exojs-physics/src/index.ts"],
+      "@codexo/exojs-physics/debug": ["./packages/exojs-physics/src/debug/index.ts"],
+      "@codexo/exojs-tilemap-physics": ["./packages/exojs-tilemap-physics/src/index.ts"],
+      "@codexo/exojs-lighting": ["./packages/exojs-lighting/src/index.ts"],
+      "@codexo/exojs-pathfinding": ["./packages/exojs-pathfinding/src/index.ts"],
+      "@codexo/exojs-audio-fx": ["./packages/exojs-audio-fx/src/index.ts"]
     }
   },
   // `src/typings.d.ts` carries the engine build constants and the ambient
