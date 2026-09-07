@@ -18,6 +18,13 @@ import type { RetainedRootRepresentation } from './RetainedRootRepresentation';
 export interface SourceDeltaHost {
   readonly backend: RenderBackend;
   _discoverSourceScope(node: RenderNode): SourceScope | null;
+  _rederiveSourceScope(node: RenderNode, previous: SourceScope, cursor: number, epoch: number, targets: SourceDeltaTargets): SourceScope | null;
+}
+
+/** What a re-derivation may ask of the delta that started it. */
+export interface SourceDeltaTargets {
+  /** Whether `scope` is one the delta attributed a structural change to. */
+  isTarget(scope: SourceScope): boolean;
 }
 
 /**
@@ -41,7 +48,7 @@ export interface SourceDeltaHost {
  * One instance per collector, because the target list is scratch reused across
  * frames; a delta is never in flight while another one runs.
  */
-export class SourceStructureDelta {
+export class SourceStructureDelta implements SourceDeltaTargets {
   /** Scopes this delta re-discovers, refilled per attempt so it allocates none. */
   private readonly _targets: SourceScope[] = [];
   private readonly _targetSet = new Set<SourceScope>();
@@ -124,7 +131,7 @@ export class SourceStructureDelta {
     product?.snapshotMembership(source.scopes, previousHandleCount);
 
     for (const target of this._targets) {
-      const fresh = this._rediscover(host, target, node);
+      const fresh = this._rediscover(host, target, node, source, epoch);
 
       if (fresh === null) {
         // Part of the tree may already carry fresh contents, and each spliced
@@ -254,11 +261,11 @@ export class SourceStructureDelta {
    * at all, and the placement keys the parent derived when it recorded the
    * entry.
    */
-  private _rediscover(host: SourceDeltaHost, target: SourceScope, root: RenderNode): SourceScope | null {
+  private _rediscover(host: SourceDeltaHost, target: SourceScope, root: RenderNode, source: RenderRootSource, epoch: number): SourceScope | null {
     const node = sourceScopeNode(target, root);
 
     if (node === root) {
-      return host._discoverSourceScope(node);
+      return this._rederiveOrDiscover(host, node, target, source, epoch);
     }
 
     const group = target as SourceGroup;
@@ -275,7 +282,28 @@ export class SourceStructureDelta {
       return null;
     }
 
-    return host._discoverSourceScope(node);
+    return this._rederiveOrDiscover(host, node, target, source, epoch);
+  }
+
+  /**
+   * A scope whose node moved or re-tinted is discovered afresh, because every
+   * stored bound and every prepacked row below it is stale at once. A content
+   * mark on the node itself does not disqualify it: a child-list change raises
+   * one on the container as a matter of course, and nothing a container records
+   * about its children lives in its own content.
+   */
+  private _rederiveOrDiscover(host: SourceDeltaHost, node: RenderNode, target: SourceScope, source: RenderRootSource, epoch: number): SourceScope | null {
+    const cursor = source.changeCursor;
+
+    if (node._transformMarkSequence > cursor || node._tintMarkSequence > cursor) {
+      return host._discoverSourceScope(node);
+    }
+
+    return host._rederiveSourceScope(node, target, cursor, epoch, this);
+  }
+
+  public isTarget(scope: SourceScope): boolean {
+    return this._targetSet.has(scope);
   }
 
   /**

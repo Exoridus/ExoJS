@@ -1,3 +1,12 @@
+/*
+ * eslint-disable-next-line is not enough for `max-lines`: the rule reports the
+ * file, not a line. The builder is the one place that owns the frame's scope
+ * stack, placement and source walk, and the structure delta's re-derivation
+ * pushed it past the limit; its carry decisions already live in
+ * `SourceRederivation`, and what remains here is the stack discipline the walk
+ * shares with discovery. Known deviation, candidate for extraction.
+ */
+/* eslint-disable max-lines */
 import type { Mutable } from '#core/types';
 import { type ReadonlyRectangle, Rectangle } from '#math/Rectangle';
 import type { Drawable } from '#rendering/Drawable';
@@ -31,7 +40,8 @@ import type { RetainedFragmentEntry, RetainedFragmentGroup, RetainedGroupFragmen
 import type { RetainedInstructionSet } from './RetainedInstructionSet';
 import type { RetainedDrawData } from './RetainedRecordPool';
 import type { RetainedRootRepresentation } from './RetainedRootRepresentation';
-import { SourceStructureDelta } from './SourceStructureDelta';
+import { SourceRederivation } from './SourceRederivation';
+import { type SourceDeltaTargets, SourceStructureDelta } from './SourceStructureDelta';
 import { clampResolutionToTextureSize, resolveBarrierResolution } from './targetResolution';
 
 /**
@@ -287,6 +297,8 @@ export class RenderPlanBuilder {
   private readonly _sourceViewReaders = new Set<RenderNode>();
   /** Re-discovers the scopes a structural change touched; owns its own scratch. */
   private readonly _structureDelta = new SourceStructureDelta();
+  /** What each level of the source walk may carry from; see {@link SourceRederivation}. */
+  private readonly _rederivation = new SourceRederivation();
 
   /**
    * The node this build treats as the retained render root, or `null` when the
@@ -620,9 +632,19 @@ export class RenderPlanBuilder {
       return;
     }
 
+    const previous = this._rederivation.previousAt(this._sourceStack.length - 1);
+
     if (node._isDrawableForRenderPlan()) {
+      if (previous !== null && this._rederivation.carryItem(node as Drawable, scope, previous, seq, zIndex)) {
+        return;
+      }
+
       this._collectSourceDrawable(node, scope, seq, zIndex);
 
+      return;
+    }
+
+    if (previous !== null && this._rederivation.carryGroup(this, node, scope, previous, seq, zIndex)) {
       return;
     }
 
@@ -672,10 +694,16 @@ export class RenderPlanBuilder {
     };
 
     scope.others.push(group);
-    this._sourceStack.push(group);
+    this._collectSourceInto(node, group, null);
+    this._resolveViewAttribution(node, scope, mark, otherMark, seq);
+  }
 
+  /** @internal - see {@link SourceRederivationHost}. */
+  public _collectSourceInto(node: RenderNode, scope: SourceScope, previous: SourceScope | null): void {
     const previousProducer = this._sourceProducer;
 
+    this._sourceStack.push(scope);
+    this._rederivation.push(previous);
     this._sourceProducer = node;
 
     try {
@@ -683,9 +711,13 @@ export class RenderPlanBuilder {
     } finally {
       this._sourceProducer = previousProducer;
       this._sourceStack.pop();
+      this._rederivation.pop();
     }
+  }
 
-    this._resolveViewAttribution(node, scope, mark, otherMark, seq);
+  /** @internal - see {@link SourceRederivationHost}. */
+  public _sourceReadsView(node: RenderNode): boolean {
+    return this._sourceViewReaders.has(node);
   }
 
   /**
@@ -736,6 +768,25 @@ export class RenderPlanBuilder {
    * @internal
    */
   public _discoverSourceScope(node: RenderNode): SourceScope | null {
+    return this._walkSourceScope(node, null);
+  }
+
+  /**
+   * Re-derive one recorded scope from its node's current child list, carrying
+   * what `previous` recorded and nothing marked since `cursor` touched (see
+   * {@link SourceRederivation}). Returns `null` where only a rebuild can express
+   * the outcome.
+   * @internal
+   */
+  public _rederiveSourceScope(node: RenderNode, previous: SourceScope, cursor: number, epoch: number, targets: SourceDeltaTargets): SourceScope | null {
+    this._rederivation.begin(cursor, epoch, targets);
+
+    const scope = this._walkSourceScope(node, previous);
+
+    return this._rederivation.end() ? null : scope;
+  }
+
+  private _walkSourceScope(node: RenderNode, previous: SourceScope | null): SourceScope | null {
     const scope = createSourceScope();
     const previousTracked = this._trackedRoot;
     const previousCaptureCull = this._captureCullActive;
@@ -746,14 +797,10 @@ export class RenderPlanBuilder {
     this._trackedRoot = null;
     this._captureCullActive = false;
     this._sourceViewReaders.clear();
-    this._sourceStack.push(scope);
-    this._sourceProducer = node;
 
     try {
-      node._collectForRenderPlan(this);
+      this._collectSourceInto(node, scope, previous);
     } finally {
-      this._sourceProducer = null;
-      this._sourceStack.pop();
       this._trackedRoot = previousTracked;
       this._captureCullActive = previousCaptureCull;
     }
@@ -761,16 +808,6 @@ export class RenderPlanBuilder {
     return this._sourceViewReaders.has(node) ? null : scope;
   }
 
-  /**
-   * Materialise a stored selection into the CURRENT frame's plan: the other
-   * entrance to the same renderer, not a second one.
-   *
-   * Every entry lands in the existing `GroupScope` with its stored `(zIndex,
-   * seq)`, so the existing optimizer sorts it, the existing player plays it and
-   * the existing backend batches it. What the source saves is everything ahead
-   * of that: the scene-graph walk, the transform derivation and the material
-   * resolve for items the rect rejects.
-   */
   private _emitSourceSelection(scope: SourceScope, selection: SourceSelection, rect: ReadonlyRectangle): void {
     const bits = selection.product.selectScope(scope, rect, selection.source.visibility);
     const items = scope.items;
@@ -1376,17 +1413,30 @@ export class RenderPlanBuilder {
 
     const placementSeq = this._reservedSeq;
     const placementZ = this._reservedZ;
-    const bounds = drawable.getBounds();
 
     if (this._sourceStack.length > 0) {
+      const top = this._sourceStack.length - 1;
+      const scope = this._sourceStack[top]!;
+      const previous = this._rederivation.previousAt(top);
+
+      // Re-derivation: an item this scope recorded, untouched since, keeps the
+      // bounds it stored and is not asked again.
+      if (previous !== null && this._rederivation.carryItem(drawable, scope, previous, placementSeq, placementZ)) {
+        return;
+      }
+
       // Discovery: record the neutral item and stop. No pooled command, no
       // nodeIndex, no transform row, no material key - the cut-1 invariant.
       // Bounds are read because they ARE the item's payload, and they are a
       // cache hit for an unmoved node.
-      this._sourceStack[this._sourceStack.length - 1]!.items.push(drawable, placementSeq, placementZ, bounds.left, bounds.top, bounds.right, bounds.bottom);
+      const bounds = drawable.getBounds();
+
+      scope.items.push(drawable, placementSeq, placementZ, bounds.left, bounds.top, bounds.right, bounds.bottom);
 
       return;
     }
+
+    const bounds = drawable.getBounds();
 
     const command = this._acquireDrawCommand();
 
@@ -1660,6 +1710,7 @@ export class RenderPlanBuilder {
     // reader set would attribute a view read to a producer in a later, unrelated
     // build and make it live forever.
     this._sourceStack.length = 0;
+    this._rederivation.reset();
     this._sourceProducer = null;
 
     // `Set.clear()` installs a fresh backing table, so an unconditional clear
@@ -1889,7 +1940,8 @@ export class RenderPlanBuilder {
     return scope;
   }
 
-  private _resolvePreserveDrawOrder(node: RenderNode): boolean {
+  /** @internal - see {@link SourceRederivationHost}. */
+  public _resolvePreserveDrawOrder(node: RenderNode): boolean {
     return node.preserveDrawOrder;
   }
 

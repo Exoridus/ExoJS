@@ -1,5 +1,5 @@
 import type { LibraryProvenance } from '../shared/provenance';
-import { csvField, formatCount as count, formatMs as ms, writeReportArtifacts } from '../shared/report';
+import { csvField, formatCount as count, formatMs as ms, mergeCellResults, mergeLibraries, readExistingReport, writeReportArtifacts } from '../shared/report';
 import type { PhysicsProvenance } from './driver';
 import type { PhysicsCellResult } from './PhysicsAdapter';
 
@@ -122,12 +122,34 @@ const toMarkdown = (data: PhysicsReportData): string => {
 };
 
 /**
+ * Merges a run into the report `outDir` already holds. Cells follow
+ * {@link mergeCellResults} and library versions {@link mergeLibraries}. The
+ * single provenance stamp is the run's: a physics report carries one stamp for
+ * the whole matrix, and the latest run is the one whose browser and clock
+ * produced the newest cells.
+ */
+export const mergePhysicsReportData = (existing: PhysicsReportData | undefined, incoming: PhysicsReportData): PhysicsReportData =>
+  existing === undefined
+    ? incoming
+    : {
+        provenance: incoming.provenance,
+        libraries: mergeLibraries(existing.libraries, incoming.libraries),
+        results: mergeCellResults(existing.results, incoming.results),
+      };
+
+/**
  * Writes the three physics report artifacts into `outDir`:
  * - `results.json` - full fidelity (provenance + every result field).
  * - `results.csv` - one row per cell, machine-parseable.
  * - `results.md` - provenance/caveats block plus a human-readable table.
+ *
+ * An existing `results.json` in `outDir` is merged into rather than replaced
+ * (see {@link mergePhysicsReportData}); the CSV and Markdown are rendered from
+ * the merged data, so all three artifacts describe the same cell set.
  */
-export const writePhysicsReport = (data: PhysicsReportData, outDir: string): void => {
+export const writePhysicsReport = (run: PhysicsReportData, outDir: string): void => {
+  const data = mergePhysicsReportData(readExistingReport<PhysicsReportData>(outDir), run);
+
   writeReportArtifacts(outDir, {
     json: `${JSON.stringify(data, null, 2)}\n`,
     csv: `${toCsv(data)}\n`,

@@ -184,7 +184,16 @@ export const finalizeSourceScopes = (scope: SourceScope, out: SourceScope[], nex
  * @internal
  */
 export const adoptScopeContents = (target: SourceScope, fresh: SourceScope): void => {
-  releaseScopeContents(target);
+  // A nested group the re-derivation carried over sits in BOTH lists and keeps
+  // its contents; only the groups the fresh scope no longer holds are released.
+  target.items.clear();
+  target.index.release();
+
+  for (const other of target.others) {
+    if (other.kind === RenderEntryKind.Group && !fresh.others.includes(other)) {
+      releaseScopeContents(other);
+    }
+  }
 
   target.items = fresh.items;
   target.index = fresh.index;

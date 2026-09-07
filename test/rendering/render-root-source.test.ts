@@ -1024,3 +1024,204 @@ describe('render-root source: structure delta', () => {
     backend.destroy();
   });
 });
+
+describe('render-root source: item-granular re-derivation', () => {
+  class CountingLeaf extends Leaf {
+    public collects = 0;
+
+    protected override _collectContent(builder: RenderPlanBuilder): void {
+      this.collects++;
+      super._collectContent(builder);
+    }
+  }
+
+  class ToggleReader extends Container {
+    public reads = false;
+
+    public constructor() {
+      super();
+      this.cullable = false;
+    }
+
+    protected override _collectContent(builder: RenderPlanBuilder): void {
+      if (this.reads) {
+        void builder.view.center.x;
+      }
+
+      super._collectContent(builder);
+    }
+  }
+
+  test('a churned container collects its arrivals and nothing it already holds', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const group = new Container();
+    const a = new CountingLeaf('a').setPosition(10, 300);
+    const b = new CountingLeaf('b').setPosition(60, 300);
+    const c = new CountingLeaf('c').setPosition(110, 300);
+
+    group.addChild(a, b, c);
+    root.addChild(group);
+
+    driveToSourceTier(root, backend);
+
+    const walkedA = a.collects;
+    const walkedC = c.collects;
+    const d = new CountingLeaf('d').setPosition(160, 300);
+
+    b.destroy();
+    group.addChild(d);
+    draws.length = 0;
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['a', 'c', 'd']);
+    expect(a.collects).toBe(walkedA);
+    expect(c.collects).toBe(walkedC);
+    expect(d.collects).toBe(1);
+    expect(entriesFor(root, group).map(entry => (entry.kind === RenderEntryKind.Draw ? entry.drawable : null))).toEqual([a, c, d]);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a nested container the change did not touch is carried without a walk', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const group = new Container();
+    const nested = new CountingContainer();
+
+    nested.addChild(new Leaf('n1').setPosition(10, 300), new Leaf('n2').setPosition(40, 300));
+    group.addChild(new Leaf('a').setPosition(70, 300), nested, new Leaf('b').setPosition(100, 300));
+    root.addChild(group);
+
+    driveToSourceTier(root, backend);
+
+    const walkedNested = nested.collects;
+    const before = entriesFor(root, nested);
+
+    group.addChild(new Leaf('c').setPosition(130, 300));
+    draws.length = 0;
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['a', 'n1', 'n2', 'b', 'c']);
+    expect(nested.collects).toBe(walkedNested);
+    expect(entriesFor(root, nested)).toEqual(before);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a nested container that moved is walked again, so its items land where it is now', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const group = new Container();
+    const nested = new CountingContainer();
+
+    nested.addChild(new Leaf('n1').setPosition(10, 300));
+    group.addChild(new Leaf('a').setPosition(70, 300), nested);
+    root.addChild(group);
+
+    driveToSourceTier(root, backend);
+
+    const walkedNested = nested.collects;
+
+    nested.setPosition(9000, 0);
+    group.addChild(new Leaf('b').setPosition(100, 300));
+    draws.length = 0;
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['a', 'b']);
+    expect(nested.collects).toBe(walkedNested + 1);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('an item moved between containers is stored in the container that holds it now', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const left = new Container();
+    const right = new Container();
+    const moved = new Leaf('x').setPosition(10, 300);
+
+    left.addChild(moved, new Leaf('a').setPosition(40, 300));
+    right.addChild(new Leaf('b').setPosition(70, 300));
+    root.addChild(left, right);
+
+    driveToSourceTier(root, backend);
+
+    right.addChild(moved);
+    draws.length = 0;
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['a', 'b', 'x']);
+    expect(entriesFor(root, left).map(entry => (entry.kind === RenderEntryKind.Draw ? (entry.drawable as Leaf).id : null))).toEqual(['a']);
+    expect(entriesFor(root, right).map(entry => (entry.kind === RenderEntryKind.Draw ? (entry.drawable as Leaf).id : null))).toEqual(['b', 'x']);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a reorder is carried in the new order without collecting anything', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const group = new Container();
+    const a = new CountingLeaf('a').setPosition(10, 300);
+    const b = new CountingLeaf('b').setPosition(40, 300);
+    const c = new CountingLeaf('c').setPosition(70, 300);
+
+    group.addChild(a, b, c);
+    root.addChild(group);
+
+    driveToSourceTier(root, backend);
+
+    const walked = a.collects + b.collects + c.collects;
+
+    group.setChildIndex(c, 0);
+    draws.length = 0;
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['c', 'a', 'b']);
+    expect(a.collects + b.collects + c.collects).toBe(walked);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a nested container that starts reading the view is rebuilt as a live entry', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const group = new Container();
+    const reader = new ToggleReader();
+
+    reader.addChild(new Leaf('r1').setPosition(10, 300));
+    group.addChild(new Leaf('a').setPosition(40, 300), reader);
+    root.addChild(group);
+
+    driveToSourceTier(root, backend);
+
+    expect(entriesFor(root, group).some(entry => entry.kind === RenderEntryKind.Group && entry.node === reader)).toBe(true);
+
+    reader.reads = true;
+    reader.addChild(new Leaf('r2').setPosition(70, 300));
+    draws.length = 0;
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['a', 'r1', 'r2']);
+
+    // The refused delta dropped the source; the next stable frames earn it back
+    // with the reader as a live entry.
+    backend.setView(viewAt(1000));
+    playFrame(root, backend);
+    backend.setView(viewAt(400));
+    playFrame(root, backend);
+    draws.length = 0;
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['a', 'r1', 'r2']);
+    expect(entriesFor(root, group).some(entry => entry.kind === RenderEntryKind.Barrier && entry.node === reader)).toBe(true);
+
+    root.destroy();
+    backend.destroy();
+  });
+});
