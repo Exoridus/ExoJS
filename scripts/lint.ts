@@ -36,6 +36,8 @@ export const LINT_PASSES: readonly LintPass[] = [
       'packages/exojs-*/test/**/*.{ts,tsx}',
       'packages/exojs-bench/competitors/*.ts',
       'packages/create-exo-app/src/**/*.ts',
+      'packages/eslint-plugin-exojs/src/**/*.ts',
+      'packages/eslint-plugin-exojs/test/**/*.ts',
     ],
   },
 ];

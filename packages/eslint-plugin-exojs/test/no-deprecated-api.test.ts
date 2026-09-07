@@ -1,6 +1,6 @@
 import { RuleTester } from 'eslint';
 
-import { noDeprecatedApi } from '../../../packages/exojs-config/eslint/plugin/rules/no-deprecated-api.js';
+import { noDeprecatedApi } from '../src/rules/no-deprecated-api.ts';
 
 // RuleTester registers its own `describe`/`it` blocks (via the vitest
 // globals this project enables) - it must run at the top level, not nested

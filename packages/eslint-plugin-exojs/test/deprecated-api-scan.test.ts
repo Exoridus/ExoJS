@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { collectDeprecatedExportsFromSource } from '../../../packages/exojs-config/eslint/plugin/deprecatedApi.js';
+import { collectDeprecatedExportsFromSource } from '../src/deprecatedApi.ts';
 
 describe('collectDeprecatedExportsFromSource', () => {
   it('finds nothing when no export carries @deprecated', () => {

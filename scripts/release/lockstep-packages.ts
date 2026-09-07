@@ -86,6 +86,11 @@ export const INDEPENDENT_PACKAGES = [
     dir: 'packages/exojs-cli',
     reason: 'project tooling; installed once via npx and never pinned to an engine version, and it depends on no engine API',
   },
+  {
+    name: '@codexo/eslint-plugin-exojs',
+    dir: 'packages/eslint-plugin-exojs',
+    reason: 'lint tooling; a consumer keeps one version in devDependencies across engine upgrades and its rules read source text, not engine API',
+  },
 ] as const satisfies readonly IndependentPackage[];
 
 /** Union of the official package names (literal type, preserved for `OfficialPackageName`). */

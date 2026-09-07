@@ -4,7 +4,7 @@
 // names imported from a configured package (in practice, `@codexo/exojs`),
 // and it never asks the type checker anything. The deprecation table is
 // generated once, from the engine's own JSDoc `@deprecated` tags (see
-// `deprecatedApi.js`), so the rule reads the replacement text that already
+// `deprecatedApi.ts`), so the rule reads the replacement text that already
 // exists at each deprecation site instead of carrying a second, hand-written
 // copy that can drift from it.
 //
@@ -15,15 +15,20 @@
 // repository or its extension packages imports the engine that way, so
 // tracking namespace member access was left out rather than built against no
 // real case to measure it on. Add it if that changes.
-/**
- * @param {string} configuredSource
- * @param {string} importedFrom
- * @returns {boolean}
- */
-const matchesSource = (configuredSource, importedFrom) => importedFrom === configuredSource || importedFrom.startsWith(`${configuredSource}/`);
+import type { Rule } from 'eslint';
 
-/** @type {import('eslint').Rule.RuleModule} */
-export const noDeprecatedApi = {
+/** Options for {@link noDeprecatedApi}. */
+export interface NoDeprecatedApiOptions {
+  /** Package the deprecation table describes; subpaths of it are matched too. */
+  readonly source: string;
+  /** Exported name to the replacement note shown in the report. */
+  readonly deprecated: Record<string, string>;
+}
+
+const matchesSource = (configuredSource: string, importedFrom: string): boolean =>
+  importedFrom === configuredSource || importedFrom.startsWith(`${configuredSource}/`);
+
+export const noDeprecatedApi: Rule.RuleModule = {
   meta: {
     type: 'problem',
     docs: {
@@ -48,8 +53,7 @@ export const noDeprecatedApi = {
     },
   },
   create(context) {
-    /** @type {{ source: string, deprecated: Record<string, string> } | undefined} */
-    const options = context.options[0];
+    const options = context.options[0] as NoDeprecatedApiOptions | undefined;
 
     if (options === undefined) return {};
 

@@ -16,6 +16,7 @@ packages:
   - packages/exojs-pathfinding
   - packages/exojs-cli
   - packages/create-exo-app
+  - packages/eslint-plugin-exojs
 
 # Packages permitted to run install/build scripts. pnpm v10+ blocks build
 # scripts by default and prompts for approval; this is the explicit allowlist.

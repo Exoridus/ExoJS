@@ -90,7 +90,7 @@
     "build": "pnpm build:tooling && pnpm clean && tsx scripts/build.ts",
     "build:dev": "pnpm build:tooling && pnpm clean && tsx scripts/build.ts --dev",
     "build:watch": "tsx scripts/build.ts --dev --watch",
-    "build:tooling": "pnpm --filter @codexo/exojs-build build",
+    "build:tooling": "pnpm --filter @codexo/exojs-build build && pnpm --filter @codexo/eslint-plugin-exojs build",
     "build:packages": "pnpm -r --filter \"./packages/**\" --filter \"!@codexo/exojs-build\" --filter \"!@codexo/exojs-bench\" build",
     "build:all": "pnpm build && pnpm build:packages",
     "typecheck": "tsc --noEmit",
@@ -218,6 +218,7 @@
   ],
   "devDependencies": {
     "@codecov/rollup-plugin": "^2.0.1",
+    "@codexo/eslint-plugin-exojs": "workspace:*",
     "@codexo/exojs-build": "workspace:*",
     "@codexo/exojs-config": "workspace:*",
     "@rollup/plugin-node-resolve": "^16.0.3",

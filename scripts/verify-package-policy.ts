@@ -38,20 +38,26 @@ for (const t of targets) {
   if (!ok) failed++;
 }
 
-// Published build tooling: the same publish contract, judged against the
-// tooling profile (no engine peer, no dependency on the private config).
-const tooling = INDEPENDENT_PACKAGES.find(p => p.name === '@codexo/exojs-build');
+// Published tooling: the same publish contract, judged against the tooling
+// profile (no engine peer, no dependency on the private config). `create-exo-app`
+// is excluded - a scaffolder is a `bin`, not a library, so the profile's
+// `exports`/`sideEffects` expectations do not describe it.
+const TOOLING_PACKAGES = ['@codexo/exojs-build', '@codexo/eslint-plugin-exojs'];
 
-if (tooling === undefined) {
-  console.error('verify-package-policy: @codexo/exojs-build is missing from INDEPENDENT_PACKAGES.');
-  process.exit(1);
+for (const name of TOOLING_PACKAGES) {
+  const tooling = INDEPENDENT_PACKAGES.find(p => p.name === name);
+
+  if (tooling === undefined) {
+    console.error(`verify-package-policy: ${name} is missing from INDEPENDENT_PACKAGES.`);
+    process.exit(1);
+  }
+
+  const result: PolicyResult = verifyToolingPackage(resolve(root, tooling.dir), { name: tooling.name });
+  const bad = result.checks.filter(c => !c.ok);
+  console.log(`${result.ok ? '✓' : '✗'} ${tooling.name} (${result.checks.length} checks${bad.length ? `, ${bad.length} failed` : ''})`);
+  for (const c of bad) console.log(`    ✗ ${c.name}${c.detail ? ` — ${c.detail}` : ''}`);
+  if (!result.ok) failed++;
 }
-
-const build: PolicyResult = verifyToolingPackage(resolve(root, tooling.dir), { name: tooling.name });
-const buildBad = build.checks.filter(c => !c.ok);
-console.log(`${build.ok ? '✓' : '✗'} ${tooling.name} (${build.checks.length} checks${buildBad.length ? `, ${buildBad.length} failed` : ''})`);
-for (const c of buildBad) console.log(`    ✗ ${c.name}${c.detail ? ` — ${c.detail}` : ''}`);
-if (!build.ok) failed++;
 
 const cfg: PolicyResult = verifyConfigPackage(resolve(root, 'packages/exojs-config'));
 const cfgBad = cfg.checks.filter(c => !c.ok);

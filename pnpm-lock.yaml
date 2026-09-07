@@ -11,6 +11,9 @@ importers:
       '@codecov/rollup-plugin':
         specifier: ^2.0.1
         version: 2.0.1(rollup@4.63.1)
+      '@codexo/eslint-plugin-exojs':
+        specifier: workspace:*
+        version: link:packages/eslint-plugin-exojs
       '@codexo/exojs-build':
         specifier: workspace:*
         version: link:packages/exojs-build
@@ -137,6 +140,21 @@ importers:
       tsx:
         specifier: ^4.23.12
         version: 4.23.13
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+
+  packages/eslint-plugin-exojs:
+    devDependencies:
+      '@types/estree':
+        specifier: ^1.0.9
+        version: 1.0.9
+      '@types/node':
+        specifier: ^26.4.0
+        version: 26.4.1
+      eslint:
+        specifier: ~10.9.1
+        version: 10.9.1(jiti@2.7.0)
       typescript:
         specifier: ~6.0.3
         version: 6.0.3

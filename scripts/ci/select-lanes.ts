@@ -73,6 +73,7 @@ export interface EffectiveLanes {
  * file runs before any install, so it cannot import that module).
  */
 const RUNTIME_PACKAGES = [
+  'eslint-plugin-exojs',
   'exojs-build',
   'exojs-config',
   'exojs-particles',

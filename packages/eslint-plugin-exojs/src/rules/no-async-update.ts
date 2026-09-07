@@ -26,6 +26,15 @@
 // deliberately excluded too - it returns a bare `void`, not `Synchronous`, and
 // is a teardown hook rather than a per-frame one; folding it in here would be
 // scope creep beyond what was asked.
+//
+// `execute` and `apply` are not here either: they are the render-pass and
+// filter hooks, and the names are too generic for a purely name-based check.
+// `no-async-render-hook` covers them, anchored on the `extends` clause.
+import type { Rule } from 'eslint';
+import type { Expression, Node, PrivateIdentifier } from 'estree';
+
+import { staticKeyName } from '../ast.js';
+
 const SYNCHRONOUS_HOOK_NAMES = new Set([
   // System phases (`SystemMethods`) and the identical Scene frame hooks.
   'preUpdate',
@@ -39,23 +48,7 @@ const SYNCHRONOUS_HOOK_NAMES = new Set([
   'render',
 ]);
 
-/**
- * Static name of a (possibly computed) property/method key, or `undefined`
- * when the name cannot be determined without evaluating the key expression.
- * @param {*} key An `Identifier`, `Literal` or other property-key AST node.
- * @param {boolean} computed
- * @returns {string | undefined}
- */
-const staticKeyName = (key, computed) => {
-  if (computed) return undefined;
-  if (key.type === 'Identifier') return key.name;
-  if (key.type === 'Literal' && typeof key.value === 'string') return key.value;
-
-  return undefined;
-};
-
-/** @type {import('eslint').Rule.RuleModule} */
-export const noAsyncUpdate = {
+export const noAsyncUpdate: Rule.RuleModule = {
   meta: {
     type: 'problem',
     docs: {
@@ -68,12 +61,7 @@ export const noAsyncUpdate = {
     },
   },
   create(context) {
-    /**
-     * @param {*} key The node's property/method key, also used as the report location.
-     * @param {boolean} computed
-     * @param {*} value The node's assigned value (a function, for a method or a class field).
-     */
-    const check = (key, computed, value) => {
+    const check = (key: Expression | PrivateIdentifier, computed: boolean, value: Node | null | undefined): void => {
       if (value === undefined || value === null) return;
       if (value.type !== 'FunctionExpression' && value.type !== 'ArrowFunctionExpression') return;
       if (!value.async) return;

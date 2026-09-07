@@ -1,12 +1,12 @@
 import { globSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { collectDeprecatedExports, exoRulesConfig } from '@codexo/eslint-plugin-exojs';
 import { coreInternalDirs, createImportBoundaries } from '@codexo/exojs-config/eslint';
 import { languageBaselineConfig, nodeToolingConfig } from '@codexo/exojs-config/eslint/base';
 import { typeAwareCorrectnessRules } from '@codexo/exojs-config/eslint/correctness';
 import { extensionSourceConfig } from '@codexo/exojs-config/eslint/extension';
 import { packageTestConfig } from '@codexo/exojs-config/eslint/package-test';
-import { collectDeprecatedExports, exoRulesConfig } from '@codexo/exojs-config/eslint/plugin';
 import { vitestConfig } from '@codexo/exojs-config/eslint/vitest';
 import { defineConfig } from 'eslint/config';
 import prettier from 'eslint-config-prettier';
@@ -19,7 +19,7 @@ import tseslint from 'typescript-eslint';
 // carries `@deprecated`. Computed once, from this repository's own sources -
 // a consumer package generating the same table for its installed dependency
 // would point `collectDeprecatedExports` at that dependency's shipped
-// `.d.ts` files instead (see `deprecatedApi.js`'s doc comment).
+// `.d.ts` files instead (see `deprecatedApi.ts`'s doc comment).
 const deprecatedApi = collectDeprecatedExports(globSync('src/**/*.ts', { cwd: import.meta.dirname }).map(file => resolve(import.meta.dirname, file)));
 
 export default defineConfig([
@@ -382,11 +382,15 @@ export default defineConfig([
   // `packages/exojs-react` lints its own tree with the same shared policy.
   ...extensionSourceConfig({ files: ['packages/exojs-*/src/**/*.ts'], tsconfigRootDir: import.meta.dirname }),
 
-  // ExoJS's own rules (`@codexo/exojs-config/eslint/plugin`), over the engine
-  // and every extension package's source. One call, covering both globs at
-  // once: `exoRulesConfig` registers the plugin as well as the rules, and a
-  // second call in the same resolved config would register it twice.
-  ...exoRulesConfig({ files: ['src/**/*.ts', 'packages/exojs-*/src/**/*.ts'], deprecatedApi }),
+  // ExoJS's own rules (`@codexo/eslint-plugin-exojs`), over the engine and every
+  // extension package's source. One call covering both globs: `exoRulesConfig`
+  // registers the plugin as well as the rules.
+  //
+  // `strict` rather than `recommended` because this repository is where the
+  // deprecation table is generated - a symbol marked `@deprecated` in `src/`
+  // must not still be imported from `src/` or from a package that ships beside
+  // it. Consumers choose the tier that fits their own migration.
+  ...exoRulesConfig({ files: ['src/**/*.ts', 'packages/exojs-*/src/**/*.ts'], deprecatedApi, tier: 'strict' }),
 
   // The published build tooling runs in Node: it drives esbuild and reads the
   // filesystem. The generic `packages/exojs-*/src` block grants browser
@@ -466,7 +470,7 @@ export default defineConfig([
   },
 
   // Extension package tests. `packages/exojs-react` lints its own tree.
-  ...packageTestConfig({ files: ['packages/exojs-*/test/**/*.{ts,tsx}'] }),
+  ...packageTestConfig({ files: ['packages/exojs-*/test/**/*.{ts,tsx}', 'packages/eslint-plugin-exojs/test/**/*.ts'] }),
 
   // Site sources are deliberately absent here. ESLint resolves the config
   // nearest to each linted file, so `site/eslint.config.ts` governs them even
@@ -980,7 +984,7 @@ export default defineConfig([
     },
   },
   // Vitest test-quality rules, over both the root suite and every package's.
-  ...vitestConfig({ files: ['test/**/*.ts', 'packages/exojs-*/test/**/*.{ts,tsx}'] }),
+  ...vitestConfig({ files: ['test/**/*.ts', 'packages/exojs-*/test/**/*.{ts,tsx}', 'packages/eslint-plugin-exojs/test/**/*.ts'] }),
   // Node / config files / scripts - not part of any tsconfig `include`, so
   // type-aware rules (from the global `recommendedTypeChecked`/
   // `stylisticTypeChecked` configs applied unscoped above) have no type
@@ -1010,6 +1014,32 @@ export default defineConfig([
       globals: {
         ...globals.browser,
       },
+    },
+  },
+
+  // The published lint rules: a Node package with its own tsconfig, outside the
+  // `packages/exojs-*` globs above because its npm name follows ESLint's plugin
+  // convention rather than the engine's. It is never linted by its own rules -
+  // it is not engine code, and a rule reporting on the file that defines it
+  // would be reporting on the fixture, not on a mistake.
+  {
+    files: ['packages/eslint-plugin-exojs/src/**/*.ts'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+      globals: {
+        ...globals.node,
+        ...globals.es2024,
+      },
+    },
+    rules: {
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
+      'unused-imports/no-unused-imports': 'error',
     },
   },
 
