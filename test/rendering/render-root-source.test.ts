@@ -1155,8 +1155,8 @@ describe('render-root source: item-granular re-derivation', () => {
     playFrame(root, backend);
 
     expect(draws).toEqual(['a', 'b', 'x']);
-    expect(entriesFor(root, left).map(entry => (entry.kind === RenderEntryKind.Draw ? entry.drawable.id : null))).toEqual(['a']);
-    expect(entriesFor(root, right).map(entry => (entry.kind === RenderEntryKind.Draw ? entry.drawable.id : null))).toEqual(['b', 'x']);
+    expect(entriesFor(root, left).map(entry => (entry.kind === RenderEntryKind.Draw ? (entry.drawable as Leaf).id : null))).toEqual(['a']);
+    expect(entriesFor(root, right).map(entry => (entry.kind === RenderEntryKind.Draw ? (entry.drawable as Leaf).id : null))).toEqual(['b', 'x']);
 
     root.destroy();
     backend.destroy();
