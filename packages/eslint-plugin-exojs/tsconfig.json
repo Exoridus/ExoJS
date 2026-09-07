@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // Lint tooling, not engine code: the rules run inside ESLint under Node and
+  // never see a browser, so the shared base's DOM libs are replaced by
+  // `@types/node`. The AST types come from `eslint` itself, which is a peer -
+  // the plugin has no runtime dependency of its own.
+  "extends": "@codexo/exojs-config/typescript/library.json",
+  "compilerOptions": {
+    "lib": ["es2022"],
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules"]
+}

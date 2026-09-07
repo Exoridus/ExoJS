@@ -1,0 +1,62 @@
+{
+  "name": "@codexo/eslint-plugin-exojs",
+  "version": "0.1.0",
+  "description": "ESLint rules for ExoJS projects: lifecycle hooks the frame loop calls synchronously, render pass and filter contracts, teardown chaining, never-registered systems, and deprecated engine imports.",
+  "keywords": [
+    "eslint",
+    "eslint-plugin",
+    "eslintplugin",
+    "exojs",
+    "gamedev",
+    "lint",
+    "typescript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Exoridus/ExoJS.git",
+    "directory": "packages/eslint-plugin-exojs"
+  },
+  "homepage": "https://github.com/Exoridus/ExoJS",
+  "bugs": {
+    "url": "https://github.com/Exoridus/ExoJS/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/esm/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/esm/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "lint": "eslint \"src/**/*.ts\"",
+    "test": "vitest run --root ../.. --project=exojs-eslint-plugin"
+  },
+  "peerDependencies": {
+    "eslint": ">=9"
+  },
+  "devDependencies": {
+    "@types/estree": "^1.0.9",
+    "@types/node": "^26.4.0",
+    "eslint": "~10.9.1",
+    "typescript": "~6.0.3"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

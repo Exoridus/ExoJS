@@ -86,7 +86,26 @@ export const INDEPENDENT_PACKAGES = [
     dir: 'packages/exojs-cli',
     reason: 'project tooling; installed once via npx and never pinned to an engine version, and it depends on no engine API',
   },
+  {
+    name: '@codexo/eslint-plugin-exojs',
+    dir: 'packages/eslint-plugin-exojs',
+    reason: 'lint tooling; a consumer keeps one version in devDependencies across engine upgrades and its rules read source text, not engine API',
+  },
 ] as const satisfies readonly IndependentPackage[];
+
+/**
+ * The independent packages judged against the published-tooling policy profile
+ * (`verifyToolingPackage`): a library published from this repository that ships
+ * `dist/esm`, is imported rather than executed, and depends on no engine API.
+ *
+ * `create-exo-app` and `@codexo/exojs-cli` are deliberately absent. Both are
+ * `bin` entry points rather than libraries, so the profile's `exports`,
+ * `sideEffects` and no-engine-dependency expectations do not describe them -
+ * the CLI legitimately depends on the engine to read back what it packs.
+ */
+const TOOLING_PACKAGE_NAMES = new Set<string>(['@codexo/exojs-build', '@codexo/eslint-plugin-exojs']);
+
+export const TOOLING_PACKAGES = INDEPENDENT_PACKAGES.filter(p => TOOLING_PACKAGE_NAMES.has(p.name));
 
 /** Union of the official package names (literal type, preserved for `OfficialPackageName`). */
 export type OfficialPackageName = (typeof LOCKSTEP_PACKAGES)[number]['name'];

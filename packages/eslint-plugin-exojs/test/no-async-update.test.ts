@@ -1,6 +1,6 @@
 import { RuleTester } from 'eslint';
 
-import { noAsyncUpdate } from '../../../packages/exojs-config/eslint/plugin/rules/no-async-update.js';
+import { noAsyncUpdate } from '../src/rules/no-async-update.ts';
 
 // RuleTester registers its own `describe`/`it` blocks (via the vitest
 // globals this project enables) - it must run at the top level, not nested

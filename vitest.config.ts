@@ -305,6 +305,19 @@ export default defineConfig({
         },
       },
 
+      // ── eslint-plugin-exojs: the published lint rules ─────────────────
+      // Plain Node, no jsdom and no engine aliases: every spec runs a rule
+      // through ESLint's own `RuleTester` against fixture source strings, so
+      // the only thing under test is the rule's view of a parsed file.
+      {
+        test: {
+          name: 'exojs-eslint-plugin',
+          environment: 'node',
+          globals: true,
+          include: ['packages/eslint-plugin-exojs/test/**/*.test.ts'],
+        },
+      },
+
       // ── exojs-cli: the published command line package ──────────────────
       // Plain Node, because the subject under test is a Node CLI: an HTTP
       // server, a scaffolder and a file packer, none of which want a jsdom
