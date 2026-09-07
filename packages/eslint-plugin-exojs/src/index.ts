@@ -25,8 +25,12 @@
 // have to widen into the same generic problem `unbound-method` already owns.
 import type { Linter } from 'eslint';
 
+import { noAsyncRenderHook } from './rules/no-async-render-hook.js';
 import { noAsyncUpdate } from './rules/no-async-update.js';
 import { noDeprecatedApi } from './rules/no-deprecated-api.js';
+import { noSelfEnabledCheck } from './rules/no-self-enabled-check.js';
+import { noUnregisteredSystem } from './rules/no-unregistered-system.js';
+import { requireSuperDestroy } from './rules/require-super-destroy.js';
 
 /**
  * The ExoJS plugin object.
@@ -36,8 +40,12 @@ import { noDeprecatedApi } from './rules/no-deprecated-api.js';
  */
 export const exoPlugin = {
   rules: {
+    'no-async-render-hook': noAsyncRenderHook,
     'no-async-update': noAsyncUpdate,
     'no-deprecated-api': noDeprecatedApi,
+    'no-self-enabled-check': noSelfEnabledCheck,
+    'no-unregistered-system': noUnregisteredSystem,
+    'require-super-destroy': requireSuperDestroy,
   },
 };
 
@@ -50,6 +58,10 @@ export const exoPlugin = {
  */
 const RECOMMENDED_RULES: Linter.RulesRecord = {
   'exo/no-async-update': 'error',
+  'exo/no-async-render-hook': 'error',
+  'exo/no-self-enabled-check': 'error',
+  'exo/require-super-destroy': 'error',
+  'exo/no-unregistered-system': 'error',
 };
 
 /**
@@ -98,3 +110,4 @@ export function exoRulesConfig({ files, deprecatedApi = {}, tier = 'recommended'
 }
 
 export { collectDeprecatedExports, collectDeprecatedExportsFromSource } from './deprecatedApi.js';
+export { EXO_DESTROY_BASE_CLASSES } from './rules/require-super-destroy.js';

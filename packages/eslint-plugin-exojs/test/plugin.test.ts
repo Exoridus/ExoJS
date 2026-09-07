@@ -35,4 +35,12 @@ describe('exoRulesConfig', () => {
 
     expect(messages.map(message => message.ruleId)).toEqual(['exo/no-async-update']);
   });
+
+  it('never turns an engine rule on for a consumer', () => {
+    for (const tier of ['recommended', 'strict'] as const) {
+      const configured = exoRulesConfig({ files: ['**/*.ts'], tier }).flatMap(block => Object.keys(block.rules ?? {}));
+
+      expect(configured.filter(rule => rule.startsWith('exo/engine/'))).toEqual([]);
+    }
+  });
 });

@@ -102,6 +102,13 @@ export class RenderPipeline extends RenderPass {
    * directly-executable pass, so disabling it skips its whole subtree). Not re-entrant. Throws after `destroy`.
    */
   public override execute(context: RenderingContext): void {
+    // The one pass that may gate itself. `enabled` is otherwise the parent's
+    // decision, and a direct `execute` runs a pass regardless - but a pipeline
+    // is the composite that flag exists to switch off, and a direct call on it
+    // has no parent to make that decision. Skipping here is what makes
+    // `enabled` mean "this subtree is off" rather than "one step of my
+    // parent is off".
+    // eslint-disable-next-line exo/no-self-enabled-check -- the composite is the exception; see above.
     if (!this.enabled) {
       return;
     }
@@ -151,6 +158,8 @@ export class RenderPipeline extends RenderPass {
     // Mark destroyed and snapshot-detach the children first, so the pipeline ends in a consistent
     // destroyed-and-empty state regardless of whether a child's destroy() throws.
     this._destroyed = true;
+
+    super.destroy();
 
     const passes = this._passes.splice(0);
     const errors: unknown[] = [];
