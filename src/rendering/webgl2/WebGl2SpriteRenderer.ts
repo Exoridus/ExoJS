@@ -262,6 +262,19 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   }
 
   /**
+   * Re-derive the store's per-handle texture table after a structure delta
+   * renumbered the source's items, and re-answer the batching rules for what it
+   * now holds.
+   *
+   * Nothing already written is disturbed: the table is append-only, so every
+   * slot's recorded texture index still names the texture it was written for.
+   * @internal
+   */
+  public _rekeyPersistentSlotStore(store: WebGl2PersistentSlotStore, source: RenderRootSource): boolean {
+    return fillPersistentSpriteSlotTable(source, store, this._maxTextureSlots);
+  }
+
+  /**
    * Fill the persistent rows of the items that just took a slot and push the
    * texture lines they landed on. See {@link writePersistentSpriteSlots} for why
    * this never touches a drawable.

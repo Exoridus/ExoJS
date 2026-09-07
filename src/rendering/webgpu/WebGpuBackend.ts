@@ -701,6 +701,31 @@ export class WebGpuBackend implements RenderBackend {
       return null;
     }
 
+    const owner = this._resolvePersistentSlotOwner(source);
+
+    // Prepack BEFORE allocating anything: a source holding an item that cannot
+    // describe itself as a quad is not servable, and finding that out after the
+    // store exists would mean tearing it down again.
+    if (owner === null || !source.prepack()) {
+      return null;
+    }
+
+    const store = owner._acquirePersistentSlotStore(source, this);
+
+    if (store !== null) {
+      store.owner = owner;
+      this._persistentStores.add(store);
+    }
+
+    return store;
+  }
+
+  /**
+   * The single renderer that can serve every item in `source`, or `null` when
+   * there is none.
+   * @internal
+   */
+  private _resolvePersistentSlotOwner(source: RenderRootSource): WebGpuPersistentSlotCapableRenderer | null {
     let owner: WebGpuPersistentSlotCapableRenderer | null = null;
 
     for (const scope of source.scopes) {
@@ -728,25 +753,19 @@ export class WebGpuBackend implements RenderBackend {
       }
     }
 
-    if (owner === null) {
-      return null;
+    return owner;
+  }
+
+  /** @internal */
+  public _rekeyPersistentSlots(bundle: PersistentSlotBundle, source: RenderRootSource): boolean {
+    const store = bundle as WebGpuPersistentSlotStore;
+    const owner = store.owner;
+
+    if (this._deviceLost || this._device === null || owner === null || owner !== this._resolvePersistentSlotOwner(source) || !source.prepack()) {
+      return false;
     }
 
-    // Prepack BEFORE allocating anything: a source holding an item that cannot
-    // describe itself as a quad is not servable, and finding that out after the
-    // store exists would mean tearing it down again.
-    if (!source.prepack()) {
-      return null;
-    }
-
-    const store = owner._acquirePersistentSlotStore(source, this);
-
-    if (store !== null) {
-      store.owner = owner;
-      this._persistentStores.add(store);
-    }
-
-    return store;
+    return owner._rekeyPersistentSlotStore(store, source);
   }
 
   /** @internal */

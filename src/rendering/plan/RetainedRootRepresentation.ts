@@ -307,6 +307,11 @@ export class RetainedRootRepresentation {
     return this._slotBundle !== null && this._slotBundle.generation === this._slotGeneration;
   }
 
+  /** The store this root currently holds, without acquiring one. */
+  public get heldPersistentSlots(): PersistentSlotBundle | null {
+    return this.persistentSlotsIntact ? this._slotBundle : null;
+  }
+
   private _reacquirePersistentSlots(source: RenderRootSource, backend: RenderBackend): PersistentSlotBundle | null {
     this.releasePersistentSlots();
     this._slotBackend = backend;
@@ -407,6 +412,31 @@ export class RetainedRootRepresentation {
     this._hasSlotCullRect = false;
   }
 
+  /**
+   * Consecutive rebuild frames whose STRUCTURE revision had moved since the
+   * previous one - the signature of a scene adding and removing nodes.
+   *
+   * The second gate into a source, and the one {@link _rebuildStreak} cannot
+   * be: a churning scene never produces two frames that found the subtree
+   * unchanged, so without this it could never earn the items its frames would
+   * then be served from. Structure specifically, and not content or transform,
+   * because the structure delta is the only thing that can absorb such a frame -
+   * a scene that merely moves is already better served by a collect that replays
+   * each container's unchanged drawables.
+   */
+  private _churnStreak = 0;
+  /**
+   * Consecutive frames whose structure delta could not be applied.
+   *
+   * A root that keeps failing pays a discovery walk on top of the frame it was
+   * going to have anyway, so after a few it stops asking. Sticky: what refuses
+   * the delta is the SHAPE of the scene's changes - churn mixed with movement,
+   * a producer the splice cannot express - and that does not usually stop being
+   * true a few frames later.
+   */
+  private _deltaFailures = 0;
+  private _deltaRefused = false;
+
   /** Fold one rebuild frame into the build gate (see {@link _rebuildStreak}). */
   public noteRebuildKeys(contentRevision: number, structureRevision: number, ancestryStamp: number, transformRevision: number): void {
     const same =
@@ -415,6 +445,7 @@ export class RetainedRootRepresentation {
       this._streakAncestry === ancestryStamp &&
       this._streakTransform === transformRevision;
 
+    this._churnStreak = this._streakStructure !== -1 && this._streakStructure !== structureRevision ? this._churnStreak + 1 : 0;
     this._rebuildStreak = same ? this._rebuildStreak + 1 : 0;
     this._streakContent = contentRevision;
     this._streakStructure = structureRevision;
@@ -424,7 +455,26 @@ export class RetainedRootRepresentation {
 
   /** Whether a missing source is worth one culling-free discovery walk now. */
   public shouldBuildSource(): boolean {
-    return !this._sourceUnbuildable && this._rebuildStreak >= 1;
+    return !this._sourceUnbuildable && (this._rebuildStreak >= 1 || (!this._deltaRefused && this._churnStreak >= 2));
+  }
+
+  /** Whether a structural frame should still be offered to the delta. */
+  public shouldApplyStructureDelta(): boolean {
+    return !this._deltaRefused;
+  }
+
+  /** A structure delta re-keyed the items in place. */
+  public noteStructureDeltaApplied(): void {
+    this._deltaFailures = 0;
+  }
+
+  /** A structure delta could not be applied; the frame rebuilds instead. */
+  public noteStructureDeltaRefused(): void {
+    this._deltaFailures++;
+
+    if (this._deltaFailures >= 3) {
+      this._deltaRefused = true;
+    }
   }
 
   /** Discovery found the ROOT itself view-dependent (see {@link _sourceUnbuildable}). */
@@ -445,5 +495,8 @@ export class RetainedRootRepresentation {
     this._derivedProduct?.release();
     this._derivedProduct = null;
     this._sourceUnbuildable = false;
+    this._churnStreak = 0;
+    this._deltaFailures = 0;
+    this._deltaRefused = false;
   }
 }

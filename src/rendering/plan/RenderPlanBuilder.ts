@@ -15,7 +15,7 @@ import { type EntryPlacementState, reserveEntryPlacement } from './entryPlacemen
 import type { PersistentSlotBackend } from './persistentSlotDraw';
 import { type DrawCommand, RenderEntryKind } from './renderCommand';
 import { MutableRenderPlan, type RenderPlan } from './RenderPlan';
-import type { RenderRootSource } from './RenderRootSource';
+import type { RenderRootSource, SourceSelection } from './RenderRootSource';
 import {
   type BarrierScope,
   type BarrierScopeEntry,
@@ -31,6 +31,7 @@ import type { RetainedFragmentEntry, RetainedFragmentGroup, RetainedGroupFragmen
 import type { RetainedInstructionSet } from './RetainedInstructionSet';
 import type { RetainedDrawData } from './RetainedRecordPool';
 import type { RetainedRootRepresentation } from './RetainedRootRepresentation';
+import { SourceStructureDelta } from './SourceStructureDelta';
 import { clampResolutionToTextureSize, resolveBarrierResolution } from './targetResolution';
 
 /**
@@ -103,13 +104,6 @@ interface MutableGroupScope extends GroupScope, EntryPlacementState {
   firstPipelineKey: number | null;
   firstBindKey: number;
   firstOwnMaterial: boolean;
-}
-
-/** What one frame selects from: the scopes, the source, and this view's membership. */
-interface SourceSelection {
-  readonly rootScope: SourceScope;
-  readonly source: RenderRootSource;
-  readonly product: DerivedRootProduct;
 }
 
 /**
@@ -291,6 +285,8 @@ export class RenderPlanBuilder {
   private _sourceProducer: RenderNode | null = null;
   /** Producers observed reading the view during the current source walk. */
   private readonly _sourceViewReaders = new Set<RenderNode>();
+  /** Re-discovers the scopes a structural change touched; owns its own scratch. */
+  private readonly _structureDelta = new SourceStructureDelta();
 
   /**
    * The node this build treats as the retained render root, or `null` when the
@@ -734,8 +730,12 @@ export class RenderPlanBuilder {
    * The `null` case has no more local answer available: the root is the
    * outermost producer, so a view read attributed to it covers everything below
    * it and there is nothing left to persist.
+   *
+   * Also runs for a single nested container, which is how a structure delta
+   * re-derives one scope through exactly the rules that first produced it.
+   * @internal
    */
-  private _discoverSource(node: RenderNode): SourceScope | null {
+  public _discoverSourceScope(node: RenderNode): SourceScope | null {
     const scope = createSourceScope();
     const previousTracked = this._trackedRoot;
     const previousCaptureCull = this._captureCullActive;
@@ -1017,6 +1017,11 @@ export class RenderPlanBuilder {
     // the selected one.
     representation.selectCaptureSlot(backend, target);
 
+    // Structural churn is settled before any tier is asked, because it is the
+    // one change class that used to withdraw the persistent items and could
+    // not (see {@link SourceStructureDelta}).
+    this._structureDelta.reconcile(this, node, representation, contentRevision, structureRevision, ancestryStamp, transformRevision);
+
     // Persistent-indexed tier, ABOVE the capture decision. A root whose source
     // the backend can serve from slot-addressed stores does not produce entries
     // at all: the frame either re-issues the order stream the last selection
@@ -1265,7 +1270,7 @@ export class RenderPlanBuilder {
       return null;
     }
 
-    const discovered = this._discoverSource(node);
+    const discovered = this._discoverSourceScope(node);
 
     if (discovered === null) {
       // The root itself is view-dependent, so nothing below it can be attributed
@@ -1279,7 +1284,7 @@ export class RenderPlanBuilder {
     const source = representation.ensureSource();
     const product = representation.ensureDerivedProduct();
 
-    source.adopt(discovered, contentRevision, structureRevision, ancestryStamp, transformRevision);
+    source.adopt(node, discovered, contentRevision, structureRevision, ancestryStamp, transformRevision);
     product.rebind(source.scopes);
 
     return this._beginSelection(source, product);

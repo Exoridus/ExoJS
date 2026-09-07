@@ -74,6 +74,7 @@ export const persistentPremultiplyMaskIndex = 36;
 export interface WebGpuPersistentSlotCapableRenderer {
   readonly _supportsPersistentSlots?: boolean;
   _acquirePersistentSlotStore(source: RenderRootSource, backend: WebGpuBackend): WebGpuPersistentSlotStore | null;
+  _rekeyPersistentSlotStore(store: WebGpuPersistentSlotStore, source: RenderRootSource): boolean;
   _writePersistentSlotRows(store: WebGpuPersistentSlotStore, source: RenderRootSource, entered: Int32Array, count: number): void;
   _drawPersistentSlots(store: WebGpuPersistentSlotStore, order: Uint32Array, count: number, backend: WebGpuBackend): void;
 }

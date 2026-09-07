@@ -308,4 +308,112 @@ describe('DerivedSelectionState', () => {
       expect(state.stats.allocated).toBe(0);
     });
   });
+
+  /**
+   * What a structure delta does to the slot table. The property to pin is the
+   * one a wrong implementation still renders plausibly for on a small scene: an
+   * item that is merely renumbered must keep its slot, because the backend wrote
+   * that slot's rows once and will not write them again.
+   */
+  describe('structure delta', () => {
+    it('keeps a renumbered item on the slot it already had', () => {
+      const root = createSourceScope();
+
+      fill(root, 4);
+
+      const scopes = finalize(root);
+      const state = new DerivedSelectionState();
+      const first = membership(scopes, [[0, 1, 2, 3]]);
+
+      state.rebind(4);
+      state.update(root, first, null);
+
+      const before = [state.slotOf(0), state.slotOf(1), state.slotOf(2), state.slotOf(3)];
+
+      // The middle item left the subtree and one arrived at the end, so the
+      // three survivors are handles 0..2 and the arrival is handle 3.
+      state.recarry(Int32Array.from([0, 2, 3, -1]), 4);
+
+      expect(state.slotOf(0)).toBe(before[0]);
+      expect(state.slotOf(1)).toBe(before[2]);
+      expect(state.slotOf(2)).toBe(before[3]);
+      expect(state.slotOf(3)).toBe(-1);
+      // The departed item's slot is free rather than lost, so the arrival can
+      // take it instead of growing the store.
+      expect(state.stats.released).toBe(1);
+    });
+
+    it('hands the departed item’s slot to the arrival and writes only that one', () => {
+      const root = createSourceScope();
+
+      fill(root, 4);
+
+      const scopes = finalize(root);
+      const state = new DerivedSelectionState();
+      const first = membership(scopes, [[0, 1, 2, 3]]);
+
+      state.rebind(4);
+      state.update(root, first, null);
+
+      const vacated = state.slotOf(1);
+
+      state.recarry(Int32Array.from([0, 2, 3, -1]), 4);
+
+      // Membership after the delta: every item is admitted, and the three
+      // survivors were admitted before it.
+      state.update(root, membership(scopes, [[0, 1, 2, 3]]), membership(scopes, [[0, 1, 2]]));
+
+      expect(state.slotOf(3)).toBe(vacated);
+      expect(state.stats.retained).toBe(3);
+      expect(state.stats.allocated).toBe(1);
+      expect(state.stats.reused).toBe(1);
+      expect(state.slotCount).toBe(4);
+      expect(orderedHandles(state)).toEqual([0, 1, 2, 3]);
+
+      const enteredHandles = [];
+
+      for (let i = 0; i < state.enteredCount; i++) {
+        enteredHandles.push(state.entered[i * 3 + 1]!);
+      }
+
+      expect(enteredHandles).toEqual([3]);
+    });
+
+    it('releases the slot of an item the delta refused to carry', () => {
+      const root = createSourceScope();
+
+      fill(root, 2);
+
+      const scopes = finalize(root);
+      const state = new DerivedSelectionState();
+
+      state.rebind(2);
+      state.update(root, membership(scopes, [[0, 1]]), null);
+
+      // Handle 1 is still there but changed since its rows were written, so the
+      // caller refuses to carry it: it has to enter again and be rewritten.
+      state.recarry(Int32Array.from([0, -1]), 2);
+
+      expect(state.slotOf(1)).toBe(-1);
+      expect(state.stats.released).toBe(1);
+    });
+
+    it('carries nothing across a growing source that shares no items', () => {
+      const root = createSourceScope();
+
+      fill(root, 2);
+
+      const scopes = finalize(root);
+      const state = new DerivedSelectionState();
+
+      state.rebind(2);
+      state.update(root, membership(scopes, [[0, 1]]), null);
+      state.recarry(Int32Array.from([-1, -1, -1]), 3);
+
+      expect(state.slotOf(0)).toBe(-1);
+      expect(state.slotOf(1)).toBe(-1);
+      expect(state.slotOf(2)).toBe(-1);
+      expect(state.stats.released).toBe(2);
+    });
+  });
 });

@@ -181,6 +181,67 @@ export class DerivedSelectionState {
   }
 
   /**
+   * Re-key against a source whose items were renumbered by a structure delta,
+   * keeping each surviving item's slot.
+   *
+   * `carried` gives, for every new handle, the handle the same drawable held
+   * before, or -1. That is the whole difference between a delta and a rebuild:
+   * a slot that changes hands here keeps the rows the backend already wrote for
+   * it, so a churning scene pays per ADDED item rather than per item on screen.
+   *
+   * Everything not carried is released, which covers both a drawable that left
+   * the subtree and one the caller deliberately refused to carry because it
+   * changed since its rows were written.
+   */
+  public recarry(carried: Int32Array, handleCount: number): void {
+    const before = this._slotOfHandle;
+    const beforeCount = this._handleCount;
+    const slots = new Int32Array(handleCount).fill(-1);
+
+    resetSlotStats(this.stats);
+    this._orderCount = 0;
+    this._enteredCount = 0;
+
+    for (let handle = 0; handle < handleCount; handle++) {
+      const previous = carried[handle]!;
+
+      if (previous < 0 || previous >= beforeCount) {
+        continue;
+      }
+
+      const slot = before[previous]!;
+
+      if (slot < 0) {
+        continue;
+      }
+
+      // Consumed, so the sweep below cannot release it as well, and a duplicated
+      // carry cannot point two handles at one slot.
+      before[previous] = -1;
+      slots[handle] = slot;
+      this._handleOfSlot[slot] = handle;
+    }
+
+    for (let handle = 0; handle < beforeCount; handle++) {
+      const slot = before[handle]!;
+
+      if (slot >= 0) {
+        this._handleOfSlot[slot] = -1;
+        this._releaseSlot(slot);
+      }
+    }
+
+    this._slotOfHandle = slots;
+    this._handleCount = handleCount;
+
+    if (this._order.length < handleCount) {
+      this._order = new Uint32Array(handleCount);
+    }
+
+    this.stats.slotCapacity = this._slotCount;
+  }
+
+  /**
    * Apply one selection's membership to the slot table and rebuild the order
    * stream, walking `rootScope` in the order a collect emits it.
    *
@@ -298,7 +359,10 @@ export class DerivedSelectionState {
 
     this._slotOfHandle[handle] = -1;
     this._handleOfSlot[slot] = -1;
+    this._releaseSlot(slot);
+  }
 
+  private _releaseSlot(slot: number): void {
     if (this._freeCount === this._freeSlots.length) {
       this._freeSlots = growInt32(this._freeSlots, Math.max(16, this._freeSlots.length * 2));
     }

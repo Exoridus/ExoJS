@@ -63,12 +63,19 @@ export interface PersistentSlotBundle {
  * - `_drawPersistentOrder(bundle, order, count)` - draw `count` instances,
  *   instance `i` reading slot `order[i]`. The order IS the draw order, so the
  *   backend must not sort, group or otherwise permute it.
+ * - `_rekeyPersistentSlots(bundle, source)` - re-answer the acquisition question
+ *   for a source whose items a structure delta re-discovered, and re-derive
+ *   whatever the store keys on the item numbering. `false` means the store must
+ *   be dropped; the written slots survive a `true`, so anything the store keys
+ *   per SLOT has to keep its meaning across the call. Optional: a backend that
+ *   omits it simply loses its store on such a frame and acquires a new one.
  * @internal
  */
 export interface PersistentSlotBackend {
   _acquirePersistentSlots?(source: RenderRootSource): PersistentSlotBundle | null;
   _writePersistentSlots?(bundle: PersistentSlotBundle, source: RenderRootSource, entered: Int32Array, count: number): void;
   _drawPersistentOrder?(bundle: PersistentSlotBundle, order: Uint32Array, count: number): void;
+  _rekeyPersistentSlots?(bundle: PersistentSlotBundle, source: RenderRootSource): boolean;
 }
 
 /**

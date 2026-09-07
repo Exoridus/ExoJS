@@ -21,6 +21,7 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
+import type { DerivedSlotStats } from '#rendering/plan/DerivedSelectionState';
 import type { RenderNode } from '#rendering/RenderNode';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
@@ -72,6 +73,17 @@ const solidTexture = (color: string): Texture => {
   context.fillRect(0, 0, tile, tile);
 
   return new Texture(source);
+};
+
+/** What the last selection did to the root's slot table - allocations, reuse, stayers. */
+const slotStatsOf = (root: RenderNode): DerivedSlotStats => {
+  const slots = root._retainedRootRepresentation().derivedProduct?.slots;
+
+  if (slots === undefined) {
+    throw new Error('the root has no derived selection state');
+  }
+
+  return slots.stats;
 };
 
 const render = (backend: WebGpuBackend, node: RenderNode): void => {
@@ -267,6 +279,99 @@ describe('WebGPU persistent-indexed selection', () => {
       root.destroy();
       firstTexture.destroy();
       secondTexture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('a churning root reaches the tier and writes only the arrival', async ctx => {
+    const backend = await createBackend();
+    const root = new Container();
+    const stayingTexture = solidTexture('#ff0000');
+    const churnTexture = solidTexture('#0000ff');
+    const staying = new Sprite(stayingTexture);
+    let churning = new Sprite(churnTexture);
+
+    try {
+      staying.setPosition(0, 0);
+      churning.setPosition(tile * 2, tile * 2);
+      root.addChild(staying, churning);
+
+      // The camera never moves, so nothing here can produce the two unchanged
+      // rebuild frames the ordinary build gate wants: structural churn is what
+      // earns the items, and the structure delta is what keeps them.
+      for (let frame = 0; frame < 5; frame++) {
+        render(backend, root);
+        churning.destroy();
+        churning = new Sprite(churnTexture);
+        churning.setPosition(tile * 2, tile * 2);
+        root.addChild(churning);
+      }
+
+      if (!(await settle(ctx, backend, root, 1))) {
+        return;
+      }
+
+      expect(backend.stats.drawCalls).toBe(1);
+      // Exactly one slot written: the arrival. A frame that rebuilt the
+      // representation instead would report both as entering and re-upload the
+      // stayer's rows - correct pixels, none of the saving.
+      expect(slotStatsOf(root).allocated).toBe(1);
+      expect(slotStatsOf(root).retained).toBe(1);
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(readPixel(8, 8), red);
+      expectPixelNear(readPixel(40, 40), blue);
+      expectPixelNear(readPixel(40, 8), black);
+    } finally {
+      root.destroy();
+      stayingTexture.destroy();
+      churnTexture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('an item that moved while its container churned is rewritten, not kept', async ctx => {
+    const backend = await createBackend();
+    const root = new Container();
+    const movedTexture = solidTexture('#ff0000');
+    const churnTexture = solidTexture('#0000ff');
+    const moved = new Sprite(movedTexture);
+    let churning = new Sprite(churnTexture);
+
+    try {
+      moved.setPosition(0, 0);
+      churning.setPosition(tile * 2, 0);
+      root.addChild(moved, churning);
+
+      for (let frame = 0; frame < 5; frame++) {
+        render(backend, root);
+        churning.destroy();
+        churning = new Sprite(churnTexture);
+        churning.setPosition(tile * 2, 0);
+        root.addChild(churning);
+      }
+
+      // A slot's rows are written once, when its item enters, so an item that
+      // moved inside a re-discovered scope has to enter again - carrying it
+      // would keep drawing it from the transform it had before.
+      moved.setPosition(0, tile * 2);
+
+      if (!(await settle(ctx, backend, root, 1))) {
+        return;
+      }
+
+      expect(backend.stats.drawCalls).toBe(1);
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(readPixel(8, 40), red);
+      expectPixelNear(readPixel(8, 8), black);
+      expectPixelNear(readPixel(40, 8), blue);
+    } finally {
+      root.destroy();
+      movedTexture.destroy();
+      churnTexture.destroy();
       backend.destroy();
     }
   });

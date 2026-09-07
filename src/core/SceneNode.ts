@@ -1107,6 +1107,8 @@ export class SceneNode implements Collidable {
   public _contentMarkSequence = 0;
   /** @internal - see {@link _dirtyMarkGeneration}. */
   public _tintMarkSequence = 0;
+  /** @internal - see {@link _dirtyMarkGeneration}. */
+  public _structureMarkSequence = 0;
 
   /**
    * @internal - mark this node's content dirty and propagate the stamp up to
@@ -1160,6 +1162,13 @@ export class SceneNode implements Collidable {
   protected _markStructureDirty(): void {
     const revision = nextNodeRevision();
     const epoch = dirtyWalkEpoch;
+
+    // Only the node whose child list changed is marked, not the ancestor chain:
+    // a consumer resolves an entry by walking UP from it to the nearest scope it
+    // owns, so stamping the chain would hand it the same answer several times.
+    if (transformGroupBoundaryCount > 0 || retainedRenderRootCount > 0) {
+      nodeDirtyIndex.mark(this, DirtyChannel.Structure);
+    }
 
     this._nodeRevision.touchStructure(revision);
     this._structureWalkEpoch = epoch;

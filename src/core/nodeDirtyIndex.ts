@@ -23,6 +23,16 @@ export const enum DirtyChannel {
    * "something changed that I cannot patch".
    */
   Tint = 1 << 2,
+  /**
+   * The node's child list changed - an add, a removal, a reorder, or a
+   * visibility flip on a child. Split from {@link Content} because the two ask
+   * different questions of a consumer: a content change invalidates what was
+   * recorded ABOUT a node, whereas a structure change says the set of nodes
+   * below this one is no longer the set that was recorded, so a consumer that
+   * keeps a per-child product has to re-derive this node's children and nothing
+   * else.
+   */
+  Structure = 1 << 3,
 }
 
 /**
@@ -160,6 +170,10 @@ class NodeDirtyIndex {
       node._tintMarkSequence = sequence;
     }
 
+    if ((channels & DirtyChannel.Structure) !== 0) {
+      node._structureMarkSequence = sequence;
+    }
+
     bucket.lastSequence = sequence;
 
     // Already standing in this generation: fold the channels in. A node written
@@ -214,6 +228,10 @@ class NodeDirtyIndex {
 
     if ((marked & DirtyChannel.Tint) !== 0 && node._tintMarkSequence > sequence) {
       changed |= DirtyChannel.Tint;
+    }
+
+    if ((marked & DirtyChannel.Structure) !== 0 && node._structureMarkSequence > sequence) {
+      changed |= DirtyChannel.Structure;
     }
 
     return changed;
