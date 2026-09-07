@@ -63,19 +63,23 @@ export interface PersistentSlotBundle {
  * - `_drawPersistentOrder(bundle, order, count)` - draw `count` instances,
  *   instance `i` reading slot `order[i]`. The order IS the draw order, so the
  *   backend must not sort, group or otherwise permute it.
- * - `_rekeyPersistentSlots(bundle, source)` - re-answer the acquisition question
- *   for a source whose items a structure delta re-discovered, and re-derive
- *   whatever the store keys on the item numbering. `false` means the store must
- *   be dropped; the written slots survive a `true`, so anything the store keys
- *   per SLOT has to keep its meaning across the call. Optional: a backend that
- *   omits it simply loses its store on such a frame and acquires a new one.
+ * - `_rekeyPersistentSlots(bundle, source, carried, previousHandleCount)` -
+ *   re-derive whatever the store keys on the item numbering, after a structure
+ *   delta re-discovered part of the source. `carried` gives, for each new global
+ *   handle, the handle the same drawable held before, or -1 when it is new or
+ *   changed; an implementation must re-derive only the latter, because this runs
+ *   on every structural frame and a walk over the whole source here is the cost
+ *   the delta exists to remove. `false` means the store must be dropped; the
+ *   written slots survive a `true`, so anything keyed per SLOT has to keep its
+ *   meaning across the call. Optional: a backend that omits it simply loses its
+ *   store on such a frame and acquires a new one.
  * @internal
  */
 export interface PersistentSlotBackend {
   _acquirePersistentSlots?(source: RenderRootSource): PersistentSlotBundle | null;
   _writePersistentSlots?(bundle: PersistentSlotBundle, source: RenderRootSource, entered: Int32Array, count: number): void;
   _drawPersistentOrder?(bundle: PersistentSlotBundle, order: Uint32Array, count: number): void;
-  _rekeyPersistentSlots?(bundle: PersistentSlotBundle, source: RenderRootSource): boolean;
+  _rekeyPersistentSlots?(bundle: PersistentSlotBundle, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean;
 }
 
 /**

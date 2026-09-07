@@ -738,15 +738,52 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   /** @internal */
-  public _rekeyPersistentSlots(bundle: PersistentSlotBundle, source: RenderRootSource): boolean {
+  public _rekeyPersistentSlots(bundle: PersistentSlotBundle, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean {
     const store = bundle as WebGl2PersistentSlotStore;
     const owner = store.owner;
 
-    if (owner === null || owner !== this._resolvePersistentSlotOwner(source) || !source.prepack()) {
+    if (owner === null || !this._ownerServesArrivals(source, owner, carried, previousHandleCount) || !source.prepack()) {
       return false;
     }
 
-    return owner._rekeyPersistentSlotStore(store, source);
+    return owner._rekeyPersistentSlotStore(store, source, carried, previousHandleCount);
+  }
+
+  /**
+   * Whether `owner` can also serve the items a structure delta did not carry.
+   *
+   * Only those are resolved: an item the delta carried is the same drawable the
+   * store was already serving, so re-resolving it would put the acquisition walk
+   * back on a path that runs on every structural frame.
+   */
+  private _ownerServesArrivals(source: RenderRootSource, owner: PersistentSlotCapableRenderer, carried: Int32Array, previousHandleCount: number): boolean {
+    for (const scope of source.scopes) {
+      const drawables = scope.items.drawables;
+      const count = scope.items.count;
+      const handleBase = scope.handleBase;
+
+      for (let i = 0; i < count; i++) {
+        const previous = carried[handleBase + i]!;
+
+        if (previous >= 0 && previous < previousHandleCount) {
+          continue;
+        }
+
+        let renderer: PersistentSlotCapableRenderer | null;
+
+        try {
+          renderer = this.rendererRegistry.resolve(drawables[i]!) as unknown as PersistentSlotCapableRenderer | null;
+        } catch {
+          return false;
+        }
+
+        if (renderer !== owner || renderer._supportsPersistentSlots !== true) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 
   /** @internal */

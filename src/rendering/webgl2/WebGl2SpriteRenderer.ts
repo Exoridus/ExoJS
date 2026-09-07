@@ -11,7 +11,7 @@ import {
 import type { AnySpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import { composeSpriteMaterialFragmentGlsl, spriteMaterialTextureSlots, spriteVertexGlsl } from '#rendering/sprite/materialSources';
-import { fillPersistentSpriteSlotTable, writePersistentSpriteSlots } from '#rendering/sprite/persistentSlots';
+import { fillPersistentSpriteSlotTable, rekeyPersistentSpriteSlotTable, writePersistentSpriteSlots } from '#rendering/sprite/persistentSlots';
 import type { Sprite } from '#rendering/sprite/Sprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
@@ -270,8 +270,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
    * slot's recorded texture index still names the texture it was written for.
    * @internal
    */
-  public _rekeyPersistentSlotStore(store: WebGl2PersistentSlotStore, source: RenderRootSource): boolean {
-    return fillPersistentSpriteSlotTable(source, store, this._maxTextureSlots);
+  public _rekeyPersistentSlotStore(store: WebGl2PersistentSlotStore, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean {
+    return rekeyPersistentSpriteSlotTable(source, store, this._maxTextureSlots, carried, previousHandleCount);
   }
 
   /**

@@ -74,7 +74,7 @@ export const persistentPremultiplyMaskIndex = 36;
 export interface WebGpuPersistentSlotCapableRenderer {
   readonly _supportsPersistentSlots?: boolean;
   _acquirePersistentSlotStore(source: RenderRootSource, backend: WebGpuBackend): WebGpuPersistentSlotStore | null;
-  _rekeyPersistentSlotStore(store: WebGpuPersistentSlotStore, source: RenderRootSource): boolean;
+  _rekeyPersistentSlotStore(store: WebGpuPersistentSlotStore, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean;
   _writePersistentSlotRows(store: WebGpuPersistentSlotStore, source: RenderRootSource, entered: Int32Array, count: number): void;
   _drawPersistentSlots(store: WebGpuPersistentSlotStore, order: Uint32Array, count: number, backend: WebGpuBackend): void;
 }
@@ -197,10 +197,14 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
    * item handle.
    *
    * Derived, not source data: it names a position in THIS store's table. Filled
-   * once during acquisition, which already walks every item to build that table,
-   * so an ENTER never has to ask a drawable for its texture.
+   * during acquisition, which already walks every item to build that table, so
+   * an ENTER never has to ask a drawable for its texture; a structure delta
+   * re-derives only the entries of the items it did not carry.
    */
   public textureIndexOfHandle = new Uint8Array(0);
+
+  /** See {@link PersistentSpriteSlotStore.spareTextureIndexOfHandle}. */
+  public spareTextureIndexOfHandle = new Uint8Array(0);
 
   public get generation(): number {
     return this._generation;
@@ -565,6 +569,7 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
     this.invalidateDeviceResources();
     this.textures.length = 0;
     this.textureIndexOfHandle = new Uint8Array(0);
+    this.spareTextureIndexOfHandle = new Uint8Array(0);
   }
 
   private _allocateSlotBuffers(slots: number): void {

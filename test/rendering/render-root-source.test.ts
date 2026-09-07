@@ -887,6 +887,35 @@ describe('render-root source: structure delta', () => {
     backend.destroy();
   });
 
+  test('a nested container changed alongside its parent is re-discovered once', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const outer = new CountingContainer();
+    const inner = new CountingContainer();
+
+    inner.addChild(new Leaf('i1').setPosition(10, 300));
+    outer.addChild(inner, new Leaf('o1').setPosition(60, 300));
+    root.addChild(outer);
+
+    driveToSourceTier(root, backend);
+
+    const walkedInner = inner.collects;
+
+    // Both containers changed, and the outer one encloses the inner: without
+    // pruning the nested subtree is walked twice, once on its own and once
+    // inside the ancestor's discovery, and the first result is then discarded.
+    inner.addChild(new Leaf('i2').setPosition(110, 300));
+    outer.addChild(new Leaf('o2').setPosition(160, 300));
+    draws.length = 0;
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['i1', 'i2', 'o1', 'o2']);
+    expect(inner.collects).toBe(walkedInner + 1);
+
+    root.destroy();
+    backend.destroy();
+  });
+
   test('an item that moved inside a re-discovered container is stored where it is now', () => {
     const { backend, draws } = createDrawRecordingBackend();
     const root = makeRoot(new Container());

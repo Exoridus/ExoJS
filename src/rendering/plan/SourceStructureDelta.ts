@@ -1,5 +1,4 @@
 import { DirtyChannel, nodeDirtyIndex } from '#core/nodeDirtyIndex';
-import type { SceneNode } from '#core/SceneNode';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
 
@@ -147,7 +146,7 @@ export class SourceStructureDelta {
     product?.recarry(source.scopes, carried, source.itemCount, previousHandleCount);
     representation.invalidatePersistentSelection();
     representation.noteStructureDeltaApplied();
-    this._rekeyPersistentSlots(host, representation, source);
+    this._rekeyPersistentSlots(host, representation, source, carried, previousHandleCount);
   }
 
   /**
@@ -182,25 +181,65 @@ export class SourceStructureDelta {
       return false;
     }
 
+    this._pruneNestedTargets(source, root);
+
     return nodeDirtyIndex.readSince(cursor, DirtyChannel.Transform | DirtyChannel.Content | DirtyChannel.Tint, marked => {
       const scope = source.scopeOfNode(marked);
 
-      return scope === null || this._covers(scope, root);
+      return scope === null || this._covers(source, scope, root);
     });
   }
 
-  /** Whether `scope` is re-discovered by one of this delta's targets. */
-  private _covers(scope: SourceScope, root: RenderNode): boolean {
-    if (this._targetSet.has(scope)) {
-      return true;
+  /**
+   * Drop every target an enclosing target already re-discovers.
+   *
+   * Two adds in one frame, one under a container and one under its parent, is an
+   * ordinary churn shape, and without this the nested subtree is walked twice -
+   * once on its own and once inside the ancestor's discovery, the first result
+   * then thrown away because {@link RenderRootSource.commitStructureDelta}
+   * rebuilds the scope list from the live tree.
+   *
+   * The pruned scopes stay in {@link _targetSet}: they ARE re-discovered, just by
+   * an ancestor, so {@link _covers} must keep answering `true` for them.
+   */
+  private _pruneNestedTargets(source: RenderRootSource, root: RenderNode): void {
+    const targets = this._targets;
+    let kept = 0;
+
+    for (const target of targets) {
+      const node = sourceScopeNode(target, root);
+      const parent = node === root ? null : node.parent;
+      const enclosing = parent === null ? null : source.scopeOfNode(parent);
+
+      if (enclosing === null || !this._covers(source, enclosing, root)) {
+        targets[kept++] = target;
+      }
     }
 
-    const scopeNode = sourceScopeNode(scope, root);
+    targets.length = kept;
+  }
 
-    for (const target of this._targets) {
-      if (isUnderNode(scopeNode, sourceScopeNode(target, root))) {
+  /**
+   * Whether `scope` is re-discovered by one of this delta's targets - itself, or
+   * any scope enclosing it.
+   *
+   * Climbs the scope chain rather than testing every target, so the answer costs
+   * the subtree's DEPTH instead of the number of targets. A churning scene
+   * produces one target per changed container, which is a count worth not being
+   * quadratic in.
+   */
+  private _covers(source: RenderRootSource, scope: SourceScope, root: RenderNode): boolean {
+    let current: SourceScope | null = scope;
+
+    while (current !== null) {
+      if (this._targetSet.has(current)) {
         return true;
       }
+
+      const node = sourceScopeNode(current, root);
+      const parent = node === root ? null : node.parent;
+
+      current = parent === null ? null : source.scopeOfNode(parent);
     }
 
     return false;
@@ -243,13 +282,23 @@ export class SourceStructureDelta {
    * Re-key the backend's slot store against the re-discovered source, or drop
    * it.
    *
-   * The store's per-handle texture table is keyed on the numbering the delta
-   * just changed, and a scope discovered now is not prepacked - so the store is
-   * offered the new source and answers whether it can still serve it. A refusal
-   * costs the store, not correctness: the root acquires a new one on a later
-   * frame.
+   * The store's per-handle tables are keyed on the numbering the delta just
+   * changed, and a scope discovered now is not prepacked - so the store is
+   * offered the new source, with the carry map so it re-derives only the items
+   * the delta did not carry, and answers whether it can still serve them.
+   *
+   * A refusal costs the store, not correctness. It is also how the store's
+   * append-only state stays bounded: whatever a long-lived store accumulates
+   * across churn - dead texture-table entries above all - is discarded here, and
+   * the next acquisition builds a fresh one from what the source holds now.
    */
-  private _rekeyPersistentSlots(host: SourceDeltaHost, representation: RetainedRootRepresentation, source: RenderRootSource): void {
+  private _rekeyPersistentSlots(
+    host: SourceDeltaHost,
+    representation: RetainedRootRepresentation,
+    source: RenderRootSource,
+    carried: Int32Array,
+    previousHandleCount: number,
+  ): void {
     const bundle = representation.heldPersistentSlots;
 
     if (bundle === null) {
@@ -258,7 +307,7 @@ export class SourceStructureDelta {
 
     const backend = host.backend as RenderBackend & PersistentSlotBackend;
 
-    if (!sourceShapeAllowsPersistentSlots(source) || backend._rekeyPersistentSlots?.(bundle, source) !== true) {
+    if (!sourceShapeAllowsPersistentSlots(source) || backend._rekeyPersistentSlots?.(bundle, source, carried, previousHandleCount) !== true) {
       representation.releasePersistentSlots();
     }
   }
@@ -269,18 +318,3 @@ export class SourceStructureDelta {
  * own - it IS the render root - so the caller supplies it.
  */
 const sourceScopeNode = (scope: SourceScope, root: RenderNode): RenderNode => (scope as Partial<SourceGroup>).node ?? root;
-
-/** Whether `node` is `ancestor` or lies anywhere below it. */
-const isUnderNode = (node: RenderNode, ancestor: RenderNode): boolean => {
-  let current: SceneNode | null = node;
-
-  while (current !== null) {
-    if ((current as unknown as RenderNode) === ancestor) {
-      return true;
-    }
-
-    current = current.parent;
-  }
-
-  return false;
-};

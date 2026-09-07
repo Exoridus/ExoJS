@@ -20,7 +20,7 @@ import {
   spriteSharedStorageWgsl,
   spriteVertexCoreWgsl,
 } from '#rendering/sprite/materialSources';
-import { fillPersistentSpriteSlotTable, writePersistentSpriteSlots } from '#rendering/sprite/persistentSlots';
+import { fillPersistentSpriteSlotTable, rekeyPersistentSpriteSlotTable, writePersistentSpriteSlots } from '#rendering/sprite/persistentSlots';
 import type { Sprite } from '#rendering/sprite/Sprite';
 import { isSampleableTexture } from '#rendering/texture/deferredTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -596,8 +596,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
    * slot's recorded texture index still names the texture it was written for.
    * @internal
    */
-  public _rekeyPersistentSlotStore(store: WebGpuPersistentSlotStore, source: RenderRootSource): boolean {
-    return fillPersistentSpriteSlotTable(source, store, this._maxBatchTextures);
+  public _rekeyPersistentSlotStore(store: WebGpuPersistentSlotStore, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean {
+    return rekeyPersistentSpriteSlotTable(source, store, this._maxBatchTextures, carried, previousHandleCount);
   }
 
   /**

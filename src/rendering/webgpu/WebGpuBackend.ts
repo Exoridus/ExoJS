@@ -757,15 +757,61 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /** @internal */
-  public _rekeyPersistentSlots(bundle: PersistentSlotBundle, source: RenderRootSource): boolean {
+  public _rekeyPersistentSlots(bundle: PersistentSlotBundle, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean {
     const store = bundle as WebGpuPersistentSlotStore;
     const owner = store.owner;
 
-    if (this._deviceLost || this._device === null || owner === null || owner !== this._resolvePersistentSlotOwner(source) || !source.prepack()) {
+    if (this._deviceLost || this._device === null || owner === null) {
       return false;
     }
 
-    return owner._rekeyPersistentSlotStore(store, source);
+    if (!this._ownerServesArrivals(source, owner, carried, previousHandleCount) || !source.prepack()) {
+      return false;
+    }
+
+    return owner._rekeyPersistentSlotStore(store, source, carried, previousHandleCount);
+  }
+
+  /**
+   * Whether `owner` can also serve the items a structure delta did not carry.
+   *
+   * Only those are resolved: an item the delta carried is the same drawable the
+   * store was already serving, so re-resolving it would put the acquisition walk
+   * back on a path that runs on every structural frame.
+   */
+  private _ownerServesArrivals(
+    source: RenderRootSource,
+    owner: WebGpuPersistentSlotCapableRenderer,
+    carried: Int32Array,
+    previousHandleCount: number,
+  ): boolean {
+    for (const scope of source.scopes) {
+      const drawables = scope.items.drawables;
+      const count = scope.items.count;
+      const handleBase = scope.handleBase;
+
+      for (let i = 0; i < count; i++) {
+        const previous = carried[handleBase + i]!;
+
+        if (previous >= 0 && previous < previousHandleCount) {
+          continue;
+        }
+
+        let renderer: WebGpuPersistentSlotCapableRenderer | null;
+
+        try {
+          renderer = this.rendererRegistry.resolve(drawables[i]!) as unknown as WebGpuPersistentSlotCapableRenderer | null;
+        } catch {
+          return false;
+        }
+
+        if (renderer !== owner || renderer._supportsPersistentSlots !== true) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 
   /** @internal */
