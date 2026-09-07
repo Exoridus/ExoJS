@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { verifyConfigPackage, verifyRuntimePackage, verifyToolingPackage } from '@codexo/exojs-config/package-policy';
 
-import { INDEPENDENT_PACKAGES, LOCKSTEP_PACKAGES } from './release/lockstep-packages.ts';
+import { LOCKSTEP_PACKAGES, TOOLING_PACKAGES } from './release/lockstep-packages.ts';
 
 // The verifier is plain JavaScript (see `scripts/untyped-config-modules.d.ts`),
 // so its result shape is named here - this script reads nothing else from it.
@@ -39,19 +39,8 @@ for (const t of targets) {
 }
 
 // Published tooling: the same publish contract, judged against the tooling
-// profile (no engine peer, no dependency on the private config). `create-exo-app`
-// is excluded - a scaffolder is a `bin`, not a library, so the profile's
-// `exports`/`sideEffects` expectations do not describe it.
-const TOOLING_PACKAGES = ['@codexo/exojs-build', '@codexo/eslint-plugin-exojs'];
-
-for (const name of TOOLING_PACKAGES) {
-  const tooling = INDEPENDENT_PACKAGES.find(p => p.name === name);
-
-  if (tooling === undefined) {
-    console.error(`verify-package-policy: ${name} is missing from INDEPENDENT_PACKAGES.`);
-    process.exit(1);
-  }
-
+// profile (no engine peer, no dependency on the private config).
+for (const tooling of TOOLING_PACKAGES) {
   const result: PolicyResult = verifyToolingPackage(resolve(root, tooling.dir), { name: tooling.name });
   const bad = result.checks.filter(c => !c.ok);
   console.log(`${result.ok ? '✓' : '✗'} ${tooling.name} (${result.checks.length} checks${bad.length ? `, ${bad.length} failed` : ''})`);

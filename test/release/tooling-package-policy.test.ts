@@ -7,12 +7,12 @@ import { fileURLToPath } from 'node:url';
 import { verifyToolingPackage } from '@codexo/exojs-config/package-policy';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { INDEPENDENT_PACKAGES, LOCKSTEP_PACKAGES } from '../../scripts/release/lockstep-packages';
+import { INDEPENDENT_PACKAGES, LOCKSTEP_PACKAGES, TOOLING_PACKAGES } from '../../scripts/release/lockstep-packages';
 import { PUBLISH_ORDER } from '../../scripts/release/manifest';
 
 /**
- * `@codexo/exojs-build` is published on its own version line rather than the
- * engine lockstep, and is checked against a different policy profile than the
+ * The published tooling packages are on their own version lines rather than the
+ * engine lockstep, and are checked against a different policy profile than the
  * runtime packages. Both are deliberate exceptions, so both need a gate: the
  * failure mode otherwise is a package that quietly falls out of every release
  * check because it is missing from the list those checks iterate.
@@ -65,9 +65,12 @@ afterAll(() => {
 });
 
 describe('tooling package policy', () => {
-  it('passes for the real package', () => {
-    expect(buildPackage).toBeDefined();
-    expect(failedChecks(resolve(repoRoot, buildPackage!.dir))).toStrictEqual([]);
+  it.each(TOOLING_PACKAGES.map(pkg => [pkg.name, pkg.dir] as const))('passes for the real %s', (name, dir) => {
+    const failures = verifyToolingPackage(resolve(repoRoot, dir), { name })
+      .checks.filter(check => !check.ok)
+      .map(check => check.name);
+
+    expect(failures).toStrictEqual([]);
   });
 
   it('accepts the reference manifest, so the negative cases isolate one fault each', () => {
@@ -115,6 +118,7 @@ describe('independent versioning', () => {
 
   it('records a reason for every package that is off the lockstep line', () => {
     expect(INDEPENDENT_PACKAGES.map(pkg => pkg.name)).toContain('@codexo/exojs-build');
+    expect(INDEPENDENT_PACKAGES.map(pkg => pkg.name)).toEqual(expect.arrayContaining(TOOLING_PACKAGES.map(pkg => pkg.name)));
 
     for (const pkg of INDEPENDENT_PACKAGES) {
       expect(pkg.reason.trim().length, `${pkg.name} needs a reason`).toBeGreaterThan(0);
