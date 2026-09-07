@@ -1,6 +1,8 @@
+import { type ContainerInput, encodeContainer } from '@codexo/exojs-build/asset-container';
+
 import { Asset } from '#assets/Asset';
 import { AssetDecodeError } from '#assets/AssetDecodeError';
-import { CONTAINER_HEADER_SIZE, CONTAINER_MAGIC, type ContainerInput, encodeContainer, parseContainer } from '#assets/container/assetContainer';
+import { CONTAINER_HEADER_SIZE, CONTAINER_MAGIC, CONTAINER_VERSION, parseContainer } from '#assets/container/assetContainer';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { materializeAssetTypes } from '#extensions/materialize';
@@ -24,6 +26,11 @@ const mockContainerFetch = (container: ArrayBuffer): ReturnType<typeof vi.fn> =>
   return spy;
 };
 
+// The writer ships in `@codexo/exojs-build` and the reader here, so the header
+// constants are stated twice on purpose - neither package may depend on the
+// other. This suite is one of the two guards that keeps them equal: it parses
+// what the published writer produces. The other is the CLI's `assets pack`
+// spec, which loads a packed file through `Loader.loadContainer`.
 describe('asset container format', () => {
   test('encode → parse round-trips the index and data offsets', () => {
     const inputs: ContainerInput[] = [
@@ -33,7 +40,7 @@ describe('asset container format', () => {
 
     const { version, entries, dataStart } = parseContainer(encodeContainer(inputs));
 
-    expect(version).toBe(2);
+    expect(version).toBe(3);
     expect(entries).toHaveLength(2);
     expect(entries[0]).toMatchObject({ source: 'level', type: 'json', offset: 0, length: 11, mime: 'application/json' });
     expect(entries[1]).toMatchObject({ source: 'note', type: 'text', offset: 11, length: 5 });
@@ -83,7 +90,17 @@ describe('asset container format', () => {
     // v1 indexed entries by an opaque alias, which cannot be resolved to an
     // asset identity at all - there is nothing to read partially.
     expect(() => parseContainer(buffer)).toThrow(/unsupported version 1/);
-    expect(() => parseContainer(buffer)).toThrow(/build-container/);
+    expect(() => parseContainer(buffer)).toThrow(/exo assets pack/);
+  });
+
+  test('rejects a version 2 container instead of misreading its index', () => {
+    const buffer = encodeContainer([]);
+    new DataView(buffer).setUint32(4, 2, true);
+
+    // v2 predates the per-entry codec, so a reader cannot tell stored bytes
+    // from asset bytes. Containers are build output: rebuild, do not migrate.
+    expect(() => parseContainer(buffer)).toThrow(/unsupported version 2/);
+    expect(() => parseContainer(buffer)).toThrow(/exo assets pack/);
   });
 
   test('rejects an index length that runs past the buffer', () => {
@@ -102,7 +119,7 @@ describe('asset container format', () => {
     for (let i = 0; i < CONTAINER_MAGIC.length; i++) {
       bytes[i] = CONTAINER_MAGIC.charCodeAt(i);
     }
-    view.setUint32(4, 2, true);
+    view.setUint32(4, CONTAINER_VERSION, true);
     view.setUint32(8, indexBytes.byteLength, true);
     bytes.set(indexBytes, CONTAINER_HEADER_SIZE);
 
@@ -118,7 +135,7 @@ describe('asset container format', () => {
     for (let i = 0; i < CONTAINER_MAGIC.length; i++) {
       bytes[i] = CONTAINER_MAGIC.charCodeAt(i);
     }
-    view.setUint32(4, 2, true);
+    view.setUint32(4, CONTAINER_VERSION, true);
     view.setUint32(8, indexBytes.byteLength, true);
     bytes.set(indexBytes, CONTAINER_HEADER_SIZE);
 
@@ -139,7 +156,7 @@ describe('asset container format', () => {
     for (let i = 0; i < CONTAINER_MAGIC.length; i++) {
       bytes[i] = CONTAINER_MAGIC.charCodeAt(i);
     }
-    view.setUint32(4, 2, true);
+    view.setUint32(4, CONTAINER_VERSION, true);
     view.setUint32(8, indexBytes.byteLength, true);
     bytes.set(indexBytes, CONTAINER_HEADER_SIZE);
 
@@ -193,6 +210,38 @@ describe('asset container format', () => {
     const { entries } = parseContainer(encodeRawIndex([{ source: 'a', type: 'text', offset: 0, length: 0, options: { mode: 'fast' } }]));
 
     expect(entries[0]).toMatchObject({ options: { mode: 'fast' } });
+  });
+
+  test('rejects an entry whose codec this build cannot decode', () => {
+    const index = [{ source: 'a', type: 'text', offset: 0, length: 0, codec: 'zstd', decodedLength: 4 }];
+
+    expect(() => parseContainer(encodeRawIndex(index))).toThrow(/unsupported codec "zstd"/);
+  });
+
+  test('rejects an encoded entry with no decodedLength', () => {
+    const index = [{ source: 'a', type: 'text', offset: 0, length: 0, codec: 'gzip' }];
+
+    expect(() => parseContainer(encodeRawIndex(index))).toThrow(/is "gzip"-encoded but has no valid "decodedLength"/);
+  });
+
+  test('rejects a decodedLength on an entry that declares no codec', () => {
+    const index = [{ source: 'a', type: 'text', offset: 0, length: 0, decodedLength: 4 }];
+
+    expect(() => parseContainer(encodeRawIndex(index))).toThrow(/has a "decodedLength" but no "codec"/);
+  });
+
+  test('rejects a hash that is not a lowercase hex SHA-256', () => {
+    const index = [{ source: 'a', type: 'text', offset: 0, length: 0, hash: 'ABC' }];
+
+    expect(() => parseContainer(encodeRawIndex(index))).toThrow(/lowercase hex SHA-256/);
+  });
+
+  test('encodeContainer records a SHA-256 of the asset bytes', () => {
+    const { entries } = parseContainer(encodeContainer([{ source: 'a', type: 'text', bytes: utf8('hello') }]));
+
+    // Known digest of "hello": the hash identifies the asset, so it must not
+    // depend on how this build happens to store it.
+    expect(entries[0]?.hash).toBe('2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824');
   });
 
   test('encodeContainer round-trips per-asset "options"', () => {

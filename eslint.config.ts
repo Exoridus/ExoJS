@@ -400,6 +400,18 @@ export default defineConfig([
     },
   },
 
+  // The published command line tool runs in Node for the same reason, and its
+  // console output is the product rather than a debug leftover.
+  {
+    files: ['packages/exojs-cli/src/**/*.ts'],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.es2024 },
+    },
+    rules: {
+      'no-console': 'off',
+    },
+  },
+
   // @codexo/exojs-bench is an internal benchmark TOOL - a Node CLI plus an
   // in-browser rendering harness - not a shipped library. It legitimately
   // monkeypatches live graphics contexts and casts through `unknown` to

@@ -32,6 +32,10 @@ const aliasConfig = [
   { find: '@codexo/exojs-tilemap-physics', replacement: fileURLToPath(new URL('./packages/exojs-tilemap-physics/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-lighting', replacement: fileURLToPath(new URL('./packages/exojs-lighting/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-pathfinding', replacement: fileURLToPath(new URL('./packages/exojs-pathfinding/src/index.ts', import.meta.url)) },
+  // The CLI's `exo create` calls the scaffolder's library entry, whose package
+  // resolves to built output. The unit lane runs without building the packages,
+  // so an in-repo test would resolve nothing at all without this.
+  { find: 'create-exo-app', replacement: fileURLToPath(new URL('./packages/create-exo-app/src/scaffold.ts', import.meta.url)) },
 ] as const;
 
 // Loads every shader source (`.vert`/`.frag`/`.wgsl`) as its REAL text, exactly
@@ -298,6 +302,27 @@ export default defineConfig({
           exclude: ['packages/exojs-build/test/browser/**'],
           testTimeout: 300_000,
           hookTimeout: 300_000,
+        },
+      },
+
+      // ── exojs-cli: the published command line package ──────────────────
+      // Plain Node, because the subject under test is a Node CLI: an HTTP
+      // server, a scaffolder and a file packer, none of which want a jsdom
+      // window. The engine aliases and the real-shader loader are wired in for
+      // one spec - the `assets pack` round trip reads a packed container back
+      // through Core's own `Loader.loadContainer`, which is what proves the
+      // writer in `@codexo/exojs-build` and the reader in Core cannot drift.
+      {
+        resolve: { alias: aliasConfig, conditions: srcConditions },
+        ssr: { resolve: { conditions: srcConditions } },
+        plugins: [realShaderPlugin],
+        define: { __DEV__: JSON.stringify(true), __VERSION__: JSON.stringify('0.0.0'), __REVISION__: JSON.stringify('test') },
+        test: {
+          name: 'exojs-cli',
+          environment: 'node',
+          globals: true,
+          include: ['packages/exojs-cli/test/**/*.test.ts'],
+          testTimeout: 30_000,
         },
       },
 
