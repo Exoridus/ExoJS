@@ -108,7 +108,7 @@ export class RenderPipeline extends RenderPass {
     // has no parent to make that decision. Skipping here is what makes
     // `enabled` mean "this subtree is off" rather than "one step of my
     // parent is off".
-    // eslint-disable-next-line exo/no-self-enabled-check -- the composite is the exception; see above.
+    // eslint-disable-next-line exojs/no-self-enabled-check -- the composite is the exception; see above.
     if (!this.enabled) {
       return;
     }

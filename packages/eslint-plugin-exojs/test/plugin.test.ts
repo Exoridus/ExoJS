@@ -1,25 +1,60 @@
 import { Linter } from 'eslint';
 import { describe, expect, it } from 'vitest';
 
-import { exoEngineRulesConfig, exoPlugin, exoRulesConfig } from '../src/index.ts';
+import { exoEnginePlugin, exoEngineRulesConfig, exoPlugin, exoRulesConfig } from '../src/index.ts';
 
 const lint = (code: string, config: object[], filename = 'file.ts'): Linter.LintMessage[] => new Linter().verify(code, config as Linter.Config[], filename);
 
-describe('exoPlugin', () => {
-  it('addresses the engine rules through a second namespace segment', () => {
-    // ESLint splits a rule id at its FIRST slash, so `engine/...` under the
-    // `exo` plugin key is a real `exo/engine/...` rule id rather than a naming
-    // convention. The fallback if it were not would be a second plugin key.
-    const messages = lint('class Effect { getOutputBounds(i, o) { return { x: 0 }; } }', [
+const ALLOCATING_HOOK = 'class Effect { getOutputBounds(i, o) { return { x: 0 }; } }';
+
+describe('plugin keys', () => {
+  it('addresses the consumer rules under the package name', () => {
+    const messages = lint('class S { async update(delta) {} }', [
       {
         files: ['**/*.ts'],
-        plugins: { exo: exoPlugin },
-        rules: { 'exo/engine/no-allocation-in-hot-hook': ['error', { methods: ['getOutputBounds'] }] },
+        plugins: { exojs: exoPlugin },
+        rules: { 'exojs/no-async-update': 'error' },
       },
     ]);
 
-    expect(messages.map(message => message.ruleId)).toEqual(['exo/engine/no-allocation-in-hot-hook']);
+    expect(messages.map(message => message.ruleId)).toEqual(['exojs/no-async-update']);
     expect(messages[0]?.fatal).toBeUndefined();
+  });
+
+  it('addresses the engine rules under their own key', () => {
+    const messages = lint(ALLOCATING_HOOK, [
+      {
+        files: ['**/*.ts'],
+        plugins: { 'exojs-engine': exoEnginePlugin },
+        rules: { 'exojs-engine/no-allocation-in-hot-hook': ['error', { methods: ['getOutputBounds'] }] },
+      },
+    ]);
+
+    expect(messages.map(message => message.ruleId)).toEqual(['exojs-engine/no-allocation-in-hot-hook']);
+    expect(messages[0]?.fatal).toBeUndefined();
+  });
+
+  it('makes an engine rule unreachable without its key, rather than silently inert', () => {
+    // This is what the second plugin key buys over a namespace inside the rule
+    // name: registering only the consumer plugin does not leave the engine rule
+    // switched off, it makes the id invalid.
+    expect(() =>
+      lint(ALLOCATING_HOOK, [
+        {
+          files: ['**/*.ts'],
+          plugins: { exojs: exoPlugin },
+          rules: { 'exojs-engine/no-allocation-in-hot-hook': 'error' },
+        },
+      ]),
+    ).toThrow(/exojs-engine/);
+  });
+
+  it('keeps the two rule sets disjoint', () => {
+    const consumer = Object.keys(exoPlugin.rules);
+    const engine = Object.keys(exoEnginePlugin.rules);
+
+    expect(consumer.filter(name => engine.includes(name))).toEqual([]);
+    expect([...consumer, ...engine].filter(name => name.includes('/'))).toEqual([]);
   });
 });
 
@@ -28,7 +63,7 @@ describe('exoRulesConfig', () => {
     const messages = lint('class S { async update(delta) {} }', exoRulesConfig({ files: ['**/*.ts'] }));
 
     expect(messages).toHaveLength(1);
-    expect(messages[0]?.ruleId).toBe('exo/no-async-update');
+    expect(messages[0]?.ruleId).toBe('exojs/no-async-update');
     expect(messages[0]?.severity).toBe(2);
   });
 
@@ -44,32 +79,37 @@ describe('exoRulesConfig', () => {
     const messages = lint("import { Old } from '@codexo/exojs';\nOld();", exoRulesConfig({ files: ['**/*.ts'], deprecatedApi, tier: 'strict' }));
 
     expect(messages).toHaveLength(1);
-    expect(messages[0]?.ruleId).toBe('exo/no-deprecated-api');
+    expect(messages[0]?.ruleId).toBe('exojs/no-deprecated-api');
     expect(messages[0]?.severity).toBe(2);
   });
 
   it('keeps every correctness rule in the strict tier', () => {
     const messages = lint('class S { async update(delta) {} }', exoRulesConfig({ files: ['**/*.ts'], tier: 'strict' }));
 
-    expect(messages.map(message => message.ruleId)).toEqual(['exo/no-async-update']);
+    expect(messages.map(message => message.ruleId)).toEqual(['exojs/no-async-update']);
   });
 
-  it('never turns an engine rule on for a consumer', () => {
+  it('never registers the engine plugin for a consumer', () => {
     for (const tier of ['recommended', 'strict'] as const) {
-      const configured = exoRulesConfig({ files: ['**/*.ts'], tier }).flatMap(block => Object.keys(block.rules ?? {}));
-
-      expect(configured.filter(rule => rule.startsWith('exo/engine/'))).toEqual([]);
+      for (const block of exoRulesConfig({ files: ['**/*.ts'], tier })) {
+        expect(Object.keys(block.plugins ?? {})).toEqual(['exojs']);
+        expect(Object.keys(block.rules ?? {}).filter(rule => rule.startsWith('exojs-engine/'))).toEqual([]);
+      }
     }
   });
 });
 
 describe('exoEngineRulesConfig', () => {
-  it('resolves alongside exoRulesConfig in one config', () => {
-    // Both factories register the plugin. ESLint rejects a second registration
-    // only when it is a DIFFERENT object, so the same one twice must resolve.
-    const config = [...exoRulesConfig({ files: ['**/*.ts'] }), ...exoEngineRulesConfig({ files: ['**/*.ts'], allocationFreeHooks: ['getOutputBounds'] })];
-    const messages = lint('class Effect { getOutputBounds(i, o) { return { x: 0 }; } }', config);
+  it('registers the engine key and nothing else', () => {
+    for (const block of exoEngineRulesConfig({ files: ['**/*.ts'], allocationFreeHooks: ['getOutputBounds'] })) {
+      expect(Object.keys(block.plugins ?? {})).toEqual(['exojs-engine']);
+    }
+  });
 
-    expect(messages.map(message => message.ruleId)).toEqual(['exo/engine/no-allocation-in-hot-hook']);
+  it('resolves alongside exoRulesConfig in one config', () => {
+    const config = [...exoRulesConfig({ files: ['**/*.ts'] }), ...exoEngineRulesConfig({ files: ['**/*.ts'], allocationFreeHooks: ['getOutputBounds'] })];
+    const messages = lint(ALLOCATING_HOOK, config);
+
+    expect(messages.map(message => message.ruleId)).toEqual(['exojs-engine/no-allocation-in-hot-hook']);
   });
 });

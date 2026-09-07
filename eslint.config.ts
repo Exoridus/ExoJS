@@ -392,9 +392,10 @@ export default defineConfig([
   // it. Consumers choose the tier that fits their own migration.
   ...exoRulesConfig({ files: ['src/**/*.ts', 'packages/exojs-*/src/**/*.ts'], deprecatedApi, tier: 'strict' }),
 
-  // The engine-internal tier, over the engine only. These enforce promises this
-  // repository's own doc comments make and are in no consumer preset - see the
-  // plugin's `exoEngineRulesConfig`.
+  // The engine-internal rules (`exojs-engine/*`), over the engine only. They
+  // enforce promises this repository's own doc comments make and reach no
+  // consumer: they live in a second plugin object under their own key, which
+  // only this call registers.
   //
   // The hook list is the set of methods whose JSDoc states the prohibition:
   // `Filter.getOutputBounds` runs once per frame for every filtered node, and

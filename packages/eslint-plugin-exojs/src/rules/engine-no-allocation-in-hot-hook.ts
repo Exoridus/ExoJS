@@ -8,8 +8,10 @@
 // This is not a consumer rule and is not part of any consumer preset. A
 // consumer's own `getOutputBounds` may allocate as much as their frame budget
 // allows; telling them otherwise would be paternalism dressed as a lint error.
-// It is in the `exo/engine/*` namespace for exactly that reason: the rules there
-// enforce this repository's internal contracts, not anyone else's.
+// It lives behind the separate `exojs-engine` plugin key for exactly that
+// reason: the rules there enforce this repository's internal contracts, not
+// anyone else's, and a config that never registers that key cannot switch one
+// on even by name.
 //
 // What it reports is syntactic allocation - object and array literals, `new`,
 // closures created per call, and the array-returning standard-library calls -

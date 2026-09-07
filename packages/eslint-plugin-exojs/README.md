@@ -26,7 +26,7 @@ export default defineConfig([
 ]);
 ```
 
-`exoRulesConfig` registers the plugin under the `exo` prefix and turns on one
+`exoRulesConfig` registers the plugin under the `exojs` prefix and turns on one
 tier of rules. Register it by hand instead if you would rather choose rules
 individually:
 
@@ -36,8 +36,8 @@ import { exoPlugin } from '@codexo/eslint-plugin-exojs';
 export default [
   {
     files: ['src/**/*.ts'],
-    plugins: { exo: exoPlugin },
-    rules: { 'exo/no-async-update': 'error' },
+    plugins: { exojs: exoPlugin },
+    rules: { 'exojs/no-async-update': 'error' },
   },
 ];
 ```
@@ -77,7 +77,7 @@ const deprecatedApi = collectDeprecatedExports(globSync('**/*.d.ts', { cwd: engi
 
 ## Rules
 
-### `exo/no-async-update`
+### `exojs/no-async-update`
 
 Flags `async preUpdate` / `fixedUpdate` / `update` / `draw` / `render` on a
 class, a class field or an object literal.
@@ -93,7 +93,7 @@ fixedUpdate()` does not occur in practice. `load()`, `unload()` and `destroy()`
 are genuinely asynchronous or genuinely teardown, and are not in the set. A
 computed key (`async ['update']()`) is not checked.
 
-### `exo/no-async-render-hook`
+### `exojs/no-async-render-hook`
 
 Flags `async execute` in a class that `extends RenderPass`, and `async apply` or
 `async getOutputBounds` in a class that `extends Filter`.
@@ -106,13 +106,13 @@ into a render target the pool may already have handed to someone else.
 Configure other bases with `hooks`:
 
 ```ts
-rules: { 'exo/no-async-render-hook': ['error', { hooks: { RenderPass: ['execute'], MyEffectBase: ['run'] } }] }
+rules: { 'exojs/no-async-render-hook': ['error', { hooks: { RenderPass: ['execute'], MyEffectBase: ['run'] } }] }
 ```
 
 Only a literal `extends <Identifier>` is matched, so a subclass that reaches
 `RenderPass` through an intermediate class in another file is not seen.
 
-### `exo/no-self-enabled-check`
+### `exojs/no-self-enabled-check`
 
 Flags any read of `this.enabled` inside `execute` of a class that
 `extends RenderPass`.
@@ -130,7 +130,7 @@ destructuring (`const { enabled } = this`) is not seen.
 
 Configure with `baseClasses` and `hook`.
 
-### `exo/require-super-destroy`
+### `exojs/require-super-destroy`
 
 Flags a `destroy()` override that never calls `super.destroy()`, in a class
 extending one of a configured list of base classes.
@@ -149,10 +149,10 @@ among them - its `destroy()` is an empty hook for your own cleanup, and the
 scene's engine-owned teardown runs separately.
 
 ```ts
-rules: { 'exo/require-super-destroy': ['error', { baseClasses: [...EXO_DESTROY_BASE_CLASSES, 'MyEntityBase'] }] }
+rules: { 'exojs/require-super-destroy': ['error', { baseClasses: [...EXO_DESTROY_BASE_CLASSES, 'MyEntityBase'] }] }
 ```
 
-### `exo/no-unregistered-system`
+### `exojs/no-unregistered-system`
 
 Flags `const system = new SomethingSystem()` when nothing in the file passes it
 to `systems.add(...)` and nothing calls a phase on it by hand.
@@ -167,7 +167,7 @@ stays quiet. System-shaped is a name test (`System$`), not a type test.
 
 Configure with `pattern`, `registry`, `registerMethod` and `lifecycleMethods`.
 
-### `exo/no-deprecated-api`
+### `exojs/no-deprecated-api`
 
 Flags an import of a name the engine's own JSDoc marks `@deprecated`, with that
 tag's replacement note as the message. In the `strict` tier only.
@@ -178,12 +178,15 @@ binding, so an aliased import is caught too. A namespace import
 
 ## Engine-internal rules
 
-`exo/engine/*` enforces contracts the ExoJS engine's own source makes - written
-promises in its doc comments, not promises made on your behalf. They are in no
-tier and nothing turns them on for you. `exoEngineRulesConfig` is a supported
-entry point if you want one anyway.
+`exojs-engine/*` enforces contracts the ExoJS engine's own source makes -
+written promises in its doc comments, not promises made on your behalf. They
+ship in a second plugin object, `exoEnginePlugin`, registered under its own
+`exojs-engine` key, so they are unreachable from a config that has not asked
+for them: ESLint rejects the rule id outright rather than silently ignoring it.
+They are in no tier, and `exoEngineRulesConfig` is the supported entry point if
+you want one anyway.
 
-### `exo/engine/no-allocation-in-hot-hook`
+### `exojs-engine/no-allocation-in-hot-hook`
 
 Flags object and array literals, `new`, per-call closures, and array-returning
 standard-library calls inside a method named in its `methods` option. It cannot

@@ -34,11 +34,10 @@ import { noUnregisteredSystem } from './rules/no-unregistered-system.js';
 import { requireSuperDestroy } from './rules/require-super-destroy.js';
 
 /**
- * The ExoJS plugin object.
+ * The consumer plugin object.
  *
- * Register it under the prefix `exo`; every rule name below and every message
- * in this package assumes it. The `engine/` rules are engine-internal and are
- * in no consumer preset - see {@link exoEngineRulesConfig}.
+ * Register it under the prefix `exojs`, matching the package name; every rule
+ * id and every message in this package assumes it.
  */
 export const exoPlugin = {
   rules: {
@@ -48,10 +47,26 @@ export const exoPlugin = {
     'no-self-enabled-check': noSelfEnabledCheck,
     'no-unregistered-system': noUnregisteredSystem,
     'require-super-destroy': requireSuperDestroy,
-    // ESLint splits a rule id at its FIRST slash, so a rule keyed with a slash
-    // under the `exo` plugin is addressed as `exo/engine/...` - a real second
-    // namespace segment rather than a naming convention.
-    'engine/no-allocation-in-hot-hook': engineNoAllocationInHotHook,
+  },
+};
+
+/**
+ * The engine-internal plugin object, registered under the prefix
+ * `exojs-engine`.
+ *
+ * A separate plugin key rather than a namespace inside a rule name. A slash in
+ * the name resolves - ESLint splits a rule id at its first slash - but every
+ * multi-segment id in the ecosystem comes from the plugin key instead
+ * (`@next/next/...`, `@angular-eslint/template/...`), and tooling that assumes
+ * the rule name is the last segment does not see one built the other way.
+ *
+ * The second key also makes "never in a consumer preset" structural rather
+ * than conventional: a config that has not registered `exojs-engine` cannot
+ * enable these rules at all - ESLint rejects the id outright.
+ */
+export const exoEnginePlugin = {
+  rules: {
+    'no-allocation-in-hot-hook': engineNoAllocationInHotHook,
   },
 };
 
@@ -63,11 +78,11 @@ export const exoPlugin = {
  * not a style preference, and a warning that nobody's CI fails on is a comment.
  */
 const RECOMMENDED_RULES: Linter.RulesRecord = {
-  'exo/no-async-update': 'error',
-  'exo/no-async-render-hook': 'error',
-  'exo/no-self-enabled-check': 'error',
-  'exo/require-super-destroy': 'error',
-  'exo/no-unregistered-system': 'error',
+  'exojs/no-async-update': 'error',
+  'exojs/no-async-render-hook': 'error',
+  'exojs/no-self-enabled-check': 'error',
+  'exojs/require-super-destroy': 'error',
+  'exojs/no-unregistered-system': 'error',
 };
 
 /**
@@ -109,36 +124,38 @@ export function exoRulesConfig({ files, deprecatedApi = {}, tier = 'recommended'
   const rules: Linter.RulesRecord = { ...RECOMMENDED_RULES };
 
   if (tier === 'strict') {
-    rules['exo/no-deprecated-api'] = ['error', { source: '@codexo/exojs', deprecated: deprecatedApi }];
+    rules['exojs/no-deprecated-api'] = ['error', { source: '@codexo/exojs', deprecated: deprecatedApi }];
   }
 
-  return [{ files, plugins: { exo: exoPlugin }, rules }];
+  return [{ files, plugins: { exojs: exoPlugin }, rules }];
 }
 
 /** Options for {@link exoEngineRulesConfig}. */
 export interface ExoEngineRulesConfigOptions {
   /** Globs the engine-internal rules apply to. */
   readonly files: string[];
-  /** Methods `exo/engine/no-allocation-in-hot-hook` treats as allocation-free hooks. */
+  /** Methods `exojs-engine/no-allocation-in-hot-hook` treats as allocation-free hooks. */
   readonly allocationFreeHooks: string[];
 }
 
 /**
- * Turns the `exo/engine/*` rules on for `files`.
+ * Turns the `exojs-engine/*` rules on for `files`.
  *
- * These enforce the ExoJS engine's own internal contracts and are deliberately
- * absent from {@link exoRulesConfig}: the promises they check are written in
- * the engine's source, not made on a consumer's behalf. A consumer who wants
- * one anyway can call this directly - it is a supported entry point, not a
- * private one - but nothing turns it on for them.
+ * Registers {@link exoEnginePlugin} and nothing else, so a config that calls
+ * only {@link exoRulesConfig} cannot reach these rules even by name. They
+ * enforce the ExoJS engine's own internal contracts and are deliberately
+ * absent from every consumer tier: the promises they check are written in the
+ * engine's source, not made on a consumer's behalf. A consumer who wants one
+ * anyway can call this directly - it is a supported entry point, not a private
+ * one - but nothing turns it on for them.
  */
 export function exoEngineRulesConfig({ files, allocationFreeHooks }: ExoEngineRulesConfigOptions): Linter.Config[] {
   return [
     {
       files,
-      plugins: { exo: exoPlugin },
+      plugins: { 'exojs-engine': exoEnginePlugin },
       rules: {
-        'exo/engine/no-allocation-in-hot-hook': ['error', { methods: allocationFreeHooks }],
+        'exojs-engine/no-allocation-in-hot-hook': ['error', { methods: allocationFreeHooks }],
       },
     },
   ];
