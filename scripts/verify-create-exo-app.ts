@@ -13,7 +13,7 @@ const templatesDir = join(rootDir, 'packages', 'create-exo-app', 'templates');
 // the newest published @codexo/exojs without needing template edits per release.
 const EXPECTED_CORE_RANGE = 'latest';
 
-const TEMPLATES = ['minimal', 'game-starter', 'audio-reactive'] as const;
+const TEMPLATES = ['minimal', 'game-starter', 'platformer', 'top-down', 'ui-app', 'audio-reactive'] as const;
 type TemplateName = (typeof TEMPLATES)[number];
 
 const EXPECTED_FILES: Record<TemplateName, string[]> = {
@@ -28,6 +28,33 @@ const EXPECTED_FILES: Record<TemplateName, string[]> = {
     'src/scenes/GameOverScene.ts',
     'src/objects/Player.ts',
   ],
+  platformer: [
+    'index.html',
+    'package.json',
+    'tsconfig.json',
+    'vite.config.ts',
+    'src/main.ts',
+    'src/objects/Player.ts',
+    'src/scenes/PlatformerScene.ts',
+    'public/assets/platformer-characters.png',
+    'public/assets/platformer-tiles.png',
+    'public/assets/ART-LICENSE.txt',
+  ],
+  'top-down': [
+    'index.html',
+    'package.json',
+    'tsconfig.json',
+    'vite.config.ts',
+    'src/main.ts',
+    'src/level.ts',
+    'src/scenes/TopDownScene.ts',
+    'src/scenes/ProceduralMapScene.ts',
+    'src/scenes/TiledMapScene.ts',
+    'public/assets/map-pack.png',
+    'public/assets/town-square.tmj',
+    'public/assets/ART-LICENSE.txt',
+  ],
+  'ui-app': ['index.html', 'package.json', 'tsconfig.json', 'vite.config.ts', 'src/main.ts', 'src/scenes/SettingsScene.ts'],
   'audio-reactive': ['index.html', 'package.json', 'tsconfig.json', 'vite.config.ts', 'src/main.ts', 'src/scenes/AudioReactiveScene.ts'],
 };
 

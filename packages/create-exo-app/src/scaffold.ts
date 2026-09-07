@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 /** Template names in the order the interactive picker lists them; the first is the default. */
-export const TEMPLATES = ['minimal', 'game-starter', 'audio-reactive'] as const;
+export const TEMPLATES = ['minimal', 'game-starter', 'platformer', 'top-down', 'ui-app', 'audio-reactive'] as const;
 
 export type TemplateName = (typeof TEMPLATES)[number];
 
@@ -22,6 +22,9 @@ export type TemplateName = (typeof TEMPLATES)[number];
 export const TEMPLATE_DESCRIPTIONS: Record<TemplateName, string> = {
   minimal: 'smallest TypeScript ExoJS app with one Scene and one visible object',
   'game-starter': 'keyboard-controlled game loop starter with Scene structure',
+  platformer: 'side-scroller with physics bodies, camera follow and a forgiving jump',
+  'top-down': 'tilemap, physics and click-to-move pathfinding, procedural or from Tiled',
+  'ui-app': 'settings screen built from the UI widgets in core',
   'audio-reactive': 'AudioAnalyser-driven shapes and animations',
 };
 
@@ -144,7 +147,7 @@ export const runScaffolder = async (argv: readonly string[]): Promise<void> => {
   if (!projectName) {
     if (!isInteractive()) {
       console.error('Error: project name is required in non-interactive mode.');
-      console.error('Usage: create-exo-app <project-name> [--template minimal|game-starter|audio-reactive]');
+      console.error(`Usage: create-exo-app <project-name> [--template ${TEMPLATES.join('|')}]`);
       process.exit(1);
     }
     projectName = await promptProjectName();
