@@ -151,21 +151,33 @@ for (const t of TEMPLATES) {
   }
 }
 
-// 7. Template @codexo/exojs dependency uses "latest" dist-tag
-console.log('\n7. Template @codexo/exojs dependency');
+// 7. Every @codexo dependency a template declares uses the "latest" dist-tag
+console.log('\n7. Template @codexo dependencies');
 const seenCoreRanges = new Set<string>();
 for (const t of TEMPLATES) {
   const pkgPath = join(tmpRoot, t, 'package.json');
   try {
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')) as { dependencies?: Record<string, string> };
-    const range = pkg.dependencies?.['@codexo/exojs'];
-    if (range === undefined) {
+    const coreRange = pkg.dependencies?.['@codexo/exojs'];
+
+    if (coreRange === undefined) {
       fail(`${t}: missing @codexo/exojs dependency`);
       continue;
     }
-    seenCoreRanges.add(range);
-    check(range === EXPECTED_CORE_RANGE, `${t}: @codexo/exojs "${range}" ✓`, `${t}: @codexo/exojs "${range}" should be "${EXPECTED_CORE_RANGE}"`);
-    check(!range.startsWith('workspace:'), `${t}: no workspace: protocol`, `${t}: uses workspace: protocol ("${range}") — not publishable`);
+
+    seenCoreRanges.add(coreRange);
+
+    // Every extension a template pulls in is published on the engine's cadence,
+    // so a template that pinned one would scaffold a project mixing versions as
+    // soon as either side is released.
+    for (const [name, range] of Object.entries(pkg.dependencies ?? {}).filter(([dependency]) => dependency.startsWith('@codexo/'))) {
+      check(range === EXPECTED_CORE_RANGE, `${t}: ${name} "${range}" ✓`, `${t}: ${name} "${range}" should be "${EXPECTED_CORE_RANGE}"`);
+      check(
+        !range.startsWith('workspace:'),
+        `${t}: ${name} has no workspace: protocol`,
+        `${t}: ${name} uses workspace: protocol ("${range}") — not publishable`,
+      );
+    }
   } catch {
     fail(`${t}: could not read scaffolded package.json dependency`);
   }
@@ -175,6 +187,24 @@ check(
   `all templates agree on one core range (${[...seenCoreRanges].join(', ')})`,
   `templates disagree on core range: ${[...seenCoreRanges].join(', ')}`,
 );
+
+// 8. Template sources compile against the engine in this working tree
+//
+// A scaffolded project resolves `@codexo/exojs` from npm, so on its own a
+// template only meets the engine when a user runs it - after the release that
+// broke it. `tsconfig.templates.json` compiles the template sources against the
+// workspace sources instead. It is in the `typecheck` gate group as well, which
+// covers an engine change; running it here is what covers the other direction,
+// a templates-only change, which routes to this script's lane and not to that
+// one.
+console.log('\n8. Template sources type-check against the workspace engine');
+try {
+  execSync('npx tsc --noEmit -p tsconfig.templates.json', { cwd: rootDir, stdio: 'pipe', encoding: 'utf-8' });
+  ok('tsc --noEmit -p tsconfig.templates.json');
+} catch (err) {
+  const output = err !== null && typeof err === 'object' && 'stdout' in err ? String((err as { stdout?: unknown }).stdout ?? '') : '';
+  fail(`template type-check failed:\n${output.trim() || String(err)}`);
+}
 
 // Summary
 console.log(`\n=== Result: ${passed} passed, ${failed} failed ===\n`);

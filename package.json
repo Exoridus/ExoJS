@@ -95,6 +95,7 @@
     "build:all": "pnpm build && pnpm build:packages",
     "typecheck": "tsc --noEmit",
     "typecheck:examples": "tsc --noEmit -p tsconfig.examples.json",
+    "typecheck:templates": "tsc --noEmit -p tsconfig.templates.json",
     "typecheck:workers": "tsc --noEmit -p tsconfig.workers.json",
     "typecheck:scripts": "tsc --noEmit -p tsconfig.scripts.json",
     "typecheck:type-tests": "tsx scripts/typecheck-type-tests.ts",

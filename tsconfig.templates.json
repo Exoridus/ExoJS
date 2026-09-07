@@ -1,0 +1,28 @@
+{
+  // Static type-check for the templates `create-exo-app` and `exo create`
+  // scaffold. Nothing else in the repository compiles them: a scaffolded
+  // project resolves `@codexo/exojs` from npm, so a template only meets the
+  // engine at the moment a user runs it, and an API change lands in a release
+  // before anything reports the break. Checking the template sources against
+  // the engine's own source types moves that discovery to the change that
+  // caused it.
+  //
+  // The compiler policy is the shared consumer profile, for the same reason
+  // `tsconfig.examples.json` uses it: a template is a copy-paste surface, and
+  // engine-only options would report drift its readers never see. Each
+  // template also ships its own `tsconfig.json`, which is the scaffolded
+  // project's - deliberately not this program, which resolves the workspace
+  // sources instead of an installed package.
+  "extends": "@codexo/exojs-config/typescript/consumer.json",
+  "compilerOptions": {
+    "customConditions": ["@codexo/exojs-source"],
+    "paths": {
+      "@codexo/exojs": ["./src/index.ts"],
+      "@codexo/exojs-audio-fx": ["./packages/exojs-audio-fx/src/index.ts"]
+    }
+  },
+  // `src/typings.d.ts` carries the engine build constants and the ambient
+  // `?worklet` module, both of which the engine and package sources this
+  // program resolves rely on.
+  "include": ["packages/create-exo-app/templates/*/src/**/*.ts", "src/typings.d.ts"]
+}

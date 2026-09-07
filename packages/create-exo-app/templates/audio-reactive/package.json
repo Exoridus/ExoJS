@@ -8,7 +8,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@codexo/exojs": "latest"
+    "@codexo/exojs": "latest",
+    "@codexo/exojs-audio-fx": "latest"
   },
   "devDependencies": {
     "typescript": "^5.8.0",

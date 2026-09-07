@@ -13,6 +13,7 @@ export const GATE_GROUPS = {
     'typecheck',
     'typecheck:guides',
     'typecheck:examples',
+    'typecheck:templates',
     'typecheck:workers',
     'typecheck:type-tests',
     'typecheck:packages',
