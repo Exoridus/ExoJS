@@ -40,6 +40,22 @@ export interface ShaderOptions<
   readonly wgsl?: string;
 }
 
+/**
+ * Per-language count of the color attachments a fragment stage declares an
+ * output for, as reflected from the shader source.
+ *
+ * `null` means the count could not be established - the language is not
+ * supplied, or the source uses a shape the reflection cannot resolve - and
+ * never means "declares none". Treat it as unknown rather than as a failed
+ * requirement.
+ */
+export interface FragmentOutputCounts {
+  /** Outputs declared by the GLSL fragment stage. */
+  readonly glsl: number | null;
+  /** Outputs declared by the WGSL fragment entry point. */
+  readonly wgsl: number | null;
+}
+
 let nextShaderId = 1;
 
 /**
@@ -171,6 +187,7 @@ export class Shader<const F extends UniformFields | undefined = undefined, const
   private readonly _glslDeclarations: string | null;
   private readonly _wgslByGroup = new Map<number, string>();
   private _resolvedGlsl: { readonly vertex: string | null; readonly fragment: string } | null = null;
+  private _fragmentOutputs: FragmentOutputCounts | null = null;
 
   public constructor(options: ShaderOptions<F, B>) {
     if (options.glsl === undefined && options.wgsl === undefined) {
@@ -312,18 +329,23 @@ export class Shader<const F extends UniformFields | undefined = undefined, const
   }
 
   /**
-   * Best-effort count of the color attachments each language's fragment stage
-   * writes, from its declared outputs - `null` for a language not supplied.
-   * Parsed via the same lightweight regex approach as {@link getDeclaredUniforms},
-   * not a full grammar: intended for an early dev-build warning when a
-   * material is drawn into a multi-attachment target it cannot fully satisfy,
-   * not for driving pipeline creation.
+   * How many color attachments each language's fragment stage declares an
+   * output for, reflected from the source on first read and cached for the
+   * shader's lifetime.
+   *
+   * Drawing into a multi-attachment render target needs one declared output
+   * per attachment, and the engine refuses a draw whose count is known to fall
+   * short. Reflection uses the same lightweight regex approach as
+   * {@link getDeclaredUniforms} rather than a full grammar, so a source it
+   * cannot resolve reports `null` and is let through rather than refused.
    */
-  public countFragmentOutputs(): { glsl: number | null; wgsl: number | null } {
-    return {
+  public get fragmentOutputs(): FragmentOutputCounts {
+    this._fragmentOutputs ??= {
       glsl: this.glsl !== null ? countGlslFragmentOutputs(this.glsl.fragment) : null,
       wgsl: this.wgsl !== null ? countWgslFragmentOutputs(this.wgsl) : null,
     };
+
+    return this._fragmentOutputs;
   }
 }
 
@@ -398,11 +420,17 @@ const parseWgslUniforms = (source: string): Record<string, string> => {
 // eslint-disable-next-line security/detect-unsafe-regex
 const glslFragmentOutputPattern = /\bout\s+(?:(?:mediump|highp|lowp)\s+)?[A-Za-z_]\w*\s+[A-Za-z_]\w*\s*;/g;
 
-const countGlslFragmentOutputs = (fragmentSource: string): number => {
+/**
+ * `null` when no `out` declaration matched. A fragment stage that writes a
+ * color has at least one, so a zero count means the regex missed the shape
+ * rather than that the source declares nothing - and the difference decides
+ * whether the multi-attachment guard refuses a draw or lets it through.
+ */
+const countGlslFragmentOutputs = (fragmentSource: string): number | null => {
   const stripped = stripComments(fragmentSource);
   const matches = stripped.match(glslFragmentOutputPattern);
 
-  return matches !== null ? matches.length : 0;
+  return matches !== null && matches.length > 0 ? matches.length : null;
 };
 
 // Captures the fragment entry point's return-type clause, up to its body.
@@ -410,9 +438,12 @@ const wgslFragmentEntryPattern = /@fragment\s+fn\s+\w+\s*\([^)]*\)\s*->\s*([^{]+
 const wgslLocationPattern = /@location\(\s*\d+\s*\)/g;
 
 /**
- * `null` when the source declares no `@fragment` entry point at all (a
- * vertex-only or compute-only module) - distinct from `0`, which would
- * incorrectly read as "declares zero outputs".
+ * `null` for a source whose fragment outputs cannot be established: no
+ * `@fragment` entry point at all (a vertex-only or compute-only module), a
+ * return type that does not resolve to a struct declaration in the same
+ * source, or a struct carrying no `@location` field - the last being a
+ * fragment stage that writes only builtins, which the multi-attachment guard
+ * is not the right place to diagnose.
  */
 const countWgslFragmentOutputs = (source: string): number | null => {
   const stripped = stripComments(source);
@@ -438,5 +469,5 @@ const countWgslFragmentOutputs = (source: string): number | null => {
 
   const locations = structMatch[1]!.match(wgslLocationPattern);
 
-  return locations !== null ? locations.length : 0;
+  return locations !== null && locations.length > 0 ? locations.length : null;
 };
