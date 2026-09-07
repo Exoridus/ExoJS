@@ -462,7 +462,13 @@ A subset run's numbers are valid for the cells in it and are not a matrix result
 - **For a before/after of an engine change, measure a single cell per
   invocation.** Within one invocation an arm's cells share a browser session, and
   accumulated driver/adapter state has been observed to move — in one case invert
-  — the verdict of a multi-archetype run.
+  — the verdict of a multi-archetype run. It moves the number too, and in one
+  direction: on one commit and one machine, `lifecycle-churn` at 5 000 nodes
+  measured 3.84 ms alone, 4.26 ms with the other 21 archetypes in the session,
+  and 4.82 ms in the full published matrix. Same engine, same structural
+  counters, a 26% spread from session shape alone — which is why a narrowed
+  run's absolute number must never be read against a recorded profile, and why
+  a before/after pair has to be two runs of the SAME shape.
 - **`nodeCount` is the world total, not the drawn count.** On `scrolling-world`
   only about a quarter of it is on screen; the rest is the off-screen content
   under study.
