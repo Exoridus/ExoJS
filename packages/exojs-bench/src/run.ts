@@ -24,8 +24,36 @@ const DEFAULT_PHYSICS_OUT_DIR = '.workspace/output/physics/';
 /** Backends run when `--backend` is not given. `buildMatrix` gates each to the adapters that support it. */
 const DEFAULT_BACKENDS: readonly Backend[] = ['webgl2', 'webgpu'];
 
+/**
+ * Refuse a selection value that carries whitespace.
+ *
+ * PowerShell reads an unquoted `a,b` argument as an array literal and rejoins
+ * it with spaces on its way through pnpm's `.ps1` shim, so
+ * `--nodes=1000,5000` typed there arrives as `--nodes=1000 5000`. Most of that
+ * damage announces itself - an engine or backend named `'webgl2 webgpu'`
+ * matches nothing and the matrix comes out empty - but `--nodes` does not:
+ * `Number.parseInt('1000 5000', 10)` is `1000`, so the run would measure one
+ * node count, report success, and publish it under the provenance of two.
+ * Refusing the shape here is what keeps that from becoming a number somebody
+ * later quotes.
+ *
+ * Quoting the flag is what preserves the list. A `--` separator does not: the
+ * rewrite happens in the argument binder, before pnpm sees anything.
+ */
+const refuseSplitList = (flag: string, value: string): void => {
+  if (!/\s/.test(value)) {
+    return;
+  }
+
+  throw new Error(
+    `--${flag} takes a comma-separated list, and '${value}' contains whitespace. ` +
+      'PowerShell splits an unquoted `a,b` argument and rejoins it with spaces; quote the flag ' +
+      `("--${flag}=...") or run the command from a POSIX shell. A \`--\` separator does not help.`,
+  );
+};
+
 /** Split a comma-separated CLI list into trimmed, non-empty values, or `undefined` when the flag was absent. */
-const parseList = (raw: string | undefined): string[] | undefined => {
+const parseList = (flag: string, raw: string | undefined): string[] | undefined => {
   if (raw === undefined) {
     return undefined;
   }
@@ -34,6 +62,10 @@ const parseList = (raw: string | undefined): string[] | undefined => {
     .split(',')
     .map(value => value.trim())
     .filter(value => value.length > 0);
+
+  for (const value of values) {
+    refuseSplitList(flag, value);
+  }
 
   return values.length > 0 ? values : undefined;
 };
@@ -171,7 +203,7 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
   const browser = parseRenderingBrowser(args.get('browser'));
   const platform = resolvePlatform(args);
 
-  const backends: readonly Backend[] = backendArg ? (backendArg.split(',').map(value => value.trim()) as Backend[]) : DEFAULT_BACKENDS;
+  const backends: readonly Backend[] = (parseList('backend', backendArg) as Backend[] | undefined) ?? DEFAULT_BACKENDS;
 
   // `--archetype`, `--engine`, `--config` and `--nodes` each accept a
   // COMMA-SEPARATED list. A single value behaves exactly as before; a list
@@ -179,10 +211,10 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
   // browser session per arm - can cover several archetypes/arms at once. Before
   // this, comparing two archetypes meant two process launches, i.e. two
   // sessions, which the same-session rule forbids for a cross-arm claim.
-  const archetypes = parseList(archetypeArg) as ArchetypeId[] | undefined;
-  const engines = parseList(engineArg);
-  const configs = parseList(args.get('config'));
-  const nodeCounts = parseList(nodesArg)?.map(value => {
+  const archetypes = parseList('archetype', archetypeArg) as ArchetypeId[] | undefined;
+  const engines = parseList('engine', engineArg);
+  const configs = parseList('config', args.get('config'));
+  const nodeCounts = parseList('nodes', nodesArg)?.map(value => {
     const nodeCount = Number.parseInt(value, 10);
 
     if (Number.isNaN(nodeCount)) {
@@ -344,6 +376,8 @@ const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
   }
 
   if (bodiesArg !== undefined) {
+    refuseSplitList('bodies', bodiesArg);
+
     const bodyCount = Number.parseInt(bodiesArg, 10);
 
     if (Number.isNaN(bodyCount)) {
