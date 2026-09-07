@@ -59,7 +59,7 @@ export interface Problem {
   readonly message: string;
 }
 
-const collectFiles = async (root: string, keep: (name: string) => boolean): Promise<string[]> => {
+const collectFiles = async (repoRoot: string, root: string, keep: (name: string) => boolean): Promise<string[]> => {
   const found: string[] = [];
 
   const walk = async (directory: string): Promise<void> => {
@@ -86,7 +86,7 @@ const collectFiles = async (root: string, keep: (name: string) => boolean): Prom
     }
   };
 
-  await walk(resolve(REPO_ROOT, root));
+  await walk(resolve(repoRoot, root));
 
   return found;
 };
@@ -111,7 +111,7 @@ const hasControlCharacter = (line: string): boolean => {
   return false;
 };
 
-const toRepoPath = (absolutePath: string): string => relative(REPO_ROOT, absolutePath).split(sep).join('/');
+const toRepoPath = (repoRoot: string, absolutePath: string): string => relative(repoRoot, absolutePath).split(sep).join('/');
 
 /**
  * Byte-level rules. A shader ships verbatim inside the bundle, so its bytes are
@@ -253,16 +253,26 @@ export const formatShaderProblem = (problem: Problem): string => `${problem.file
 /**
  * Check every tracked shader against the hygiene rules. An empty `problems`
  * array means the tree is clean.
+ *
+ * `repoRoot` selects the tree to scan and defaults to this repository. A caller
+ * that needs to see the scanner react to a defective shader must point this at
+ * a copied tree rather than introduce the defect here: the suite runs its files
+ * in parallel workers, and a shader edited in place is read in that state by
+ * whichever worker happens to load it.
  */
-export const scanShaderSources = async (): Promise<ShaderScan> => {
-  const shaderFiles = (await Promise.all(SCAN_ROOTS.map(root => collectFiles(root, name => SHADER_EXTENSIONS.some(ext => name.endsWith(ext)))))).flat();
-  const importerFiles = (await Promise.all(SCAN_ROOTS.map(root => collectFiles(root, name => IMPORTER_EXTENSIONS.some(ext => name.endsWith(ext)))))).flat();
+export const scanShaderSources = async (repoRoot: string = REPO_ROOT): Promise<ShaderScan> => {
+  const shaderFiles = (
+    await Promise.all(SCAN_ROOTS.map(root => collectFiles(repoRoot, root, name => SHADER_EXTENSIONS.some(ext => name.endsWith(ext)))))
+  ).flat();
+  const importerFiles = (
+    await Promise.all(SCAN_ROOTS.map(root => collectFiles(repoRoot, root, name => IMPORTER_EXTENSIONS.some(ext => name.endsWith(ext)))))
+  ).flat();
   const importerText = (await Promise.all(importerFiles.map(path => readFile(path, 'utf8')))).join('\n');
 
   const problems: Problem[] = [];
 
   for (const absolutePath of shaderFiles) {
-    const file = toRepoPath(absolutePath);
+    const file = toRepoPath(repoRoot, absolutePath);
     const text = await readFile(absolutePath, 'utf8');
 
     problems.push(...checkBytes(file, text), ...checkLanguage(file, text), ...checkSubstitutions(file, text), ...checkStripped(file, text));
