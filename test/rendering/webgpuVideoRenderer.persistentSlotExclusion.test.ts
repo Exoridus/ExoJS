@@ -23,6 +23,7 @@ import { describe, expect, test } from 'vitest';
 
 import type { Application } from '#core/Application';
 import { materializeRendererBindings } from '#extensions/materialize';
+import { Container } from '#rendering/Container';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderRootSource } from '#rendering/plan/RenderRootSource';
@@ -64,6 +65,7 @@ describe('WebGPU persistent slots: a root containing Video', () => {
     const sprite = new Sprite(Texture.empty);
     const video = new Video(document.createElement('video'));
 
+    const root = new Container();
     const rootScope = createSourceScope();
 
     rootScope.items.push(sprite, 0, 0, 0, 0, 16, 16);
@@ -71,12 +73,13 @@ describe('WebGPU persistent slots: a root containing Video', () => {
 
     const source = new RenderRootSource();
 
-    source.adopt(rootScope, 0, 0, 0, 0);
+    source.adopt(root, rootScope, 0, 0, 0, 0);
 
     expect(backend._acquirePersistentSlots(source)).toBeNull();
 
     video.destroy();
     sprite.destroy();
+    root.destroy();
     backend.destroy();
   });
 
@@ -94,17 +97,19 @@ describe('WebGPU persistent slots: a root containing Video', () => {
     const backend = createConnectedBackend();
     const video = new Video(document.createElement('video'));
 
+    const root = new Container();
     const rootScope = createSourceScope();
 
     rootScope.items.push(video, 0, 0, 0, 0, 16, 16);
 
     const source = new RenderRootSource();
 
-    source.adopt(rootScope, 0, 0, 0, 0);
+    source.adopt(root, rootScope, 0, 0, 0, 0);
 
     expect(backend._acquirePersistentSlots(source)).toBeNull();
 
     video.destroy();
+    root.destroy();
     backend.destroy();
   });
 });

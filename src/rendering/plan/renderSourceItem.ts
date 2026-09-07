@@ -81,11 +81,16 @@ export interface LiveEntry {
  * single-sourced across the two.
  */
 export interface SourceScope extends EntryPlacementState {
-  readonly items: PackedSourceItems;
+  /**
+   * Replaced wholesale when this scope is re-discovered by a structure delta;
+   * the scope OBJECT survives because its identity is its placement in the
+   * parent (see {@link adoptScopeContents}).
+   */
+  items: PackedSourceItems;
   /** Nested groups and live entries, in recorded order (see {@link LiveEntry.itemMark}). */
   readonly others: SourceOther[];
-  /** Spatial index over {@link items}, built once when the source is finalized. */
-  readonly index: SourceVisibilityIndex;
+  /** Spatial index over {@link items}, built when the scope is finalized. */
+  index: SourceVisibilityIndex;
   /**
    * Depth-first position of this scope among the source's scopes, assigned when
    * the source is finalized. The derived product keys its per-scope state on it.
@@ -150,7 +155,13 @@ export const finalizeSourceScopes = (scope: SourceScope, out: SourceScope[], nex
   scope.ordinal = out.length;
   scope.handleBase = nextHandle;
   out.push(scope);
-  scope.index.build(scope.items);
+
+  // A scope carried through a structure delta keeps the index it already has:
+  // its items were not touched, and rebuilding it would put the whole subtree
+  // back on the O(items) path the delta exists to leave.
+  if (!scope.index.isBuilt) {
+    scope.index.build(scope.items);
+  }
 
   let handle = nextHandle + scope.items.count;
 
@@ -161,4 +172,41 @@ export const finalizeSourceScopes = (scope: SourceScope, out: SourceScope[], nex
   }
 
   return handle;
+};
+
+/**
+ * Move a freshly discovered scope's contents into `target`, releasing what it
+ * held.
+ *
+ * The target object survives the swap because its identity IS its placement: a
+ * nested scope sits in its parent's `others` at a recorded `itemMark`, `seq` and
+ * `zIndex`, and re-discovering the scope itself re-derives none of those.
+ * @internal
+ */
+export const adoptScopeContents = (target: SourceScope, fresh: SourceScope): void => {
+  releaseScopeContents(target);
+
+  target.items = fresh.items;
+  target.index = fresh.index;
+  target.others.length = 0;
+
+  for (const other of fresh.others) {
+    target.others.push(other);
+  }
+
+  target._nextSeq = fresh._nextSeq;
+  target.firstZ = fresh.firstZ;
+  target.hasMixedZ = fresh.hasMixedZ;
+};
+
+/** Drop a scope's items, its index and everything its nested scopes hold. @internal */
+export const releaseScopeContents = (scope: SourceScope): void => {
+  scope.items.clear();
+  scope.index.release();
+
+  for (const other of scope.others) {
+    if (other.kind === RenderEntryKind.Group) {
+      releaseScopeContents(other);
+    }
+  }
 };

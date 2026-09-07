@@ -4,6 +4,7 @@ import type { PersistentSlotBundle } from '#rendering/plan/persistentSlotDraw';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
+import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -43,6 +44,10 @@ interface PersistentHarness {
   writes: number;
   /** Selections the store admits; a higher slot count is refused. */
   representableSlots: number;
+  /** One entry per structure-delta rekey: how many items it was NOT handed a carry for. */
+  rekeyArrivals: number[];
+  /** What the store answers when a structure delta offers it the re-discovered source. */
+  rekeyAnswer: boolean;
 }
 
 const createHarness = (): PersistentHarness => {
@@ -53,6 +58,8 @@ const createHarness = (): PersistentHarness => {
     acquisitions: 0,
     writes: 0,
     representableSlots: Number.POSITIVE_INFINITY,
+    rekeyArrivals: [] as number[],
+    rekeyAnswer: true,
   };
 
   const bundle: PersistentSlotBundle = {
@@ -133,6 +140,19 @@ const createHarness = (): PersistentHarness => {
     },
     _writePersistentSlots(): void {
       harness.writes++;
+    },
+    _rekeyPersistentSlots(_bundle: PersistentSlotBundle, source: RenderRootSource, carried: Int32Array): boolean {
+      let arrivals = 0;
+
+      for (let handle = 0; handle < source.itemCount; handle++) {
+        if (carried[handle]! < 0) {
+          arrivals++;
+        }
+      }
+
+      harness.rekeyArrivals.push(arrivals);
+
+      return harness.rekeyAnswer;
     },
     _drawPersistentOrder(_bundle: PersistentSlotBundle, _order: Uint32Array, count: number): void {
       harness.persistentDraws.push(count);
@@ -257,6 +277,63 @@ describe('persistent slots: a store that cannot represent the selection', () => 
     // item, once a frame, for a root that has already been answered.
     expect(harness.acquisitions).toBe(afterRefusal);
     expect(harness.persistentDraws).toEqual([]);
+
+    root.destroy();
+    harness.backend.destroy();
+  });
+});
+
+/**
+ * What a structure delta offers the store, and what a store that cannot take the
+ * offer costs.
+ */
+describe('persistent slots: a store offered a re-discovered source', () => {
+  test('is told which items it has to re-derive and which it already holds', () => {
+    const harness = createHarness();
+    const root = createScene();
+
+    driveToSourceTier(root, harness.backend);
+
+    const replaced = root.children[0]!;
+    const replacement = new Leaf('replacement');
+
+    replacement.setPosition(-1000, 300);
+    replaced.destroy();
+    root.addChild(replacement);
+    harness.rekeyArrivals.length = 0;
+    playFrame(root, harness.backend);
+
+    // 200 items, one of them new. A store handed no carry map would have to
+    // re-derive all 200 every structural frame, which is the walk the delta
+    // exists to remove.
+    expect(harness.rekeyArrivals).toEqual([1]);
+
+    root.destroy();
+    harness.backend.destroy();
+  });
+
+  test('is dropped and re-acquired in the same frame when it refuses', () => {
+    const harness = createHarness();
+    const root = createScene();
+
+    driveToSourceTier(root, harness.backend);
+
+    const acquisitionsBefore = harness.acquisitions;
+    const replacement = new Leaf('replacement');
+
+    // A store that cannot take the re-discovered source - its texture table is
+    // full of entries only departed items used, say - is discarded rather than
+    // kept, so whatever it accumulated across churn does not become permanent:
+    // the acquisition that follows starts from what the source holds now.
+    harness.rekeyAnswer = false;
+    replacement.setPosition(-1000, 300);
+    root.children[0]!.destroy();
+    root.addChild(replacement);
+    harness.persistentDraws.length = 0;
+    playFrame(root, harness.backend);
+
+    expect(harness.acquisitions).toBe(acquisitionsBefore + 1);
+    expect(harness.persistentDraws.length).toBe(1);
 
     root.destroy();
     harness.backend.destroy();

@@ -72,6 +72,7 @@ const initialSlotCapacity = 1024;
 export interface PersistentSlotCapableRenderer {
   readonly _supportsPersistentSlots?: boolean;
   _acquirePersistentSlotStore(source: RenderRootSource, backend: WebGl2Backend): WebGl2PersistentSlotStore | null;
+  _rekeyPersistentSlotStore(store: WebGl2PersistentSlotStore, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean;
   _writePersistentSlotRows(store: WebGl2PersistentSlotStore, source: RenderRootSource, entered: Int32Array, count: number): void;
   _drawPersistentSlots(store: WebGl2PersistentSlotStore, order: Uint32Array, count: number, backend: WebGl2Backend): void;
 }
@@ -103,10 +104,11 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
   /**
    * The root's base textures, in the slot order the packed rows reference.
    *
-   * Fixed for the store's whole life. That is the promise which makes a slot's
-   * texture index item-stable: the acquisition check refuses a source whose
-   * distinct textures do not all fit one table, so no membership change can ever
-   * force a re-slotting.
+   * Append-only for the store's whole life. That is the promise which makes a
+   * slot's texture index item-stable: an entry never moves, and a source whose
+   * distinct textures do not all fit one table is refused - so neither a
+   * membership change nor a structure delta bringing a new texture in can force
+   * a re-slotting of what is already written.
    */
   public readonly textures: Array<Texture | RenderTexture> = [];
 
@@ -122,10 +124,14 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
    * item handle.
    *
    * Derived, not source data: it names a position in THIS store's table. Filled
-   * once during acquisition, which already walks every item to build that table,
-   * so an ENTER never has to ask a drawable for its texture.
+   * during acquisition, which already walks every item to build that table, so
+   * an ENTER never has to ask a drawable for its texture; a structure delta
+   * re-derives only the entries of the items it did not carry.
    */
   public textureIndexOfHandle = new Uint8Array(0);
+
+  /** See {@link PersistentSpriteSlotStore.spareTextureIndexOfHandle}. */
+  public spareTextureIndexOfHandle = new Uint8Array(0);
 
   private _gl: WebGL2RenderingContext | null = null;
   private _accountant: GpuResourceAccountant | null = null;
@@ -388,6 +394,7 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
     this.invalidateDeviceResources();
     this.textures.length = 0;
     this.textureIndexOfHandle = new Uint8Array(0);
+    this.spareTextureIndexOfHandle = new Uint8Array(0);
     this._order = new Uint32Array(0);
   }
 

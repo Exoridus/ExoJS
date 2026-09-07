@@ -20,7 +20,7 @@ import {
   spriteSharedStorageWgsl,
   spriteVertexCoreWgsl,
 } from '#rendering/sprite/materialSources';
-import { fillPersistentSpriteSlotTable, writePersistentSpriteSlots } from '#rendering/sprite/persistentSlots';
+import { fillPersistentSpriteSlotTable, rekeyPersistentSpriteSlotTable, writePersistentSpriteSlots } from '#rendering/sprite/persistentSlots';
 import type { Sprite } from '#rendering/sprite/Sprite';
 import { isSampleableTexture } from '#rendering/texture/deferredTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -585,6 +585,19 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     store.connectDevice(device, backend.accountant);
 
     return store;
+  }
+
+  /**
+   * Re-derive the store's per-handle texture table after a structure delta
+   * renumbered the source's items, and re-answer the batching rules for what it
+   * now holds.
+   *
+   * Nothing already written is disturbed: the table is append-only, so every
+   * slot's recorded texture index still names the texture it was written for.
+   * @internal
+   */
+  public _rekeyPersistentSlotStore(store: WebGpuPersistentSlotStore, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean {
+    return rekeyPersistentSpriteSlotTable(source, store, this._maxBatchTextures, carried, previousHandleCount);
   }
 
   /**

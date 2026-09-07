@@ -11,7 +11,7 @@ import {
 import type { AnySpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { RenderRootSource } from '#rendering/plan/RenderRootSource';
 import { composeSpriteMaterialFragmentGlsl, spriteMaterialTextureSlots, spriteVertexGlsl } from '#rendering/sprite/materialSources';
-import { fillPersistentSpriteSlotTable, writePersistentSpriteSlots } from '#rendering/sprite/persistentSlots';
+import { fillPersistentSpriteSlotTable, rekeyPersistentSpriteSlotTable, writePersistentSpriteSlots } from '#rendering/sprite/persistentSlots';
 import type { Sprite } from '#rendering/sprite/Sprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
@@ -259,6 +259,19 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     store.connectDevice(backend.context, backend.accountant);
 
     return store;
+  }
+
+  /**
+   * Re-derive the store's per-handle texture table after a structure delta
+   * renumbered the source's items, and re-answer the batching rules for what it
+   * now holds.
+   *
+   * Nothing already written is disturbed: the table is append-only, so every
+   * slot's recorded texture index still names the texture it was written for.
+   * @internal
+   */
+  public _rekeyPersistentSlotStore(store: WebGl2PersistentSlotStore, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean {
+    return rekeyPersistentSpriteSlotTable(source, store, this._maxTextureSlots, carried, previousHandleCount);
   }
 
   /**

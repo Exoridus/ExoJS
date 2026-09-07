@@ -202,6 +202,17 @@ const scopeEntries = (scope: SourceScope): SourceEntryView[] => {
   return out;
 };
 
+/** The recorded entries of the scope the root's source holds for `node`. */
+const entriesFor = (root: RenderNode, node: RenderNode): readonly SourceEntryView[] => {
+  const scope = sourceOf(root)?.scopeOfNode(node) ?? null;
+
+  if (scope === null) {
+    throw new Error('the source holds no scope for this node');
+  }
+
+  return scopeEntries(scope);
+};
+
 const entriesOf = (root: RenderNode): readonly SourceEntryView[] => {
   const source = sourceOf(root);
   const rootScope = source?.rootScope ?? null;
@@ -771,6 +782,245 @@ describe('render-root source: a transform group pays for none of the root machin
 
     captureSpy.mockRestore();
     root.destroy();
+    backend.destroy();
+  });
+});
+
+/**
+ * A structural change used to withdraw the whole persistent representation: the
+ * items are keyed on the structure revision, and the build gate wants two
+ * consecutive frames that found the subtree unchanged - which a scene adding and
+ * removing nodes every frame never produces. Every such frame therefore fell
+ * back to a full collect over every node.
+ *
+ * These tests pin the two halves of the replacement: that a change is
+ * re-discovered where it happened and nowhere else, and that the frame it
+ * produces is still exactly the frame a full collect produces.
+ */
+describe('render-root source: structure delta', () => {
+  test('an added child is re-discovered in its own container and nowhere else', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const left = new CountingContainer();
+    const right = new CountingContainer();
+
+    left.addChild(new Leaf('a').setPosition(10, 300));
+    right.addChild(new Leaf('b').setPosition(60, 300));
+    root.addChild(left, right);
+
+    driveToSourceTier(root, backend);
+
+    const walkedLeft = left.collects;
+    const walkedRight = right.collects;
+
+    right.addChild(new Leaf('c').setPosition(110, 300));
+    draws.length = 0;
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['a', 'b', 'c']);
+    // The whole point: the container that did not change is not walked again,
+    // so its items, its index and its membership stay where they are.
+    expect(left.collects).toBe(walkedLeft);
+    expect(right.collects).toBe(walkedRight + 1);
+    expect(entriesFor(root, right)).toHaveLength(2);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a removed child leaves the source describing exactly what is left', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const group = new CountingContainer();
+    const removed = new Leaf('b').setPosition(60, 300);
+
+    group.addChild(new Leaf('a').setPosition(10, 300), removed, new Leaf('c').setPosition(110, 300));
+    root.addChild(group);
+
+    driveToSourceTier(root, backend);
+
+    removed.destroy();
+    draws.length = 0;
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['a', 'c']);
+    expect(entriesFor(root, group)).toHaveLength(2);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a root that churns every frame earns a source it can splice', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const group = new CountingContainer();
+
+    group.addChild(new Leaf('a').setPosition(10, 300));
+    root.addChild(group);
+    backend.setView(viewAt(400));
+
+    let replaced = group.children[0] as Leaf;
+
+    // The camera never moves, so the ordinary build gate - two rebuild frames
+    // that found the same content - can never fire here. Structural churn is
+    // what earns the source.
+    for (let frame = 0; frame < 4; frame++) {
+      playFrame(root, backend);
+      replaced.destroy();
+      replaced = new Leaf(`a${frame}`);
+      replaced.setPosition(10, 300);
+      group.addChild(replaced);
+    }
+
+    expect(sourceOf(root)).not.toBeNull();
+
+    const walked = group.collects;
+
+    draws.length = 0;
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['a3']);
+    // One re-discovery of the changed container, not a collect of the root.
+    expect(group.collects).toBe(walked + 1);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a nested container changed alongside its parent is re-discovered once', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const outer = new CountingContainer();
+    const inner = new CountingContainer();
+
+    inner.addChild(new Leaf('i1').setPosition(10, 300));
+    outer.addChild(inner, new Leaf('o1').setPosition(60, 300));
+    root.addChild(outer);
+
+    driveToSourceTier(root, backend);
+
+    const walkedInner = inner.collects;
+
+    // Both containers changed, and the outer one encloses the inner: without
+    // pruning the nested subtree is walked twice, once on its own and once
+    // inside the ancestor's discovery, and the first result is then discarded.
+    inner.addChild(new Leaf('i2').setPosition(110, 300));
+    outer.addChild(new Leaf('o2').setPosition(160, 300));
+    draws.length = 0;
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['i1', 'i2', 'o1', 'o2']);
+    expect(inner.collects).toBe(walkedInner + 1);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('an item that moved inside a re-discovered container is stored where it is now', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const group = new Container();
+    const moved = new Leaf('a');
+
+    moved.setPosition(10, 300);
+    group.addChild(moved, new Leaf('b').setPosition(60, 300));
+    root.addChild(group);
+
+    driveToSourceTier(root, backend);
+
+    // Inside the container the delta re-discovers, so the move is covered: the
+    // item's stored world bounds are re-read, and the far-off item is culled by
+    // the same rect a full collect would cull it with.
+    moved.setPosition(9000, 300);
+    group.addChild(new Leaf('c').setPosition(110, 300));
+    draws.length = 0;
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['b', 'c']);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a move to an item the delta would keep refuses the delta', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const left = new CountingContainer();
+    const right = new CountingContainer();
+    const moved = new Leaf('a');
+
+    moved.setPosition(10, 300);
+    left.addChild(moved);
+    right.addChild(new Leaf('b').setPosition(60, 300));
+    root.addChild(left, right);
+
+    driveToSourceTier(root, backend);
+
+    const walkedLeft = left.collects;
+
+    // A structural change the delta could absorb, plus a move to an item it
+    // would have kept: that item's stored world bounds and its written GPU rows
+    // are both stale, and neither is repairable from a re-discovery of the
+    // OTHER container.
+    moved.setPosition(200, 300);
+    right.addChild(new Leaf('c').setPosition(110, 300));
+    draws.length = 0;
+    playFrame(root, backend);
+
+    expect(draws).toEqual(['a', 'b', 'c']);
+    expect(left.collects).toBeGreaterThan(walkedLeft);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a spliced source paints what a full collect of the same scene paints', () => {
+    const { backend, draws } = createDrawRecordingBackend();
+    const root = makeRoot(new Container());
+    const outer = new CountingContainer();
+    const inner = new Container();
+    const untouched = new CountingContainer();
+
+    inner.addChild(new Leaf('i1').setPosition(10, 300), new Leaf('i2').setPosition(40, 300));
+    outer.addChild(new Leaf('o1').setPosition(70, 300), inner, new Leaf('o2').setPosition(100, 300));
+    untouched.addChild(new Leaf('u1').setPosition(160, 300));
+    root.addChild(outer, untouched);
+
+    driveToSourceTier(root, backend);
+
+    const walkedUntouched = untouched.collects;
+
+    inner.addChild(new Leaf('i3').setPosition(130, 300));
+    outer.removeChild(outer.children[0]!);
+    draws.length = 0;
+    playFrame(root, backend);
+
+    const spliced = [...draws];
+
+    // Proof this frame took the delta rather than a rebuild: the container
+    // neither change touched was not walked again.
+    expect(untouched.collects).toBe(walkedUntouched);
+
+    root.destroy();
+
+    // The same scene built from scratch, so its first frame is a plain collect:
+    // the order it paints is the answer the spliced source has to reproduce.
+    const rebuilt = makeRoot(new Container());
+    const rebuiltOuter = new Container();
+    const rebuiltInner = new Container();
+    const rebuiltUntouched = new Container();
+
+    rebuiltInner.addChild(new Leaf('i1').setPosition(10, 300), new Leaf('i2').setPosition(40, 300), new Leaf('i3').setPosition(130, 300));
+    rebuiltOuter.addChild(rebuiltInner, new Leaf('o2').setPosition(100, 300));
+    rebuiltUntouched.addChild(new Leaf('u1').setPosition(160, 300));
+    rebuilt.addChild(rebuiltOuter, rebuiltUntouched);
+
+    draws.length = 0;
+    playFrame(rebuilt, backend);
+
+    expect(spliced).toEqual(draws);
+
+    rebuilt.destroy();
     backend.destroy();
   });
 });

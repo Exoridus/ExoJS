@@ -701,6 +701,31 @@ export class WebGpuBackend implements RenderBackend {
       return null;
     }
 
+    const owner = this._resolvePersistentSlotOwner(source);
+
+    // Prepack BEFORE allocating anything: a source holding an item that cannot
+    // describe itself as a quad is not servable, and finding that out after the
+    // store exists would mean tearing it down again.
+    if (owner === null || !source.prepack()) {
+      return null;
+    }
+
+    const store = owner._acquirePersistentSlotStore(source, this);
+
+    if (store !== null) {
+      store.owner = owner;
+      this._persistentStores.add(store);
+    }
+
+    return store;
+  }
+
+  /**
+   * The single renderer that can serve every item in `source`, or `null` when
+   * there is none.
+   * @internal
+   */
+  private _resolvePersistentSlotOwner(source: RenderRootSource): WebGpuPersistentSlotCapableRenderer | null {
     let owner: WebGpuPersistentSlotCapableRenderer | null = null;
 
     for (const scope of source.scopes) {
@@ -728,25 +753,65 @@ export class WebGpuBackend implements RenderBackend {
       }
     }
 
-    if (owner === null) {
-      return null;
+    return owner;
+  }
+
+  /** @internal */
+  public _rekeyPersistentSlots(bundle: PersistentSlotBundle, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean {
+    const store = bundle as WebGpuPersistentSlotStore;
+    const owner = store.owner;
+
+    if (this._deviceLost || this._device === null || owner === null) {
+      return false;
     }
 
-    // Prepack BEFORE allocating anything: a source holding an item that cannot
-    // describe itself as a quad is not servable, and finding that out after the
-    // store exists would mean tearing it down again.
-    if (!source.prepack()) {
-      return null;
+    if (!this._ownerServesArrivals(source, owner, carried, previousHandleCount) || !source.prepack()) {
+      return false;
     }
 
-    const store = owner._acquirePersistentSlotStore(source, this);
+    return owner._rekeyPersistentSlotStore(store, source, carried, previousHandleCount);
+  }
 
-    if (store !== null) {
-      store.owner = owner;
-      this._persistentStores.add(store);
+  /**
+   * Whether `owner` can also serve the items a structure delta did not carry.
+   *
+   * Only those are resolved: an item the delta carried is the same drawable the
+   * store was already serving, so re-resolving it would put the acquisition walk
+   * back on a path that runs on every structural frame.
+   */
+  private _ownerServesArrivals(
+    source: RenderRootSource,
+    owner: WebGpuPersistentSlotCapableRenderer,
+    carried: Int32Array,
+    previousHandleCount: number,
+  ): boolean {
+    for (const scope of source.scopes) {
+      const drawables = scope.items.drawables;
+      const count = scope.items.count;
+      const handleBase = scope.handleBase;
+
+      for (let i = 0; i < count; i++) {
+        const previous = carried[handleBase + i]!;
+
+        if (previous >= 0 && previous < previousHandleCount) {
+          continue;
+        }
+
+        let renderer: WebGpuPersistentSlotCapableRenderer | null;
+
+        try {
+          renderer = this.rendererRegistry.resolve(drawables[i]!) as unknown as WebGpuPersistentSlotCapableRenderer | null;
+        } catch {
+          return false;
+        }
+
+        if (renderer !== owner || renderer._supportsPersistentSlots !== true) {
+          return false;
+        }
+      }
     }
 
-    return store;
+    return true;
   }
 
   /** @internal */

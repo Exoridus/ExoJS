@@ -682,6 +682,31 @@ export class WebGl2Backend implements RenderBackend {
    * @internal
    */
   public _acquirePersistentSlots(source: RenderRootSource): PersistentSlotBundle | null {
+    const owner = this._resolvePersistentSlotOwner(source);
+
+    // Prepack BEFORE allocating anything: a source holding an item that cannot
+    // describe itself as a quad is not servable, and finding that out after the
+    // store exists would mean tearing it down again.
+    if (owner === null || !source.prepack()) {
+      return null;
+    }
+
+    const store = owner._acquirePersistentSlotStore(source, this);
+
+    if (store !== null) {
+      store.owner = owner;
+      this._persistentStores.add(store);
+    }
+
+    return store;
+  }
+
+  /**
+   * The single renderer that can serve every item in `source`, or `null` when
+   * there is none.
+   * @internal
+   */
+  private _resolvePersistentSlotOwner(source: RenderRootSource): PersistentSlotCapableRenderer | null {
     let owner: PersistentSlotCapableRenderer | null = null;
 
     for (const scope of source.scopes) {
@@ -709,25 +734,56 @@ export class WebGl2Backend implements RenderBackend {
       }
     }
 
-    if (owner === null) {
-      return null;
+    return owner;
+  }
+
+  /** @internal */
+  public _rekeyPersistentSlots(bundle: PersistentSlotBundle, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean {
+    const store = bundle as WebGl2PersistentSlotStore;
+    const owner = store.owner;
+
+    if (owner === null || !this._ownerServesArrivals(source, owner, carried, previousHandleCount) || !source.prepack()) {
+      return false;
     }
 
-    // Prepack BEFORE allocating anything: a source holding an item that cannot
-    // describe itself as a quad is not servable, and finding that out after the
-    // store exists would mean tearing it down again.
-    if (!source.prepack()) {
-      return null;
+    return owner._rekeyPersistentSlotStore(store, source, carried, previousHandleCount);
+  }
+
+  /**
+   * Whether `owner` can also serve the items a structure delta did not carry.
+   *
+   * Only those are resolved: an item the delta carried is the same drawable the
+   * store was already serving, so re-resolving it would put the acquisition walk
+   * back on a path that runs on every structural frame.
+   */
+  private _ownerServesArrivals(source: RenderRootSource, owner: PersistentSlotCapableRenderer, carried: Int32Array, previousHandleCount: number): boolean {
+    for (const scope of source.scopes) {
+      const drawables = scope.items.drawables;
+      const count = scope.items.count;
+      const handleBase = scope.handleBase;
+
+      for (let i = 0; i < count; i++) {
+        const previous = carried[handleBase + i]!;
+
+        if (previous >= 0 && previous < previousHandleCount) {
+          continue;
+        }
+
+        let renderer: PersistentSlotCapableRenderer | null;
+
+        try {
+          renderer = this.rendererRegistry.resolve(drawables[i]!) as unknown as PersistentSlotCapableRenderer | null;
+        } catch {
+          return false;
+        }
+
+        if (renderer !== owner || renderer._supportsPersistentSlots !== true) {
+          return false;
+        }
+      }
     }
 
-    const store = owner._acquirePersistentSlotStore(source, this);
-
-    if (store !== null) {
-      store.owner = owner;
-      this._persistentStores.add(store);
-    }
-
-    return store;
+    return true;
   }
 
   /** @internal */
