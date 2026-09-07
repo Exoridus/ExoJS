@@ -1,5 +1,6 @@
-import { Color, Keyboard, Scene, Text } from '@codexo/exojs';
 import type { RenderingContext } from '@codexo/exojs';
+import { Color, Keyboard, Scene, Text } from '@codexo/exojs';
+
 import { GameScene } from './GameScene';
 
 export interface GameOverData {

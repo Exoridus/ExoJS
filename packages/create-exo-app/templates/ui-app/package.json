@@ -1,5 +1,5 @@
 {
-  "name": "exo-audio-reactive",
+  "name": "exo-ui-app",
   "version": "0.0.1",
   "type": "module",
   "scripts": {
@@ -8,8 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@codexo/exojs": "latest",
-    "@codexo/exojs-audio-fx": "latest"
+    "@codexo/exojs": "latest"
   },
   "devDependencies": {
     "typescript": "^5.8.0",

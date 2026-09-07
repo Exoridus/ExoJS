@@ -1,5 +1,6 @@
+import type { RenderingContext, Seconds } from '@codexo/exojs';
 import { Color, Keyboard, Scene, Text } from '@codexo/exojs';
-import type { RenderingContext, Time } from '@codexo/exojs';
+
 import { Player } from '../objects/Player';
 import { GameOverScene } from './GameOverScene';
 
@@ -81,17 +82,17 @@ export class GameScene extends Scene {
     });
   }
 
-  public override update(delta: Time): void {
+  public override update(delta: Seconds): void {
     const dx = this._move.right - this._move.left;
     const dy = this._move.down - this._move.up;
 
     if (dx !== 0 || dy !== 0) {
       const len = Math.sqrt(dx * dx + dy * dy);
-      const speed = this._player.speed * delta.seconds;
+      const speed = this._player.speed * delta;
       this._player.move((dx / len) * speed, (dy / len) * speed);
     }
 
-    this._elapsed += delta.seconds;
+    this._elapsed += delta;
     this._scoreText.text = `Score: ${Math.floor(this._elapsed)}`;
   }
 

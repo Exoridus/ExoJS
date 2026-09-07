@@ -1,5 +1,5 @@
 {
-  "name": "exo-audio-reactive",
+  "name": "exo-platformer",
   "version": "0.0.1",
   "type": "module",
   "scripts": {
@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@codexo/exojs": "latest",
-    "@codexo/exojs-audio-fx": "latest"
+    "@codexo/exojs-physics": "latest"
   },
   "devDependencies": {
     "typescript": "^5.8.0",

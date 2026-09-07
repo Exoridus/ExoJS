@@ -13,6 +13,9 @@ Or pick a template:
 ```bash
 npm create exo-app@latest my-game -- --template minimal
 npm create exo-app@latest my-game -- --template game-starter
+npm create exo-app@latest my-game -- --template platformer
+npm create exo-app@latest my-game -- --template top-down
+npm create exo-app@latest my-game -- --template ui-app
 npm create exo-app@latest my-game -- --template audio-reactive
 ```
 
@@ -26,18 +29,21 @@ npm run dev
 
 ## Templates
 
-| Template         | Description                                                             |
-| ---------------- | ----------------------------------------------------------------------- |
-| `minimal`        | Smallest TypeScript ExoJS app — one `Scene`, one rotating box           |
-| `game-starter`   | Keyboard-controlled player, `GameScene` + `GameOverScene`, score HUD    |
-| `audio-reactive` | `AudioAnalyser`-driven frequency bar visualiser; click-to-start gesture |
+| Template         | Description                                                                            |
+| ---------------- | -------------------------------------------------------------------------------------- |
+| `minimal`        | Smallest TypeScript ExoJS app — one `Scene`, one rotating box                          |
+| `game-starter`   | Keyboard-controlled player, `GameScene` + `GameOverScene`, score HUD                   |
+| `platformer`     | Side-scroller on `@codexo/exojs-physics`: coyote time, jump buffer, camera follow      |
+| `top-down`       | Tilemap + physics + click-to-move pathfinding, procedurally built or loaded from Tiled |
+| `ui-app`         | Settings screen built from the core UI widgets                                         |
+| `audio-reactive` | `AudioAnalyser`-driven frequency bar visualiser; click-to-start gesture                |
 
 ## CLI options
 
 ```
 create-exo-app <project-name> [--template <name>] [--force]
 
-  --template  minimal | game-starter | audio-reactive  (default: minimal)
+  --template  minimal | game-starter | platformer | top-down | ui-app | audio-reactive  (default: minimal)
   --force     overwrite an existing non-empty directory
 ```
 

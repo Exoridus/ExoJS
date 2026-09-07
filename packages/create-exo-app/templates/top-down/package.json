@@ -1,5 +1,5 @@
 {
-  "name": "exo-audio-reactive",
+  "name": "exo-top-down",
   "version": "0.0.1",
   "type": "module",
   "scripts": {
@@ -9,7 +9,10 @@
   },
   "dependencies": {
     "@codexo/exojs": "latest",
-    "@codexo/exojs-audio-fx": "latest"
+    "@codexo/exojs-pathfinding": "latest",
+    "@codexo/exojs-physics": "latest",
+    "@codexo/exojs-tiled": "latest",
+    "@codexo/exojs-tilemap": "latest"
   },
   "devDependencies": {
     "typescript": "^5.8.0",

@@ -35,7 +35,7 @@ describe('exo create', () => {
   });
 
   test('offers the same template names as create-exo-app', () => {
-    expect([...TEMPLATES]).toEqual(['minimal', 'game-starter', 'audio-reactive']);
+    expect([...TEMPLATES]).toEqual(['minimal', 'game-starter', 'platformer', 'top-down', 'ui-app', 'audio-reactive']);
   });
 
   test('an unknown template lists the valid ones and exits non-zero', async () => {
@@ -50,7 +50,10 @@ describe('exo create', () => {
 
     expect(exit).toHaveBeenCalledWith(1);
     expect(errors).toContain('Error: unknown template "roguelike".');
-    expect(errors).toContain('Valid templates: minimal, game-starter, audio-reactive');
+    // Derived, not repeated: the assertion above pins WHICH templates exist, so
+    // spelling them out again here would only pin the same list twice. What is
+    // left to check is that the message lists them at all.
+    expect(errors).toContain(`Valid templates: ${TEMPLATES.join(', ')}`);
   });
 
   test('refuses a non-empty directory without --force', async () => {
