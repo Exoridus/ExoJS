@@ -424,6 +424,17 @@ The run writes `results.json`, `results.csv` and `results.md` into `--out`
 (default `.workspace/output/baseline/`, gitignored), plus a `checkpoint.jsonl`
 appended per cell as it lands, so a crash never discards finished work.
 
+A `results.json` already in `--out` is merged into, not replaced: a cell the
+run measured with status `ok` replaces the cell with the same spec, a cell it
+did not run stays as it was, and an `exceeded` or `unavailable` cell never
+overwrites a measurement (it is added only when the cell had no entry). The CSV
+and Markdown are re-rendered from the merged set. That is what lets a matrix be
+built up one archetype or one backend at a time - but it also means a kept cell
+keeps its earlier provenance, and the table does not mark which cells a rerun
+did not touch. Delete or move `results.json` before a run that must stand on
+its own, and give pooled runs separate `--out` directories as before. The
+checkpoint files are per run and are truncated at start.
+
 Other flags:
 
 - `--browser=chromium` (default) / `--browser=webkit` — the engine to measure in.

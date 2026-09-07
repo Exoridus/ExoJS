@@ -1,7 +1,7 @@
 import type { LibraryProvenance } from '../shared/provenance';
-import { csvField, formatCount as count, formatMs as ms, writeReportArtifacts } from '../shared/report';
+import { csvField, formatCount as count, formatMs as ms, mergeCellResults, mergeLibraries, readExistingReport, writeReportArtifacts } from '../shared/report';
 import type { Provenance } from './driver';
-import type { CellResult } from './EngineAdapter';
+import type { Backend, CellResult } from './EngineAdapter';
 
 /** Node count at or above which a full-frame time is beyond any interactive budget. */
 const FRAME_BUDGET_NODE_THRESHOLD = 100_000;
@@ -248,12 +248,45 @@ const toMarkdown = (data: ReportData): string => {
 };
 
 /**
+ * Merges a run into the report `outDir` already holds. Cells follow
+ * {@link mergeCellResults} and library versions {@link mergeLibraries}; the
+ * provenance stamp of each backend the run exercised replaces the stamp on
+ * record for that backend, and the other backends' stamps stay.
+ */
+export const mergeReportData = (existing: ReportData | undefined, incoming: ReportData): ReportData => {
+  if (existing === undefined) {
+    return incoming;
+  }
+
+  const stampFor = (backend: Backend): Provenance | undefined => incoming.provenance.find(entry => entry.backend === backend);
+  const provenance = existing.provenance.map(entry => stampFor(entry.backend) ?? entry);
+
+  for (const entry of incoming.provenance) {
+    if (!provenance.some(stamp => stamp.backend === entry.backend)) {
+      provenance.push(entry);
+    }
+  }
+
+  return {
+    provenance,
+    libraries: mergeLibraries(existing.libraries, incoming.libraries),
+    results: mergeCellResults(existing.results, incoming.results),
+  };
+};
+
+/**
  * Writes the three report artifacts into `outDir`:
  * - `results.json` - full fidelity (provenance + every result field).
  * - `results.csv` - one row per cell, machine-parseable.
  * - `results.md` - provenance block plus a human-readable table.
+ *
+ * An existing `results.json` in `outDir` is merged into rather than replaced
+ * (see {@link mergeReportData}); the CSV and Markdown are rendered from the
+ * merged data, so all three artifacts describe the same cell set.
  */
-export const writeReport = (data: ReportData, outDir: string): void => {
+export const writeReport = (run: ReportData, outDir: string): void => {
+  const data = mergeReportData(readExistingReport<ReportData>(outDir), run);
+
   writeReportArtifacts(outDir, {
     json: `${JSON.stringify(data, null, 2)}\n`,
     csv: `${toCsv(data)}\n`,
