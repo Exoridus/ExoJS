@@ -17,7 +17,7 @@ import {
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
 import { createDistinctTextureCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
-import { compositeBlurRadius, filterChainDepth, isChurning, isTextArchetype, isTextUpdating, maskDepth, textForLeaf } from '../traits';
+import { compositeBlurRadius, filterChainDepth, hasMaskMotion, isChurning, isTextArchetype, isTextUpdating, maskDepth, textForLeaf } from '../traits';
 import {
   BLOOM_DOWNSCALE,
   cameraCenterAt,
@@ -172,6 +172,9 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
    * disclosed in the report's Methodology.
    */
   let scrollingSpec: ArchetypeSpec | null = null;
+  /** Mask source graphics, moved per frame when the archetype animates its masks. */
+  let maskSources: Graphics[] = [];
+  let maskMotion = false;
   /** Rebuilds the leaf at a global index exactly as `buildScene` built it; non-null only for a churning archetype. */
   let rebuildLeaf: ((index: number) => Sprite | BitmapText) | null = null;
   /** Per-frame mutation mode of the built archetype; see `traits.ts`. */
@@ -413,11 +416,15 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
       // why `mask-clip` declares a nesting depth one greater than its mask depth.
       const maskLevels = Math.min(maskDepth(spec), spine.length - 1);
 
+      maskSources = [];
+      maskMotion = hasMaskMotion(spec);
+
       for (let level = 0; level < maskLevels; level++) {
         const source = createMaskRect(level, maskLevels);
 
         sceneRoot.addChild(source);
         spine[level + 1]!.mask = source;
+        maskSources.push(source);
       }
 
       // Bloom-shaped multipass, hand-rolled the way a Pixi app writes one: a
@@ -468,6 +475,16 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
         const centre = cameraCenterAt(scrollingSpec, frame, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 
         root.position.set(VIEWPORT_WIDTH / 2 - centre.x, VIEWPORT_HEIGHT / 2 - centre.y);
+      }
+
+      // Mask motion: the mask sources move by the same wobbled offset the
+      // ExoJS arm applies to its rects.
+      if (maskMotion) {
+        const { dx, dy } = wobbleOffsetAt(frame);
+
+        for (const source of maskSources) {
+          source.position.set(dx, dy);
+        }
       }
 
       // Structural churn: destroy each selected leaf and build its replacement in
@@ -572,6 +589,8 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
       mutableLeaves = [];
       mutableIndices = [];
       scrollingSpec = null;
+      maskSources = [];
+      maskMotion = false;
       rebuildLeaf = null;
       churning = false;
       textUpdating = false;

@@ -29,7 +29,7 @@ import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
 import { createDistinctTextureCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
-import { compositeBlurRadius, filterChainDepth, isChurning, isTextArchetype, isTextUpdating, maskDepth, textForLeaf } from '../traits';
+import { compositeBlurRadius, filterChainDepth, hasMaskMotion, isChurning, isTextArchetype, isTextUpdating, maskDepth, textForLeaf } from '../traits';
 import {
   BLOOM_DOWNSCALE,
   cameraCenterAt,
@@ -42,6 +42,7 @@ import {
   VIEWPORT_HEIGHT,
   VIEWPORT_WIDTH,
   worldExtent,
+  type WorldRect,
 } from '../world';
 
 /**
@@ -350,6 +351,9 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
   /** Per-frame mutation mode of the built archetype; see `traits.ts`. */
   let churning = false;
   let textUpdating = false;
+  /** Masked spine containers with their rest rects, moved per frame when the archetype animates its masks. */
+  let maskedLevels: Array<{ container: Container; base: WorldRect }> = [];
+  let maskMotion = false;
   /** Characters per text leaf of the built archetype; `0` when it has no text. */
   let textGlyphs = 0;
 
@@ -717,10 +721,15 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       // of containers with the identical rects.
       const masks = Math.min(maskDepth(spec), spine.length - 1);
 
+      maskedLevels = [];
+      maskMotion = hasMaskMotion(spec);
+
       for (let level = 0; level < masks; level++) {
         const rect = maskRect(level, masks, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+        const container = spine[level + 1]!;
 
-        spine[level + 1]!.mask = new Rectangle(rect.x, rect.y, rect.width, rect.height);
+        container.mask = new Rectangle(rect.x, rect.y, rect.width, rect.height);
+        maskedLevels.push({ container, base: rect });
       }
 
       const bloomRadius = compositeBlurRadius(spec);
@@ -765,6 +774,17 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         const centre = cameraCenterAt(scrollingSpec, frame, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 
         app.rendering.view.setCenter(centre.x, centre.y);
+      }
+
+      // Mask motion: every rect is re-assigned at a wobbled offset. A fresh
+      // rectangle each time, because a mask is keyed by identity - mutating the
+      // one already assigned would change nothing the engine can see.
+      if (maskMotion) {
+        const { dx, dy } = wobbleOffsetAt(frame);
+
+        for (const { container, base } of maskedLevels) {
+          container.mask = new Rectangle(base.x + dx, base.y + dy, base.width, base.height);
+        }
       }
 
       // Structural churn: destroy each selected leaf and build its replacement in
@@ -906,6 +926,8 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       mutableIndices = [];
       views = [];
       scrollingSpec = null;
+      maskedLevels = [];
+      maskMotion = false;
       rebuildLeaf = null;
       churning = false;
       textUpdating = false;
