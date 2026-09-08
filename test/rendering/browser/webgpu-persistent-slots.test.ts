@@ -24,6 +24,7 @@ import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import type { DerivedSlotStats } from '#rendering/plan/DerivedSelectionState';
 import type { RenderNode } from '#rendering/RenderNode';
+import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -122,6 +123,32 @@ const settle = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBa
     const validationError = await device.popErrorScope();
 
     expect(validationError).toBeNull();
+  } catch (error) {
+    if (isDeviceLoss(error)) {
+      ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+
+      return false;
+    }
+
+    throw error;
+  }
+
+  return true;
+};
+
+/**
+ * Run one frame under a validation scope, the way {@link settle} scopes its
+ * last frame, for a frame the caller composes itself (several roots, a move).
+ * `false` means the device was lost and the test has been skipped.
+ */
+const validatedFrame = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, frame: () => void): Promise<boolean> => {
+  const device = getBackendDevice(backend);
+
+  try {
+    device.pushErrorScope('validation');
+    frame();
+
+    expect(await device.popErrorScope()).toBeNull();
   } catch (error) {
     if (isDeviceLoss(error)) {
       ctx.skip('WebGPU device lost mid-test — unstable software adapter');
@@ -548,6 +575,62 @@ describe('WebGPU persistent-indexed selection', () => {
       expectPixelNear(readPixel(tile * 2 + 8, 8), red);
     } finally {
       root.destroy();
+      redTexture.destroy();
+      blueTexture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('a live batch pending from another renderer is issued before the slot draw', async ctx => {
+    const backend = await createBackend();
+    const liveRoot = new Container();
+    const slotRoot = new Container();
+    const redTexture = solidTexture('#ff0000');
+    const blueTexture = solidTexture('#0000ff');
+    // A repeating sprite is served by its own renderer, so its batch is not
+    // the sprite batcher's: only the backend's active-renderer flush drains it.
+    const layer = new RepeatingSprite(redTexture, { width: tile * 2, height: tile });
+    const cover = new Sprite(blueTexture);
+
+    try {
+      liveRoot.cullable = false;
+      slotRoot.cullable = false;
+      liveRoot.addChild(layer);
+      cover.setPosition(0, 0);
+      slotRoot.addChild(cover);
+
+      // The live root moves every frame and never settles; the slot root is
+      // drawn after it and must paint over it.
+      let frameIndex = 0;
+      const frame = (): void => {
+        layer.setPosition((frameIndex++ % 2) * 0.5, 0);
+        backend.resetStats();
+        backend.clear(Color.black);
+        liveRoot.render(backend);
+        slotRoot.render(backend);
+        backend.flush();
+      };
+
+      frame();
+      backend.view.move(canvasSize * 100, 0);
+      frame();
+      backend.view.move(-canvasSize * 100, 0);
+      frame();
+      frame();
+
+      if (!(await validatedFrame(ctx, backend, frame))) {
+        return;
+      }
+
+      expect(slotStatsOf(slotRoot).orderEntries).toBe(1);
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(readPixel(8, 8), blue);
+      expectPixelNear(readPixel(tile + 8, 8), red);
+    } finally {
+      liveRoot.destroy();
+      slotRoot.destroy();
       redTexture.destroy();
       blueTexture.destroy();
       backend.destroy();

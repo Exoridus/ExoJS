@@ -6,6 +6,7 @@ import {
   createTransformTextureRect,
   type MutableTransformTextureRect,
   tintTextureRect,
+  TRANSFORM_ROWS_PER_TEXTURE_LINE,
   TRANSFORM_TEXELS_PER_ROW,
   type TransformTextureLayout,
   transformTextureRect,
@@ -182,6 +183,30 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
   }
 
   /**
+   * Whether a selection of `slots` fits the row textures this context can
+   * allocate. Asked by the plan before the first write, so a root past the
+   * ceiling is refused onto the ordinary path instead of failing the frame in
+   * {@link ensureCapacity}. The order buffer has no such ceiling on WebGL2.
+   */
+  public canRepresent(slots: number, _orderEntries: number): boolean {
+    const capacity = this._growthCapacity(slots);
+    const rowsPerLine = Math.min(TRANSFORM_ROWS_PER_TEXTURE_LINE, capacity);
+
+    return rowsPerLine * TRANSFORM_TEXELS_PER_ROW <= this._maxTextureSize && capacity / rowsPerLine <= this._maxTextureSize;
+  }
+
+  /** The capacity a growth to hold `slots` rows would settle on: doubling from the current one. */
+  private _growthCapacity(slots: number): number {
+    let next = Math.max(initialSlotCapacity, this._capacity);
+
+    while (next < slots) {
+      next *= 2;
+    }
+
+    return next;
+  }
+
+  /**
    * Grow the stores to hold at least `slots` rows, preserving every row already
    * written. Deliberately does not bump {@link generation}: a slot survives a
    * growth with its number and its contents intact, so nothing the plan believes
@@ -192,12 +217,7 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
       return;
     }
 
-    let next = Math.max(initialSlotCapacity, this._capacity);
-
-    while (next < slots) {
-      next *= 2;
-    }
-
+    const next = this._growthCapacity(slots);
     const layout = createTransformTextureLayout(next, this._maxTextureSize);
     const attributes = new Float32Array(next * floatsPerSlotRow);
     const transforms = new Float32Array(next * floatsPerSlotRow);

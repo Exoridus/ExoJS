@@ -18,6 +18,7 @@ import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import type { DerivedSlotStats } from '#rendering/plan/DerivedSelectionState';
 import type { RenderNode } from '#rendering/RenderNode';
+import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
@@ -428,6 +429,52 @@ describe('WebGL2 persistent-indexed selection', () => {
       expectPixelNear(readWebGl2Pixel(backend, tile * 2 + 8, 8), red);
     } finally {
       root.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('a live batch pending from another renderer is issued before the slot draw', async () => {
+    const backend = await createBackend();
+    const liveRoot = new Container();
+    const slotRoot = new Container();
+    // A repeating sprite is served by its own renderer, so its batch is not
+    // the sprite batcher's: only the backend's active-renderer flush drains it.
+    const layer = new RepeatingSprite(solidTexture('#ff0000'), { width: tile * 2, height: tile });
+    const cover = new Sprite(solidTexture('#0000ff'));
+
+    try {
+      liveRoot.cullable = false;
+      slotRoot.cullable = false;
+      liveRoot.addChild(layer);
+      cover.setPosition(0, 0);
+      slotRoot.addChild(cover);
+
+      // The live root moves every frame and never settles; the slot root is
+      // drawn after it and must paint over it.
+      let frameIndex = 0;
+      const frame = (): void => {
+        layer.setPosition((frameIndex++ % 2) * 0.5, 0);
+        backend.resetStats();
+        backend.clear(Color.black);
+        liveRoot.render(backend);
+        slotRoot.render(backend);
+        backend.flush();
+      };
+
+      frame();
+      backend.view.move(canvasSize * 100, 0);
+      frame();
+      backend.view.move(-canvasSize * 100, 0);
+      frame();
+      frame();
+      frame();
+
+      expect(slotStatsOf(slotRoot).orderEntries).toBe(1);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), blue);
+      expectPixelNear(readWebGl2Pixel(backend, tile + 8, 8), red);
+    } finally {
+      liveRoot.destroy();
+      slotRoot.destroy();
       backend.destroy();
     }
   });

@@ -1096,9 +1096,18 @@ export class RenderPlanBuilder {
       // source instead of replaying: the entries it emits are the same, and the
       // frame after it selects from the source, slot tier included. Falls
       // through to the rebuild path below, whose build gate the identical keys
-      // satisfy. Keyed on the capture's shape and not on recordability at
-      // large: a backend without record hooks is best served by entry replay.
-      if (representation.source !== null || !representation.canBuildSource || !representation.fragment.hasLiveEntries) {
+      // satisfy - and only then: a root whose keys moved since the last rebuild
+      // (a descendant the transform patch keeps up with) would not build a
+      // source from that frame, only pay a whole collect for nothing, so it
+      // replays as before. Keyed on the capture's shape and not on
+      // recordability at large: a backend without record hooks is best served
+      // by entry replay.
+      if (
+        representation.source !== null ||
+        !representation.canBuildSource ||
+        !representation.fragment.hasLiveEntries ||
+        !representation.rebuildKeysRepeat(contentRevision, structureRevision, ancestryStamp, transformRevision)
+      ) {
         this._replayRetainedFragment(representation.fragment.entries, representation.fragment.entryCount);
         representation.markReplayed();
         // Record-on-first-clean-frame: this clean playback is the recording
@@ -1250,6 +1259,11 @@ export class RenderPlanBuilder {
     // path - which has no per-root buffer to overflow.
     if (bundle.canRepresent?.(slots.slotCount, slots.orderCount) === false) {
       representation.refusePersistentSlots(this.backend);
+      // The refusal is sticky for this source, so the slot table and the order
+      // stream would be maintained on every selection for a draw that never
+      // comes; release them with it.
+      product.slotsEnabled = false;
+      product.slots.release();
 
       return false;
     }
@@ -1289,9 +1303,15 @@ export class RenderPlanBuilder {
     for (let i = 0; i < record.markCount; i++) {
       const entry = entries[i]!;
       const markScope = this._acquireGroupScope(false);
+      // Placed by append order under one z, never by the entry's own seq and
+      // zIndex: the marks come from every scope of the source, so their seqs
+      // can collide and their zIndexes can differ, and either would let the
+      // optimizer sort the mark scopes away from the stream positions the
+      // player pairs them with. The entry's own placement is reproduced inside
+      // the mark scope by its collect.
+      const seq = reserveEntryPlacement(this._currentScope(), undefined, 0);
 
-      reserveEntryPlacement(this._currentScope(), entry.seq, entry.zIndex);
-      this._pushGroupEntry(entry.seq, entry.zIndex, markScope);
+      this._pushGroupEntry(seq, 0, markScope);
       this._pushScope(markScope);
 
       try {
