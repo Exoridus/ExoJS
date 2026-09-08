@@ -472,7 +472,6 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
 
         if (state && state.dataByteLength >= buffer.uploadByteLength) {
           uploadBufferRange(gl, buffer, offset);
-          state.dataByteLength = buffer.uploadByteLength;
         } else {
           uploadBufferStore(gl, buffer);
           connection.buffers.set(buffer, { handle, dataByteLength: buffer.uploadByteLength });

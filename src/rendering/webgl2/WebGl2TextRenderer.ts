@@ -938,7 +938,6 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
         gl.bindBuffer(buf.type, handle);
         if (state && state.dataByteLength >= buf.uploadByteLength) {
           uploadBufferRange(gl, buf, offset);
-          state.dataByteLength = buf.uploadByteLength;
         } else {
           uploadBufferStore(gl, buf);
           buffers.set(buf, { handle, dataByteLength: buf.uploadByteLength });

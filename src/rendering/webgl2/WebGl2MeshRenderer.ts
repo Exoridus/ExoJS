@@ -1176,7 +1176,6 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
 
         if (state && state.dataByteLength >= buffer.uploadByteLength) {
           uploadBufferRange(gl, buffer, offset);
-          state.dataByteLength = buffer.uploadByteLength;
         } else {
           uploadBufferStore(gl, buffer);
           buffers.set(buffer, { handle, dataByteLength: buffer.uploadByteLength });

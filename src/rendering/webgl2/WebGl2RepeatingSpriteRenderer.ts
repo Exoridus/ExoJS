@@ -754,7 +754,6 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
         gl.bindBuffer(buffer.type, handle);
         if (state && state.dataByteLength >= buffer.uploadByteLength) {
           uploadBufferRange(gl, buffer, offset);
-          state.dataByteLength = buffer.uploadByteLength;
         } else {
           uploadBufferStore(gl, buffer);
           conn.buffers.set(buffer, { handle, dataByteLength: buffer.uploadByteLength });
