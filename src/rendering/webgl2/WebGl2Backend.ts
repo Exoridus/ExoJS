@@ -794,10 +794,10 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   /** @internal */
-  public _drawPersistentOrder(bundle: PersistentSlotBundle, order: Uint32Array, count: number): void {
+  public _drawPersistentOrder(bundle: PersistentSlotBundle, order: Uint32Array, _orderCount: number, offset: number, count: number): void {
     const store = bundle as WebGl2PersistentSlotStore;
 
-    store.owner?._drawPersistentSlots(store, order, count, this);
+    store.owner?._drawPersistentSlots(store, order, offset, count, this);
   }
 
   /** @internal */

@@ -76,7 +76,7 @@ export interface WebGpuPersistentSlotCapableRenderer {
   _acquirePersistentSlotStore(source: RenderRootSource, backend: WebGpuBackend): WebGpuPersistentSlotStore | null;
   _rekeyPersistentSlotStore(store: WebGpuPersistentSlotStore, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean;
   _writePersistentSlotRows(store: WebGpuPersistentSlotStore, source: RenderRootSource, entered: Int32Array, count: number): void;
-  _drawPersistentSlots(store: WebGpuPersistentSlotStore, order: Uint32Array, count: number, backend: WebGpuBackend): void;
+  _drawPersistentSlots(store: WebGpuPersistentSlotStore, order: Uint32Array, orderCount: number, offset: number, count: number, backend: WebGpuBackend): void;
 }
 
 /**
@@ -472,24 +472,31 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
   }
 
   /**
-   * Upload `count` order entries and return the buffer they live in.
+   * Upload the `count` order entries at `offset`, in place, and return the
+   * buffer they live in.
+   *
+   * The buffer is sized for `orderCount`, the whole stream, on the first
+   * segment of a frame, so a later segment of a cut stream never replaces the
+   * buffer an earlier one's draw still references; and each segment writes
+   * only its own range, so the write never aliases a range an earlier draw in
+   * the same pass reads.
    *
    * This is the one per-frame upload proportional to the VISIBLE set rather than
    * to the delta, and it is four bytes an entry: an insertion moves every later
    * position, so a diff would have to answer where each survivor went, which
    * costs more than rewriting the stream.
    */
-  public uploadOrder(order: Uint32Array, count: number): GPUBuffer {
+  public uploadOrder(order: Uint32Array, orderCount: number, offset: number, count: number): GPUBuffer {
     const device = this._device;
 
     if (device === null) {
       throw new Error('WebGpuPersistentSlotStore: device not connected before order upload.');
     }
 
-    if (count > this._orderCapacity || this._orderBuffer === null) {
+    if (orderCount > this._orderCapacity || this._orderBuffer === null) {
       let next = Math.max(initialSlotCapacity, this._orderCapacity);
 
-      while (next < count) {
+      while (next < orderCount) {
         next *= 2;
       }
 
@@ -505,12 +512,18 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
       this._accountedOrderBytes = this._accountant?.reallocate(this._accountedOrderBytes, next * orderBytesPerEntry) ?? next * orderBytesPerEntry;
     }
 
-    this._order.set(order.subarray(0, count));
+    this._order.set(order.subarray(offset, offset + count), offset);
 
     // Rounded up to four bytes is a no-op here (entries are u32), but
     // writeBuffer requires a multiple of 4 and a non-zero size is never asked
-    // for - the draw hook returns early on an empty order.
-    device.queue.writeBuffer(this._orderBuffer, 0, this._order.buffer, this._order.byteOffset, count * orderBytesPerEntry);
+    // for - the draw hook returns early on an empty segment.
+    device.queue.writeBuffer(
+      this._orderBuffer,
+      offset * orderBytesPerEntry,
+      this._order.buffer,
+      this._order.byteOffset + offset * orderBytesPerEntry,
+      count * orderBytesPerEntry,
+    );
     this._accountant?.recordBufferUpload(count * orderBytesPerEntry);
 
     return this._orderBuffer;

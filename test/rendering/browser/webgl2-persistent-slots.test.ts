@@ -14,6 +14,7 @@
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import type { DerivedSlotStats } from '#rendering/plan/DerivedSelectionState';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -112,6 +113,58 @@ const settle = (backend: WebGl2Backend, node: RenderNode, frames = 6): void => {
 };
 
 describe('WebGL2 persistent-indexed selection', () => {
+  test('a live batch flushed after a slot draw keeps its own vertex layout', async () => {
+    const backend = await createBackend();
+    const rootA = new Container();
+    const rootB = new Container();
+    const a = new Sprite(solidTexture('#ff0000'));
+    const b = new Sprite(solidTexture('#0000ff'));
+
+    try {
+      // Two roots on the slot tier, drawn one after the other in every frame.
+      // Then both change, so the next frame falls back to one live batch over
+      // the shared instance buffer - the batch's vertex array object must still
+      // carry the batch layout, not the slot path's single-attribute one.
+      a.setPosition(0, 0);
+      b.setPosition(tile * 2, 0);
+      rootA.addChild(a);
+      rootB.addChild(b);
+      rootA.cullable = false;
+      rootB.cullable = false;
+
+      const frame = (): void => {
+        backend.resetStats();
+        backend.clear(Color.black);
+        rootA.render(backend);
+        rootB.render(backend);
+        backend.flush();
+      };
+
+      frame();
+      backend.view.move(canvasSize * 100, 0);
+      frame();
+      backend.view.move(-canvasSize * 100, 0);
+      frame();
+      frame();
+
+      expect(backend.stats.drawCalls).toBe(2);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), red);
+      expectPixelNear(readWebGl2Pixel(backend, tile * 2 + 8, 8), blue);
+
+      a.setPosition(0, tile);
+      b.setPosition(tile * 2, tile);
+      frame();
+
+      expectPixelNear(readWebGl2Pixel(backend, 8, tile + 8), red);
+      expectPixelNear(readWebGl2Pixel(backend, tile * 2 + 8, tile + 8), blue);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), black);
+    } finally {
+      rootA.destroy();
+      rootB.destroy();
+      backend.destroy();
+    }
+  });
+
   test('draws the whole root from slot stores in one instanced draw', async () => {
     const backend = await createBackend();
     const root = new Container();
@@ -316,6 +369,63 @@ describe('WebGL2 persistent-indexed selection', () => {
 
       expect(backend.stats.drawCalls).toBe(1);
       expectPixelNear(readWebGl2Pixel(backend, 8, 8), blue);
+    } finally {
+      root.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('a masked container inside the root is painted between two slot segments', async () => {
+    const backend = await createBackend();
+    const root = new Container();
+    const left = new Sprite(solidTexture('#ff0000'));
+    const clipped = new Container();
+    const inner = new Sprite(solidTexture('#0000ff'));
+    const right = new Sprite(solidTexture('#ff0000'));
+
+    try {
+      left.setPosition(0, 0);
+      inner.setPosition(tile, 0);
+      right.setPosition(tile * 2, 0);
+      // The mask keeps the left half of the blue tile: the right half stays
+      // black, which is what tells a clipped draw from an unclipped one.
+      root.cullable = false;
+      clipped.cullable = false;
+      clipped.mask = new Rectangle(tile, 0, tile / 2, tile);
+      clipped.addChild(inner);
+      root.addChild(left);
+      root.addChild(clipped);
+      root.addChild(right);
+      // The source gate wants two rebuild frames over unchanged content, and
+      // a clean frame under a steady camera replays instead of rebuilding - so
+      // the camera leaves and comes back. The mask content is a root of its
+      // own and climbs on the same frames, which the two `cullable = false`
+      // above are for: a culled container is not collected on the far frame.
+      render(backend, root);
+      backend.view.move(canvasSize * 100, 0);
+      render(backend, root);
+      backend.view.move(-canvasSize * 100, 0);
+      settle(backend, root, 3);
+
+      // The order stream holds both outer sprites and is cut once, so the
+      // second segment starts at offset 1 - the slot it draws has to be the one
+      // the stream names, not the one at the buffer's start.
+      expect(slotStatsOf(root).orderEntries).toBe(2);
+      expectPixelNear(readWebGl2Pixel(backend, 8, 8), red);
+      expectPixelNear(readWebGl2Pixel(backend, tile + 4, 8), blue);
+      expectPixelNear(readWebGl2Pixel(backend, tile + 12, 8), black);
+      expectPixelNear(readWebGl2Pixel(backend, tile * 2 + 8, 8), red);
+
+      // The mask is live: moving it to the right half takes effect on the next
+      // frame. (The change also bumps the subtree's content revision, which is
+      // the root's source key, so that frame may leave the slot tier - the
+      // pixels are the contract here, not the tier.)
+      clipped.mask = new Rectangle(tile + tile / 2, 0, tile / 2, tile);
+      render(backend, root);
+
+      expectPixelNear(readWebGl2Pixel(backend, tile + 4, 8), black);
+      expectPixelNear(readWebGl2Pixel(backend, tile + 12, 8), blue);
+      expectPixelNear(readWebGl2Pixel(backend, tile * 2 + 8, 8), red);
     } finally {
       root.destroy();
       backend.destroy();

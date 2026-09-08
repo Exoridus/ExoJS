@@ -822,10 +822,10 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /** @internal */
-  public _drawPersistentOrder(bundle: PersistentSlotBundle, order: Uint32Array, count: number): void {
+  public _drawPersistentOrder(bundle: PersistentSlotBundle, order: Uint32Array, orderCount: number, offset: number, count: number): void {
     const store = bundle as WebGpuPersistentSlotStore;
 
-    store.owner?._drawPersistentSlots(store, order, count, this);
+    store.owner?._drawPersistentSlots(store, order, orderCount, offset, count, this);
   }
 
   /** @internal */

@@ -21,7 +21,7 @@ import type { View } from '#rendering/View';
 import type { DerivedRootProduct } from './DerivedRootProduct';
 import { EffectBoundsResolver } from './EffectBoundsResolver';
 import { type EntryPlacementState, reserveEntryPlacement } from './entryPlacement';
-import type { PersistentSlotBackend } from './persistentSlotDraw';
+import type { PersistentSlotBackend, PersistentSlotDrawRecord } from './persistentSlotDraw';
 import { type DrawCommand, RenderEntryKind } from './renderCommand';
 import { MutableRenderPlan, type RenderPlan } from './RenderPlan';
 import type { RenderRootSource, SourceSelection } from './RenderRootSource';
@@ -621,13 +621,13 @@ export class RenderPlanBuilder {
     const scope = this._sourceStack[this._sourceStack.length - 1]!;
 
     if (node._renderPlanHasBarrierEffects()) {
-      scope.others.push({ kind: RenderEntryKind.Barrier, seq, node, reason: LiveEntryReason.Barrier, itemMark: scope.items.count });
+      scope.others.push({ kind: RenderEntryKind.Barrier, seq, zIndex, node, reason: LiveEntryReason.Barrier, itemMark: scope.items.count });
 
       return;
     }
 
     if (node._isTransformGroupBoundary) {
-      scope.others.push({ kind: RenderEntryKind.Barrier, seq, node, reason: LiveEntryReason.Boundary, itemMark: scope.items.count });
+      scope.others.push({ kind: RenderEntryKind.Barrier, seq, zIndex, node, reason: LiveEntryReason.Boundary, itemMark: scope.items.count });
 
       return;
     }
@@ -676,7 +676,7 @@ export class RenderPlanBuilder {
       this._sourceProducer = previousProducer;
     }
 
-    this._resolveViewAttribution(node, scope, mark, otherMark, seq);
+    this._resolveViewAttribution(node, scope, mark, otherMark, seq, zIndex);
   }
 
   /** A grouping producer: mirror its scope into the source and descend. */
@@ -695,7 +695,7 @@ export class RenderPlanBuilder {
 
     scope.others.push(group);
     this._collectSourceInto(node, group, null);
-    this._resolveViewAttribution(node, scope, mark, otherMark, seq);
+    this._resolveViewAttribution(node, scope, mark, otherMark, seq, zIndex);
   }
 
   /** @internal - see {@link SourceRederivationHost}. */
@@ -734,14 +734,14 @@ export class RenderPlanBuilder {
    * items, and a nested producer that read the view has already collapsed
    * itself, so this only ever fires for the OUTERMOST reader of a chain.
    */
-  private _resolveViewAttribution(node: RenderNode, scope: SourceScope, mark: number, otherMark: number, seq: number): void {
+  private _resolveViewAttribution(node: RenderNode, scope: SourceScope, mark: number, otherMark: number, seq: number, zIndex: number): void {
     if (!this._sourceViewReaders.has(node)) {
       return;
     }
 
     scope.items.truncate(mark);
     scope.others.length = otherMark;
-    scope.others.push({ kind: RenderEntryKind.Barrier, seq, node, reason: LiveEntryReason.ViewDependent, itemMark: mark });
+    scope.others.push({ kind: RenderEntryKind.Barrier, seq, zIndex, node, reason: LiveEntryReason.ViewDependent, itemMark: mark });
   }
 
   /**
@@ -1023,6 +1023,11 @@ export class RenderPlanBuilder {
    * tier 4  content / structure / ancestry changed   -> collect the scene graph
    * ```
    *
+   * Tier 1 has one exception: a capture the backend cannot record (a live entry
+   * inside it) is not replayed on its first clean frame but discovered into a
+   * source, so a static scene behind a mask reaches tier 2 - and from there the
+   * slot tier - without waiting for a camera move that may never come.
+   *
    * Tier 2 sits BELOW the capture decision, not inside it: the source is keyed
    * on the node's own content, structure and ancestry and on nothing the capture
    * owns, so a frame that may not capture at all still gets to select. That is
@@ -1084,14 +1089,25 @@ export class RenderPlanBuilder {
         return;
       }
 
-      this._replayRetainedFragment(representation.fragment.entries, representation.fragment.entryCount);
-      representation.markReplayed();
-      // Record-on-first-clean-frame: this clean playback is the recording
-      // source, so the record cost never lands on a frame whose capture is
-      // about to be invalidated.
-      this._armRetainedRecord(representation.fragment);
+      // A capture holding a live entry (a mask, a boundary) can never be
+      // recorded, however capable the backend, so a static root would replay
+      // every item on every frame forever. That root is exactly the one a
+      // source pays off for, so its first clean frame is spent discovering the
+      // source instead of replaying: the entries it emits are the same, and the
+      // frame after it selects from the source, slot tier included. Falls
+      // through to the rebuild path below, whose build gate the identical keys
+      // satisfy. Keyed on the capture's shape and not on recordability at
+      // large: a backend without record hooks is best served by entry replay.
+      if (representation.source !== null || !representation.canBuildSource || !representation.fragment.hasLiveEntries) {
+        this._replayRetainedFragment(representation.fragment.entries, representation.fragment.entryCount);
+        representation.markReplayed();
+        // Record-on-first-clean-frame: this clean playback is the recording
+        // source, so the record cost never lands on a frame whose capture is
+        // about to be invalidated.
+        this._armRetainedRecord(representation.fragment);
 
-      return;
+        return;
+      }
     }
 
     // This frame has to produce entries one way or another. Settle the source
@@ -1203,6 +1219,7 @@ export class RenderPlanBuilder {
 
     if (cached !== null && cached.bundle === bundle) {
       this._currentScope().persistentDraw = cached;
+      this._dispatchPersistentMarks(cached);
 
       return true;
     }
@@ -1245,9 +1262,44 @@ export class RenderPlanBuilder {
     // either way, and it is what proves the tier still culls.
     this.backend.stats.culledNodes += source.itemCount - product.delta.visible;
     representation.notePersistentSelection(rect);
-    this._currentScope().persistentDraw = representation.persistentDrawRecord(bundle, slots.order, slots.orderCount);
+
+    const record = representation.persistentDrawRecord(bundle, slots);
+
+    this._currentScope().persistentDraw = record;
+    this._dispatchPersistentMarks(record);
 
     return true;
+  }
+
+  /**
+   * Re-dispatch every live entry the order stream is cut around, each through
+   * its ordinary collect into a child scope of its own, in stream order. The
+   * `i`-th entry of the scope carrying the record is the `i`-th mark's
+   * playback, and the scope holds nothing else - which is what lets the player
+   * interleave the two without a second bookkeeping structure.
+   *
+   * Runs on the cached path too. The slots are the last selection's answer and
+   * still the right one; the live entries never were part of that answer, and a
+   * mask whose rect changed or a parallax layer whose coverage moved has to
+   * reach this frame.
+   */
+  private _dispatchPersistentMarks(record: PersistentSlotDrawRecord): void {
+    const entries = record.markEntries;
+
+    for (let i = 0; i < record.markCount; i++) {
+      const entry = entries[i]!;
+      const markScope = this._acquireGroupScope(false);
+
+      reserveEntryPlacement(this._currentScope(), entry.seq, entry.zIndex);
+      this._pushGroupEntry(entry.seq, entry.zIndex, markScope);
+      this._pushScope(markScope);
+
+      try {
+        entry.node.collect(this, entry.seq);
+      } finally {
+        this._popScope();
+      }
+    }
   }
 
   /**

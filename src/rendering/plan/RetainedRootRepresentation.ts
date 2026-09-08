@@ -4,6 +4,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import type { View } from '#rendering/View';
 
 import { DerivedRootProduct } from './DerivedRootProduct';
+import type { DerivedSelectionState } from './DerivedSelectionState';
 import {
   type PersistentSlotBackend,
   type PersistentSlotBundle,
@@ -368,16 +369,26 @@ export class RetainedRootRepresentation {
   /**
    * The draw record handed to the player, mutated in place across frames.
    *
-   * `order` is the selection state's own array, whose identity survives every
-   * update, so the record is written once per selection rather than allocated
-   * per frame.
+   * `order` and the mark arrays are the selection state's own, whose identities
+   * survive every update, so the record is written once per selection rather
+   * than allocated per frame.
    */
-  public persistentDrawRecord(bundle: PersistentSlotBundle, order: Uint32Array, count: number): PersistentSlotDrawRecord {
-    const record = (this._slotRecord ??= { bundle, order, count });
+  public persistentDrawRecord(bundle: PersistentSlotBundle, slots: DerivedSelectionState): PersistentSlotDrawRecord {
+    const record = (this._slotRecord ??= {
+      bundle,
+      order: slots.order,
+      count: slots.orderCount,
+      markPositions: slots.markPositions,
+      markEntries: slots.markEntries,
+      markCount: slots.markCount,
+    });
 
     record.bundle = bundle;
-    record.order = order;
-    record.count = count;
+    record.order = slots.order;
+    record.count = slots.orderCount;
+    record.markPositions = slots.markPositions;
+    record.markEntries = slots.markEntries;
+    record.markCount = slots.markCount;
 
     return record;
   }
@@ -456,6 +467,11 @@ export class RetainedRootRepresentation {
   /** Whether a missing source is worth one culling-free discovery walk now. */
   public shouldBuildSource(): boolean {
     return !this._sourceUnbuildable && (this._rebuildStreak >= 1 || (!this._deltaRefused && this._churnStreak >= 2));
+  }
+
+  /** Whether a source could be built for this root at all - false once discovery found the root itself reads the view. */
+  public get canBuildSource(): boolean {
+    return !this._sourceUnbuildable;
   }
 
   /** Whether a structural frame should still be offered to the delta. */

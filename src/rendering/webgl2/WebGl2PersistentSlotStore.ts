@@ -19,6 +19,7 @@ import { BlendModes, BufferTypes, BufferUsage, TextureFormat } from '#rendering/
 
 import type { WebGl2Backend } from './WebGl2Backend';
 import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
+import type { WebGl2VertexArrayObject } from './WebGl2VertexArrayObject';
 
 /**
  * Floats one slot occupies in each of the two rgba32f stores. Both hold two
@@ -74,7 +75,7 @@ export interface PersistentSlotCapableRenderer {
   _acquirePersistentSlotStore(source: RenderRootSource, backend: WebGl2Backend): WebGl2PersistentSlotStore | null;
   _rekeyPersistentSlotStore(store: WebGl2PersistentSlotStore, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean;
   _writePersistentSlotRows(store: WebGl2PersistentSlotStore, source: RenderRootSource, entered: Int32Array, count: number): void;
-  _drawPersistentSlots(store: WebGl2PersistentSlotStore, order: Uint32Array, count: number, backend: WebGl2Backend): void;
+  _drawPersistentSlots(store: WebGl2PersistentSlotStore, order: Uint32Array, offset: number, count: number, backend: WebGl2Backend): void;
 }
 
 export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
@@ -100,6 +101,12 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
 
   private _order = new Uint32Array(0);
   private _orderBuffer: WebGl2RenderBuffer | null = null;
+  /**
+   * The vertex array object the owner draws this store's order buffer through.
+   * Created by the owner on first draw, held here because its lifetime is the
+   * order buffer's: whatever replaces or releases the buffer drops it too.
+   */
+  public indexedVao: WebGl2VertexArrayObject | null = null;
 
   /**
    * The root's base textures, in the slot order the packed rows reference.
@@ -317,14 +324,23 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
   }
 
   /**
-   * Upload `count` order entries and return the buffer they live in.
+   * Upload the `count` order entries at `offset` and return the buffer they
+   * live in, at its start: WebGL2 has no base instance, so every segment of a
+   * cut stream is uploaded to position zero and drawn from there. GL orders
+   * the upload against the draws before it, so the rewrite never reaches an
+   * earlier segment.
    *
    * This is the one per-frame upload proportional to the VISIBLE set rather than
    * to the delta, and it is four bytes an entry: an insertion moves every later
    * position, so a diff would have to answer where each survivor went, which
    * costs more than rewriting the stream.
    */
-  public uploadOrder(order: Uint32Array, count: number, createRuntime: (gl: WebGL2RenderingContext) => WebGl2RenderBufferRuntime): WebGl2RenderBuffer {
+  public uploadOrder(
+    order: Uint32Array,
+    offset: number,
+    count: number,
+    createRuntime: (gl: WebGL2RenderingContext) => WebGl2RenderBufferRuntime,
+  ): WebGl2RenderBuffer {
     const gl = this._gl;
 
     if (gl === null) {
@@ -339,11 +355,10 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
       }
 
       this._order = new Uint32Array(next);
-      this._orderBuffer?.destroy();
-      this._orderBuffer = null;
+      this._releaseOrderBuffer();
     }
 
-    this._order.set(order.subarray(0, count));
+    this._order.set(order.subarray(offset, offset + count));
 
     // At least one element: a zero-length store is not a valid buffer.
     const uploadCount = Math.max(1, count);
@@ -371,11 +386,10 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
     this._attributeTexture?.destroy();
     this._transformTexture?.destroy();
     this._tintTexture?.destroy();
-    this._orderBuffer?.destroy();
+    this._releaseOrderBuffer();
     this._attributeTexture = null;
     this._transformTexture = null;
     this._tintTexture = null;
-    this._orderBuffer = null;
     this._capacity = 0;
     this._layout = null;
     this._attributes = new Float32Array(0);
@@ -383,6 +397,14 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
     this._tints = new Uint8Array(0);
     this._dirtyLines = new Uint8Array(0);
     this._dirtyLineCount = 0;
+  }
+
+  /** Drop the order buffer and the vertex array object pointing into it, together. */
+  private _releaseOrderBuffer(): void {
+    this.indexedVao?.destroy();
+    this.indexedVao = null;
+    this._orderBuffer?.destroy();
+    this._orderBuffer = null;
   }
 
   public destroy(): void {

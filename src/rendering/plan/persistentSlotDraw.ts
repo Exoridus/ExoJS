@@ -1,6 +1,6 @@
 import { RenderEntryKind } from './renderCommand';
 import type { RenderRootSource } from './RenderRootSource';
-import type { SourceScope } from './renderSourceItem';
+import type { LiveEntry, SourceScope } from './renderSourceItem';
 
 /**
  * Backend-owned GPU state for one render root's persistent slot space: the
@@ -60,9 +60,14 @@ export interface PersistentSlotBundle {
  *   stores for the items in `entered`, a flat `(scopeOrdinal, localIndex, slot)`
  *   triple list. Called with the items that just took a slot and with nothing
  *   else, which is the whole point: a staying item's rows are already correct.
- * - `_drawPersistentOrder(bundle, order, count)` - draw `count` instances,
- *   instance `i` reading slot `order[i]`. The order IS the draw order, so the
- *   backend must not sort, group or otherwise permute it.
+ * - `_drawPersistentOrder(bundle, order, orderCount, offset, count)` - draw
+ *   `count` instances, instance `i` reading slot `order[offset + i]`. The order
+ *   IS the draw order, so the backend must not sort, group or otherwise permute
+ *   it. `orderCount` is the whole stream's length: a root whose stream is cut
+ *   around live entries issues one call per segment, in stream order, with live
+ *   playback in between, and a backend that keeps the stream on the device
+ *   sizes its buffer for `orderCount` on the first segment so a later one never
+ *   replaces a buffer an earlier draw of the same frame still reads.
  * - `_rekeyPersistentSlots(bundle, source, carried, previousHandleCount)` -
  *   re-derive whatever the store keys on the item numbering, after a structure
  *   delta re-discovered part of the source. `carried` gives, for each new global
@@ -78,23 +83,37 @@ export interface PersistentSlotBundle {
 export interface PersistentSlotBackend {
   _acquirePersistentSlots?(source: RenderRootSource): PersistentSlotBundle | null;
   _writePersistentSlots?(bundle: PersistentSlotBundle, source: RenderRootSource, entered: Int32Array, count: number): void;
-  _drawPersistentOrder?(bundle: PersistentSlotBundle, order: Uint32Array, count: number): void;
+  _drawPersistentOrder?(bundle: PersistentSlotBundle, order: Uint32Array, orderCount: number, offset: number, count: number): void;
   _rekeyPersistentSlots?(bundle: PersistentSlotBundle, source: RenderRootSource, carried: Int32Array, previousHandleCount: number): boolean;
 }
 
 /**
  * One root's persistent draw, as the plan player receives it: the store to draw
- * from, and the order stream's live extent.
+ * from, the order stream's live extent, and where the stream is cut for live
+ * playback.
+ *
+ * A live entry - a barrier, a transform-group boundary, a view-dependent
+ * producer - sits in the stream at `markPositions[i]`: every slot before that
+ * position draws before the entry, every slot from it on draws after. The
+ * entries themselves are re-dispatched through a full collect on every frame,
+ * into the `i`-th child scope of the scope carrying this record, which is what
+ * keeps a mask's rect or a parallax layer's coverage current while the slots
+ * around it stay untouched.
  *
  * Held per representation and mutated in place, never allocated per frame -
- * `order` is the {@link DerivedSelectionState}'s own array, whose identity is
- * stable across selections.
+ * `order` and the mark arrays are the {@link DerivedSelectionState}'s own,
+ * whose identities are stable across selections.
  * @internal
  */
 export interface PersistentSlotDrawRecord {
   bundle: PersistentSlotBundle;
   order: Uint32Array;
   count: number;
+  /** Stream positions of the live entries, ascending; valid for `[0, markCount)`. */
+  markPositions: readonly number[];
+  /** The live entry at each mark; valid for `[0, markCount)`. */
+  markEntries: readonly LiveEntry[];
+  markCount: number;
 }
 
 /** Whether `backend` implements the whole persistent-indexed contract. @internal */
@@ -102,30 +121,27 @@ export const supportsPersistentSlots = (backend: PersistentSlotBackend): boolean
   backend._acquirePersistentSlots !== undefined && backend._writePersistentSlots !== undefined && backend._drawPersistentOrder !== undefined;
 
 /**
- * Whether a source's SHAPE allows its visible set to be drawn as one ordered
+ * Whether a source's SHAPE allows its visible set to be drawn as an ordered
  * stream of slots - the half of the eligibility question the plan layer owns.
  *
- * Two conditions, both about draw order rather than about batching:
+ * One condition, about draw order rather than about batching: no scope may
+ * have mixed `zIndex`. A scope that does is sorted by the optimizer, so its
+ * recorded order is NOT its draw order, and the order stream - which is built
+ * from recorded order - would paint it wrong. With uniform z in every scope the
+ * sort is a no-op and the two coincide.
  *
- * - No scope may have mixed `zIndex`. A scope that does is sorted by the
- *   optimizer, so its recorded order is NOT its draw order, and the order
- *   stream - which is built from recorded order - would paint it wrong. With
- *   uniform z in every scope the sort is a no-op and the two coincide.
- * - No scope may hold a live entry. Barriers, transform-group boundaries and
- *   view-dependent producers are re-dispatched through a full collect at their
- *   recorded position, so the stream would have to be cut around each of them
- *   and interleaved with live playback. That is a real extension, not a
- *   correctness shortcut, and it is deliberately not taken here: a root holding
- *   one keeps today's path in full.
+ * A live entry is not a refusal: the stream is cut at its recorded position and
+ * the entry is played live between the two segments (see
+ * {@link PersistentSlotDrawRecord}). One mask, boundary or parallax layer
+ * therefore costs one cut, not the persistence of every item around it. It is
+ * held to the same z rule as everything else in its scope, because a live
+ * entry's own collect reserves its `zIndex` on the frame-local scope and the
+ * optimizer would sort it away from the position the stream was cut at.
  * @internal
  */
 export const sourceShapeAllowsPersistentSlots = (source: RenderRootSource): boolean => {
   for (const scope of source.scopes) {
-    if (scope.hasMixedZ) {
-      return false;
-    }
-
-    if (!othersAreAllGroups(scope)) {
+    if (scope.hasMixedZ || liveEntriesMixZ(scope)) {
       return false;
     }
   }
@@ -133,12 +149,20 @@ export const sourceShapeAllowsPersistentSlots = (source: RenderRootSource): bool
   return source.rootScope !== null;
 };
 
-const othersAreAllGroups = (scope: SourceScope): boolean => {
+const liveEntriesMixZ = (scope: SourceScope): boolean => {
+  let z = scope.firstZ;
+
   for (const other of scope.others) {
-    if (other.kind !== RenderEntryKind.Group) {
-      return false;
+    if (other.kind !== RenderEntryKind.Barrier) {
+      continue;
+    }
+
+    if (z === null) {
+      z = other.zIndex;
+    } else if (other.zIndex !== z) {
+      return true;
     }
   }
 
-  return true;
+  return false;
 };

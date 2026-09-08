@@ -122,8 +122,6 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   private readonly _shader: WebGl2Shader;
   /** Persistent-indexed program: same fragment stage, slot-fetching vertex stage. */
   private readonly _indexedShader: WebGl2Shader;
-  private _indexedVao: WebGl2VertexArrayObject | null = null;
-  private _indexedVaoBuffer: WebGl2RenderBuffer | null = null;
   private readonly _slotAttributeUnitScratch: Int32Array = new Int32Array([slotAttributeTextureUnit]);
   private readonly _batchSize: number;
   private readonly _instanceData: ArrayBuffer;
@@ -293,15 +291,15 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
    * split it - the stream IS the draw order the plan built.
    * @internal
    */
-  public _drawPersistentSlots(store: WebGl2PersistentSlotStore, order: Uint32Array, count: number, backend: WebGl2Backend): void {
+  public _drawPersistentSlots(store: WebGl2PersistentSlotStore, order: Uint32Array, offset: number, count: number, backend: WebGl2Backend): void {
     if (count === 0) {
       return;
     }
 
     const gl = backend.context;
     const shader = this._indexedShader;
-    const buffer = store.uploadOrder(order, count, () => this._createBufferRuntime(this._connection!));
-    const vao = this._acquireIndexedVao(gl, buffer);
+    const buffer = store.uploadOrder(order, offset, count, () => this._createBufferRuntime(this._connection!));
+    const vao = this._acquireIndexedVao(gl, store, buffer);
 
     backend.setBlendMode(store.blendMode);
     backend.bindShader(shader);
@@ -331,21 +329,27 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   }
 
   /**
-   * The VAO the indexed path draws through, rebuilt when the store's order
-   * buffer is replaced (growth destroys it, so the pointer would dangle).
+   * The VAO the indexed path draws a store through. Owned by the store and
+   * dropped with its order buffer, so growth - which replaces the buffer - can
+   * never leave a pointer dangling; and on a GL handle of its own, so it never
+   * disturbs the live batch's layout (see {@link _createVaoRuntime}).
    */
-  private _acquireIndexedVao(gl: WebGL2RenderingContext, buffer: WebGl2RenderBuffer): WebGl2VertexArrayObject {
-    if (this._indexedVao !== null && this._indexedVaoBuffer === buffer) {
-      return this._indexedVao;
+  private _acquireIndexedVao(gl: WebGL2RenderingContext, store: WebGl2PersistentSlotStore, buffer: WebGl2RenderBuffer): WebGl2VertexArrayObject {
+    if (store.indexedVao !== null) {
+      return store.indexedVao;
     }
 
-    this._indexedVao?.destroy();
-    this._indexedVaoBuffer = buffer;
-    this._indexedVao = new WebGl2VertexArrayObject(RenderingPrimitives.TriangleStrip)
-      .addAttribute(buffer, this._indexedShader.getAttribute('a_slot'), gl.UNSIGNED_INT, false, Uint32Array.BYTES_PER_ELEMENT, 0, true, 1)
-      .connect(this._createVaoRuntime(this._connection!));
+    const vaoHandle = gl.createVertexArray();
 
-    return this._indexedVao;
+    if (vaoHandle === null) {
+      throw new Error('WebGl2SpriteRenderer: could not create the persistent slot vertex array object.');
+    }
+
+    store.indexedVao = new WebGl2VertexArrayObject(RenderingPrimitives.TriangleStrip)
+      .addAttribute(buffer, this._indexedShader.getAttribute('a_slot'), gl.UNSIGNED_INT, false, Uint32Array.BYTES_PER_ELEMENT, 0, true, 1)
+      .connect(this._createVaoRuntime(this._connection!, vaoHandle));
+
+    return store.indexedVao;
   }
 
   public flush(): void {
@@ -669,7 +673,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
       .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_uvBounds'), gl.UNSIGNED_SHORT, true, instanceStrideBytes, 16, false, 1)
       .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_textureSlot'), gl.UNSIGNED_INT, false, instanceStrideBytes, 24, true, 1)
       .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, instanceStrideBytes, 28, true, 1)
-      .connect(this._createVaoRuntime(this._connection));
+      .connect(this._createVaoRuntime(this._connection, this._connection.vaoHandle));
 
     // Pin the per-slot sampler uniforms to texture units 0..N-1. Strict on
     // purpose (getUniform throws on a missing name): every slot the batcher
@@ -700,8 +704,6 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   protected onDisconnect(): void {
     this._shader.destroy();
     this._indexedShader.destroy();
-    this._indexedVao?.destroy();
-    this._indexedVao = null;
 
     for (const shader of this._customShaders.values()) {
       shader.destroy();
@@ -1006,14 +1008,22 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     };
   }
 
-  private _createVaoRuntime(connection: SpriteRendererConnection): WebGl2VertexArrayObjectRuntime {
+  /**
+   * A runtime over one GL vertex array object. Each `WebGl2VertexArrayObject`
+   * needs a handle of its own: the runtime re-points attributes only when the
+   * object's version changes, so two objects sharing a handle would each
+   * believe the layout it last applied is still in place while the other has
+   * overwritten it - and destroying either would delete the handle under the
+   * other.
+   */
+  private _createVaoRuntime(connection: SpriteRendererConnection, vaoHandle: WebGLVertexArrayObject): WebGl2VertexArrayObjectRuntime {
     let appliedVersion = -1;
 
     return {
       bind: (vao): void => {
         const gl = connection.gl;
 
-        gl.bindVertexArray(connection.vaoHandle);
+        gl.bindVertexArray(vaoHandle);
 
         if (appliedVersion !== vao.version) {
           let lastBuffer: WebGl2RenderBuffer | null = null;
@@ -1047,7 +1057,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
         connection.gl.drawArraysInstanced(type, start, count, instanceCount);
       },
       destroy: (vao): void => {
-        connection.gl.deleteVertexArray(connection.vaoHandle);
+        connection.gl.deleteVertexArray(vaoHandle);
         vao.disconnect();
       },
     };

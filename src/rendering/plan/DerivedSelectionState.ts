@@ -1,5 +1,5 @@
 import { RenderEntryKind } from './renderCommand';
-import type { SourceScope } from './renderSourceItem';
+import type { LiveEntry, SourceScope } from './renderSourceItem';
 import type { MembershipBits } from './SourceVisibilityIndex';
 
 /**
@@ -92,6 +92,15 @@ export class DerivedSelectionState {
   private _orderCount = 0;
 
   /**
+   * Where the order stream is cut for live playback: the live entries the walk
+   * met, in stream order, and the stream position each one sits at. Grow-only
+   * and rewritten per selection, like the stream itself.
+   */
+  private readonly _markPositions: number[] = [];
+  private readonly _markEntries: LiveEntry[] = [];
+  private _markCount = 0;
+
+  /**
    * Items that just took a slot, as flat `(scopeOrdinal, localIndex, slot)`
    * triples. These - and only these - need their persistent per-item data
    * written, which is why the list exists instead of a flag per slot: the
@@ -115,6 +124,20 @@ export class DerivedSelectionState {
 
   public get orderCount(): number {
     return this._orderCount;
+  }
+
+  /** Stream positions of the live entries, ascending; valid for `[0, markCount)`. */
+  public get markPositions(): readonly number[] {
+    return this._markPositions;
+  }
+
+  /** The live entry at each mark; valid for `[0, markCount)`. */
+  public get markEntries(): readonly LiveEntry[] {
+    return this._markEntries;
+  }
+
+  public get markCount(): number {
+    return this._markCount;
   }
 
   public get enteredCount(): number {
@@ -253,6 +276,7 @@ export class DerivedSelectionState {
     resetSlotStats(this.stats);
     this._enteredCount = 0;
     this._orderCount = 0;
+    this._markCount = 0;
 
     // Releases run over the WHOLE tree before any allocation, not scope by
     // scope. A camera step swaps items roughly one for one, so vacating first
@@ -267,6 +291,12 @@ export class DerivedSelectionState {
     this._walkScope(rootScope, current);
     this.stats.orderEntries = this._orderCount;
     this.stats.slotCapacity = this._slotCount;
+  }
+
+  private _mark(position: number, entry: LiveEntry): void {
+    this._markPositions[this._markCount] = position;
+    this._markEntries[this._markCount] = entry;
+    this._markCount++;
   }
 
   private _releaseTree(scope: SourceScope, current: readonly MembershipBits[], previous: readonly MembershipBits[]): void {
@@ -407,14 +437,16 @@ export class DerivedSelectionState {
 
   /**
    * Append `scope`'s visible slots to the order stream, interleaving nested
-   * scopes at the recorded position their `itemMark` gives them.
+   * scopes at the recorded position their `itemMark` gives them and marking
+   * where a live entry sits.
    *
    * This is the same walk `RenderPlanBuilder._emitSourceSelection` performs, and
    * it has to stay the same walk: the order stream IS the draw order, so any
    * divergence here is a reordered frame. Nested groups are entered
    * unconditionally rather than behind their subtree cull test - the per-item
    * membership already answers that question, and an empty nested scope
-   * contributes nothing to append.
+   * contributes nothing to append. A live entry is never culled here either:
+   * its own collect applies whatever cull its node has.
    */
   private _walkScope(scope: SourceScope, current: readonly MembershipBits[]): void {
     const bits = current[scope.ordinal]!;
@@ -452,6 +484,8 @@ export class DerivedSelectionState {
             this._orderCount = cursor;
             this._walkScope(nested, current);
             cursor = this._orderCount;
+          } else {
+            this._mark(cursor, nested);
           }
         }
 
@@ -468,6 +502,8 @@ export class DerivedSelectionState {
 
       if (nested.kind === RenderEntryKind.Group) {
         this._walkScope(nested, current);
+      } else {
+        this._mark(this._orderCount, nested);
       }
     }
   }
