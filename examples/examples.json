@@ -416,7 +416,7 @@
       "path": "filters/chromatic-aberration.js",
       "language": "typescript",
       "title": "Chromatic Aberration",
-      "description": "Offset RGB channels by different amounts to simulate lens chromatic aberration — drag the pointer to control intensity.",
+      "description": "Offset the red and blue channels in opposite directions to simulate lens chromatic aberration — an intensity slider drives the split live.",
       "backend": "core",
       "tags": ["fx", "filter", "shader"],
       "level": "intermediate"
