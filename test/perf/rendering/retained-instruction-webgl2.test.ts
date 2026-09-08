@@ -114,16 +114,17 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       expect(f3.visibleNodes).toBe(4);
 
       // F4 - steady splice: NOTHING uploads for the group anymore. The only
-      // buffer traffic is the live outside sprite's own 36-byte re-pack; the
-      // shared transform texture is unchanged (hash) and the group texture is
-      // clean (version) - zero texture uploads of any kind.
+      // buffer traffic is the root's own persistent slot draw of the outside
+      // sprite - one order entry, four bytes, with the group cut around as a
+      // live mark; the shared transform texture is unchanged (hash) and the
+      // group texture is clean (version) - zero texture uploads of any kind.
       const f4 = measureFrame(harness, root);
 
       expect(f4.drawCalls).toBe(2);
       expect(f4.batches).toBe(2);
       expect(f4.instances).toBe(4);
       expect(f4.visibleNodes).toBe(4); // stats parity: replay bumps submittedNodes from the descriptor
-      expect(f4.uploadedBufferBytes).toBe(32); // ONLY the live outside sprite
+      expect(f4.uploadedBufferBytes).toBe(4); // ONLY the outside sprite's order entry
       expect(f4.transformUploads).toBe(0);
       expect(f4.bufferUploads).toBe(1);
 
@@ -226,7 +227,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       expect(beginSpy).not.toHaveBeenCalled();
       expect(replaySpy).toHaveBeenCalledTimes(2);
       expect(moved.instances).toBe(4);
-      expect(moved.uploadedBufferBytes).toBe(32); // still only the live outside sprite
+      expect(moved.uploadedBufferBytes).toBe(4); // still only the outside sprite's order entry
 
       root.destroy();
     });
