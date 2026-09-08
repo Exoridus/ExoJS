@@ -3,6 +3,7 @@ import type { ArchetypeId, ArchetypeSpec } from '../src/rendering/EngineAdapter'
 import {
   compositeBlurRadius,
   filterChainDepth,
+  hasMaskMotion,
   isChurning,
   isTextArchetype,
   isTextUpdating,
@@ -107,6 +108,19 @@ describe('render-target archetypes', () => {
     expect(maskDepth(mask)).toBe(mask.nestingDepth - 1);
   });
 
+  test('mask-clip-animated is a mask-clip row plus mask motion, so the two are readable as a delta', () => {
+    const animated = byId['mask-clip-animated'];
+    const still = byId['mask-clip'];
+
+    expect(hasMaskMotion(animated)).toBe(true);
+    expect(hasMaskMotion(still)).toBe(false);
+    expect(maskDepth(animated)).toBe(maskDepth(still));
+    expect(animated.nestingDepth).toBe(still.nestingDepth);
+    expect(animated.textureCount).toBe(still.textureCount);
+    expect(animated.mutationFraction).toBe(still.mutationFraction);
+    expect(animated.nodeCounts).toEqual(still.nodeCounts);
+  });
+
   test('composite is a filter-chain-1 row plus its multipass, so the two are readable as a delta', () => {
     const composite = byId.composite;
     const filtered = byId['filter-chain-1'];
@@ -123,7 +137,7 @@ describe('render-target archetypes', () => {
       ARCHETYPES.filter(usesRenderTargets)
         .map(archetype => archetype.id)
         .sort(),
-    ).toEqual(['composite', 'filter-chain-1', 'filter-chain-2', 'filter-chain-4', 'mask-clip']);
+    ).toEqual(['composite', 'filter-chain-1', 'filter-chain-2', 'filter-chain-4', 'mask-clip', 'mask-clip-animated']);
   });
 });
 

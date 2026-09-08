@@ -114,7 +114,7 @@ export class RetainedCaptureSlot {
       return true;
     }
 
-    if (!this._hasCapture || !reconcileRetainedTintRows(this.fragment, node => isUnder(node, root))) {
+    if (!this._hasCapture || !reconcileRetainedTintRows(this.fragment, root, node => isUnder(node, root))) {
       return false;
     }
 

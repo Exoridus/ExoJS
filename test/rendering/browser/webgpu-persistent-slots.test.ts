@@ -563,11 +563,12 @@ describe('WebGPU persistent-indexed selection', () => {
       expectPixelNear(readPixel(tile * 2 + 8, 8), red);
 
       // The mask is live: moving it to the right half takes effect on the next
-      // frame. (The change also bumps the subtree's content revision, which is
-      // the root's source key, so that frame may leave the slot tier - the
-      // pixels are the contract here, not the tier.)
+      // frame - and the root stays on the slot tier for it, because an effect
+      // change on a live entry is nothing the source recorded.
       clipped.mask = new Rectangle(tile + tile / 2, 0, tile / 2, tile);
       render(backend, root);
+
+      expect(slotStatsOf(root).orderEntries).toBe(2);
 
       readPixel = readWebGpuPixels(backend, canvasSize);
       expectPixelNear(readPixel(tile + 4, 8), black);

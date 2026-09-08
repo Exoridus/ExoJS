@@ -26,6 +26,9 @@ export const filterChainDepth = (spec: ArchetypeSpec): number => Math.max(0, Mat
 /** Nested rectangle-mask depth down the container spine; `0` when the archetype is unmasked. */
 export const maskDepth = (spec: ArchetypeSpec): number => Math.max(0, Math.trunc(spec.maskDepth ?? 0));
 
+/** Whether the archetype moves its mask rects every frame (see `ArchetypeSpec.maskMotion`). */
+export const hasMaskMotion = (spec: ArchetypeSpec): boolean => maskDepth(spec) > 0 && spec.maskMotion === true;
+
 /** Bloom-composite blur extent in logical px; `0` when the archetype renders the scene in one pass. */
 export const compositeBlurRadius = (spec: ArchetypeSpec): number => Math.max(0, spec.compositeBlurRadius ?? 0);
 

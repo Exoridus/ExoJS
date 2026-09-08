@@ -26,6 +26,7 @@ export type ArchetypeId =
   | 'filter-chain-2'
   | 'filter-chain-4'
   | 'mask-clip'
+  | 'mask-clip-animated'
   | 'composite';
 
 /**
@@ -263,6 +264,14 @@ export interface ArchetypeSpec {
    * WebGL2/WebGPU arms only - see the Phaser exclusion in `archetypes.ts`.
    */
   readonly maskDepth?: number;
+  /**
+   * Whether every mask rect moves each frame. A static clip is one live entry
+   * the persistent tiers cut around once; a moving one is the shape a scrolling
+   * view has, where the effect changes on every frame while the content behind
+   * it does not - the cost being isolated is what an effect change alone does
+   * to the retained products around it.
+   */
+  readonly maskMotion?: boolean;
   /**
    * Blur extent, in logical px, of the bloom-shaped multipass composite, or
    * `undefined` for the single-pass scene every other archetype renders.

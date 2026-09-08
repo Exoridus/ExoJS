@@ -472,6 +472,21 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     cullingEnabled: false,
     maskDepth: 3,
   },
+  // `mask-clip` with every rect moving each frame: the delta against the row
+  // above is what an effect change alone costs the retained products around
+  // it, which is the shape of every scrolling clip.
+  {
+    id: 'mask-clip-animated',
+    category: 'render-targets',
+    crossArm: true,
+    nodeCounts: GPU_BOUND_COUNTS,
+    nestingDepth: 4,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    maskDepth: 3,
+    maskMotion: true,
+  },
 ];
 
 /**
