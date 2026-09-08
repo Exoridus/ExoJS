@@ -15,6 +15,12 @@ import type { WebGl2VertexArrayObject, WebGl2VertexArrayObjectRuntime } from './
 
 interface ManagedBufferState {
   readonly handle: WebGLBuffer;
+  /**
+   * Bytes the GL store was allocated with, set only when `bufferData` sizes it.
+   * A prefix upload never shrinks it: the store keeps its size, so the next
+   * larger prefix that still fits stays a `bufferSubData` instead of an
+   * orphaning reallocation on every growing frame.
+   */
   dataByteLength: number;
 }
 
@@ -179,7 +185,6 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
 
         if (state && state.dataByteLength >= buffer.uploadByteLength) {
           uploadBufferRange(gl, buffer, offset);
-          state.dataByteLength = buffer.uploadByteLength;
         } else {
           uploadBufferStore(gl, buffer);
           connection.buffers.set(buffer, { handle, dataByteLength: buffer.uploadByteLength });
