@@ -25,7 +25,10 @@ interface Props {
 }
 
 const { locale } = Astro.props;
-const findings = referenceProfile === undefined ? [] : headlineFindings(referenceProfile);
+const allFindings = referenceProfile === undefined ? [] : headlineFindings(referenceProfile);
+/** The scope sentence names the measurement; it sits under the title, the verdict sentences are the findings. */
+const scope = allFindings.find(finding => finding.tone === 'scope');
+const findings = allFindings.filter(finding => finding.tone !== 'scope');
 
 /** The word next to a headline sentence, so a lead and a loss are labelled rather than coloured into a ranking. */
 const TONE_LABELS = { scope: 'scope', lead: 'lead', level: 'level', loss: 'loss', unstable: 'unstable' } as const;
@@ -59,12 +62,10 @@ const pooledRuns = referenceProfile?.profile.runs ?? REPRODUCTION_RUNS;
         <header class="bench-head">
             <h1>Benchmarks</h1>
             <p>
-                How ExoJS compares against Pixi, Phaser and Excalibur for rendering, and against matter.js, planck and Rapier for physics. The ratios are
-                the statement and the milliseconds are the evidence behind them. Every number on this page was written by the benchmark harness into a
-                signed profile file in the repository; none of it is typed by hand, and every cell where ExoJS trails is published exactly like the ones
-                where it leads. Every number is also pooled from {pooledRuns} separate runs and printed with the range those runs observed, and a comparison
-                the runs did not agree on publishes no verdict at all.
+                ExoJS against Pixi, Phaser and Excalibur for rendering, and against matter.js, planck and Rapier for physics. Every number comes from the
+                harness, pooled over {pooledRuns} runs; losses are published like wins. How the numbers are made is at the end of the page.
             </p>
+            {scope !== undefined && <p class="scope">{scope.text}</p>}
         </header>
 
         <section id="findings">
@@ -90,11 +91,6 @@ const pooledRuns = referenceProfile?.profile.runs ?? REPRODUCTION_RUNS;
         {referenceProfile !== undefined && (
             <section id="reference">
                 <h2>Reference profile</h2>
-                <p>
-                    One machine, measured after the release was tagged, with no other load on it, and measured {pooledRuns} times over: the numbers below are
-                    pooled across those runs and each carries the range they observed. A re-measurement of the same machine overwrites this profile; a
-                    different machine can only ever arrive as a new file.
-                </p>
                 <BenchProfileReport document={referenceProfile} headingLevel={3} />
             </section>
         )}
@@ -102,10 +98,7 @@ const pooledRuns = referenceProfile?.profile.runs ?? REPRODUCTION_RUNS;
         {furtherProfiles.length > 0 && (
             <section id="further">
                 <h2>Further machines</h2>
-                <p>
-                    Profiles contributed for other hardware, newest engine version first. They answer a different question from the reference run: whether
-                    the ratios hold on another GPU, another driver stack and another JavaScript engine.
-                </p>
+                <p class="section-note">Contributed profiles for other hardware, newest engine version first: do the ratios hold on another GPU, driver and JavaScript engine?</p>
                 {furtherProfiles.map(document => {
                     const newer = olderThanReference(document);
 
@@ -134,6 +127,8 @@ const pooledRuns = referenceProfile?.profile.runs ?? REPRODUCTION_RUNS;
 
         <section id="methodology">
             <h2>Methodology</h2>
+            <details class="practice">
+                <summary>How a number becomes a verdict: pooling, medians, ranges, the ladder, the frame budget</summary>
             <ul class="method">
                 <li>
                     A published profile pools <strong>{pooledRuns} separate runs</strong> of the same matrix. One run cannot support a ratio: the same code
@@ -215,10 +210,13 @@ const pooledRuns = referenceProfile?.profile.runs ?? REPRODUCTION_RUNS;
                     which is what the table was ever for. Two rows are two different scenes at two different sizes.
                 </li>
             </ul>
+            </details>
         </section>
 
         <section id="reproduce">
             <h2>Reproduce</h2>
+            <details class="practice">
+                <summary>Clone, bootstrap, run the matrix {REPRODUCTION_RUNS} times, pool into a profile</summary>
             <p>
                 The harness is in the repository, and so are the adapters. A reference profile is <strong>{REPRODUCTION_RUNS} separate runs</strong>, not one
                 run repeated inside itself: repeating a matrix in one process shares JIT and heap state between the repetitions and measures the same warm
@@ -271,10 +269,13 @@ pnpm bench:compare -- \
                 A profile for a machine that is not published yet is welcome as a pull request containing that one file. Nothing else needs to change - this
                 page picks it up from the directory.
             </p>
+            </details>
         </section>
 
         <section id="fairness">
             <h2>Fairness</h2>
+            <details class="practice">
+                <summary>Adapters at library defaults, no score, no overall winner</summary>
             <p>
                 The adapter for every competitor is in the repository next to the ExoJS one, and each is configured at that library's own defaults with the
                 deviations disclosed in the run's caveats. If a maintainer of one of these libraries thinks an adapter misrepresents it, an issue about that
@@ -285,6 +286,7 @@ pnpm bench:compare -- \
                 weight as one where it leads, with the same mechanism evidence attached, and the rows the harness could not compare are listed with the
                 reason it could not.
             </p>
+            </details>
         </section>
     </div>
 </DocsLayout>
@@ -309,6 +311,32 @@ pnpm bench:compare -- \
         line-height: 1.65;
     }
 
+    .scope {
+        margin-top: var(--s-3) !important;
+        font-family: var(--f-mono);
+        font-size: 0.78rem !important;
+        color: var(--fg-faint) !important;
+    }
+    .section-note {
+        margin: 0 0 var(--s-4);
+        max-width: 72ch;
+        color: var(--fg-muted);
+        font-size: 0.9rem;
+    }
+    .practice {
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-3);
+        padding: var(--s-3) var(--s-4);
+        background: var(--bg-elevated);
+    }
+    .practice summary {
+        cursor: pointer;
+        color: var(--fg-muted);
+    }
+    .practice[open] summary {
+        margin-bottom: var(--s-3);
+        color: var(--fg);
+    }
     .empty {
         margin: 0;
         padding: var(--s-4);

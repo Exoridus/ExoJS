@@ -113,6 +113,16 @@ const tableRows = (sections: readonly ProfileSection[], arms: readonly string[])
         }),
     );
 
+/**
+ * The mechanism sentence the harness wrote, shortened for the table cell. The
+ * equivalent-counters case is the bulk of the rows and says the same thing
+ * every time, so it becomes a label and the full sentence moves to the title.
+ */
+const mechanismCell = (mechanism: string): { label: string; title: string | null } =>
+    mechanism.startsWith('structurally equivalent')
+        ? { label: 'CPU-side; counters level', title: mechanism }
+        : { label: mechanism, title: null };
+
 const renderingBlocks = (rendering?.backends ?? []).map(backend => {
     const webgl1Arms = [...new Set(backend.webgl1.flatMap(row => row.cells.map(cell => cell.competitor)))].sort();
 
@@ -151,6 +161,14 @@ const runTimes = [
 <section class="profile">
     {showTitle && <Heading id={`profile-${profile.slug}`}>{profile.gpu} / {profile.os} / {profile.browser}</Heading>}
 
+    <details class="provenance-details">
+        <summary>
+            <span>ExoJS {profile.engineVersion}</span>
+            <span>{profile.runs} runs, {formatDay(profile.measuredAt)}</span>
+            {rendering !== undefined && <span>{rendering.libraries.map(library => `${library.name} ${library.version}`).join(', ')}</span>}
+            {physics !== undefined && <span>{physics.libraries.map(library => `${library.name} ${library.version}`).join(', ')}</span>}
+            <span class="summary-hint">machine, adapters, signature</span>
+        </summary>
     <dl class="provenance">
         <div><dt>ExoJS</dt><dd>{profile.engineVersion}</dd></div>
         <div><dt>Measured</dt><dd>{formatDay(profile.measuredAt)}</dd></div>
@@ -205,6 +223,7 @@ const runTimes = [
             </div>
         )}
     </dl>
+    </details>
 
     {renderingBlocks.map(block => (
         <section class="block">
@@ -212,7 +231,7 @@ const runTimes = [
             <p class="block-note">
                 {block.backend.headlineCount === null
                     ? 'No single node count qualified for a headline table on this backend, so no rows are published for it.'
-                    : `Every row is measured at ${String(block.backend.headlineCount)} nodes, chosen from the archetype ladders before any timing was read. Times are CPU milliseconds per frame, pooled over ${String(profile.runs)} separate runs as the median of their per-run medians and of their per-run p95s; lower is better. The range under a time is what those runs observed.`}
+                    : `${String(block.backend.headlineCount)} nodes per row. CPU ms per frame, median of ${String(profile.runs)} runs, lower is better.`}
             </p>
 
             {block.rows.length > 0 && (
@@ -262,9 +281,13 @@ const runTimes = [
                                             {entry.outcome.rungs !== null && <span class="rungs">{entry.outcome.rungs}</span>}
                                         </td>
                                         <td class="mechanism">
-                                            {!entry.present
-                                                ? `This arm produced no comparable cell at ${String(row.count)} nodes, so the pair is not published as a comparison.`
-                                                : (entry.mechanism ?? 'No structural counters were reported for this pair.')}
+                                            {!entry.present ? (
+                                                `no comparable cell at ${String(row.count)} nodes`
+                                            ) : entry.mechanism === null ? (
+                                                'no structural counters reported'
+                                            ) : (
+                                                <span title={mechanismCell(entry.mechanism).title ?? undefined}>{mechanismCell(entry.mechanism).label}</span>
+                                            )}
                                         </td>
                                     </tr>
                                 )),
@@ -277,11 +300,7 @@ const runTimes = [
             {block.webgl1Rows.length > 0 && (
                 <div class="aside">
                     <h5>WebGL1 arms, CPU time only</h5>
-                    <p>
-                        These arms render through a WebGL1 context, so a gap against them can be caused by the backend generation as much as by the engine,
-                        and the structural probe cannot attach to say which. The rows compare CPU time and carry no mechanism, which makes them an
-                        observation rather than a finding.
-                    </p>
+                    <p>WebGL1 context: CPU time only, no mechanism, an observation rather than a finding.</p>
                     <div class="scroller">
                         <table class="narrow">
                             <thead>
@@ -355,7 +374,7 @@ const runTimes = [
             <p class="block-note">
                 {physicsRows.length === 0
                     ? 'No physics archetype produced a valid cell on every arm at any rung of its ladder, so no physics rows are published.'
-                    : `Each archetype has its own body-count ladder, placed so its rungs straddle the 60 fps frame, so every row states the count it was measured at and rows are not comparable with one another - only the arms within a row are. Times are CPU milliseconds per fixed step, pooled over ${String(profile.runs)} separate runs as the median of their per-run medians and of their per-run p95s; lower is better. The range under a time is what those runs observed.`}
+                    : `Body count per row, each archetype on its own ladder. CPU ms per fixed step, median of ${String(profile.runs)} runs, lower is better.`}
             </p>
 
             {physicsRows.length > 0 && (
@@ -442,14 +461,17 @@ const runTimes = [
         <span class="verdict unstable">no verdict - the runs disagreed</span>
         <span class="verdict absent">not comparable</span>
     </p>
-    <p class="reading-key">
+    <details class="reading-key">
+        <summary>How to read a cell</summary>
+        <p>
         Each time is published with the <strong>p95</strong> of the same timed window under it and, under that, the range the {profile.runs} pooled runs
         observed for the median. Verdicts are computed from the medians alone; the p95 is the step or frame a player feels, so a pair far apart hitches even
         where the median reads as comfortable. A range marked in amber spans a factor of 1.2 or more - as wide as the band the verdict ladder treats as noise -
         so the number above it is soft on this machine. A median marked in amber as <em>over the {FRAME_BUDGET_MS} ms frame</em> costs more than a whole 60 fps
         frame on its own: how much of a frame this work may take is your decision, but one that exceeds the entire frame is unplayable whatever you decide. A
         cell whose runs reached different verdicts publishes none of them and lists what each run concluded instead.
-    </p>
+        </p>
+    </details>
 </section>
 
 <style>
@@ -457,15 +479,42 @@ const runTimes = [
         margin-top: var(--s-6);
     }
 
+    .provenance-details {
+        margin: 0 0 var(--s-6);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-3);
+        background: var(--bg-elevated);
+    }
+
+    .provenance-details summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--s-2) var(--s-4);
+        padding: var(--s-3) var(--s-4);
+        cursor: pointer;
+        font-size: 0.82rem;
+        color: var(--fg-muted);
+    }
+
+    .provenance-details summary span:first-child {
+        color: var(--fg);
+        font-weight: 600;
+    }
+
+    .summary-hint {
+        margin-left: auto;
+        color: var(--fg-faint);
+        font-family: var(--f-mono);
+        font-size: 0.72rem;
+    }
+
     .provenance {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
         gap: var(--s-2) var(--s-4);
-        margin: 0 0 var(--s-6);
-        padding: var(--s-4);
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-3);
-        background: var(--bg-elevated);
+        margin: 0;
+        padding: var(--s-3) var(--s-4) var(--s-4);
+        border-top: 1px solid var(--line-soft);
         font-size: 0.82rem;
     }
 
@@ -699,6 +748,15 @@ const runTimes = [
         color: var(--fg-muted);
         font-size: 0.8rem;
         line-height: 1.55;
+    }
+
+    .reading-key summary {
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    .reading-key p {
+        margin: var(--s-2) 0 0;
     }
 
     @media (max-width: 760px) {
