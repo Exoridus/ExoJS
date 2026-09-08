@@ -16,9 +16,9 @@ outside the repo (design source); these are the SVGO-optimised web copies.
 
 | File | Use |
 | --- | --- |
-| `wordmark-exo-dot-js.svg` / `-light.svg` / `-mono.svg` | `exo.js` lockup, the site header and README lockup; `-light.svg` sets the light-theme ink. |
-| `wordmark-ExoJS.svg` / `-mono.svg` | `ExoJS` lockup. |
-| `wordmark-ExoJS-limeJS.svg` | `ExoJS` with the lime `JS`. |
+| `wordmark-exo-dot-js-dark.svg` | `exo.js` lockup on dark backgrounds: the site header and the README. |
+| `wordmark-exo-dot-js-light.svg` | The same lockup with the light-theme ink. |
+| `wordmark-exo-dot-js-mono.svg` | Single-colour (`currentColor`). |
 
 ## Favicons (generated, in `site/public/`)
 

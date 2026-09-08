@@ -1,7 +1,7 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Exoridus/ExoJS/main/site/public/brand/wordmark-exo-dot-js.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Exoridus/ExoJS/main/site/public/brand/wordmark-exo-dot-js-dark.svg">
   <img src="https://raw.githubusercontent.com/Exoridus/ExoJS/main/site/public/brand/wordmark-exo-dot-js-light.svg" alt="ExoJS" width="284" height="108">
 </picture>
 
