@@ -209,8 +209,11 @@ describe('WebGPU Sprite — solid color', () => {
 
       const readPixel = readWebGpuPixels(backend, canvasSize);
 
+      // The scale set before the load survives it: the 16x16 texture draws
+      // 32 px wide, so the sprite covers (40, 40) and stops well before (60, 60).
       expectPixelNear(readPixel(32, 32), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(40, 40), [0, 0, 0, 255]);
+      expectPixelNear(readPixel(40, 40), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(60, 60), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       texture.destroy();
