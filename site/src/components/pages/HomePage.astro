@@ -4,10 +4,11 @@ import { Code } from 'astro:components';
 import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
 import ExampleThumb from '../../components/ExampleThumb.astro';
 import { GuideExamplePreview } from '../../components/GuideExamplePreview';
-import { appInfo } from '../../lib/app-info';
+import InstallCommand from '../../components/InstallCommand.astro';
 import { getAllExamples, getExamplesForChapter } from '../../lib/examples-catalog';
 import { getExampleExecutionSource } from '../../lib/example-sources';
 import { GUIDE_PARTS } from '../../lib/guide-structure';
+import { SHIKI_THEMES } from '../../lib/shiki-theme';
 
 interface Props {
     locale: 'en' | 'de';
@@ -16,8 +17,6 @@ interface Props {
 const { locale } = Astro.props;
 const localeBase = `${import.meta.env.BASE_URL}${locale}/`;
 
-const majorVersion = Number.parseInt(appInfo.version.split('.')[0] ?? '0', 10);
-const releaseStage = Number.isFinite(majorVersion) && majorVersion < 1 ? 'Pre-1.0' : 'Stable';
 const chapterCount = GUIDE_PARTS.reduce((sum, part) => sum + part.chapters.length, 0);
 const demoCount = getAllExamples().length;
 
@@ -28,65 +27,49 @@ const heroExample = getExamplesForChapter('lighting').find(entry => entry.slug =
 const heroExampleTitle = heroExample?.title ?? 'Many Lights';
 const heroExampleSource = getExampleExecutionSource('lighting', 'many-lights');
 
-const heroSnippet = `import {
-  Application, Color, Container, Scene, Sprite,
-} from '@codexo/exojs';
-import {
-  LightingSystem, LitSpriteMaterial, PointLight,
-} from '@codexo/exojs-lighting';
+const heroSnippet = `import { Application, Color, Scene, Sprite } from '@codexo/exojs';
+import { LightingSystem, LitSpriteMaterial, PointLight } from '@codexo/exojs-lighting';
+
+const lighting = new LightingSystem();
+const lights = Array.from({ length: 24 }, (_, i) => {
+  const color = Color.fromCss(\`hsl(\${i * 15} 80% 60%)\`);
+  return new PointLight({ radius: 190, color });
+});
 
 class LitScene extends Scene {
-  private lighting = new LightingSystem({ maxLights: 48 });
-  private floor = new Container();
-  private lights: PointLight[] = [];
-  private t = 0;
-
   async load(loader) {
-    const material = new LitSpriteMaterial({
-      lighting: this.lighting,
-      normalMap: await loader.load('stone-normal.png'),
-    });
     const stone = await loader.load('stone.png');
+    const normalMap = await loader.load('stone-normal.png');
+    const material = new LitSpriteMaterial({ lighting, normalMap });
 
     for (let i = 0; i < 112; i++) {
       const tile = new Sprite(stone);
       tile.setPosition((i % 14) * 96, Math.floor(i / 14) * 96);
       tile.material = material;
-      this.floor.addChild(tile);
+      this.root.addChild(tile);
     }
   }
 
   init() {
-    this.systems.add(this.lighting);
-
-    // 24 lights in one data texture - still a single batch.
-    for (let i = 0; i < 24; i++) {
-      const color = Color.fromCss(\`hsl(\${i * 15} 80% 60%)\`);
-      const light = new PointLight({ radius: 190, color });
-      this.lights.push(light);
-      this.lighting.add(light);
-    }
+    this.systems.add(lighting);
+    lights.forEach(light => lighting.add(light));
   }
 
-  update(delta) {
-    this.t += delta;
-    this.lights.forEach((light, i) => {
-      const a = this.t * (0.25 + (i % 7) * 0.08) + i;
-      light.x = 640 + Math.cos(a) * 420;
-      light.y = 360 + Math.sin(a * 1.37) * 260;
+  update() {
+    const t = this.app.activeSeconds;
+    lights.forEach((light, i) => {
+      const angle = t * (0.25 + i * 0.08) + i;
+      light.x = 640 + Math.cos(angle) * 420;
+      light.y = 360 + Math.sin(angle * 1.37) * 260;
     });
   }
 
   draw(context) {
-    context.render(this.floor);
+    context.render(this.root);
   }
 }
 
-const app = new Application({
-  canvas: { width: 1280, height: 720 },
-});
-
-app.start(new LitScene());`;
+new Application({ canvas: { width: 1280, height: 720 } }).start(new LitScene());`;
 
 const quickstartSnippet = `import { Application, Scene } from '@codexo/exojs';
 
@@ -161,10 +144,6 @@ const examples = [
         <section class="hero">
             <div class="hero-inner">
                 <div class="hero-copy">
-                    <span class="hero-eyebrow">
-                        <span class="pip"><span class="dot"></span>v{appInfo.version}</span>
-                        <span>{releaseStage} / TypeScript / {appInfo.license}</span>
-                    </span>
                     <h1><span class="nowrap">A TypeScript-first</span><br />2D runtime for<br /><span class="hero-token-wrap"><span class="hero-token" id="hero-token">arcade games</span></span></h1>
                     <p class="lead">
                         ExoJS gives you scenes, sprites, graphics, input, audio, effects, assets, and rendering primitives — without turning your project into a full game-engine workflow.
@@ -173,7 +152,9 @@ const examples = [
                         <a class="btn btn-primary" href={`${localeBase}guide/`}>Read the Guide</a>
                         <a class="btn btn-ghost" href={`${localeBase}playground/`}>Open Playground</a>
                         <a class="btn btn-link" href={`${localeBase}api/`}>Browse API</a>
-                        <span class="meta">npm i @codexo/exojs</span>
+                    </div>
+                    <div class="hero-install">
+                        <InstallCommand />
                     </div>
                 </div>
                 <div class="hero-snippet">
@@ -182,7 +163,7 @@ const examples = [
                         <span class="file">game.ts</span>
                         <span class="caps"><span class="cap cap-accent">scene</span><span class="cap">lighting</span></span>
                     </div>
-                    <Code code={heroSnippet} lang="ts" themes={{ light: 'github-light', dark: 'one-dark-pro' }} />
+                    <Code code={heroSnippet} lang="ts" themes={SHIKI_THEMES} />
                 </div>
             </div>
         </section>
@@ -285,19 +266,9 @@ const examples = [
                     <a class="btn btn-ghost" href={`${localeBase}guide/getting-started/setup/`}>Open Getting Started</a>
                 </div>
                 <div>
-                    <div class="install-tabs">
-                        <button type="button" data-active="true">npm</button>
-                        <button type="button">pnpm</button>
-                        <button type="button">yarn</button>
-                        <button type="button">bun</button>
-                    </div>
-                    <div class="install-line">
-                        <span class="dollar">$</span>
-                        <span><span class="key">npm</span> install <span class="pkg">@codexo/exojs</span></span>
-                        <span class="copy">COPY</span>
-                    </div>
+                    <InstallCommand />
                     <div class="snippet">
-                        <Code code={quickstartSnippet} lang="ts" themes={{ light: 'github-light', dark: 'github-dark' }} />
+                        <Code code={quickstartSnippet} lang="ts" themes={SHIKI_THEMES} />
                     </div>
                 </div>
             </div>
@@ -414,39 +385,6 @@ const examples = [
         }
     }
 
-    .hero-eyebrow {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--s-2);
-        margin-bottom: var(--s-5);
-        padding: 4px 10px 4px 4px;
-        border-radius: var(--r-pill);
-        background: var(--bg-elevated);
-        border: 1px solid var(--line-soft);
-        font-size: 12px;
-        color: var(--fg-muted);
-        font-family: var(--f-mono);
-    }
-
-    .hero-eyebrow .pip {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        padding: 2px 8px;
-        background: var(--accent-soft);
-        color: var(--accent);
-        border-radius: var(--r-pill);
-        font-weight: 600;
-    }
-
-    .hero-eyebrow .dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: var(--accent);
-        box-shadow: 0 0 0 3px var(--accent-soft);
-    }
-
     .hero h1 {
         font-size: clamp(40px, 5.4vw, 68px);
         font-weight: 600;
@@ -510,11 +448,9 @@ const examples = [
         align-items: center;
     }
 
-    .hero-cta .meta {
-        color: var(--fg-faint);
-        font-size: 13px;
-        font-family: var(--f-mono);
-        margin-left: var(--s-3);
+    .hero-install {
+        margin-top: var(--s-5);
+        max-width: 420px;
     }
 
     .home .btn {
@@ -628,8 +564,10 @@ const examples = [
         border-radius: 0 !important;
         background: transparent !important;
         box-shadow: none !important;
-        font-size: 13px;
-        line-height: 1.7;
+        font-size: 12.5px;
+        line-height: 1.6;
+        overflow-x: hidden !important;
+        mask-image: linear-gradient(90deg, #000 92%, transparent);
     }
 
     .live-hero {
@@ -909,62 +847,6 @@ const examples = [
         margin: 0 0 var(--s-5);
         color: var(--fg-muted);
         max-width: 460px;
-    }
-
-    .install-tabs {
-        display: flex;
-        gap: 4px;
-        padding: 4px;
-        background: var(--bg-canvas);
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-2);
-        width: max-content;
-        margin-bottom: var(--s-3);
-    }
-
-    .install-tabs button {
-        padding: 4px 10px;
-        border-radius: 4px;
-        font-size: 12px;
-        font-family: var(--f-mono);
-        color: var(--fg-muted);
-        border: 0;
-        background: transparent;
-    }
-
-    .install-tabs button[data-active='true'] {
-        background: var(--bg-elevated);
-        color: var(--fg);
-    }
-
-    .install-line {
-        display: flex;
-        align-items: center;
-        gap: var(--s-2);
-        background: var(--bg-code);
-        border: 1px solid var(--line);
-        border-radius: var(--r-2);
-        padding: 10px 14px;
-        font-family: var(--f-mono);
-        font-size: 13px;
-        color: oklch(92% 0.02 245);
-    }
-
-    .install-line .dollar {
-        color: oklch(70% 0.012 245);
-    }
-
-    .install-line .copy {
-        margin-left: auto;
-        color: oklch(70% 0.012 245);
-    }
-
-    .install-line .key {
-        color: oklch(78% 0.16 95);
-    }
-
-    .install-line .pkg {
-        color: oklch(80% 0.14 30);
     }
 
     .snippet {
