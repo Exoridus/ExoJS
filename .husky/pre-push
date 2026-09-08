@@ -53,22 +53,18 @@ while read local_ref local_sha remote_ref remote_sha; do
     esac
 done
 
-# verify:quick includes `typecheck:site`, which type-checks the site/examples
-# package against the PUBLISHED entry points (package.json `exports` →
-# dist/esm/*.d.ts) rather than against src/. Without a build those declaration
-# files don't exist and tsc reports a wall of ts(2307) "Cannot find module
-# 'exojs'" — a failure mode that reads like a broken import in the pushed
-# change, not like a missing prerequisite. Checking for the root entry point's
-# .d.ts up front turns that into one actionable line. Deliberately not running
-# the build here: it is slow enough that a hook doing it silently would be the
-# thing people bypass.
+# verify:quick includes `typecheck:site` and `full-bundle:exports:check`, which
+# read the PUBLISHED entry points (package.json `exports` → dist/) rather than
+# src/. A dist that is missing fails them with a wall of ts(2307) "Cannot find
+# module 'exojs'"; one that merely lags the sources - the state every local
+# edit leaves behind - fails the freshness gate inside the site group, after
+# the typecheck and lint groups have already run. Either way the push is lost,
+# the build runs by hand, and everything runs again. So the build runs here
+# instead, exactly when the source stamp says it is due and never otherwise: a
+# clean tree pays one hash walk.
 if [ "$is_branch_push" = "1" ]; then
-    if [ ! -e dist/esm/index.d.ts ]; then
-        echo "[pre-push] dist/ is missing — 'typecheck:site' would fail with ts(2307) 'Cannot find module exojs'."
-        echo "[pre-push] It type-checks site/examples against the published entry points, which only exist after a build."
-        echo "[pre-push] Run 'pnpm build', then push again."
-        exit 1
-    fi
+    echo "[pre-push] checking dist against the sources"
+    node scripts/check-dist-fresh.ts --rebuild || exit 1
 fi
 
 if [ "$is_tag_push" = "1" ]; then
