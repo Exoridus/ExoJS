@@ -8,7 +8,6 @@ import styles from './Editor.module.scss';
 import type { EditorCodeHandle, EditorCodeProps, EditorCursorEvent, EditorDiagnostic, ResetCodeEvent, UpdateCodeEvent } from './EditorCode';
 import { type CanvasSizeEvent, EditorPreview, type EditorPreviewHandle } from './EditorPreview';
 import { EditorStatusBar } from './EditorStatusBar';
-import { LoadingSpinner } from './LoadingSpinner';
 import { PreviewToolbar } from './PreviewToolbar';
 import { css, cx } from './react-utils';
 
@@ -321,7 +320,10 @@ export const Editor = ({
           server left an empty one - the mismatch React reports as #418, after
           which it discards and rebuilds this tree on every page load.
         */}
-        <Suspense fallback={<LoadingSpinner centered />}>
+        {/* No spinner of its own: the preview beside it already shows one
+            while the example boots, and two spinners on one screen read as
+            two things being broken rather than one page loading. */}
+        <Suspense fallback={null}>
           {!hydrated ? null : (
             <EditorCode
               ref={codeEditorRef}
