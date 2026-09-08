@@ -37,7 +37,9 @@ export const ThemeToggle = (): JSX.Element => {
         aria-pressed={theme === 'dark'}
         onClick={() => chooseTheme('dark')}
       >
-        <span aria-hidden="true">Dark</span>
+        <svg viewBox="0 0 20 20" width="20" height="20" fill="none" aria-hidden="true">
+          <path d="M17.5 10.66A7.5 7.5 0 1 1 9.34 2.5a5.83 5.83 0 0 0 8.16 8.16z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+        </svg>
       </button>
       <button
         type="button"
@@ -46,7 +48,15 @@ export const ThemeToggle = (): JSX.Element => {
         aria-pressed={theme === 'light'}
         onClick={() => chooseTheme('light')}
       >
-        <span aria-hidden="true">Light</span>
+        <svg viewBox="0 0 20 20" width="20" height="20" fill="none" aria-hidden="true">
+          <circle cx="10" cy="10" r="3.2" stroke="currentColor" strokeWidth="1.6" />
+          <path
+            d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
+        </svg>
       </button>
     </div>
   );
