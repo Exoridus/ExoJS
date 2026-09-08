@@ -1,8 +1,9 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/Exoridus/ExoJS/main/site/public/brand/mark-e-dot-dark.svg" alt="" width="88" height="88">
-
-# ExoJS
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Exoridus/ExoJS/main/site/public/brand/wordmark-ExoJS.svg">
+  <img src="https://raw.githubusercontent.com/Exoridus/ExoJS/main/site/public/brand/wordmark-ExoJS-mono.svg" alt="ExoJS" width="284" height="104">
+</picture>
 
 [![Latest](https://img.shields.io/github/v/release/Exoridus/ExoJS?style=for-the-badge&label=Latest&logo=github&color=44cc11)](https://github.com/Exoridus/ExoJS/releases/latest)
 [![npm](https://img.shields.io/npm/v/%40codexo%2Fexojs?style=for-the-badge&logo=npm&label=npm&color=44cc11)](https://www.npmjs.com/package/@codexo/exojs)
