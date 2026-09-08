@@ -352,14 +352,18 @@ export class Sprite extends Drawable {
     this.flags.addMask(SpriteFlags.TextureCoords);
 
     // A frame the caller chose stands; only the schedule-time reset's own 0x0
-    // frame is replaced by the real dimensions.
+    // frame is replaced by the real dimensions. The sprite's scale is left as
+    // the caller set it: a scale applied while the texture was still loading
+    // is the size they asked for, and only a size assigned in the meantime
+    // overrides it. Resizing to the frame here would silently reset that
+    // scale to 1 the moment the texture arrives.
     if (this._textureFrame.width === 0 && this._textureFrame.height === 0) {
-      // Read before the reset: it sizes the sprite to the new frame, and that
-      // assignment goes through the same setter, which clears what is pending.
+      // Read before the frame is set: applying a size goes through the same
+      // setter, which clears what is pending.
       const width = this._pendingWidth;
       const height = this._pendingHeight;
 
-      this.resetTextureFrame();
+      this.setTextureFrame(this._resetFrameScratch.set(0, 0, texture.width, texture.height), false);
 
       if (width !== null) this.width = width;
       if (height !== null) this.height = height;
