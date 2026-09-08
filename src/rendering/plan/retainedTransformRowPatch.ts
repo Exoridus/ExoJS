@@ -5,6 +5,7 @@ import { resolveRendererFor } from '#rendering/rendererLookup';
 import type { RenderNode } from '#rendering/RenderNode';
 import { packTintRow, packTransformRow, TRANSFORM_FLOATS_PER_ROW, TRANSFORM_TINT_BYTES_PER_ROW } from '#rendering/TransformBuffer';
 
+import { changeBelongsToLiveEntry } from './liveEntryChange';
 import type { RetainedFragmentDraw, RetainedGroupFragment } from './RetainedGroupFragment';
 import type { RetainedGroupBundle } from './RetainedInstructionSet';
 
@@ -292,25 +293,32 @@ export const reconcileRetainedTransformRows = (
  * both kinds of change bump.
  * @internal
  */
-export const reconcileRetainedTintRows = (fragment: RetainedGroupFragment, owns: (node: RenderNode) => boolean): boolean => {
+export const reconcileRetainedTintRows = (fragment: RetainedGroupFragment, root: RenderNode, owns: (node: RenderNode) => boolean): boolean => {
   const set = fragment.instructions;
   const bundle = set?.hasRecording === true ? set.ownedBundle : null;
   const patchable = bundle !== null && typeof bundle.patchTintRow === 'function' && bundle.transformRowBase !== undefined;
   const base = fragment.recordedRowBase();
 
-  const applied = nodeDirtyIndex.readSince(fragment.contentCursor, DirtyChannel.Content | DirtyChannel.Tint, (node, marked) => {
+  const applied = nodeDirtyIndex.readSince(fragment.contentCursor, DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect, (node, marked) => {
     const changed = node as unknown as RenderNode;
     const drawable = changed as unknown as Drawable;
     const rowIndex = fragment.recordedRowIndex(drawable);
 
     // Same economy as the transform channel: a change to something this
     // fragment drew is recognised by the row map, and only a mark the map does
-    // not know needs the walk to decide whether it is even ours.
-    if (rowIndex === undefined && !owns(changed)) {
+    // not know needs the walk to decide whether it is even ours. The root
+    // itself is ours: a change to it reaches everything below.
+    if (rowIndex === undefined && changed !== root && !owns(changed)) {
       return true;
     }
 
-    if ((marked & DirtyChannel.Content) !== 0) {
+    // A change on or below a node the capture re-dispatches live is that
+    // dispatch's to pick up; the records hold nothing about it.
+    if (rowIndex === undefined && changeBelongsToLiveEntry(changed, root, marked, candidate => fragment.hasLiveRecordFor(candidate))) {
+      return true;
+    }
+
+    if ((marked & (DirtyChannel.Content | DirtyChannel.Effect)) !== 0) {
       // Not a tint-only change: nothing in a recorded product expresses a new
       // texture, geometry or blend mode without re-recording it.
       return false;

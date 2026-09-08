@@ -1109,6 +1109,8 @@ export class SceneNode implements Collidable {
   public _tintMarkSequence = 0;
   /** @internal - see {@link _dirtyMarkGeneration}. */
   public _structureMarkSequence = 0;
+  /** @internal - see {@link _dirtyMarkGeneration}. */
+  public _effectMarkSequence = 0;
 
   /**
    * @internal - mark this node's content dirty and propagate the stamp up to

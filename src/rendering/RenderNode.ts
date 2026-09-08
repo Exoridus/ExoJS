@@ -489,7 +489,7 @@ export abstract class RenderNode extends SceneNode {
       }
     }
 
-    this.invalidateCache();
+    this._invalidateEffect();
   }
 
   /**
@@ -526,7 +526,7 @@ export abstract class RenderNode extends SceneNode {
 
     if (this._mask !== mask) {
       this._mask = mask;
-      this.invalidateCache();
+      this._invalidateEffect();
     }
   }
 
@@ -747,7 +747,7 @@ export abstract class RenderNode extends SceneNode {
   public set cacheAsTexture(cacheAsTexture: boolean) {
     if (this._cacheAsTexture !== cacheAsTexture) {
       this._cacheAsTexture = cacheAsTexture;
-      this.invalidateCache();
+      this._invalidateEffect();
 
       if (!cacheAsTexture) {
         this._destroyCacheTexture();
@@ -775,7 +775,7 @@ export abstract class RenderNode extends SceneNode {
   public set cacheResolution(cacheResolution: TargetResolution) {
     if (this._cacheResolution !== cacheResolution) {
       this._cacheResolution = cacheResolution;
-      this.invalidateCache();
+      this._invalidateEffect();
     }
   }
 
@@ -785,7 +785,7 @@ export abstract class RenderNode extends SceneNode {
     // state reaches back here without the application having to re-add it.
     filter._attachOwner(this);
 
-    return this.invalidateCache();
+    return this._invalidateEffect();
   }
 
   public removeFilter(filter: Filter): this {
@@ -794,7 +794,7 @@ export abstract class RenderNode extends SceneNode {
     if (index !== -1) {
       this._filters!.splice(index, 1);
       filter._detachOwner(this);
-      this.invalidateCache();
+      this._invalidateEffect();
     }
 
     return this;
@@ -826,7 +826,7 @@ export abstract class RenderNode extends SceneNode {
     if (this._filters !== null && this._filters.length > 0) {
       this._detachFilterOwnership();
       this._filters.length = 0;
-      this.invalidateCache();
+      this._invalidateEffect();
     }
 
     return this;
@@ -835,6 +835,21 @@ export abstract class RenderNode extends SceneNode {
   public invalidateCache(): this {
     this._cacheDirty = true;
     this._markContentDirty();
+
+    return this;
+  }
+
+  /**
+   * Cache invalidation for a change to this node's effect - mask, filters,
+   * texture cache. Content-dirties exactly as {@link invalidateCache} does, so
+   * every consumer that recorded this node as ordinary content still rebuilds;
+   * the difference is the channel it marks, which is what lets a product that
+   * holds this node as a live entry keep replaying: the effect is never part
+   * of the product, it is read live on every dispatch.
+   */
+  private _invalidateEffect(): this {
+    this._cacheDirty = true;
+    this._markContentDirty(DirtyChannel.Effect);
 
     return this;
   }

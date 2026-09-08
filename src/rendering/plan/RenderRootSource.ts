@@ -5,8 +5,11 @@ import type { RenderNode } from '#rendering/RenderNode';
 
 import type { DerivedRootProduct } from './DerivedRootProduct';
 import { GridVisibility } from './GridVisibility';
+import { changeBelongsToLiveEntry } from './liveEntryChange';
+import { RenderEntryKind } from './renderCommand';
 import type { RenderItemVisibility } from './RenderItemVisibility';
 import { finalizeSourceScopes, releaseScopeContents, type SourceScope } from './renderSourceItem';
+import { isUnder } from './retainedTransformRowPatch';
 
 /** What one frame selects from: the scopes, the source, and this view's membership. @internal */
 export interface SourceSelection {
@@ -220,6 +223,60 @@ export class RenderRootSource {
     this._ancestryStamp = -1;
     this._transformRevision = -1;
     this._changeCursor = -1;
+    this._liveEntryNodes.clear();
+  }
+
+  /**
+   * Whether the items still describe the subtree after a content change, and
+   * if so, adopt `contentRevision` as the new key.
+   *
+   * The source records nothing about a live entry - it is re-dispatched
+   * through its own collect on every selection - so a change marked on one, or
+   * on anything below one, leaves every item and bound the source holds
+   * intact. Reads the marks since the cursor to find out whether the change is
+   * only that (see {@link changeBelongsToLiveEntry}); a change to an item or to
+   * a container above items answers `false`, and the caller rebuilds as it
+   * always did. On `true` the cursor advances: every mark up to now is
+   * accounted for, exactly as {@link noteSettled} records for a quiet frame.
+   *
+   * Only the content key may differ. A structure, ancestry or transform change
+   * has its own tier and is refused here.
+   */
+  public reconcileContent(contentRevision: number, structureRevision: number, ancestryStamp: number, transformRevision: number, root: RenderNode): boolean {
+    if (
+      this._rootScope === null ||
+      this._structureRevision !== structureRevision ||
+      this._ancestryStamp !== ancestryStamp ||
+      this._transformRevision !== transformRevision
+    ) {
+      return false;
+    }
+
+    if (this._contentRevision === contentRevision) {
+      return true;
+    }
+
+    const liveEntries = this._liveEntryNodes;
+    const tolerable = nodeDirtyIndex.readSince(this._changeCursor, DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect, (node, marked) => {
+      const changed = node as unknown as RenderNode;
+
+      // A mark outside this subtree is another product's; only what lies on or
+      // below this root can invalidate its items.
+      if (changed !== root && !isUnder(changed, root)) {
+        return true;
+      }
+
+      return changeBelongsToLiveEntry(changed, root, marked, candidate => liveEntries.has(candidate));
+    });
+
+    if (!tolerable) {
+      return false;
+    }
+
+    this._contentRevision = contentRevision;
+    this.noteSettled();
+
+    return true;
   }
 
   // ---------------------------------------------------------------------------
@@ -241,6 +298,8 @@ export class RenderRootSource {
 
   /** Scope owning each container below the root, for resolving a change to a scope. */
   private readonly _scopeOfNode = new Map<RenderNode, SourceScope>();
+  /** Every node the source holds as a live entry, across all scopes; see {@link reconcileContent}. */
+  private readonly _liveEntryNodes = new Set<RenderNode>();
   /**
    * Mark sequence everything below this root has been accounted for up to.
    *
@@ -424,8 +483,10 @@ export class RenderRootSource {
 
   private _indexScopesByNode(root: RenderNode): void {
     const map = this._scopeOfNode;
+    const liveEntries = this._liveEntryNodes;
 
     map.clear();
+    liveEntries.clear();
 
     if (this._rootScope !== null) {
       map.set(root, this._rootScope);
@@ -436,6 +497,12 @@ export class RenderRootSource {
 
       if (node !== undefined) {
         map.set(node, scope);
+      }
+
+      for (const other of scope.others) {
+        if (other.kind === RenderEntryKind.Barrier) {
+          liveEntries.add(other.node);
+        }
       }
     }
   }

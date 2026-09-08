@@ -120,7 +120,20 @@ export class RetainedRootRepresentation {
   }
 
   public reconcileContent(contentRevision: number, root: RenderNode): boolean {
-    return this._capture.reconcileContent(contentRevision, root);
+    if (!this._capture.reconcileContent(contentRevision, root)) {
+      return false;
+    }
+
+    // A change the capture absorbed - a tint written into its rows, the effect
+    // of a live entry it re-dispatches anyway - leaves the products describing
+    // the scene, so the build gate counts the frame as one whose content it
+    // already knew. Without this a mask that moves on every frame would never
+    // repeat a content key, and the root it clips could never earn a source.
+    if (this._streakContent !== -1) {
+      this._streakContent = contentRevision;
+    }
+
+    return true;
   }
 
   public isCleanIgnoringTransform(contentRevision: number, structureRevision: number, ancestryStamp: number, view: View): boolean {

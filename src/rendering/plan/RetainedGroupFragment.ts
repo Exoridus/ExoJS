@@ -5,10 +5,12 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
 
 import { CaptureThrashSuppressor, CaptureVerdict } from './CaptureThrashSuppressor';
+import { changeBelongsToLiveEntry } from './liveEntryChange';
 import { RenderEntryKind } from './renderCommand';
 import type { ScopeEntry } from './RenderScope';
 import { isRetainedFragmentRecordable, RetainedInstructionSet } from './RetainedInstructionSet';
 import { copyRetainedDrawData, type MutableRetainedDrawData, releasePooledDrawables, RetainedRecordPool } from './RetainedRecordPool';
+import { isUnder } from './retainedTransformRowPatch';
 
 /**
  * A captured draw: replayed verbatim with a fresh frame-local nodeIndex.
@@ -175,6 +177,19 @@ export class RetainedGroupFragment {
    */
   public get hasLiveEntries(): boolean {
     return this._hasCapture && this._barrierPool.used > 0;
+  }
+
+  /** Whether the capture holds `node` as a live re-dispatch record. */
+  public hasLiveRecordFor(node: RenderNode): boolean {
+    const pool = this._barrierPool;
+
+    for (let i = 0; i < pool.used; i++) {
+      if (pool.at(i).node === node) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -378,6 +393,44 @@ export class RetainedGroupFragment {
 
   public isClean(contentRevision: number, structureRevision: number, backend: RenderBackend): boolean {
     return this._hasCapture && this._contentRevision === contentRevision && this._structureRevision === structureRevision && this._backend === backend;
+  }
+
+  /**
+   * Adopt `contentRevision` when every content change since the capture lies
+   * on or below a node the capture re-dispatches live - a mask whose rect
+   * moved, a nested boundary whose own content changed - and nothing else
+   * moved. The records hold nothing about such a change, so the capture
+   * stays valid; a change to anything the capture recorded answers `false`.
+   * Structure and backend must already match: this settles the content key
+   * only.
+   */
+  public reconcileLiveEntryChanges(contentRevision: number, structureRevision: number, backend: RenderBackend, root: RenderNode): boolean {
+    if (!this._hasCapture || this._structureRevision !== structureRevision || this._backend !== backend) {
+      return false;
+    }
+
+    if (this._contentRevision === contentRevision) {
+      return true;
+    }
+
+    const tolerable = nodeDirtyIndex.readSince(this._contentCursor, DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect, (node, marked) => {
+      const changed = node as unknown as RenderNode;
+
+      if (changed !== root && !isUnder(changed, root)) {
+        return true;
+      }
+
+      return changeBelongsToLiveEntry(changed, root, marked, candidate => this.hasLiveRecordFor(candidate));
+    });
+
+    if (!tolerable) {
+      return false;
+    }
+
+    this._contentRevision = contentRevision;
+    this.markContentSeen();
+
+    return true;
   }
 
   /**

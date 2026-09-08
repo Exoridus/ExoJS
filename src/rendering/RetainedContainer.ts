@@ -246,7 +246,12 @@ export class RetainedContainer extends Container {
     // unlinks the node, and that removal stamps every ancestor up to this
     // boundary structure-dirty, so a destroyed descendant always fails the key
     // check below instead of being replayed out of the recorded bundle.
-    if (this._fragment.isClean(this._contentRevision, this._structureRevision, builder.backend)) {
+    // Clean, or dirty only on or below a live re-dispatch record - a child
+    // mask's rect moved - which the capture holds nothing about.
+    if (
+      this._fragment.isClean(this._contentRevision, this._structureRevision, builder.backend) ||
+      this._fragment.reconcileLiveEntryChanges(this._contentRevision, this._structureRevision, builder.backend, this)
+    ) {
       // A content/structure-clean frame may still carry transform-only
       // descendant moves, since an own-transform move no longer content-
       // dirties. The recorded instruction set's baked transform rows are stale

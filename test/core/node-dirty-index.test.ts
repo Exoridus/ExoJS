@@ -115,6 +115,25 @@ describe('NodeDirtyIndex', () => {
     node.destroy();
   });
 
+  test('an effect mark is its own channel: read apart from content, and not mistaken for it', () => {
+    const node = new Container();
+    const before = nodeDirtyIndex.sequence;
+
+    nodeDirtyIndex.mark(node, DirtyChannel.Effect);
+
+    const seen: number[] = [];
+
+    nodeDirtyIndex.readSince(before, DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect, (_node, marked) => {
+      seen.push(marked);
+
+      return true;
+    });
+
+    expect(seen).toEqual([DirtyChannel.Effect]);
+    expect(nodeDirtyIndex.hasMarksSince(before, DirtyChannel.Content)).toBe(false);
+    expect(nodeDirtyIndex.hasMarksSince(before, DirtyChannel.Effect)).toBe(true);
+  });
+
   test('a mark on one channel does not erase an unread mark on another', () => {
     // A node that changes its content and then moves - a sprite whose deferred
     // texture arrives in a frame it is also being animated in. Losing the

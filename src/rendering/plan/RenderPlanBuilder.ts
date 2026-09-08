@@ -1069,7 +1069,7 @@ export class RenderPlanBuilder {
     // at all: the frame either re-issues the order stream the last selection
     // built, or rebuilds that stream from a membership delta. Both are cheaper
     // than the capture tiers below, and neither materialises a staying item.
-    if (this._collectPersistentRoot(representation, view, contentRevision, structureRevision, ancestryStamp, transformRevision)) {
+    if (this._collectPersistentRoot(node, representation, view, contentRevision, structureRevision, ancestryStamp, transformRevision)) {
       return;
     }
 
@@ -1195,6 +1195,7 @@ export class RenderPlanBuilder {
    * here at all - it takes the transform-reconcile tier below, which stays O(k).
    */
   private _collectPersistentRoot(
+    node: RenderNode,
     representation: RetainedRootRepresentation,
     view: View,
     contentRevision: number,
@@ -1204,7 +1205,9 @@ export class RenderPlanBuilder {
   ): boolean {
     const source = representation.source;
 
-    if (!source?.isUsable(contentRevision, structureRevision, ancestryStamp, transformRevision)) {
+    // A content change on or below a live entry - a mask whose rect moved -
+    // touches nothing the source holds, so it is adopted rather than refused.
+    if (!source?.reconcileContent(contentRevision, structureRevision, ancestryStamp, transformRevision, node)) {
       return false;
     }
 
@@ -1365,7 +1368,7 @@ export class RenderPlanBuilder {
   ): SourceSelection | null {
     const existing = representation.source;
 
-    if (existing?.isUsable(contentRevision, structureRevision, ancestryStamp, transformRevision)) {
+    if (existing?.reconcileContent(contentRevision, structureRevision, ancestryStamp, transformRevision, node)) {
       return this._beginSelection(existing, representation.ensureDerivedProduct());
     }
 

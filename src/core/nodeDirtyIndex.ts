@@ -33,6 +33,16 @@ export const enum DirtyChannel {
    * else.
    */
   Structure = 1 << 3,
+  /**
+   * Only the node's effect changed - its mask, clip, filters or texture cache.
+   * Split from {@link Content} because a retained product never records an
+   * effect: the node that carries one is re-dispatched live on every replay
+   * and reads the effect as it is then. A consumer that holds the node as
+   * such a live entry can therefore keep its product; one that recorded the
+   * node as ordinary content cannot, and the content revision still moves so
+   * it rebuilds as before.
+   */
+  Effect = 1 << 4,
 }
 
 /**
@@ -174,6 +184,10 @@ class NodeDirtyIndex {
       node._structureMarkSequence = sequence;
     }
 
+    if ((channels & DirtyChannel.Effect) !== 0) {
+      node._effectMarkSequence = sequence;
+    }
+
     bucket.lastSequence = sequence;
 
     // Already standing in this generation: fold the channels in. A node written
@@ -232,6 +246,10 @@ class NodeDirtyIndex {
 
     if ((marked & DirtyChannel.Structure) !== 0 && node._structureMarkSequence > sequence) {
       changed |= DirtyChannel.Structure;
+    }
+
+    if ((marked & DirtyChannel.Effect) !== 0 && node._effectMarkSequence > sequence) {
+      changed |= DirtyChannel.Effect;
     }
 
     return changed;

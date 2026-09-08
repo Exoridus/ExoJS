@@ -140,12 +140,15 @@ describe('transform-row patch is O(k moved), independent of group size', () => {
 
         // A tint change is a genuine content mutation: it invalidates the
         // recording and forces a full re-collect + re-record + re-store of ALL
-        // n rows over the next two frames (dirty collect, then record).
+        // n rows over the next frames - dirty collect, record, first splice.
+        // Which of the three carries the row upload depends on the tier the
+        // enclosing root sits on, so the cost is the widest upload among them.
         sprites[0]!.setTint(new Color(10, 20, 30));
-        measureFrame(harness, root); // dirty full collect
-        const recorded = measureFrame(harness, root); // re-record stores all rows
 
-        rows = recorded.transformRows;
+        for (let frame = 0; frame < 3; frame++) {
+          rows = Math.max(rows, measureFrame(harness, root).transformRows);
+        }
+
         root.destroy();
       });
 
