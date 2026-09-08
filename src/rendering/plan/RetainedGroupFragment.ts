@@ -169,6 +169,15 @@ export class RetainedGroupFragment {
   }
 
   /**
+   * Whether the capture holds a record that is re-dispatched live on every
+   * replay - a barrier effect, or a deferred transform group. Such a capture can
+   * never be recorded as an instruction set, however capable the backend.
+   */
+  public get hasLiveEntries(): boolean {
+    return this._hasCapture && this._barrierPool.used > 0;
+  }
+
+  /**
    * The shared transform-buffer row `drawable` was captured on, or `undefined`
    * when it is not a captured draw of this fragment. Lazily builds a
    * drawable→row map over every draw record, rebuilt after each capture.

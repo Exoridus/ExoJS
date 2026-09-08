@@ -49,6 +49,13 @@ export interface LiveEntry {
    */
   readonly kind: RenderEntryKind.Barrier;
   seq: number;
+  /**
+   * The `zIndex` the re-dispatch places the node at. Not reserved in the scope's
+   * placement state - the live collect reserves it on the frame-local scope -
+   * but the persistent slot tier reads it to refuse a scope whose live entry
+   * would be sorted away from its recorded position.
+   */
+  zIndex: number;
   node: RenderNode;
   reason: LiveEntryReason;
   /**

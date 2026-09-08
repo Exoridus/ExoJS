@@ -632,7 +632,14 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
    * plan built.
    * @internal
    */
-  public _drawPersistentSlots(store: WebGpuPersistentSlotStore, order: Uint32Array, count: number, backend: WebGpuBackend): void {
+  public _drawPersistentSlots(
+    store: WebGpuPersistentSlotStore,
+    order: Uint32Array,
+    orderCount: number,
+    offset: number,
+    count: number,
+    backend: WebGpuBackend,
+  ): void {
     const device = this._device;
 
     if (count === 0 || device === null || this._indexBuffer === null || this._persistentBindGroupLayout === null) {
@@ -673,7 +680,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     // same aliasing argument as the slot writes applies before either happens.
     const uniformDirty = this._stagePersistentUniforms(backend, store);
 
-    if (uniformDirty || store.orderWouldGrow(count)) {
+    if (uniformDirty || store.orderWouldGrow(orderCount)) {
       this._endPassOnPersistentHazard(backend, store);
     }
 
@@ -682,16 +689,18 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       store.uniformWritten = true;
     }
 
-    store.uploadOrder(order, count);
+    store.uploadOrder(order, orderCount, offset, count);
 
     const active = coordinator.acquirePass();
     const pass = active.pass;
 
+    // `firstInstance` selects the segment: the vertex stage reads the order
+    // buffer at `instance_index`, which WebGPU defines to include it.
     pass.setPipeline(this._getPersistentPipeline(store.blendMode, backend.renderTargetFormat, coordinator.stencilActive, device));
     pass.setBindGroup(0, store.bindGroup(device, this._persistentBindGroupLayout));
     pass.setBindGroup(1, textureBindGroup);
     pass.setIndexBuffer(this._indexBuffer, 'uint16');
-    pass.drawIndexed(indicesPerSprite, count, 0, 0, 0);
+    pass.drawIndexed(indicesPerSprite, count, 0, 0, offset);
 
     store.drawsInPass = active;
     coordinator.markPassDraws();

@@ -154,7 +154,7 @@ const createHarness = (): PersistentHarness => {
 
       return harness.rekeyAnswer;
     },
-    _drawPersistentOrder(_bundle: PersistentSlotBundle, _order: Uint32Array, count: number): void {
+    _drawPersistentOrder(_bundle: PersistentSlotBundle, _order: Uint32Array, _orderCount: number, _offset: number, count: number): void {
       harness.persistentDraws.push(count);
     },
   } as unknown as RenderBackend;

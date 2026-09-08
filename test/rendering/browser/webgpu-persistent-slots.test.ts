@@ -20,6 +20,7 @@
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import type { DerivedSlotStats } from '#rendering/plan/DerivedSelectionState';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -477,6 +478,74 @@ describe('WebGPU persistent-indexed selection', () => {
 
       expectPixelNear(readPixel(8, 8), red);
       expectPixelNear(readPixel(tile * 2 + 8, 8), blue);
+    } finally {
+      root.destroy();
+      redTexture.destroy();
+      blueTexture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('a masked container inside the root is painted between two slot segments', async ctx => {
+    const backend = await createBackend();
+    const root = new Container();
+    const redTexture = solidTexture('#ff0000');
+    const blueTexture = solidTexture('#0000ff');
+    const left = new Sprite(redTexture);
+    const clipped = new Container();
+    const inner = new Sprite(blueTexture);
+    const right = new Sprite(redTexture);
+
+    try {
+      left.setPosition(0, 0);
+      inner.setPosition(tile, 0);
+      right.setPosition(tile * 2, 0);
+      // The mask keeps the left half of the blue tile: the right half stays
+      // black, which is what tells a clipped draw from an unclipped one.
+      root.cullable = false;
+      clipped.cullable = false;
+      clipped.mask = new Rectangle(tile, 0, tile / 2, tile);
+      clipped.addChild(inner);
+      root.addChild(left);
+      root.addChild(clipped);
+      root.addChild(right);
+      // The source gate wants two rebuild frames over unchanged content, and
+      // a clean frame under a steady camera replays instead of rebuilding - so
+      // the camera leaves and comes back. The mask content is a root of its
+      // own and climbs on the same frames, which the two `cullable = false`
+      // above are for: a culled container is not collected on the far frame.
+      render(backend, root);
+      backend.view.move(canvasSize * 100, 0);
+      render(backend, root);
+      backend.view.move(-canvasSize * 100, 0);
+
+      if (!(await settle(ctx, backend, root, 3))) {
+        return;
+      }
+
+      // The order stream holds both outer sprites and is cut once, so the
+      // second segment is drawn with `firstInstance` 1 - the slot it draws has
+      // to be the one the stream names, not the one at the buffer's start.
+      expect(slotStatsOf(root).orderEntries).toBe(2);
+
+      let readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(readPixel(8, 8), red);
+      expectPixelNear(readPixel(tile + 4, 8), blue);
+      expectPixelNear(readPixel(tile + 12, 8), black);
+      expectPixelNear(readPixel(tile * 2 + 8, 8), red);
+
+      // The mask is live: moving it to the right half takes effect on the next
+      // frame. (The change also bumps the subtree's content revision, which is
+      // the root's source key, so that frame may leave the slot tier - the
+      // pixels are the contract here, not the tier.)
+      clipped.mask = new Rectangle(tile + tile / 2, 0, tile / 2, tile);
+      render(backend, root);
+
+      readPixel = readWebGpuPixels(backend, canvasSize);
+      expectPixelNear(readPixel(tile + 4, 8), black);
+      expectPixelNear(readPixel(tile + 12, 8), blue);
+      expectPixelNear(readPixel(tile * 2 + 8, 8), red);
     } finally {
       root.destroy();
       redTexture.destroy();
