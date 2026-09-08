@@ -1,0 +1,176 @@
+---
+/**
+ * The package install line with a package-manager switch and a copy button.
+ * Every instance on a page shares the chosen manager, and the choice persists
+ * across visits.
+ */
+import { Code } from 'astro:components';
+import { SHIKI_THEMES } from '../lib/shiki-theme';
+
+const COMMANDS = [
+    { manager: 'npm', command: 'npm install @codexo/exojs' },
+    { manager: 'pnpm', command: 'pnpm add @codexo/exojs' },
+    { manager: 'yarn', command: 'yarn add @codexo/exojs' },
+    { manager: 'bun', command: 'bun add @codexo/exojs' },
+] as const;
+---
+
+<div class="install" data-install>
+    <div class="tabs" role="tablist" aria-label="Package manager">
+        {COMMANDS.map(({ manager }, index) => (
+            <button type="button" role="tab" aria-selected={index === 0 ? 'true' : 'false'} data-manager={manager}>
+                {manager}
+            </button>
+        ))}
+    </div>
+    {COMMANDS.map(({ manager, command }, index) => (
+        <div class="line" role="tabpanel" data-manager={manager} hidden={index !== 0}>
+            <Code code={command} lang="sh" themes={SHIKI_THEMES} />
+            <button type="button" class="copy" data-copy={command} aria-label={`Copy "${command}"`}>Copy</button>
+        </div>
+    ))}
+</div>
+
+<style>
+    .install {
+        display: grid;
+        gap: var(--s-2);
+        justify-items: start;
+    }
+
+    .tabs {
+        display: flex;
+        gap: 2px;
+        padding: 2px;
+        background: var(--bg-canvas);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-2);
+    }
+
+    .tabs button {
+        padding: 3px 10px;
+        border: 0;
+        border-radius: 4px;
+        background: transparent;
+        color: var(--fg-muted);
+        font-family: var(--f-mono);
+        font-size: 12px;
+        cursor: pointer;
+        transition:
+            background var(--transition-fast),
+            color var(--transition-fast);
+    }
+
+    .tabs button:hover {
+        color: var(--fg);
+    }
+
+    .tabs button[aria-selected='true'] {
+        background: var(--bg-elevated);
+        color: var(--fg);
+    }
+
+    .line {
+        display: flex;
+        align-items: center;
+        gap: var(--s-3);
+        width: 100%;
+        padding: 0 6px 0 0;
+        background: var(--bg-code);
+        border: 1px solid var(--line);
+        border-radius: var(--r-2);
+    }
+
+    .line[hidden] {
+        display: none;
+    }
+
+    .line :global(pre.astro-code) {
+        flex: 1;
+        margin: 0;
+        padding: 9px 14px !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .copy {
+        flex: none;
+        padding: 4px 9px;
+        border: 1px solid oklch(32% 0.014 245);
+        border-radius: 4px;
+        background: transparent;
+        color: oklch(70% 0.012 245);
+        font-family: var(--f-mono);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition:
+            color var(--transition-fast),
+            border-color var(--transition-fast);
+    }
+
+    .copy:hover {
+        color: oklch(92% 0.02 245);
+        border-color: oklch(45% 0.014 245);
+    }
+
+    .copy[data-copied] {
+        color: var(--accent);
+        border-color: var(--accent-line);
+    }
+</style>
+
+<script>
+    const STORAGE_KEY = 'exo-package-manager';
+    const roots = [...document.querySelectorAll<HTMLElement>('[data-install]')];
+
+    const select = (manager: string): void => {
+        for (const root of roots) {
+            for (const tab of root.querySelectorAll<HTMLButtonElement>('[role="tab"]')) {
+                tab.setAttribute('aria-selected', tab.dataset.manager === manager ? 'true' : 'false');
+            }
+            for (const line of root.querySelectorAll<HTMLElement>('[role="tabpanel"]')) {
+                line.hidden = line.dataset.manager !== manager;
+            }
+        }
+    };
+
+    for (const root of roots) {
+        for (const tab of root.querySelectorAll<HTMLButtonElement>('[role="tab"]')) {
+            tab.addEventListener('click', () => {
+                const manager = tab.dataset.manager ?? 'npm';
+                select(manager);
+                try {
+                    window.localStorage.setItem(STORAGE_KEY, manager);
+                } catch {
+                    // Storage can be unavailable; the selection still applies to this page.
+                }
+            });
+        }
+        for (const copy of root.querySelectorAll<HTMLButtonElement>('[data-copy]')) {
+            copy.addEventListener('click', async () => {
+                await navigator.clipboard.writeText(copy.dataset.copy ?? '');
+                copy.dataset.copied = '';
+                copy.textContent = 'Copied';
+                window.setTimeout(() => {
+                    delete copy.dataset.copied;
+                    copy.textContent = 'Copy';
+                }, 1400);
+            });
+        }
+    }
+
+    try {
+        const stored = window.localStorage.getItem(STORAGE_KEY);
+        if (stored !== null && roots.some(root => root.querySelector(`[role="tab"][data-manager="${stored}"]`) !== null)) {
+            select(stored);
+        }
+    } catch {
+        // Storage can be unavailable; the default manager stays selected.
+    }
+</script>
