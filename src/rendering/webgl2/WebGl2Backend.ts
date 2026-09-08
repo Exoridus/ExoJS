@@ -797,6 +797,12 @@ export class WebGl2Backend implements RenderBackend {
   public _drawPersistentOrder(bundle: PersistentSlotBundle, order: Uint32Array, _orderCount: number, offset: number, count: number): void {
     const store = bundle as WebGl2PersistentSlotStore;
 
+    // Whatever renderer still holds a live batch recorded before this draw -
+    // a parallax layer played as a mark, a previous render() call kept for
+    // cross-call batching - issues it now, or it would land on top of slots
+    // recorded after it. The owner's own batcher is not necessarily the active
+    // one, so this is the backend's flush, not the owner's.
+    this._flushActiveRenderer();
     store.owner?._drawPersistentSlots(store, order, offset, count, this);
   }
 

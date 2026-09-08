@@ -464,6 +464,20 @@ export class RetainedRootRepresentation {
     this._streakTransform = transformRevision;
   }
 
+  /**
+   * Whether these keys are the ones the last rebuild frame noted - i.e. whether
+   * a rebuild frame with them would extend the streak {@link shouldBuildSource}
+   * reads, rather than reset it.
+   */
+  public rebuildKeysRepeat(contentRevision: number, structureRevision: number, ancestryStamp: number, transformRevision: number): boolean {
+    return (
+      this._streakContent === contentRevision &&
+      this._streakStructure === structureRevision &&
+      this._streakAncestry === ancestryStamp &&
+      this._streakTransform === transformRevision
+    );
+  }
+
   /** Whether a missing source is worth one culling-free discovery walk now. */
   public shouldBuildSource(): boolean {
     return !this._sourceUnbuildable && (this._rebuildStreak >= 1 || (!this._deltaRefused && this._churnStreak >= 2));

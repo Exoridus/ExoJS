@@ -825,6 +825,11 @@ export class WebGpuBackend implements RenderBackend {
   public _drawPersistentOrder(bundle: PersistentSlotBundle, order: Uint32Array, orderCount: number, offset: number, count: number): void {
     const store = bundle as WebGpuPersistentSlotStore;
 
+    // Drain the active renderer's live batch first, whichever renderer that
+    // is: a parallax layer played as a mark leaves the repeating renderer's
+    // batch pending, and the owner's own flush inside the draw covers only the
+    // sprite batcher. Same reasoning as `replayRetainedBatch`.
+    this._renderer?.flush();
     store.owner?._drawPersistentSlots(store, order, orderCount, offset, count, this);
   }
 

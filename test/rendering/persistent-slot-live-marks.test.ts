@@ -1,3 +1,5 @@
+import { vi } from 'vitest';
+
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
@@ -452,6 +454,80 @@ describe('persistent slots: a live entry cuts the order stream', () => {
       [0, 4],
       [4, 4],
     ]);
+
+    root.destroy();
+    harness.backend.destroy();
+  });
+
+  test('marks from a nested scope with a different z keep their stream positions', () => {
+    const harness = createHarness();
+    const root = new Container();
+
+    root.cullable = false;
+    addLeaves(root, 'a', 2, 100);
+
+    // A plain container whose children all sit at z 5: uniform inside its own
+    // scope, so the slot tier admits it, while the root's own children sit at z
+    // 0. The mask inside it and the mask under the root therefore reach the
+    // slot scope with different z, and only their append order may decide the
+    // playback order - a sort by z would swap them.
+    const group = new Container();
+    const inner = addLeaves(group, 'g', 1, 150);
+
+    inner[0]!.zIndex = 5;
+
+    const clipX = new Container();
+
+    clipX.zIndex = 5;
+    clipX.cullable = false;
+    clipX.mask = new Rectangle(0, 0, 400, 300);
+    addLeaves(clipX, 'x', 1, 200);
+    group.addChild(clipX);
+    root.addChild(group);
+
+    const clipM = new Container();
+
+    clipM.cullable = false;
+    clipM.mask = new Rectangle(0, 0, 500, 300);
+    addLeaves(clipM, 'm', 1, 250);
+    root.addChild(clipM);
+    addLeaves(root, 'b', 1, 300);
+    driveToSourceTier(root, harness.backend);
+
+    for (const store of harness.stores) store.segments.length = 0;
+
+    const events = frameEvents(harness, root);
+
+    expect(events).toEqual([...ids('a', 2), 'g0', 'scissor:0,0,400,300', 'x0', 'popScissor', 'scissor:0,0,500,300', 'm0', 'popScissor', 'b0']);
+    expect(harness.stores[0]!.segments).toEqual([
+      [0, 3],
+      [3, 1],
+    ]);
+
+    root.destroy();
+    harness.backend.destroy();
+  });
+
+  test('a masked root whose leaf moves every frame keeps replaying instead of re-collecting', () => {
+    const harness = createHarness();
+    const { root } = createMaskedScene();
+    const mover = root.children[0] as Leaf;
+
+    harness.backend.setView(viewAt(400));
+    playFrame(root, harness.backend);
+
+    const collectSpy = vi.spyOn(root, '_collectForRenderPlan');
+
+    // Each frame moves one leaf: the transform patch keeps the capture clean,
+    // but the transform revision differs from the last rebuild's every time, so
+    // no source would be built from such a frame - and it must not be spent on
+    // a whole collect for nothing.
+    for (let i = 1; i <= 3; i++) {
+      mover.setPosition(100 + i, 300);
+      playFrame(root, harness.backend);
+    }
+
+    expect(collectSpy).not.toHaveBeenCalled();
 
     root.destroy();
     harness.backend.destroy();
