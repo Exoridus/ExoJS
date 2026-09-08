@@ -82,23 +82,24 @@ export const EditorPreview = ({ exampleMeta, onCanvasSize, onPreviewErrors, ref,
     setUpdateId(value => value + 1);
     disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
     currentCanvasRef.current = { width: 0, height: 0, zoom: 1 };
-    // NOTE: do NOT pre-set --canvas-w/--preview-zoom here. The zoom is
-    // CSS `zoom` on the iframe, which rescales the iframe's inner layout
-    // viewport - applying it before the example loads makes preview.html
-    // fit its 1280x720 stage against a distorted innerWidth and every
-    // example renders shrunken into the top-left corner. The stable
-    // pre-load height comes from the surface's aspect-ratio instead
-    // (see Editor.module.scss).
-    rootRef.current?.style.removeProperty('--canvas-w');
-    rootRef.current?.style.removeProperty('--canvas-h');
-    rootRef.current?.style.removeProperty('--preview-zoom');
+    // Before the example reports its canvas, the frame already takes the
+    // stage's size scaled to the surface, so the iframe never sits at a
+    // different size or position from the one it settles on: the transform
+    // leaves the iframe's inner viewport alone, so this can be set early.
+    const zoom = measureFillZoom(rootRef.current, STAGE_WIDTH, STAGE_HEIGHT);
+    rootRef.current?.style.setProperty('--canvas-w', `${STAGE_WIDTH}px`);
+    rootRef.current?.style.setProperty('--canvas-h', `${STAGE_HEIGHT}px`);
+    rootRef.current?.style.setProperty('--preview-zoom', String(zoom));
     onCanvasSize?.({ width: 0, height: 0, zoom: 1 });
   }, [onCanvasSize, sourceCode]);
 
   useEffect(() => {
     const recalculateZoom = (): void => {
       const { width, height } = currentCanvasRef.current;
-      if (!width) return;
+      if (!width) {
+        rootRef.current?.style.setProperty('--preview-zoom', String(measureFillZoom(rootRef.current, STAGE_WIDTH, STAGE_HEIGHT)));
+        return;
+      }
       const zoom = measureFillZoom(rootRef.current, width, height);
       currentCanvasRef.current = { width, height, zoom };
       rootRef.current?.style.setProperty('--preview-zoom', String(zoom));
@@ -236,6 +237,10 @@ export const EditorPreview = ({ exampleMeta, onCanvasSize, onPreviewErrors, ref,
     </div>
   );
 };
+
+/** The stage preview.html lays every example out on; the frame takes this size until the canvas reports its own. */
+const STAGE_WIDTH = 1280;
+const STAGE_HEIGHT = 720;
 
 // Scale the canvas to fill the available preview-panel width rather than
 // sitting at native size with empty gutters. The iframe itself is a fixed

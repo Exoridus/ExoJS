@@ -160,9 +160,18 @@
 
                 if (!source) return;
 
+                // The playground shell hands the example its asset catalog
+                // through the iframe window; a preview opened in its own tab
+                // has no shell, so the catalog is resolved here against this
+                // page's location before the example runs.
+                var prelude =
+                    "import { assets as rawAssets } from './assets/catalog.js';\n" +
+                    "import { resolveAssetCatalog } from './assets/resolver.js';\n" +
+                    "window.assets = resolveAssetCatalog(rawAssets, new URL('assets/', window.location.href).href);\n";
+
                 var script = document.createElement('script');
                 script.type = 'module';
-                script.textContent = source + '\n';
+                script.textContent = prelude + source + '\n';
                 document.body.appendChild(script);
             })();
         </script>
