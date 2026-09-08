@@ -25,8 +25,13 @@ export interface BuildUnit {
   readonly built: boolean;
 }
 
-/** Packages that own their outputs and are never bundled by a dist-consuming step. */
-const TOOLING_PACKAGES = new Set(['exojs-build', 'exojs-config', 'exojs-bench', 'exojs-examples']);
+/**
+ * Packages that own their outputs and are never bundled by a dist-consuming
+ * step. The CLI is one: it emits a flat `dist/index.js` through its own tsc
+ * build rather than the shared library pipeline's `dist/esm/`, so read as a
+ * library unit it would look never built on every machine.
+ */
+const TOOLING_PACKAGES = new Set(['exojs-build', 'exojs-config', 'exojs-bench', 'exojs-examples', 'exojs-cli']);
 
 /** Core plus every runtime extension package, whether or not it has been built. */
 export const collectBuildUnits = (): BuildUnit[] => {
