@@ -21,44 +21,72 @@ const releaseStage = Number.isFinite(majorVersion) && majorVersion < 1 ? 'Pre-1.
 const chapterCount = GUIDE_PARTS.reduce((sum, part) => sum + part.chapters.length, 0);
 const demoCount = getAllExamples().length;
 
-// Live hero example — an ambient particle showcase that runs everywhere
+// Live hero example - an ambient lighting showcase that runs everywhere
 // (WebGL2, no input or audio gesture needed) so the landing shows the real
 // engine rendering in the page, not a video.
-const heroExample = getExamplesForChapter('particles').find(entry => entry.slug === 'bonfire');
-const heroExampleTitle = heroExample?.title ?? 'Bonfire';
-const heroExampleSource = getExampleExecutionSource('particles', 'bonfire');
+const heroExample = getExamplesForChapter('lighting').find(entry => entry.slug === 'many-lights');
+const heroExampleTitle = heroExample?.title ?? 'Many Lights';
+const heroExampleSource = getExampleExecutionSource('lighting', 'many-lights');
 
-const heroSnippet = `import { Application, Color, Scene, Sprite } from '@codexo/exojs';
+const heroSnippet = `import {
+  Application, Color, Container, Scene, Sprite,
+} from '@codexo/exojs';
+import {
+  LightingSystem, LitSpriteMaterial, PointLight,
+} from '@codexo/exojs-lighting';
 
-class HeroScene extends Scene {
-  private ship!: Sprite;
+class LitScene extends Scene {
+  private lighting = new LightingSystem({ maxLights: 48 });
+  private floor = new Container();
+  private lights: PointLight[] = [];
+  private t = 0;
 
   async load(loader) {
-    this.ship = new Sprite(await loader.load('ship.png'));
+    const material = new LitSpriteMaterial({
+      lighting: this.lighting,
+      normalMap: await loader.load('stone-normal.png'),
+    });
+    const stone = await loader.load('stone.png');
+
+    for (let i = 0; i < 112; i++) {
+      const tile = new Sprite(stone);
+      tile.setPosition((i % 14) * 96, Math.floor(i / 14) * 96);
+      tile.material = material;
+      this.floor.addChild(tile);
+    }
   }
 
   init() {
-    const { width, height } = this.app.canvas;
-    this.ship.setAnchor(0.5).setPosition(width / 2, height / 2);
+    this.systems.add(this.lighting);
 
-    // Pulse and spin — two tweens running in parallel.
-    this.app.tweens.create(this.ship.scale)
-      .to({ x: 1.4, y: 1.4 }, 0.9).yoyo(true).repeat(-1).start();
-    this.app.tweens.create(this.ship)
-      .to({ rotation: Math.PI }, 1.8).yoyo(true).repeat(-1).start();
+    // 24 lights in one data texture - still a single batch.
+    for (let i = 0; i < 24; i++) {
+      const color = Color.fromCss(\`hsl(\${i * 15} 80% 60%)\`);
+      const light = new PointLight({ radius: 190, color });
+      this.lights.push(light);
+      this.lighting.add(light);
+    }
+  }
+
+  update(delta) {
+    this.t += delta;
+    this.lights.forEach((light, i) => {
+      const a = this.t * (0.25 + (i % 7) * 0.08) + i;
+      light.x = 640 + Math.cos(a) * 420;
+      light.y = 360 + Math.sin(a * 1.37) * 260;
+    });
   }
 
   draw(context) {
-    context.render(this.ship);
+    context.render(this.floor);
   }
 }
 
 const app = new Application({
-  canvas: { width: 960, height: 540 },
-  clearColor: Color.black,
+  canvas: { width: 1280, height: 720 },
 });
 
-app.start(new HeroScene());`;
+app.start(new LitScene());`;
 
 const quickstartSnippet = `import { Application, Scene } from '@codexo/exojs';
 
@@ -82,7 +110,7 @@ const examples = [
     },
     {
         title: 'Chromatic Aberration',
-        description: 'Stack two filters on a layer for analog feel.',
+        description: 'Split the red and blue channels apart with a fragment-shader filter.',
         chapter: 'Filters',
         tags: ['filter', 'blend'],
         anim: 'chroma' as const,
@@ -105,12 +133,12 @@ const examples = [
         href: `${localeBase}playground/?example=sprites-textures/spritesheet-frames`,
     },
     {
-        title: 'Easing Curves',
-        description: 'Tween any numeric property with built-in easings.',
-        chapter: 'Tweens & Animation',
-        tags: ['tween', 'easing'],
-        anim: 'easing' as const,
-        href: `${localeBase}playground/?example=tweens-animation/easing-curves`,
+        title: 'Many Lights',
+        description: 'Up to 48 point lights over a normal-mapped floor, still one batch.',
+        chapter: 'Lighting',
+        tags: ['lighting', 'normal-map'],
+        anim: 'lights' as const,
+        href: `${localeBase}playground/?example=lighting/many-lights`,
     },
     {
         title: 'Camera And View',
@@ -152,7 +180,7 @@ const examples = [
                     <div class="head">
                         <span class="dot3"></span><span class="dot3"></span><span class="dot3"></span>
                         <span class="file">game.ts</span>
-                        <span class="caps"><span class="cap cap-accent">scene</span><span class="cap">tweens</span></span>
+                        <span class="caps"><span class="cap cap-accent">scene</span><span class="cap">lighting</span></span>
                     </div>
                     <Code code={heroSnippet} lang="ts" themes={{ light: 'github-light', dark: 'one-dark-pro' }} />
                 </div>
@@ -178,15 +206,15 @@ const examples = [
             <div class="live-hero-stage">
                 <GuideExamplePreview
                     client:visible
-                    chapter="particles"
-                    slug="bonfire"
+                    chapter="lighting"
+                    slug="many-lights"
                     title={heroExampleTitle}
                     sourceCode={heroExampleSource}
                     capabilities={heroExample?.capabilities ?? []}
                 />
             </div>
             <div class="live-hero-actions">
-                <a class="btn btn-ghost" href={`${localeBase}playground/?example=particles/bonfire`}>Open in Playground</a>
+                <a class="btn btn-ghost" href={`${localeBase}playground/?example=lighting/many-lights`}>Open in Playground</a>
                 <a class="btn btn-link" href={`${localeBase}playground/`}>Browse all {demoCount} demos</a>
             </div>
         </section>
