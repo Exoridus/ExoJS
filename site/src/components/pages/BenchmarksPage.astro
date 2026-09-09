@@ -4,34 +4,30 @@
  *
  * The page is generated at build time from the machine profiles under
  * `packages/exojs-bench/results/` and from nothing else, so it cannot drift from
- * the harness: a re-measurement rewrites the headline paragraph, the tables and
- * the provenance together. Losses are published on the same terms as wins, and
- * the rows the harness left out of a comparison are shown with their reasons.
+ * the harness: a re-measurement rewrites the scoreboard, the tables and the
+ * provenance together. Losses are published on the same terms as wins, nothing
+ * is aggregated into a score or an overall winner, and the rows the harness left
+ * out of a comparison are listed with their reasons.
  *
- * When the directory holds no profile - a fresh clone, or the state a release
- * branch sits in before its reference run - the measured sections disappear and
- * the methodology, reproduction and fairness sections stay, because those are
- * what a reader can act on when there is nothing to read yet.
+ * The numbers come first and the practices behind them last. Methodology,
+ * reproduction and fairness are what a reader consults once a row surprises
+ * them, so they sit under the tables rather than in front of them - and they
+ * stay on the page when the directory holds no profile at all, which is the
+ * state a fresh clone and a release branch before its reference run are in.
  */
 
 import BenchProfileReport from '../BenchProfileReport.astro';
 import DocsLayout from '../../layouts/DocsLayout.astro';
 import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
 import { appInfo } from '../../lib/app-info';
-import { formatDay, FRAME_BUDGET_MS, furtherProfiles, headlineFindings, olderThanReference, referenceProfile } from '../../lib/bench-profiles';
+import { formatDay, FRAME_BUDGET_MS, furtherProfiles, olderThanReference, profileScope, referenceProfile } from '../../lib/bench-profiles';
 
 interface Props {
     locale: 'en' | 'de';
 }
 
 const { locale } = Astro.props;
-const allFindings = referenceProfile === undefined ? [] : headlineFindings(referenceProfile);
-/** The scope sentence names the measurement; it sits under the title, the verdict sentences are the findings. */
-const scope = allFindings.find(finding => finding.tone === 'scope');
-const findings = allFindings.filter(finding => finding.tone !== 'scope');
-
-/** The word next to a headline sentence, so a lead and a loss are labelled rather than coloured into a ranking. */
-const TONE_LABELS = { scope: 'scope', lead: 'lead', level: 'level', loss: 'loss', unstable: 'unstable' } as const;
+const scope = referenceProfile === undefined ? '' : profileScope(referenceProfile);
 
 /**
  * Runs the reproduction below pools. A published profile states the number it
@@ -43,62 +39,39 @@ const REPRODUCTION_RUNS = 3;
 const pooledRuns = referenceProfile?.profile.runs ?? REPRODUCTION_RUNS;
 ---
 
-<DocsLayout title="ExoJS benchmarks" description="Measured comparisons between ExoJS and other 2D rendering and physics libraries.">
-    <aside slot="rail" class="toc" aria-label="Benchmarks table of contents">
-        <h6>On this page</h6>
-        <ul>
-            <li><a href="#findings" data-active="true">Headline findings</a></li>
-            {referenceProfile !== undefined && <li><a href="#reference">Reference profile</a></li>}
-            {furtherProfiles.length > 0 && <li><a href="#further">Further machines</a></li>}
-            <li><a href="#methodology">Methodology</a></li>
-            <li><a href="#reproduce">Reproduce</a></li>
-            <li><a href="#fairness">Fairness</a></li>
-        </ul>
-    </aside>
-
+<DocsLayout
+    title="ExoJS benchmarks"
+    description="Measured comparisons between ExoJS and other 2D rendering and physics libraries."
+    variant="wide"
+>
     <div class="prose bench-prose" data-pagefind-body={locale === 'en' ? true : undefined}>
         {locale === 'de' && <EnglishFallbackNotice />}
 
         <header class="bench-head">
             <h1>Benchmarks</h1>
             <p>
-                ExoJS against Pixi, Phaser and Excalibur for rendering, and against matter.js, planck and Rapier for physics. Every number comes from the
-                harness, pooled over {pooledRuns} runs; losses are published like wins. How the numbers are made is at the end of the page.
+                ExoJS against Pixi, Phaser and Excalibur for rendering, and against matter.js, planck and Rapier for physics. Every number is written by the
+                harness into a signed profile in the repository, pooled over {pooledRuns} separate runs; a comparison the runs did not agree on publishes no
+                verdict, and every cell where ExoJS trails is published like the ones where it leads.
             </p>
-            {scope !== undefined && <p class="scope">{scope.text}</p>}
+            {scope !== '' && <p class="scope">{scope}</p>}
         </header>
 
-        <section id="findings">
-            <h2>Headline findings</h2>
-            {findings.length === 0 ? (
-                <p class="empty">
-                    No measurements are published yet. The reference measurement is {REPRODUCTION_RUNS} separate runs on one machine after a release is
-                    tagged, pooled into a single profile file in the repository; until then there is nothing here to read. The methodology, the reproduction
-                    steps and the fairness terms below already apply.
-                </p>
-            ) : (
-                <ul class="findings">
-                    {findings.map(finding => (
-                        <li class:list={['finding', finding.tone]}>
-                            <span class="tone">{TONE_LABELS[finding.tone]}</span>
-                            <p>{finding.text}</p>
-                        </li>
-                    ))}
-                </ul>
-            )}
-        </section>
-
-        {referenceProfile !== undefined && (
-            <section id="reference">
-                <h2>Reference profile</h2>
-                <BenchProfileReport document={referenceProfile} headingLevel={3} />
-            </section>
+        {referenceProfile === undefined ? (
+            <p class="empty">
+                No measurements are published yet. The reference measurement is {REPRODUCTION_RUNS} separate runs on one machine after a release is tagged,
+                pooled into a single profile file in the repository; until then there is nothing here to read. The practices below already apply.
+            </p>
+        ) : (
+            <BenchProfileReport document={referenceProfile} headingLevel={2} showTitle={false} />
         )}
 
         {furtherProfiles.length > 0 && (
             <section id="further">
                 <h2>Further machines</h2>
-                <p class="section-note">Contributed profiles for other hardware, newest engine version first: do the ratios hold on another GPU, driver and JavaScript engine?</p>
+                <p class="section-note">
+                    Contributed profiles for other hardware, newest engine version first: do the ratios hold on another GPU, driver and JavaScript engine?
+                </p>
                 {furtherProfiles.map(document => {
                     const newer = olderThanReference(document);
 
@@ -125,105 +98,111 @@ const pooledRuns = referenceProfile?.profile.runs ?? REPRODUCTION_RUNS;
             </section>
         )}
 
-        <section id="methodology">
-            <h2>Methodology</h2>
-            <details class="practice">
-                <summary>How a number becomes a verdict: pooling, medians, ranges, the ladder, the frame budget</summary>
-            <ul class="method">
-                <li>
-                    A published profile pools <strong>{pooledRuns} separate runs</strong> of the same matrix. One run cannot support a ratio: the same code
-                    measured twice on one idle machine moves a cell's median far enough to reverse which library a cell favours - a reversal this harness
-                    has produced in practice, which is why a single run is not published as a reference measurement.
-                </li>
-                <li>
-                    The published value is the <strong>median of the per-run medians</strong> - each run's own median over its timed window, then the median
-                    across the runs - so one unlucky run cannot set a number. Nothing is ever a mean, and nothing is aggregated across archetypes.
-                </li>
-                <li>
-                    Every number carries the <strong>range its runs observed</strong>, printed under it. A range spanning a factor of 1.2 or more is marked:
-                    the measurement's own noise then reaches as wide as the band the ladder below treats as no difference at all, which is something to know
-                    before reading the number, not after.
-                </li>
-                <li>
-                    Every median is published with the <strong>p95</strong> of the same timed window beside it. The median is the amortised cost and the
-                    number every verdict is computed from - it is also what independent published comparisons state - while the p95 is the step or frame a
-                    player feels as a hitch. A pair far apart describes work that is periodically expensive, which a median alone would report as cheap. There
-                    is no p99: the largest cells time 120 steps, so a p99 there is the second-worst sample, an outlier rather than a percentile.
-                </li>
-                <li>
-                    A published median past <strong>{FRAME_BUDGET_MS} ms</strong> - a whole 60 fps frame - is marked. The line is the entire frame and not a
-                    fraction of it on purpose: how much of a frame you may spend on physics, or on the CPU side of rendering, depends on everything else your
-                    frame does and is your decision, while a single step or frame that costs more than the frame it has to fit in is unplayable whatever you
-                    decide. Nothing is derived from the mark - there is no "how many bodies at N ms" capacity figure, because that would interpolate between
-                    the ladder's rungs rather than report something measured.
-                </li>
-                <li>
-                    A verdict is published <strong>only when all {pooledRuns} runs independently reach it</strong>. Each run is placed on the ladder on its
-                    own, and the pooled medians have to land on the same rung as well. A cell whose runs disagreed publishes <em>no verdict</em>: it keeps
-                    its numbers and its range, states what each run concluded, and is counted nowhere - not as a win, not as a loss, and not as a level row.
-                    That the pair cannot be separated on this machine is the finding.
-                </li>
-                <li>
-                    A ratio between <strong>0.8 and 1.2</strong> is reported as <code>level</code>: inside that band the difference is not distinguishable
-                    from machine mood.
-                </li>
-                <li>
-                    A gap of <strong>5x or more</strong> is reported as <em>leads clearly</em> rather than <em>leads</em>. Below that factor a driver state
-                    or an unlucky window could still explain the result; at or above it, the difference is attributable to how the two libraries are built.
-                </li>
-                <li>
-                    Each row names the <strong>mechanism</strong> behind its difference, drawn from structural counters the harness collects - draw calls,
-                    texture binds, buffer uploads, solved contacts. A row whose difference could not be evidenced that way is not published as a
-                    comparison; it appears among the omissions instead.
-                </li>
-                <li>
-                    One profile describes <strong>one machine measured in one browser</strong>. Numbers from different machines are never mixed into one
-                    table or averaged together, and neither are numbers from different browsers - including for physics, which touches no GPU but whose
-                    per-step times depend on which JavaScript engine executed the steps.
-                </li>
-                <li>
-                    Physics is measured <strong>in the browser</strong>, not in the process that drives the harness. Nobody runs ExoJS physics in Node, and
-                    the runtime is part of the measurement: heap limits, garbage collection and WebAssembly compilation are the browser's. The fastest cells
-                    step in microseconds, close to the browser's clock resolution, so a step too fast to time on its own is timed in batches large enough to
-                    clear that resolution, with the batch published beside the number and the timed-step budget unchanged.
-                </li>
-                <li>
-                    Phaser renders through a <strong>WebGL1</strong> context, so its rows sit in their own block, compare CPU time only, and carry no
-                    mechanism - the structural probe cannot attach to that context to say whether the backend generation or the engine caused the gap.
-                </li>
-                <li>
-                    Rapier is a <strong>Rust/WASM reference ceiling</strong>, not a pure-JS peer. It measures what leaving JavaScript buys; matter.js and
-                    planck are the peers ExoJS is compared against.
-                </li>
-                <li>Culling is configured to match across arms, so no arm wins a row by drawing less of the same scene.</li>
-                <li>
-                    A row's node or body count is chosen from the <strong>archetype ladders before any timing is read</strong> - the largest rung at which
-                    every arm produced a valid cell - so it can never be picked to suit the outcome. A rendering table goes further and uses one node count
-                    for all of its rows, because its archetypes share their ladders. An arm that produced no comparable cell at that count - because it sits
-                    the archetype out, or because it exceeded the runaway step budget - is shown as <em>not comparable</em> rather than omitted.
-                </li>
-                <li>
-                    Each <strong>physics archetype has its own body-count ladder</strong>, placed so its rungs straddle the frame budget: two inside the
-                    frame and one past it, so you can see both the slope and where the archetype stops being viable. They reach a frame at sizes that differ
-                    by nearly an order of magnitude, so one shared count would put most rows at a size chosen to suit a different scene. Every physics row
-                    therefore states its own count, and <strong>physics rows are not comparable with one another</strong> - only the arms within one row are,
-                    which is what the table was ever for. Two rows are two different scenes at two different sizes.
-                </li>
-            </ul>
-            </details>
-        </section>
-
-        <section id="reproduce">
-            <h2>Reproduce</h2>
-            <details class="practice">
-                <summary>Clone, bootstrap, run the matrix {REPRODUCTION_RUNS} times, pool into a profile</summary>
-            <p>
-                The harness is in the repository, and so are the adapters. A reference profile is <strong>{REPRODUCTION_RUNS} separate runs</strong>, not one
-                run repeated inside itself: repeating a matrix in one process shares JIT and heap state between the repetitions and measures the same warm
-                state {REPRODUCTION_RUNS} times, which is the very effect the repetition exists to expose. Each run is its own invocation with its own output
-                directory, and <code>bench:compare</code> pools them by taking each input flag once per run.
+        <section id="practices">
+            <h2>How these numbers are made</h2>
+            <p class="section-note">
+                The terms the tables above are published under. They are here rather than in front of the numbers because they are what a reader consults
+                once a row surprises them.
             </p>
-            <pre><code>git clone {appInfo.repositoryUrl}
+
+            <details class="practice">
+                <summary>Methodology: pooling, medians, ranges, the ladder, the frame budget</summary>
+                <ul class="method">
+                    <li>
+                        A published profile pools <strong>{pooledRuns} separate runs</strong> of the same matrix. One run cannot support a ratio: the same
+                        code measured twice on one idle machine moves a cell's median far enough to reverse which library a cell favours - a reversal this
+                        harness has produced in practice, which is why a single run is not published as a reference measurement.
+                    </li>
+                    <li>
+                        The published value is the <strong>median of the per-run medians</strong> - each run's own median over its timed window, then the
+                        median across the runs - so one unlucky run cannot set a number. Nothing is ever a mean, and nothing is aggregated across archetypes.
+                    </li>
+                    <li>
+                        Every number carries the <strong>range its runs observed</strong>, printed under it. A range spanning a factor of 1.2 or more is
+                        marked: the measurement's own noise then reaches as wide as the band the ladder treats as no difference at all, which is something to
+                        know before reading the number, not after.
+                    </li>
+                    <li>
+                        Every median is published with the <strong>p95</strong> of the same timed window beside it. The median is the amortised cost and the
+                        number every verdict is computed from - it is also what independent published comparisons state - while the p95 is the step or frame
+                        a player feels as a hitch. A pair far apart describes work that is periodically expensive, which a median alone would report as
+                        cheap. There is no p99: the largest cells time 120 steps, so a p99 there is the second-worst sample, an outlier rather than a
+                        percentile.
+                    </li>
+                    <li>
+                        A published median past <strong>{FRAME_BUDGET_MS} ms</strong> - a whole 60 fps frame - is marked. The line is the entire frame and
+                        not a fraction of it on purpose: how much of a frame you may spend on physics, or on the CPU side of rendering, depends on everything
+                        else your frame does and is your decision, while a single step or frame that costs more than the frame it has to fit in is unplayable
+                        whatever you decide. Nothing is derived from the mark - there is no "how many bodies at N ms" capacity figure, because that would
+                        interpolate between the ladder's rungs rather than report something measured.
+                    </li>
+                    <li>
+                        A verdict is published <strong>only when all {pooledRuns} runs independently reach it</strong>. Each run is placed on the ladder on
+                        its own, and the pooled medians have to land on the same rung as well. A cell whose runs disagreed publishes <em>no verdict</em>: it
+                        keeps its numbers and shows the ratio band those runs spanned, and it is counted nowhere - not as a win, not as a loss, and not as a
+                        level row. That the pair cannot be separated on this machine is the finding. The band is the one figure the page computes rather than
+                        reads, from the published extremes of both arms, and it is drawn without a side.
+                    </li>
+                    <li>
+                        A ratio between <strong>0.8 and 1.2</strong> is reported as <code>level</code>: inside that band the difference is not
+                        distinguishable from machine mood.
+                    </li>
+                    <li>
+                        A gap of <strong>5x or more</strong> is reported as <em>leads clearly</em> rather than <em>leads</em>. Below that factor a driver
+                        state or an unlucky window could still explain the result; at or above it, the difference is attributable to how the two libraries
+                        are built.
+                    </li>
+                    <li>
+                        Each comparison names the <strong>mechanism</strong> behind its difference, drawn from structural counters the harness collects -
+                        draw calls, texture binds, buffer uploads, solved contacts - and they are listed under the tables. A row whose difference could not
+                        be evidenced that way is not published as a comparison; it appears among the omissions instead.
+                    </li>
+                    <li>
+                        One profile describes <strong>one machine measured in one browser</strong>. Numbers from different machines are never mixed into one
+                        table or averaged together, and neither are numbers from different browsers - including for physics, which touches no GPU but whose
+                        per-step times depend on which JavaScript engine executed the steps.
+                    </li>
+                    <li>
+                        Physics is measured <strong>in the browser</strong>, not in the process that drives the harness. Nobody runs ExoJS physics in Node,
+                        and the runtime is part of the measurement: heap limits, garbage collection and WebAssembly compilation are the browser's. The
+                        fastest cells step in microseconds, close to the browser's clock resolution, so a step too fast to time on its own is timed in
+                        batches large enough to clear that resolution, with the timed-step budget unchanged.
+                    </li>
+                    <li>
+                        Phaser renders through a <strong>WebGL1</strong> context, so its rows sit in their own block, compare CPU time only, and carry no
+                        mechanism - the structural probe cannot attach to that context to say whether the backend generation or the engine caused the gap.
+                    </li>
+                    <li>
+                        Rapier is a <strong>Rust/WASM reference ceiling</strong>, not a pure-JS peer. It measures what leaving JavaScript buys; matter.js and
+                        planck are the peers ExoJS is compared against.
+                    </li>
+                    <li>Culling is configured to match across arms, so no arm wins a row by drawing less of the same scene.</li>
+                    <li>
+                        A row's node or body count is chosen from the <strong>archetype ladders before any timing is read</strong> - the largest rung at
+                        which every arm produced a valid cell - so it can never be picked to suit the outcome. A rendering backend goes further and uses one
+                        node count for all of its rows, because its archetypes share their ladders. An arm that produced no comparable cell at that count -
+                        because it sits the archetype out, or because it exceeded the runaway step budget - is shown as <em>not comparable</em> rather than
+                        omitted.
+                    </li>
+                    <li>
+                        Each <strong>physics archetype has its own body-count ladder</strong>, placed so its rungs straddle the frame budget: two inside the
+                        frame and one past it, so you can see both the slope and where the archetype stops being viable. They reach a frame at sizes that
+                        differ by nearly an order of magnitude, so one shared count would put most rows at a size chosen to suit a different scene. Every
+                        physics row therefore states its own count, and <strong>physics rows are not comparable with one another</strong> - only the arms
+                        within one row are, which is what the table was ever for.
+                    </li>
+                </ul>
+            </details>
+
+            <details class="practice">
+                <summary>Reproduce: run the harness yourself and publish a profile for your machine</summary>
+                <p>
+                    The harness is in the repository, and so are the adapters. A reference profile is <strong>{REPRODUCTION_RUNS} separate runs</strong>, not
+                    one run repeated inside itself: repeating a matrix in one process shares JIT and heap state between the repetitions and measures the same
+                    warm state {REPRODUCTION_RUNS} times, which is the very effect the repetition exists to expose. Each run is its own invocation with its
+                    own output directory, and <code>bench:compare</code> pools them by taking each input flag once per run.
+                </p>
+                <pre><code>git clone {appInfo.repositoryUrl}
 cd exojs
 pnpm bootstrap
 cd packages/exojs-bench
@@ -240,52 +219,52 @@ pnpm bench:compare -- \
   --rendering=a/results.json --rendering=b/results.json --rendering=c/results.json \
   --physics=a-physics/results.json --physics=b-physics/results.json --physics=c-physics/results.json \
   --profile</code></pre>
-            <p>
-                The harness lives in <code>packages/exojs-bench</code> and its scripts are run from there; the root <code>pnpm bench</code> is the engine's own
-                micro-benchmark suite and not this one. The <code>--</code> separates the harness's flags from pnpm's own. Output directories are relative to
-                the package. <code>pnpm bootstrap</code> installs the competitor libraries alongside the workspace, each <code>pnpm bench</code> runs one
-                matrix into its own directory, and <code>bench:compare --profile</code> pools them into a profile named after your machine under
-                <code>packages/exojs-bench/results/</code>. Repeating an input flag is what pools: a profile built from fewer than {REPRODUCTION_RUNS} runs is
-                rejected by the repository's own check on this directory. Pooling is refused outright for runs that do not repeat one measurement - a different engine version, different library
-                arms, a different matrix - because a spread over those would describe the difference between two runs rather than the noise of one. Measure on
-                an otherwise idle machine: these are wall-clock comparisons and background load moves them.
-            </p>
-            <p>
-                <code>pnpm bench -- --browser=webkit</code> measures in WebKit instead of the default Chromium, for both domains - a physics run takes the
-                flag too, and the two domains of one profile have to agree on it. The browser is part of the profile's name, so the same machine measured in
-                both publishes two files rather than overwriting one with the other, and the harness refuses to pool runs taken in different browsers. A
-                backend the browser does not expose is published as not measured, never as a number: WebKit reaches WebGPU on macOS alone. A physics arm the
-                browser cannot load is published the same way, with the reason it failed. WebKit also reports a constant in place of the GPU, so a WebKit
-                profile is named after the machine's CPU model and needs a physics measurement of the same machine alongside the rendering one.
-            </p>
-            <p>
-                On macOS and Linux, add <code>--platform=26</code> to every run - or <code>--platform=26-beta</code> on a pre-release build. The profile's
-                name carries the operating system's major version, so a beta measurement and the shipping platform's later one do not overwrite each other,
-                and neither the version nor the beta status is readable at runtime there: <code>os.release()</code> reports the kernel version. Windows
-                reports its own version and needs no flag. Every stamp records whether the version was read or declared, and whether the platform was
-                pre-release and how that was established.
-            </p>
-            <p>
-                A profile for a machine that is not published yet is welcome as a pull request containing that one file. Nothing else needs to change - this
-                page picks it up from the directory.
-            </p>
+                <p>
+                    The harness lives in <code>packages/exojs-bench</code> and its scripts are run from there; the root <code>pnpm bench</code> is the
+                    engine's own micro-benchmark suite and not this one. The <code>--</code> separates the harness's flags from pnpm's own. Output
+                    directories are relative to the package. <code>pnpm bootstrap</code> installs the competitor libraries alongside the workspace, each
+                    <code>pnpm bench</code> runs one matrix into its own directory, and <code>bench:compare --profile</code> pools them into a profile named
+                    after your machine under <code>packages/exojs-bench/results/</code>. Repeating an input flag is what pools: a profile built from fewer
+                    than {REPRODUCTION_RUNS} runs is rejected by the repository's own check on this directory. Pooling is refused outright for runs that do
+                    not repeat one measurement - a different engine version, different library arms, a different matrix - because a spread over those would
+                    describe the difference between two runs rather than the noise of one. Measure on an otherwise idle machine: these are wall-clock
+                    comparisons and background load moves them.
+                </p>
+                <p>
+                    <code>pnpm bench -- --browser=webkit</code> measures in WebKit instead of the default Chromium, for both domains - a physics run takes
+                    the flag too, and the two domains of one profile have to agree on it. The browser is part of the profile's name, so the same machine
+                    measured in both publishes two files rather than overwriting one with the other, and the harness refuses to pool runs taken in different
+                    browsers. A backend the browser does not expose is published as not measured, never as a number: WebKit reaches WebGPU on macOS alone. A
+                    physics arm the browser cannot load is published the same way, with the reason it failed. WebKit also reports a constant in place of the
+                    GPU, so a WebKit profile is named after the machine's CPU model and needs a physics measurement of the same machine alongside the
+                    rendering one.
+                </p>
+                <p>
+                    On macOS and Linux, add <code>--platform=26</code> to every run - or <code>--platform=26-beta</code> on a pre-release build. The profile's
+                    name carries the operating system's major version, so a beta measurement and the shipping platform's later one do not overwrite each
+                    other, and neither the version nor the beta status is readable at runtime there: <code>os.release()</code> reports the kernel version.
+                    Windows reports its own version and needs no flag. Every stamp records whether the version was read or declared, and whether the platform
+                    was pre-release and how that was established.
+                </p>
+                <p>
+                    A profile for a machine that is not published yet is welcome as a pull request containing that one file. Nothing else needs to change -
+                    this page picks it up from the directory.
+                </p>
             </details>
-        </section>
 
-        <section id="fairness">
-            <h2>Fairness</h2>
             <details class="practice">
-                <summary>Adapters at library defaults, no score, no overall winner</summary>
-            <p>
-                The adapter for every competitor is in the repository next to the ExoJS one, and each is configured at that library's own defaults with the
-                deviations disclosed in the run's caveats. If a maintainer of one of these libraries thinks an adapter misrepresents it, an issue about that
-                adapter is the right place to say so, and a fix changes the published numbers the next time the harness runs.
-            </p>
-            <p>
-                Nothing here is aggregated into a score and nothing is declared an overall winner. Every cell where ExoJS trails is published with the same
-                weight as one where it leads, with the same mechanism evidence attached, and the rows the harness could not compare are listed with the
-                reason it could not.
-            </p>
+                <summary>Fairness: how the arms are configured and what is never derived</summary>
+                <p>
+                    The adapter for every competitor is in the repository next to the ExoJS one, and each is configured at that library's own defaults with
+                    the deviations disclosed in the run's caveats. If a maintainer of one of these libraries thinks an adapter misrepresents it, an issue
+                    about that adapter is the right place to say so, and a fix changes the published numbers the next time the harness runs.
+                </p>
+                <p>
+                    Nothing here is aggregated into a score and nothing is declared an overall winner. The scoreboard counts outcomes per arm and never sums
+                    them across arms, because the arms answer different questions. Every cell where ExoJS trails is published with the same weight as one
+                    where it leads, with the same mechanism evidence attached, and the rows the harness could not compare are listed with the reason it could
+                    not.
+                </p>
             </details>
         </section>
     </div>
@@ -296,8 +275,13 @@ pnpm bench:compare -- \
         max-width: none;
     }
 
+    /* The docs reading measure belongs to prose pages; here it would wrap short notes beside full-width tables. */
+    .bench-prose :where(p, li) {
+        max-width: none;
+    }
+
     .bench-head {
-        margin-bottom: var(--s-6);
+        margin-bottom: var(--s-5);
     }
 
     .bench-head h1 {
@@ -306,37 +290,17 @@ pnpm bench:compare -- \
 
     .bench-head p {
         margin: 0;
-        max-width: 68ch;
         color: var(--fg-muted);
-        line-height: 1.65;
+        line-height: 1.6;
     }
 
     .scope {
-        margin-top: var(--s-3) !important;
+        margin-top: var(--s-2) !important;
         font-family: var(--f-mono);
-        font-size: 0.78rem !important;
+        font-size: 0.74rem;
         color: var(--fg-faint) !important;
     }
-    .section-note {
-        margin: 0 0 var(--s-4);
-        max-width: 72ch;
-        color: var(--fg-muted);
-        font-size: 0.9rem;
-    }
-    .practice {
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-3);
-        padding: var(--s-3) var(--s-4);
-        background: var(--bg-elevated);
-    }
-    .practice summary {
-        cursor: pointer;
-        color: var(--fg-muted);
-    }
-    .practice[open] summary {
-        margin-bottom: var(--s-3);
-        color: var(--fg);
-    }
+
     .empty {
         margin: 0;
         padding: var(--s-4);
@@ -345,73 +309,21 @@ pnpm bench:compare -- \
         border-radius: var(--r-3);
         background: var(--bg-elevated);
         color: var(--fg-muted);
-        max-width: 68ch;
     }
 
-    .findings {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        gap: var(--s-3);
-    }
-
-    /*
-     * A lead and a loss get the same box, the same type and the same border
-     * weight; the tone chip only names which one it is. Styling a win louder
-     * than a loss would make the paragraph an argument rather than a report.
-     */
-    .finding {
-        display: grid;
-        grid-template-columns: 5.5rem minmax(0, 1fr);
-        gap: var(--s-3);
-        align-items: start;
-        padding: var(--s-3) var(--s-4);
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-3);
-        background: var(--bg-elevated);
-    }
-
-    .finding p {
-        margin: 0;
-        line-height: 1.6;
-    }
-
-    .tone {
-        display: inline-block;
-        padding: 0.15rem 0.5rem;
-        border: 1px solid currentcolor;
-        border-radius: var(--r-pill);
-        font-family: var(--f-mono);
-        font-size: 0.7rem;
-        font-weight: 600;
-        text-align: center;
-        letter-spacing: 0.04em;
-    }
-
-    .finding.scope .tone {
-        color: var(--fg-faint);
-    }
-
-    .finding.lead .tone {
-        color: var(--sky);
-    }
-
-    .finding.loss .tone {
-        color: var(--violet);
-    }
-
-    .finding.level .tone {
+    .section-note {
+        margin: 0 0 var(--s-3);
         color: var(--fg-muted);
+        font-size: 0.85rem;
     }
 
-    .finding.unstable .tone {
-        color: var(--amber);
+    #further,
+    #practices {
+        margin-top: var(--s-8);
     }
 
     .machine {
-        margin-top: var(--s-4);
+        margin-top: var(--s-3);
         border: 1px solid var(--line-soft);
         border-radius: var(--r-3);
         padding: var(--s-3) var(--s-4);
@@ -443,12 +355,28 @@ pnpm bench:compare -- \
         font-size: 0.85rem;
     }
 
+    .practice {
+        margin-top: var(--s-3);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-3);
+        padding: var(--s-3) var(--s-4);
+    }
+
+    .practice summary {
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    .practice p,
     .method {
-        margin: 0;
-        padding-left: 1.15rem;
-        max-width: 74ch;
         color: var(--fg-muted);
         line-height: 1.6;
+        font-size: 0.88rem;
+    }
+
+    .method {
+        margin: var(--s-3) 0 0;
+        padding-left: 1.15rem;
     }
 
     .method li {
@@ -459,26 +387,8 @@ pnpm bench:compare -- \
         color: var(--fg);
     }
 
-    #reproduce pre {
+    .practice pre {
         overflow-x: auto;
         max-width: 100%;
-    }
-
-    #reproduce p,
-    #fairness p {
-        max-width: 72ch;
-        color: var(--fg-muted);
-        line-height: 1.65;
-    }
-
-    @media (max-width: 760px) {
-        .finding {
-            grid-template-columns: 1fr;
-            gap: var(--s-2);
-        }
-
-        .tone {
-            justify-self: start;
-        }
     }
 </style>

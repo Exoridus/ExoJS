@@ -1,0 +1,538 @@
+---
+/**
+ * BenchComparisonTable - one archetype per row, one comparison pair per column.
+ *
+ * The ratio is the statement, so it is drawn: a bar on a log axis that runs left
+ * from the centre when ExoJS leads and right when the arm does, with the
+ * published factor beside it. The milliseconds, the p95 of the same window and
+ * the range the pooled runs observed sit under it as the evidence, never behind
+ * a toggle. Both sides of a comparison get the same bar, the same type and the
+ * same weight; only the hue differs.
+ *
+ * A pair whose runs reached different verdicts publishes none: it keeps its
+ * numbers and shows the ratio band those runs spanned, drawn without a side, so
+ * a cell the measurement could not settle still says what was measured. A pair
+ * that produced no comparable cell says so in place of the bar rather than
+ * leaving the column blank.
+ *
+ * The axis is scaled to the widest ratio the table itself contains, up to a cap,
+ * and printed with it: a table whose axis had to hold a thousand-fold outlier
+ * would draw every ordinary row as a few pixels. A bar past the cap is drawn
+ * cut, so it still reads as an outlier, and its exact factor is printed beside
+ * it. Because each table states its own axis, two tables are never read against
+ * each other by bar length alone.
+ */
+
+import {
+    describeRungs,
+    formatBand,
+    formatFactor,
+    formatMs,
+    formatRange,
+    isWideSpread,
+    outcomeOf,
+    ratioBand,
+    type ProfileCell,
+    type ProfileSpread,
+} from '../lib/bench-profiles';
+import type { ComparisonTable } from '../lib/bench-tables';
+
+interface Props {
+    table: ComparisonTable;
+    /** Accessible name for the table, since the caption carries the reading terms rather than a title. */
+    label: string;
+}
+
+const { table, label } = Astro.props;
+const { columns, rows, unit, countColumn } = table;
+
+/** Every ratio the table draws, including both ends of a disagreeing pair's band. */
+const ratios = rows
+    .flatMap(row =>
+        row.entries.flatMap(entry => {
+            const cell = entry.cell;
+
+            if (cell === null) return [];
+
+            if (!cell.aggregate.stable) {
+                const band = ratioBand(cell);
+
+                return band === null ? [] : [band.low, band.high];
+            }
+
+            return cell.verdict.ratio === null ? [] : [cell.verdict.ratio];
+        }),
+    )
+    .filter(ratio => Number.isFinite(ratio) && ratio > 0);
+
+/**
+ * Widest half-axis the table will draw, in decades.
+ *
+ * A single outlying comparison can be three orders of magnitude wide, and an
+ * axis stretched to hold it would compress every ordinary row into a few
+ * pixels. Past this point a bar is drawn cut rather than scaled down, so the
+ * rows a reader is comparing stay legible and the outlier still reads as one.
+ * Its exact factor is printed beside it either way.
+ */
+const AXIS_CAP_DECADES = 2;
+
+/** Half-width of the axis in decades: the widest ratio present, up to the cap. */
+const decades = Math.min(AXIS_CAP_DECADES, Math.max(0.5, ...ratios.map(ratio => Math.abs(Math.log10(ratio)))));
+
+/** True where at least one bar runs past the axis and is drawn cut. */
+const clips = ratios.some(ratio => Math.abs(Math.log10(ratio)) > decades);
+
+/** Where a ratio sits on the axis, as a percentage from its left edge. */
+const positionOf = (ratio: number): number => {
+    const clamped = Math.max(-decades, Math.min(decades, Math.log10(ratio)));
+
+    return 50 + (clamped / decades) * 50;
+};
+
+interface BarShape {
+    readonly outcome: string;
+    readonly style: string;
+    readonly band: boolean;
+    /** Which end of the axis the bar was cut at, if it ran past it. */
+    readonly clipped: 'left' | 'right' | null;
+}
+
+const shapeOf = (cell: ProfileCell): BarShape | null => {
+    const outcome = outcomeOf(cell);
+
+    if (outcome === 'unstable') {
+        const band = ratioBand(cell);
+
+        if (band === null) return null;
+
+        const from = positionOf(band.low);
+        const to = positionOf(band.high);
+
+        return {
+            outcome,
+            style: `left:${String(Math.min(from, to))}%;width:${String(Math.max(1.5, Math.abs(to - from)))}%`,
+            band: true,
+            clipped: Math.abs(Math.log10(band.low)) > decades ? 'left' : Math.abs(Math.log10(band.high)) > decades ? 'right' : null,
+        };
+    }
+
+    const ratio = cell.verdict.ratio;
+
+    if (ratio === null || !Number.isFinite(ratio) || ratio <= 0) return null;
+
+    const at = positionOf(ratio);
+    const style = at < 50 ? `right:50%;width:${String(50 - at)}%` : `left:50%;width:${String(at - 50)}%`;
+    const past = Math.abs(Math.log10(ratio)) > decades;
+
+    return { outcome, style, band: false, clipped: past ? (ratio < 1 ? 'left' : 'right') : null };
+};
+
+/** The figure printed beside the bar: the published factor, or the band a disagreeing pair spanned. */
+const figureOf = (cell: ProfileCell): string => {
+    if (outcomeOf(cell) !== 'unstable') return formatFactor(cell.verdict.factor);
+
+    const band = ratioBand(cell);
+
+    return band === null ? 'runs split' : formatBand(band);
+};
+
+/** Consecutive columns that share a heading, such as the backend they were measured on. */
+const groups = columns.reduce<{ label: string; span: number }[]>((built, column) => {
+    if (column.group === null) return built;
+
+    const last = built.at(-1);
+
+    if (last !== undefined && last.label === column.group) {
+        last.span += 1;
+
+        return built;
+    }
+
+    return [...built, { label: column.group, span: 1 }];
+}, []);
+
+const rangeOf = (spread: ProfileSpread | undefined): { text: string; wide: boolean } => ({
+    text: spread === undefined || formatRange(spread) === '' ? '-' : formatRange(spread),
+    wide: spread !== undefined && isWideSpread(spread),
+});
+---
+
+<figure class="table-figure">
+    <div class="scroller">
+        <table aria-label={label}>
+            <thead>
+                {groups.length > 0 && (
+                    <tr class="groups">
+                        <td colspan={countColumn ? 2 : 1} />
+                        {groups.map(group => (
+                            <th scope="colgroup" colspan={group.span}>
+                                {group.label}
+                            </th>
+                        ))}
+                    </tr>
+                )}
+                <tr>
+                    <th scope="col" class="col-archetype">Archetype</th>
+                    {countColumn && <th scope="col" class="col-count">{unit === 'bodies' ? 'Bodies' : 'Nodes'}</th>}
+                    {columns.map(column => (
+                        <th scope="col" class:list={[column.kind === 'reference' ? 'col-reference' : 'col-arm']}>
+                            {column.overline !== '' && <span class="overline">{column.overline}</span>}
+                            <span class="pair">{column.label}</span>
+                        </th>
+                    ))}
+                </tr>
+            </thead>
+            <tbody>
+                {rows.map((row, index) => (
+                    <>
+                        {row.section !== null && row.section !== rows[index - 1]?.section && (
+                            <tr class="section">
+                                <td colspan={columns.length + (countColumn ? 2 : 1)}>{row.section}</td>
+                            </tr>
+                        )}
+                        <tr>
+                            <th scope="row">{row.archetype}</th>
+                            {countColumn && <td class="count">{row.count}</td>}
+                            {row.entries.map(entry => {
+                                if (entry.kind === 'reference') {
+                                    const reference = entry.reference;
+                                    const spread = rangeOf(reference?.spread);
+
+                                    return (
+                                        <td class="cell reference">
+                                            <span class="top" />
+                                            <span class="times">
+                                                <b class:list={[reference?.overFrameBudget && 'over-budget']}>{formatMs(reference?.ms ?? null)}</b> ms
+                                            </span>
+                                            <span class="spread">
+                                                p95 {formatMs(reference?.p95Ms ?? null)} &middot; <span class:list={[spread.wide && 'wide']}>{spread.text}</span>
+                                            </span>
+                                        </td>
+                                    );
+                                }
+
+                                const cell = entry.cell;
+
+                                if (cell === null) {
+                                    return (
+                                        <td class="cell">
+                                            <span class="top">
+                                                <span class="bar" />
+                                                <span class="figure absent">-</span>
+                                            </span>
+                                            <span class="times absent">
+                                                {entry.count === null ? 'not measured here' : `not comparable at ${String(entry.count)} ${unit}`}
+                                            </span>
+                                        </td>
+                                    );
+                                }
+
+                                const shape = shapeOf(cell);
+                                const outcome = outcomeOf(cell);
+                                const spread = rangeOf(cell.aggregate.competitor);
+
+                                return (
+                                    <td class="cell" title={outcome === 'unstable' ? describeRungs(cell.aggregate.rungs) : undefined}>
+                                        <span class="top">
+                                            <span class="bar">
+                                                <span class="axis" />
+                                                {shape !== null && (
+                                                    <span
+                                                        class:list={[
+                                                            'fill',
+                                                            shape.outcome,
+                                                            shape.band && 'band',
+                                                            shape.clipped !== null && `clipped-${shape.clipped}`,
+                                                        ]}
+                                                        style={shape.style}
+                                                    />
+                                                )}
+                                            </span>
+                                            <span class:list={['figure', outcome]}>{figureOf(cell)}</span>
+                                        </span>
+                                        <span class="times">
+                                            <b class:list={[cell.competitorOverFrameBudget && 'over-budget']}>{formatMs(cell.competitorMs)}</b> ms
+                                        </span>
+                                        <span class="spread">
+                                            p95 {formatMs(cell.competitorP95Ms)} &middot; <span class:list={[spread.wide && 'wide']}>{spread.text}</span>
+                                        </span>
+                                    </td>
+                                );
+                            })}
+                        </tr>
+                    </>
+                ))}
+            </tbody>
+        </table>
+    </div>
+    <figcaption>
+        The bar is log-scaled and reaches {formatFactor(Math.pow(10, decades))} to each side of the centre, which is 1.00x
+        {clips ? '; a bar past that is drawn cut and keeps its exact factor beside it' : ''}. Under every time: the p95 of the same window, and the range the
+        pooled runs observed for the median.
+    </figcaption>
+</figure>
+
+<style>
+    .table-figure {
+        margin: 0;
+    }
+
+    .scroller {
+        overflow-x: auto;
+        max-width: 100%;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-3);
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th,
+    td {
+        padding: 0.45rem 0.7rem;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid var(--line-soft);
+    }
+
+    thead th {
+        background: var(--bg-elevated);
+        white-space: nowrap;
+        padding-block: 0.5rem;
+    }
+
+    tr.groups th {
+        padding-block: 0.35rem 0;
+        border-bottom: 0;
+        font-family: var(--f-mono);
+        font-size: 0.66rem;
+        font-weight: 600;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: var(--fg-faint);
+    }
+
+    tr.groups th + th {
+        border-left: 1px solid var(--line-soft);
+    }
+
+    tr.groups td {
+        background: var(--bg-elevated);
+        border-bottom: 0;
+    }
+
+    .overline {
+        display: block;
+        font-family: var(--f-mono);
+        font-size: 0.62rem;
+        font-weight: 400;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: var(--fg-faint);
+    }
+
+    .pair {
+        display: block;
+        font-family: var(--f-mono);
+        font-size: 0.76rem;
+        color: var(--fg);
+    }
+
+    .col-archetype {
+        width: 12rem;
+    }
+
+    .col-count {
+        width: 4.5rem;
+    }
+
+    .col-reference {
+        width: 9rem;
+    }
+
+    .col-arm {
+        width: 15rem;
+    }
+
+    tbody th {
+        font-family: var(--f-mono);
+        font-size: 0.76rem;
+        font-weight: 600;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+    tr.section td {
+        background: var(--bg-panel);
+        padding-block: 0.25rem;
+        font-size: 0.64rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--fg-faint);
+    }
+
+    .count {
+        font-family: var(--f-mono);
+        font-size: 0.74rem;
+        color: var(--fg-muted);
+        text-align: right;
+        vertical-align: middle;
+    }
+
+    /* The ExoJS column carries no bar, so its numbers are held on the arms' baseline by an empty first line. */
+    .top {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 4.6rem;
+        align-items: center;
+        gap: var(--s-2);
+        height: 10px;
+    }
+
+    .reference {
+        background: color-mix(in oklab, var(--bg-elevated), transparent 45%);
+    }
+
+    .bar {
+        position: relative;
+        display: block;
+        height: 10px;
+    }
+
+    .axis {
+        position: absolute;
+        left: 50%;
+        top: -1px;
+        bottom: -1px;
+        width: 1px;
+        background: var(--line);
+    }
+
+    .fill {
+        position: absolute;
+        top: 2px;
+        height: 6px;
+        border-radius: 2px;
+    }
+
+    /* A cut end says the bar ran past the axis; the factor beside it is still the measured one. */
+    .fill.clipped-left {
+        clip-path: polygon(6px 0, 100% 0, 100% 100%, 6px 100%, 0 50%);
+    }
+
+    .fill.clipped-right {
+        clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 50%, calc(100% - 6px) 100%, 0 100%);
+    }
+
+    .fill.clear-lead {
+        background: var(--bench-lead);
+    }
+
+    .fill.lead {
+        background: color-mix(in oklab, var(--bench-lead), transparent 45%);
+    }
+
+    .fill.level {
+        background: var(--fg-faint);
+        min-width: 3px;
+    }
+
+    .fill.loss {
+        background: color-mix(in oklab, var(--bench-loss), transparent 45%);
+    }
+
+    .fill.clear-loss {
+        background: var(--bench-loss);
+    }
+
+    /*
+     * A band is given neither side's hue and a dashed outline: it is the spread
+     * the runs produced, not a quiet verdict for whichever side it leans to.
+     */
+    .fill.band {
+        top: 1px;
+        height: 8px;
+        border: 1px dashed var(--bench-mark);
+        background: color-mix(in oklab, var(--bench-mark), transparent 88%);
+    }
+
+    .figure {
+        font-family: var(--f-mono);
+        font-size: 0.78rem;
+        font-weight: 600;
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .figure.clear-lead,
+    .figure.lead {
+        color: var(--bench-lead);
+    }
+
+    .figure.level {
+        color: var(--fg-muted);
+    }
+
+    .figure.loss,
+    .figure.clear-loss {
+        color: var(--bench-loss);
+    }
+
+    .figure.unstable {
+        color: var(--bench-mark);
+        font-size: 0.68rem;
+    }
+
+    .figure.absent {
+        color: var(--fg-faint);
+    }
+
+    /*
+     * Both evidence lines are kept to one line each: a cell that wraps turns a
+     * table meant to be scanned column-wise into a wall of text.
+     */
+    .times,
+    .spread {
+        display: block;
+        font-family: var(--f-mono);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .times {
+        margin-top: 0.3rem;
+        font-size: 0.78rem;
+        color: var(--fg-muted);
+    }
+
+    .times b {
+        font-weight: 600;
+        color: var(--fg);
+    }
+
+    .times.absent {
+        color: var(--fg-faint);
+        font-size: 0.7rem;
+    }
+
+    .spread {
+        margin-top: 0.1rem;
+        font-size: 0.66rem;
+        color: var(--fg-faint);
+    }
+
+    .over-budget,
+    .spread .wide {
+        color: var(--bench-mark);
+    }
+
+    figcaption {
+        max-width: none;
+        margin-top: var(--s-2);
+        color: var(--fg-faint);
+        font-size: 0.72rem;
+        line-height: 1.5;
+    }
+</style>

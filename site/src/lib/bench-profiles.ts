@@ -451,7 +451,7 @@ interface FlatCell {
  *
  * The WebGL1 block is deliberately left out. Those arms report no structural
  * counters, so their rows are an observation about a different backend
- * generation rather than a finding, and a headline sentence must not rest on one.
+ * generation rather than a finding, and the scope sentence must not count one.
  */
 const renderingCells = (document: BenchProfileDocument): readonly FlatCell[] =>
   (document.rendering?.backends ?? []).flatMap(backend =>
@@ -464,30 +464,6 @@ const renderingCells = (document: BenchProfileDocument): readonly FlatCell[] =>
 const physicsCells = (document: BenchProfileDocument): readonly FlatCell[] =>
   (document.physics?.section.rows ?? []).flatMap(row => row.cells.map(cell => ({ backend: null, archetype: row.archetype, count: row.count, cell })));
 
-/**
- * The cells a sentence may be built on: the ones whose pooled runs all reached
- * the same verdict.
- *
- * Every count, comparison and superlative below draws from this set and never
- * from the full one. An unstable cell's verdict is a placeholder whose `side` is
- * `neither`, so counting it as a row that "reads as level" would turn a
- * measurement the runs contradicted into a published claim - which is exactly
- * the laundering the stability rule exists to prevent.
- */
-const settled = (cells: readonly FlatCell[]): readonly FlatCell[] => cells.filter(entry => entry.cell.aggregate.stable);
-
-/** The cell with the widest computed factor, or `undefined` when none carries one. */
-const widest = (cells: readonly FlatCell[]): FlatCell | undefined =>
-  cells.reduce<FlatCell | undefined>((best, candidate) => {
-    const factor = candidate.cell.verdict.factor;
-
-    if (factor === null || !Number.isFinite(factor)) return best;
-
-    const bestFactor = best?.cell.verdict.factor;
-
-    return bestFactor === undefined || bestFactor === null || factor > bestFactor ? candidate : best;
-  }, undefined);
-
 /** Distinct arm names in a set of cells, alphabetically. */
 const armsIn = (cells: readonly FlatCell[]): readonly string[] => [...new Set(cells.map(entry => entry.cell.competitor))].sort();
 
@@ -495,180 +471,151 @@ const armsIn = (cells: readonly FlatCell[]): readonly string[] => [...new Set(ce
 const listOf = (items: readonly string[]): string => (items.length < 2 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} and ${items.at(-1) ?? ''}`);
 
 /**
- * The arm whose numbers sit closest to ExoJS across the whole rendering table.
+ * How one comparison reads once the pooled runs are taken into account.
  *
- * Distance is the mean absolute log ratio, so a 2x lead and a 2x loss weigh the
- * same. Averaging the raw ratios would let one lopsided win cancel a loss and
- * name the wrong arm as the close one.
- *
- * Only cells whose runs agreed enter the mean. An unstable cell has no ratio the
- * measurement supports, so averaging one in would rank the arms partly on
- * numbers the runs contradicted; an arm with no settled cell at all is not
- * ranked rather than being placed last.
+ * `clear-lead` and `clear-loss` are the ladder's own "leads clearly" rungs, kept
+ * apart from the ordinary ones so a scoreboard can show at a glance how much of
+ * a mix is attributable to structure. `unstable` is not a sixth verdict but the
+ * absence of one: the runs reached different rungs, so the pair carries numbers
+ * and no conclusion. `absent` is an arm that produced no comparable cell at all.
  */
-const closestArm = (cells: readonly FlatCell[]): string | undefined => {
-  const scored = armsIn(cells)
-    .map(arm => {
-      const ratios = cells
-        .filter(entry => entry.cell.competitor === arm)
-        .map(entry => entry.cell.verdict.ratio)
-        .filter((ratio): ratio is number => ratio !== null && Number.isFinite(ratio) && ratio > 0);
+export type CellOutcome = 'clear-lead' | 'lead' | 'level' | 'loss' | 'clear-loss' | 'unstable' | 'absent';
 
-      return { arm, ratios };
-    })
-    .filter(entry => entry.ratios.length > 0)
-    .map(entry => ({ arm: entry.arm, distance: entry.ratios.reduce((sum, ratio) => sum + Math.abs(Math.log(ratio)), 0) / entry.ratios.length }));
+/** Outcomes in reading order: the widest lead first, the widest loss last, then the two that carry no verdict. */
+export const OUTCOME_ORDER: readonly CellOutcome[] = ['clear-lead', 'lead', 'level', 'loss', 'clear-loss', 'unstable', 'absent'];
 
-  return scored.sort((a, b) => a.distance - b.distance)[0]?.arm;
+/** The word a scoreboard and a legend print for each outcome. */
+export const OUTCOME_LABELS: Readonly<Record<CellOutcome, string>> = {
+  'clear-lead': 'clear lead',
+  lead: 'lead',
+  level: 'level',
+  loss: 'loss',
+  'clear-loss': 'clear loss',
+  unstable: 'runs disagreed',
+  absent: 'not comparable',
 };
 
-/** How a headline sentence reads for the engine. */
-export type FindingTone = 'scope' | 'lead' | 'level' | 'loss' | 'unstable';
+/**
+ * Which outcome a cell publishes.
+ *
+ * This is the only place a comparison is turned into one of the seven words, so
+ * no table or scoreboard can invent an outcome for a cell whose runs did not
+ * agree on one.
+ */
+export const outcomeOf = (cell: ProfileCell | null): CellOutcome => {
+  if (cell === null) return 'absent';
+  if (!cell.aggregate.stable) return 'unstable';
+  if (cell.verdict.side === 'neither') return 'level';
+  if (cell.verdict.side === 'exojs') return cell.verdict.structural ? 'clear-lead' : 'lead';
 
-/** One generated headline sentence. */
-export interface HeadlineFinding {
-  readonly tone: FindingTone;
-  readonly text: string;
+  return cell.verdict.structural ? 'clear-loss' : 'loss';
+};
+
+/** The lowest and highest `exojs / competitor` ratio the pooled runs can have produced. */
+export interface RatioBand {
+  readonly low: number;
+  readonly high: number;
 }
 
-/** `n of m` where `m` counts only the comparisons a verdict could be drawn from. */
-const outOfSettled = (count: number, total: number): string => `${String(count)} of ${String(total)}`;
+/**
+ * The ratio band behind a comparison whose runs disagreed.
+ *
+ * This is the one figure the page derives rather than reads: a cell the runs
+ * split on carries no published ratio, and printing nothing in its place would
+ * throw away measurements that exist. The band is the widest and narrowest
+ * ratio the observed extremes allow, so it is an envelope around what was
+ * measured and never a verdict - it is drawn without a side, and a band that
+ * straddles 1.00 is exactly the statement that the runs could not separate the
+ * pair. It returns `null` where an arm reported no extremes to bound.
+ */
+export const ratioBand = (cell: ProfileCell): RatioBand | null => {
+  const { reference, competitor } = cell.aggregate;
+
+  if (reference.minMs === null || reference.maxMs === null || competitor.minMs === null || competitor.maxMs === null) return null;
+  if (competitor.minMs <= 0 || competitor.maxMs <= 0) return null;
+
+  return { low: reference.minMs / competitor.maxMs, high: reference.maxMs / competitor.minMs };
+};
+
+/** A ratio band as the scoreboard and the tables print it. */
+export const formatBand = (band: RatioBand): string => `${band.low.toFixed(2)}-${band.high.toFixed(2)}`;
+
+/** One scoreboard line: everything measured against one arm, on one backend or in physics. */
+export interface ComparisonTally {
+  readonly key: string;
+  /** The pair, as the scoreboard names it. */
+  readonly label: string;
+  /** What the pair is measured at, or what role the arm stands in. */
+  readonly meta: string;
+  readonly counts: Readonly<Record<CellOutcome, number>>;
+  readonly total: number;
+}
+
+const tally = (key: string, label: string, meta: string, cells: readonly (ProfileCell | null)[]): ComparisonTally => {
+  const counts = Object.fromEntries(OUTCOME_ORDER.map(outcome => [outcome, 0])) as Record<CellOutcome, number>;
+
+  for (const cell of cells) counts[outcomeOf(cell)] += 1;
+
+  return { key, label, meta, counts, total: cells.length };
+};
 
 /**
- * The page's headline paragraph, generated from a profile's own verdicts.
+ * The scoreboard, one line per arm a domain was measured against.
  *
- * Which rows deserve a sentence is decided here - the widest lead, the widest
- * loss, the arm that sits closest, the split against the pure-JS physics peers
- * and against the WASM ceiling. Every number and every verdict inside a sentence
- * is copied from the document, so a re-measurement rewrites the paragraph
- * instead of leaving prose behind that no longer matches the tables under it.
- *
- * No sentence is built on a cell whose pooled runs disagreed, and no denominator
- * counts one: a sentence that quietly folded unstable cells into its totals
- * would publish, in prose, the verdicts the tables above it refuse to print. How
- * many comparisons were left out that way is stated as a finding of its own,
- * because it is the reader's measure of how far the paragraph can be trusted.
- *
- * A sentence with nothing behind it is dropped rather than padded, so a profile
- * carrying only one domain yields a shorter paragraph.
+ * The split is per arm and never per backend: a backend line would pool two
+ * different opponents into one strip, so a reader would see a mix that belongs
+ * to neither of them. Nothing is summed across lines and no line is ranked
+ * against another, because the arms answer different questions.
  */
-export const headlineFindings = (document: BenchProfileDocument): readonly HeadlineFinding[] => {
-  const findings: HeadlineFinding[] = [];
-  const allRendering = renderingCells(document);
-  const allPhysics = physicsCells(document);
-  const rendering = settled(allRendering);
-  const physics = settled(allPhysics);
-  const { profile } = document;
-  const scopeParts: string[] = [];
+export const comparisonTallies = (document: BenchProfileDocument): readonly ComparisonTally[] => [
+  ...(document.rendering?.backends ?? []).flatMap(backend =>
+    backend.competitors.map(arm =>
+      tally(
+        `${backend.backend}-${arm}`,
+        `${BACKEND_LABELS[backend.backend]} vs ${arm}`,
+        backend.headlineCount === null ? 'no headline count' : `${String(backend.headlineCount)} nodes`,
+        backend.sections.flatMap(section => section.rows.map(row => row.cells.find(cell => cell.competitor === arm) ?? null)),
+      ),
+    ),
+  ),
+  ...(document.physics === undefined
+    ? []
+    : armsOfSection(document.physics.section).map(arm =>
+        tally(
+          `physics-${arm}`,
+          `Physics vs ${arm}`,
+          isWasmReferenceArm(arm) ? 'Rust/WASM ceiling' : 'pure-JS peer',
+          (document.physics?.section.rows ?? []).map(row => row.cells.find(cell => cell.competitor === arm) ?? null),
+        ),
+      )),
+];
 
-  if (allRendering.length > 0) {
+/**
+ * The sentence under the page title: which machine was measured, with which
+ * engine version, over how many runs, and how much the profile covers.
+ *
+ * Every value in it is copied from the document, so a re-measurement rewrites
+ * the sentence with the tables rather than leaving a claim behind that the
+ * numbers no longer support. A profile carrying only one domain yields a
+ * shorter sentence instead of a padded one.
+ */
+export const profileScope = (document: BenchProfileDocument): string => {
+  const rendering = renderingCells(document);
+  const physics = physicsCells(document);
+  const { profile } = document;
+  const parts: string[] = [];
+
+  if (rendering.length > 0) {
     const backends = (document.rendering?.backends ?? []).map(backend => BACKEND_LABELS[backend.backend]);
 
-    scopeParts.push(`${String(allRendering.length)} rendering comparisons on ${listOf(backends)} against ${listOf(armsIn(allRendering))}`);
+    parts.push(`${String(rendering.length)} rendering comparisons on ${listOf(backends)} against ${listOf(armsIn(rendering))}`);
   }
 
-  if (allPhysics.length > 0) {
-    scopeParts.push(`${String(allPhysics.length)} physics comparisons against ${listOf(armsIn(allPhysics))}`);
+  if (physics.length > 0) {
+    parts.push(`${String(physics.length)} physics comparisons against ${listOf(armsIn(physics))}`);
   }
 
-  if (scopeParts.length > 0) {
-    findings.push({
-      tone: 'scope',
-      text: `The reference measurement runs ExoJS ${profile.engineVersion} on ${profile.gpu} / ${profile.os} / ${profile.browser}, pooled from ${String(profile.runs)} separate runs taken on ${formatDay(profile.measuredAt)}, and publishes ${scopeParts.join('; ')}.`,
-    });
-  }
+  if (parts.length === 0) return '';
 
-  const unstableRendering = allRendering.length - rendering.length;
-  const unstablePhysics = allPhysics.length - physics.length;
-
-  if (unstableRendering > 0 || unstablePhysics > 0) {
-    const parts = [
-      ...(unstableRendering > 0 ? [`${outOfSettled(unstableRendering, allRendering.length)} rendering comparisons`] : []),
-      ...(unstablePhysics > 0 ? [`${outOfSettled(unstablePhysics, allPhysics.length)} physics comparisons`] : []),
-    ];
-
-    findings.push({
-      tone: 'unstable',
-      text: `${listOf(parts)} came out differently in the ${String(profile.runs)} runs behind this profile, so they publish no verdict and none of the sentences here rests on one. They stay in the tables with the range their runs observed: on this machine those pairs are too close, or too noisy, to be separated.`,
-    });
-  }
-
-  const clearLeads = rendering.filter(entry => entry.cell.verdict.side === 'exojs' && entry.cell.verdict.structural);
-  const widestLead = widest(clearLeads);
-
-  if (widestLead !== undefined && widestLead.backend !== null) {
-    findings.push({
-      tone: 'lead',
-      text: `ExoJS leads clearly - five times or better - in ${outOfSettled(clearLeads.length, rendering.length)} rendering comparisons whose runs agreed, the widest being ${widestLead.archetype} on ${BACKEND_LABELS[widestLead.backend]} at ${formatFactor(widestLead.cell.verdict.factor)} ahead of ${widestLead.cell.competitor} with ${String(widestLead.count)} nodes.`,
-    });
-  }
-
-  const closest = closestArm(rendering);
-
-  if (closest !== undefined) {
-    const against = rendering.filter(entry => entry.cell.competitor === closest);
-    const level = against.filter(entry => entry.cell.verdict.side === 'neither').length;
-    const ahead = against.filter(entry => entry.cell.verdict.side === 'exojs').length;
-    const behind = against.filter(entry => entry.cell.verdict.side === 'competitor').length;
-    const dropped = allRendering.filter(entry => entry.cell.competitor === closest).length - against.length;
-    const caveat =
-      dropped === 0 ? '' : ` A further ${String(dropped)} rows against that arm were not stable across the runs and are left out of this count entirely.`;
-    // An arm every one of whose rows was unstable is not merely absent from the
-    // ranking - it may well be the arm that actually sits closest, and naming
-    // another one "closest" without saying so would be the ranking laundering
-    // the instability it excluded.
-    const unranked = armsIn(allRendering).filter(arm => !rendering.some(entry => entry.cell.competitor === arm));
-    const missing =
-      unranked.length === 0
-        ? ''
-        : ` ${listOf(unranked)} cannot be placed against that at all: no comparison against ${unranked.length === 1 ? 'it' : 'them'} was stable across the runs, so how close ${unranked.length === 1 ? 'it sits' : 'they sit'} is not something this profile measured.`;
-
-    findings.push({
-      tone: 'level',
-      text: `Against ${closest}, the arm whose settled numbers sit closest to ExoJS, ${outOfSettled(level, against.length)} rows fall inside the 0.8-1.2 noise band and read as level, while ExoJS leads ${String(ahead)} and trails ${String(behind)}.${caveat}${missing}`,
-    });
-  }
-
-  const widestLoss = widest(rendering.filter(entry => entry.cell.verdict.side === 'competitor'));
-
-  if (widestLoss !== undefined && widestLoss.backend !== null) {
-    const mechanism = widestLoss.cell.mechanism === null ? '' : ` The counters recorded for that row say: ${widestLoss.cell.mechanism}.`;
-
-    findings.push({
-      tone: 'loss',
-      text: `The widest rendering loss the runs agreed on is ${widestLoss.archetype} on ${BACKEND_LABELS[widestLoss.backend]}, where ${widestLoss.cell.competitor} leads by ${formatFactor(widestLoss.cell.verdict.factor)}.${mechanism}`,
-    });
-  }
-
-  const peers = physics.filter(entry => !isWasmReferenceArm(entry.cell.competitor));
-  const peerLeads = peers.filter(entry => entry.cell.verdict.side === 'exojs');
-  const widestPeerLead = widest(peerLeads);
-
-  if (widestPeerLead !== undefined) {
-    const behind = peers.filter(entry => entry.cell.verdict.side === 'competitor').length;
-
-    findings.push({
-      tone: 'lead',
-      // The body count belongs to the archetype the superlative names, not to
-      // the physics table: each archetype is measured on its own ladder, so a
-      // sentence that put one count in front of the whole paragraph would claim
-      // a scene size the other rows were not measured at.
-      text: `In physics, ExoJS leads the pure-JS peers (${listOf(armsIn(peers))}) in ${outOfSettled(peerLeads.length, peers.length)} comparisons whose runs agreed, by up to ${formatFactor(widestPeerLead.cell.verdict.factor)} against ${widestPeerLead.cell.competitor} on ${widestPeerLead.archetype} at ${String(widestPeerLead.count)} bodies, and trails in ${String(behind)}. Each archetype is measured on its own body-count ladder, so the counts differ per row.`,
-    });
-  }
-
-  const ceiling = physics.filter(entry => isWasmReferenceArm(entry.cell.competitor));
-  const ceilingLosses = ceiling.filter(entry => entry.cell.verdict.side === 'competitor');
-  const widestCeilingLoss = widest(ceilingLosses);
-
-  if (widestCeilingLoss !== undefined) {
-    const level = ceiling.filter(entry => entry.cell.verdict.side === 'neither').length;
-
-    findings.push({
-      tone: 'loss',
-      text: `Against ${listOf(armsIn(ceiling))}, a Rust/WASM engine published here as a ceiling rather than as a peer, ExoJS trails in ${outOfSettled(ceilingLosses.length, ceiling.length)} comparisons whose runs agreed - by up to ${formatFactor(widestCeilingLoss.cell.verdict.factor)} on ${widestCeilingLoss.archetype} at ${String(widestCeilingLoss.count)} bodies - and is level in ${String(level)}.`,
-    });
-  }
-
-  return findings;
+  return `ExoJS ${profile.engineVersion} on ${profile.gpu} / ${profile.os} / ${profile.browser}, pooled from ${String(profile.runs)} separate runs taken on ${formatDay(profile.measuredAt)}: ${parts.join('; ')}.`;
 };
