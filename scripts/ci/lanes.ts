@@ -40,6 +40,8 @@ export interface Lane {
   local?: 'browser' | 'gate';
   /** Runs on CI only: its assertions hold for the runner's software rasteriser, not a developer's GPU. */
   ciOnly?: boolean;
+  /** Lowest output mode this lane permits; useful for reportable measurements. */
+  minimumOutput?: 'compact' | 'normal' | 'silent' | 'verbose';
   /** Emits `test-results/<id>.junit.xml` for the skip budget and Codecov. */
   junit?: boolean;
   /** Pull requests only. */
@@ -47,7 +49,7 @@ export interface Lane {
   timeoutMinutes?: number;
 }
 
-const junit = (id: string): string => `--reporter=default --reporter=junit --outputFile.junit=./test-results/${id}.junit.xml`;
+const junit = (id: string): string => `--reporter=minimal --reporter=junit --outputFile.junit=./test-results/${id}.junit.xml`;
 
 export const LANES: readonly Lane[] = [
   { id: 'typecheck', stage: 'gates', when: 'typecheck', run: 'pnpm gates typecheck', local: 'gate' },
@@ -141,6 +143,7 @@ export const LANES: readonly Lane[] = [
     run: 'pnpm typecheck:bench && pnpm gate:bench:structural',
     browser: 'chromium',
     local: 'browser',
+    minimumOutput: 'normal',
     timeoutMinutes: 30,
   },
 
@@ -157,6 +160,7 @@ export const LANES: readonly Lane[] = [
     when: 'releaseDryRun',
     run: 'pnpm release:prepare --build --skip-zip',
     pullRequestOnly: true,
+    minimumOutput: 'normal',
   },
   {
     id: 'create-exo-app',

@@ -25,12 +25,13 @@
  * `dist/esm/index.d.ts`, so it can only run in a job that has the built dist.
  * That is why it cannot simply join the ungated typecheck job.
  */
-import { spawnSync } from 'node:child_process';
-
 import { GATE_GROUP_NAMES, GATE_GROUPS, type GateGroup } from './gate-groups.ts';
+import { readOutputOptions } from '../lib/output.ts';
+import { runCommand } from '../lib/run-command.ts';
 
 const groupNames = GATE_GROUP_NAMES;
-const requested = process.argv[2];
+const outputOptions = readOutputOptions(process.argv.slice(2));
+const requested = outputOptions.argv[0];
 
 if (!requested) {
   console.error(`Usage: pnpm gates <all|${groupNames.join('|')}>`);
@@ -45,18 +46,33 @@ if (requested !== 'all' && !groupNames.includes(requested as GateGroup)) {
 const selected = requested === 'all' ? groupNames : [requested as GateGroup];
 const scripts = selected.flatMap(group => GATE_GROUPS[group]);
 
-console.log(`Running ${scripts.length} gate(s) from group(s): ${selected.join(', ')}\n`);
-
-for (const script of scripts) {
-  console.log(`\n=== pnpm ${script} ===\n`);
-
-  // `shell: true` so the pnpm shim resolves on Windows as well as on CI.
-  const result = spawnSync('pnpm', ['run', script], { stdio: 'inherit', shell: true });
-
-  if (result.status !== 0) {
-    console.error(`\nGate failed: pnpm ${script} (exit code ${result.status ?? 'signal'})`);
-    process.exit(result.status ?? 1);
-  }
+if (outputOptions.mode !== 'silent') {
+  console.log(`Running ${scripts.length} gate(s) from group(s): ${selected.join(', ')}\n`);
 }
 
-console.log(`\nAll ${scripts.length} gate(s) passed.`);
+const main = async (): Promise<void> => {
+  for (const script of scripts) {
+    if (outputOptions.mode === 'normal' || outputOptions.mode === 'verbose') {
+      console.log(`\n=== pnpm ${script} ===\n`);
+    }
+
+    // `shell: true` so the pnpm shim resolves on Windows as well as on CI.
+    const result = await runCommand({
+      label: `gates-${script}`,
+      command: 'pnpm',
+      args: ['run', script],
+      output: outputOptions.mode,
+    });
+
+    if (result.status !== 0) {
+      if (outputOptions.mode === 'normal' || outputOptions.mode === 'verbose') {
+        console.error(`\nGate failed: pnpm ${script} (exit code ${result.status})`);
+      }
+      process.exit(result.status);
+    }
+  }
+
+  if (outputOptions.mode !== 'silent') console.log(`\nAll ${scripts.length} gate(s) passed.`);
+};
+
+await main();
