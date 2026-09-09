@@ -350,6 +350,27 @@ export const furtherProfiles: readonly BenchProfileDocument[] = loaded.slice(1);
 export const BACKEND_LABELS: Readonly<Record<ProfileBackendName, string>> = { webgl2: 'WebGL2', webgpu: 'WebGPU' };
 
 /**
+ * How each arm is written where a reader sees it.
+ *
+ * The profile stores the harness's own package slugs, which are the right
+ * identifier inside the repository and the wrong one on a published page: a
+ * comparison against `matter-js` is a comparison against Matter.js. An arm with
+ * no entry keeps its slug rather than being guessed at, so adding one to the
+ * harness never silently renames it here.
+ */
+const ARM_LABELS: Readonly<Record<string, string>> = {
+  pixi: 'PixiJS',
+  excalibur: 'Excalibur',
+  phaser: 'Phaser',
+  'matter-js': 'Matter.js',
+  planck: 'Planck',
+  rapier: 'Rapier',
+};
+
+/** An arm's published name, or its slug where none is known. */
+export const armLabel = (arm: string): string => ARM_LABELS[arm] ?? arm;
+
+/**
  * Spread factor at which a measurement's own noise is called out.
  *
  * The verdict ladder treats a ratio up to 1.2 between two arms as
@@ -420,6 +441,34 @@ const RUNG_LABELS: Readonly<Record<string, string>> = {
 export const describeRungs = (rungs: readonly string[]): string =>
   rungs.map((rung, index) => `run ${String(index + 1)}: ${RUNG_LABELS[rung] ?? rung}`).join(', ');
 
+/** Which way one run's rung fell, for showing the pooled runs as marks rather than as a sentence. */
+export type RungSide = 'exojs' | 'neither' | 'competitor';
+
+/**
+ * The side a single run landed on.
+ *
+ * The profile records the rung each run reached but not the median behind it,
+ * so a run can be placed on a side and never on an axis. Four marks that all
+ * sit together and four that straddle the middle are different measurements
+ * with the same printed range, which is the whole reason to show them.
+ */
+export const rungSide = (rung: string): RungSide => {
+  if (rung.startsWith('exojs-leads')) return 'exojs';
+  if (rung.startsWith('competitor-leads')) return 'competitor';
+
+  return 'neither';
+};
+
+/**
+ * How much of a whole 60 fps frame one published time takes.
+ *
+ * A millisecond figure is only meaningful against the frame it has to fit in,
+ * and that is the comparison a reader without a benchmarking habit makes
+ * anyway. Nothing is derived from it: no verdict, no capacity figure, no
+ * ranking - it restates a published time against {@link FRAME_BUDGET_MS}.
+ */
+export const frameShare = (ms: number | null): number | null => (ms === null || !Number.isFinite(ms) ? null : (ms / FRAME_BUDGET_MS) * 100);
+
 /** True when this arm stands as a reference ceiling rather than as a peer. */
 export const isWasmReferenceArm = (competitor: string): boolean => WASM_REFERENCE_ARMS.includes(competitor);
 
@@ -484,15 +533,15 @@ export type CellOutcome = 'clear-lead' | 'lead' | 'level' | 'loss' | 'clear-loss
 /** Outcomes in reading order: the widest lead first, the widest loss last, then the two that carry no verdict. */
 export const OUTCOME_ORDER: readonly CellOutcome[] = ['clear-lead', 'lead', 'level', 'loss', 'clear-loss', 'unstable', 'absent'];
 
-/** The word a scoreboard and a legend print for each outcome. */
+/** The word a summary and a legend print for each outcome. */
 export const OUTCOME_LABELS: Readonly<Record<CellOutcome, string>> = {
   'clear-lead': 'clear lead',
   lead: 'lead',
   level: 'level',
   loss: 'loss',
   'clear-loss': 'clear loss',
-  unstable: 'runs disagreed',
-  absent: 'not comparable',
+  unstable: 'no clear lead',
+  absent: 'no shared cell',
 };
 
 /**
@@ -520,13 +569,14 @@ export interface RatioBand {
 /**
  * The ratio band behind a comparison whose runs disagreed.
  *
- * This is the one figure the page derives rather than reads: a cell the runs
+ * This is the one figure the page derives rather than reads. A cell the runs
  * split on carries no published ratio, and printing nothing in its place would
- * throw away measurements that exist. The band is the widest and narrowest
- * ratio the observed extremes allow, so it is an envelope around what was
- * measured and never a verdict - it is drawn without a side, and a band that
- * straddles 1.00 is exactly the statement that the runs could not separate the
- * pair. It returns `null` where an arm reported no extremes to bound.
+ * throw away measurements that exist - but printing a single figure would
+ * invent the point verdict the runs failed to reach. The band is the widest and
+ * narrowest ratio the observed extremes allow: an envelope around what was
+ * measured, drawn without a side, and a band that straddles 1.00 is exactly the
+ * statement that the runs landed on both sides of the decision point. Returns
+ * `null` where an arm reported no extremes to bound.
  */
 export const ratioBand = (cell: ProfileCell): RatioBand | null => {
   const { reference, competitor } = cell.aggregate;
@@ -537,26 +587,99 @@ export const ratioBand = (cell: ProfileCell): RatioBand | null => {
   return { low: reference.minMs / competitor.maxMs, high: reference.maxMs / competitor.minMs };
 };
 
-/** A ratio band as the scoreboard and the tables print it. */
-export const formatBand = (band: RatioBand): string => `${band.low.toFixed(2)}-${band.high.toFixed(2)}`;
+/** A ratio band as the details print it. */
+export const formatBand = (band: RatioBand): string => `${band.low.toFixed(2)}x-${band.high.toFixed(2)}x`;
 
-/** One scoreboard line: everything measured against one arm, on one backend or in physics. */
+/**
+ * The factor a pair's two pooled medians work out to.
+ *
+ * A cell whose runs landed on different rungs publishes no verdict, but its two
+ * medians are published and are the pair's central observation. It is printed
+ * with a tilde and without a side: it says how far apart the arms sit, not
+ * which one is faster, because that is precisely what the runs disagreed on.
+ * It is deliberately not the middle of the observed band - averaging two ratios
+ * is not a ratio anyone measured.
+ */
+export const pooledFactor = (cell: ProfileCell): number | null => {
+  const { referenceMs, competitorMs } = cell;
+
+  if (referenceMs === null || competitorMs === null || referenceMs <= 0 || competitorMs <= 0) return null;
+
+  const ratio = referenceMs / competitorMs;
+
+  return ratio < 1 ? 1 / ratio : ratio;
+};
+
+/** A factor the runs did not settle, marked as such. */
+export const formatApproximate = (factor: number): string => `~${factor.toFixed(2)}x`;
+
+/** How far the pooled runs moved, as the single factor the profile stores. */
+export const formatSpread = (spread: ProfileSpread): string => (spread.ratio === null || !Number.isFinite(spread.ratio) ? '' : `${spread.ratio.toFixed(2)}x`);
+
+/**
+ * What a measured comparison came out as, once the ladder's five settled rungs
+ * are collapsed to the three directions a summary needs.
+ *
+ * `mixed` is a measured outcome, not a missing one: the runs produced numbers
+ * and landed on different rungs. A pair with no shared cell has no state at all
+ * and is counted as coverage instead - an arm that sat an archetype out is not
+ * a fifth performance direction, and folding the two together would report a
+ * gap in the matrix as a doubt about the measurement.
+ */
+export type SummaryState = 'ahead' | 'level' | 'behind' | 'unclear';
+
+/** Which summary state an outcome falls into, or `null` where no pair was measured. */
+export const SUMMARY_OF: Readonly<Record<CellOutcome, SummaryState | null>> = {
+  'clear-lead': 'ahead',
+  lead: 'ahead',
+  level: 'level',
+  loss: 'behind',
+  'clear-loss': 'behind',
+  unstable: 'unclear',
+  absent: null,
+};
+
+/** Summary states in reading order. */
+export const SUMMARY_ORDER: readonly SummaryState[] = ['ahead', 'level', 'behind', 'unclear'];
+
+/** One summary line: everything measured against one arm, on one backend or in physics. */
 export interface ComparisonTally {
   readonly key: string;
-  /** The pair, as the scoreboard names it. */
+  /** Heading this pair sits under, so peers and a reference arm are not read as the same kind of opponent. */
+  readonly group: string;
+  /** The pair, as the summary names it. */
   readonly label: string;
+  /** The arm on its own, for a sentence that has to name it. */
+  readonly arm: string;
   /** What the pair is measured at, or what role the arm stands in. */
   readonly meta: string;
   readonly counts: Readonly<Record<CellOutcome, number>>;
+  /** The measured comparisons, rolled up to the states the summary shows. */
+  readonly summary: Readonly<Record<SummaryState, number>>;
+  /** How many rows produced a comparison at all; the rest of `total` is coverage the matrix does not have. */
+  readonly measured: number;
   readonly total: number;
 }
 
-const tally = (key: string, label: string, meta: string, cells: readonly (ProfileCell | null)[]): ComparisonTally => {
+const tally = (key: string, group: string, label: string, arm: string, meta: string, cells: readonly (ProfileCell | null)[]): ComparisonTally => {
   const counts = Object.fromEntries(OUTCOME_ORDER.map(outcome => [outcome, 0])) as Record<CellOutcome, number>;
+  const summary = Object.fromEntries(SUMMARY_ORDER.map(state => [state, 0])) as Record<SummaryState, number>;
 
-  for (const cell of cells) counts[outcomeOf(cell)] += 1;
+  let measured = 0;
 
-  return { key, label, meta, counts, total: cells.length };
+  for (const cell of cells) {
+    const outcome = outcomeOf(cell);
+    const state = SUMMARY_OF[outcome];
+
+    counts[outcome] += 1;
+
+    if (state !== null) {
+      summary[state] += 1;
+      measured += 1;
+    }
+  }
+
+  return { key, group, label, arm, meta, counts, summary, measured, total: cells.length };
 };
 
 /**
@@ -572,7 +695,9 @@ export const comparisonTallies = (document: BenchProfileDocument): readonly Comp
     backend.competitors.map(arm =>
       tally(
         `${backend.backend}-${arm}`,
-        `${BACKEND_LABELS[backend.backend]} vs ${arm}`,
+        `Rendering · ${BACKEND_LABELS[backend.backend]}`,
+        `vs ${armLabel(arm)}`,
+        armLabel(arm),
         backend.headlineCount === null ? 'no headline count' : `${String(backend.headlineCount)} nodes`,
         backend.sections.flatMap(section => section.rows.map(row => row.cells.find(cell => cell.competitor === arm) ?? null)),
       ),
@@ -583,39 +708,31 @@ export const comparisonTallies = (document: BenchProfileDocument): readonly Comp
     : armsOfSection(document.physics.section).map(arm =>
         tally(
           `physics-${arm}`,
-          `Physics vs ${arm}`,
-          isWasmReferenceArm(arm) ? 'Rust/WASM ceiling' : 'pure-JS peer',
+          isWasmReferenceArm(arm) ? 'Physics · WASM reference' : 'Physics · JavaScript peers',
+          `vs ${armLabel(arm)}`,
+          armLabel(arm),
+          isWasmReferenceArm(arm) ? 'Rust/WASM solver' : 'JavaScript solver',
           (document.physics?.section.rows ?? []).map(row => row.cells.find(cell => cell.competitor === arm) ?? null),
         ),
       )),
 ];
 
 /**
- * The sentence under the page title: which machine was measured, with which
- * engine version, over how many runs, and how much the profile covers.
+ * The one-line stamp under the page title: which machine, which engine version,
+ * how many pooled runs, and what the profile covers.
  *
- * Every value in it is copied from the document, so a re-measurement rewrites
- * the sentence with the tables rather than leaving a claim behind that the
- * numbers no longer support. A profile carrying only one domain yields a
- * shorter sentence instead of a padded one.
+ * Every value is copied from the document, so a re-measurement rewrites the
+ * line with the tables rather than leaving a claim behind that the numbers no
+ * longer support. A profile carrying only one domain yields a shorter line
+ * instead of a padded one.
  */
 export const profileScope = (document: BenchProfileDocument): string => {
   const rendering = renderingCells(document);
   const physics = physicsCells(document);
-  const { profile } = document;
   const parts: string[] = [];
 
-  if (rendering.length > 0) {
-    const backends = (document.rendering?.backends ?? []).map(backend => BACKEND_LABELS[backend.backend]);
+  if (rendering.length > 0) parts.push(`${String(rendering.length)} rendering comparisons against ${listOf(armsIn(rendering).map(armLabel))}`);
+  if (physics.length > 0) parts.push(`${String(physics.length)} physics comparisons against ${listOf(armsIn(physics).map(armLabel))}`);
 
-    parts.push(`${String(rendering.length)} rendering comparisons on ${listOf(backends)} against ${listOf(armsIn(rendering))}`);
-  }
-
-  if (physics.length > 0) {
-    parts.push(`${String(physics.length)} physics comparisons against ${listOf(armsIn(physics))}`);
-  }
-
-  if (parts.length === 0) return '';
-
-  return `ExoJS ${profile.engineVersion} on ${profile.gpu} / ${profile.os} / ${profile.browser}, pooled from ${String(profile.runs)} separate runs taken on ${formatDay(profile.measuredAt)}: ${parts.join('; ')}.`;
+  return parts.join(' · ');
 };

@@ -218,11 +218,10 @@ const ADAPTER_CAPABILITIES: readonly EngineAdapter[] = [
   capabilityDescriptor('pixi', 'culled', ['webgl2', 'webgpu'], spec => spec.cullingEnabled),
   // Phaser 4 and Excalibur are committed competitor arms (pinned exact
   // devDependencies). Both are WebGL2-only in this harness and never run WebGPU
-  // (Phaser 4 ships no WebGPU renderer; Excalibur 0.32 has none). Phaser 4 is
-  // measured as a stock app: its WebGLRenderer creates a WebGL1 context by
-  // default (`getContext('webgl')`), so it runs under the 'webgl2' REQUEST while
-  // rendering WebGL1 (disclosed by the harness's structural-probe degrade path
-  // and the report Methodology); Excalibur 0.32 renders a real WebGL2 context.
+  // (Phaser 4 ships no WebGPU renderer; Excalibur 0.32 has none). Phaser's
+  // default renderer asks for WebGL1, so the adapter explicitly supplies and
+  // verifies a WebGL2 context through Phaser's public context path; Excalibur
+  // creates its own real WebGL2 context.
   // A missing (unlinked) competitor degrades gracefully: its per-cell dynamic
   // import fails in isolation (`runCellInPage` records that cell `unavailable`
   // and the run continues), and it is left out of Vite's pre-bundle set below.
@@ -231,14 +230,10 @@ const ADAPTER_CAPABILITIES: readonly EngineAdapter[] = [
   // promises off-screen content - a row that looks comparable and is not.
   //
   // Both also sit out the render-target archetypes (`filter-chain-*`,
-  // `mask-clip`), for two different reasons that land on the same exclusion.
-  // Phaser 4 renders a WebGL1 context, so a target-heavy row's gap would be
-  // attributable to the backend generation rather than to the engine, and a
-  // WebGL1-vs-WebGL2 factor is not a claim this matrix makes. Excalibur 0.32 has
-  // no per-node filter or clipping API at all: its `PostProcessor` chain is a
-  // full-SCREEN pass, not a filtered subtree, and it ships no mask source, so
-  // the cell would have to be approximated - which the fairness rule forbids.
-  capabilityDescriptor('phaser', 'default', ['webgl2'], spec => !isScrolling(spec) && !usesRenderTargets(spec)),
+  // `mask-clip`): Phaser's adapter and Excalibur 0.32 have no validated
+  // per-node equivalent for the shared filter/mask scenes, so approximating
+  // the cell would violate the fairness rule.
+  capabilityDescriptor('phaser', 'webgl2', ['webgl2'], spec => !isScrolling(spec) && !usesRenderTargets(spec)),
   capabilityDescriptor('excalibur', 'default', ['webgl2'], spec => !isScrolling(spec) && !usesRenderTargets(spec)),
 ];
 

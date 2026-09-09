@@ -174,7 +174,7 @@ export interface PhysicsArmIdentity {
  * {@link '../rendering/EngineAdapter'.EngineAdapter}.
  *
  * Every arm - the native `@codexo/exojs-physics` runtime and the matter.js,
- * planck and rapier libraries an app would attach instead - implements this one
+ * planck, nape-js and rapier libraries an app would attach instead - implements this one
  * interface, so the stay-native vs. attach-an-adapter comparison rests on the
  * harness driving all of them through the identical calls. Implementations run
  * in the browser page, not in the driver process.

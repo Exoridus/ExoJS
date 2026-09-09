@@ -37,6 +37,19 @@ const scope = referenceProfile === undefined ? '' : profileScope(referenceProfil
 const REPRODUCTION_RUNS = 3;
 
 const pooledRuns = referenceProfile?.profile.runs ?? REPRODUCTION_RUNS;
+const machine = referenceProfile?.profile;
+
+/**
+ * The sections the on-page navigation offers. Only the ones that exist are
+ * listed: a link to an empty anchor is worse than a shorter bar.
+ */
+const sections = [
+    ...(referenceProfile === undefined ? [] : [{ id: 'summary', label: 'Overview' }]),
+    ...(referenceProfile?.rendering === undefined ? [] : [{ id: 'rendering', label: 'Rendering' }]),
+    ...(referenceProfile?.physics === undefined ? [] : [{ id: 'physics', label: 'Physics' }]),
+    ...(furtherProfiles.length === 0 ? [] : [{ id: 'further', label: 'Other machines' }]),
+    { id: 'practices', label: 'Methodology' },
+];
 ---
 
 <DocsLayout
@@ -49,13 +62,27 @@ const pooledRuns = referenceProfile?.profile.runs ?? REPRODUCTION_RUNS;
 
         <header class="bench-head">
             <h1>Benchmarks</h1>
-            <p>
-                ExoJS against Pixi, Phaser and Excalibur for rendering, and against matter.js, planck and Rapier for physics. Every number is written by the
-                harness into a signed profile in the repository, pooled over {pooledRuns} separate runs; a comparison the runs did not agree on publishes no
-                verdict, and every cell where ExoJS trails is published like the ones where it leads.
+            <p class="lede">
+                Cross-library measurements for rendering and physics. Lower is better. Every published value is pooled from {pooledRuns} independent runs.
             </p>
-            {scope !== '' && <p class="scope">{scope}</p>}
+            {machine !== undefined && (
+                <p class="stamp">
+                    <b>
+                        {machine.gpu} · {machine.os} · {machine.browser}
+                    </b>
+                    <span>
+                        ExoJS {machine.engineVersion} · measured {formatDay(machine.measuredAt)} · {machine.runs} pooled runs
+                    </span>
+                    {scope !== '' && <span>{scope}</span>}
+                </p>
+            )}
         </header>
+
+        <nav class="section-nav" aria-label="Benchmark sections">
+            {sections.map(section => (
+                <a href={`#${section.id}`}>{section.label}</a>
+            ))}
+        </nav>
 
         {referenceProfile === undefined ? (
             <p class="empty">
@@ -63,7 +90,7 @@ const pooledRuns = referenceProfile?.profile.runs ?? REPRODUCTION_RUNS;
                 pooled into a single profile file in the repository; until then there is nothing here to read. The practices below already apply.
             </p>
         ) : (
-            <BenchProfileReport document={referenceProfile} headingLevel={2} showTitle={false} />
+            <BenchProfileReport document={referenceProfile} headingLevel={2} showTitle={false} primary />
         )}
 
         {furtherProfiles.length > 0 && (
@@ -118,9 +145,10 @@ const pooledRuns = referenceProfile?.profile.runs ?? REPRODUCTION_RUNS;
                         median across the runs - so one unlucky run cannot set a number. Nothing is ever a mean, and nothing is aggregated across archetypes.
                     </li>
                     <li>
-                        Every number carries the <strong>range its runs observed</strong>, printed under it. A range spanning a factor of 1.2 or more is
-                        marked: the measurement's own noise then reaches as wide as the band the ladder treats as no difference at all, which is something to
-                        know before reading the number, not after.
+                        Every number carries the <strong>spread its runs observed</strong>, printed under it as the factor between the slowest and the
+                        fastest run; the two millisecond values behind it are on the cell itself. A spread of 1.2 or more is marked: the measurement's own
+                        noise then reaches as wide as the band the ladder treats as no difference at all, which is something to know before reading the
+                        number, not after.
                     </li>
                     <li>
                         Every median is published with the <strong>p95</strong> of the same timed window beside it. The median is the amortised cost and the
@@ -138,10 +166,11 @@ const pooledRuns = referenceProfile?.profile.runs ?? REPRODUCTION_RUNS;
                     </li>
                     <li>
                         A verdict is published <strong>only when all {pooledRuns} runs independently reach it</strong>. Each run is placed on the ladder on
-                        its own, and the pooled medians have to land on the same rung as well. A cell whose runs disagreed publishes <em>no verdict</em>: it
-                        keeps its numbers and shows the ratio band those runs spanned, and it is counted nowhere - not as a win, not as a loss, and not as a
-                        level row. That the pair cannot be separated on this machine is the finding. The band is the one figure the page computes rather than
-                        reads, from the published extremes of both arms, and it is drawn without a side.
+                        its own, and the pooled medians have to land on the same rung as well. A cell whose runs disagreed publishes <em>no verdict</em>, and
+                        it is counted nowhere - not as a win, not as a loss, and not as a level row. That the pair cannot be separated on this machine is the
+                        finding. It still shows what was measured: the factor its two pooled medians work out to, printed with a tilde and plotted without a
+                        side. That factor is the one figure the page derives rather than reads, and it is never a verdict - the tilde, the hollow mark and
+                        the scoreboard all keep it out of the outcome counts.
                     </li>
                     <li>
                         A ratio between <strong>0.8 and 1.2</strong> is reported as <code>level</code>: inside that band the difference is not
@@ -288,17 +317,64 @@ pnpm bench:compare -- \
         margin: 0 0 var(--s-3);
     }
 
-    .bench-head p {
+    .lede {
         margin: 0;
         color: var(--fg-muted);
         line-height: 1.6;
     }
 
-    .scope {
-        margin-top: var(--s-2) !important;
+    .stamp {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.15rem var(--s-4);
+        margin: var(--s-3) 0 0 !important;
         font-family: var(--f-mono);
         font-size: 0.74rem;
-        color: var(--fg-faint) !important;
+        color: var(--fg-faint);
+    }
+
+    .stamp b {
+        font-weight: 600;
+        color: var(--fg-muted);
+    }
+
+    /*
+     * The page is long and its sections are far apart, so the jump list stays
+     * reachable. Horizontal scrolling is fine for navigation - it is exactly
+     * what the measurements below must never need.
+     */
+    .section-nav {
+        position: sticky;
+        top: 68px;
+        z-index: 2;
+        display: flex;
+        gap: var(--s-2);
+        overflow-x: auto;
+        margin: var(--s-5) 0 var(--s-6);
+        padding: var(--s-2) 0;
+        background: var(--bg-canvas);
+        border-bottom: 1px solid var(--line-soft);
+        scrollbar-width: none;
+    }
+
+    .section-nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    .section-nav a {
+        flex: none;
+        padding: 0.25rem 0.7rem;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-pill);
+        font-size: 0.76rem;
+        color: var(--fg-muted);
+        text-decoration: none;
+        white-space: nowrap;
+    }
+
+    .section-nav a:hover {
+        color: var(--fg);
+        border-color: var(--line);
     }
 
     .empty {

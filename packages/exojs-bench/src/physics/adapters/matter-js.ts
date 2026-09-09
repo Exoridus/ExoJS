@@ -40,8 +40,9 @@ import { describePhysicsScene } from './scene';
  *   (`enableSleeping=false`), whereas exojs and rapier do - so a settled matter
  *   stack keeps paying full solve cost. Kept at matter's default and disclosed.
  * - `frictionAir` is set to `0` (matter's default `0.01` applies a per-step linear
- *   drag that neither exojs nor rapier apply by default) so all three arms
- *   integrate the SAME pure-gravity force field - matching the SCENE, while the
+ *   drag that exojs, planck, rapier and nape-js do not apply by default) so all
+ *   four arms integrate the SAME pure-gravity force field - matching the SCENE,
+ *   while the
  *   solver differences above are left to be measured.
  * - Contact count is matter's active colliding-pair count (`engine.pairs
  *   .collisionActive`), a pair-level proxy comparable to - but not semantically

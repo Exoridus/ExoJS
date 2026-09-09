@@ -11,6 +11,9 @@ importers:
       '@dimforge/rapier2d-compat':
         specifier: 0.19.3
         version: 0.19.3
+      '@newkrok/nape-js':
+        specifier: 3.42.0
+        version: 3.42.0
       '@types/matter-js':
         specifier: 0.20.2
         version: 0.20.2
@@ -35,6 +38,10 @@ packages:
   '@dimforge/rapier2d-compat@0.19.3':
     resolution: {integrity: sha512-5HZUgiSpu9Uba3He+4SCPVte3h2vgxcodkxWThRjd3X/zgq/Z4OyRUKpNEOsOR6AC+OfulPkkZ5asZGzRMpcwA==}
 
+  '@newkrok/nape-js@3.42.0':
+    resolution: {integrity: sha512-gjGp45ERUa4bI5Q72vpL3ruVUCoBouC29CoeE/pZ4hCrTRGjjfy1WQz0lQTR1tGuSHDd9XAbB6CgZ7EiazFA5Q==}
+    engines: {node: '>=18'}
+
   '@pixi/colord@2.9.6':
     resolution: {integrity: sha512-nezytU2pw587fQstUu1AsJZDVEynjskwOL+kibwcdxsMBFqPsFFNA7xl0ii/gXuDi6M0xj3mfRJj8pBSc2jCfA==}
 
@@ -50,6 +57,7 @@ packages:
   '@xmldom/xmldom@0.8.13':
     resolution: {integrity: sha512-KRYzxepc14G/CEpEGc3Yn+JKaAeT63smlDr+vjB8jRfgTBBI9wRj/nkQEO+ucV8p8I9bfKLWp37uHgFrbntPvw==}
     engines: {node: '>=10.0.0'}
+    deprecated: this version has critical issues, please update to the latest version
 
   earcut@3.2.3:
     resolution: {integrity: sha512-vnS4AVwp1KHAF13i1vp1/2D5evWy3k5u/iW/B81QVsUZtV8cv2tU0b2VNFlqvh4kYwrFMDdjPCfAmfyJW9y14Q==}
@@ -98,6 +106,8 @@ packages:
 snapshots:
 
   '@dimforge/rapier2d-compat@0.19.3': {}
+
+  '@newkrok/nape-js@3.42.0': {}
 
   '@pixi/colord@2.9.6': {}
 

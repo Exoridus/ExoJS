@@ -39,9 +39,9 @@ export const isComposite = (spec: ArchetypeSpec): boolean => compositeBlurRadius
  * Whether the archetype exercises render-target machinery - a filter chain, a
  * mask stack, or the bloom-shaped composite.
  *
- * This is the WebGL1 exclusion boundary: the Phaser arm renders through a WebGL1
- * context, so a target-heavy row's gap would be attributable to the backend
- * generation rather than to the engine, which is not a claim this matrix makes.
+ * This is the render-target coverage boundary: competitor arms without a
+ * validated per-node equivalent sit these rows out rather than approximating
+ * them and making the comparison answer a different question.
  */
 export const usesRenderTargets = (spec: ArchetypeSpec): boolean => filterChainDepth(spec) > 0 || maskDepth(spec) > 0 || isComposite(spec);
 

@@ -6,8 +6,8 @@ import { rayForStep } from './scene';
  * Shared per-step work for the archetypes whose cost is NOT the plain solver
  * step: the ray sweep and the body churn.
  *
- * The three arms differ only in how they create, destroy and query a body, so
- * only that is left to them ({@link ArmWorldOps}); the loop structure - which
+ * The competitor arms differ only in how they create, destroy and query a body,
+ * so only that is left to them ({@link ArmWorldOps}); the loop structure - which
  * indices churn, which rays are cast at which step index, how hits are counted -
  * lives here. Three hand-written copies of that loop would be three chances for
  * one arm to churn a different set or cast a different sweep than the others,

@@ -12,8 +12,8 @@ import type { StructuralCounters } from '../rendering/EngineAdapter';
  *
  * `null` is therefore a meaningful result and never an inconvenience to work
  * around: it says this pair of cells carries no structural evidence, which is the
- * case whenever an arm reported no counters at all (the Phaser arm renders a
- * WebGL1 context the probe cannot attach to).
+ * case whenever an arm reported no counters at all (for example, a legacy
+ * Phaser profile measured before its WebGL2 context path was enabled).
  */
 
 /** How far apart two counters must be before the difference is attributed to them rather than to CPU work. */

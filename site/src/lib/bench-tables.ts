@@ -8,10 +8,13 @@
  * anywhere gets no column, and an archetype a backend did not measure keeps its
  * row and reports the gap rather than disappearing from it.
  *
- * ExoJS gets a column of its own in front of each backend's arms rather than
- * appearing inside every cell. It is one measurement per row and backend, so
- * repeating it beside each arm would print the same three numbers as often as
- * the backend has opponents.
+ * There is no column for ExoJS itself. Its median belongs to the comparison and
+ * is printed inside each cell beside the arm's, which repeats the value once per
+ * opponent - a repetition worth paying for, because it makes every cell a whole
+ * comparison that stands on its own. A separate reference column widened the
+ * table, split each backend's header across an uneven number of columns, and
+ * stacked into a block of its own on narrow screens, where a card should read as
+ * a list of comparisons and nothing else.
  *
  * Only the arrangement lives here. Timings, ratios and verdicts are read from
  * the profile in `bench-profiles`, and no row is dropped, reordered by outcome
@@ -19,6 +22,7 @@
  */
 
 import {
+  armLabel,
   armsOfSection,
   BACKEND_LABELS,
   type BenchProfileDocument,
@@ -26,16 +30,11 @@ import {
   type ProfileBackend,
   type ProfileCell,
   type ProfileRow,
-  type ProfileSpread,
 } from './bench-profiles';
 
-/** What a column carries: the ExoJS measurement itself, or a comparison against one arm. */
-export type ComparisonColumnKind = 'reference' | 'arm';
-
-/** One column of a table. */
+/** One comparison pair the table has a column for. */
 export interface ComparisonColumn {
   readonly key: string;
-  readonly kind: ComparisonColumnKind;
   /** Heading the neighbouring columns share, such as the backend they were measured on; `null` where each column stands alone. */
   readonly group: string | null;
   /** What this column alone is measured under, such as the role an arm stands in. */
@@ -43,22 +42,11 @@ export interface ComparisonColumn {
   readonly label: string;
 }
 
-/** The ExoJS side of one row, under one backend. */
-export interface ComparisonReference {
-  readonly ms: number | null;
-  readonly p95Ms: number | null;
-  readonly overFrameBudget: boolean;
-  readonly spread: ProfileSpread | undefined;
-}
-
 /** One column's outcome on one row. */
 export interface ComparisonEntry {
   readonly key: string;
-  readonly kind: ComparisonColumnKind;
-  /** The published comparison, or `null` in a reference column and where an arm produced none. */
+  /** The published comparison, or `null` where this column produced none. */
   readonly cell: ProfileCell | null;
-  /** The ExoJS measurement, in a reference column only. */
-  readonly reference: ComparisonReference | null;
   /** Scene size this column measured the row at; `null` where the column does not carry the row at all. */
   readonly count: number | null;
 }
@@ -74,14 +62,6 @@ export interface ComparisonRow {
   readonly entries: readonly ComparisonEntry[];
 }
 
-/** The structural evidence one comparison carries, listed away from the numbers. */
-export interface ComparisonMechanism {
-  readonly key: string;
-  readonly archetype: string;
-  readonly column: string;
-  readonly text: string;
-}
-
 /** One published comparison table. */
 export interface ComparisonTable {
   readonly columns: readonly ComparisonColumn[];
@@ -90,57 +70,19 @@ export interface ComparisonTable {
   readonly unit: string;
   /** True where the rows were measured at different sizes, so the size belongs in a column of its own. */
   readonly countColumn: boolean;
-  readonly mechanisms: readonly ComparisonMechanism[];
 }
 
-/**
- * The ExoJS side of a row. Every arm in a block times the same ExoJS scene, so
- * the first cell that produced a number carries it for the whole block.
- */
-const referenceOf = (row: ProfileRow | undefined): ComparisonReference => {
-  const cell = row?.cells.find(candidate => candidate.referenceMs !== null);
-
-  return {
-    ms: cell?.referenceMs ?? null,
-    p95Ms: cell?.referenceP95Ms ?? null,
-    overFrameBudget: cell?.referenceOverFrameBudget ?? false,
-    spread: cell?.aggregate.reference,
-  };
-};
-
-const referenceEntry = (key: string, row: ProfileRow | undefined): ComparisonEntry => ({
+const entryOf = (key: string, row: ProfileRow | undefined, arm: string): ComparisonEntry => ({
   key,
-  kind: 'reference',
-  cell: null,
-  reference: referenceOf(row),
-  count: row?.count ?? null,
-});
-
-const armEntry = (key: string, row: ProfileRow | undefined, arm: string): ComparisonEntry => ({
-  key,
-  kind: 'arm',
   cell: row?.cells.find(cell => cell.competitor === arm) ?? null,
-  reference: null,
   count: row?.count ?? null,
 });
-
-const mechanismsOf = (rows: readonly ComparisonRow[], columns: readonly ComparisonColumn[]): readonly ComparisonMechanism[] =>
-  rows.flatMap(row =>
-    row.entries.flatMap((entry, index) => {
-      const text = entry.cell?.mechanism;
-      const column = columns[index];
-
-      return text === undefined || text === null || column === undefined
-        ? []
-        : [{ key: `${row.key}-${column.key}`, archetype: row.archetype, column: column.label, text }];
-    }),
-  );
 
 /** Every row of a backend, flattened out of its categories. */
 const rowsOf = (backend: ProfileBackend): readonly ProfileRow[] => backend.sections.flatMap(section => section.rows);
 
 /**
- * The rendering table: an ExoJS column and its arms, per backend.
+ * The rendering table: one column per backend-and-arm pair.
  *
  * Archetypes are collected in the order the first backend publishes them and
  * then extended by any a later backend adds, so the categories stay in the
@@ -148,16 +90,14 @@ const rowsOf = (backend: ProfileBackend): readonly ProfileRow[] => backend.secti
  */
 export const renderingComparison = (document: BenchProfileDocument): ComparisonTable => {
   const backends = document.rendering?.backends ?? [];
-  const columns = backends.flatMap(backend => [
-    { key: `${backend.backend}-exojs`, kind: 'reference' as const, group: BACKEND_LABELS[backend.backend], overline: '', label: 'ExoJS' },
-    ...backend.competitors.map(arm => ({
+  const columns = backends.flatMap(backend =>
+    backend.competitors.map(arm => ({
       key: `${backend.backend}-${arm}`,
-      kind: 'arm' as const,
       group: BACKEND_LABELS[backend.backend],
       overline: '',
-      label: `vs ${arm}`,
+      label: armLabel(arm),
     })),
-  ]);
+  );
   const archetypes: { archetype: string; section: string }[] = [];
 
   for (const backend of backends) {
@@ -172,14 +112,14 @@ export const renderingComparison = (document: BenchProfileDocument): ComparisonT
     const entries = backends.flatMap(backend => {
       const row = rowsOf(backend).find(candidate => candidate.archetype === archetype);
 
-      return [referenceEntry(`${backend.backend}-exojs`, row), ...backend.competitors.map(arm => armEntry(`${backend.backend}-${arm}`, row, arm))];
+      return backend.competitors.map(arm => entryOf(`${backend.backend}-${arm}`, row, arm));
     });
     const counts = [...new Set(entries.map(entry => entry.count).filter((count): count is number => count !== null))];
 
     return { key: archetype, archetype, section, count: counts.length === 1 ? (counts[0] ?? null) : null, entries };
   });
 
-  return { columns, rows, unit: 'nodes', countColumn: false, mechanisms: mechanismsOf(rows, columns) };
+  return { columns, rows, unit: 'nodes', countColumn: false };
 };
 
 const singleBlockTable = (
@@ -188,17 +128,18 @@ const singleBlockTable = (
   columns: readonly ComparisonColumn[],
   unit: string,
   countColumn: boolean,
-): ComparisonTable => {
-  const built = rows.map(row => ({
+): ComparisonTable => ({
+  columns,
+  rows: rows.map(row => ({
     key: row.archetype,
     archetype: row.archetype,
     section: null,
     count: row.count,
-    entries: [referenceEntry('exojs', row), ...arms.map(arm => armEntry(arm, row, arm))],
-  }));
-
-  return { columns, rows: built, unit, countColumn, mechanisms: mechanismsOf(built, columns) };
-};
+    entries: arms.map(arm => entryOf(arm, row, arm)),
+  })),
+  unit,
+  countColumn,
+});
 
 /**
  * The physics table.
@@ -217,16 +158,15 @@ export const physicsComparison = (document: BenchProfileDocument): ComparisonTab
   return singleBlockTable(
     section.rows,
     arms,
-    [
-      { key: 'exojs', kind: 'reference', group: null, overline: 'per fixed step', label: 'ExoJS' },
-      ...arms.map(arm => ({
-        key: arm,
-        kind: 'arm' as const,
-        group: null,
-        overline: isWasmReferenceArm(arm) ? 'Rust/WASM ceiling' : 'pure-JS peer',
-        label: `vs ${arm}`,
-      })),
-    ],
+    arms.map(arm => ({
+      key: arm,
+      // Grouping the peers apart from the reference arm is the whole point: a
+      // Rust/WASM solver answers "what does leaving JavaScript buy", not "how
+      // does ExoJS compare to what I would otherwise reach for".
+      group: isWasmReferenceArm(arm) ? 'WASM reference' : 'JavaScript peers',
+      overline: '',
+      label: armLabel(arm),
+    })),
     'bodies',
     true,
   );
@@ -236,22 +176,18 @@ export const physicsComparison = (document: BenchProfileDocument): ComparisonTab
  * The WebGL1 block of one backend, as its own table.
  *
  * These arms render through a WebGL1 context and report no structural counters,
- * so the block compares CPU time only and carries no mechanism list.
+ * so the block compares CPU time only.
  */
 export const webgl1Comparison = (backend: ProfileBackend): ComparisonTable | null => {
   if (backend.webgl1.length === 0) return null;
 
   const arms = [...new Set(backend.webgl1.flatMap(row => row.cells.map(cell => cell.competitor)))].sort();
-  const table = singleBlockTable(
+
+  return singleBlockTable(
     backend.webgl1,
     arms,
-    [
-      { key: 'exojs', kind: 'reference', group: null, overline: 'CPU time only', label: 'ExoJS' },
-      ...arms.map(arm => ({ key: arm, kind: 'arm' as const, group: null, overline: 'WebGL1', label: `vs ${arm}` })),
-    ],
+    arms.map(arm => ({ key: arm, group: null, overline: 'WebGL1, CPU time only', label: armLabel(arm) })),
     'nodes',
     false,
   );
-
-  return { ...table, mechanisms: [] };
 };

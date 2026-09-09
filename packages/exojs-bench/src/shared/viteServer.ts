@@ -41,7 +41,7 @@ export const RENDERING_LIBRARY_ARMS = ['pixi.js', 'phaser', 'excalibur'] as cons
  * own WASM, so both only reach the browser's native ESM loader through the
  * optimizer.
  */
-export const PHYSICS_LIBRARY_ARMS = ['matter-js', 'planck', '@dimforge/rapier2d-compat'] as const;
+export const PHYSICS_LIBRARY_ARMS = ['matter-js', 'planck', '@dimforge/rapier2d-compat', '@newkrok/nape-js'] as const;
 
 /** Every competitor arm this package can measure, across both domains. */
 export const LIBRARY_ARMS = [...RENDERING_LIBRARY_ARMS, ...PHYSICS_LIBRARY_ARMS] as const;

@@ -17,7 +17,7 @@
  */
 
 import BenchComparisonTable from './BenchComparisonTable.astro';
-import BenchScoreboard from './BenchScoreboard.astro';
+import BenchComparisonSummary from './BenchComparisonSummary.astro';
 import {
     BACKEND_LABELS,
     comparisonTallies,
@@ -35,9 +35,11 @@ interface Props {
     headingLevel?: 2 | 3;
     /** Set false where the surrounding markup already names the machine, such as a collapsed further machine. */
     showTitle?: boolean;
+    /** The reference profile carries the page's section anchors; a further machine must not duplicate them. */
+    primary?: boolean;
 }
 
-const { document: profileDocument, headingLevel = 2, showTitle = true } = Astro.props;
+const { document: profileDocument, headingLevel = 2, showTitle = true, primary = false } = Astro.props;
 const { profile, rendering, physics } = profileDocument;
 const Heading = `h${String(headingLevel)}` as 'h2' | 'h3';
 const SubHeading = `h${String(headingLevel + 1)}` as 'h3' | 'h4';
@@ -67,7 +69,6 @@ const renderingCountNote =
               .map(backend => `${String(backend.headlineCount ?? 0)} nodes on ${BACKEND_LABELS[backend.backend]}`)
               .join(' and ')}`;
 
-const mechanisms = [...renderingTable.mechanisms, ...(physicsTable?.mechanisms ?? [])];
 const excluded = backends.flatMap(backend => backend.excluded.map(entry => ({ backend: backend.backend, ...entry })));
 
 /** The machine is one across the pooled runs, so the first run's stamps name it for all of them. */
@@ -96,11 +97,25 @@ const libraries = [...(rendering?.libraries ?? []), ...(physics?.libraries ?? []
 <section class="profile">
     {showTitle && <Heading id={`profile-${profile.slug}`}>{profile.gpu} / {profile.os} / {profile.browser}</Heading>}
 
-    <BenchScoreboard tallies={tallies} />
+    <div id={primary ? 'summary' : undefined}>
+        <BenchComparisonSummary tallies={tallies} />
+    </div>
+
+    <p class="legend">
+        <span class="key ahead">ExoJS ahead</span>
+        <span class="key behind">the arm ahead</span>
+        <span class="key level">level, inside the noise band</span>
+        <span class="key unclear">no clear lead: the pooled runs landed on different verdict bands</span>
+        <span class="key warn">past the {FRAME_BUDGET_MS} ms frame, or a spread of {WIDE_SPREAD_RATIO}x and up</span>
+    </p>
+    <p class="legend-note">
+        A bar is as wide as the arm's row count, so the unfilled part is coverage the matrix does not have rather than a result. Nothing is summed across
+        bars and no bar is ranked against another: the arms answer different questions, and this page publishes no score and no overall winner.
+    </p>
 
     {renderingTable.rows.length > 0 && (
         <section class="block">
-            <SubHeading id={`${profile.slug}-rendering`}>Rendering</SubHeading>
+            <SubHeading id={primary ? 'rendering' : undefined}>Rendering</SubHeading>
             <p class="note">
                 {renderingCountNote}, chosen from the archetype ladders before any timing was read. CPU milliseconds per frame, pooled over {profile.runs}
                 {' '}separate runs as the median of their per-run medians; lower is better.
@@ -111,36 +126,13 @@ const libraries = [...(rendering?.libraries ?? []), ...(physics?.libraries ?? []
 
     {physicsTable !== null && physicsTable.rows.length > 0 && (
         <section class="block">
-            <SubHeading id={`${profile.slug}-physics`}>Physics</SubHeading>
+            <SubHeading id={primary ? 'physics' : undefined}>Physics</SubHeading>
             <p class="note">
                 Each archetype sits on its own body-count ladder, so every row states the count it was measured at and rows are not comparable with one
                 another - only the arms within one row are. CPU milliseconds per fixed step, pooled the same way.
             </p>
             <BenchComparisonTable table={physicsTable} label="Physics comparisons per arm" />
         </section>
-    )}
-
-    <p class="legend">
-        <span class="key clear-lead">ExoJS leads</span>
-        <span class="key clear-loss">the arm leads</span>
-        <span class="key level">level, inside the noise band</span>
-        <span class="key unstable">the runs disagreed: the band is the ratio they spanned</span>
-        <span class="key absent">not comparable</span>
-        <span class="key budget">a time past the {FRAME_BUDGET_MS} ms frame</span>
-        <span class="key budget">a range spanning {WIDE_SPREAD_RATIO}x or more</span>
-    </p>
-
-    {mechanisms.length > 0 && (
-        <details class="aside">
-            <summary>Structural evidence behind each comparison ({mechanisms.length})</summary>
-            <ul>
-                {mechanisms.map(entry => (
-                    <li>
-                        <code>{entry.archetype}</code> <span class="against">{entry.column}</span> - {entry.text}
-                    </li>
-                ))}
-            </ul>
-        </details>
     )}
 
     {webgl1Blocks.map(block => (
@@ -236,7 +228,9 @@ const libraries = [...(rendering?.libraries ?? []), ...(physics?.libraries ?? []
 </section>
 
 <style>
+    /* Every block below reacts to the room this component actually has, not to the window. */
     .profile {
+        container-type: inline-size;
         margin-top: var(--s-5);
     }
 
@@ -259,7 +253,7 @@ const libraries = [...(rendering?.libraries ?? []), ...(physics?.libraries ?? []
         display: flex;
         flex-wrap: wrap;
         gap: var(--s-2) var(--s-4);
-        margin: var(--s-5) 0 0;
+        margin: var(--s-3) 0 0;
         font-family: var(--f-mono);
         font-size: 0.7rem;
         color: var(--fg-muted);
@@ -268,18 +262,18 @@ const libraries = [...(rendering?.libraries ?? []), ...(physics?.libraries ?? []
     .key::before {
         content: '';
         display: inline-block;
-        width: 14px;
-        height: 6px;
-        margin-right: 0.35rem;
-        border-radius: 2px;
+        width: 9px;
+        height: 9px;
+        margin-right: 0.4rem;
+        border-radius: 50%;
         vertical-align: middle;
     }
 
-    .key.clear-lead::before {
+    .key.ahead::before {
         background: var(--bench-lead);
     }
 
-    .key.clear-loss::before {
+    .key.behind::before {
         background: var(--bench-loss);
     }
 
@@ -287,17 +281,22 @@ const libraries = [...(rendering?.libraries ?? []), ...(physics?.libraries ?? []
         background: var(--fg-faint);
     }
 
-    .key.unstable::before {
-        border: 1px dashed var(--bench-mark);
-        background: color-mix(in oklab, var(--bench-mark), transparent 88%);
+    /* Neither side's hue: a pair without a verdict must not read as a quiet win or a quiet loss. */
+    .key.unclear::before {
+        background: repeating-linear-gradient(135deg, var(--fg-faint) 0 2px, transparent 2px 5px);
+        box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--fg-faint), transparent 60%);
     }
 
-    .key.absent::before {
-        background: repeating-linear-gradient(90deg, var(--fg-faint) 0 1px, transparent 1px 4px);
-    }
-
-    .key.budget::before {
+    .key.warn::before {
         background: var(--bench-mark);
+    }
+
+    .legend-note {
+        max-width: none;
+        margin: var(--s-2) 0 0;
+        color: var(--fg-faint);
+        font-size: 0.72rem;
+        line-height: 1.5;
     }
 
     .aside {

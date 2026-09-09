@@ -4,15 +4,15 @@ import type { PhysicsArchetypeSpec, PhysicsSceneShape } from '../PhysicsAdapter'
 
 /**
  * Engine-neutral description of a physics scene - the fairness backbone the
- * matter.js and rapier arms build from.
+ * matter.js, planck.js, nape-js and rapier arms build from.
  *
  * The native `adapters/exojs-physics.ts` arm builds its scene inline against the
  * `@codexo/exojs-physics` API. The competitor arms cannot share that code (they
- * speak matter/rapier body APIs), so the risk is two hand-written transcriptions
+ * speak different body APIs), so the risk is several hand-written transcriptions
  * quietly drifting into different scenes. This module removes that risk for the
  * competitor arms: it produces one neutral list of {@link BodyDesc}s, drawn from
  * the SAME shared deterministic RNG in the SAME order as the exojs arm, so
- * matter and rapier simulate a byte-identical body configuration to each other,
+ * all competitor arms simulate a byte-identical body configuration to each other,
  * and - because the draw order is a faithful transcription of exojs-physics.ts -
  * to the native arm as well.
  *
@@ -23,7 +23,7 @@ import type { PhysicsArchetypeSpec, PhysicsSceneShape } from '../PhysicsAdapter'
  *
  * Coordinate convention matches exojs: +Y points DOWN, and a body's position is
  * the CENTRE of its box/circle. Both competitor arms adopt this same convention
- * so the numeric positions are identical across all three arms.
+ * so the numeric positions are identical across all arms.
  */
 
 /** Side length of a dynamic box / diameter reference for a dynamic circle, px. Mirrors `exojs-physics.ts`. */

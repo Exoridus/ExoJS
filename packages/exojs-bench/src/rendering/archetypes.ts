@@ -386,8 +386,8 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // binding and blit, so a heavy kernel would move the bottleneck into the
   // fragment shader and hide the thing under test.
   //
-  // WebGL2/WebGPU arms only. The Phaser arm renders WebGL1, so its gap here
-  // would be attributable to the backend generation rather than to the engine.
+  // Arms with validated render-target support only. Competitor gaps here are
+  // coverage gaps, not approximations of a different scene.
   {
     id: 'filter-chain-1',
     category: 'render-targets',
@@ -426,7 +426,7 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // unrotated rect mask as GPU scissor/clip state, so the row measures the
   // nesting rather than one arm's intermediate-target policy.
   //
-  // Shares the render-target machinery of the filter rows and the same WebGL1
+  // Shares the render-target machinery of the filter rows and the same coverage
   // exclusion; otherwise identical to `static-heavy` at depth 4.
   //
   // The nesting depth is one greater than the mask depth on purpose: the scene
