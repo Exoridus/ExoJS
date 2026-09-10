@@ -20,6 +20,7 @@ import BenchComparisonTable from './BenchComparisonTable.astro';
 import BenchComparisonSummary from './BenchComparisonSummary.astro';
 import {
     BACKEND_LABELS,
+    type BenchDomain,
     comparisonTallies,
     formatDay,
     formatRunTime,
@@ -31,6 +32,12 @@ import { physicsComparison, renderingComparison, webgl1Comparison } from '../lib
 
 interface Props {
     document: BenchProfileDocument;
+    /**
+     * The domain this view shows. Rendering and physics answer different
+     * questions and share no row, so putting both on one page only made a
+     * reader scroll past the one they did not come for.
+     */
+    domain: BenchDomain;
     /** Heading level the block starts at, so a collapsed further machine does not outrank the reference. */
     headingLevel?: 2 | 3;
     /** Set false where the surrounding markup already names the machine, such as a collapsed further machine. */
@@ -39,15 +46,15 @@ interface Props {
     primary?: boolean;
 }
 
-const { document: profileDocument, headingLevel = 2, showTitle = true, primary = false } = Astro.props;
+const { document: profileDocument, domain, headingLevel = 2, showTitle = true, primary = false } = Astro.props;
 const { profile, rendering, physics } = profileDocument;
 const Heading = `h${String(headingLevel)}` as 'h2' | 'h3';
-const SubHeading = `h${String(headingLevel + 1)}` as 'h3' | 'h4';
 
-const tallies = comparisonTallies(profileDocument);
+const isRendering = domain === 'rendering';
+const tallies = comparisonTallies(profileDocument, domain);
 const renderingTable = renderingComparison(profileDocument);
 const physicsTable = physicsComparison(profileDocument);
-const backends = rendering?.backends ?? [];
+const backends = isRendering ? rendering?.backends ?? [] : [];
 const webgl1Blocks = backends.flatMap(backend => {
     const table = webgl1Comparison(backend);
 
@@ -72,8 +79,8 @@ const renderingCountNote =
 const excluded = backends.flatMap(backend => backend.excluded.map(entry => ({ backend: backend.backend, ...entry })));
 
 /** The machine is one across the pooled runs, so the first run's stamps name it for all of them. */
-const renderingStamps = rendering?.runs[0]?.provenance ?? [];
-const physicsHost = physics?.runs[0];
+const renderingStamps = isRendering ? rendering?.runs[0]?.provenance ?? [] : [];
+const physicsHost = isRendering ? undefined : physics?.runs[0];
 
 /**
  * When each pooled run was taken, per domain.
@@ -84,14 +91,15 @@ const physicsHost = physics?.runs[0];
  * them is a median over several measurements and not a single lucky one.
  */
 const runTimes = [
-    ...(rendering === undefined ? [] : [{ domain: 'Rendering', times: rendering.runs.map(run => run.provenance[0]?.timestamp ?? null) }]),
-    ...(physics === undefined ? [] : [{ domain: 'Physics', times: physics.runs.map(run => run.timestamp) }]),
+    ...(!isRendering || rendering === undefined ? [] : [{ domain: 'Rendering', times: rendering.runs.map(run => run.provenance[0]?.timestamp ?? null) }]),
+    ...(isRendering || physics === undefined ? [] : [{ domain: 'Physics', times: physics.runs.map(run => run.timestamp) }]),
 ].map(entry => ({
     domain: entry.domain,
     times: entry.times.filter((time): time is string => time !== null).map(formatRunTime),
 }));
 
-const libraries = [...(rendering?.libraries ?? []), ...(physics?.libraries ?? [])].map(library => `${library.name} ${library.version}`);
+/** Only the libraries this view's numbers came from: a physics table is not evidence about the renderer's opponents. */
+const libraries = (isRendering ? rendering?.libraries ?? [] : physics?.libraries ?? []).map(library => `${library.name} ${library.version}`);
 ---
 
 <section class="profile">
@@ -113,23 +121,19 @@ const libraries = [...(rendering?.libraries ?? []), ...(physics?.libraries ?? []
         bars and no bar is ranked against another: the arms answer different questions, and this page publishes no score and no overall winner.
     </p>
 
-    {renderingTable.rows.length > 0 && (
+    {/* The view already names its domain and its unit, so the block carries only what the tab cannot say: the size the rows were measured at. */}
+    {isRendering && renderingTable.rows.length > 0 && (
         <section class="block">
-            <SubHeading id={primary ? 'rendering' : undefined}>Rendering</SubHeading>
-            <p class="note">
-                {renderingCountNote}, chosen from the archetype ladders before any timing was read. CPU milliseconds per frame, pooled over {profile.runs}
-                {' '}separate runs as the median of their per-run medians; lower is better.
-            </p>
+            <p class="note">{renderingCountNote}, chosen from the archetype ladders before any timing was read.</p>
             <BenchComparisonTable table={renderingTable} label="Rendering comparisons per backend and arm" />
         </section>
     )}
 
-    {physicsTable !== null && physicsTable.rows.length > 0 && (
+    {!isRendering && physicsTable !== null && physicsTable.rows.length > 0 && (
         <section class="block">
-            <SubHeading id={primary ? 'physics' : undefined}>Physics</SubHeading>
             <p class="note">
                 Each archetype sits on its own body-count ladder, so every row states the count it was measured at and rows are not comparable with one
-                another - only the arms within one row are. CPU milliseconds per fixed step, pooled the same way.
+                another - only the arms within one row are.
             </p>
             <BenchComparisonTable table={physicsTable} label="Physics comparisons per arm" />
         </section>
@@ -141,7 +145,7 @@ const libraries = [...(rendering?.libraries ?? []), ...(physics?.libraries ?? []
             <p>
                 These arms render through a WebGL1 context, so a gap against them can be caused by the backend generation as much as by the engine, and the
                 structural probe cannot attach to say which. The rows compare CPU time and carry no mechanism, which makes them an observation rather than a
-                finding.
+                finding, and the comparison count above therefore leaves them out.
             </p>
             <BenchComparisonTable table={block.table} label={`WebGL1 comparisons measured alongside ${BACKEND_LABELS[block.backend.backend]}`} />
         </details>
@@ -160,7 +164,7 @@ const libraries = [...(rendering?.libraries ?? []), ...(physics?.libraries ?? []
         </details>
     )}
 
-    {physicsHost !== undefined && physicsHost.caveats.length > 0 && (
+    {!isRendering && physicsHost !== undefined && physicsHost.caveats.length > 0 && (
         <details class="aside">
             <summary>Caveats the physics runs disclosed ({physicsHost.caveats.length})</summary>
             <ul>

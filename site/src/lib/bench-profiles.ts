@@ -759,6 +759,9 @@ const tally = (key: string, group: string, label: string, arm: string, meta: str
   return { key, group, label, arm, meta, counts, summary, measured, total: cells.length };
 };
 
+/** Which measured domain a view is showing. */
+export type BenchDomain = 'rendering' | 'physics';
+
 /**
  * The scoreboard, one line per arm a domain was measured against.
  *
@@ -766,9 +769,12 @@ const tally = (key: string, group: string, label: string, arm: string, meta: str
  * different opponents into one strip, so a reader would see a mix that belongs
  * to neither of them. Nothing is summed across lines and no line is ranked
  * against another, because the arms answer different questions.
+ *
+ * Pass `domain` to keep the lines of one domain only; without it the document's
+ * whole scoreboard is returned.
  */
-export const comparisonTallies = (document: BenchProfileDocument): readonly ComparisonTally[] => [
-  ...(document.rendering?.backends ?? []).flatMap(backend =>
+export const comparisonTallies = (document: BenchProfileDocument, domain?: BenchDomain): readonly ComparisonTally[] => [
+  ...(domain === 'physics' ? [] : (document.rendering?.backends ?? [])).flatMap(backend =>
     backend.competitors.map(arm =>
       tally(
         `${backend.backend}-${arm}`,
@@ -780,7 +786,7 @@ export const comparisonTallies = (document: BenchProfileDocument): readonly Comp
       ),
     ),
   ),
-  ...(document.physics === undefined
+  ...(document.physics === undefined || domain === 'rendering'
     ? []
     : armsOfSection(document.physics.section).map(arm =>
         tally(
@@ -803,9 +809,9 @@ export const comparisonTallies = (document: BenchProfileDocument): readonly Comp
  * longer support. A profile carrying only one domain yields a shorter line
  * instead of a padded one.
  */
-export const profileScope = (document: BenchProfileDocument): string => {
-  const rendering = renderingCells(document);
-  const physics = physicsCells(document);
+export const profileScope = (document: BenchProfileDocument, domain?: BenchDomain): string => {
+  const rendering = domain === 'physics' ? [] : renderingCells(document);
+  const physics = domain === 'rendering' ? [] : physicsCells(document);
   const parts: string[] = [];
 
   if (rendering.length > 0) parts.push(`${String(rendering.length)} rendering comparisons against ${listOf(armsIn(rendering).map(armLabel))}`);
@@ -813,3 +819,7 @@ export const profileScope = (document: BenchProfileDocument): string => {
 
   return parts.join(' · ');
 };
+
+/** True when the profile carries measurements for this domain. */
+export const coversDomain = (document: BenchProfileDocument, domain: BenchDomain): boolean =>
+  domain === 'rendering' ? document.rendering !== undefined : document.physics !== undefined;

@@ -10,12 +10,12 @@
  * 700px of room inside a 1400px window, and a matrix squeezed into that is a
  * matrix nobody can read. Measurements never scroll sideways at any width.
  *
- * A cell's first glance carries three things and no more: which way the pair
- * went and by how much, the two medians, and a disclosure. Everything a reader
- * needs only when verifying a row - p95, the range the pooled runs observed,
- * the spread factor, the structural evidence, what each run concluded - sits
- * behind that disclosure. It is not hidden, it is ranked: printing all of it in
- * primary type is what made the previous table unreadable.
+ * A cell carries three things and no more: which way the pair went and by how
+ * much, the two medians, and the bar. Everything a reader needs only when
+ * verifying a row - p95, the range the pooled runs observed, the spread factor,
+ * the structural evidence, what each run concluded - sits behind one disclosure
+ * per archetype rather than one per comparison: a row of five pairs otherwise
+ * carried five toggles that each opened the same six terms.
  *
  * The bar is a diverging one on a fixed log axis shared by every column and
  * every table on the page, so a length means the same thing wherever it is
@@ -132,13 +132,28 @@ const winnerOf = (cell: ProfileCell): string => {
 ---
 
 <figure class="comparison">
+    {/*
+     * Hiding a group narrows the matrix to one question at a time. It is an
+     * enhancement and never a gate: without the script every column is shown,
+     * which is also what the printed and indexed page carries.
+     */}
+    {groups.length > 1 && (
+        <div class="filters" data-bench-filter role="group" aria-label="Show columns for">
+            <button type="button" data-group-filter="" aria-pressed="true">All</button>
+            {groups.map(group => (
+                <button type="button" data-group-filter={group.label} aria-pressed="false">
+                    {group.label}
+                </button>
+            ))}
+        </div>
+    )}
     <table aria-label={label}>
         {/* A fixed layout takes its widths from the first row, which is the group row and carries colspans rather than columns; declared on the cells, every width here would be ignored. */}
         <colgroup>
             <col class="col-archetype" />
             {countColumn && <col class="col-count" />}
-            {columns.map(() => (
-                <col class="col-arm" />
+            {columns.map(column => (
+                <col class="col-arm" data-group={column.group ?? undefined} />
             ))}
         </colgroup>
         <thead>
@@ -146,7 +161,7 @@ const winnerOf = (cell: ProfileCell): string => {
                 <tr class="groups">
                     <td colspan={countColumn ? 2 : 1} />
                     {groups.map(group => (
-                        <th scope="colgroup" colspan={group.span}>
+                        <th scope="colgroup" colspan={group.span} data-group={group.label}>
                             {group.label}
                         </th>
                     ))}
@@ -156,7 +171,7 @@ const winnerOf = (cell: ProfileCell): string => {
                 <th scope="col" class="col-archetype">Archetype</th>
                 {countColumn && <th scope="col" class="col-count">{unit === 'bodies' ? 'Bodies' : 'Nodes'}</th>}
                 {columns.map(column => (
-                    <th scope="col" class="col-arm">
+                    <th scope="col" class="col-arm" data-group={column.group ?? undefined}>
                         {column.overline !== '' && <span class="overline">{column.overline}</span>}
                         <span class="arm">
                             <i>vs</i>
@@ -199,30 +214,26 @@ const winnerOf = (cell: ProfileCell): string => {
                                         : `No shared cell at ${String(entry.count)} ${unit}: the arm sits this archetype out, or exceeded the run budget there.`;
 
                                 return (
-                                    <td class="cell empty" data-label={labelOf(column)} title={reason}>
+                                    <td class="cell empty" data-label={labelOf(column)} data-group={columns[column]?.group ?? undefined} title={reason}>
                                         <span class="dash" aria-label={reason}>
                                             -
                                         </span>
-                                        <details class="more empty-more">
-                                            <summary>Details</summary>
-                                            <p>{reason}</p>
-                                        </details>
                                     </td>
                                 );
                             }
 
                             const outcome = outcomeOf(cell);
                             const mixed = outcome === 'unstable';
+                            const level = outcome === 'level';
                             const band = mixed ? ratioBand(cell) : null;
                             const factor = mixed ? pooledFactor(cell) : cell.verdict.factor;
                             const ratio = cell.verdict.ratio;
                             const plotted = !mixed && ratio !== null && Number.isFinite(ratio) && ratio > 0;
                             const referenceMs = measuredMs(cell, cell.referenceMs);
                             const competitorMs = measuredMs(cell, cell.competitorMs);
-                            const hasGpuTiming = cell.referenceGpuMs !== undefined || cell.competitorGpuMs !== undefined;
 
                             return (
-                                <td class="cell" data-label={labelOf(column)}>
+                                <td class="cell" data-label={labelOf(column)} data-group={columns[column]?.group ?? undefined}>
                                     <span class="tracks">
                                         <span class="plot">
                                             <span class="axis" />
@@ -241,8 +252,9 @@ const winnerOf = (cell: ProfileCell): string => {
                                         </span>
                                         <span class="track">
                                             <span class:list={['verdict', mixed ? 'unclear' : outcome]}>
-                                                <b>{mixed ? (factor === null ? '-' : formatApproximate(factor)) : formatFactor(factor)}</b>
-                                                <i>{mixed ? 'no clear lead' : winnerOf(cell)}</i>
+                                                {/* A pair inside the noise band is named, not scored: its factor is pinned to 1 by the ladder, so printing 1.00x beside two medians that differ would claim a precision the ladder never measured. */}
+                                                <b>{mixed ? (factor === null ? '-' : formatApproximate(factor)) : level ? 'similar' : formatFactor(factor)}</b>
+                                                <i>{mixed ? 'no clear lead' : level ? 'inside the noise band' : winnerOf(cell)}</i>
                                             </span>
                                             <span class="medians">
                                                 <b class:list={[cell.referenceOverFrameBudget && 'warn']}>{formatMs(referenceMs)}</b>
@@ -250,8 +262,43 @@ const winnerOf = (cell: ProfileCell): string => {
                                                 <b class:list={[cell.competitorOverFrameBudget && 'warn']}>{formatMs(competitorMs)}</b> ms
                                             </span>
                                         </span>
-                                        <details class="more">
-                                                <summary>Details</summary>
+                                    </span>
+                                </td>
+                            );
+                        })}
+                    </tr>
+                    {/* One disclosure for the archetype, not one per comparison: a matrix row carried five toggles that each opened the same six terms. */}
+                    <tr class="detail">
+                        <td colspan={columns.length + (countColumn ? 2 : 1)}>
+                            <details class="row-more">
+                                <summary>
+                                    How <code>{row.archetype}</code> was measured
+                                </summary>
+                                <div class="arms">
+                                    {row.entries.map((entry, column) => {
+                                        const cell = entry.cell;
+
+                                        if (cell === null) {
+                                            return (
+                                                <section class="arm-detail absent">
+                                                    <h4>{labelOf(column)}</h4>
+                                                    <p>
+                                                        {entry.count === null
+                                                            ? 'Not measured on this backend.'
+                                                            : `No shared cell at ${String(entry.count)} ${unit}: the arm sits this archetype out, or exceeded the run budget there.`}
+                                                    </p>
+                                                </section>
+                                            );
+                                        }
+
+                                        const band = outcomeOf(cell) === 'unstable' ? ratioBand(cell) : null;
+                                        const referenceMs = measuredMs(cell, cell.referenceMs);
+                                        const competitorMs = measuredMs(cell, cell.competitorMs);
+                                        const hasGpuTiming = cell.referenceGpuMs !== undefined || cell.competitorGpuMs !== undefined;
+
+                                        return (
+                                            <section class="arm-detail">
+                                                <h4>{labelOf(column)}</h4>
                                                 <dl>
                                                     <div>
                                                         <dt>p95</dt>
@@ -269,13 +316,7 @@ const winnerOf = (cell: ProfileCell): string => {
                                                             <span class:list={[isWideSpread(cell.aggregate.competitor) && 'warn']}>
                                                                 {rangeOf(cell.aggregate.competitor)}
                                                             </span>{' '}
-                                                            ms
-                                                        </dd>
-                                                    </div>
-                                                    <div>
-                                                        <dt>spread</dt>
-                                                        <dd>
-                                                            {formatSpread(cell.aggregate.reference)} vs {formatSpread(cell.aggregate.competitor)}
+                                                            ms, spread {formatSpread(cell.aggregate.reference)} vs {formatSpread(cell.aggregate.competitor)}
                                                         </dd>
                                                     </div>
                                                     {band !== null && (
@@ -285,22 +326,16 @@ const winnerOf = (cell: ProfileCell): string => {
                                                         </div>
                                                     )}
                                                     <div>
-                                                        <dt>60 fps frame</dt>
+                                                        <dt>{FRAME_BUDGET_MS} ms frame</dt>
                                                         <dd>
                                                             {[
                                                                 { name: 'ExoJS', share: frameShare(referenceMs) },
                                                                 { name: armLabel(cell.competitor), share: frameShare(competitorMs) },
-                                                            ].map(entry => (
+                                                            ].map(share => (
                                                                 <span class="budget-row">
-                                                                    <em>{entry.name}</em>
-                                                                    <span class="budget">
-                                                                        <i
-                                                                            class:list={[entry.share !== null && entry.share > 100 && 'over']}
-                                                                            style={`width:${String(Math.min(100, entry.share ?? 0))}%`}
-                                                                        />
-                                                                    </span>
-                                                                    <b class:list={[entry.share !== null && entry.share > 100 && 'warn']}>
-                                                                        {entry.share === null ? '-' : `${entry.share.toFixed(1)}%`}
+                                                                    <em>{share.name}</em>
+                                                                    <b class:list={[share.share !== null && share.share > 100 && 'warn']}>
+                                                                        {share.share === null ? '-' : `${share.share.toFixed(1)}%`}
                                                                     </b>
                                                                 </span>
                                                             ))}
@@ -308,11 +343,10 @@ const winnerOf = (cell: ProfileCell): string => {
                                                     </div>
                                                     {hasGpuTiming && (
                                                         <div>
-                                                            <dt>CPU / GPU</dt>
+                                                            <dt>GPU</dt>
                                                             <dd>
-                                                                CPU submission {formatMs(referenceMs)} vs {formatMs(competitorMs)} ms; GPU execution{' '}
                                                                 {formatMs(measuredMs(cell, cell.referenceGpuMs ?? null))} vs{' '}
-                                                                {formatMs(measuredMs(cell, cell.competitorGpuMs ?? null))} ms
+                                                                {formatMs(measuredMs(cell, cell.competitorGpuMs ?? null))} ms of GPU execution
                                                             </dd>
                                                         </div>
                                                     )}
@@ -333,17 +367,45 @@ const winnerOf = (cell: ProfileCell): string => {
                                                             <dd>{cell.mechanism}</dd>
                                                         </div>
                                                     )}
-                                            </dl>
-                                        </details>
-                                    </span>
-                                </td>
-                            );
-                        })}
+                                                </dl>
+                                            </section>
+                                        );
+                                    })}
+                                </div>
+                            </details>
+                        </td>
                     </tr>
                 </>
             ))}
         </tbody>
     </table>
+    <script>
+        for (const filter of document.querySelectorAll('[data-bench-filter]')) {
+            const figure = filter.closest('figure');
+
+            if (figure === null) continue;
+
+            filter.addEventListener('click', event => {
+                const button = event.target instanceof Element ? event.target.closest('[data-group-filter]') : null;
+
+                if (!(button instanceof HTMLButtonElement)) return;
+
+                const only = button.dataset.groupFilter ?? '';
+
+                // Hidden per element rather than through a class on the table: a
+                // column collapses only when its col, its headers and its cells
+                // all go, and the group names are data rather than known here.
+                for (const element of figure.querySelectorAll('[data-group]')) {
+                    if (element instanceof HTMLElement) element.hidden = only !== '' && element.dataset.group !== only;
+                }
+
+                for (const other of filter.querySelectorAll('[data-group-filter]')) {
+                    other.setAttribute('aria-pressed', String(other === button));
+                }
+            });
+        }
+    </script>
+
     <figcaption>
         Bars share one log axis across the whole page: the centre is 1.00x and each side reaches 100x, with anything past that drawn cut. A hollow bar is a
         pair whose pooled runs landed on different rungs; it spans the interval they produced, publishes no verdict, and prints the two medians' own factor
@@ -422,6 +484,42 @@ const winnerOf = (cell: ProfileCell): string => {
         color: var(--fg-faint);
     }
 
+    .filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--s-2);
+        margin-bottom: var(--s-3);
+    }
+
+    .filters button {
+        padding: 0.2rem 0.65rem;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-pill);
+        background: none;
+        font-family: var(--f-mono);
+        font-size: 0.7rem;
+        color: var(--fg-muted);
+        cursor: pointer;
+    }
+
+    .filters button:hover {
+        color: var(--fg);
+        border-color: var(--line);
+    }
+
+    /* The chosen filter is filled as well as tinted, so it is not colour alone that says which one is on. */
+    .filters button[aria-pressed='true'] {
+        border-color: var(--line);
+        background: var(--bg-elevated);
+        color: var(--fg);
+        font-weight: 600;
+    }
+
+    /* Stacked cards give td a display of their own, which the UA rule behind `hidden` does not outrank. */
+    [data-group][hidden] {
+        display: none !important;
+    }
+
     .col-archetype {
         width: 14rem;
     }
@@ -488,12 +586,6 @@ const winnerOf = (cell: ProfileCell): string => {
     .track {
         min-width: 0;
         order: 1;
-    }
-
-    /* The disclosure spans the cell rather than the text track: its rows are prose and wrap badly in ten rem. */
-    .more {
-        grid-column: 1 / -1;
-        order: 3;
     }
 
     .plot {
@@ -622,15 +714,50 @@ const winnerOf = (cell: ProfileCell): string => {
         color: var(--bench-mark);
     }
 
-    .more summary {
+    /* The detail row is a full-width strip under its archetype, not a cell: it belongs to the row, and its terms read as prose rather than as a column. */
+    tr.detail > td {
+        padding: 0 0.7rem 0.5rem;
+        border-bottom: 1px solid var(--line-soft);
+    }
+
+    .row-more summary {
         cursor: pointer;
         font-family: var(--f-mono);
-        font-size: 0.68rem;
+        font-size: 0.7rem;
         color: var(--fg-faint);
     }
 
-    .more summary:hover {
+    .row-more summary:hover {
         color: var(--fg-muted);
+    }
+
+    .row-more summary code {
+        font-size: inherit;
+    }
+
+    .arms {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+        gap: var(--s-3) var(--s-5);
+        margin-top: var(--s-3);
+    }
+
+    .arm-detail h4 {
+        margin: 0 0 0.3rem;
+        font-family: var(--f-mono);
+        font-size: 0.68rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--fg-muted);
+    }
+
+    .arm-detail.absent p {
+        margin: 0;
+        font-family: var(--f-mono);
+        font-size: 0.68rem;
+        line-height: 1.5;
+        color: var(--fg-faint);
     }
 
     .row-description {
@@ -644,40 +771,28 @@ const winnerOf = (cell: ProfileCell): string => {
         line-height: 1.35;
     }
 
-    /*
-     * The term sits above its value rather than beside it. A label column costs
-     * a comparison column six and a half rem of the little it has, and the two
-     * widest values here - the frame-budget rows and the run strip - are
-     * themselves multi-column and stop fitting long before the prose does.
-     */
-    .more dl {
-        margin: 0.4rem 0 0;
+    .arm-detail dl {
+        display: grid;
+        grid-template-columns: 5.5rem minmax(0, 1fr);
+        column-gap: var(--s-3);
+        margin: 0;
         font-family: var(--f-mono);
         font-size: 0.68rem;
         line-height: 1.5;
         color: var(--fg-muted);
     }
 
-    .more dl > div {
-        margin-bottom: 0.45rem;
+    .arm-detail dl > div {
+        display: contents;
     }
 
-    .more dt {
+    .arm-detail dt {
         color: var(--fg-faint);
     }
 
-    .more dd {
-        margin: 0;
+    .arm-detail dd {
+        margin: 0 0 0.25rem;
         overflow-wrap: anywhere;
-    }
-
-    .empty-more p {
-        max-width: 32rem;
-        margin: 0.4rem 0 0;
-        font-family: var(--f-mono);
-        font-size: 0.68rem;
-        line-height: 1.5;
-        color: var(--fg-muted);
     }
 
     /*
@@ -686,10 +801,9 @@ const winnerOf = (cell: ProfileCell): string => {
      * it restates the published time in the unit a reader already thinks in.
      */
     .budget-row {
-        display: grid;
-        grid-template-columns: 4.5rem minmax(3rem, 1fr) 3rem;
-        align-items: center;
-        gap: 0.4rem;
+        display: inline-flex;
+        gap: 0.35rem;
+        margin-right: var(--s-3);
     }
 
     .budget-row em {
@@ -697,27 +811,8 @@ const winnerOf = (cell: ProfileCell): string => {
         color: var(--fg-faint);
     }
 
-    .budget {
-        display: block;
-        height: 5px;
-        border-radius: 3px;
-        background: color-mix(in oklab, var(--fg-faint), transparent 85%);
-    }
-
-    .budget i {
-        display: block;
-        height: 100%;
-        border-radius: 3px;
-        background: var(--fg-muted);
-    }
-
-    .budget i.over {
-        background: var(--bench-mark);
-    }
-
     .budget-row b {
         font-weight: 400;
-        text-align: right;
     }
 
     /*
@@ -780,12 +875,22 @@ const winnerOf = (cell: ProfileCell): string => {
             display: none;
         }
 
-        tbody tr:not(.section) {
+        /* An archetype and its detail row are two table rows but one card, so the border opens on the first and closes on the second. */
+        tbody tr:not(.section):not(.detail) {
+            border: 1px solid var(--line-soft);
+            border-bottom: 0;
+            border-radius: var(--r-3) var(--r-3) 0 0;
+            background: var(--bg-elevated);
+            padding: var(--s-3) var(--s-4) 0;
+        }
+
+        tbody tr.detail {
             margin-bottom: var(--s-3);
             border: 1px solid var(--line-soft);
-            border-radius: var(--r-3);
+            border-top: 0;
+            border-radius: 0 0 var(--r-3) var(--r-3);
             background: var(--bg-elevated);
-            padding: var(--s-3) var(--s-4);
+            padding: 0 var(--s-4) var(--s-3);
         }
 
         tbody tr.section td {
@@ -839,6 +944,27 @@ const winnerOf = (cell: ProfileCell): string => {
         .plot {
             order: 0;
             margin-top: 0;
+        }
+
+        /*
+         * An arm with no cell keeps its place in the matrix, where the gap is
+         * visible against the columns beside it. Stacked, that same gap becomes
+         * a labelled block with a rule and a dash and the height of a result -
+         * so the card lists only what was measured, and the detail row below
+         * still names every arm that was not.
+         */
+        .cell.empty {
+            display: none;
+        }
+
+        /* The card carries the row's border; a second one under the disclosure would draw a line across the middle of it. */
+        tr.detail > td {
+            padding: var(--s-2) 0 0;
+            border-bottom: 0;
+        }
+
+        .arms {
+            grid-template-columns: minmax(0, 1fr);
         }
     }
 </style>

@@ -21,14 +21,46 @@ import BenchLocalProbe from '../BenchLocalProbe.astro';
 import DocsLayout from '../../layouts/DocsLayout.astro';
 import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
 import { appInfo } from '../../lib/app-info';
-import { formatDay, FRAME_BUDGET_MS, furtherProfiles, olderThanReference, profileScope, referenceProfile } from '../../lib/bench-profiles';
+import {
+    type BenchDomain,
+    coversDomain,
+    formatDay,
+    FRAME_BUDGET_MS,
+    furtherProfiles,
+    olderThanReference,
+    profileScope,
+    referenceProfile,
+} from '../../lib/bench-profiles';
 
 interface Props {
     locale: 'en' | 'de';
+    domain: BenchDomain;
 }
 
-const { locale } = Astro.props;
-const scope = referenceProfile === undefined ? '' : profileScope(referenceProfile);
+const { locale, domain } = Astro.props;
+const scope = referenceProfile === undefined ? '' : profileScope(referenceProfile, domain);
+
+/**
+ * The two views, as ordinary links.
+ *
+ * They are styled as tabs but they are navigation, not a tab widget: two static
+ * pages need no panel, no selection state and no arrow-key model, and a reader
+ * can link to either one. Rendering is the page the section's own URL serves,
+ * so there is no third URL that only forwards to it.
+ */
+const base = import.meta.env.BASE_URL;
+const views: readonly { id: BenchDomain; label: string; href: string }[] = [
+    { id: 'rendering', label: 'Rendering', href: `${base}${locale}/benchmarks/` },
+    { id: 'physics', label: 'Physics', href: `${base}${locale}/benchmarks/physics/` },
+];
+
+const covered = referenceProfile !== undefined && coversDomain(referenceProfile, domain);
+
+/** Only the further machines that measured this domain: an empty disclosure is a promise the profile cannot keep. */
+const furtherMachines = furtherProfiles.filter(document => coversDomain(document, domain));
+
+/** What this view measures, stated once beside the numbers rather than in the methodology alone. */
+const metric = domain === 'rendering' ? 'CPU milliseconds per frame' : 'CPU milliseconds per fixed step';
 
 /**
  * Runs the reproduction below pools. A published profile states the number it
@@ -40,22 +72,15 @@ const REPRODUCTION_RUNS = 3;
 const pooledRuns = referenceProfile?.profile.runs ?? REPRODUCTION_RUNS;
 const machine = referenceProfile?.profile;
 
-/**
- * The sections the on-page navigation offers. Only the ones that exist are
- * listed: a link to an empty anchor is worse than a shorter bar.
- */
-const sections = [
-    ...(referenceProfile === undefined ? [] : [{ id: 'summary', label: 'Overview' }]),
-    ...(referenceProfile?.rendering === undefined ? [] : [{ id: 'rendering', label: 'Rendering' }]),
-    ...(referenceProfile?.physics === undefined ? [] : [{ id: 'physics', label: 'Physics' }]),
-    ...(furtherProfiles.length === 0 ? [] : [{ id: 'further', label: 'Other machines' }]),
-    { id: 'practices', label: 'Methodology' },
-];
 ---
 
 <DocsLayout
-    title="ExoJS benchmarks"
-    description="Measured comparisons between ExoJS and other 2D rendering and physics libraries."
+    title={domain === 'rendering' ? 'ExoJS rendering benchmarks' : 'ExoJS physics benchmarks'}
+    description={
+        domain === 'rendering'
+            ? 'Measured comparisons between ExoJS and other 2D rendering libraries.'
+            : 'Measured comparisons between ExoJS physics and other 2D physics engines.'
+    }
     variant="wide"
 >
     <div class="prose bench-prose" data-pagefind-body={locale === 'en' ? true : undefined}>
@@ -64,45 +89,55 @@ const sections = [
         <header class="bench-head">
             <h1>Benchmarks</h1>
             <p class="lede">
-                Cross-library measurements for rendering and physics. Lower is better. Every published value is pooled from {pooledRuns} independent runs.
+                {metric}, lower is better. Every published value is the median of {pooledRuns} independent runs.
             </p>
-            {machine !== undefined && (
-                <p class="stamp">
-                    <b>
-                        {machine.gpu} · {machine.os} · {machine.browser}
-                    </b>
-                    <span>
-                        ExoJS {machine.engineVersion} · measured {formatDay(machine.measuredAt)} · {machine.runs} pooled runs
-                    </span>
-                    {scope !== '' && <span>{scope}</span>}
-                </p>
-            )}
         </header>
 
-        <nav class="section-nav" aria-label="Benchmark sections">
-            {sections.map(section => (
-                <a href={`#${section.id}`}>{section.label}</a>
+        <nav class="views" aria-label="Benchmark domain">
+            {views.map(view => (
+                <a href={view.href} aria-current={view.id === domain ? 'page' : undefined}>
+                    {view.label}
+                </a>
             ))}
         </nav>
+
+        {machine !== undefined && (
+            <p class="stamp">
+                <b>
+                    {machine.gpu} · {machine.os} · {machine.browser}
+                </b>
+                <span>
+                    ExoJS {machine.engineVersion} · measured {formatDay(machine.measuredAt)} · {machine.runs} pooled runs
+                </span>
+                {scope !== '' && <span>{scope}</span>}
+            </p>
+        )}
 
         {referenceProfile === undefined ? (
             <p class="empty">
                 No measurements are published yet. The reference measurement is {REPRODUCTION_RUNS} separate runs on one machine after a release is tagged,
                 pooled into a single profile file in the repository; until then there is nothing here to read. The practices below already apply.
             </p>
+        ) : covered ? (
+            <BenchProfileReport document={referenceProfile} domain={domain} headingLevel={2} showTitle={false} primary />
         ) : (
-            <BenchProfileReport document={referenceProfile} headingLevel={2} showTitle={false} primary />
+            <p class="empty">
+                The leading profile - {referenceProfile.profile.gpu} / {referenceProfile.profile.os} / {referenceProfile.profile.browser} - carries no{' '}
+                {domain} measurement, so there is nothing to show here for that machine. Another machine below may have measured it; the page does not
+                quietly swap the profile out, because two machines' numbers do not belong in one reading.
+            </p>
         )}
 
-        <BenchLocalProbe />
+        {domain === 'rendering' && <BenchLocalProbe />}
 
-        {furtherProfiles.length > 0 && (
+        {furtherMachines.length > 0 && (
             <section id="further">
                 <h2>Further machines</h2>
                 <p class="section-note">
-                    Contributed profiles for other hardware, newest engine version first: do the ratios hold on another GPU, driver and JavaScript engine?
+                    Contributed profiles that measured {domain} on other hardware, newest engine version first: do the ratios hold on another GPU, driver
+                    and JavaScript engine?
                 </p>
-                {furtherProfiles.map(document => {
+                {furtherMachines.map(document => {
                     const newer = olderThanReference(document);
 
                     return (
@@ -121,7 +156,7 @@ const sections = [
                                     reference profile with that in mind.
                                 </p>
                             )}
-                            <BenchProfileReport document={document} headingLevel={3} showTitle={false} />
+                            <BenchProfileReport document={document} domain={domain} headingLevel={3} showTitle={false} />
                         </details>
                     );
                 })}
@@ -346,38 +381,32 @@ pnpm bench:compare -- \
      * reachable. Horizontal scrolling is fine for navigation - it is exactly
      * what the measurements below must never need.
      */
-    .section-nav {
-        position: sticky;
-        top: 68px;
-        z-index: 2;
+    /* Drawn as tabs, but two ordinary links: each view is its own page, so there is nothing here to select, focus or arrow between. */
+    .views {
         display: flex;
-        gap: var(--s-2);
-        overflow-x: auto;
-        margin: var(--s-5) 0 var(--s-6);
-        padding: var(--s-2) 0;
-        background: var(--bg-canvas);
+        gap: var(--s-4);
+        margin: var(--s-5) 0 var(--s-4);
         border-bottom: 1px solid var(--line-soft);
-        scrollbar-width: none;
     }
 
-    .section-nav::-webkit-scrollbar {
-        display: none;
-    }
-
-    .section-nav a {
-        flex: none;
-        padding: 0.25rem 0.7rem;
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-pill);
-        font-size: 0.76rem;
+    .views a {
+        padding: 0.35rem 0.1rem;
+        margin-bottom: -1px;
+        border-bottom: 2px solid transparent;
+        font-size: 0.95rem;
+        font-weight: 600;
         color: var(--fg-muted);
         text-decoration: none;
-        white-space: nowrap;
     }
 
-    .section-nav a:hover {
+    .views a:hover {
         color: var(--fg);
-        border-color: var(--line);
+    }
+
+    /* The rule's presence, not its hue, is what marks the current view; `aria-current` carries the same fact where the rule is not seen. */
+    .views a[aria-current='page'] {
+        color: var(--fg);
+        border-bottom-color: var(--accent);
     }
 
     .empty {
