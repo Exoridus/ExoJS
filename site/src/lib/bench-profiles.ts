@@ -453,11 +453,38 @@ export const WIDE_SPREAD_RATIO = 1.2;
  */
 export const FRAME_BUDGET_MS = 16.7;
 
+/**
+ * How many digits of a published figure are worth printing.
+ *
+ * Three, and never a fixed number of decimals. A fixed three decimals prints
+ * `13.380` for a value whose pooled runs spanned 12.73 to 14.10, and a fixed two
+ * prints `669.00x` for a ratio whose denominator is a single clock tick - digits
+ * the measurement never resolved, in the position a reader trusts most.
+ */
+const SIGNIFICANT_DIGITS = 3;
+
+/**
+ * A number at {@link SIGNIFICANT_DIGITS}, as a fixed number of decimals for its
+ * magnitude.
+ *
+ * Trailing zeros are kept rather than stripped: `0.80` printed as `0.8` beside
+ * `0.12` ragged a column of figures a reader is scanning down, and the zero is
+ * a digit the timer did resolve. What the magnitude rule removes is the digit
+ * it did not - the third decimal of a two-figure millisecond value.
+ */
+const significant = (value: number): string => {
+  const magnitude = value === 0 ? 0 : Math.floor(Math.log10(Math.abs(value)));
+
+  // Capped at three: below a tenth of a millisecond the significant-figure rule
+  // would keep adding decimals to values the clock delivers in fixed steps.
+  return value.toFixed(Math.max(0, Math.min(3, SIGNIFICANT_DIGITS - 1 - magnitude)));
+};
+
 /** A ratio in the form the verdict labels print it, or a dash when the pair produced none. */
-export const formatFactor = (factor: number | null): string => (factor === null || !Number.isFinite(factor) ? '-' : `${factor.toFixed(2)}x`);
+export const formatFactor = (factor: number | null): string => (factor === null || !Number.isFinite(factor) ? '-' : `${significant(factor)}x`);
 
 /** A median in milliseconds, or a dash when the arm produced no comparable number. */
-export const formatMs = (ms: number | null): string => (ms === null || !Number.isFinite(ms) ? '-' : ms.toFixed(3));
+export const formatMs = (ms: number | null): string => (ms === null || !Number.isFinite(ms) ? '-' : significant(ms));
 
 /**
  * True when the pair produced a comparison at all.
@@ -665,7 +692,7 @@ export const ratioBand = (cell: ProfileCell): RatioBand | null => {
 };
 
 /** A ratio band as the details print it. */
-export const formatBand = (band: RatioBand): string => `${band.low.toFixed(2)}x-${band.high.toFixed(2)}x`;
+export const formatBand = (band: RatioBand): string => `${significant(band.low)}x-${significant(band.high)}x`;
 
 /**
  * The factor a pair's two pooled medians work out to.
@@ -688,10 +715,10 @@ export const pooledFactor = (cell: ProfileCell): number | null => {
 };
 
 /** A factor the runs did not settle, marked as such. */
-export const formatApproximate = (factor: number): string => `~${factor.toFixed(2)}x`;
+export const formatApproximate = (factor: number): string => `~${significant(factor)}x`;
 
 /** How far the pooled runs moved, as the single factor the profile stores. */
-export const formatSpread = (spread: ProfileSpread): string => (spread.ratio === null || !Number.isFinite(spread.ratio) ? '' : `${spread.ratio.toFixed(2)}x`);
+export const formatSpread = (spread: ProfileSpread): string => (spread.ratio === null || !Number.isFinite(spread.ratio) ? '' : `${significant(spread.ratio)}x`);
 
 /**
  * What a measured comparison came out as, once the ladder's five settled rungs
