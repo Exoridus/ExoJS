@@ -236,13 +236,15 @@ const winnerOf = (cell: ProfileCell): string => {
                                 );
                             }
 
-                            const outcome = outcomeOf(cell);
+                            const outcome = outcomeOf(cell, entry.resolutionMs);
                             const mixed = outcome === 'unstable';
                             const level = outcome === 'level';
+                            // A pair the clock never separated publishes neither a figure nor a bar; only its two times survive.
+                            const unresolved = outcome === 'timer-limited';
                             const band = mixed ? ratioBand(cell) : null;
                             const factor = mixed ? pooledFactor(cell) : cell.verdict.factor;
                             const ratio = cell.verdict.ratio;
-                            const plotted = !mixed && ratio !== null && Number.isFinite(ratio) && ratio > 0;
+                            const plotted = !mixed && !unresolved && ratio !== null && Number.isFinite(ratio) && ratio > 0;
                             const referenceMs = measuredMs(cell, cell.referenceMs);
                             const competitorMs = measuredMs(cell, cell.competitorMs);
 
@@ -251,7 +253,7 @@ const winnerOf = (cell: ProfileCell): string => {
                                     <span class="tracks">
                                         <span class="plot">
                                             <span class="axis" />
-                                            {band !== null && (
+                                            {!unresolved && band !== null && (
                                                 <span
                                                     class:list={['fill', 'mixed', (saturates(band.low) || saturates(band.high)) && 'cut']}
                                                     style={intervalOf(band.low, band.high)}
@@ -267,9 +269,9 @@ const winnerOf = (cell: ProfileCell): string => {
                                         <span class="track">
                                             <span class:list={['verdict', mixed ? 'unclear' : outcome]}>
                                                 {/* A pair inside the noise band is named, not scored: its factor is pinned to 1 by the ladder, so printing 1.00x beside two medians that differ would claim a precision the ladder never measured. */}
-                                                <b>{mixed ? (factor === null ? '-' : formatApproximate(factor)) : level ? 'similar' : formatFactor(factor)}</b>
+                                                <b>{unresolved ? 'not resolved' : mixed ? (factor === null ? '-' : formatApproximate(factor)) : level ? 'similar' : formatFactor(factor)}</b>
                                                 {/* The word alone; what it means is stated once in the legend rather than in every cell that carries it. */}
-                                                <i>{mixed ? 'no clear lead' : level ? '' : winnerOf(cell)}</i>
+                                                <i>{unresolved ? 'below the timer' : mixed ? 'no clear lead' : level ? '' : winnerOf(cell)}</i>
                                             </span>
                                             <span class="medians">
                                                 <b class:list={[cell.referenceOverFrameBudget && 'warn']}>{formatMs(referenceMs)}</b>

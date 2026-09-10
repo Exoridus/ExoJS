@@ -180,10 +180,19 @@ export interface PlatformVersionStamp {
   readonly evidence: string;
 }
 
+/** What a page's clock was observed to do, where the run recorded it. */
+export interface ProfileClock {
+  /** Smallest positive step the probe saw, or `null` where it established none. */
+  readonly resolutionMs: number | null;
+  readonly crossOriginIsolated: boolean;
+}
+
 /** Rendering provenance for one backend. */
 export interface RenderingStamp {
   readonly backend: ProfileBackendName;
   readonly adapter: string;
+  /** The clock this backend's page was measured on; absent in profiles written before it was recorded. */
+  readonly clock?: ProfileClock;
   /** Browser engine the run was measured in. */
   readonly browser: string;
   /** Browser build the run was measured in. */
@@ -643,10 +652,10 @@ const listOf = (items: readonly string[]): string => (items.length < 2 ? (items[
  * absence of one: the runs reached different rungs, so the pair carries numbers
  * and no conclusion. `absent` is an arm that produced no comparable cell at all.
  */
-export type CellOutcome = 'clear-lead' | 'lead' | 'level' | 'loss' | 'clear-loss' | 'unstable' | 'absent';
+export type CellOutcome = 'clear-lead' | 'lead' | 'level' | 'loss' | 'clear-loss' | 'unstable' | 'timer-limited' | 'absent';
 
-/** Outcomes in reading order: the widest lead first, the widest loss last, then the two that carry no verdict. */
-export const OUTCOME_ORDER: readonly CellOutcome[] = ['clear-lead', 'lead', 'level', 'loss', 'clear-loss', 'unstable', 'absent'];
+/** Outcomes in reading order: the widest lead first, the widest loss last, then the three that carry no verdict. */
+export const OUTCOME_ORDER: readonly CellOutcome[] = ['clear-lead', 'lead', 'level', 'loss', 'clear-loss', 'unstable', 'timer-limited', 'absent'];
 
 /** The word a summary and a legend print for each outcome. */
 export const OUTCOME_LABELS: Readonly<Record<CellOutcome, string>> = {
@@ -656,18 +665,61 @@ export const OUTCOME_LABELS: Readonly<Record<CellOutcome, string>> = {
   loss: 'loss',
   'clear-loss': 'clear loss',
   unstable: 'no clear lead',
+  'timer-limited': 'below the timer',
   absent: 'no shared cell',
+};
+
+/**
+ * How many of the clock's observed steps a duration has to span before a
+ * comparison built from it publishes a factor.
+ *
+ * A guard, chosen to be safely clear of the one- and two-step readings that a
+ * coarse clock produces, and applied to every library, browser and profile
+ * alike. It is not a standard and not a precision claim: clearing it means this
+ * one check did not trip, never that the comparison is accurate or
+ * statistically established. Every other check a cell passes still applies.
+ */
+const MIN_RESOLVED_STEPS = 10;
+
+/** What the timer check established about a comparison. */
+export type TimerCheck = 'resolved' | 'limited' | 'unknown';
+
+/**
+ * Whether both of a pair's durations stand far enough above the clock's
+ * observed step to carry a ratio.
+ *
+ * Each duration is checked on its own against the step observed in the context
+ * that measured it - the question is how big a reading is relative to the grid
+ * it was read on, not how far the two arms are apart. A profile written before
+ * the step was recorded yields `unknown`, which is the absence of the check and
+ * never a pass.
+ */
+export const timerCheck = (cell: ProfileCell, resolutionMs: number | null): TimerCheck => {
+  if (resolutionMs === null || !Number.isFinite(resolutionMs) || resolutionMs <= 0) return 'unknown';
+
+  const floor = resolutionMs * MIN_RESOLVED_STEPS;
+  const durations = [cell.referenceMs, cell.competitorMs].filter((ms): ms is number => ms !== null && Number.isFinite(ms));
+
+  return durations.some(ms => ms < floor) ? 'limited' : 'resolved';
 };
 
 /**
  * Which outcome a cell publishes.
  *
- * This is the only place a comparison is turned into one of the seven words, so
- * no table or scoreboard can invent an outcome for a cell whose runs did not
- * agree on one.
+ * This is the only place a comparison is turned into one of the words, so no
+ * table or scoreboard can invent an outcome for a cell whose runs did not agree
+ * on one - or whose durations the clock did not separate. Pass `resolutionMs`
+ * as the coarsest step observed across the runs behind this cell: a pooled
+ * figure inherits the limit of the least resolved run that produced it.
+ *
+ * `timer-limited` outranks every verdict because it is about whether a
+ * comparison could be drawn at all. The cell keeps both measured times; what it
+ * loses is the factor, the bar and the winner. That is a refusal to publish a
+ * comparison, not a claim that the two libraries are equally fast.
  */
-export const outcomeOf = (cell: ProfileCell | null): CellOutcome => {
+export const outcomeOf = (cell: ProfileCell | null, resolutionMs: number | null = null): CellOutcome => {
   if (cell === null) return 'absent';
+  if (timerCheck(cell, resolutionMs) === 'limited') return 'timer-limited';
   if (!cell.aggregate.stable) return 'unstable';
   if (cell.verdict.side === 'neither') return 'level';
   if (cell.verdict.side === 'exojs') return cell.verdict.structural ? 'clear-lead' : 'lead';
@@ -751,6 +803,9 @@ export const SUMMARY_OF: Readonly<Record<CellOutcome, SummaryState | null>> = {
   loss: 'behind',
   'clear-loss': 'behind',
   unstable: 'unclear',
+  // Counted on its own line rather than folded into `unclear`: those runs
+  // disagreed about a comparison that was made, while these never resolved one.
+  'timer-limited': null,
   absent: null,
 };
 
