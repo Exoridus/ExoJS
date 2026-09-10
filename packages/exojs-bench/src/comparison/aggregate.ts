@@ -242,6 +242,12 @@ const NO_SPREAD: RunSpread = { minMs: Number.NaN, maxMs: Number.NaN, ratio: Numb
 
 const measured = (value: number | null): value is number => value !== null && Number.isFinite(value);
 
+const pooledOptional = (values: ReadonlyArray<number | null | undefined>): number | null => {
+  const measuredValues = values.filter((value): value is number => value !== null && value !== undefined && Number.isFinite(value));
+
+  return measuredValues.length > 0 ? median(measuredValues) : null;
+};
+
 /**
  * Pool one arm pair across the runs that produced it.
  *
@@ -272,12 +278,14 @@ const aggregateCell = (perRun: readonly ComparisonCell[], runCount: number): Agg
     // pooled across runs, not a tail across the pooled samples, which no
     // published artifact retains.
     referenceP95Ms: referenceP95s.length > 0 ? median(referenceP95s) : null,
+    referenceGpuMs: pooledOptional(perRun.map(cell => cell.referenceGpuMs)),
     // Recomputed from the POOLED median rather than carried over from a run: the
     // published number is the one the mark has to describe, and a run's own mark
     // can disagree with it near the line.
     referenceOverFrameBudget: exceedsFrameBudget(referenceMs),
     competitorMs,
     competitorP95Ms: competitorP95s.length > 0 ? median(competitorP95s) : null,
+    competitorGpuMs: pooledOptional(perRun.map(cell => cell.competitorGpuMs)),
     competitorOverFrameBudget: exceedsFrameBudget(competitorMs),
     verdict: stable ? pooled : UNSTABLE_VERDICT,
     mechanism: first.mechanism,

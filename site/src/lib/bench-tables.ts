@@ -22,6 +22,7 @@
  */
 
 import {
+  archetypeDescription,
   armLabel,
   armsOfSection,
   BACKEND_LABELS,
@@ -59,6 +60,7 @@ export interface ComparisonRow {
   readonly section: string | null;
   /** The size every column measured this row at, or `null` where they differ. */
   readonly count: number | null;
+  readonly description?: string;
   readonly entries: readonly ComparisonEntry[];
 }
 
@@ -116,7 +118,14 @@ export const renderingComparison = (document: BenchProfileDocument): ComparisonT
     });
     const counts = [...new Set(entries.map(entry => entry.count).filter((count): count is number => count !== null))];
 
-    return { key: archetype, archetype, section, count: counts.length === 1 ? (counts[0] ?? null) : null, entries };
+    return {
+      key: archetype,
+      archetype,
+      section,
+      count: counts.length === 1 ? (counts[0] ?? null) : null,
+      description: archetypeDescription(archetype),
+      entries,
+    };
   });
 
   return { columns, rows, unit: 'nodes', countColumn: false };
@@ -135,6 +144,7 @@ const singleBlockTable = (
     archetype: row.archetype,
     section: null,
     count: row.count,
+    description: archetypeDescription(row.archetype),
     entries: arms.map(arm => entryOf(arm, row, arm)),
   })),
   unit,

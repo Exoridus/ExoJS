@@ -29,7 +29,7 @@ import type { PlatformVersionStamp, PrereleaseStamp, RenderingBrowser } from '..
  */
 
 /** Schema version `bench:compare` stamps into a new document. */
-export const BENCH_PROFILE_SCHEMA_VERSION = 6;
+export const BENCH_PROFILE_SCHEMA_VERSION = 7;
 
 /**
  * Schema versions a reader accepts. A document carrying anything else is
@@ -53,8 +53,12 @@ export const BENCH_PROFILE_SCHEMA_VERSION = 6;
  * shared body count; its physics numbers were additionally taken on ladders that
  * have since moved, and because the per-cell seed folds the body count in, a
  * moved rung is a different scene rather than the same one measured again.
+ *
+ * Version 6 is still read. Version 7 only adds the GPU frame time beside each
+ * arm's CPU time, so every figure a version 6 document publishes still means
+ * what it meant; such a cell reports no GPU time rather than a wrong one.
  */
-export const SUPPORTED_BENCH_PROFILE_SCHEMA_VERSIONS: readonly number[] = [BENCH_PROFILE_SCHEMA_VERSION];
+export const SUPPORTED_BENCH_PROFILE_SCHEMA_VERSIONS: readonly number[] = [6, BENCH_PROFILE_SCHEMA_VERSION];
 
 /** Characters a slug may be built from. */
 const SLUG_CHARACTERS = /^[a-z0-9-]+$/;

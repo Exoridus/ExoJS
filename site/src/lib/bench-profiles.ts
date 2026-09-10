@@ -21,7 +21,7 @@
  */
 
 /** Schema version this reader understands; anything else is refused. */
-const SUPPORTED_SCHEMA_VERSION = 6;
+const SUPPORTED_SCHEMA_VERSIONS = new Set([6, 7]);
 
 /**
  * Arms that stand as a reference ceiling rather than as a peer.
@@ -86,12 +86,16 @@ export interface ProfileCell {
   readonly referenceMs: number | null;
   /** Median of the per-run p95s. */
   readonly referenceP95Ms: number | null;
+  /** GPU frame median when the published rendering run exposed a hardware timer. */
+  readonly referenceGpuMs?: number | null;
   /** True when `referenceMs` is past a whole 60 fps frame; see `FRAME_BUDGET_MS`. */
   readonly referenceOverFrameBudget: boolean;
   /** Median of the per-run medians. */
   readonly competitorMs: number | null;
   /** Median of the per-run p95s. */
   readonly competitorP95Ms: number | null;
+  /** GPU frame median when the published rendering run exposed a hardware timer. */
+  readonly competitorGpuMs?: number | null;
   /** True when `competitorMs` is past a whole 60 fps frame; see `FRAME_BUDGET_MS`. */
   readonly competitorOverFrameBudget: boolean;
   readonly verdict: ProfileVerdict;
@@ -321,16 +325,26 @@ const byVersionDescending = (a: string, b: string): number => {
   return 0;
 };
 
-/** Newest engine version first, then newest measurement first. */
+/** How many of the two measured domains a profile carries. */
+const domainCount = (document: BenchProfileDocument): number => (document.rendering === undefined ? 0 : 1) + (document.physics === undefined ? 0 : 1);
+
+/**
+ * Newest engine version first, then widest coverage, then newest measurement.
+ *
+ * Coverage outranks the measurement date because the first profile leads the
+ * page: a partial run finished an hour later than a complete one would
+ * otherwise bury a whole domain in the collapsed list below, and the page would
+ * silently stop showing measurements it holds.
+ */
 const byRecency = (a: BenchProfileDocument, b: BenchProfileDocument): number =>
-  byVersionDescending(a.profile.engineVersion, b.profile.engineVersion) || b.profile.measuredAt.localeCompare(a.profile.measuredAt);
+  byVersionDescending(a.profile.engineVersion, b.profile.engineVersion) ||
+  domainCount(b) - domainCount(a) ||
+  b.profile.measuredAt.localeCompare(a.profile.measuredAt);
 
 const loaded = Object.entries(documents)
   .map(([path, document]) => {
-    if (document.schemaVersion !== SUPPORTED_SCHEMA_VERSION) {
-      throw new Error(
-        `Benchmark profile '${path}' declares schema version ${String(document.schemaVersion)}, but this site reads version ${String(SUPPORTED_SCHEMA_VERSION)}.`,
-      );
+    if (!SUPPORTED_SCHEMA_VERSIONS.has(document.schemaVersion)) {
+      throw new Error(`Benchmark profile '${path}' declares unsupported schema version ${String(document.schemaVersion)}.`);
     }
 
     return document;
@@ -371,6 +385,51 @@ const ARM_LABELS: Readonly<Record<string, string>> = {
 export const armLabel = (arm: string): string => ARM_LABELS[arm] ?? arm;
 
 /**
+ * What each archetype's workload is, in one line.
+ *
+ * These live with the page rather than in a profile: they are prose for a
+ * reader, identical on every machine, and a measurement artifact that carried
+ * them would repeat them per run and let two published profiles disagree about
+ * what the same archetype means. The archetype id is the contract between the
+ * harness and this page; an id with no line here simply prints without one.
+ */
+const ARCHETYPE_DESCRIPTIONS: Readonly<Record<string, string>> = {
+  'static-heavy': 'Mostly unchanged sprites; stresses retained scene reuse.',
+  'dynamic-heavy': 'A lightly mutating sprite field; stresses transform and update work.',
+  'deep-hierarchy': 'Deep parent-child nesting; stresses world-transform propagation.',
+  overdraw: 'Full-viewport sprites; stresses fragment fill and overdraw.',
+  'batch-breaking': 'Many texture changes; stresses batch breaks and state submission.',
+  'batch-breaking-atlased': 'Atlased texture changes; isolates batching without texture uploads.',
+  'split-screen': 'Several simultaneous views; stresses multi-viewport traversal.',
+  'mixed-blend': 'Long runs of blend modes; stresses state changes and batching.',
+  'mixed-material': 'Several custom materials; stresses shader/material switches.',
+  'mixed-material-atlased': 'Custom materials over atlased sprites; combines material and texture variety.',
+  'instanced-batch': 'Explicit instance batches; stresses immediate submission cost.',
+  'mixed-sprite-mesh-array': 'Sprites interleaved with mesh-array leaves; stresses renderer path switches.',
+  'mixed-sprite-mesh-static': 'Sprites interleaved with static meshes; stresses mixed draw paths.',
+  'scrolling-world': 'A moving camera over mostly off-screen content; stresses culling and retained reuse.',
+  'text-static': 'Static labels with repeated glyphs; stresses text layout and glyph generation.',
+  'text-dynamic': 'Changing labels; stresses per-frame text invalidation and layout.',
+  'lifecycle-churn': 'A small fraction of leaves rebuilt each frame; stresses resource lifecycle work.',
+  'filter-chain-1': 'One filter pass per scene; stresses offscreen composition.',
+  'filter-chain-2': 'Two filter passes per scene; stresses chained offscreen composition.',
+  'filter-chain-4': 'Four filter passes per scene; stresses deep filter composition.',
+  'mask-clip': 'Clipped content; stresses mask setup and compositing.',
+  'mask-clip-animated': 'Animated clipped content; stresses mask invalidation.',
+  composite: 'Nested render targets; stresses multi-pass composition.',
+  'box-stack': 'Dense resting contacts; stresses collision detection, solving and sleeping.',
+  'many-dynamic': 'Many active bodies in a bounded field; stresses broad-phase and live contacts.',
+  'mixed-static-dynamic': 'Dynamic bodies falling onto static level geometry; models a common game mix.',
+  raycast: 'A mixed scene plus repeated rays; isolates query throughput.',
+  'body-churn': 'Bodies rebuilt every step; stresses broad-phase repair and lifecycle work.',
+  joints: 'Constraint chains; stresses impulse propagation through joints.',
+  'settling-pile': 'A dissipating pile; exposes steady-state settling and sleeping behavior.',
+};
+
+/** The one-line workload description for an archetype, or `undefined` where none is written. */
+export const archetypeDescription = (archetype: string): string | undefined => ARCHETYPE_DESCRIPTIONS[archetype];
+
+/**
  * Spread factor at which a measurement's own noise is called out.
  *
  * The verdict ladder treats a ratio up to 1.2 between two arms as
@@ -399,6 +458,24 @@ export const formatFactor = (factor: number | null): string => (factor === null 
 
 /** A median in milliseconds, or a dash when the arm produced no comparable number. */
 export const formatMs = (ms: number | null): string => (ms === null || !Number.isFinite(ms) ? '-' : ms.toFixed(3));
+
+/**
+ * True when the pair produced a comparison at all.
+ *
+ * A pair the harness could not compare - an arm that does not implement the
+ * archetype, or that reported nothing there - carries neither a ratio nor a
+ * factor.
+ */
+export const isComparable = (cell: ProfileCell): boolean => cell.verdict.ratio !== null || cell.verdict.factor !== null;
+
+/**
+ * One arm's measurement inside a cell, or `null` where that arm produced none.
+ *
+ * An arm that sat a comparison out is stored as a zero rather than as a missing
+ * value, so a reader would otherwise be shown `0.000 ms` - the fastest number on
+ * the page - for the arm that did not run.
+ */
+export const measuredMs = (cell: ProfileCell, ms: number | null): number | null => (!isComparable(cell) && ms === 0 ? null : ms);
 
 /** An ISO timestamp reduced to a calendar day. */
 export const formatDay = (timestamp: string): string => timestamp.slice(0, 10);

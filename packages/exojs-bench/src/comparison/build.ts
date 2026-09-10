@@ -78,6 +78,8 @@ export interface ComparisonCell {
   readonly referenceMs: number | null;
   /** Reference arm's 95th-percentile CPU time (ms) over the same timed window, or `null`. */
   readonly referenceP95Ms: number | null;
+  /** Reference arm's measured GPU frame time, when the backend exposed a timer. */
+  readonly referenceGpuMs?: number | null;
   /**
    * True when {@link referenceMs} is past a whole 60 fps frame; see
    * {@link '../shared/frameBudget'.FRAME_BUDGET_MS}.
@@ -91,6 +93,8 @@ export interface ComparisonCell {
   readonly competitorMs: number | null;
   /** Competitor's 95th-percentile CPU time (ms) over the same timed window, or `null`. */
   readonly competitorP95Ms: number | null;
+  /** Competitor arm's measured GPU frame time, when the backend exposed a timer. */
+  readonly competitorGpuMs?: number | null;
   /** True when {@link competitorMs} is past a whole 60 fps frame; see {@link referenceOverFrameBudget}. */
   readonly competitorOverFrameBudget: boolean;
   /** Computed ladder outcome, from the two medians. */
@@ -292,9 +296,11 @@ const buildBackend = (backend: Backend, results: readonly CellResult[]): Backend
           competitor,
           referenceMs: reference.cpuMsMedian,
           referenceP95Ms: reference.cpuMsP95,
+          referenceGpuMs: reference.frameMsMedian,
           referenceOverFrameBudget: exceedsFrameBudget(reference.cpuMsMedian),
           competitorMs: competitorCell.cpuMsMedian,
           competitorP95Ms: competitorCell.cpuMsP95,
+          competitorGpuMs: competitorCell.frameMsMedian,
           competitorOverFrameBudget: exceedsFrameBudget(competitorCell.cpuMsMedian),
           verdict: compareMedians(reference.cpuMsMedian, competitorCell.cpuMsMedian),
           mechanism,
@@ -354,9 +360,11 @@ const buildBackend = (backend: Backend, results: readonly CellResult[]): Backend
           competitor,
           referenceMs: reference.cpuMsMedian,
           referenceP95Ms: reference.cpuMsP95,
+          referenceGpuMs: reference.frameMsMedian,
           referenceOverFrameBudget: exceedsFrameBudget(reference.cpuMsMedian),
           competitorMs: competitorCell.cpuMsMedian,
           competitorP95Ms: competitorCell.cpuMsP95,
+          competitorGpuMs: competitorCell.frameMsMedian,
           competitorOverFrameBudget: exceedsFrameBudget(competitorCell.cpuMsMedian),
           verdict: compareMedians(reference.cpuMsMedian, competitorCell.cpuMsMedian),
           mechanism: null,

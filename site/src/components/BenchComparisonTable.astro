@@ -45,6 +45,7 @@ import {
     frameShare,
     FRAME_BUDGET_MS,
     isWideSpread,
+    measuredMs,
     outcomeOf,
     pooledFactor,
     ratioBand,
@@ -132,6 +133,14 @@ const winnerOf = (cell: ProfileCell): string => {
 
 <figure class="comparison">
     <table aria-label={label}>
+        {/* A fixed layout takes its widths from the first row, which is the group row and carries colspans rather than columns; declared on the cells, every width here would be ignored. */}
+        <colgroup>
+            <col class="col-archetype" />
+            {countColumn && <col class="col-count" />}
+            {columns.map(() => (
+                <col class="col-arm" />
+            ))}
+        </colgroup>
         <thead>
             {groups.length > 0 && (
                 <tr class="groups">
@@ -168,6 +177,7 @@ const winnerOf = (cell: ProfileCell): string => {
                     <tr>
                         <th scope="row">
                             {row.archetype}
+                            {row.description !== undefined && <span class="row-description">{row.description}</span>}
                             {row.count !== null && !countColumn && (
                                 <span class="row-count">
                                     {row.count} {unit}
@@ -207,6 +217,9 @@ const winnerOf = (cell: ProfileCell): string => {
                             const factor = mixed ? pooledFactor(cell) : cell.verdict.factor;
                             const ratio = cell.verdict.ratio;
                             const plotted = !mixed && ratio !== null && Number.isFinite(ratio) && ratio > 0;
+                            const referenceMs = measuredMs(cell, cell.referenceMs);
+                            const competitorMs = measuredMs(cell, cell.competitorMs);
+                            const hasGpuTiming = cell.referenceGpuMs !== undefined || cell.competitorGpuMs !== undefined;
 
                             return (
                                 <td class="cell" data-label={labelOf(column)}>
@@ -232,9 +245,9 @@ const winnerOf = (cell: ProfileCell): string => {
                                                 <i>{mixed ? 'no clear lead' : winnerOf(cell)}</i>
                                             </span>
                                             <span class="medians">
-                                                <b class:list={[cell.referenceOverFrameBudget && 'warn']}>{formatMs(cell.referenceMs)}</b>
+                                                <b class:list={[cell.referenceOverFrameBudget && 'warn']}>{formatMs(referenceMs)}</b>
                                                 <em>vs</em>
-                                                <b class:list={[cell.competitorOverFrameBudget && 'warn']}>{formatMs(cell.competitorMs)}</b> ms
+                                                <b class:list={[cell.competitorOverFrameBudget && 'warn']}>{formatMs(competitorMs)}</b> ms
                                             </span>
                                         </span>
                                         <details class="more">
@@ -243,7 +256,7 @@ const winnerOf = (cell: ProfileCell): string => {
                                                     <div>
                                                         <dt>p95</dt>
                                                         <dd>
-                                                            {formatMs(cell.referenceP95Ms)} vs {formatMs(cell.competitorP95Ms)} ms
+                                                            {formatMs(measuredMs(cell, cell.referenceP95Ms))} vs {formatMs(measuredMs(cell, cell.competitorP95Ms))} ms
                                                         </dd>
                                                     </div>
                                                     <div>
@@ -275,8 +288,8 @@ const winnerOf = (cell: ProfileCell): string => {
                                                         <dt>60 fps frame</dt>
                                                         <dd>
                                                             {[
-                                                                { name: 'ExoJS', share: frameShare(cell.referenceMs) },
-                                                                { name: armLabel(cell.competitor), share: frameShare(cell.competitorMs) },
+                                                                { name: 'ExoJS', share: frameShare(referenceMs) },
+                                                                { name: armLabel(cell.competitor), share: frameShare(competitorMs) },
                                                             ].map(entry => (
                                                                 <span class="budget-row">
                                                                     <em>{entry.name}</em>
@@ -293,6 +306,16 @@ const winnerOf = (cell: ProfileCell): string => {
                                                             ))}
                                                         </dd>
                                                     </div>
+                                                    {hasGpuTiming && (
+                                                        <div>
+                                                            <dt>CPU / GPU</dt>
+                                                            <dd>
+                                                                CPU submission {formatMs(referenceMs)} vs {formatMs(competitorMs)} ms; GPU execution{' '}
+                                                                {formatMs(measuredMs(cell, cell.referenceGpuMs ?? null))} vs{' '}
+                                                                {formatMs(measuredMs(cell, cell.competitorGpuMs ?? null))} ms
+                                                            </dd>
+                                                        </div>
+                                                    )}
                                                     <div>
                                                         <dt>runs</dt>
                                                         <dd>
@@ -400,15 +423,16 @@ const winnerOf = (cell: ProfileCell): string => {
     }
 
     .col-archetype {
-        width: 12rem;
+        width: 14rem;
     }
 
     .col-count {
         width: 5rem;
     }
 
+    /* Left to share what the two fixed columns do not take, so the slack lands on the comparisons rather than beside a four-digit count. */
     .col-arm {
-        width: 20rem;
+        width: auto;
     }
 
     tbody th {
@@ -445,12 +469,20 @@ const winnerOf = (cell: ProfileCell): string => {
         color: var(--fg-faint);
     }
 
-    /* The text track is sized to its longest line; the plot takes whatever the column has left, so the axis is as wide as the layout allows. */
+    /*
+     * Text and bar each take a full-width lane rather than sharing a row.
+     * Beside a ten-rem text track, a column of a five-pair table leaves the plot
+     * about sixty pixels, on which every ratio short of 10x is a few pixels of
+     * bar and the axis stops carrying meaning; the intrinsic minimum of that
+     * two-column layout is also wider than such a column, so the table pushed
+     * past the viewport. Stacked, the axis is as wide as the column, and since
+     * the columns are equal width the axes still line up down the table.
+     */
     .tracks {
         display: grid;
-        grid-template-columns: 10.5rem minmax(4rem, 1fr);
+        grid-template-columns: minmax(0, 1fr);
         align-items: start;
-        gap: var(--s-3);
+        gap: var(--s-2);
     }
 
     .track {
@@ -472,13 +504,14 @@ const winnerOf = (cell: ProfileCell): string => {
         margin-top: 0.2rem;
     }
 
+    /* Every bar grows outward from this line, so a bar means nothing without it: it is the 1.00x the length is read against. */
     .axis {
         position: absolute;
         left: 50%;
-        top: -0.55rem;
-        bottom: -0.85rem;
+        top: -5px;
+        bottom: -5px;
         width: 1px;
-        background: var(--line);
+        background: color-mix(in oklab, var(--fg-faint), transparent 45%);
     }
 
     .fill {
@@ -600,10 +633,24 @@ const winnerOf = (cell: ProfileCell): string => {
         color: var(--fg-muted);
     }
 
+    .row-description {
+        display: block;
+        max-width: 34rem;
+        margin-top: var(--s-1);
+        color: var(--fg-muted);
+        font-family: var(--f-sans);
+        font-size: 0.72rem;
+        font-weight: 400;
+        line-height: 1.35;
+    }
+
+    /*
+     * The term sits above its value rather than beside it. A label column costs
+     * a comparison column six and a half rem of the little it has, and the two
+     * widest values here - the frame-budget rows and the run strip - are
+     * themselves multi-column and stop fitting long before the prose does.
+     */
     .more dl {
-        display: grid;
-        grid-template-columns: 6.5rem minmax(0, 1fr);
-        column-gap: var(--s-3);
         margin: 0.4rem 0 0;
         font-family: var(--f-mono);
         font-size: 0.68rem;
@@ -612,7 +659,7 @@ const winnerOf = (cell: ProfileCell): string => {
     }
 
     .more dl > div {
-        display: contents;
+        margin-bottom: 0.45rem;
     }
 
     .more dt {
@@ -620,7 +667,7 @@ const winnerOf = (cell: ProfileCell): string => {
     }
 
     .more dd {
-        margin: 0 0 0.35rem;
+        margin: 0;
         overflow-wrap: anywhere;
     }
 
@@ -788,20 +835,10 @@ const winnerOf = (cell: ProfileCell): string => {
             color: var(--fg-faint);
         }
 
-        /* Stacked, the bar leads the comparison full width: there is no column of bars left to align down. */
-        .tracks {
-            grid-template-columns: minmax(0, 1fr);
-            gap: var(--s-2);
-        }
-
+        /* Stacked into cards there is no column of bars left to align down, so the bar leads its comparison instead of trailing it. */
         .plot {
             order: 0;
             margin-top: 0;
-        }
-
-        .axis {
-            top: -2px;
-            bottom: -2px;
         }
     }
 </style>

@@ -17,6 +17,7 @@
  */
 
 import BenchProfileReport from '../BenchProfileReport.astro';
+import BenchLocalProbe from '../BenchLocalProbe.astro';
 import DocsLayout from '../../layouts/DocsLayout.astro';
 import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
 import { appInfo } from '../../lib/app-info';
@@ -92,6 +93,8 @@ const sections = [
         ) : (
             <BenchProfileReport document={referenceProfile} headingLevel={2} showTitle={false} primary />
         )}
+
+        <BenchLocalProbe />
 
         {furtherProfiles.length > 0 && (
             <section id="further">
