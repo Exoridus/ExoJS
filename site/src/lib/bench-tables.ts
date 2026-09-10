@@ -29,7 +29,6 @@ import {
   type BenchProfileDocument,
   isWasmReferenceArm,
   type ProfileBackend,
-  type ProfileBackendName,
   type ProfileCell,
   type ProfileRow,
 } from './bench-profiles';
@@ -51,13 +50,6 @@ export interface ComparisonEntry {
   readonly cell: ProfileCell | null;
   /** Scene size this column measured the row at; `null` where the column does not carry the row at all. */
   readonly count: number | null;
-  /**
-   * Coarsest clock step observed across the runs behind this cell, or `null`
-   * where the profile records none. A pooled figure inherits the limit of the
-   * least resolved run that produced it, so the widest step is the one the
-   * comparison has to clear.
-   */
-  readonly resolutionMs: number | null;
 }
 
 /** One archetype, across every column of a table. */
@@ -110,29 +102,11 @@ const preferredColumn = (columns: readonly ComparisonColumn[]): number => {
   return 0;
 };
 
-const entryOf = (key: string, row: ProfileRow | undefined, arm: string, resolutionMs: number | null = null): ComparisonEntry => ({
+const entryOf = (key: string, row: ProfileRow | undefined, arm: string): ComparisonEntry => ({
   key,
   cell: row?.cells.find(cell => cell.competitor === arm) ?? null,
   count: row?.count ?? null,
-  resolutionMs,
 });
-
-/**
- * The coarsest step any run of one backend observed, or `null` where no run
- * recorded one.
- *
- * A single run without the stamp leaves the whole backend unknown rather than
- * borrowing a finer neighbour's figure: a repetition measured on a coarse clock
- * is not repaired by one measured on a fine one, and the missing observation
- * does not come back by averaging.
- */
-const coarsestResolution = (document: BenchProfileDocument, backend: ProfileBackendName): number | null => {
-  const stamps = (document.rendering?.runs ?? []).map(run => run.provenance.find(stamp => stamp.backend === backend));
-
-  if (stamps.length === 0 || stamps.some(stamp => stamp?.clock?.resolutionMs == null)) return null;
-
-  return Math.max(...stamps.map(stamp => stamp?.clock?.resolutionMs ?? 0));
-};
 
 /** Every row of a backend, flattened out of its categories. */
 const rowsOf = (backend: ProfileBackend): readonly ProfileRow[] => backend.sections.flatMap(section => section.rows);
@@ -168,9 +142,7 @@ export const renderingComparison = (document: BenchProfileDocument): ComparisonT
     const entries = backends.flatMap(backend => {
       const row = rowsOf(backend).find(candidate => candidate.archetype === archetype);
 
-      const resolutionMs = coarsestResolution(document, backend.backend);
-
-      return backend.competitors.map(arm => entryOf(`${backend.backend}-${arm}`, row, arm, resolutionMs));
+      return backend.competitors.map(arm => entryOf(`${backend.backend}-${arm}`, row, arm));
     });
     const counts = [...new Set(entries.map(entry => entry.count).filter((count): count is number => count !== null))];
 

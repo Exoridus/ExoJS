@@ -236,11 +236,11 @@ const winnerOf = (cell: ProfileCell): string => {
                                 );
                             }
 
-                            const outcome = outcomeOf(cell, entry.resolutionMs);
+                            const outcome = outcomeOf(cell);
                             const mixed = outcome === 'unstable';
                             const level = outcome === 'level';
                             // A pair the clock never separated publishes neither a figure nor a bar; only its two times survive.
-                            const unresolved = outcome === 'timer-limited';
+                            const unresolved = outcome === 'timer-limited' || outcome === 'timer-unknown';
                             const band = mixed ? ratioBand(cell) : null;
                             const factor = mixed ? pooledFactor(cell) : cell.verdict.factor;
                             const ratio = cell.verdict.ratio;
@@ -269,9 +269,9 @@ const winnerOf = (cell: ProfileCell): string => {
                                         <span class="track">
                                             <span class:list={['verdict', mixed ? 'unclear' : outcome]}>
                                                 {/* A pair inside the noise band is named, not scored: its factor is pinned to 1 by the ladder, so printing 1.00x beside two medians that differ would claim a precision the ladder never measured. */}
-                                                <b>{unresolved ? 'not resolved' : mixed ? (factor === null ? '-' : formatApproximate(factor)) : level ? 'similar' : formatFactor(factor)}</b>
+                                                <b>{unresolved ? '-' : mixed ? (factor === null ? '-' : formatApproximate(factor)) : level ? 'similar' : formatFactor(factor)}</b>
                                                 {/* The word alone; what it means is stated once in the legend rather than in every cell that carries it. */}
-                                                <i>{unresolved ? 'below the timer' : mixed ? 'no clear lead' : level ? '' : winnerOf(cell)}</i>
+                                                <i>{outcome === 'timer-limited' ? 'below the timer' : outcome === 'timer-unknown' ? '' : mixed ? 'no clear lead' : level ? '' : winnerOf(cell)}</i>
                                             </span>
                                             <span class="medians">
                                                 <b class:list={[cell.referenceOverFrameBudget && 'warn']}>{formatMs(referenceMs)}</b>

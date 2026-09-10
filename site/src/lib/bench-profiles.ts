@@ -98,6 +98,8 @@ export interface ProfileCell {
   readonly competitorGpuMs?: number | null;
   /** True when `competitorMs` is past a whole 60 fps frame; see `FRAME_BUDGET_MS`. */
   readonly competitorOverFrameBudget: boolean;
+  /** What the timer check made of this comparison across the runs behind it; absent in profiles written before the clock was recorded. */
+  readonly timer?: TimerCheck;
   readonly verdict: ProfileVerdict;
   /** Structural evidence behind the difference, or `null` when the counters carry none. */
   readonly mechanism: string | null;
@@ -652,10 +654,20 @@ const listOf = (items: readonly string[]): string => (items.length < 2 ? (items[
  * absence of one: the runs reached different rungs, so the pair carries numbers
  * and no conclusion. `absent` is an arm that produced no comparable cell at all.
  */
-export type CellOutcome = 'clear-lead' | 'lead' | 'level' | 'loss' | 'clear-loss' | 'unstable' | 'timer-limited' | 'absent';
+export type CellOutcome = 'clear-lead' | 'lead' | 'level' | 'loss' | 'clear-loss' | 'unstable' | 'timer-limited' | 'timer-unknown' | 'absent';
 
 /** Outcomes in reading order: the widest lead first, the widest loss last, then the three that carry no verdict. */
-export const OUTCOME_ORDER: readonly CellOutcome[] = ['clear-lead', 'lead', 'level', 'loss', 'clear-loss', 'unstable', 'timer-limited', 'absent'];
+export const OUTCOME_ORDER: readonly CellOutcome[] = [
+  'clear-lead',
+  'lead',
+  'level',
+  'loss',
+  'clear-loss',
+  'unstable',
+  'timer-limited',
+  'timer-unknown',
+  'absent',
+];
 
 /** The word a summary and a legend print for each outcome. */
 export const OUTCOME_LABELS: Readonly<Record<CellOutcome, string>> = {
@@ -666,6 +678,7 @@ export const OUTCOME_LABELS: Readonly<Record<CellOutcome, string>> = {
   'clear-loss': 'clear loss',
   unstable: 'no clear lead',
   'timer-limited': 'below the timer',
+  'timer-unknown': 'timer not recorded',
   absent: 'no shared cell',
 };
 
@@ -685,22 +698,42 @@ const MIN_RESOLVED_STEPS = 10;
 export type TimerCheck = 'resolved' | 'limited' | 'unknown';
 
 /**
- * Whether both of a pair's durations stand far enough above the clock's
- * observed step to carry a ratio.
+ * Whether both durations of one run stand far enough above the step that run's
+ * clock was observed to deliver.
  *
- * Each duration is checked on its own against the step observed in the context
- * that measured it - the question is how big a reading is relative to the grid
- * it was read on, not how far the two arms are apart. A profile written before
- * the step was recorded yields `unknown`, which is the absence of the check and
+ * Each duration is checked on its own - the question is how large a reading is
+ * against the grid it was read on, not how far the two arms are apart. A run
+ * with no recorded step yields `unknown`, which is the absence of the check and
  * never a pass.
+ *
+ * This evaluates ONE run. A pooled comparison must merge the runs' results with
+ * {@link mergeTimerChecks} rather than run this against pooled medians: pooling
+ * the durations first lets a well-resolved repetition carry a limited one past
+ * the threshold, which is the reading the per-run check exists to prevent.
  */
-export const timerCheck = (cell: ProfileCell, resolutionMs: number | null): TimerCheck => {
+export const timerCheckOfRun = (durations: readonly (number | null)[], resolutionMs: number | null): TimerCheck => {
   if (resolutionMs === null || !Number.isFinite(resolutionMs) || resolutionMs <= 0) return 'unknown';
 
   const floor = resolutionMs * MIN_RESOLVED_STEPS;
-  const durations = [cell.referenceMs, cell.competitorMs].filter((ms): ms is number => ms !== null && Number.isFinite(ms));
+  const measured = durations.filter((ms): ms is number => ms !== null && Number.isFinite(ms));
 
-  return durations.some(ms => ms < floor) ? 'limited' : 'resolved';
+  return measured.some(ms => ms < floor) ? 'limited' : 'resolved';
+};
+
+/**
+ * One verdict for a comparison from the verdicts of the runs behind it.
+ *
+ * A limitation any run established stands for the pooled figure, and a run
+ * whose clock was never recorded cannot lift it: missing information does not
+ * cancel an established one. Only a comparison whose every run cleared the
+ * check is reported as resolved.
+ */
+export const mergeTimerChecks = (checks: readonly TimerCheck[]): TimerCheck => {
+  if (checks.length === 0) return 'unknown';
+  if (checks.includes('limited')) return 'limited';
+  if (checks.includes('unknown')) return 'unknown';
+
+  return 'resolved';
 };
 
 /**
@@ -712,14 +745,16 @@ export const timerCheck = (cell: ProfileCell, resolutionMs: number | null): Time
  * as the coarsest step observed across the runs behind this cell: a pooled
  * figure inherits the limit of the least resolved run that produced it.
  *
- * `timer-limited` outranks every verdict because it is about whether a
- * comparison could be drawn at all. The cell keeps both measured times; what it
- * loses is the factor, the bar and the winner. That is a refusal to publish a
- * comparison, not a claim that the two libraries are equally fast.
+ * The two timer states outrank every verdict because they are about whether a
+ * comparison could be drawn at all. Either way the cell keeps both measured
+ * times and loses the factor, the bar and the winner - a refusal to publish a
+ * comparison, not a claim that the libraries are equally fast. They stay apart
+ * because they say different things: `timer-limited` is a check that tripped,
+ * `timer-unknown` is a check that could not be made.
  */
-export const outcomeOf = (cell: ProfileCell | null, resolutionMs: number | null = null): CellOutcome => {
+export const outcomeOf = (cell: ProfileCell | null): CellOutcome => {
   if (cell === null) return 'absent';
-  if (timerCheck(cell, resolutionMs) === 'limited') return 'timer-limited';
+  if (cell.timer !== 'resolved') return cell.timer === 'limited' ? 'timer-limited' : 'timer-unknown';
   if (!cell.aggregate.stable) return 'unstable';
   if (cell.verdict.side === 'neither') return 'level';
   if (cell.verdict.side === 'exojs') return cell.verdict.structural ? 'clear-lead' : 'lead';
@@ -806,6 +841,8 @@ export const SUMMARY_OF: Readonly<Record<CellOutcome, SummaryState | null>> = {
   // Counted on its own line rather than folded into `unclear`: those runs
   // disagreed about a comparison that was made, while these never resolved one.
   'timer-limited': null,
+  // Not judged rather than judged inconclusive, and counted as neither.
+  'timer-unknown': null,
   absent: null,
 };
 

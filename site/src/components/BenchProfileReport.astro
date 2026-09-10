@@ -52,6 +52,9 @@ const Heading = `h${String(headingLevel)}` as 'h2' | 'h3';
 
 const isRendering = domain === 'rendering';
 const tallies = comparisonTallies(profileDocument, domain);
+
+/** True where no cell of this view carries a timer verdict, which is what a profile written before the clock was recorded looks like. */
+const timerUnrecorded = tallies.length > 0 && tallies.every(entry => entry.counts['timer-unknown'] === entry.total);
 const renderingTable = renderingComparison(profileDocument);
 const physicsTable = physicsComparison(profileDocument);
 const backends = isRendering ? rendering?.backends ?? [] : [];
@@ -113,6 +116,17 @@ const libraries = (isRendering ? rendering?.libraries ?? [] : physics?.libraries
         <span class="key unclear">no clear lead</span>
         <span class="key warn">past the {FRAME_BUDGET_MS} ms frame, or a spread of {WIDE_SPREAD_RATIO}x and up</span>
     </p>
+
+    {/*
+     * Stated once for the profile rather than in each of its cells: it is a
+     * fact about how the run was recorded, identical in every row.
+     */}
+    {timerUnrecorded && (
+        <p class="notice">
+            This profile was measured before the harness recorded what its clock resolved, so no comparison here is published as a factor. The times each
+            arm produced are shown as measured; what cannot be established is whether the clock separated them well enough for a ratio to mean anything.
+        </p>
+    )}
 
     {/* The view already names its domain and its unit, so the block carries only what the tab cannot say: the size the rows were measured at. */}
     {isRendering && renderingTable.rows.length > 0 && (
@@ -249,6 +263,16 @@ const libraries = (isRendering ? rendering?.libraries ?? [] : physics?.libraries
 
     .block {
         margin-top: var(--s-7);
+    }
+
+    .notice {
+        margin: 0 0 var(--s-4);
+        padding: var(--s-3) var(--s-4);
+        border: 1px solid var(--line-soft);
+        border-left: 3px solid var(--bench-mark);
+        border-radius: var(--r-3);
+        color: var(--fg-muted);
+        font-size: 0.85rem;
     }
 
     .note {
