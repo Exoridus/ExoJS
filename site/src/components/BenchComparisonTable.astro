@@ -62,7 +62,7 @@ interface Props {
 }
 
 const { table, label } = Astro.props;
-const { columns, rows, unit, countColumn } = table;
+const { columns, rows, unit, countColumn, defaultColumn } = table;
 
 /**
  * Half-width of the axis in decades, fixed for every column and every table.
@@ -129,25 +129,6 @@ const winnerOf = (cell: ProfileCell): string => {
 
     return side === 'exojs' ? 'ExoJS' : side === 'competitor' ? armLabel(cell.competitor) : '';
 };
-
-/**
- * The comparison a narrow reader is shown before choosing one.
- *
- * The arm ExoJS leads on fewest rows, so the view a phone opens on is the
- * hardest opponent this machine found rather than the most flattering one.
- * It selects which comparison is on screen first and publishes no figure, so
- * nothing here is summed, ranked or counted anywhere else on the page.
- */
-const defaultColumn = columns
-    .map((_, index) => ({
-        index,
-        leads: rows.filter(row => {
-            const outcome = outcomeOf(row.entries[index]?.cell ?? null);
-
-            return outcome === 'lead' || outcome === 'clear-lead';
-        }).length,
-    }))
-    .reduce((fewest, candidate) => (candidate.leads < fewest.leads ? candidate : fewest), { index: 0, leads: Number.POSITIVE_INFINITY }).index;
 ---
 
 <figure class="comparison">
