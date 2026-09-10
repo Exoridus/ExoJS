@@ -456,22 +456,19 @@ export const FRAME_BUDGET_MS = 16.7;
 /**
  * How many digits of a published figure are worth printing.
  *
- * Three, and never a fixed number of decimals. A fixed three decimals prints
- * `13.380` for a value whose pooled runs spanned 12.73 to 14.10, and a fixed two
- * prints `669.00x` for a ratio whose denominator is a single clock tick - digits
- * the measurement never resolved, in the position a reader trusts most.
+ * Three, and never a fixed number of decimals: a fixed three prints `13.380` for
+ * a value whose pooled runs spanned 12.73 to 14.10, which is a digit past what
+ * the measurement separated.
+ *
+ * The rule is about how many digits a figure of this size can carry, and it says
+ * nothing about the clock behind it. A value that reaches the page as `0.020`
+ * has three digits because the formatter counts places, not because the timer
+ * resolved a thousandth of a millisecond - see {@link ProfileAggregate} for what
+ * the runs actually separated.
  */
 const SIGNIFICANT_DIGITS = 3;
 
-/**
- * A number at {@link SIGNIFICANT_DIGITS}, as a fixed number of decimals for its
- * magnitude.
- *
- * Trailing zeros are kept rather than stripped: `0.80` printed as `0.8` beside
- * `0.12` ragged a column of figures a reader is scanning down, and the zero is
- * a digit the timer did resolve. What the magnitude rule removes is the digit
- * it did not - the third decimal of a two-figure millisecond value.
- */
+/** A number at {@link SIGNIFICANT_DIGITS}, as a fixed number of decimals for its magnitude. */
 const significant = (value: number): string => {
   const magnitude = value === 0 ? 0 : Math.floor(Math.log10(Math.abs(value)));
 
@@ -480,8 +477,22 @@ const significant = (value: number): string => {
   return value.toFixed(Math.max(0, Math.min(3, SIGNIFICANT_DIGITS - 1 - magnitude)));
 };
 
-/** A ratio in the form the verdict labels print it, or a dash when the pair produced none. */
-export const formatFactor = (factor: number | null): string => (factor === null || !Number.isFinite(factor) ? '-' : `${significant(factor)}x`);
+/**
+ * A ratio as the cell prints it, or a dash when the pair produced none.
+ *
+ * A factor is read for its size, not for its digits, so it carries fewer than a
+ * millisecond value: whole numbers from ten up, one decimal below that, and no
+ * trailing zero. `72x` and `2x` say what `72.25x` and `2.00x` said, without
+ * offering four figures of a ratio the ladder rounds to a rung anyway. The
+ * unrounded figure stays in the row's detail.
+ */
+export const formatFactor = (factor: number | null): string => {
+  if (factor === null || !Number.isFinite(factor)) return '-';
+
+  const rounded = factor >= 10 ? factor.toFixed(0) : factor.toFixed(1).replace(/\.0$/, '');
+
+  return `${rounded}x`;
+};
 
 /** A median in milliseconds, or a dash when the arm produced no comparable number. */
 export const formatMs = (ms: number | null): string => (ms === null || !Number.isFinite(ms) ? '-' : significant(ms));
@@ -692,7 +703,7 @@ export const ratioBand = (cell: ProfileCell): RatioBand | null => {
 };
 
 /** A ratio band as the details print it. */
-export const formatBand = (band: RatioBand): string => `${significant(band.low)}x-${significant(band.high)}x`;
+export const formatBand = (band: RatioBand): string => `${formatFactor(band.low)}-${formatFactor(band.high)}`;
 
 /**
  * The factor a pair's two pooled medians work out to.
@@ -715,10 +726,10 @@ export const pooledFactor = (cell: ProfileCell): number | null => {
 };
 
 /** A factor the runs did not settle, marked as such. */
-export const formatApproximate = (factor: number): string => `~${significant(factor)}x`;
+export const formatApproximate = (factor: number): string => `~${formatFactor(factor)}`;
 
 /** How far the pooled runs moved, as the single factor the profile stores. */
-export const formatSpread = (spread: ProfileSpread): string => (spread.ratio === null || !Number.isFinite(spread.ratio) ? '' : `${significant(spread.ratio)}x`);
+export const formatSpread = (spread: ProfileSpread): string => (spread.ratio === null || !Number.isFinite(spread.ratio) ? '' : formatFactor(spread.ratio));
 
 /**
  * What a measured comparison came out as, once the ladder's five settled rungs

@@ -105,20 +105,13 @@ const libraries = (isRendering ? rendering?.libraries ?? [] : physics?.libraries
 <section class="profile">
     {showTitle && <Heading id={`profile-${profile.slug}`}>{profile.gpu} / {profile.os} / {profile.browser}</Heading>}
 
-    <div id={primary ? 'summary' : undefined}>
-        <BenchComparisonSummary tallies={tallies} />
-    </div>
-
+    {/* Only what a bar's colour means, which the table beside it needs. Everything the key had to explain about itself moved into the tally below the results. */}
     <p class="legend">
         <span class="key ahead">ExoJS ahead</span>
         <span class="key behind">the arm ahead</span>
-        <span class="key level">level, inside the noise band</span>
-        <span class="key unclear">no clear lead: the pooled runs landed on different verdict bands</span>
+        <span class="key level">similar</span>
+        <span class="key unclear">no clear lead</span>
         <span class="key warn">past the {FRAME_BUDGET_MS} ms frame, or a spread of {WIDE_SPREAD_RATIO}x and up</span>
-    </p>
-    <p class="legend-note">
-        A bar is as wide as the arm's row count, so the unfilled part is coverage the matrix does not have rather than a result. Nothing is summed across
-        bars and no bar is ranked against another: the arms answer different questions, and this page publishes no score and no overall winner.
     </p>
 
     {/* The view already names its domain and its unit, so the block carries only what the tab cannot say: the size the rows were measured at. */}
@@ -138,6 +131,22 @@ const libraries = (isRendering ? rendering?.libraries ?? [] : physics?.libraries
             <BenchComparisonTable table={physicsTable} label="Physics comparisons per arm" />
         </section>
     )}
+
+    {/*
+     * The tally sits under the results rather than over them. Read first it is
+     * the hardest thing on the page - coverage, five outcome states, a strip
+     * whose unfilled part is not a result, and a paragraph on how not to read
+     * it - and it asks all of that before a reader has seen a single number.
+     * Read after, it is a summary of rows already met.
+     */}
+    <details class="aside" id={primary ? 'summary' : undefined}>
+        <summary>How the {tallies.length} comparisons came out, per arm</summary>
+        <p>
+            A bar is as wide as the arm's row count, so the unfilled part is coverage the matrix does not have rather than a result. Nothing is summed
+            across bars and no bar is ranked against another: the arms answer different questions, and this page publishes no score and no overall winner.
+        </p>
+        <BenchComparisonSummary tallies={tallies} />
+    </details>
 
     {webgl1Blocks.map(block => (
         <details class="aside">

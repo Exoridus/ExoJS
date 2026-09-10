@@ -129,6 +129,25 @@ const winnerOf = (cell: ProfileCell): string => {
 
     return side === 'exojs' ? 'ExoJS' : side === 'competitor' ? armLabel(cell.competitor) : '';
 };
+
+/**
+ * The comparison a narrow reader is shown before choosing one.
+ *
+ * The arm ExoJS leads on fewest rows, so the view a phone opens on is the
+ * hardest opponent this machine found rather than the most flattering one.
+ * It selects which comparison is on screen first and publishes no figure, so
+ * nothing here is summed, ranked or counted anywhere else on the page.
+ */
+const defaultColumn = columns
+    .map((_, index) => ({
+        index,
+        leads: rows.filter(row => {
+            const outcome = outcomeOf(row.entries[index]?.cell ?? null);
+
+            return outcome === 'lead' || outcome === 'clear-lead';
+        }).length,
+    }))
+    .reduce((fewest, candidate) => (candidate.leads < fewest.leads ? candidate : fewest), { index: 0, leads: Number.POSITIVE_INFINITY }).index;
 ---
 
 <figure class="comparison">
@@ -137,14 +156,28 @@ const winnerOf = (cell: ProfileCell): string => {
      * enhancement and never a gate: without the script every column is shown,
      * which is also what the printed and indexed page carries.
      */}
-    {groups.length > 1 && (
-        <div class="filters" data-bench-filter role="group" aria-label="Show columns for">
-            <button type="button" data-group-filter="" aria-pressed="true">All</button>
-            {groups.map(group => (
-                <button type="button" data-group-filter={group.label} aria-pressed="false">
-                    {group.label}
-                </button>
-            ))}
+    {columns.length > 1 && (
+        <div class="filters" data-bench-filter data-default-column={String(defaultColumn)}>
+            {groups.length > 1 && (
+                <div class="chips" role="group" aria-label="Show columns for">
+                    <button type="button" data-group-filter="" aria-pressed="true">All</button>
+                    {groups.map(group => (
+                        <button type="button" data-group-filter={group.label} aria-pressed="false">
+                            {group.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+            {/* Stacked, a card would otherwise carry every comparison of its archetype one under the other; picked, it carries one. */}
+            <label class="pick">
+                Comparison
+                <select data-column-filter>
+                    <option value="">All comparisons</option>
+                    {columns.map((_, index) => (
+                        <option value={String(index)}>{labelOf(index)}</option>
+                    ))}
+                </select>
+            </label>
         </div>
     )}
     <table aria-label={label}>
@@ -152,8 +185,8 @@ const winnerOf = (cell: ProfileCell): string => {
         <colgroup>
             <col class="col-archetype" />
             {countColumn && <col class="col-count" />}
-            {columns.map(column => (
-                <col class="col-arm" data-group={column.group ?? undefined} />
+            {columns.map((column, index) => (
+                <col class="col-arm" data-group={column.group ?? undefined} data-column={String(index)} />
             ))}
         </colgroup>
         <thead>
@@ -170,8 +203,8 @@ const winnerOf = (cell: ProfileCell): string => {
             <tr>
                 <th scope="col" class="col-archetype">Archetype</th>
                 {countColumn && <th scope="col" class="col-count">{unit === 'bodies' ? 'Bodies' : 'Nodes'}</th>}
-                {columns.map(column => (
-                    <th scope="col" class="col-arm" data-group={column.group ?? undefined}>
+                {columns.map((column, index) => (
+                    <th scope="col" class="col-arm" data-group={column.group ?? undefined} data-column={String(index)}>
                         {column.overline !== '' && <span class="overline">{column.overline}</span>}
                         <span class="arm">
                             <i>vs</i>
@@ -214,7 +247,7 @@ const winnerOf = (cell: ProfileCell): string => {
                                         : `No shared cell at ${String(entry.count)} ${unit}: the arm sits this archetype out, or exceeded the run budget there.`;
 
                                 return (
-                                    <td class="cell empty" data-label={labelOf(column)} data-group={columns[column]?.group ?? undefined} title={reason}>
+                                    <td class="cell empty" data-label={labelOf(column)} data-group={columns[column]?.group ?? undefined} data-column={String(column)} title={reason}>
                                         <span class="dash" aria-label={reason}>
                                             -
                                         </span>
@@ -233,7 +266,7 @@ const winnerOf = (cell: ProfileCell): string => {
                             const competitorMs = measuredMs(cell, cell.competitorMs);
 
                             return (
-                                <td class="cell" data-label={labelOf(column)} data-group={columns[column]?.group ?? undefined}>
+                                <td class="cell" data-label={labelOf(column)} data-group={columns[column]?.group ?? undefined} data-column={String(column)}>
                                     <span class="tracks">
                                         <span class="plot">
                                             <span class="axis" />
@@ -254,7 +287,8 @@ const winnerOf = (cell: ProfileCell): string => {
                                             <span class:list={['verdict', mixed ? 'unclear' : outcome]}>
                                                 {/* A pair inside the noise band is named, not scored: its factor is pinned to 1 by the ladder, so printing 1.00x beside two medians that differ would claim a precision the ladder never measured. */}
                                                 <b>{mixed ? (factor === null ? '-' : formatApproximate(factor)) : level ? 'similar' : formatFactor(factor)}</b>
-                                                <i>{mixed ? 'no clear lead' : level ? 'inside the noise band' : winnerOf(cell)}</i>
+                                                {/* The word alone; what it means is stated once in the legend rather than in every cell that carries it. */}
+                                                <i>{mixed ? 'no clear lead' : level ? '' : winnerOf(cell)}</i>
                                             </span>
                                             <span class="medians">
                                                 <b class:list={[cell.referenceOverFrameBudget && 'warn']}>{formatMs(referenceMs)}</b>
@@ -271,9 +305,8 @@ const winnerOf = (cell: ProfileCell): string => {
                     <tr class="detail">
                         <td colspan={columns.length + (countColumn ? 2 : 1)}>
                             <details class="row-more">
-                                <summary>
-                                    How <code>{row.archetype}</code> was measured
-                                </summary>
+                                {/* The row already names its archetype; the label repeats it only where a reader reaches the summary without that context. */}
+                                <summary aria-label={`How ${row.archetype} was measured`}>Measurement detail</summary>
                                 <div class="arms">
                                     {row.entries.map((entry, column) => {
                                         const cell = entry.cell;
@@ -380,29 +413,57 @@ const winnerOf = (cell: ProfileCell): string => {
         </tbody>
     </table>
     <script>
+        /** Width at which the block stacks into cards; keep in step with the container query below. */
+        const CARD_WIDTH_PX = 56 * 16;
+
         for (const filter of document.querySelectorAll('[data-bench-filter]')) {
             const figure = filter.closest('figure');
+            const select = filter.querySelector('[data-column-filter]');
 
             if (figure === null) continue;
+
+            /**
+             * Hidden per element rather than through a class on the table: a
+             * column collapses only when its col, its headers and its cells all
+             * go, and the group and column names are data rather than known here.
+             */
+            const show = (attribute: 'group' | 'column', value: string): void => {
+                for (const element of figure.querySelectorAll('[data-group],[data-column]')) {
+                    if (element instanceof HTMLElement) element.hidden = value !== '' && element.dataset[attribute] !== value;
+                }
+            };
 
             filter.addEventListener('click', event => {
                 const button = event.target instanceof Element ? event.target.closest('[data-group-filter]') : null;
 
                 if (!(button instanceof HTMLButtonElement)) return;
 
-                const only = button.dataset.groupFilter ?? '';
-
-                // Hidden per element rather than through a class on the table: a
-                // column collapses only when its col, its headers and its cells
-                // all go, and the group names are data rather than known here.
-                for (const element of figure.querySelectorAll('[data-group]')) {
-                    if (element instanceof HTMLElement) element.hidden = only !== '' && element.dataset.group !== only;
-                }
+                if (select instanceof HTMLSelectElement) select.value = '';
+                show('group', button.dataset.groupFilter ?? '');
 
                 for (const other of filter.querySelectorAll('[data-group-filter]')) {
                     other.setAttribute('aria-pressed', String(other === button));
                 }
             });
+
+            select?.addEventListener('change', () => {
+                if (!(select instanceof HTMLSelectElement)) return;
+
+                for (const other of filter.querySelectorAll('[data-group-filter]')) {
+                    if (other instanceof HTMLElement) other.setAttribute('aria-pressed', String(other.dataset.groupFilter === ''));
+                }
+
+                show('column', select.value);
+            });
+
+            // Stacked, every comparison of an archetype would sit one under the
+            // other in its card, so the narrow view opens on one of them. Applied
+            // once and never re-applied: past the first paint the reader's own
+            // choice outranks the default, at any width.
+            if (select instanceof HTMLSelectElement && figure.getBoundingClientRect().width < CARD_WIDTH_PX) {
+                select.value = filter.getAttribute('data-default-column') ?? '';
+                select.dispatchEvent(new Event('change'));
+            }
         }
     </script>
 
@@ -487,8 +548,31 @@ const winnerOf = (cell: ProfileCell): string => {
     .filters {
         display: flex;
         flex-wrap: wrap;
-        gap: var(--s-2);
+        align-items: center;
+        gap: var(--s-2) var(--s-4);
         margin-bottom: var(--s-3);
+    }
+
+    .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--s-2);
+    }
+
+    /* The matrix shows a column per comparison already, so picking one there would hide the reading the matrix exists for. */
+    .pick {
+        display: none;
+    }
+
+    .pick select {
+        margin-left: var(--s-2);
+        padding: 0.2rem 0.4rem;
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-2);
+        background: var(--bg-elevated);
+        color: var(--fg);
+        font-family: var(--f-mono);
+        font-size: 0.7rem;
     }
 
     .filters button {
@@ -965,6 +1049,18 @@ const winnerOf = (cell: ProfileCell): string => {
 
         .arms {
             grid-template-columns: minmax(0, 1fr);
+        }
+
+        /* One comparison at a time is the readable unit here, and the picker names the pair the chips could only narrow to a group. */
+        .pick {
+            display: block;
+            font-family: var(--f-mono);
+            font-size: 0.7rem;
+            color: var(--fg-muted);
+        }
+
+        .chips {
+            display: none;
         }
     }
 </style>
