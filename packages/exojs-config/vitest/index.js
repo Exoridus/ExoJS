@@ -41,14 +41,17 @@ export const workerTransformPlugin = createWorkerPlugin();
  * the function; it does not otherwise change how V8 collects. Note this is a
  * top-level test option in Vitest 4 - under `poolOptions.forks` it is silently
  * ignored.
- * @param {{ name: string, include: string[], exclude?: string[], setupFiles?: string[], alias?: NonNullable<import('vitest/config').ViteUserConfig['resolve']>['alias'] }} opts
+ * `plugins` are prepended to the shared shader/worklet/worker transforms, so a
+ * project that needs its own resolution step keeps the transforms it would
+ * otherwise have to reproduce.
+ * @param {{ name: string, include: string[], exclude?: string[], setupFiles?: string[], alias?: NonNullable<import('vitest/config').ViteUserConfig['resolve']>['alias'], plugins?: import('vitest/config').ViteUserConfig['plugins'] }} opts
  */
 export function createJsdomTestProject(opts) {
-  const { name, include, exclude, setupFiles = ['./test/setup-env.vitest.ts'], alias } = opts;
+  const { name, include, exclude, setupFiles = ['./test/setup-env.vitest.ts'], alias, plugins = [] } = opts;
   return {
     resolve: { alias, conditions: srcConditions },
     ssr: { resolve: { conditions: srcConditions } },
-    plugins: [createShaderPlugin(), workletTransformPlugin, workerTransformPlugin],
+    plugins: [...plugins, createShaderPlugin(), workletTransformPlugin, workerTransformPlugin],
     define: { __DEV__: JSON.stringify(true), __VERSION__: JSON.stringify('0.0.0'), __REVISION__: JSON.stringify('test') },
     test: {
       name,

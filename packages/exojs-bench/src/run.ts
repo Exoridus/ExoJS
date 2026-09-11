@@ -4,22 +4,34 @@ import { resolve } from 'node:path';
 // graph is loaded lazily via a dynamic `import()` inside `runPhysicsDomain`, so
 // a rendering run never pays for it.
 import type { PhysicsCellResult, PhysicsCellSpec } from './physics';
+import { PHYSICS_ARCHETYPES } from './physics/archetypes';
 import type { ArchetypeId, Backend, CellResult, MatrixSelection, RenderingBrowser } from './rendering';
 import { isHitching, parseRenderingBrowser, profileCell, runMatrix, writeReport } from './rendering';
+import { ARCHETYPES } from './rendering/archetypes';
+import { resolveMatrixCells } from './rendering/driver';
 import { parseArgs } from './shared/args';
 import { createCheckpointWriter } from './shared/checkpoint';
 import type { PlatformDeclaration } from './shared/provenance';
 import { parsePlatformDeclaration, PLATFORM_DECLARATION_SYNTAX, readPlatformVersion } from './shared/provenance';
+import { PHYSICS_LIBRARY_ARMS } from './shared/viteServer';
+import type { RunPlan } from './suite/plan';
+import { parseSuite, resolveSuitePlan } from './suite/plan';
 
 /** Domains this CLI can drive. Each has its own archetypes + arms; the shared layer (timing, provenance, checkpoint, report skeleton) is reused across both. */
 const DOMAINS = ['rendering', 'physics'] as const;
 type Domain = (typeof DOMAINS)[number];
+
+/** `--domain` accepts a single domain or `all`, which runs both SERIALLY. */
+type DomainSelector = Domain | 'all';
 
 /** Default output directory for the rendering report artifacts (gitignored). */
 const DEFAULT_OUT_DIR = '.workspace/output/baseline/';
 
 /** Default output directory for the physics report artifacts (gitignored). */
 const DEFAULT_PHYSICS_OUT_DIR = '.workspace/output/physics/';
+
+/** Default parent directory for a `--domain=all` run; each domain gets a subdirectory of it. */
+const DEFAULT_ALL_OUT_DIR = '.workspace/output/all/';
 
 /** Backends run when `--backend` is not given. `buildMatrix` gates each to the adapters that support it. */
 const DEFAULT_BACKENDS: readonly Backend[] = ['webgl2', 'webgpu'];
@@ -112,16 +124,105 @@ const requirePlatformVersion = (declared: PlatformDeclaration | undefined, isSub
 };
 
 /** Parse and validate the `--domain` selector (defaults to `rendering`). */
-const resolveDomain = (raw: string | undefined): Domain => {
+const resolveDomain = (raw: string | undefined): DomainSelector => {
   if (raw === undefined) {
     return 'rendering';
   }
 
-  if ((DOMAINS as readonly string[]).includes(raw)) {
-    return raw as Domain;
+  if (raw === 'all' || (DOMAINS as readonly string[]).includes(raw)) {
+    return raw as DomainSelector;
   }
 
-  throw new Error(`--domain must be one of [${DOMAINS.join(', ')}] (got '${raw}').`);
+  throw new Error(`--domain must be one of [${DOMAINS.join(', ')}, all] (got '${raw}').`);
+};
+
+/**
+ * Output directory for one domain of a run.
+ *
+ * `--domain=all` gives each domain its own SUBDIRECTORY of the requested output
+ * rather than letting the second domain's `results.json` overwrite the first's.
+ * A single-domain run keeps writing exactly where it always did.
+ */
+const outDirFor = (args: Map<string, string>, domain: Domain, selector: DomainSelector): string => {
+  const requested = args.get('out');
+
+  if (selector !== 'all') {
+    return resolve(requested ?? (domain === 'rendering' ? DEFAULT_OUT_DIR : DEFAULT_PHYSICS_OUT_DIR));
+  }
+
+  return resolve(requested ?? DEFAULT_ALL_OUT_DIR, domain);
+};
+
+/** Resolve the suite plan for one domain from the shared `--suite` / `--extreme` flags. */
+const resolvePlanFor = (args: Map<string, string>, domain: Domain, exploratory: boolean): RunPlan =>
+  resolveSuitePlan({
+    suite: parseSuite(args.get('suite')),
+    domain,
+    extreme: args.has('extreme'),
+    exploratory,
+    ladders: laddersFor(domain),
+  });
+
+/**
+ * Every archetype a domain implements, mapped to its own load ladder.
+ *
+ * This is what a catalog scenario is checked against, and what `full` falls back
+ * to for the ExoJS-internal probes the published catalog deliberately omits.
+ */
+const laddersFor = (domain: Domain): ReadonlyMap<string, readonly number[]> =>
+  new Map(
+    domain === 'rendering'
+      ? ARCHETYPES.map(archetype => [archetype.id as string, archetype.nodeCounts])
+      : PHYSICS_ARCHETYPES.map(archetype => [archetype.id as string, archetype.bodyCounts]),
+  );
+
+/**
+ * Print the resolved plan without measuring anything.
+ *
+ * States the planned workload - scenarios, loads, cells and sampling budget -
+ * and the capability gaps the catalog still has. Deliberately prints no wall
+ * clock estimate: how long a cell takes is a property of the machine, and a
+ * number invented here would be quoted as if it had been measured.
+ */
+const printDryRun = (plan: RunPlan, backends: readonly Backend[]): void => {
+  const scenarios = new Set(plan.workloads.map(workload => workload.scenarioId));
+
+  console.log(
+    `\n=== Plan: ${plan.meta.planId} suite=${plan.meta.suite} rev=${String(plan.meta.planRevision)} hash=${plan.meta.planHash} domain=${plan.meta.domain} ===`,
+  );
+  console.log(
+    `  ${String(scenarios.size)} scenarios, ${String(plan.workloads.length)} scenario/load pairs${plan.meta.extreme ? ' (extreme loads included)' : ''}`,
+  );
+
+  if (plan.meta.domain === 'rendering') {
+    const cells = resolveMatrixCells({ backends, plan });
+    const frames = cells.reduce((total, cell) => total + cell.timedFrames, 0);
+    const arms = new Set(cells.map(cell => `${cell.engine} ${cell.config}`));
+
+    console.log(`  ${String(cells.length)} cells over ${String(arms.size)} arms and backends [${backends.join(', ')}]`);
+    console.log(
+      `  ${String(frames)} timed frames planned, plus ${String(cells.reduce((total, cell) => total + cell.warmupFrames, 0))} discarded warmup frames`,
+    );
+
+    for (const backend of backends) {
+      console.log(`    ${backend}: ${String(cells.filter(cell => cell.backend === backend).length)} cells`);
+    }
+  } else {
+    const armCount = PHYSICS_LIBRARY_ARMS.length + 1;
+
+    console.log(`  ${String(plan.workloads.length * armCount)} cells at most, over ${String(armCount)} arms (exojs plus ${PHYSICS_LIBRARY_ARMS.join(', ')})`);
+    console.log('  Arm availability is decided by the measuring browser, so the built matrix may be smaller; a missing arm is recorded, never dropped.');
+  }
+
+  for (const workload of plan.workloads) {
+    console.log(
+      `    ${workload.scenarioId.padEnd(22)} ${workload.loadId.padStart(5)} = ${String(workload.value).padStart(9)} ${workload.unit}${workload.primary ? '  [headline]' : ''}${workload.extreme ? '  [extreme]' : ''}`,
+    );
+  }
+
+  if (plan.missingScenarios.length > 0) {
+    console.warn(`\n  CAPABILITY GAP — catalog scenarios with no archetype behind them: ${plan.missingScenarios.join(', ')}`);
+  }
 };
 
 /**
@@ -186,13 +287,13 @@ const runProfileMode = async (
 };
 
 /** Run the rendering benchmark domain end-to-end and write its report artifacts. */
-const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
+const runRenderingDomain = async (args: Map<string, string>, selector: DomainSelector): Promise<void> => {
   const backendArg = args.get('backend');
   const archetypeArg = args.get('archetype');
   const nodesArg = args.get('nodes');
   const framesArg = args.get('frames');
   const engineArg = args.get('engine');
-  const outDir = resolve(args.get('out') ?? DEFAULT_OUT_DIR);
+  const outDir = outDirFor(args, 'rendering', selector);
 
   // `--browser` selects the engine the run is measured in and is stamped into
   // every provenance block, so a WebKit number can never be read as a Chromium
@@ -268,7 +369,18 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
     return;
   }
 
-  const isSubset = backendArg !== undefined || hasSelection || timedFramesOverride !== undefined;
+  // A plan resolved WHOLE is a publishable contract however few cells it holds;
+  // only a free filter makes the run exploratory. `--backend` is a free filter
+  // in that sense too: it publishes one backend's block under a plan that names
+  // both.
+  const isSubset = backendArg !== undefined || hasSelection || timedFramesOverride !== undefined || args.has('capture');
+  const plan = resolvePlanFor(args, 'rendering', isSubset);
+
+  if (args.has('dry-run')) {
+    printDryRun(plan, backends);
+
+    return;
+  }
 
   if (isSubset) {
     console.warn('SUBSET RUN — not a reportable comparison (see the same-session rule).');
@@ -285,9 +397,17 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
   // probe was the observed one - can never discard the cells already measured.
   const checkpoint = createCheckpointWriter<CellResult>(outDir);
 
+  // `--capture=<dir>`: write each measured cell's final frame there, for
+  // checking by eye that two arms asked for one scene rendered it. A capture
+  // costs a readback per cell, so it belongs to a spot check and never to a
+  // reportable run - which is why it also marks the run a subset.
+  const captureDir = args.get('capture');
+
   const data = await runMatrix({
     backends,
     browser,
+    plan,
+    ...(captureDir !== undefined && { captureDir: resolve(captureDir) }),
     ...(platform !== undefined && { platform }),
     ...(hasSelection && { selection }),
     ...(timedFramesOverride !== undefined && { timedFramesOverride }),
@@ -349,14 +469,12 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
  * analogue), `--frames` overrides the timed-step count for a fast spot-check
  * (never a reportable run).
  */
-const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
-  const { runPhysicsMatrix, writePhysicsReport } = await import('./physics');
-
+const runPhysicsDomain = async (args: Map<string, string>, selector: DomainSelector): Promise<void> => {
   const archetypeArg = args.get('archetype');
   const bodiesArg = args.get('bodies');
   const framesArg = args.get('frames');
   const engineArg = args.get('engine');
-  const outDir = resolve(args.get('out') ?? DEFAULT_PHYSICS_OUT_DIR);
+  const outDir = outDirFor(args, 'physics', selector);
   const browser = parseRenderingBrowser(args.get('browser'));
   const platform = resolvePlatform(args);
 
@@ -404,6 +522,15 @@ const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
   }
 
   const isSubset = archetypeArg !== undefined || bodiesArg !== undefined || engineArg !== undefined || timedStepsOverride !== undefined;
+  const plan = resolvePlanFor(args, 'physics', isSubset);
+
+  if (args.has('dry-run')) {
+    printDryRun(plan, []);
+
+    return;
+  }
+
+  const { runPhysicsMatrix, writePhysicsReport } = await import('./physics');
 
   if (isSubset) {
     console.warn('SUBSET RUN — not a reportable comparison (see the same-run rule).');
@@ -421,6 +548,7 @@ const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
 
   const data = await runPhysicsMatrix({
     browser,
+    plan,
     ...(platform !== undefined && { platform }),
     ...(isSubset && { filter }),
     ...(timedStepsOverride !== undefined && { timedStepsOverride }),
@@ -463,13 +591,15 @@ const main = async (): Promise<void> => {
   const args = parseArgs(process.argv.slice(2));
   const domain = resolveDomain(args.get('domain'));
 
-  switch (domain) {
-    case 'rendering':
-      await runRenderingDomain(args);
-      break;
-    case 'physics':
-      await runPhysicsDomain(args);
-      break;
+  // Serial on purpose: the two domains contend for the same CPU (and the
+  // rendering one for the GPU), so running them concurrently would measure the
+  // contention rather than either domain.
+  if (domain === 'rendering' || domain === 'all') {
+    await runRenderingDomain(args, domain);
+  }
+
+  if (domain === 'physics' || domain === 'all') {
+    await runPhysicsDomain(args, domain);
   }
 };
 

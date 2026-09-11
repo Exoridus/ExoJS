@@ -14,6 +14,19 @@ import type { ArchetypeSpec } from './EngineAdapter';
 /** Whether the archetype's leaves are text nodes rather than sprites. */
 export const isTextArchetype = (spec: ArchetypeSpec): boolean => (spec.textGlyphsPerNode ?? 0) > 0;
 
+/**
+ * Whether every leaf is stretched to the whole viewport and stacked at the
+ * origin, which makes the scene fill-bound rather than node-bound.
+ *
+ * A predicate rather than an archetype-id check in each adapter: the arms used
+ * to test the id separately, and an archetype added with the same geometry under
+ * a different name would have been laid out four different ways.
+ */
+export const hasFullViewportLeaves = (spec: ArchetypeSpec): boolean => spec.fullViewportLeaves === true;
+
+/** Per-leaf alpha the archetype fixes, or `1` where it leaves the leaves opaque. */
+export const leafAlpha = (spec: ArchetypeSpec): number => spec.leafAlpha ?? 1;
+
 /** Whether the per-frame mutation re-sets each selected text leaf's string. */
 export const isTextUpdating = (spec: ArchetypeSpec): boolean => isTextArchetype(spec) && spec.textUpdate === true;
 

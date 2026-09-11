@@ -2,8 +2,20 @@ import * as Phaser from 'phaser';
 
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
-import { createDigitAtlasCanvas, createDistinctTextureCanvas, DIGIT_ALPHABET, DIGIT_CELL_HEIGHT, DIGIT_CELL_WIDTH, TEXT_FONT_SIZE } from '../sceneAssets';
-import { isChurning, isTextArchetype, isTextUpdating, textForLeaf, usesRenderTargets } from '../traits';
+import { isParticleLifecycle, isParticles, PARTICLE_ALPHA, PARTICLE_LIFETIME, PARTICLE_STEP, particleSeedAt } from '../particles';
+import {
+  createDigitAtlasCanvas,
+  createDistinctTextureCanvas,
+  createParticleCanvas,
+  createTileAtlasCanvas,
+  DIGIT_ALPHABET,
+  DIGIT_CELL_HEIGHT,
+  DIGIT_CELL_WIDTH,
+  TEXT_FONT_SIZE,
+} from '../sceneAssets';
+import type { TilemapExtent } from '../tilemap';
+import { isTilemap, isTilemapEditing, TILE_SIZE, tileIdAt, tilemapCameraAt, tilemapCameraFrameFor, tilemapEditsAt, tilemapExtent } from '../tilemap';
+import { hasFullViewportLeaves, isChurning, isTextArchetype, isTextUpdating, leafAlpha, textForLeaf, usesRenderTargets } from '../traits';
 import { GRID_MARGIN, gridLayout, gridPosition, isScrolling, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '../world';
 
 /**
@@ -112,6 +124,158 @@ export const createPhaserAdapter = (): EngineAdapter => {
   /** Characters per text leaf of the built archetype; `0` when it has no text. */
   let textGlyphs = 0;
 
+  /** The tilemap scene's layer and map, or `null` for every other archetype. */
+  let tileLayer: Phaser.Tilemaps.TilemapGPULayer | null = null;
+  let tileMap: Phaser.Tilemaps.Tilemap | null = null;
+  let tilemapSpec: ArchetypeSpec | null = null;
+  let tileExtent: TilemapExtent = { width: 0, height: 0 };
+
+  /**
+   * Build the tilemap scene on Phaser's GPU tile layer.
+   *
+   * The GPU layer is the arm's fastest path for exactly this shape of work - one
+   * tileset, one orthographic grid, no per-tile game objects - and it is what a
+   * Phaser project would use here, so it is what the comparison measures. It
+   * renders the whole layer as a single quad over a data texture, which is why
+   * an edit has to be followed by regenerating that texture rather than being
+   * picked up on its own.
+   */
+  const buildTilemapScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const extent = tilemapExtent(nodeCount);
+    const key = `${SCENE_KEY}-tiles`;
+
+    if (game!.textures.exists(key)) {
+      game!.textures.remove(key);
+    }
+
+    game!.textures.addCanvas(key, createTileAtlasCanvas());
+
+    const data: number[][] = [];
+
+    for (let y = 0; y < extent.height; y += 1) {
+      const row = new Array<number>(extent.width);
+
+      for (let x = 0; x < extent.width; x += 1) {
+        row[x] = tileIdAt(x, y);
+      }
+
+      data.push(row);
+    }
+
+    const map = scene!.make.tilemap({ data, tileWidth: TILE_SIZE, tileHeight: TILE_SIZE });
+    const tileset = map.addTilesetImage('tiles', key, TILE_SIZE, TILE_SIZE, 0, 0)!;
+    const layer = map.createLayer(0, tileset, 0, 0, true) as Phaser.Tilemaps.TilemapGPULayer;
+
+    tileMap = map;
+    tileLayer = layer;
+    tilemapSpec = spec;
+    tileExtent = extent;
+
+    const camera = tilemapCameraAt(0, extent);
+
+    scene!.cameras.main.setScroll(camera.x, camera.y);
+  };
+
+  /** Drop the tilemap scene so a rebuild (or teardown) leaks nothing. */
+  const releaseTilemap = (): void => {
+    tileLayer?.destroy();
+    tileMap?.destroy();
+    tileLayer = null;
+    tileMap = null;
+    tilemapSpec = null;
+  };
+
+  /** The particle scene's emitter, or `null` for every other archetype. */
+  let particleEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+  let particleSpec: ArchetypeSpec | null = null;
+  /** Milliseconds of emitter time already simulated, so `preUpdate` gets a monotonic clock. */
+  let particleClockMs = 0;
+
+  /**
+   * Build the particle scene on Phaser's own emitter.
+   *
+   * The draw-only scene emits the whole pool at once and then never steps the
+   * emitter: the harness drives rendering alone, so an unstepped emitter holds
+   * its particles exactly where they were put - which is the resting simulation
+   * this scene asks every arm for. Their positions are overwritten from the
+   * shared layout, so this arm draws the identical picture rather than its own
+   * random spread.
+   *
+   * The lifecycle scene keeps Phaser's emitter doing the simulating, configured
+   * to the shared contract: a two second life, a steady rate that holds the pool
+   * at the node count, a linear drift and a linear fade. Its particles do not
+   * land on the same coordinates as the other arms' - the emitter draws its own
+   * randoms - and they are not supposed to: the comparison is of equal work, not
+   * of identical pixels, and forcing the positions would replace the emitter
+   * under test with harness code.
+   */
+  const buildParticleScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const key = `${SCENE_KEY}-particle`;
+
+    if (game!.textures.exists(key)) {
+      game!.textures.remove(key);
+    }
+
+    game!.textures.addCanvas(key, createParticleCanvas());
+
+    particleClockMs = 0;
+
+    if (isParticleLifecycle(spec)) {
+      const emitter = scene!.add.particles(0, 0, key, {
+        lifespan: PARTICLE_LIFETIME * 1000,
+        speed: { min: 20, max: 60 },
+        angle: { min: 0, max: 360 },
+        alpha: { start: PARTICLE_ALPHA, end: 0 },
+        // One emission per frame of the share of the pool that expires in it, so
+        // the live count holds at the node count instead of oscillating.
+        frequency: 0,
+        quantity: Math.max(1, Math.round(nodeCount / (PARTICLE_LIFETIME / PARTICLE_STEP))),
+        maxAliveParticles: nodeCount,
+        // Spread over the viewport through the emitter's own per-particle x/y
+        // ranges, so the pool fills the frame the way every other arm's does.
+        x: { min: 0, max: VIEWPORT_WIDTH },
+        y: { min: 0, max: VIEWPORT_HEIGHT },
+      });
+
+      // One full lifetime before the timed window, like every other arm's
+      // preroll: the pool reaches its steady state outside the measurement.
+      emitter.fastForward(PARTICLE_LIFETIME * 1000, PARTICLE_STEP * 1000);
+      particleClockMs = PARTICLE_LIFETIME * 1000;
+      particleEmitter = emitter;
+    } else {
+      const emitter = scene!.add.particles(0, 0, key, {
+        lifespan: Number.MAX_SAFE_INTEGER,
+        speed: 0,
+        alpha: PARTICLE_ALPHA,
+        emitting: false,
+        maxAliveParticles: nodeCount,
+      });
+
+      emitter.explode(nodeCount);
+
+      let index = 0;
+
+      emitter.forEachAlive(particle => {
+        const seed = particleSeedAt(index, nodeCount);
+
+        index += 1;
+        particle.x = seed.x;
+        particle.y = seed.y;
+      }, null);
+
+      particleEmitter = emitter;
+    }
+
+    particleSpec = spec;
+  };
+
+  /** Drop the particle scene so a rebuild (or teardown) leaks nothing. */
+  const releaseParticles = (): void => {
+    particleEmitter?.destroy();
+    particleEmitter = null;
+    particleSpec = null;
+  };
+
   return {
     engine: 'phaser',
     config: 'webgl2',
@@ -188,6 +352,23 @@ export const createPhaserAdapter = (): EngineAdapter => {
         throw new Error('buildScene was called before init.');
       }
 
+      releaseTilemap();
+      releaseParticles();
+
+      if (isParticles(spec)) {
+        buildParticleScene(spec, nodeCount);
+
+        return;
+      }
+
+      // The tilemap scenes leave the sprite path behind: the leaves are tiles in
+      // a layer rather than game objects, so nothing below applies to them.
+      if (isTilemap(spec)) {
+        buildTilemapScene(spec, nodeCount);
+
+        return;
+      }
+
       const textures = game.textures;
 
       textureKeys = [];
@@ -227,7 +408,8 @@ export const createPhaserAdapter = (): EngineAdapter => {
       // the position `world.ts` computes, so a change to the layout cannot move
       // one arm's scene without moving every arm's.
       const layout = gridLayout(nodeCount, VIEWPORT_WIDTH, VIEWPORT_HEIGHT, GRID_MARGIN);
-      const overdraw = spec.id === 'overdraw';
+      const overdraw = hasFullViewportLeaves(spec);
+      const alpha = leafAlpha(spec);
 
       // Shared, canonical mutation selection - the SAME helper every arm routes
       // through, so all arms select the byte-for-byte identical index set and the
@@ -283,6 +465,12 @@ export const createPhaserAdapter = (): EngineAdapter => {
           sprite.setDisplaySize(VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
         }
 
+        // A fixed leaf alpha is what makes a stack of full-viewport quads a
+        // blend workload: every layer has to be composited rather than skipped.
+        if (alpha < 1) {
+          sprite.setAlpha(alpha);
+        }
+
         sprite.setPosition(x, y);
 
         return sprite;
@@ -316,6 +504,39 @@ export const createPhaserAdapter = (): EngineAdapter => {
     },
 
     mutate(frame: number): void {
+      // Particle scenes: the lifecycle one steps Phaser's emitter, which is the
+      // simulation under comparison; the draw-only one steps nothing, so its
+      // particles stay where the build put them.
+      if (particleSpec !== null && particleEmitter !== null) {
+        if (isParticleLifecycle(particleSpec)) {
+          particleClockMs += PARTICLE_STEP * 1000;
+          particleEmitter.preUpdate(particleClockMs, PARTICLE_STEP * 1000);
+        }
+
+        return;
+      }
+
+      // Tilemap scenes: scroll the camera, then submit this frame's tile changes.
+      // The GPU layer reads its tiles from a data texture that does not follow a
+      // tile write on its own, so regenerating that texture is what actually
+      // submits the edit - and it belongs in the bracket for the same reason the
+      // other arms' repacking does.
+      if (tilemapSpec !== null && tileLayer !== null && tileMap !== null && scene !== null) {
+        const camera = tilemapCameraAt(tilemapCameraFrameFor(tilemapSpec, frame), tileExtent);
+
+        scene.cameras.main.setScroll(camera.x, camera.y);
+
+        if (isTilemapEditing(tilemapSpec)) {
+          for (const edit of tilemapEditsAt(frame, tileExtent)) {
+            tileMap.putTileAt(edit.tileId, edit.x, edit.y, false, tileLayer as unknown as Phaser.Tilemaps.TilemapLayer);
+          }
+
+          tileLayer.generateLayerDataTexture();
+        }
+
+        return;
+      }
+
       // Structural churn: destroy each selected leaf and build its replacement in
       // the same place. Phaser's `destroy` removes the object from its parent
       // container itself, so nothing detaches it first.
@@ -353,7 +574,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
     },
 
     renderFrame(): void {
-      if (game === null || root === null) {
+      if (game === null || (root === null && tileLayer === null && particleEmitter === null)) {
         throw new Error('renderFrame was called before buildScene.');
       }
 
@@ -369,6 +590,9 @@ export const createPhaserAdapter = (): EngineAdapter => {
     },
 
     teardown(): void {
+      releaseTilemap();
+      releaseParticles();
+
       if (game !== null) {
         // `destroy` only FLAGS pending destruction (normally consumed by the next
         // game step); since the loop is stopped, drive one explicit `step` - which

@@ -1,6 +1,6 @@
 {
   "recorded": {
-    "at": "2026-09-08T17:20:19.719Z",
+    "at": "2026-09-11T04:46:48.402Z",
     "engineVersion": "0.17.0",
     "adapter": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
   },
@@ -30,6 +30,16 @@
       "config": "current",
       "backend": "webgl2",
       "archetype": "deep-hierarchy",
+      "nodeCount": 200,
+      "drawCalls": 1,
+      "textureBinds": 0,
+      "bufferUploads": 1
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "dynamic-all",
       "nodeCount": 200,
       "drawCalls": 1,
       "textureBinds": 0,
@@ -169,6 +179,26 @@
       "engine": "exojs",
       "config": "current",
       "backend": "webgl2",
+      "archetype": "particles-draw",
+      "nodeCount": 200,
+      "drawCalls": 1,
+      "textureBinds": 0,
+      "bufferUploads": 1
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "particles-lifecycle",
+      "nodeCount": 200,
+      "drawCalls": 1,
+      "textureBinds": 0,
+      "bufferUploads": 1
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
       "archetype": "scrolling-world",
       "nodeCount": 200,
       "drawCalls": 1,
@@ -207,6 +237,26 @@
     },
     {
       "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "tilemap-edit",
+      "nodeCount": 200,
+      "drawCalls": 1,
+      "textureBinds": 0,
+      "bufferUploads": 1
+    },
+    {
+      "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "tilemap-scroll",
+      "nodeCount": 200,
+      "drawCalls": 1,
+      "textureBinds": 0,
+      "bufferUploads": 0
+    },
+    {
+      "engine": "exojs",
       "config": "retained",
       "backend": "webgl2",
       "archetype": "batch-breaking-atlased",
@@ -234,6 +284,16 @@
       "drawCalls": 16,
       "textureBinds": 0,
       "bufferUploads": 19
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "dynamic-all",
+      "nodeCount": 200,
+      "drawCalls": 4,
+      "textureBinds": 0,
+      "bufferUploads": 7
     },
     {
       "engine": "exojs",
@@ -369,6 +429,26 @@
       "engine": "exojs",
       "config": "retained",
       "backend": "webgl2",
+      "archetype": "particles-draw",
+      "nodeCount": 200,
+      "drawCalls": 1,
+      "textureBinds": 0,
+      "bufferUploads": 1
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "particles-lifecycle",
+      "nodeCount": 200,
+      "drawCalls": 1,
+      "textureBinds": 0,
+      "bufferUploads": 1
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
       "archetype": "scrolling-world",
       "nodeCount": 200,
       "drawCalls": 4,
@@ -404,6 +484,26 @@
       "drawCalls": 4,
       "textureBinds": 0,
       "bufferUploads": 12
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "tilemap-edit",
+      "nodeCount": 200,
+      "drawCalls": 1,
+      "textureBinds": 0,
+      "bufferUploads": 1
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "tilemap-scroll",
+      "nodeCount": 200,
+      "drawCalls": 1,
+      "textureBinds": 0,
+      "bufferUploads": 0
     }
   ]
 }

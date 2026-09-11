@@ -3,7 +3,8 @@ import * as ex from 'excalibur';
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
 import { createDigitAtlasCanvas, createDistinctTextureCanvas, DIGIT_ALPHABET, DIGIT_CELL_HEIGHT, DIGIT_CELL_WIDTH, TEXT_FONT_SIZE } from '../sceneAssets';
-import { isChurning, isTextArchetype, isTextUpdating, textForLeaf, usesRenderTargets } from '../traits';
+import { isTilemap } from '../tilemap';
+import { hasFullViewportLeaves, isChurning, isTextArchetype, isTextUpdating, leafAlpha, textForLeaf, usesRenderTargets } from '../traits';
 import { GRID_MARGIN, gridLayout, gridPosition, isScrolling, SPRITE_SIZE, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '../world';
 
 /**
@@ -127,7 +128,15 @@ export const createExcaliburAdapter = (): EngineAdapter => {
       // equivalent API at all: its `PostProcessor` chain is a full-SCREEN pass
       // rather than a filtered subtree, and it ships no mask source, so those
       // cells could only be approximated - which the fairness rule forbids.
-      return !isScrolling(spec) && !usesRenderTargets(spec);
+      //
+      // The tilemap archetypes are sat out for a capability reason rather than a
+      // policy one. Excalibur 0.32's `TileMap` is a grid of `Tile`s each holding
+      // its own graphics list, drawn through the ordinary graphics path - there
+      // is no dedicated tile submission path of the kind the other three arms
+      // are being compared on, so its cell would answer a different question
+      // than the row it sat in. Building one here would mean writing the arm's
+      // missing feature rather than adapting to it.
+      return !isScrolling(spec) && !usesRenderTargets(spec) && !isTilemap(spec);
     },
 
     async init(canvas: HTMLCanvasElement, target: Backend): Promise<void> {
@@ -192,7 +201,8 @@ export const createExcaliburAdapter = (): EngineAdapter => {
       // the position `world.ts` computes, so a change to the layout cannot move
       // one arm's scene without moving every arm's.
       const layout = gridLayout(nodeCount, VIEWPORT_WIDTH, VIEWPORT_HEIGHT, GRID_MARGIN);
-      const overdraw = spec.id === 'overdraw';
+      const overdraw = hasFullViewportLeaves(spec);
+      const alpha = leafAlpha(spec);
 
       // Shared, canonical mutation selection - the SAME helper every arm routes
       // through, so all arms select the byte-for-byte identical index set and the
@@ -249,6 +259,12 @@ export const createExcaliburAdapter = (): EngineAdapter => {
         // sprites at their native SPRITE_SIZE.
         if (overdraw) {
           sprite.destSize = { width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT };
+        }
+
+        // A fixed leaf alpha is what makes a stack of full-viewport quads a
+        // blend workload: every layer has to be composited rather than skipped.
+        if (alpha < 1) {
+          sprite.opacity = alpha;
         }
 
         actor.graphics.use(sprite);

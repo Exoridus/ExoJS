@@ -78,6 +78,9 @@ const missingFields = (subject: unknown, fields: readonly string[], where: strin
 // `flags` is deliberately absent: a browser that takes no launch arguments
 // records an empty set, and demanding content there would push a run into
 // claiming flags it never passed.
+/** First schema version whose rendering stamps record the clock their session read on. */
+const RENDERING_CLOCK_SINCE = 7;
+
 const RENDERING_STAMP_FIELDS = [
   'backend',
   'adapter',
@@ -187,6 +190,48 @@ const PHYSICS_STAMP_FIELDS = ['browser', 'browserVersion', 'host', 'prerelease',
 const HOST_FIELDS = ['cpu', 'cpuCount', 'os', 'platformVersion', 'arch'] as const;
 const PROFILE_FIELDS = ['slug', 'gpu', 'os', 'browser', 'platform', 'engineVersion', 'measuredAt', 'runs'] as const;
 const PLATFORM_FIELDS = ['name', 'version', 'versionSource', 'prerelease'] as const;
+
+/** Fields every published row of a version 7 document carries; see {@link ROW_FIELDS_SINCE}. */
+const ROW_FIELDS = ['archetype', 'category', 'count', 'loadId', 'unit', 'primary', 'cells'] as const;
+
+/** Fields every published cell of a version 7 document carries. */
+const CELL_FIELDS = ['competitor', 'referenceMs', 'competitorMs', 'verdict', 'timer'] as const;
+
+/**
+ * First schema version whose rows state their load and whose cells state what
+ * the clock established about them.
+ *
+ * Checked rather than assumed: the fields are produced by the aggregation stage,
+ * and a stage that silently stopped emitting one would publish a document whose
+ * loads the page cannot tell apart and whose comparisons carry no timer
+ * qualification - which reads exactly like a document that was never meant to.
+ */
+const ROW_FIELDS_SINCE = 7;
+
+/** Every row and cell of one published section carries the fields its schema version promises. */
+const checkModelRows = (section: unknown, where: string, problems: string[]): void => {
+  const rows = isRecord(section) ? section['rows'] : undefined;
+
+  if (!Array.isArray(rows)) {
+    problems.push(`${where}.rows is missing`);
+
+    return;
+  }
+
+  for (const [index, row] of rows.entries()) {
+    problems.push(...missingFields(row, [...ROW_FIELDS], `${where}.rows[${String(index)}]`));
+
+    const cells = isRecord(row) ? row['cells'] : undefined;
+
+    if (!Array.isArray(cells)) {
+      continue;
+    }
+
+    for (const [cellIndex, cell] of cells.entries()) {
+      problems.push(...missingFields(cell, [...CELL_FIELDS], `${where}.rows[${String(index)}].cells[${String(cellIndex)}]`));
+    }
+  }
+};
 
 /**
  * The operating system the file name claims.
@@ -343,6 +388,10 @@ const checkProfile = (path: string): string[] => {
           problems.push(...missingFields(stamp, [...RENDERING_STAMP_FIELDS], where));
           checkRenderingStampShape(stamp, where, problems);
 
+          if (version >= RENDERING_CLOCK_SINCE && isRecord(stamp) && !('clock' in stamp)) {
+            problems.push(`${where}.clock is missing, so nothing states what the page's clock resolved to`);
+          }
+
           if (isRecord(stamp) && typeof stamp['engineVersion'] === 'string') {
             engineVersions.add(stamp['engineVersion']);
           }
@@ -351,6 +400,14 @@ const checkProfile = (path: string): string[] => {
 
       if (!Array.isArray(rendering['backends']) || rendering['backends'].length === 0) {
         problems.push('rendering.backends is missing or empty');
+      } else if (version >= ROW_FIELDS_SINCE) {
+        for (const [index, block] of rendering['backends'].entries()) {
+          const sections = isRecord(block) ? block['sections'] : undefined;
+
+          for (const [sectionIndex, section] of (Array.isArray(sections) ? sections : []).entries()) {
+            checkModelRows(section, `rendering.backends[${String(index)}].sections[${String(sectionIndex)}]`, problems);
+          }
+        }
       }
 
       armVersions.push(...checkLibraries(rendering, 'rendering', problems));
@@ -377,6 +434,8 @@ const checkProfile = (path: string): string[] => {
 
       if (!isRecord(physics['section'])) {
         problems.push('physics.section is missing');
+      } else if (version >= ROW_FIELDS_SINCE) {
+        checkModelRows(physics['section'], 'physics.section', problems);
       }
 
       armVersions.push(...checkLibraries(physics, 'physics', problems));

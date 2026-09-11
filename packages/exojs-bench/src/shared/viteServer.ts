@@ -21,6 +21,59 @@ const REPO_ROOT = resolve(HERE, '..', '..', '..', '..');
 /** The engine's TypeScript source root every harness page benchmarks (`<repo>/src`). */
 const ENGINE_SRC = resolve(REPO_ROOT, 'src');
 
+/**
+ * Engine and official-extension package entries, mapped to their SOURCE.
+ *
+ * The engine's `@codexo/exojs-source` condition only redirects a package's own
+ * `#*` imports; the package ENTRY still resolves through `exports`, which points
+ * at `dist`. Without these aliases an extension arm would load the built engine
+ * while the adapter beside it loads the source, so one cell would measure a
+ * different tree from the rest of the matrix - and the two copies of a class
+ * fail every `instanceof` across the boundary, which is how a `ParticleSystem`
+ * silently kept its default capacity instead of the one the cell asked for.
+ */
+const SOURCE_PACKAGE_ALIASES: ReadonlyArray<{ find: string; replacement: string }> = [
+  { find: '@codexo/exojs-particles', replacement: resolve(REPO_ROOT, 'packages/exojs-particles/src/index.ts') },
+  { find: '@codexo/exojs-tilemap', replacement: resolve(REPO_ROOT, 'packages/exojs-tilemap/src/index.ts') },
+  { find: '@codexo/exojs/renderer-sdk', replacement: resolve(ENGINE_SRC, 'renderer-sdk.ts') },
+  { find: '@codexo/exojs/extensions', replacement: resolve(ENGINE_SRC, 'extensions/index.ts') },
+  { find: '@codexo/exojs', replacement: resolve(ENGINE_SRC, 'index.ts') },
+];
+
+/**
+ * Source roots whose `#*` specifiers belong to the package they sit in rather
+ * than to the engine - the official extensions the harness measures through.
+ * The benchmark package itself is deliberately absent: its adapters use `#*` to
+ * reach engine modules.
+ */
+const EXTENSION_SOURCE_ROOTS: readonly string[] = [resolve(REPO_ROOT, 'packages/exojs-particles'), resolve(REPO_ROOT, 'packages/exojs-tilemap')];
+
+/**
+ * Resolve `#...` specifiers to the ENGINE source - but only for importers
+ * outside the extension packages.
+ *
+ * Each extension package has its own `#*` map pointing at its own `src`, and a
+ * blanket alias would send `#gpu/ParticleGpuState` into the engine tree, where
+ * no such module exists. Declining here leaves those specifiers to Vite's normal
+ * `imports` resolution, which the source conditions already steer to the
+ * package's own sources.
+ */
+const engineHashImports = () => ({
+  name: 'exojs-bench-engine-hash-imports',
+  enforce: 'pre',
+  resolveId(source: string, importer: string | undefined) {
+    if (!source.startsWith('#') || source.endsWith('.vert') || source.endsWith('.frag')) {
+      return null;
+    }
+
+    if (importer !== undefined && EXTENSION_SOURCE_ROOTS.some(root => resolve(importer).startsWith(root))) {
+      return null;
+    }
+
+    return `${resolve(ENGINE_SRC, source.slice(1))}.ts`;
+  },
+});
+
 /** WebGl2Shader extensions the engine imports as text. */
 const SHADER_EXTENSIONS = ['.vert', '.frag', '.glsl', '.wgsl'] as const;
 
@@ -232,7 +285,7 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     // condition below, so the engine graph is measured exactly as it ships.
     // `.vert`/`.frag` specifiers carry their extension and are handled by
     // `realShaderPlugin`'s transform.
-    resolve: { alias: [{ find: /^#(.*)$/, replacement: `${ENGINE_SRC}/$1` }], conditions: srcConditions },
+    resolve: { alias: [...SOURCE_PACKAGE_ALIASES, { find: /^#(.*)\.(vert|frag)$/, replacement: `${ENGINE_SRC}/$1.$2` }], conditions: srcConditions },
     ssr: { resolve: { conditions: srcConditions } },
     // `noDiscovery` keeps the automatic dep scanner OFF - it runs esbuild over
     // the whole import graph, which would choke on the engine's `.vert`/`.frag`
@@ -248,7 +301,7 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     // pre-bundled.
     optimizeDeps: { noDiscovery: true, include: resolvableCompetitors(libraryArms) },
     define: { __DEV__: String(ENGINE_DEV_BUILD), __VERSION__: JSON.stringify(version), __REVISION__: JSON.stringify('baseline'), ...extraDefine },
-    plugins: [realShaderPlugin, devGlobalsPlugin(version), ...extraPlugins],
+    plugins: [engineHashImports(), realShaderPlugin, devGlobalsPlugin(version), ...extraPlugins],
   });
 
   await server.listen();

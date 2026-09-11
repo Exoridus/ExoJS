@@ -1,10 +1,11 @@
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { createShaderPlugin } from '@codexo/exojs-build';
 import { createJsdomTestProject, srcConditions, workerTransformPlugin, workletTransformPlugin } from '@codexo/exojs-config/vitest';
 import { playwright } from '@vitest/browser-playwright';
 import { webdriverio } from '@vitest/browser-webdriverio';
-import { defineConfig } from 'vitest/config';
+import { defineConfig, type Plugin } from 'vitest/config';
 
 import { emitAllocationRecord, startHeapSampling, stopHeapSampling } from './test/perf/webgpu/heapSamplingCommands';
 import { resetParityEvidence, writeParityEvidence } from './test/rendering/parity/evidenceSink';
@@ -24,6 +25,10 @@ const aliasConfig = [
   // exports a `@codexo/exojs-source` condition, so alias to source for in-repo tests.
   // @codexo/exojs-physics is aliased too so the example physics↔tilemap bridge
   // recipe (examples/shared/physics-tilemap.ts) can be unit-tested in-repo.
+  // @codexo/exojs-particles and @codexo/exojs-tilemap are aliased for the same
+  // reason: the benchmark's extension arms import them, and this lane runs
+  // without building the packages, so their `dist` entries resolve to nothing.
+  { find: '@codexo/exojs-particles', replacement: fileURLToPath(new URL('./packages/exojs-particles/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-tilemap', replacement: fileURLToPath(new URL('./packages/exojs-tilemap/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-tiled', replacement: fileURLToPath(new URL('./packages/exojs-tiled/src/index.ts', import.meta.url)) },
   { find: '@codexo/exojs-aseprite', replacement: fileURLToPath(new URL('./packages/exojs-aseprite/src/index.ts', import.meta.url)) },
@@ -37,6 +42,44 @@ const aliasConfig = [
   // so an in-repo test would resolve nothing at all without this.
   { find: 'create-exo-app', replacement: fileURLToPath(new URL('./packages/create-exo-app/src/scaffold.ts', import.meta.url)) },
 ] as const;
+
+/**
+ * Source roots whose `#*` specifiers address the package they sit in rather than
+ * the engine. The benchmark package is deliberately absent: its adapters use
+ * `#*` to reach engine modules.
+ */
+const EXTENSION_SOURCE_ROOTS = [
+  fileURLToPath(new URL('./packages/exojs-particles', import.meta.url)),
+  fileURLToPath(new URL('./packages/exojs-tilemap', import.meta.url)),
+] as const;
+
+/**
+ * Resolves the benchmark adapters' `#*` specifiers to the engine source.
+ *
+ * A blanket alias cannot do this: each extension package carries its own `#*`
+ * map pointing at its own `src`, so `#distributions/Curve` imported from inside
+ * `@codexo/exojs-particles` would be sent into the engine tree, where no such
+ * module exists. Declining for those importers leaves the specifier to Vite's
+ * normal `imports` resolution, which `srcConditions` already steers to the
+ * package's own sources.
+ */
+const benchEngineHashImports = (): Plugin => {
+  const engineSrc = fileURLToPath(new URL('./src', import.meta.url));
+
+  return {
+    name: 'exojs-bench-engine-hash-imports',
+    enforce: 'pre',
+    async resolveId(source: string, importer: string | undefined, options) {
+      if (!source.startsWith('#')) return null;
+      if (importer !== undefined && EXTENSION_SOURCE_ROOTS.some(root => resolve(importer).startsWith(root))) return null;
+
+      // Re-enter resolution rather than returning the path: the engine's `#*`
+      // specifiers carry no extension, and shader imports need `.frag`/`.wgsl`
+      // rather than the `.ts` a hand-built path would have to assume.
+      return this.resolve(`${engineSrc}/${source.slice(1)}`, importer, options);
+    },
+  };
+};
 
 // Loads every shader source (`.vert`/`.frag`/`.wgsl`) as its REAL text, exactly
 // as the production build does. Tests read what ships: the renderer performance
@@ -97,8 +140,21 @@ const parityCommands = { writeParityEvidence, resetParityEvidence };
 // reachable only over CDP, which lives on the node side. See the command module.
 const allocationCommands = { startHeapSampling, stopHeapSampling, emitAllocationRecord };
 
+/**
+ * Worker cap for the jsdom lane.
+ *
+ * Vitest otherwise sizes its fork pool at one worker per core, which saturates a
+ * developer machine for the several minutes the unit lane runs - and the pre-push
+ * hook runs it on every push. Half the cores keeps the machine usable and costs
+ * little wall time, since the lane is not purely CPU-bound. CI keeps the default:
+ * its runners have few cores and nothing else to serve. `EXOJS_TEST_MAX_WORKERS`
+ * overrides both (a plain count or a `"50%"`-style share).
+ */
+const maxWorkers = process.env['EXOJS_TEST_MAX_WORKERS'] ?? (process.env['CI'] ? undefined : '50%');
+
 export default defineConfig({
   test: {
+    ...(maxWorkers === undefined ? {} : { maxWorkers }),
     coverage: {
       provider: 'istanbul',
       reporter: ['lcov', 'clover', 'text-summary'],
@@ -281,7 +337,8 @@ export default defineConfig({
       // PR - run it on demand via `pnpm --filter @codexo/exojs-bench test`.
       createJsdomTestProject({
         name: 'exojs-bench',
-        alias: [...aliasConfig, { find: /^#(.*)$/, replacement: `${fileURLToPath(new URL('./src', import.meta.url))}/$1` }],
+        alias: aliasConfig,
+        plugins: [benchEngineHashImports()],
         include: ['packages/exojs-bench/test/**/*.test.ts'],
       }),
 

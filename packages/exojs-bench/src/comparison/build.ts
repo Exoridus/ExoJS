@@ -2,7 +2,12 @@ import { PHYSICS_ARCHETYPES } from '../physics/archetypes';
 import type { PhysicsCellResult } from '../physics/PhysicsAdapter';
 import { ARCHETYPES } from '../rendering/archetypes';
 import type { ArchetypeCategory, Backend, CellResult, StructuralCounters } from '../rendering/EngineAdapter';
+import type { ClockReport } from '../shared/clock';
 import { exceedsFrameBudget } from '../shared/frameBudget';
+import type { TimerCheck } from '../shared/timerCheck';
+import { mergeTimerChecks, timerCheckOfRun } from '../shared/timerCheck';
+import type { LoadUnit } from '../suite/catalog';
+import { loadIdFor, scenariosFor } from '../suite/catalog';
 import { physicsMechanism, renderingMechanism } from './mechanism';
 import type { Verdict } from './verdict';
 import { compareMedians } from './verdict';
@@ -17,12 +22,17 @@ import { compareMedians } from './verdict';
  *
  * - No aggregation across archetypes, anywhere. Categories are section headings,
  *   never rows, because any mean over a category hides its worst cell.
- * - A row's node or body count is chosen from the archetype LADDERS before any
- *   timing is read (see {@link chooseRowCount}), so it can never be picked to
- *   suit the outcome. A rendering block goes further and puts every row on one
- *   count (see {@link chooseHeadlineCount}); the physics block cannot, and
- *   states each row's count on the row instead.
+ * - A row is one archetype at one LOAD, and every load the run measured becomes
+ *   its own row. Nothing picks a load after the fact: the plan fixed which loads
+ *   would be measured before the run started, and a row states the load it
+ *   belongs to.
  * - A row with no evidenced mechanism does not enter the table.
+ *
+ * The rendering block used to collapse onto a single table-wide node count. It
+ * cannot any more: the published page offers the reader a load to pick, and a
+ * single count discards every other measurement before the profile is even
+ * written. The property that count protected - that no load is chosen to suit an
+ * outcome - is kept by the plan, which fixes the loads in advance.
  */
 
 /** The reference arm every comparison is drawn against: ExoJS on its default path. */
@@ -42,6 +52,8 @@ const CATEGORY_ORDER: readonly ArchetypeCategory[] = [
   'text',
   'render-targets',
   'camera-and-world',
+  'tilemaps',
+  'particles',
   'submission',
 ];
 
@@ -53,6 +65,8 @@ const CATEGORY_TITLES: Readonly<Record<ArchetypeCategory, string>> = {
   text: 'Text',
   'render-targets': 'Render targets',
   'camera-and-world': 'Camera and world',
+  tilemaps: 'Tilemaps',
+  particles: 'Particles',
   submission: 'Submission paths',
 };
 
@@ -78,6 +92,8 @@ export interface ComparisonCell {
   readonly referenceMs: number | null;
   /** Reference arm's 95th-percentile CPU time (ms) over the same timed window, or `null`. */
   readonly referenceP95Ms: number | null;
+  /** Reference arm's measured GPU frame time, when the backend exposed a timer. */
+  readonly referenceGpuMs?: number | null;
   /**
    * True when {@link referenceMs} is past a whole 60 fps frame; see
    * {@link '../shared/frameBudget'.FRAME_BUDGET_MS}.
@@ -91,29 +107,48 @@ export interface ComparisonCell {
   readonly competitorMs: number | null;
   /** Competitor's 95th-percentile CPU time (ms) over the same timed window, or `null`. */
   readonly competitorP95Ms: number | null;
+  /** Competitor arm's measured GPU frame time, when the backend exposed a timer. */
+  readonly competitorGpuMs?: number | null;
   /** True when {@link competitorMs} is past a whole 60 fps frame; see {@link referenceOverFrameBudget}. */
   readonly competitorOverFrameBudget: boolean;
   /** Computed ladder outcome, from the two medians. */
   readonly verdict: Verdict;
   /** Evidenced mechanism, or `null` when the counters carry none. */
   readonly mechanism: string | null;
+  /**
+   * What the clock this run read the two durations on established about them.
+   *
+   * Evaluated here, against the grid of the very session that produced each
+   * cell, because that is the only place both are known together. The pooling
+   * stage merges the runs' results; it never re-runs the check against pooled
+   * medians, which would let a well-resolved repetition carry a limited one.
+   */
+  readonly timer: TimerCheck;
 }
 
-/** One published row: an archetype at the count it was measured at, across every competitor. */
+/**
+ * One published row: an archetype at one load, across every competitor.
+ *
+ * An archetype measured at several loads produces several rows. A reader
+ * compares the arms WITHIN a row, which is like for like by construction, and
+ * never two rows against each other: two loads are two different scenes, as are
+ * two archetypes.
+ */
 export interface ComparisonRow {
-  /** Archetype id - the row's identity. */
+  /** Archetype id. Together with {@link ComparisonRow.loadId} it identifies the row. */
   readonly archetype: string;
   /** The category section this row sits under. */
   readonly category: string;
-  /**
-   * Node or body count this row was measured at.
-   *
-   * In a rendering block every row carries the block's single headline count. In
-   * the physics block the rows carry their OWN counts, because the physics
-   * archetypes have per-archetype ladders; two physics rows are therefore never
-   * comparable with each other, only the arms within one row are.
-   */
+  /** Node or body count this row was measured at. */
   readonly count: number;
+  /** Catalog load id for {@link ComparisonRow.count}, e.g. `10k`. */
+  readonly loadId: string;
+  /** Unit the count is quoted in, so a figure is never published without one. */
+  readonly unit: LoadUnit;
+  /** Whether this is the scenario's headline load - the one a card shows first. */
+  readonly primary: boolean;
+  /** Display label for a load the count/unit pair cannot state, e.g. a resolution. */
+  readonly label?: string;
   /** One entry per competitor arm, in a stable order. */
   readonly cells: readonly ComparisonCell[];
 }
@@ -156,11 +191,42 @@ export interface BackendComparison {
 /** Key identifying one arm's cell within a backend. */
 const cellKey = (engine: string, config: string, archetype: string, count: number): string => `${engine}|${config}|${archetype}|${count}`;
 
+/**
+ * The catalog identity of one load: its id, the unit it is counted in, whether
+ * it is the scenario's headline, and a label where the pair cannot state it.
+ *
+ * A scenario the catalog does not carry - an ExoJS-internal probe measured under
+ * `full` - still gets a well-formed identity, so every row in the model can be
+ * addressed the same way. It is quoted in scene nodes, which is what those
+ * probes count.
+ */
+const loadIdentity = (scenarioId: string, count: number): { loadId: string; unit: LoadUnit; primary: boolean; label?: string } => {
+  const scenario =
+    scenariosFor('rendering').find(entry => entry.scenarioId === scenarioId) ?? scenariosFor('physics').find(entry => entry.scenarioId === scenarioId);
+  const load = scenario?.loads.find(entry => entry.value === count);
+
+  return {
+    loadId: loadIdFor(count),
+    unit: scenario?.unit ?? 'nodes',
+    primary: load?.primary === true,
+    ...(load?.label !== undefined && { label: load.label }),
+  };
+};
+
 /** Identity used to preserve the old CPU-only Phaser block while new WebGL2 profiles migrate. */
 const armKeyOf = (result: { readonly spec: { readonly engine: string; readonly config: string } }): string => `${result.spec.engine}|${result.spec.config}`;
 
 /** Whether a result can be compared at all: it measured, and it measured something. */
 const isComparable = (result: { status: string; note?: string }): boolean => result.status === 'ok';
+
+/**
+ * The duration the clock actually bracketed for one physics cell: the median
+ * sample, which covers `stepsPerSample` steps.
+ *
+ * The harness batches steps precisely so a sample clears the clock's grid, so
+ * the batch is the reading and the per-step quotient is a derived figure.
+ */
+const batchMsOf = (result: PhysicsCellResult): number => result.stepMsMedian * result.stepsPerSample;
 
 /**
  * The count one row is published at: the largest rung of its own LADDER at which
@@ -252,73 +318,83 @@ const buildBackend = (backend: Backend, results: readonly CellResult[]): Backend
       : 'ExoJS-internal structural probe: a competitor arm renders a different scene here, so a wall-clock comparison would not be like for like',
   }));
 
+  /** Loads the reference arm actually measured for one archetype, ascending. */
+  const measuredLoads = (archetype: string): readonly number[] =>
+    [
+      ...new Set(
+        onBackend
+          .filter(result => result.spec.engine === REFERENCE_ENGINE && result.spec.config === REFERENCE_CONFIG && result.spec.archetype === archetype)
+          .map(result => result.spec.nodeCount),
+      ),
+    ].sort((a, b) => a - b);
+
   const sections: ComparisonSection[] = [];
 
   for (const category of CATEGORY_ORDER) {
     const rows: ComparisonRow[] = [];
 
     for (const archetype of comparable.filter(candidate => candidate.category === category)) {
-      // The headline count is one number for the whole table; an archetype whose
-      // ladder does not contain it is reported in the full sweep instead of being
-      // given a count of its own.
-      if (headlineCount === null || !archetype.nodeCounts.includes(headlineCount)) {
-        excluded.push({
-          archetype: archetype.id,
-          reason:
-            headlineCount === null
-              ? 'no single node count qualified for the headline table on this backend'
-              : `its ladder does not contain the headline node count (${headlineCount}); see the full sweep`,
-        });
+      const loads = measuredLoads(archetype.id);
+      let published = 0;
 
-        continue;
-      }
+      for (const count of loads) {
+        const reference = byKey.get(cellKey(REFERENCE_ENGINE, REFERENCE_CONFIG, archetype.id, count));
+        const cells: ComparisonCell[] = [];
 
-      const reference = byKey.get(cellKey(REFERENCE_ENGINE, REFERENCE_CONFIG, archetype.id, headlineCount));
-      const cells: ComparisonCell[] = [];
+        for (const competitor of competitors) {
+          const competitorCell = onBackend.find(
+            result => result.spec.engine === competitor && result.spec.archetype === archetype.id && result.spec.nodeCount === count,
+          );
 
-      for (const competitor of competitors) {
-        const competitorCell = onBackend.find(
-          result => result.spec.engine === competitor && result.spec.archetype === archetype.id && result.spec.nodeCount === headlineCount,
-        );
+          if (reference === undefined || competitorCell === undefined || !isComparable(reference) || !isComparable(competitorCell)) {
+            continue;
+          }
 
-        if (reference === undefined || competitorCell === undefined || !isComparable(reference) || !isComparable(competitorCell)) {
+          const counters = (result: CellResult): StructuralCounters | null => (result.structural.drawCalls > 0 ? result.structural : null);
+          const mechanism = renderingMechanism(counters(reference), counters(competitorCell));
+
+          cells.push({
+            competitor,
+            referenceMs: reference.cpuMsMedian,
+            referenceP95Ms: reference.cpuMsP95,
+            referenceGpuMs: reference.frameMsMedian,
+            referenceOverFrameBudget: exceedsFrameBudget(reference.cpuMsMedian),
+            competitorMs: competitorCell.cpuMsMedian,
+            competitorP95Ms: competitorCell.cpuMsP95,
+            competitorGpuMs: competitorCell.frameMsMedian,
+            competitorOverFrameBudget: exceedsFrameBudget(competitorCell.cpuMsMedian),
+            verdict: compareMedians(reference.cpuMsMedian, competitorCell.cpuMsMedian),
+            mechanism,
+            // The frame is the bracket the clock read on this backend, so the
+            // per-frame medians are the durations the check applies to. Each arm
+            // is checked against the grid of the session that measured it: the
+            // arms run in separate browser sessions, which need not share one.
+            timer: mergeTimerChecks([
+              timerCheckOfRun([reference.cpuMsMedian], reference.clock?.resolutionMs ?? null),
+              timerCheckOfRun([competitorCell.cpuMsMedian], competitorCell.clock?.resolutionMs ?? null),
+            ]),
+          });
+        }
+
+        // The mechanism rule: a row where NO competitor comparison could be
+        // evidenced does not enter the table.
+        if (cells.every(cell => cell.mechanism === null)) {
           continue;
         }
 
-        const counters = (result: CellResult): StructuralCounters | null => (result.structural.drawCalls > 0 ? result.structural : null);
-        const mechanism = renderingMechanism(counters(reference), counters(competitorCell));
-
-        cells.push({
-          competitor,
-          referenceMs: reference.cpuMsMedian,
-          referenceP95Ms: reference.cpuMsP95,
-          referenceOverFrameBudget: exceedsFrameBudget(reference.cpuMsMedian),
-          competitorMs: competitorCell.cpuMsMedian,
-          competitorP95Ms: competitorCell.cpuMsP95,
-          competitorOverFrameBudget: exceedsFrameBudget(competitorCell.cpuMsMedian),
-          verdict: compareMedians(reference.cpuMsMedian, competitorCell.cpuMsMedian),
-          mechanism,
-        });
+        rows.push({ archetype: archetype.id, category: CATEGORY_TITLES[category], count, ...loadIdentity(archetype.id, count), cells });
+        published += 1;
       }
 
-      // The mechanism rule: a row where NO competitor comparison could be
-      // evidenced does not enter the table.
-      if (cells.length === 0) {
-        excluded.push({ archetype: archetype.id, reason: 'no arm pair produced a comparable cell at the headline node count' });
-
-        continue;
-      }
-
-      if (cells.every(cell => cell.mechanism === null)) {
+      if (published === 0) {
         excluded.push({
           archetype: archetype.id,
-          reason: 'no structural mechanism could be evidenced for any arm pair (the arm reported no counters), so the row would be a number without a cause',
+          reason:
+            loads.length === 0
+              ? 'not measured in this run'
+              : 'no arm pair produced a comparable cell with an evidenced structural mechanism at any measured load, so every row would be a number without a cause',
         });
-
-        continue;
       }
-
-      rows.push({ archetype: archetype.id, category: CATEGORY_TITLES[category], count: headlineCount, cells });
     }
 
     if (rows.length > 0) {
@@ -354,17 +430,29 @@ const buildBackend = (backend: Backend, results: readonly CellResult[]): Backend
           competitor,
           referenceMs: reference.cpuMsMedian,
           referenceP95Ms: reference.cpuMsP95,
+          referenceGpuMs: reference.frameMsMedian,
           referenceOverFrameBudget: exceedsFrameBudget(reference.cpuMsMedian),
           competitorMs: competitorCell.cpuMsMedian,
           competitorP95Ms: competitorCell.cpuMsP95,
+          competitorGpuMs: competitorCell.frameMsMedian,
           competitorOverFrameBudget: exceedsFrameBudget(competitorCell.cpuMsMedian),
           verdict: compareMedians(reference.cpuMsMedian, competitorCell.cpuMsMedian),
           mechanism: null,
+          timer: mergeTimerChecks([
+            timerCheckOfRun([reference.cpuMsMedian], reference.clock?.resolutionMs ?? null),
+            timerCheckOfRun([competitorCell.cpuMsMedian], competitorCell.clock?.resolutionMs ?? null),
+          ]),
         });
       }
 
       if (cells.length > 0) {
-        webgl1.push({ archetype: archetype.id, category: CATEGORY_TITLES[archetype.category], count: headlineCount, cells });
+        webgl1.push({
+          archetype: archetype.id,
+          category: CATEGORY_TITLES[archetype.category],
+          count: headlineCount,
+          ...loadIdentity(archetype.id, headlineCount),
+          cells,
+        });
       }
     }
   }
@@ -398,7 +486,7 @@ export const buildRenderingComparison = (results: readonly CellResult[]): readon
  * suit an outcome, and that is still prevented: a row's count comes from its
  * ladder, and the timings only decide whether the largest rung survives.
  */
-export const buildPhysicsComparison = (results: readonly PhysicsCellResult[]): ComparisonSection => {
+export const buildPhysicsComparison = (results: readonly PhysicsCellResult[], clock: ClockReport | null = null): ComparisonSection => {
   const competitors = [...new Set(results.map(result => result.spec.engine))].filter(engine => engine !== 'exojs-physics').sort();
   // As in the rendering block: an archetype the run did not measure is absent
   // rather than empty, or every subset run would produce an empty table.
@@ -407,49 +495,49 @@ export const buildPhysicsComparison = (results: readonly PhysicsCellResult[]): C
   const rows: ComparisonRow[] = [];
 
   for (const archetype of comparable) {
-    const count = chooseRowCount(archetype.bodyCounts, candidate => {
-      const cells = results.filter(result => result.spec.archetype === archetype.id && result.spec.bodyCount === candidate);
+    const loads = [
+      ...new Set(
+        results.filter(result => result.spec.engine === 'exojs-physics' && result.spec.archetype === archetype.id).map(result => result.spec.bodyCount),
+      ),
+    ].sort((a, b) => a - b);
 
-      // A count with NO cell for this archetype is not a valid candidate.
-      // Testing only "every cell is ok" would accept it, since an empty set
-      // satisfies that vacuously - which is how a run at one body count ended up
-      // choosing another and publishing nothing.
-      return cells.some(result => result.spec.engine === 'exojs-physics') && cells.every(result => isComparable(result));
-    });
-
-    if (count === null) {
-      continue;
-    }
-
-    const reference = results.find(
-      result => result.spec.engine === 'exojs-physics' && result.spec.archetype === archetype.id && result.spec.bodyCount === count,
-    );
-    const cells: ComparisonCell[] = [];
-
-    for (const competitor of competitors) {
-      const competitorCell = results.find(
-        result => result.spec.engine === competitor && result.spec.archetype === archetype.id && result.spec.bodyCount === count,
+    for (const count of loads) {
+      const reference = results.find(
+        result => result.spec.engine === 'exojs-physics' && result.spec.archetype === archetype.id && result.spec.bodyCount === count,
       );
+      const cells: ComparisonCell[] = [];
 
-      if (reference === undefined || competitorCell === undefined || !isComparable(reference) || !isComparable(competitorCell)) {
-        continue;
+      for (const competitor of competitors) {
+        const competitorCell = results.find(
+          result => result.spec.engine === competitor && result.spec.archetype === archetype.id && result.spec.bodyCount === count,
+        );
+
+        if (reference === undefined || competitorCell === undefined || !isComparable(reference) || !isComparable(competitorCell)) {
+          continue;
+        }
+
+        cells.push({
+          competitor,
+          referenceMs: reference.stepMsMedian,
+          referenceP95Ms: reference.stepMsP95,
+          referenceOverFrameBudget: exceedsFrameBudget(reference.stepMsMedian),
+          competitorMs: competitorCell.stepMsMedian,
+          competitorP95Ms: competitorCell.stepMsP95,
+          competitorOverFrameBudget: exceedsFrameBudget(competitorCell.stepMsMedian),
+          verdict: compareMedians(reference.stepMsMedian, competitorCell.stepMsMedian),
+          mechanism: physicsMechanism(reference.structural, competitorCell.structural),
+          // The clock bracketed a BATCH of steps, not one step: the published
+          // ms/step is that bracket divided by the batch size. Checking the
+          // quotient would compare a derived number against a grid it was never
+          // read on, and would mark a well-resolved cell as unresolved purely
+          // because the harness batched it.
+          timer: timerCheckOfRun([batchMsOf(reference), batchMsOf(competitorCell)], clock?.resolutionMs ?? null),
+        });
       }
 
-      cells.push({
-        competitor,
-        referenceMs: reference.stepMsMedian,
-        referenceP95Ms: reference.stepMsP95,
-        referenceOverFrameBudget: exceedsFrameBudget(reference.stepMsMedian),
-        competitorMs: competitorCell.stepMsMedian,
-        competitorP95Ms: competitorCell.stepMsP95,
-        competitorOverFrameBudget: exceedsFrameBudget(competitorCell.stepMsMedian),
-        verdict: compareMedians(reference.stepMsMedian, competitorCell.stepMsMedian),
-        mechanism: physicsMechanism(reference.structural, competitorCell.structural),
-      });
-    }
-
-    if (cells.some(cell => cell.mechanism !== null)) {
-      rows.push({ archetype: archetype.id, category: 'Physics', count, cells });
+      if (cells.some(cell => cell.mechanism !== null)) {
+        rows.push({ archetype: archetype.id, category: 'Physics', count, ...loadIdentity(archetype.id, count), cells });
+      }
     }
   }
 

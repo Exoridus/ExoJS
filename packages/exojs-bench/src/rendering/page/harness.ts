@@ -3,6 +3,8 @@
 // engine module instances) but never runs during a matrix cell.
 import './timerProbe';
 
+import type { ClockReport } from '../../shared/clock';
+import { probeClock } from '../../shared/clock';
 import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
 import { createCpuTimer, median, percentile, shouldAbort } from '../../shared/timing';
 import { createExoJsAdapter } from '../adapters/exojs';
@@ -136,6 +138,18 @@ const HARD_FRAME_BUDGET_MS = FRAME_BUDGET_MS * 10;
  * remainder means the harness has a bug (a fractional draw call is nonsense),
  * so the raw totals are surfaced instead and flagged via the returned note.
  */
+/**
+ * This page's clock grid, probed once and reused by every cell the session
+ * measures.
+ *
+ * Probing per cell would cost a five-figure loop before each measurement and
+ * answer the same question every time: the coarsening is a property of the
+ * browsing context, which does not change between two cells of one session.
+ */
+let probedClock: ClockReport | null = null;
+
+const pageClock = (): ClockReport => (probedClock ??= probeClock());
+
 const perFrameStructural = (totals: StructuralCounters, frames: number): { structural: StructuralCounters; note: string | null } => {
   const draws = totals.drawCalls / frames;
   const binds = totals.textureBinds / frames;
@@ -436,13 +450,34 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
       queueMsMedian,
       queueMsP95,
       structural,
+      clock: pageClock(),
       status: exceeded ? 'exceeded' : 'ok',
       ...(note !== null && { note }),
     };
   } finally {
     probe.detach();
-    adapter.teardown();
+
+    // A held cell keeps its scene on the canvas so the driver can capture the
+    // frame it just measured. Tearing down first leaves an arm-dependent canvas
+    // - some engines keep the last frame, others release the context and blank
+    // it - so a capture taken afterwards would compare teardown policies rather
+    // than scenes.
+    if (heldAdapter === null) {
+      adapter.teardown();
+    }
   }
+};
+
+/**
+ * The arm whose scene is being kept alive for a capture, or `null` when no cell
+ * is held. Disposed by {@link disposeHeldCell} before the next cell runs.
+ */
+let heldAdapter: EngineAdapter | null = null;
+
+/** Tear down the scene {@link runCell} was asked to hold. Safe to call when nothing is held. */
+const disposeHeldCell = (): void => {
+  heldAdapter?.teardown();
+  heldAdapter = null;
 };
 
 /** Registry key uniquely identifying an engine arm by its engine + config labels. */
@@ -512,9 +547,18 @@ const resolveAdapter = async (engine: string, config: string): Promise<EngineAda
  * completed cells. All calls share this one page, so the same-session timing
  * discipline is preserved across the backend's cells.
  */
-const runBaselineCell = async (cell: CellSpec): Promise<CellResult> => {
+const runBaselineCell = async (cell: CellSpec, hold = false): Promise<CellResult> => {
+  // Whatever the previous cell was asked to hold is released here rather than
+  // after the capture, so a capture failure can never leave an arm's scene alive
+  // underneath the next cell's measurement.
+  disposeHeldCell();
+
   const canvas = freshStageCanvas();
   const adapter = await resolveAdapter(cell.engine, cell.config);
+
+  if (hold) {
+    heldAdapter = adapter;
+  }
 
   return runCell(adapter, cell, canvas);
 };
@@ -582,13 +626,28 @@ const profileDispose = (): void => {
 };
 
 declare global {
-  var __runBaselineCell: ((cell: CellSpec) => Promise<CellResult>) | undefined;
+  /**
+   * Measures one cell. `hold` keeps the scene on the canvas afterwards, for the
+   * driver's frame capture; the next call releases it.
+   */
+  var __runBaselineCell: ((cell: CellSpec, hold?: boolean) => Promise<CellResult>) | undefined;
+  /** Releases a held cell's scene without measuring another. */
+  var __disposeHeldCell: (() => void) | undefined;
+  /**
+   * Reports what THIS page's clock resolves to. Exposed from the page rather
+   * than evaluated as a driver-side function so the probe runs in the same
+   * browsing context as the cells it qualifies: the coarsening depends on the
+   * context, and one session's grid says nothing about another's.
+   */
+  var __probeClock: (() => ClockReport) | undefined;
   var __profileSetup: ((cell: CellSpec, warmupFrames: number) => Promise<void>) | undefined;
   var __profileFrames: ((count: number) => number) | undefined;
   var __profileDispose: (() => void) | undefined;
 }
 
 globalThis.__runBaselineCell = runBaselineCell;
+globalThis.__probeClock = probeClock;
+globalThis.__disposeHeldCell = disposeHeldCell;
 globalThis.__profileSetup = profileSetup;
 globalThis.__profileFrames = profileFrames;
 globalThis.__profileDispose = profileDispose;

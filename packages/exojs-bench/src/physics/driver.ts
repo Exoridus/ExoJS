@@ -15,6 +15,7 @@ import {
 } from '../shared/provenance';
 import type { ViteDevServer } from '../shared/viteServer';
 import { PHYSICS_LIBRARY_ARMS, startViteServer as startPageServer } from '../shared/viteServer';
+import type { RunPlan } from '../suite/plan';
 import { buildPhysicsMatrix, STEP_DELTA } from './archetypes';
 import type { PhysicsArmReport, PhysicsClockReport } from './page/contract';
 import type { PhysicsCellResult, PhysicsCellSpec } from './PhysicsAdapter';
@@ -125,6 +126,21 @@ const applyFilter = (cells: readonly PhysicsCellSpec[], filter: Partial<PhysicsC
   const entries = Object.entries(filter).filter(([, value]) => value !== undefined);
 
   return cells.filter(cell => entries.every(([key, value]) => cell[key as keyof PhysicsCellSpec] === value));
+};
+
+/**
+ * Keeps only the cells one resolved suite plan selects.
+ *
+ * A pure filter, unlike the rendering side's re-emitting counterpart: physics
+ * seeds fold the body count in (`seedFor`), so a rung outside the archetype's
+ * own ladder would be a DIFFERENT world under the same name. The catalog's
+ * physics loads are therefore always ladder rungs, and a plan naming one that is
+ * not simply selects nothing for that scenario rather than inventing a scene.
+ */
+const applyPhysicsPlan = (cells: readonly PhysicsCellSpec[], plan: RunPlan): PhysicsCellSpec[] => {
+  const selected = new Set(plan.workloads.map(workload => `${workload.scenarioId}/${String(workload.value)}`));
+
+  return cells.filter(cell => selected.has(`${cell.archetype}/${String(cell.bodyCount)}`));
 };
 
 /** A cell that could not be measured: zeroed timings/structure, `unavailable` status, and an explanatory note. */
@@ -261,6 +277,8 @@ export const runPhysicsMatrix = async (
      * every platform, and both are part of a published profile's file name.
      */
     platform?: PlatformDeclaration;
+    /** Resolved suite plan restricting the matrix to the loads it selects, applied before `filter`. */
+    plan?: RunPlan;
     filter?: Partial<PhysicsCellSpec>;
     /** Forces every selected cell's timed-step count to this value (smoke/spot-check knob; never a reportable run). */
     timedStepsOverride?: number;
@@ -290,7 +308,8 @@ export const runPhysicsMatrix = async (
     const reasons = new Map(arms.map(arm => [`${arm.engine}/${arm.config}`, arm.reason]));
 
     const allCells = buildPhysicsMatrix(arms);
-    const filtered = options.filter ? applyFilter(allCells, options.filter) : allCells;
+    const planned = options.plan ? applyPhysicsPlan(allCells, options.plan) : allCells;
+    const filtered = options.filter ? applyFilter(planned, options.filter) : planned;
     const cells = options.timedStepsOverride === undefined ? filtered : filtered.map(cell => ({ ...cell, timedSteps: options.timedStepsOverride! }));
 
     if (cells.length === 0) {

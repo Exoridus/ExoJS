@@ -20,6 +20,53 @@ const GPU_BOUND_COUNTS = [1_000, 5_000, 25_000] as const;
 const TEXT_COUNTS = [200, 1_000, 5_000] as const;
 
 /**
+ * Node counts for `dynamic-all`. Three steps spanning 100x, sharing 1k and 100k
+ * with the sprite ladder so the row can be read against `static-heavy` and
+ * `dynamic-heavy` at both ends of the sweep. The intermediate rungs the sprite
+ * ladder carries would only refine a slope this archetype states plainly.
+ */
+const DYNAMIC_ALL_COUNTS = [1_000, 10_000, 100_000] as const;
+
+/**
+ * Layer counts for `fill-layers`. The load is full-screen layers, not scene
+ * nodes, so the ladder is three steps of a few dozen rather than thousands: 8 is
+ * an ordinary parallax stack, 32 a heavy one, and 128 past anything that ships.
+ * At 1280x720 the top step already resolves the viewport 128 times over.
+ */
+const FILL_LAYER_COUNTS = [8, 32, 128] as const;
+
+/**
+ * World tile totals for the tilemap scenes. The visible window is the same at
+ * every rung - 1280x720 over 32 px tiles is about 41x23 tiles - so the ladder
+ * sweeps how large a map an arm can hold rather than how much of it it draws.
+ * `tilemap.ts` maps each count onto the map's dimensions.
+ */
+const TILEMAP_COUNTS = [10_000, 100_000, 1_000_000] as const;
+
+/**
+ * World tile totals for the editing scene. It stops below the million the
+ * scrolling scene reaches: an edit is submitted per frame, and at a million tiles
+ * an arm that has to repack or re-upload a whole map's worth of data would be
+ * measured on its allocator rather than on its tile path.
+ */
+const TILEMAP_EDIT_COUNTS = [10_000, 100_000] as const;
+
+/**
+ * Particle counts for the draw-only scene. Four steps spanning 1000x: the top
+ * one is a million quads submitted in a frame, which is where a particle draw
+ * path either holds up or does not.
+ */
+const PARTICLE_DRAW_COUNTS = [1_000, 10_000, 100_000, 1_000_000] as const;
+
+/**
+ * Particle counts for the lifecycle scene. It stops below the million the
+ * draw-only scene reaches: a million simulated particles measures each arm's
+ * update loop rather than the effect, and no effect anything ships keeps that
+ * many alive at once.
+ */
+const PARTICLE_LIFECYCLE_COUNTS = [1_000, 10_000, 100_000] as const;
+
+/**
  * Characters per text leaf across both text archetypes. Twelve is the length of
  * an ordinary label (a score, a name, a damage number) - long enough that layout
  * and glyph iteration dominate the per-node cost, short enough that no arm's
@@ -73,6 +120,25 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     mutationFraction: 0.075,
     cullingEnabled: false,
   },
+  // EVERY leaf moves, every frame. `dynamic-heavy` builds the identical scene
+  // and moves 7.5 % of it, which is the shape a real scene has - a few actors
+  // over a mostly still background - so the delta between the two rows is what
+  // the remaining 92.5 % costs once it stops being still.
+  //
+  // It is a separate archetype rather than a raised `mutationFraction` on
+  // `dynamic-heavy` because the two answer different questions and both are
+  // worth publishing; changing the existing one would also silently invalidate
+  // every number measured under its name.
+  {
+    id: 'dynamic-all',
+    category: 'node-scaling',
+    crossArm: true,
+    nodeCounts: DYNAMIC_ALL_COUNTS,
+    nestingDepth: 4,
+    textureCount: 1,
+    mutationFraction: 1,
+    cullingEnabled: false,
+  },
   {
     id: 'deep-hierarchy',
     category: 'node-scaling',
@@ -99,6 +165,31 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     textureCount: 1,
     mutationFraction: 0,
     cullingEnabled: false,
+    fullViewportLeaves: true,
+  },
+  // The same geometry as `overdraw` at a workload a real scene reaches: a
+  // handful of translucent full-screen layers rather than thousands of them.
+  // `overdraw` sweeps 1k to 25k viewport-sized quads, which is a fill-rate
+  // ceiling probe and not something anything ships; this sweeps 8 to 128, the
+  // range a parallax background, a weather pass and a few tint overlays add up
+  // to.
+  //
+  // `leafAlpha: 0.05` is what makes it a blend workload: every layer has to be
+  // composited, and none of them can be skipped by an occlusion policy the way
+  // an opaque top layer could. The load is the LAYER COUNT rather than a node
+  // count, which is why it carries its own short ladder instead of the sprite
+  // one.
+  {
+    id: 'fill-layers',
+    category: 'fill-and-state',
+    crossArm: true,
+    nodeCounts: FILL_LAYER_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    fullViewportLeaves: true,
+    leafAlpha: 0.05,
   },
   // 40 textures: must exceed EVERY sprite-batcher slot ceiling any granted
   // backend/tier reaches, or the archetype silently stops breaking batches on
@@ -475,6 +566,83 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // `mask-clip` with every rect moving each frame: the delta against the row
   // above is what an effect change alone costs the retained products around
   // it, which is the shape of every scrolling clip.
+  // TILEMAPS. The one scene shape practically every 2D game has and that no
+  // sprite archetype describes: a world far larger than the viewport, drawn
+  // through a dedicated tile path rather than one node per tile.
+  //
+  // `scrolling-world` is NOT this test. It lays independent sprite nodes over a
+  // world a few viewports across, and its per-node cost is the finding; here the
+  // world is a hundred thousand tiles, the visible window never changes size, and
+  // what is being compared is each arm's tile path - an instanced chunk renderer,
+  // an imperatively painted quad buffer, a shader over a data texture.
+  //
+  // `nodeCount` is the WORLD tile total, so the ladder says how large a map an
+  // arm can hold, not how much of it is on screen. The visible tile count is
+  // fixed by the viewport at every rung, which is exactly what makes the two
+  // questions separable. See `tilemap.ts` for the shared map, camera and edits.
+  {
+    id: 'tilemap-scroll',
+    category: 'tilemaps',
+    crossArm: true,
+    nodeCounts: TILEMAP_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: true,
+    tilemap: 'scroll',
+  },
+  // The same map and the same camera, with visible tile ids replaced every frame.
+  // The delta against the row above is what submitting a tile change costs -
+  // which is where the three tile paths differ most sharply, because a shader
+  // reading a data texture has to re-upload it, a chunked quad buffer has to
+  // repack the affected chunk, and an instanced renderer has to invalidate the
+  // chunk's cached geometry.
+  {
+    id: 'tilemap-edit',
+    category: 'tilemaps',
+    crossArm: true,
+    nodeCounts: TILEMAP_EDIT_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: true,
+    tilemap: 'edit',
+  },
+  // PARTICLES. Two scenes on one draw path, kept apart because they answer
+  // different questions and a figure from one would be read as the other.
+  //
+  // `particles-draw` submits a fixed set of small translucent quads and
+  // simulates nothing, so it measures the submission path alone: an arm's
+  // particle renderer, Pixi's `ParticleContainer`, a Phaser emitter whose
+  // simulation is not stepped. A million quads here is a million quads drawn,
+  // NOT a million interactive sprites, and nothing in the published figure may
+  // suggest otherwise.
+  {
+    id: 'particles-draw',
+    category: 'particles',
+    crossArm: true,
+    nodeCounts: PARTICLE_DRAW_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    particles: 'draw',
+  },
+  // The same draw path with a steady effect on top: every particle ages, moves,
+  // fades and respawns at the end of its life, with the pool held at the node
+  // count. The delta against the row above is what the simulation costs, which
+  // is the half a bare container never pays.
+  {
+    id: 'particles-lifecycle',
+    category: 'particles',
+    crossArm: true,
+    nodeCounts: PARTICLE_LIFECYCLE_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    particles: 'lifecycle',
+  },
   {
     id: 'mask-clip-animated',
     category: 'render-targets',

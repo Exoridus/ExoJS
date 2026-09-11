@@ -1,33 +1,44 @@
 ---
 /**
- * BenchmarksPage - the published cross-library measurements.
+ * BenchmarksPage - the published cross-library measurements, rendering and
+ * physics on one page.
  *
  * The page is generated at build time from the machine profiles under
  * `packages/exojs-bench/results/` and from nothing else, so it cannot drift from
- * the harness: a re-measurement rewrites the scoreboard, the tables and the
+ * the harness: a re-measurement rewrites the cards, the tables and the
  * provenance together. Losses are published on the same terms as wins, nothing
  * is aggregated into a score or an overall winner, and the rows the harness left
  * out of a comparison are listed with their reasons.
  *
- * The numbers come first and the practices behind them last. Methodology,
- * reproduction and fairness are what a reader consults once a row surprises
- * them, so they sit under the tables rather than in front of them - and they
- * stay on the page when the directory holds no profile at all, which is the
- * state a fresh clone and a release branch before its reference run are in.
+ * Results lead and the practices behind them follow. Which scenarios open each
+ * section is fixed in `bench-cards.ts` before any run happens, so the top of the
+ * page cannot become a selection of whatever ExoJS won; the rest stay one
+ * disclosure away in the same section.
  */
 
 import BenchProfileReport from '../BenchProfileReport.astro';
+import BenchResultCard from '../BenchResultCard.astro';
+import BenchLocalProbe from '../BenchLocalProbe.astro';
 import DocsLayout from '../../layouts/DocsLayout.astro';
 import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
 import { appInfo } from '../../lib/app-info';
-import { formatDay, FRAME_BUDGET_MS, furtherProfiles, olderThanReference, profileScope, referenceProfile } from '../../lib/bench-profiles';
+import { PHYSICS_HEADLINE_SCENARIOS, physicsCards, RENDERING_HEADLINE_SCENARIOS, renderingCards, selectCards } from '../../lib/bench-cards';
+import {
+    BACKEND_LABELS,
+    coversDomain,
+    formatDay,
+    FRAME_BUDGET_MS,
+    furtherProfiles,
+    olderThanReference,
+    type ProfileBackendName,
+    referenceProfile,
+} from '../../lib/bench-profiles';
 
 interface Props {
     locale: 'en' | 'de';
 }
 
 const { locale } = Astro.props;
-const scope = referenceProfile === undefined ? '' : profileScope(referenceProfile);
 
 /**
  * Runs the reproduction below pools. A published profile states the number it
@@ -39,50 +50,44 @@ const REPRODUCTION_RUNS = 3;
 const pooledRuns = referenceProfile?.profile.runs ?? REPRODUCTION_RUNS;
 const machine = referenceProfile?.profile;
 
-/**
- * The sections the on-page navigation offers. Only the ones that exist are
- * listed: a link to an empty anchor is worse than a shorter bar.
- */
-const sections = [
-    ...(referenceProfile === undefined ? [] : [{ id: 'summary', label: 'Overview' }]),
-    ...(referenceProfile?.rendering === undefined ? [] : [{ id: 'rendering', label: 'Rendering' }]),
-    ...(referenceProfile?.physics === undefined ? [] : [{ id: 'physics', label: 'Physics' }]),
-    ...(furtherProfiles.length === 0 ? [] : [{ id: 'further', label: 'Other machines' }]),
-    { id: 'practices', label: 'Methodology' },
-];
+/** Cards per rendering backend, so the section switches without a second request. */
+const backends: readonly ProfileBackendName[] = ['webgl2', 'webgpu'];
+const rendering = backends
+    .map(backend => ({
+        backend,
+        ...selectCards(referenceProfile === undefined ? [] : renderingCards(referenceProfile, backend), RENDERING_HEADLINE_SCENARIOS, 6),
+    }))
+    .filter(entry => entry.headline.length > 0);
+
+const physics = selectCards(referenceProfile === undefined ? [] : physicsCards(referenceProfile), PHYSICS_HEADLINE_SCENARIOS, 4);
+
+/** Only the further machines that measured something, so no disclosure opens onto nothing. */
+const furtherMachines = furtherProfiles.filter(document => coversDomain(document, 'rendering') || coversDomain(document, 'physics'));
 ---
 
-<DocsLayout
-    title="ExoJS benchmarks"
-    description="Measured comparisons between ExoJS and other 2D rendering and physics libraries."
-    variant="wide"
->
+<DocsLayout title="ExoJS benchmarks" description="Measured comparisons between ExoJS and other 2D rendering and physics libraries." variant="wide">
     <div class="prose bench-prose" data-pagefind-body={locale === 'en' ? true : undefined}>
         {locale === 'de' && <EnglishFallbackNotice />}
 
         <header class="bench-head">
             <h1>Benchmarks</h1>
             <p class="lede">
-                Cross-library measurements for rendering and physics. Lower is better. Every published value is pooled from {pooledRuns} independent runs.
+                How long one frame of rendering, and one fixed step of physics, costs on the CPU. Lower is better, and every published value is the median
+                of {pooledRuns} independent runs.
             </p>
-            {machine !== undefined && (
-                <p class="stamp">
-                    <b>
-                        {machine.gpu} · {machine.os} · {machine.browser}
-                    </b>
-                    <span>
-                        ExoJS {machine.engineVersion} · measured {formatDay(machine.measuredAt)} · {machine.runs} pooled runs
-                    </span>
-                    {scope !== '' && <span>{scope}</span>}
-                </p>
-            )}
         </header>
 
-        <nav class="section-nav" aria-label="Benchmark sections">
-            {sections.map(section => (
-                <a href={`#${section.id}`}>{section.label}</a>
-            ))}
-        </nav>
+        {machine !== undefined && (
+            <p class="stamp">
+                <b>
+                    {machine.gpu} · {machine.os} · {machine.browser}
+                </b>
+                <span>
+                    ExoJS {machine.engineVersion} · measured {formatDay(machine.measuredAt)} · {machine.runs} pooled runs
+                </span>
+                <a href="#practices">Details and methodology</a>
+            </p>
+        )}
 
         {referenceProfile === undefined ? (
             <p class="empty">
@@ -90,16 +95,110 @@ const sections = [
                 pooled into a single profile file in the repository; until then there is nothing here to read. The practices below already apply.
             </p>
         ) : (
-            <BenchProfileReport document={referenceProfile} headingLevel={2} showTitle={false} primary />
+            <>
+                <section id="rendering" class="domain">
+                    <div class="domain-head">
+                        <h2>Rendering</h2>
+                        {rendering.length > 1 && (
+                            <div class="backends" role="group" aria-label="Rendering backend">
+                                {rendering.map((entry, index) => (
+                                    <button type="button" class="backend" data-backend={entry.backend} aria-pressed={index === 0 ? 'true' : 'false'}>
+                                        {BACKEND_LABELS[entry.backend]}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {rendering.length === 0 ? (
+                        <p class="empty">This machine published no rendering measurement.</p>
+                    ) : (
+                        rendering.map((entry, index) => (
+                            <div class="backend-panel" data-backend={entry.backend} hidden={index !== 0}>
+                                <div class="cards">
+                                    {entry.headline.map(card => (
+                                        <BenchResultCard card={card} domain="rendering" />
+                                    ))}
+                                </div>
+
+                                {entry.rest.length > 0 && (
+                                    <details class="more">
+                                        <summary>All rendering tests ({entry.rest.length} more)</summary>
+                                        <div class="cards">
+                                            {entry.rest.map(card => (
+                                                <BenchResultCard card={card} domain="rendering" />
+                                            ))}
+                                        </div>
+                                    </details>
+                                )}
+                            </div>
+                        ))
+                    )}
+                </section>
+
+                <section id="physics" class="domain">
+                    <div class="domain-head">
+                        <h2>Physics</h2>
+                    </div>
+
+                    {physics.headline.length === 0 ? (
+                        <p class="empty">This machine published no physics measurement.</p>
+                    ) : (
+                        <>
+                            <div class="cards">
+                                {physics.headline.map(card => (
+                                    <BenchResultCard card={card} domain="physics" />
+                                ))}
+                            </div>
+
+                            {physics.rest.length > 0 && (
+                                <details class="more">
+                                    <summary>All physics tests ({physics.rest.length} more)</summary>
+                                    <div class="cards">
+                                        {physics.rest.map(card => (
+                                            <BenchResultCard card={card} domain="physics" />
+                                        ))}
+                                    </div>
+                                </details>
+                            )}
+                        </>
+                    )}
+                </section>
+
+                <section id="full-data" class="domain">
+                    <h2>Full data</h2>
+                    <p class="section-note">
+                        Every measured row with its spread, its p95, the mechanism behind each difference and the rows the harness left out - the same
+                        numbers the cards above are drawn from, in full.
+                    </p>
+
+                    {coversDomain(referenceProfile, 'rendering') && (
+                        <details class="more">
+                            <summary>Rendering: every row, spread and omission</summary>
+                            <BenchProfileReport document={referenceProfile} domain="rendering" headingLevel={3} showTitle={false} primary />
+                        </details>
+                    )}
+
+                    {coversDomain(referenceProfile, 'physics') && (
+                        <details class="more">
+                            <summary>Physics: every row, spread and omission</summary>
+                            <BenchProfileReport document={referenceProfile} domain="physics" headingLevel={3} showTitle={false} primary />
+                        </details>
+                    )}
+                </section>
+            </>
         )}
 
-        {furtherProfiles.length > 0 && (
+        <BenchLocalProbe />
+
+        {furtherMachines.length > 0 && (
             <section id="further">
                 <h2>Further machines</h2>
                 <p class="section-note">
-                    Contributed profiles for other hardware, newest engine version first: do the ratios hold on another GPU, driver and JavaScript engine?
+                    Contributed profiles measured on other hardware, newest engine version first: do the ratios hold on another GPU, driver and JavaScript
+                    engine?
                 </p>
-                {furtherProfiles.map(document => {
+                {furtherMachines.map(document => {
                     const newer = olderThanReference(document);
 
                     return (
@@ -118,7 +217,10 @@ const sections = [
                                     reference profile with that in mind.
                                 </p>
                             )}
-                            <BenchProfileReport document={document} headingLevel={3} showTitle={false} />
+                            {coversDomain(document, 'rendering') && (
+                                <BenchProfileReport document={document} domain="rendering" headingLevel={3} showTitle={false} />
+                            )}
+                            {coversDomain(document, 'physics') && <BenchProfileReport document={document} domain="physics" headingLevel={3} showTitle={false} />}
                         </details>
                     );
                 })}
@@ -299,6 +401,27 @@ pnpm bench:compare -- \
     </div>
 </DocsLayout>
 
+<script>
+    // The backend choice belongs to the reader, not to the results: it is never
+    // derived from which backend won more rows. Without JavaScript the first
+    // panel is the one that is not `hidden`, so the section still shows measured
+    // cards rather than an empty frame.
+    const buttons = document.querySelectorAll<HTMLButtonElement>('.backend');
+    const panels = document.querySelectorAll<HTMLElement>('.backend-panel');
+
+    for (const button of buttons) {
+        button.addEventListener('click', () => {
+            for (const other of buttons) {
+                other.setAttribute('aria-pressed', String(other === button));
+            }
+
+            for (const panel of panels) {
+                panel.hidden = panel.dataset['backend'] !== button.dataset['backend'];
+            }
+        });
+    }
+</script>
+
 <style>
     .bench-prose {
         max-width: none;
@@ -343,38 +466,32 @@ pnpm bench:compare -- \
      * reachable. Horizontal scrolling is fine for navigation - it is exactly
      * what the measurements below must never need.
      */
-    .section-nav {
-        position: sticky;
-        top: 68px;
-        z-index: 2;
+    /* Drawn as tabs, but two ordinary links: each view is its own page, so there is nothing here to select, focus or arrow between. */
+    .views {
         display: flex;
-        gap: var(--s-2);
-        overflow-x: auto;
-        margin: var(--s-5) 0 var(--s-6);
-        padding: var(--s-2) 0;
-        background: var(--bg-canvas);
+        gap: var(--s-4);
+        margin: var(--s-5) 0 var(--s-4);
         border-bottom: 1px solid var(--line-soft);
-        scrollbar-width: none;
     }
 
-    .section-nav::-webkit-scrollbar {
-        display: none;
-    }
-
-    .section-nav a {
-        flex: none;
-        padding: 0.25rem 0.7rem;
-        border: 1px solid var(--line-soft);
-        border-radius: var(--r-pill);
-        font-size: 0.76rem;
+    .views a {
+        padding: 0.35rem 0.1rem;
+        margin-bottom: -1px;
+        border-bottom: 2px solid transparent;
+        font-size: 0.95rem;
+        font-weight: 600;
         color: var(--fg-muted);
         text-decoration: none;
-        white-space: nowrap;
     }
 
-    .section-nav a:hover {
+    .views a:hover {
         color: var(--fg);
-        border-color: var(--line);
+    }
+
+    /* The rule's presence, not its hue, is what marks the current view; `aria-current` carries the same fact where the rule is not seen. */
+    .views a[aria-current='page'] {
+        color: var(--fg);
+        border-bottom-color: var(--accent);
     }
 
     .empty {
@@ -466,5 +583,73 @@ pnpm bench:compare -- \
     .practice pre {
         overflow-x: auto;
         max-width: 100%;
+    }
+</style>
+
+<style>
+    .domain {
+        margin-top: var(--s-6);
+    }
+
+    .domain-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: var(--s-3);
+        margin-bottom: var(--s-4);
+    }
+
+    .domain-head h2 {
+        margin: 0;
+    }
+
+    .backends {
+        display: flex;
+        gap: 0.3rem;
+    }
+
+    .backend {
+        font: inherit;
+        font-size: 0.8rem;
+        padding: 0.25rem 0.7rem;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--fg-muted);
+        cursor: pointer;
+    }
+
+    .backend[aria-pressed='true'] {
+        border-color: var(--accent);
+        color: var(--accent);
+        font-weight: 600;
+    }
+
+    /* Two per row on desktop: a card is a comparison to read, not a tile to scan,
+       and a third column would shrink the bars past the point of being readable. */
+    .cards {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--s-4);
+    }
+
+    .more {
+        margin-top: var(--s-4);
+    }
+
+    .more > summary {
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    .more .cards {
+        margin-top: var(--s-4);
+    }
+
+    @media (max-width: 52rem) {
+        .cards {
+            grid-template-columns: minmax(0, 1fr);
+        }
     }
 </style>

@@ -10,7 +10,14 @@ import { type PhysicsReportData, writePhysicsReport } from '../src/physics/repor
 import type { Provenance } from '../src/rendering/driver';
 import type { ArchetypeId, Backend, CellResult } from '../src/rendering/EngineAdapter';
 import { type ReportData, writeReport } from '../src/rendering/report';
+import type { ClockReport } from '../src/shared/clock';
 import { mergeCellResults, mergeLibraries } from '../src/shared/report';
+
+/**
+ * A clock fine enough that no fixture duration trips the timer check, so a test
+ * asserts on the comparison it is about rather than on the grid it was read on.
+ */
+const FINE_CLOCK: ClockReport = { resolutionMs: 0.001, crossOriginIsolated: true };
 
 const cell = (options: {
   archetype: ArchetypeId;
@@ -36,6 +43,7 @@ const cell = (options: {
   queueMsMedian: null,
   queueMsP95: null,
   structural: { drawCalls: 1, textureBinds: 1, bufferUploads: 1 },
+  clock: FINE_CLOCK,
   status: options.status ?? 'ok',
 });
 
@@ -45,6 +53,7 @@ const stamp = (backend: Backend, timestamp: string): Provenance => ({
   browser: 'chromium',
   browserVersion: '151.0.7922.34',
   os: 'win32 10.0.26200',
+  clock: FINE_CLOCK,
   platformVersion: { major: 11, source: 'detected', evidence: "os.release() reported '10.0.26200'" },
   prerelease: { value: false, source: 'assumed-stable', evidence: 'no marker, none declared' },
   flags: [],

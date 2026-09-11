@@ -7,6 +7,7 @@
   "scripts": {
     "bench:setup": "pnpm install --dir competitors --frozen-lockfile && node competitors/link.ts",
     "bench": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/run.ts",
+    "bench:reference": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/run.ts --suite=reference --domain=all",
     "perf:baseline": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/run.ts",
     "gate:timing": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/runTimingGate.ts",
     "gate:structural": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/runStructuralGate.ts",
@@ -20,7 +21,9 @@
   "devDependencies": {
     "@codexo/exojs": "workspace:*",
     "@codexo/exojs-config": "workspace:*",
+    "@codexo/exojs-particles": "workspace:*",
     "@codexo/exojs-physics": "workspace:*",
+    "@codexo/exojs-tilemap": "workspace:*",
     "@types/node": "^26.4.0",
     "@webgpu/types": "^0.1.69",
     "playwright": "^1.62.1",

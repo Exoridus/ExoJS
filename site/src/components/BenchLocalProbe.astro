@@ -1,0 +1,206 @@
+---
+/** A deliberately separate, browser-only probe. It never changes published profile data. */
+---
+
+<section class="local-probe" aria-labelledby="local-probe-title">
+    <div class="local-probe-copy">
+        <p class="eyebrow">Local, not published</p>
+        <h2 id="local-probe-title">Run on this device</h2>
+        <p>
+            Run a short WebGL2 workload in this browser. It reports this device's local frame cost and capabilities; it is not mixed into the published
+            cross-library comparisons.
+        </p>
+    </div>
+    <div class="local-probe-actions">
+        <button type="button" class="run" data-local-probe>Run local probe</button>
+        <span class="status" data-local-status role="status" aria-live="polite">Idle</span>
+    </div>
+    <canvas class="probe-canvas" data-local-canvas width="640" height="360" aria-hidden="true"></canvas>
+    <dl class="local-results" data-local-results hidden>
+        <div>
+            <dt>CPU submission</dt>
+            <dd data-local-cpu>-</dd>
+        </div>
+        <div>
+            <dt data-local-gpu-label>GPU-inclusive frame</dt>
+            <dd data-local-gpu>-</dd>
+        </div>
+        <div>
+            <dt>Frame budget</dt>
+            <dd data-local-budget>-</dd>
+        </div>
+        <div>
+            <dt>Capabilities</dt>
+            <dd data-local-capabilities>-</dd>
+        </div>
+    </dl>
+</section>
+
+<script is:inline>
+    const localProbe = document.querySelector('[data-local-probe]');
+    const localStatus = document.querySelector('[data-local-status]');
+    const localResults = document.querySelector('[data-local-results]');
+    const localCanvas = document.querySelector('[data-local-canvas]');
+
+    const median = values => {
+        const sorted = [...values].sort((a, b) => a - b);
+        return sorted[Math.floor(sorted.length / 2)] ?? 0;
+    };
+
+    const percentile = (values, p) => {
+        const sorted = [...values].sort((a, b) => a - b);
+        return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] ?? 0;
+    };
+
+    const formatMs = value => (value < 0.005 ? '<0.01 ms' : `${value.toFixed(2)} ms`);
+
+    const compile = (gl, type, source) => {
+        const shader = gl.createShader(type);
+        if (shader === null) throw new Error('Could not create WebGL2 shader.');
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader) ?? 'WebGL2 shader compilation failed.');
+        return shader;
+    };
+
+    const runLocalProbe = () => {
+        if (!(localCanvas instanceof HTMLCanvasElement)) throw new Error('Probe canvas is unavailable.');
+        const gl = localCanvas.getContext('webgl2', { antialias: false, powerPreference: 'high-performance' });
+        if (gl === null) throw new Error('WebGL2 is unavailable in this browser.');
+
+        const vertex = compile(gl, gl.VERTEX_SHADER, '#version 300 es\nin vec2 position;\nvoid main(){gl_Position=vec4(position,0.0,1.0);gl_PointSize=1.0;}');
+        const fragment = compile(gl, gl.FRAGMENT_SHADER, '#version 300 es\nprecision highp float;\nout vec4 color;\nvoid main(){color=vec4(0.25,0.65,1.0,1.0);}');
+        const program = gl.createProgram();
+        if (program === null) throw new Error('Could not create WebGL2 program.');
+        gl.attachShader(program, vertex);
+        gl.attachShader(program, fragment);
+        gl.linkProgram(program);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) ?? 'WebGL2 program linking failed.');
+
+        const count = 100_000;
+        const positions = new Float32Array(count * 2);
+        for (let index = 0; index < count; index += 1) {
+            positions[index * 2] = ((index * 37) % 1000) / 500 - 1;
+            positions[index * 2 + 1] = ((index * 91) % 1000) / 500 - 1;
+        }
+        const buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+        gl.useProgram(program);
+        const location = gl.getAttribLocation(program, 'position');
+        gl.enableVertexAttribArray(location);
+        gl.vertexAttribPointer(location, 2, gl.FLOAT, false, 0, 0);
+
+        const timer = gl.getExtension('EXT_disjoint_timer_query_webgl2');
+        const cpuSamples = [];
+        const wallSamples = [];
+        // A timer query is answered by the driver some frames after it is ended, so
+        // the queries are drained after the loop; reading one straight back leaves
+        // every sample unavailable and the arm silently untimed.
+        const pending = [];
+        const sample = () => {
+            const start = performance.now();
+            const query = timer === null ? null : gl.createQuery();
+            if (query !== null && timer !== null) gl.beginQuery(timer.TIME_ELAPSED_EXT, query);
+            gl.clearColor(0.02, 0.03, 0.06, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.drawArrays(gl.POINTS, 0, count);
+            if (query !== null && timer !== null) gl.endQuery(timer.TIME_ELAPSED_EXT);
+            const submitted = performance.now();
+            gl.finish();
+            const finished = performance.now();
+            cpuSamples.push(submitted - start);
+            wallSamples.push(finished - start);
+            if (query !== null) pending.push(query);
+        };
+
+        for (let index = 0; index < 20; index += 1) sample();
+        cpuSamples.length = 0;
+        wallSamples.length = 0;
+        for (const query of pending.splice(0)) gl.deleteQuery(query);
+
+        const started = performance.now();
+        for (let index = 0; index < 60; index += 1) sample();
+        const elapsed = performance.now() - started;
+
+        const gpuSamples = [];
+        const disjoint = timer !== null && gl.getParameter(timer.GPU_DISJOINT_EXT);
+        for (const query of pending) {
+            if (!disjoint && gl.getQueryParameter(query, gl.QUERY_RESULT_AVAILABLE)) {
+                gpuSamples.push(Number(gl.getQueryParameter(query, gl.QUERY_RESULT)) / 1_000_000);
+            }
+            gl.deleteQuery(query);
+        }
+
+        return {
+            cpu: median(cpuSamples),
+            // Without a timer query the honest second figure is the wall time a
+            // frame took to reach `finish()`, never the submission time again.
+            gpu: gpuSamples.length > 0 ? median(gpuSamples) : median(wallSamples),
+            gpuP95: gpuSamples.length > 0 ? percentile(gpuSamples, 0.95) : null,
+            elapsed,
+            gpuTimed: gpuSamples.length > 0,
+            webgpu: 'gpu' in navigator,
+        };
+    };
+
+    localProbe?.addEventListener('click', () => {
+        if (!(localStatus instanceof HTMLElement) || !(localResults instanceof HTMLElement) || !(localProbe instanceof HTMLButtonElement)) return;
+        localProbe.disabled = true;
+        localStatus.textContent = 'Running 60 frames...';
+        try {
+            const result = runLocalProbe();
+            const cpu = localResults.querySelector('[data-local-cpu]');
+            const gpu = localResults.querySelector('[data-local-gpu]');
+            const gpuLabel = localResults.querySelector('[data-local-gpu-label]');
+            const budget = localResults.querySelector('[data-local-budget]');
+            const capabilities = localResults.querySelector('[data-local-capabilities]');
+            if (cpu) cpu.textContent = formatMs(result.cpu);
+            if (gpu) gpu.textContent = formatMs(result.gpu);
+            if (gpuLabel) gpuLabel.textContent = result.gpuTimed ? 'GPU execution' : 'GPU-inclusive frame';
+            if (budget) budget.textContent = result.gpu < 0.005 ? '<0.1% of 16.7 ms' : `${((result.gpu / 16.7) * 100).toFixed(1)}% of 16.7 ms`;
+            if (capabilities) capabilities.textContent = `WebGL2 · ${result.webgpu ? 'WebGPU available' : 'WebGPU unavailable'} · ${navigator.hardwareConcurrency ?? '?'} logical cores`;
+            localResults.hidden = false;
+            localStatus.textContent = `Complete in ${result.elapsed.toFixed(0)} ms`;
+        } catch (error) {
+            localStatus.textContent = error instanceof Error ? error.message : 'Local probe failed.';
+        } finally {
+            localProbe.disabled = false;
+        }
+    });
+</script>
+
+<style>
+    .local-probe {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: var(--s-4) var(--s-6);
+        margin: var(--s-8) 0;
+        padding: var(--s-5);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-3);
+        background: var(--bg-elevated);
+    }
+
+    .local-probe-copy h2,
+    .local-probe-copy p { margin: 0; }
+    /* The card's own border already separates it; the section rule prose gives an h2 draws a line through the middle of it. */
+    .local-probe-copy h2 { margin-top: var(--s-1); padding-bottom: 0; border-bottom: 0; }
+    .local-probe-copy p:last-child { max-width: 55rem; margin-top: var(--s-2); color: var(--fg-muted); }
+    .eyebrow { color: var(--fg-faint); font: 600 0.68rem/1 var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; }
+    .local-probe-actions { display: flex; align-items: center; gap: var(--s-3); justify-content: end; }
+    .run { border: 1px solid var(--line); border-radius: var(--r-2); background: var(--fg); color: var(--bg-elevated); padding: 0.65rem 0.9rem; font: 600 0.78rem var(--f-mono); cursor: pointer; }
+    .run:disabled { opacity: 0.6; cursor: wait; }
+    .status { color: var(--fg-muted); font: 0.72rem var(--f-mono); }
+    .probe-canvas { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .local-results { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-3); margin: 0; }
+    .local-results[hidden] { display: none; }
+    .local-results div { padding-top: var(--s-3); border-top: 1px solid var(--line-soft); }
+    .local-results dt { color: var(--fg-faint); font: 0.68rem var(--f-mono); text-transform: uppercase; }
+    .local-results dd { margin: var(--s-1) 0 0; font: 0.82rem var(--f-mono); }
+    @media (max-width: 48rem) {
+        .local-probe { grid-template-columns: 1fr; }
+        .local-probe-actions { justify-content: start; flex-wrap: wrap; }
+        .local-results { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+</style>

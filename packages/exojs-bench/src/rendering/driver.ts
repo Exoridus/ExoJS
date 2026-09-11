@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import type { Browser } from 'playwright';
 import { chromium, webkit } from 'playwright';
 
+import type { ClockReport } from '../shared/clock';
 import type { BaseProvenance, LibraryProvenance, PlatformDeclaration, PlatformVersionStamp, PrereleaseStamp, RenderingBrowser } from '../shared/provenance';
 import {
   classifyPrerelease,
@@ -15,12 +16,13 @@ import {
 } from '../shared/provenance';
 import type { ViteDevServer } from '../shared/viteServer';
 import { readEngineVersion, RENDERING_LIBRARY_ARMS, startViteServer as startPageServer } from '../shared/viteServer';
+import type { RunPlan } from '../suite/plan';
 import { buildMatrix } from './archetypes';
 import type { ArchetypeSpec, Backend, CellResult, CellSpec, EngineAdapter } from './EngineAdapter';
 import type { MatrixSelection } from './selection';
-import { applySelection } from './selection';
+import { applyPlan, applySelection } from './selection';
 import { usesRenderTargets } from './traits';
-import { isScrolling } from './world';
+import { isScrolling, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from './world';
 
 // Re-exported so the rendering barrel and the CLI keep importing the selection
 // surface from `driver` unchanged. It lives in its own module because the tests
@@ -73,6 +75,15 @@ export interface Provenance extends BaseProvenance {
   readonly headless: boolean;
   /** True when the adapter is a software rasterizer - timings are then untrusted. */
   readonly software: boolean;
+  /**
+   * The clock grid the run's FIRST session observed, or `null` where no session
+   * opened.
+   *
+   * Provenance only. A run opens one session per arm, so this describes the
+   * conditions rather than qualifying any particular measurement; each cell
+   * carries the grid of the session that actually timed it.
+   */
+  readonly clock: ClockReport | null;
   /**
    * Resolved WebGPU sprite-batch texture-slot tier for this run's adapter (8 /
    * 16 / 32), or `undefined` for the WebGL2 backend (whose batcher uses a fixed
@@ -394,8 +405,15 @@ export const readWebGpuAdapter = async (page: import('playwright').Page, browser
   return { adapter, usable: true, note: '', slotTier };
 };
 
-/** A cell that could not be measured: zeroed timings/structure, `unavailable` status, and an explanatory note. */
-const unavailableCell = (spec: CellSpec, note: string): CellResult => ({
+/**
+ * A cell that could not be measured: zeroed timings/structure, `unavailable`
+ * status, and an explanatory note.
+ *
+ * `clock` carries the session's grid where a session existed, so a cell that
+ * failed inside a live page is still attributed to the page it failed in. It is
+ * `null` only where no page produced the cell at all.
+ */
+const unavailableCell = (spec: CellSpec, note: string, clock: ClockReport | null = null): CellResult => ({
   spec,
   cpuMsMedian: 0,
   cpuMsP95: 0,
@@ -404,6 +422,7 @@ const unavailableCell = (spec: CellSpec, note: string): CellResult => ({
   queueMsMedian: null,
   queueMsP95: null,
   structural: { drawCalls: 0, textureBinds: 0, bufferUploads: 0 },
+  clock,
   status: 'unavailable',
   note,
 });
@@ -434,9 +453,9 @@ export type CellResultSink = (result: CellResult) => void;
  * discipline is untouched - means a failing cell costs only itself: it becomes
  * an `unavailable` datapoint carrying the error, and the run continues.
  */
-const runCellInPage = async (page: import('playwright').Page, spec: CellSpec): Promise<CellResult> => {
+const runCellInPage = async (page: import('playwright').Page, spec: CellSpec, hold: boolean): Promise<CellResult> => {
   try {
-    return await page.evaluate(cell => globalThis.__runBaselineCell!(cell), spec);
+    return await page.evaluate(args => globalThis.__runBaselineCell!(args.cell, args.hold), { cell: spec, hold });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
@@ -468,13 +487,13 @@ const CELL_WEDGED = Symbol('cell-wedged');
  * closes; its rejection is swallowed so it never surfaces as an unhandled
  * rejection (`runCellInPage` already never rejects on a normal cell error).
  */
-const runCellOrWedge = async (page: import('playwright').Page, spec: CellSpec): Promise<CellResult | typeof CELL_WEDGED> => {
+const runCellOrWedge = async (page: import('playwright').Page, spec: CellSpec, hold = false): Promise<CellResult | typeof CELL_WEDGED> => {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<typeof CELL_WEDGED>(resolvePromise => {
     timer = setTimeout(() => resolvePromise(CELL_WEDGED), CELL_TIMEOUT_MS);
   });
 
-  const run = runCellInPage(page, spec).then(result => {
+  const run = runCellInPage(page, spec, hold).then(result => {
     if (timer !== undefined) {
       clearTimeout(timer);
     }
@@ -508,6 +527,9 @@ const runCellOrWedge = async (page: import('playwright').Page, spec: CellSpec): 
  * For WebGPU the adapter identity is read once; a null or software adapter emits
  * every cell as `unavailable` rather than measuring a software rasterizer.
  */
+/** File stem of one cell's captured frame - the cell's identity, safe for a file name. */
+const captureName = (cell: CellSpec): string => `${cell.backend}-${cell.archetype}-${String(cell.nodeCount)}-${cell.engine}-${cell.config}`;
+
 const runBackend = async (options: {
   baseUrl: string;
   backend: Backend;
@@ -519,8 +541,10 @@ const runBackend = async (options: {
   platform?: PlatformDeclaration;
   /** Replaces the per-backend launch flags; see {@link runMatrix}. */
   launchFlags?: readonly string[];
+  /** Directory to capture each measured cell's last frame into; see {@link runMatrix}. */
+  captureDir?: string;
 }): Promise<{ provenance: Provenance; results: CellResult[] }> => {
-  const { baseUrl, backend, browser: browserName, cells, engineVersion, onCellResult } = options;
+  const { baseUrl, backend, browser: browserName, cells, engineVersion, onCellResult, captureDir } = options;
   const flags = resolveLaunchFlags(browserName, backend, options.launchFlags);
 
   // Group cells by arm (engine|config) in first-seen order so each arm runs in its
@@ -553,6 +577,10 @@ const runBackend = async (options: {
   // read once and reused across every arm's session (same GPU, same flags).
   let renderer: string | null = null;
   let webgpuIdentity: WebGpuIdentity | null = null;
+  // The first session's grid, kept for the backend's provenance line. It
+  // describes the run's conditions and is NOT what qualifies a cell: each cell
+  // carries the grid of the session that produced it.
+  let clock: ClockReport | null = null;
   // Read off the first session and reused: every session in a run launches the
   // same build, and a run with no session at all reports the absence rather than
   // an invented version.
@@ -576,12 +604,19 @@ const runBackend = async (options: {
         await page.goto(baseUrl, { waitUntil: 'load' });
         await page.waitForFunction(() => typeof globalThis.__runBaselineCell === 'function');
 
+        // Probed in THIS page, before its cells run: the grid belongs to the
+        // browsing context, and this run opens one session per arm, so a value
+        // read from another session would qualify cells it never timed.
+        const sessionClock = await page.evaluate(() => globalThis.__probeClock!());
+
+        clock ??= sessionClock;
+
         if (backend === 'webgpu') {
           webgpuIdentity ??= await readWebGpuAdapter(page, browserName);
 
           if (!webgpuIdentity.usable) {
             for (const cell of remaining) {
-              collect(unavailableCell(cell, webgpuIdentity.note));
+              collect(unavailableCell(cell, webgpuIdentity.note, sessionClock));
             }
 
             remaining = [];
@@ -590,13 +625,14 @@ const runBackend = async (options: {
 
         while (remaining.length > 0) {
           const cell = remaining[0]!;
-          const outcome = await runCellOrWedge(page, cell);
+          const outcome = await runCellOrWedge(page, cell, captureDir !== undefined);
 
           if (outcome === CELL_WEDGED) {
             collect(
               unavailableCell(
                 cell,
                 `cell wedged the browser (no result after ${CELL_TIMEOUT_MS}ms — a mid-frame GPU-driver stall the in-page guards cannot interrupt); isolated as unavailable, browser relaunched for the arm's remaining cells`,
+                sessionClock,
               ),
             );
             remaining = remaining.slice(1);
@@ -605,6 +641,20 @@ const runBackend = async (options: {
           }
 
           collect(outcome);
+
+          // Frame capture: the canvas as the measured cell left it. The cell was
+          // asked to HOLD its scene for exactly this, because some arms blank the
+          // canvas when they release their context and a capture taken after
+          // teardown would compare teardown policies rather than scenes.
+          // `page.screenshot` rather than a canvas readback: a WebGPU canvas
+          // never yields its contents to `drawImage`.
+          if (captureDir !== undefined && outcome.status === 'ok') {
+            await page.screenshot({
+              path: resolve(captureDir, `${captureName(cell)}.png`),
+              clip: { x: 0, y: 0, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT },
+            });
+            await page.evaluate(() => globalThis.__disposeHeldCell!());
+          }
 
           if (backend === 'webgl2' && renderer === null && outcome.status === 'ok') {
             renderer = await readRendererInPage(page);
@@ -625,6 +675,7 @@ const runBackend = async (options: {
   const platform = {
     browser: browserName,
     browserVersion,
+    clock,
     os: readOsRelease(),
     platformVersion: readPlatformVersion(options.platform),
     prerelease: classifyPrerelease({ browserVersion, declared: declaredPrereleaseOf(options.platform) }),
@@ -881,6 +932,9 @@ export const profileCell = async (options: {
           prerelease: classifyPrerelease({ browserVersion, declared: declaredPrereleaseOf(options.platform) }),
           flags,
           headless: true,
+          // A CPU profile reports attributed self time, never a wall-clock
+          // figure anyone compares, so no grid is probed for it.
+          clock: null,
           engineVersion,
           timestamp: new Date().toISOString(),
           software: isSoftwareRenderer(adapter),
@@ -923,6 +977,33 @@ export interface MatrixOutcome {
  * `onCellResult` (optional) fires after every cell so the caller can persist it
  * immediately; the returned {@link MatrixOutcome} is the same set aggregated.
  */
+/** The cell selection one matrix invocation would measure, resolved without touching a browser. */
+export interface MatrixCellSelection {
+  readonly backends: readonly Backend[];
+  readonly plan?: RunPlan;
+  readonly filter?: Partial<CellSpec>;
+  readonly selection?: MatrixSelection;
+  readonly timedFramesOverride?: number;
+}
+
+/**
+ * Resolve the cells a run would measure: the capability-gated matrix narrowed by
+ * the suite plan, then by the free filter, then by the multi-value selection.
+ *
+ * Exported so `--dry-run` can report the real planned workload - cell count,
+ * frame budgets, arms - from the same code path the run itself uses. A dry run
+ * derived from a second, parallel enumeration would be a description of a run
+ * nobody performs.
+ */
+export const resolveMatrixCells = (options: MatrixCellSelection): CellSpec[] => {
+  const allCells = buildMatrix([...ADAPTER_CAPABILITIES, ...requestedCalibrationArms(options.selection)], options.backends);
+  const planned = options.plan ? applyPlan(allCells, options.plan) : allCells;
+  const filtered = options.filter ? applyFilter(planned, options.filter) : planned;
+  const selected = options.selection ? applySelection(filtered, options.selection) : filtered;
+
+  return options.timedFramesOverride === undefined ? selected : selected.map(cell => ({ ...cell, timedFrames: options.timedFramesOverride! }));
+};
+
 export const runMatrix = async (options: {
   backends: readonly Backend[];
   /**
@@ -942,6 +1023,13 @@ export const runMatrix = async (options: {
    * is detected from its own version string and needs no declaration.
    */
   platform?: PlatformDeclaration;
+  /**
+   * Resolved suite plan restricting the matrix to the loads that plan selects,
+   * applied BEFORE `filter` and `selection` so a free filter narrows within the
+   * plan. Omitted, the run covers each archetype's own full ladder, which is
+   * what an unqualified `bench` invocation has always meant.
+   */
+  plan?: RunPlan;
   filter?: Partial<CellSpec>;
   /** Multi-value selection applied after `filter`; see {@link MatrixSelection}. */
   selection?: MatrixSelection;
@@ -966,13 +1054,20 @@ export const runMatrix = async (options: {
    * GPU number.
    */
   launchFlags?: readonly string[];
+  /**
+   * Directory each measured cell's final frame is captured into, as
+   * `<backend>-<archetype>-<count>-<engine>-<config>.png`.
+   *
+   * For checking that two arms asked to render one scene actually rendered it -
+   * a cell that draws nothing measures a frame nobody would ship, and its number
+   * looks like a win. Off unless asked for: a capture costs a full readback per
+   * cell, which has no place in a reportable run.
+   */
+  captureDir?: string;
 }): Promise<MatrixOutcome> => {
   const engineVersion = readEngineVersion();
   const libraries = readLibraryProvenance(RENDERING_LIBRARY_ARMS);
-  const allCells = buildMatrix([...ADAPTER_CAPABILITIES, ...requestedCalibrationArms(options.selection)], options.backends);
-  const filtered = options.filter ? applyFilter(allCells, options.filter) : allCells;
-  const selected = options.selection ? applySelection(filtered, options.selection) : filtered;
-  const cells = options.timedFramesOverride === undefined ? selected : selected.map(cell => ({ ...cell, timedFrames: options.timedFramesOverride! }));
+  const cells = resolveMatrixCells(options);
 
   if (cells.length === 0) {
     throw new Error('The baseline matrix is empty: no adapter supports the requested backends/filter.');
@@ -1007,6 +1102,7 @@ export const runMatrix = async (options: {
         onCellResult,
         ...(options.platform !== undefined && { platform: options.platform }),
         ...(options.launchFlags !== undefined && { launchFlags: options.launchFlags }),
+        ...(options.captureDir !== undefined && { captureDir: options.captureDir }),
       });
 
       provenance.push(outcome.provenance);

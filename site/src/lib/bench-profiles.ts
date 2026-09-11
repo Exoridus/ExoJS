@@ -21,7 +21,7 @@
  */
 
 /** Schema version this reader understands; anything else is refused. */
-const SUPPORTED_SCHEMA_VERSION = 6;
+const SUPPORTED_SCHEMA_VERSIONS = new Set([6, 7]);
 
 /**
  * Arms that stand as a reference ceiling rather than as a peer.
@@ -86,14 +86,20 @@ export interface ProfileCell {
   readonly referenceMs: number | null;
   /** Median of the per-run p95s. */
   readonly referenceP95Ms: number | null;
+  /** GPU frame median when the published rendering run exposed a hardware timer. */
+  readonly referenceGpuMs?: number | null;
   /** True when `referenceMs` is past a whole 60 fps frame; see `FRAME_BUDGET_MS`. */
   readonly referenceOverFrameBudget: boolean;
   /** Median of the per-run medians. */
   readonly competitorMs: number | null;
   /** Median of the per-run p95s. */
   readonly competitorP95Ms: number | null;
+  /** GPU frame median when the published rendering run exposed a hardware timer. */
+  readonly competitorGpuMs?: number | null;
   /** True when `competitorMs` is past a whole 60 fps frame; see `FRAME_BUDGET_MS`. */
   readonly competitorOverFrameBudget: boolean;
+  /** What the timer check made of this comparison across the runs behind it; absent in profiles written before the clock was recorded. */
+  readonly timer?: TimerCheck;
   readonly verdict: ProfileVerdict;
   /** Structural evidence behind the difference, or `null` when the counters carry none. */
   readonly mechanism: string | null;
@@ -102,19 +108,50 @@ export interface ProfileCell {
 }
 
 /**
- * One published row: an archetype at the count it was measured at.
+ * One published row: an archetype at one load.
  *
- * A rendering row carries its block's single node count. A physics row carries
- * its own body count, because the physics archetypes have per-archetype ladders -
- * so two physics rows are never comparable with each other, only the arms within
- * one row are.
+ * An archetype measured at several loads publishes a row per load. A reader
+ * compares the arms WITHIN a row, which is like for like by construction, and
+ * never two rows against each other: two loads are two different scenes, as are
+ * two archetypes.
  */
 export interface ProfileRow {
   readonly archetype: string;
   readonly category: string;
   readonly count: number;
+  /**
+   * Catalog load id, e.g. `10k`. Absent in profiles written before rows carried
+   * their load, where an archetype appears exactly once.
+   */
+  readonly loadId?: string;
+  /** Unit {@link count} is quoted in, so a figure is never shown without one. */
+  readonly unit?: LoadUnit;
+  /** Whether this is the scenario's headline load - the one a card opens on. */
+  readonly primary?: boolean;
+  /** Display label for a load the count/unit pair cannot state, e.g. a resolution. */
+  readonly label?: string;
   readonly cells: readonly ProfileCell[];
 }
+
+/**
+ * Unit a load is counted in.
+ *
+ * Carried per row rather than assumed per domain: the same figure means scene
+ * nodes in one scenario and world tiles in another, and those are not the same
+ * claim.
+ */
+export type LoadUnit = 'sprites' | 'nodes' | 'labels' | 'tiles' | 'layers' | 'particles' | 'widgets' | 'rects' | 'bodies' | 'viewport';
+
+/** How a load reads beside its figure: `10,000 sprites`, or the row's own label. */
+export const formatLoad = (row: ProfileRow): string => {
+  if (row.label !== undefined) {
+    return row.label;
+  }
+
+  const figure = row.count.toLocaleString('en-US');
+
+  return row.unit === undefined ? figure : `${figure} ${row.unit}`;
+};
 
 /** A category section of a published table. */
 export interface ProfileSection {
@@ -176,10 +213,19 @@ export interface PlatformVersionStamp {
   readonly evidence: string;
 }
 
+/** What a page's clock was observed to do, where the run recorded it. */
+export interface ProfileClock {
+  /** Smallest positive step the probe saw, or `null` where it established none. */
+  readonly resolutionMs: number | null;
+  readonly crossOriginIsolated: boolean;
+}
+
 /** Rendering provenance for one backend. */
 export interface RenderingStamp {
   readonly backend: ProfileBackendName;
   readonly adapter: string;
+  /** The clock this backend's page was measured on; absent in profiles written before it was recorded. */
+  readonly clock?: ProfileClock;
   /** Browser engine the run was measured in. */
   readonly browser: string;
   /** Browser build the run was measured in. */
@@ -321,16 +367,26 @@ const byVersionDescending = (a: string, b: string): number => {
   return 0;
 };
 
-/** Newest engine version first, then newest measurement first. */
+/** How many of the two measured domains a profile carries. */
+const domainCount = (document: BenchProfileDocument): number => (document.rendering === undefined ? 0 : 1) + (document.physics === undefined ? 0 : 1);
+
+/**
+ * Newest engine version first, then widest coverage, then newest measurement.
+ *
+ * Coverage outranks the measurement date because the first profile leads the
+ * page: a partial run finished an hour later than a complete one would
+ * otherwise bury a whole domain in the collapsed list below, and the page would
+ * silently stop showing measurements it holds.
+ */
 const byRecency = (a: BenchProfileDocument, b: BenchProfileDocument): number =>
-  byVersionDescending(a.profile.engineVersion, b.profile.engineVersion) || b.profile.measuredAt.localeCompare(a.profile.measuredAt);
+  byVersionDescending(a.profile.engineVersion, b.profile.engineVersion) ||
+  domainCount(b) - domainCount(a) ||
+  b.profile.measuredAt.localeCompare(a.profile.measuredAt);
 
 const loaded = Object.entries(documents)
   .map(([path, document]) => {
-    if (document.schemaVersion !== SUPPORTED_SCHEMA_VERSION) {
-      throw new Error(
-        `Benchmark profile '${path}' declares schema version ${String(document.schemaVersion)}, but this site reads version ${String(SUPPORTED_SCHEMA_VERSION)}.`,
-      );
+    if (!SUPPORTED_SCHEMA_VERSIONS.has(document.schemaVersion)) {
+      throw new Error(`Benchmark profile '${path}' declares unsupported schema version ${String(document.schemaVersion)}.`);
     }
 
     return document;
@@ -359,6 +415,8 @@ export const BACKEND_LABELS: Readonly<Record<ProfileBackendName, string>> = { we
  * harness never silently renames it here.
  */
 const ARM_LABELS: Readonly<Record<string, string>> = {
+  exojs: 'ExoJS',
+  'exojs-physics': 'ExoJS',
   pixi: 'PixiJS',
   excalibur: 'Excalibur',
   phaser: 'Phaser',
@@ -369,6 +427,106 @@ const ARM_LABELS: Readonly<Record<string, string>> = {
 
 /** An arm's published name, or its slug where none is known. */
 export const armLabel = (arm: string): string => ARM_LABELS[arm] ?? arm;
+
+/**
+ * What each archetype's workload is, in one line.
+ *
+ * These live with the page rather than in a profile: they are prose for a
+ * reader, identical on every machine, and a measurement artifact that carried
+ * them would repeat them per run and let two published profiles disagree about
+ * what the same archetype means. The archetype id is the contract between the
+ * harness and this page; an id with no line here simply prints without one.
+ */
+const ARCHETYPE_DESCRIPTIONS: Readonly<Record<string, string>> = {
+  'static-heavy': 'Mostly unchanged sprites; stresses retained scene reuse.',
+  'dynamic-heavy': 'A lightly mutating sprite field; stresses transform and update work.',
+  'deep-hierarchy': 'Deep parent-child nesting; stresses world-transform propagation.',
+  overdraw: 'Full-viewport sprites; stresses fragment fill and overdraw.',
+  'batch-breaking': 'Many texture changes; stresses batch breaks and state submission.',
+  'batch-breaking-atlased': 'Atlased texture changes; isolates batching without texture uploads.',
+  'split-screen': 'Several simultaneous views; stresses multi-viewport traversal.',
+  'mixed-blend': 'Long runs of blend modes; stresses state changes and batching.',
+  'mixed-material': 'Several custom materials; stresses shader/material switches.',
+  'mixed-material-atlased': 'Custom materials over atlased sprites; combines material and texture variety.',
+  'instanced-batch': 'Explicit instance batches; stresses immediate submission cost.',
+  'mixed-sprite-mesh-array': 'Sprites interleaved with mesh-array leaves; stresses renderer path switches.',
+  'mixed-sprite-mesh-static': 'Sprites interleaved with static meshes; stresses mixed draw paths.',
+  'scrolling-world': 'A moving camera over mostly off-screen content; stresses culling and retained reuse.',
+  'text-static': 'Static labels with repeated glyphs; stresses text layout and glyph generation.',
+  'text-dynamic': 'Changing labels; stresses per-frame text invalidation and layout.',
+  'lifecycle-churn': 'A small fraction of leaves rebuilt each frame; stresses resource lifecycle work.',
+  'filter-chain-1': 'One filter pass per scene; stresses offscreen composition.',
+  'filter-chain-2': 'Two filter passes per scene; stresses chained offscreen composition.',
+  'filter-chain-4': 'Four filter passes per scene; stresses deep filter composition.',
+  'mask-clip': 'Clipped content; stresses mask setup and compositing.',
+  'mask-clip-animated': 'Animated clipped content; stresses mask invalidation.',
+  composite: 'Nested render targets; stresses multi-pass composition.',
+  'box-stack': 'Dense resting contacts; stresses collision detection, solving and sleeping.',
+  'many-dynamic': 'Many active bodies in a bounded field; stresses broad-phase and live contacts.',
+  'mixed-static-dynamic': 'Dynamic bodies falling onto static level geometry; models a common game mix.',
+  raycast: 'A mixed scene plus repeated rays; isolates query throughput.',
+  'body-churn': 'Bodies rebuilt every step; stresses broad-phase repair and lifecycle work.',
+  joints: 'Constraint chains; stresses impulse propagation through joints.',
+  'settling-pile': 'A dissipating pile; exposes steady-state settling and sleeping behavior.',
+  'dynamic-all': 'Every sprite moving every frame; stresses transform and upload work at full mutation.',
+  'fill-layers': 'Stacked translucent full-screen layers; stresses blended fill.',
+  'tilemap-scroll': 'A large tile map scrolling past a fixed window; stresses the tile draw path.',
+  'tilemap-edit': 'Tile ids replaced every frame; stresses getting a tile change to the GPU.',
+  'particles-draw': 'A fixed set of quads submitted through the particle path; no simulation.',
+  'particles-lifecycle': 'A steady particle effect: ageing, movement, fading and respawning.',
+};
+
+/**
+ * A scenario's title, as a card names it.
+ *
+ * Plain words rather than the archetype id: the id is the contract with the
+ * harness and belongs in the details, while the card has to be readable by
+ * someone who has never run the benchmark.
+ */
+const ARCHETYPE_TITLES: Readonly<Record<string, string>> = {
+  'static-heavy': 'Static scene',
+  'dynamic-heavy': 'Scene with few changes',
+  'dynamic-all': 'Fully moving sprites',
+  'deep-hierarchy': 'Deep scene hierarchy',
+  overdraw: 'Overdraw ceiling',
+  'fill-layers': 'Transparent screen layers',
+  'batch-breaking': 'Many texture changes',
+  'batch-breaking-atlased': 'Same scene, atlased',
+  'split-screen': 'Split screen',
+  'mixed-blend': 'Mixed blend modes',
+  'mixed-material': 'Custom materials',
+  'mixed-material-atlased': 'Custom materials, atlased',
+  'instanced-batch': 'Instanced submission',
+  'mixed-sprite-mesh-array': 'Sprites and array meshes',
+  'mixed-sprite-mesh-static': 'Sprites and static meshes',
+  'scrolling-world': 'Camera over a sprite world',
+  'text-static': 'Static labels',
+  'text-dynamic': 'Changing labels',
+  'lifecycle-churn': 'Creating and destroying objects',
+  'filter-chain-1': 'One filter pass',
+  'filter-chain-2': 'Two filter passes',
+  'filter-chain-4': 'Four filter passes',
+  'mask-clip': 'Clipping',
+  'mask-clip-animated': 'Moving clip',
+  composite: 'Composited effect',
+  'tilemap-scroll': 'Large tile map',
+  'tilemap-edit': 'Editing tiles',
+  'particles-draw': 'Drawing particles',
+  'particles-lifecycle': 'Particle effect',
+  'box-stack': 'Box stack',
+  'many-dynamic': 'Many active bodies',
+  'mixed-static-dynamic': 'Static level, falling bodies',
+  raycast: 'Ray queries',
+  'body-churn': 'Bodies created and destroyed',
+  joints: 'Joint chains',
+  'settling-pile': 'Settling pile',
+};
+
+/** The readable title for a scenario, falling back to its id where none is written. */
+export const archetypeTitle = (archetype: string): string => ARCHETYPE_TITLES[archetype] ?? archetype;
+
+/** The one-line workload description for an archetype, or `undefined` where none is written. */
+export const archetypeDescription = (archetype: string): string | undefined => ARCHETYPE_DESCRIPTIONS[archetype];
 
 /**
  * Spread factor at which a measurement's own noise is called out.
@@ -394,11 +552,67 @@ export const WIDE_SPREAD_RATIO = 1.2;
  */
 export const FRAME_BUDGET_MS = 16.7;
 
-/** A ratio in the form the verdict labels print it, or a dash when the pair produced none. */
-export const formatFactor = (factor: number | null): string => (factor === null || !Number.isFinite(factor) ? '-' : `${factor.toFixed(2)}x`);
+/**
+ * How many digits of a published figure are worth printing.
+ *
+ * Three, and never a fixed number of decimals: a fixed three prints `13.380` for
+ * a value whose pooled runs spanned 12.73 to 14.10, which is a digit past what
+ * the measurement separated.
+ *
+ * The rule is about how many digits a figure of this size can carry, and it says
+ * nothing about the clock behind it. A value that reaches the page as `0.020`
+ * has three digits because the formatter counts places, not because the timer
+ * resolved a thousandth of a millisecond - see {@link ProfileAggregate} for what
+ * the runs actually separated.
+ */
+const SIGNIFICANT_DIGITS = 3;
+
+/** A number at {@link SIGNIFICANT_DIGITS}, as a fixed number of decimals for its magnitude. */
+const significant = (value: number): string => {
+  const magnitude = value === 0 ? 0 : Math.floor(Math.log10(Math.abs(value)));
+
+  // Capped at three: below a tenth of a millisecond the significant-figure rule
+  // would keep adding decimals to values the clock delivers in fixed steps.
+  return value.toFixed(Math.max(0, Math.min(3, SIGNIFICANT_DIGITS - 1 - magnitude)));
+};
+
+/**
+ * A ratio as the cell prints it, or a dash when the pair produced none.
+ *
+ * A factor is read for its size, not for its digits, so it carries fewer than a
+ * millisecond value: whole numbers from ten up, one decimal below that, and no
+ * trailing zero. `72x` and `2x` say what `72.25x` and `2.00x` said, without
+ * offering four figures of a ratio the ladder rounds to a rung anyway. The
+ * unrounded figure stays in the row's detail.
+ */
+export const formatFactor = (factor: number | null): string => {
+  if (factor === null || !Number.isFinite(factor)) return '-';
+
+  const rounded = factor >= 10 ? factor.toFixed(0) : factor.toFixed(1).replace(/\.0$/, '');
+
+  return `${rounded}x`;
+};
 
 /** A median in milliseconds, or a dash when the arm produced no comparable number. */
-export const formatMs = (ms: number | null): string => (ms === null || !Number.isFinite(ms) ? '-' : ms.toFixed(3));
+export const formatMs = (ms: number | null): string => (ms === null || !Number.isFinite(ms) ? '-' : significant(ms));
+
+/**
+ * True when the pair produced a comparison at all.
+ *
+ * A pair the harness could not compare - an arm that does not implement the
+ * archetype, or that reported nothing there - carries neither a ratio nor a
+ * factor.
+ */
+export const isComparable = (cell: ProfileCell): boolean => cell.verdict.ratio !== null || cell.verdict.factor !== null;
+
+/**
+ * One arm's measurement inside a cell, or `null` where that arm produced none.
+ *
+ * An arm that sat a comparison out is stored as a zero rather than as a missing
+ * value, so a reader would otherwise be shown `0.000 ms` - the fastest number on
+ * the page - for the arm that did not run.
+ */
+export const measuredMs = (cell: ProfileCell, ms: number | null): number | null => (!isComparable(cell) && ms === 0 ? null : ms);
 
 /** An ISO timestamp reduced to a calendar day. */
 export const formatDay = (timestamp: string): string => timestamp.slice(0, 10);
@@ -528,10 +742,20 @@ const listOf = (items: readonly string[]): string => (items.length < 2 ? (items[
  * absence of one: the runs reached different rungs, so the pair carries numbers
  * and no conclusion. `absent` is an arm that produced no comparable cell at all.
  */
-export type CellOutcome = 'clear-lead' | 'lead' | 'level' | 'loss' | 'clear-loss' | 'unstable' | 'absent';
+export type CellOutcome = 'clear-lead' | 'lead' | 'level' | 'loss' | 'clear-loss' | 'unstable' | 'timer-limited' | 'timer-unknown' | 'absent';
 
-/** Outcomes in reading order: the widest lead first, the widest loss last, then the two that carry no verdict. */
-export const OUTCOME_ORDER: readonly CellOutcome[] = ['clear-lead', 'lead', 'level', 'loss', 'clear-loss', 'unstable', 'absent'];
+/** Outcomes in reading order: the widest lead first, the widest loss last, then the three that carry no verdict. */
+export const OUTCOME_ORDER: readonly CellOutcome[] = [
+  'clear-lead',
+  'lead',
+  'level',
+  'loss',
+  'clear-loss',
+  'unstable',
+  'timer-limited',
+  'timer-unknown',
+  'absent',
+];
 
 /** The word a summary and a legend print for each outcome. */
 export const OUTCOME_LABELS: Readonly<Record<CellOutcome, string>> = {
@@ -541,18 +765,42 @@ export const OUTCOME_LABELS: Readonly<Record<CellOutcome, string>> = {
   loss: 'loss',
   'clear-loss': 'clear loss',
   unstable: 'no clear lead',
+  'timer-limited': 'below the timer',
+  'timer-unknown': 'timer not recorded',
   absent: 'no shared cell',
 };
 
 /**
+ * What the timer check established about a comparison.
+ *
+ * The check itself runs in the harness, per run and against the grid of the
+ * session that produced each cell, and its merged result travels in the profile.
+ * Recomputing it here is not possible and would not be right: the per-run
+ * durations and their per-session clocks are not in the published document, and
+ * pooled medians checked against a pooled grid is exactly the reading the
+ * per-run check exists to prevent.
+ */
+export type TimerCheck = 'resolved' | 'limited' | 'unknown';
+
+/**
  * Which outcome a cell publishes.
  *
- * This is the only place a comparison is turned into one of the seven words, so
- * no table or scoreboard can invent an outcome for a cell whose runs did not
- * agree on one.
+ * This is the only place a comparison is turned into one of the words, so no
+ * table or scoreboard can invent an outcome for a cell whose runs did not agree
+ * on one - or whose durations the clock did not separate. Pass `resolutionMs`
+ * as the coarsest step observed across the runs behind this cell: a pooled
+ * figure inherits the limit of the least resolved run that produced it.
+ *
+ * The two timer states outrank every verdict because they are about whether a
+ * comparison could be drawn at all. Either way the cell keeps both measured
+ * times and loses the factor, the bar and the winner - a refusal to publish a
+ * comparison, not a claim that the libraries are equally fast. They stay apart
+ * because they say different things: `timer-limited` is a check that tripped,
+ * `timer-unknown` is a check that could not be made.
  */
 export const outcomeOf = (cell: ProfileCell | null): CellOutcome => {
   if (cell === null) return 'absent';
+  if (cell.timer !== 'resolved') return cell.timer === 'limited' ? 'timer-limited' : 'timer-unknown';
   if (!cell.aggregate.stable) return 'unstable';
   if (cell.verdict.side === 'neither') return 'level';
   if (cell.verdict.side === 'exojs') return cell.verdict.structural ? 'clear-lead' : 'lead';
@@ -588,7 +836,7 @@ export const ratioBand = (cell: ProfileCell): RatioBand | null => {
 };
 
 /** A ratio band as the details print it. */
-export const formatBand = (band: RatioBand): string => `${band.low.toFixed(2)}x-${band.high.toFixed(2)}x`;
+export const formatBand = (band: RatioBand): string => `${formatFactor(band.low)}-${formatFactor(band.high)}`;
 
 /**
  * The factor a pair's two pooled medians work out to.
@@ -611,10 +859,10 @@ export const pooledFactor = (cell: ProfileCell): number | null => {
 };
 
 /** A factor the runs did not settle, marked as such. */
-export const formatApproximate = (factor: number): string => `~${factor.toFixed(2)}x`;
+export const formatApproximate = (factor: number): string => `~${formatFactor(factor)}`;
 
 /** How far the pooled runs moved, as the single factor the profile stores. */
-export const formatSpread = (spread: ProfileSpread): string => (spread.ratio === null || !Number.isFinite(spread.ratio) ? '' : `${spread.ratio.toFixed(2)}x`);
+export const formatSpread = (spread: ProfileSpread): string => (spread.ratio === null || !Number.isFinite(spread.ratio) ? '' : formatFactor(spread.ratio));
 
 /**
  * What a measured comparison came out as, once the ladder's five settled rungs
@@ -636,6 +884,11 @@ export const SUMMARY_OF: Readonly<Record<CellOutcome, SummaryState | null>> = {
   loss: 'behind',
   'clear-loss': 'behind',
   unstable: 'unclear',
+  // Counted on its own line rather than folded into `unclear`: those runs
+  // disagreed about a comparison that was made, while these never resolved one.
+  'timer-limited': null,
+  // Not judged rather than judged inconclusive, and counted as neither.
+  'timer-unknown': null,
   absent: null,
 };
 
@@ -682,6 +935,9 @@ const tally = (key: string, group: string, label: string, arm: string, meta: str
   return { key, group, label, arm, meta, counts, summary, measured, total: cells.length };
 };
 
+/** Which measured domain a view is showing. */
+export type BenchDomain = 'rendering' | 'physics';
+
 /**
  * The scoreboard, one line per arm a domain was measured against.
  *
@@ -689,9 +945,12 @@ const tally = (key: string, group: string, label: string, arm: string, meta: str
  * different opponents into one strip, so a reader would see a mix that belongs
  * to neither of them. Nothing is summed across lines and no line is ranked
  * against another, because the arms answer different questions.
+ *
+ * Pass `domain` to keep the lines of one domain only; without it the document's
+ * whole scoreboard is returned.
  */
-export const comparisonTallies = (document: BenchProfileDocument): readonly ComparisonTally[] => [
-  ...(document.rendering?.backends ?? []).flatMap(backend =>
+export const comparisonTallies = (document: BenchProfileDocument, domain?: BenchDomain): readonly ComparisonTally[] => [
+  ...(domain === 'physics' ? [] : (document.rendering?.backends ?? [])).flatMap(backend =>
     backend.competitors.map(arm =>
       tally(
         `${backend.backend}-${arm}`,
@@ -703,7 +962,7 @@ export const comparisonTallies = (document: BenchProfileDocument): readonly Comp
       ),
     ),
   ),
-  ...(document.physics === undefined
+  ...(document.physics === undefined || domain === 'rendering'
     ? []
     : armsOfSection(document.physics.section).map(arm =>
         tally(
@@ -726,9 +985,9 @@ export const comparisonTallies = (document: BenchProfileDocument): readonly Comp
  * longer support. A profile carrying only one domain yields a shorter line
  * instead of a padded one.
  */
-export const profileScope = (document: BenchProfileDocument): string => {
-  const rendering = renderingCells(document);
-  const physics = physicsCells(document);
+export const profileScope = (document: BenchProfileDocument, domain?: BenchDomain): string => {
+  const rendering = domain === 'physics' ? [] : renderingCells(document);
+  const physics = domain === 'rendering' ? [] : physicsCells(document);
   const parts: string[] = [];
 
   if (rendering.length > 0) parts.push(`${String(rendering.length)} rendering comparisons against ${listOf(armsIn(rendering).map(armLabel))}`);
@@ -736,3 +995,7 @@ export const profileScope = (document: BenchProfileDocument): string => {
 
   return parts.join(' · ');
 };
+
+/** True when the profile carries measurements for this domain. */
+export const coversDomain = (document: BenchProfileDocument, domain: BenchDomain): boolean =>
+  domain === 'rendering' ? document.rendering !== undefined : document.physics !== undefined;

@@ -22,6 +22,7 @@
  */
 
 import {
+  archetypeDescription,
   armLabel,
   armsOfSection,
   BACKEND_LABELS,
@@ -59,6 +60,7 @@ export interface ComparisonRow {
   readonly section: string | null;
   /** The size every column measured this row at, or `null` where they differ. */
   readonly count: number | null;
+  readonly description?: string;
   readonly entries: readonly ComparisonEntry[];
 }
 
@@ -70,7 +72,35 @@ export interface ComparisonTable {
   readonly unit: string;
   /** True where the rows were measured at different sizes, so the size belongs in a column of its own. */
   readonly countColumn: boolean;
+  /** Index of the column a narrow reader is shown first; see {@link PREFERRED_COLUMN_KEYS}. */
+  readonly defaultColumn: number;
 }
+
+/**
+ * Which comparison a stacked view opens on, most preferred first.
+ *
+ * An editorial choice about the entry point, fixed here rather than computed
+ * from the measurements. A rule such as "the arm ExoJS leads on fewest rows"
+ * reads as fairness but is not one: an arm can lead on few rows because it was
+ * compared on few, or because most of its runs disagreed - and a later
+ * correction to how a comparison is judged would then silently move the view a
+ * reader lands on, without anything about the navigation having changed.
+ *
+ * The list names keys, so a profile that never measured the first entry falls
+ * through to the next and finally to the leftmost column that exists.
+ */
+const PREFERRED_COLUMN_KEYS: readonly string[] = ['webgl2-pixi', 'webgpu-pixi', 'webgl2-phaser', 'matter-js', 'planck'];
+
+/** The first preferred column this table actually has, or its leftmost one. */
+const preferredColumn = (columns: readonly ComparisonColumn[]): number => {
+  for (const key of PREFERRED_COLUMN_KEYS) {
+    const index = columns.findIndex(column => column.key === key);
+
+    if (index !== -1) return index;
+  }
+
+  return 0;
+};
 
 const entryOf = (key: string, row: ProfileRow | undefined, arm: string): ComparisonEntry => ({
   key,
@@ -116,10 +146,17 @@ export const renderingComparison = (document: BenchProfileDocument): ComparisonT
     });
     const counts = [...new Set(entries.map(entry => entry.count).filter((count): count is number => count !== null))];
 
-    return { key: archetype, archetype, section, count: counts.length === 1 ? (counts[0] ?? null) : null, entries };
+    return {
+      key: archetype,
+      archetype,
+      section,
+      count: counts.length === 1 ? (counts[0] ?? null) : null,
+      description: archetypeDescription(archetype),
+      entries,
+    };
   });
 
-  return { columns, rows, unit: 'nodes', countColumn: false };
+  return { columns, rows, unit: 'nodes', countColumn: false, defaultColumn: preferredColumn(columns) };
 };
 
 const singleBlockTable = (
@@ -130,11 +167,13 @@ const singleBlockTable = (
   countColumn: boolean,
 ): ComparisonTable => ({
   columns,
+  defaultColumn: preferredColumn(columns),
   rows: rows.map(row => ({
     key: row.archetype,
     archetype: row.archetype,
     section: null,
     count: row.count,
+    description: archetypeDescription(row.archetype),
     entries: arms.map(arm => entryOf(arm, row, arm)),
   })),
   unit,
