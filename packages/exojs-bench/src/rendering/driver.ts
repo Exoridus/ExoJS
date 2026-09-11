@@ -15,10 +15,11 @@ import {
 } from '../shared/provenance';
 import type { ViteDevServer } from '../shared/viteServer';
 import { readEngineVersion, RENDERING_LIBRARY_ARMS, startViteServer as startPageServer } from '../shared/viteServer';
+import type { RunPlan } from '../suite/plan';
 import { buildMatrix } from './archetypes';
 import type { ArchetypeSpec, Backend, CellResult, CellSpec, EngineAdapter } from './EngineAdapter';
 import type { MatrixSelection } from './selection';
-import { applySelection } from './selection';
+import { applyPlan, applySelection } from './selection';
 import { usesRenderTargets } from './traits';
 import { isScrolling } from './world';
 
@@ -923,6 +924,33 @@ export interface MatrixOutcome {
  * `onCellResult` (optional) fires after every cell so the caller can persist it
  * immediately; the returned {@link MatrixOutcome} is the same set aggregated.
  */
+/** The cell selection one matrix invocation would measure, resolved without touching a browser. */
+export interface MatrixCellSelection {
+  readonly backends: readonly Backend[];
+  readonly plan?: RunPlan;
+  readonly filter?: Partial<CellSpec>;
+  readonly selection?: MatrixSelection;
+  readonly timedFramesOverride?: number;
+}
+
+/**
+ * Resolve the cells a run would measure: the capability-gated matrix narrowed by
+ * the suite plan, then by the free filter, then by the multi-value selection.
+ *
+ * Exported so `--dry-run` can report the real planned workload - cell count,
+ * frame budgets, arms - from the same code path the run itself uses. A dry run
+ * derived from a second, parallel enumeration would be a description of a run
+ * nobody performs.
+ */
+export const resolveMatrixCells = (options: MatrixCellSelection): CellSpec[] => {
+  const allCells = buildMatrix([...ADAPTER_CAPABILITIES, ...requestedCalibrationArms(options.selection)], options.backends);
+  const planned = options.plan ? applyPlan(allCells, options.plan) : allCells;
+  const filtered = options.filter ? applyFilter(planned, options.filter) : planned;
+  const selected = options.selection ? applySelection(filtered, options.selection) : filtered;
+
+  return options.timedFramesOverride === undefined ? selected : selected.map(cell => ({ ...cell, timedFrames: options.timedFramesOverride! }));
+};
+
 export const runMatrix = async (options: {
   backends: readonly Backend[];
   /**
@@ -942,6 +970,13 @@ export const runMatrix = async (options: {
    * is detected from its own version string and needs no declaration.
    */
   platform?: PlatformDeclaration;
+  /**
+   * Resolved suite plan restricting the matrix to the loads that plan selects,
+   * applied BEFORE `filter` and `selection` so a free filter narrows within the
+   * plan. Omitted, the run covers each archetype's own full ladder, which is
+   * what an unqualified `bench` invocation has always meant.
+   */
+  plan?: RunPlan;
   filter?: Partial<CellSpec>;
   /** Multi-value selection applied after `filter`; see {@link MatrixSelection}. */
   selection?: MatrixSelection;
@@ -969,10 +1004,7 @@ export const runMatrix = async (options: {
 }): Promise<MatrixOutcome> => {
   const engineVersion = readEngineVersion();
   const libraries = readLibraryProvenance(RENDERING_LIBRARY_ARMS);
-  const allCells = buildMatrix([...ADAPTER_CAPABILITIES, ...requestedCalibrationArms(options.selection)], options.backends);
-  const filtered = options.filter ? applyFilter(allCells, options.filter) : allCells;
-  const selected = options.selection ? applySelection(filtered, options.selection) : filtered;
-  const cells = options.timedFramesOverride === undefined ? selected : selected.map(cell => ({ ...cell, timedFrames: options.timedFramesOverride! }));
+  const cells = resolveMatrixCells(options);
 
   if (cells.length === 0) {
     throw new Error('The baseline matrix is empty: no adapter supports the requested backends/filter.');

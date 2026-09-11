@@ -7,6 +7,7 @@
   "scripts": {
     "bench:setup": "pnpm install --dir competitors --frozen-lockfile && node competitors/link.ts",
     "bench": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/run.ts",
+    "bench:reference": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/run.ts --suite=reference --domain=all",
     "perf:baseline": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/run.ts",
     "gate:timing": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/runTimingGate.ts",
     "gate:structural": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/runStructuralGate.ts",
