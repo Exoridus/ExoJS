@@ -1,0 +1,230 @@
+---
+/**
+ * One scenario's result card: what the scene is, how heavy it was, and how long
+ * each library took.
+ *
+ * Times are drawn on a LINEAR scale from zero within the card, so a bar's length
+ * is the time it shows and two bars can be read against each other directly.
+ * There is no log scale and no ratio axis: both require the reader to learn the
+ * axis before they can read the result, and both make a small difference look
+ * like a large one.
+ *
+ * A card compares the arms WITHIN one load. It never compares two loads or two
+ * cards against each other - those are different scenes, and the harness makes
+ * no claim about them.
+ */
+
+import { archetypeDescription, archetypeTitle, formatMs, OUTCOME_LABELS } from '../lib/bench-profiles';
+import type { BenchCard } from '../lib/bench-cards';
+import { openingLoad } from '../lib/bench-cards';
+
+interface Props {
+    card: BenchCard;
+    /** Anchor prefix, so a rendering and a physics card of one name stay distinct. */
+    domain: 'rendering' | 'physics';
+}
+
+const { card, domain } = Astro.props;
+const opening = openingLoad(card);
+const description = archetypeDescription(card.id);
+
+/**
+ * Bar width for one figure, as a percentage of the card's slowest arm.
+ *
+ * A measured figure always gets at least a sliver, so a very fast arm stays
+ * visible - but the sliver is deliberately narrow enough that nobody reads it as
+ * a quantity. An absent figure gets no bar at all rather than a zero-length one:
+ * zero would say the arm took no time, which is the opposite of what happened.
+ */
+const widthOf = (ms: number | null, maxMs: number): number | null => (ms === null || !Number.isFinite(ms) || maxMs <= 0 ? null : Math.max(1.5, (ms / maxMs) * 100));
+---
+
+<article class="card" id={`${domain}-${card.id}`}>
+    <header>
+        <h3>{archetypeTitle(card.id)}</h3>
+        {description !== undefined && <p class="what">{description}</p>}
+    </header>
+
+    {card.loads.length > 1 && (
+        <div class="loads" role="group" aria-label="Load">
+            {card.loads.map(load => (
+                <button type="button" class="load" data-load={load.id} aria-pressed={load.id === opening?.id ? 'true' : 'false'}>
+                    {load.label}
+                </button>
+            ))}
+        </div>
+    )}
+
+    {card.loads.map(load => (
+        <div class="panel" data-load={load.id} hidden={load.id !== opening?.id}>
+            <p class="at">{load.label}</p>
+
+            <ul class="arms">
+                {load.arms.map(arm => (
+                    <li class:list={['arm', { reference: arm.reference, absent: arm.ms === null }]}>
+                        <span class="name">{arm.label}</span>
+                        <span class="track">
+                            {widthOf(arm.ms, load.maxMs) !== null && <span class="bar" style={`width:${String(widthOf(arm.ms, load.maxMs))}%`} />}
+                        </span>
+                        <span class="time">
+                            {arm.ms === null ? OUTCOME_LABELS[arm.outcome] : formatMs(arm.ms)}
+                            {arm.ms !== null && <span class="unit">ms</span>}
+                            {arm.overFrameBudget && <span class="over" title="Past a whole 60 fps frame">!</span>}
+                        </span>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    ))}
+</article>
+
+<style>
+    .card {
+        border: 1px solid var(--color-border);
+        border-radius: 0.75rem;
+        padding: 1rem 1.1rem 1.1rem;
+        background: var(--color-surface);
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+    }
+
+    .card h3 {
+        margin: 0;
+        font-size: 1.02rem;
+        line-height: 1.25;
+    }
+
+    .what {
+        margin: 0.25rem 0 0;
+        font-size: 0.82rem;
+        line-height: 1.4;
+        color: var(--color-text-muted);
+    }
+
+    .loads {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+    }
+
+    .load {
+        font: inherit;
+        font-size: 0.76rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 999px;
+        border: 1px solid var(--color-border);
+        background: transparent;
+        color: var(--color-text-muted);
+        cursor: pointer;
+    }
+
+    .load[aria-pressed='true'] {
+        border-color: var(--color-accent);
+        color: var(--color-accent);
+        font-weight: 600;
+    }
+
+    .at {
+        margin: 0 0 0.5rem;
+        font-size: 0.78rem;
+        color: var(--color-text-muted);
+    }
+
+    .arms {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .arm {
+        display: grid;
+        grid-template-columns: 5.5rem 1fr auto;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.82rem;
+    }
+
+    .arm.reference .name {
+        font-weight: 650;
+        color: var(--color-text);
+    }
+
+    .name {
+        color: var(--color-text-muted);
+        overflow-wrap: anywhere;
+    }
+
+    .track {
+        height: 0.55rem;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--color-border) 55%, transparent);
+        overflow: hidden;
+    }
+
+    .bar {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: color-mix(in srgb, var(--color-text-muted) 65%, transparent);
+    }
+
+    .arm.reference .bar {
+        background: var(--color-accent);
+    }
+
+    .time {
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+    .arm.absent .time {
+        color: var(--color-text-muted);
+        font-size: 0.76rem;
+    }
+
+    .unit {
+        color: var(--color-text-muted);
+        margin-left: 0.15rem;
+        font-size: 0.76rem;
+    }
+
+    .over {
+        color: var(--color-warning, #b45309);
+        margin-left: 0.3rem;
+        font-weight: 700;
+    }
+
+    @media (max-width: 34rem) {
+        .arm {
+            grid-template-columns: 4.5rem 1fr auto;
+            font-size: 0.78rem;
+        }
+    }
+</style>
+
+<script>
+    // Load switching is per card and nothing else on the page depends on it, so
+    // it stays a listener on the card rather than shared state. Without
+    // JavaScript every panel but the opening one is `hidden`, which is the same
+    // thing the buttons toggle - so the card still shows a real measured load.
+    for (const card of document.querySelectorAll<HTMLElement>('.card')) {
+        const buttons = card.querySelectorAll<HTMLButtonElement>('.load');
+        const panels = card.querySelectorAll<HTMLElement>('.panel');
+
+        for (const button of buttons) {
+            button.addEventListener('click', () => {
+                for (const other of buttons) {
+                    other.setAttribute('aria-pressed', String(other === button));
+                }
+
+                for (const panel of panels) {
+                    panel.hidden = panel.dataset['load'] !== button.dataset['load'];
+                }
+            });
+        }
+    }
+</script>

@@ -108,19 +108,50 @@ export interface ProfileCell {
 }
 
 /**
- * One published row: an archetype at the count it was measured at.
+ * One published row: an archetype at one load.
  *
- * A rendering row carries its block's single node count. A physics row carries
- * its own body count, because the physics archetypes have per-archetype ladders -
- * so two physics rows are never comparable with each other, only the arms within
- * one row are.
+ * An archetype measured at several loads publishes a row per load. A reader
+ * compares the arms WITHIN a row, which is like for like by construction, and
+ * never two rows against each other: two loads are two different scenes, as are
+ * two archetypes.
  */
 export interface ProfileRow {
   readonly archetype: string;
   readonly category: string;
   readonly count: number;
+  /**
+   * Catalog load id, e.g. `10k`. Absent in profiles written before rows carried
+   * their load, where an archetype appears exactly once.
+   */
+  readonly loadId?: string;
+  /** Unit {@link count} is quoted in, so a figure is never shown without one. */
+  readonly unit?: LoadUnit;
+  /** Whether this is the scenario's headline load - the one a card opens on. */
+  readonly primary?: boolean;
+  /** Display label for a load the count/unit pair cannot state, e.g. a resolution. */
+  readonly label?: string;
   readonly cells: readonly ProfileCell[];
 }
+
+/**
+ * Unit a load is counted in.
+ *
+ * Carried per row rather than assumed per domain: the same figure means scene
+ * nodes in one scenario and world tiles in another, and those are not the same
+ * claim.
+ */
+export type LoadUnit = 'sprites' | 'nodes' | 'labels' | 'tiles' | 'layers' | 'particles' | 'widgets' | 'rects' | 'bodies' | 'viewport';
+
+/** How a load reads beside its figure: `10,000 sprites`, or the row's own label. */
+export const formatLoad = (row: ProfileRow): string => {
+  if (row.label !== undefined) {
+    return row.label;
+  }
+
+  const figure = row.count.toLocaleString('en-US');
+
+  return row.unit === undefined ? figure : `${figure} ${row.unit}`;
+};
 
 /** A category section of a published table. */
 export interface ProfileSection {
@@ -384,6 +415,8 @@ export const BACKEND_LABELS: Readonly<Record<ProfileBackendName, string>> = { we
  * harness never silently renames it here.
  */
 const ARM_LABELS: Readonly<Record<string, string>> = {
+  exojs: 'ExoJS',
+  'exojs-physics': 'ExoJS',
   pixi: 'PixiJS',
   excalibur: 'Excalibur',
   phaser: 'Phaser',
@@ -435,7 +468,62 @@ const ARCHETYPE_DESCRIPTIONS: Readonly<Record<string, string>> = {
   'body-churn': 'Bodies rebuilt every step; stresses broad-phase repair and lifecycle work.',
   joints: 'Constraint chains; stresses impulse propagation through joints.',
   'settling-pile': 'A dissipating pile; exposes steady-state settling and sleeping behavior.',
+  'dynamic-all': 'Every sprite moving every frame; stresses transform and upload work at full mutation.',
+  'fill-layers': 'Stacked translucent full-screen layers; stresses blended fill.',
+  'tilemap-scroll': 'A large tile map scrolling past a fixed window; stresses the tile draw path.',
+  'tilemap-edit': 'Tile ids replaced every frame; stresses getting a tile change to the GPU.',
+  'particles-draw': 'A fixed set of quads submitted through the particle path; no simulation.',
+  'particles-lifecycle': 'A steady particle effect: ageing, movement, fading and respawning.',
 };
+
+/**
+ * A scenario's title, as a card names it.
+ *
+ * Plain words rather than the archetype id: the id is the contract with the
+ * harness and belongs in the details, while the card has to be readable by
+ * someone who has never run the benchmark.
+ */
+const ARCHETYPE_TITLES: Readonly<Record<string, string>> = {
+  'static-heavy': 'Static scene',
+  'dynamic-heavy': 'Scene with few changes',
+  'dynamic-all': 'Fully moving sprites',
+  'deep-hierarchy': 'Deep scene hierarchy',
+  overdraw: 'Overdraw ceiling',
+  'fill-layers': 'Transparent screen layers',
+  'batch-breaking': 'Many texture changes',
+  'batch-breaking-atlased': 'Same scene, atlased',
+  'split-screen': 'Split screen',
+  'mixed-blend': 'Mixed blend modes',
+  'mixed-material': 'Custom materials',
+  'mixed-material-atlased': 'Custom materials, atlased',
+  'instanced-batch': 'Instanced submission',
+  'mixed-sprite-mesh-array': 'Sprites and array meshes',
+  'mixed-sprite-mesh-static': 'Sprites and static meshes',
+  'scrolling-world': 'Camera over a sprite world',
+  'text-static': 'Static labels',
+  'text-dynamic': 'Changing labels',
+  'lifecycle-churn': 'Creating and destroying objects',
+  'filter-chain-1': 'One filter pass',
+  'filter-chain-2': 'Two filter passes',
+  'filter-chain-4': 'Four filter passes',
+  'mask-clip': 'Clipping',
+  'mask-clip-animated': 'Moving clip',
+  composite: 'Composited effect',
+  'tilemap-scroll': 'Large tile map',
+  'tilemap-edit': 'Editing tiles',
+  'particles-draw': 'Drawing particles',
+  'particles-lifecycle': 'Particle effect',
+  'box-stack': 'Box stack',
+  'many-dynamic': 'Many active bodies',
+  'mixed-static-dynamic': 'Static level, falling bodies',
+  raycast: 'Ray queries',
+  'body-churn': 'Bodies created and destroyed',
+  joints: 'Joint chains',
+  'settling-pile': 'Settling pile',
+};
+
+/** The readable title for a scenario, falling back to its id where none is written. */
+export const archetypeTitle = (archetype: string): string => ARCHETYPE_TITLES[archetype] ?? archetype;
 
 /** The one-line workload description for an archetype, or `undefined` where none is written. */
 export const archetypeDescription = (archetype: string): string | undefined => ARCHETYPE_DESCRIPTIONS[archetype];
