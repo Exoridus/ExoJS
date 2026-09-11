@@ -441,3 +441,77 @@ describe('renderer / hit-test agreement', () => {
     im.destroy();
   });
 });
+
+describe('nodeAt', () => {
+  it('resolves a point to the same node the pointer path would', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionSystem(app);
+
+    im.attachRoot(scene.root);
+
+    const below = overlapping();
+    const above = overlapping();
+
+    above.zIndex = 10;
+    scene.root.addChild(below);
+    scene.root.addChild(above);
+
+    expect(im.nodeAt(50, 50)).toBe(above);
+    expect(im.nodeAt(50, 50)).toBe(pick(im, signals, scene, 50, 50));
+
+    im.destroy();
+  });
+
+  it('returns null where the point hits nothing interactive', () => {
+    const { app, scene } = createApp();
+    const im = new InteractionSystem(app);
+
+    im.attachRoot(scene.root);
+    scene.root.addChild(overlapping());
+
+    expect(im.nodeAt(500, 500)).toBeNull();
+
+    im.destroy();
+  });
+
+  it('leaves hover state alone, so a query cannot be mistaken for a pointer having moved', () => {
+    const { app, scene } = createApp();
+    const im = new InteractionSystem(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = overlapping();
+
+    scene.root.addChild(sprite);
+
+    expect(im.nodeAt(50, 50)).toBe(sprite);
+    // No pointer has moved, so nothing is hovered and no enter/leave pair was
+    // owed to anyone - a query that updated this would make the next real event
+    // skip the enter it should have fired.
+    expect(im.getHoveredNode()).toBeNull();
+    expect(im.getCapturedNodes()).toHaveLength(0);
+
+    im.destroy();
+  });
+
+  it('respects visibility and hit-test flags, like every other resolution', () => {
+    const { app, scene } = createApp();
+    const im = new InteractionSystem(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = overlapping();
+
+    scene.root.addChild(sprite);
+    sprite.visible = false;
+
+    expect(im.nodeAt(50, 50)).toBeNull();
+
+    sprite.visible = true;
+    sprite.interactive = false;
+
+    expect(im.nodeAt(50, 50)).toBeNull();
+
+    im.destroy();
+  });
+});

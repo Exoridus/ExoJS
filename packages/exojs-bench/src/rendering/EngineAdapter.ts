@@ -16,6 +16,7 @@ export type ArchetypeId =
   | 'tilemap-edit'
   | 'particles-draw'
   | 'particles-lifecycle'
+  | 'fx-blur'
   | 'batch-breaking'
   | 'batch-breaking-atlased'
   | 'split-screen'
@@ -286,6 +287,16 @@ export interface ArchetypeSpec {
    * they are separate archetypes. See `particles.ts` for the shared scene.
    */
   readonly particles?: 'draw' | 'lifecycle';
+  /**
+   * Blur reach in logical pixels for the effect scene, or `undefined` for every
+   * archetype that renders no blur.
+   *
+   * Setting it replaces the scene with ONE textured quad under a separable
+   * two-pass Gaussian blur, and the node count becomes the HEIGHT of that quad
+   * rather than a number of nodes - the scene measures how a blur scales with
+   * the area it covers, which is what an effect pass actually costs.
+   */
+  readonly blurRadius?: number;
   /**
    * Number of chained post-process filters applied to the scene root, or
    * `undefined` for the unfiltered scene every other archetype builds.

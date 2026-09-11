@@ -32,6 +32,7 @@ import { View } from '#rendering/View';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
+import { BLUR_TAPS_PER_SIDE } from '../archetypes';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
 import {
   isParticleLifecycle,
@@ -43,7 +44,7 @@ import {
   PARTICLE_TINT,
   particleSeedAt,
 } from '../particles';
-import { createDistinctTextureCanvas, createParticleCanvas, createTileAtlasCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
+import { createBlurSourceCanvas, createDistinctTextureCanvas, createParticleCanvas, createTileAtlasCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
 import type { TilemapExtent } from '../tilemap';
 import {
   isTilemap,
@@ -57,10 +58,12 @@ import {
   tilemapExtent,
 } from '../tilemap';
 import {
+  blurRadius,
   compositeBlurRadius,
   filterChainDepth,
   hasFullViewportLeaves,
   hasMaskMotion,
+  isBlurEffect,
   isChurning,
   isTextArchetype,
   isTextUpdating,
@@ -687,6 +690,42 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
     particleLifetime = null;
   };
 
+  /** The blur scene's texture, kept so teardown releases it. */
+  let blurTexture: Texture | null = null;
+
+  /**
+   * Build the blur scene: one textured quad under a separable two-pass Gaussian.
+   *
+   * A single quad on purpose - the archetype measures the filter's own target
+   * passes, and a scene of nodes would mix traversal cost into a figure about an
+   * effect. The node count is the filtered HEIGHT; the quad keeps a 16:9 shape,
+   * so the count scales the area the blur has to cover.
+   */
+  const buildBlurScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const texture = new Texture(createBlurSourceCanvas());
+    const sprite = new Sprite(texture);
+    const height = nodeCount;
+    const width = Math.round((height * 16) / 9);
+
+    sprite.width = width;
+    sprite.height = height;
+    sprite.setPosition((VIEWPORT_WIDTH - width) / 2, (VIEWPORT_HEIGHT - height) / 2);
+
+    root = new Container();
+    root.addChild(sprite);
+    // Nine taps at the archetype's reach: `quality` is taps per side, so 4 gives
+    // the 4 + 1 + 4 the shared contract asks for.
+    root.filters = [new BlurFilter({ radius: blurRadius(spec), quality: BLUR_TAPS_PER_SIDE })];
+
+    blurTexture = texture;
+  };
+
+  /** Drop the blur scene's texture so a rebuild (or teardown) leaks nothing. */
+  const releaseBlur = (): void => {
+    blurTexture?.destroy();
+    blurTexture = null;
+  };
+
   return {
     engine: 'exojs',
     config,
@@ -744,6 +783,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       releaseComposite();
       releaseTilemap();
       releaseParticles();
+      releaseBlur();
       sharedMeshGeometry?.destroy();
       sharedMeshGeometry = null;
 
@@ -759,6 +799,12 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       // in the system's own storage rather than in the scene graph.
       if (isParticles(spec)) {
         buildParticleScene(spec, nodeCount);
+
+        return;
+      }
+
+      if (isBlurEffect(spec)) {
+        buildBlurScene(spec, nodeCount);
 
         return;
       }
