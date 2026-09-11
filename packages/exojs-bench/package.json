@@ -21,7 +21,9 @@
   "devDependencies": {
     "@codexo/exojs": "workspace:*",
     "@codexo/exojs-config": "workspace:*",
+    "@codexo/exojs-particles": "workspace:*",
     "@codexo/exojs-physics": "workspace:*",
+    "@codexo/exojs-tilemap": "workspace:*",
     "@types/node": "^26.4.0",
     "@webgpu/types": "^0.1.69",
     "playwright": "^1.62.1",

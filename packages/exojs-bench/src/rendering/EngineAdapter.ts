@@ -12,6 +12,8 @@ export type ArchetypeId =
   | 'deep-hierarchy'
   | 'overdraw'
   | 'fill-layers'
+  | 'tilemap-scroll'
+  | 'tilemap-edit'
   | 'batch-breaking'
   | 'batch-breaking-atlased'
   | 'split-screen'
@@ -38,7 +40,8 @@ export type ArchetypeId =
  * several archetypes into one number, and any average over them hides the worst
  * cell. Nothing in the report aggregates across archetypes.
  */
-export type ArchetypeCategory = 'node-scaling' | 'fill-and-state' | 'material-variety' | 'text' | 'render-targets' | 'camera-and-world' | 'submission';
+export type ArchetypeCategory =
+  'node-scaling' | 'fill-and-state' | 'material-variety' | 'text' | 'render-targets' | 'camera-and-world' | 'submission' | 'tilemaps';
 
 /** Structural definition of a scene archetype, independent of any engine or backend. */
 export interface ArchetypeSpec {
@@ -258,6 +261,18 @@ export interface ArchetypeSpec {
    * happens to have, which is a different comparison.
    */
   readonly leafAlpha?: number;
+  /**
+   * Renders a tilemap instead of a sprite scene, and whether the scene also
+   * edits tiles.
+   *
+   * `'scroll'` scrolls a fully-populated map past a fixed viewport; `'edit'` does
+   * the same and additionally replaces a fixed number of VISIBLE tile ids every
+   * frame, so the arm has to submit the change before it draws. The node count is
+   * the map's total tile count, not its visible one - a large world with a small
+   * window is the point, and `tilemap.ts` maps the count onto the map's
+   * dimensions.
+   */
+  readonly tilemap?: 'scroll' | 'edit';
   /**
    * Number of chained post-process filters applied to the scene root, or
    * `undefined` for the unfiltered scene every other archetype builds.

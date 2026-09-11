@@ -36,6 +36,22 @@ const DYNAMIC_ALL_COUNTS = [1_000, 10_000, 100_000] as const;
 const FILL_LAYER_COUNTS = [8, 32, 128] as const;
 
 /**
+ * World tile totals for the tilemap scenes. The visible window is the same at
+ * every rung - 1280x720 over 32 px tiles is about 41x23 tiles - so the ladder
+ * sweeps how large a map an arm can hold rather than how much of it it draws.
+ * `tilemap.ts` maps each count onto the map's dimensions.
+ */
+const TILEMAP_COUNTS = [10_000, 100_000, 1_000_000] as const;
+
+/**
+ * World tile totals for the editing scene. It stops below the million the
+ * scrolling scene reaches: an edit is submitted per frame, and at a million tiles
+ * an arm that has to repack or re-upload a whole map's worth of data would be
+ * measured on its allocator rather than on its tile path.
+ */
+const TILEMAP_EDIT_COUNTS = [10_000, 100_000] as const;
+
+/**
  * Characters per text leaf across both text archetypes. Twelve is the length of
  * an ordinary label (a score, a name, a damage number) - long enough that layout
  * and glyph iteration dominate the per-node cost, short enough that no arm's
@@ -535,6 +551,48 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // `mask-clip` with every rect moving each frame: the delta against the row
   // above is what an effect change alone costs the retained products around
   // it, which is the shape of every scrolling clip.
+  // TILEMAPS. The one scene shape practically every 2D game has and that no
+  // sprite archetype describes: a world far larger than the viewport, drawn
+  // through a dedicated tile path rather than one node per tile.
+  //
+  // `scrolling-world` is NOT this test. It lays independent sprite nodes over a
+  // world a few viewports across, and its per-node cost is the finding; here the
+  // world is a hundred thousand tiles, the visible window never changes size, and
+  // what is being compared is each arm's tile path - an instanced chunk renderer,
+  // an imperatively painted quad buffer, a shader over a data texture.
+  //
+  // `nodeCount` is the WORLD tile total, so the ladder says how large a map an
+  // arm can hold, not how much of it is on screen. The visible tile count is
+  // fixed by the viewport at every rung, which is exactly what makes the two
+  // questions separable. See `tilemap.ts` for the shared map, camera and edits.
+  {
+    id: 'tilemap-scroll',
+    category: 'tilemaps',
+    crossArm: true,
+    nodeCounts: TILEMAP_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: true,
+    tilemap: 'scroll',
+  },
+  // The same map and the same camera, with visible tile ids replaced every frame.
+  // The delta against the row above is what submitting a tile change costs -
+  // which is where the three tile paths differ most sharply, because a shader
+  // reading a data texture has to re-upload it, a chunked quad buffer has to
+  // repack the affected chunk, and an instanced renderer has to invalidate the
+  // chunk's cached geometry.
+  {
+    id: 'tilemap-edit',
+    category: 'tilemaps',
+    crossArm: true,
+    nodeCounts: TILEMAP_EDIT_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: true,
+    tilemap: 'edit',
+  },
   {
     id: 'mask-clip-animated',
     category: 'render-targets',

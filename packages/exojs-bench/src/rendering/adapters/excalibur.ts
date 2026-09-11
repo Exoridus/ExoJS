@@ -3,6 +3,7 @@ import * as ex from 'excalibur';
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
 import { createDigitAtlasCanvas, createDistinctTextureCanvas, DIGIT_ALPHABET, DIGIT_CELL_HEIGHT, DIGIT_CELL_WIDTH, TEXT_FONT_SIZE } from '../sceneAssets';
+import { isTilemap } from '../tilemap';
 import { hasFullViewportLeaves, isChurning, isTextArchetype, isTextUpdating, leafAlpha, textForLeaf, usesRenderTargets } from '../traits';
 import { GRID_MARGIN, gridLayout, gridPosition, isScrolling, SPRITE_SIZE, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '../world';
 
@@ -127,7 +128,15 @@ export const createExcaliburAdapter = (): EngineAdapter => {
       // equivalent API at all: its `PostProcessor` chain is a full-SCREEN pass
       // rather than a filtered subtree, and it ships no mask source, so those
       // cells could only be approximated - which the fairness rule forbids.
-      return !isScrolling(spec) && !usesRenderTargets(spec);
+      //
+      // The tilemap archetypes are sat out for a capability reason rather than a
+      // policy one. Excalibur 0.32's `TileMap` is a grid of `Tile`s each holding
+      // its own graphics list, drawn through the ordinary graphics path - there
+      // is no dedicated tile submission path of the kind the other three arms
+      // are being compared on, so its cell would answer a different question
+      // than the row it sat in. Building one here would mean writing the arm's
+      // missing feature rather than adapting to it.
+      return !isScrolling(spec) && !usesRenderTargets(spec) && !isTilemap(spec);
     },
 
     async init(canvas: HTMLCanvasElement, target: Backend): Promise<void> {

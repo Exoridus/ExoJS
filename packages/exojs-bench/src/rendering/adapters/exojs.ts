@@ -1,3 +1,5 @@
+import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
+
 import { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Matrix } from '#math/Matrix';
@@ -22,13 +24,26 @@ import { Sprite } from '#rendering/sprite/Sprite';
 import { Text } from '#rendering/text/Text';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
+import { TextureRegion } from '#rendering/texture/TextureRegion';
 import { BlendModes } from '#rendering/types';
 import { View } from '#rendering/View';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
-import { createDistinctTextureCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
+import { createDistinctTextureCanvas, createTileAtlasCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
+import type { TilemapExtent } from '../tilemap';
+import {
+  isTilemap,
+  isTilemapEditing,
+  TILE_SIZE,
+  TILE_VARIANTS,
+  tileIdAt,
+  tilemapCameraAt,
+  tilemapCameraFrameFor,
+  tilemapEditsAt,
+  tilemapExtent,
+} from '../tilemap';
 import {
   compositeBlurRadius,
   filterChainDepth,
@@ -467,6 +482,87 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
     views = [];
   };
 
+  /** The tile layer the tilemap scenes paint into, or `null` for every other archetype. */
+  let tileLayer: TileLayer | null = null;
+
+  /** The tileset the tile layer draws from, kept so teardown releases its texture. */
+  let tileTexture: Texture | null = null;
+
+  /** The tilemap scene's root node, and the map extent its camera is bounded by. */
+  let tilemapNode: TileMapNode | null = null;
+  let tilemapSpec: ArchetypeSpec | null = null;
+  let tilemapMapExtent: TilemapExtent = { width: 0, height: 0 };
+
+  /**
+   * Build the tilemap scene: one fully-populated layer over a single-page
+   * tileset, rendered through the package's own chunk renderer.
+   *
+   * Every tile is written at build time, outside the timed window - the scenes
+   * compare drawing and editing a populated map, not populating one. The camera
+   * is the View's, as it is for `scrolling-world`: the engine has a real camera,
+   * and its rect is what the chunk culling and the retained products are keyed
+   * on.
+   */
+  const buildTilemapScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const extent = tilemapExtent(nodeCount);
+    const texture = new Texture(createTileAtlasCanvas());
+    const tileset = new TileSet({
+      name: 'tiles',
+      texture: new TextureRegion(texture, { x: 0, y: 0, width: TILE_SIZE * TILE_VARIANTS, height: TILE_SIZE }),
+      tileWidth: TILE_SIZE,
+      tileHeight: TILE_SIZE,
+      tileCount: TILE_VARIANTS,
+    });
+    const layer = new TileLayer({
+      id: 1,
+      name: 'ground',
+      width: extent.width,
+      height: extent.height,
+      tileWidth: TILE_SIZE,
+      tileHeight: TILE_SIZE,
+      tilesets: [tileset],
+    });
+
+    for (let y = 0; y < extent.height; y += 1) {
+      for (let x = 0; x < extent.width; x += 1) {
+        layer.setTileAt(x, y, { tileset, localTileId: tileIdAt(x, y), transform: TILE_TRANSFORM_IDENTITY });
+      }
+    }
+
+    const map = new TileMap({
+      name: 'benchmark',
+      width: extent.width,
+      height: extent.height,
+      tileWidth: TILE_SIZE,
+      tileHeight: TILE_SIZE,
+      tilesets: [tileset],
+      layers: [layer],
+    });
+
+    root = new Container();
+    tilemapNode = new TileMapNode(map);
+    root.addChild(tilemapNode);
+
+    tileLayer = layer;
+    tileTexture = texture;
+    tilemapSpec = spec;
+    tilemapMapExtent = extent;
+
+    const start = tilemapCameraAt(0, extent);
+
+    app!.rendering.view.setCenter(start.x + VIEWPORT_WIDTH / 2, start.y + VIEWPORT_HEIGHT / 2);
+  };
+
+  /** Drop the tilemap scene so a rebuild (or teardown) leaks no GPU resources. */
+  const releaseTilemap = (): void => {
+    tilemapNode?.destroy();
+    tilemapNode = null;
+    tileTexture?.destroy();
+    tileTexture = null;
+    tileLayer = null;
+    tilemapSpec = null;
+  };
+
   return {
     engine: 'exojs',
     config,
@@ -491,6 +587,11 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         backend: { type: backend },
         clearColor: Color.black,
         hello: false,
+        // Registered for every cell, not only the tilemap ones: the extension
+        // contributes renderer bindings rather than scene work, and an engine
+        // configured differently per archetype would make two archetypes'
+        // numbers describe two engines.
+        extensions: [tilemapExtension],
       });
 
       // Boot the full production init path (awaits the backend's async
@@ -517,8 +618,17 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
 
       releaseBatchScene();
       releaseComposite();
+      releaseTilemap();
       sharedMeshGeometry?.destroy();
       sharedMeshGeometry = null;
+
+      // The tilemap scenes leave the sprite path behind: the leaves are tiles in
+      // a packed layer rather than nodes, so nothing below applies to them.
+      if (isTilemap(spec)) {
+        buildTilemapScene(spec, nodeCount);
+
+        return;
+      }
 
       // `instanced-batch` leaves the scene graph behind entirely: nodeCount
       // instances are laid out on the same grid every other archetype uses, but
@@ -785,6 +895,26 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
     },
 
     mutate(frame: number): void {
+      // Tilemap scenes: move the window, then submit this frame's tile changes.
+      // Both belong in the bracket - scrolling and editing ARE the per-frame work
+      // these scenes do, and an edit an arm defers past the draw would not be an
+      // edit the frame paid for.
+      if (tilemapSpec !== null && app !== null && tileLayer !== null) {
+        const camera = tilemapCameraAt(tilemapCameraFrameFor(tilemapSpec, frame), tilemapMapExtent);
+
+        app.rendering.view.setCenter(camera.x + VIEWPORT_WIDTH / 2, camera.y + VIEWPORT_HEIGHT / 2);
+
+        if (isTilemapEditing(tilemapSpec)) {
+          const tileset = tileLayer.tilesets[0]!;
+
+          for (const edit of tilemapEditsAt(frame, tilemapMapExtent)) {
+            tileLayer.setTileAt(edit.x, edit.y, { tileset, localTileId: edit.tileId, transform: TILE_TRANSFORM_IDENTITY });
+          }
+        }
+
+        return;
+      }
+
       // Camera step for a scrolling archetype. Both this and the wobble below
       // run inside the harness's CPU bracket, which is correct: moving the
       // camera IS the per-frame work such a scene does.
@@ -917,6 +1047,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
     teardown(): void {
       releaseBatchScene();
       releaseComposite();
+      releaseTilemap();
 
       if (root !== null) {
         root.destroy();

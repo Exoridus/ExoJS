@@ -373,7 +373,7 @@ const runRenderingDomain = async (args: Map<string, string>, selector: DomainSel
   // only a free filter makes the run exploratory. `--backend` is a free filter
   // in that sense too: it publishes one backend's block under a plan that names
   // both.
-  const isSubset = backendArg !== undefined || hasSelection || timedFramesOverride !== undefined;
+  const isSubset = backendArg !== undefined || hasSelection || timedFramesOverride !== undefined || args.has('capture');
   const plan = resolvePlanFor(args, 'rendering', isSubset);
 
   if (args.has('dry-run')) {
@@ -397,10 +397,17 @@ const runRenderingDomain = async (args: Map<string, string>, selector: DomainSel
   // probe was the observed one - can never discard the cells already measured.
   const checkpoint = createCheckpointWriter<CellResult>(outDir);
 
+  // `--capture=<dir>`: write each measured cell's final frame there, for
+  // checking by eye that two arms asked for one scene rendered it. A capture
+  // costs a readback per cell, so it belongs to a spot check and never to a
+  // reportable run - which is why it also marks the run a subset.
+  const captureDir = args.get('capture');
+
   const data = await runMatrix({
     backends,
     browser,
     plan,
+    ...(captureDir !== undefined && { captureDir: resolve(captureDir) }),
     ...(platform !== undefined && { platform }),
     ...(hasSelection && { selection }),
     ...(timedFramesOverride !== undefined && { timedFramesOverride }),

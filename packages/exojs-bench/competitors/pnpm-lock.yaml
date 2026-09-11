@@ -14,6 +14,9 @@ importers:
       '@newkrok/nape-js':
         specifier: 3.42.0
         version: 3.42.0
+      '@pixi/tilemap':
+        specifier: 5.0.2
+        version: 5.0.2(pixi.js@8.19.0)
       '@types/matter-js':
         specifier: 0.20.2
         version: 0.20.2
@@ -44,6 +47,11 @@ packages:
 
   '@pixi/colord@2.9.6':
     resolution: {integrity: sha512-nezytU2pw587fQstUu1AsJZDVEynjskwOL+kibwcdxsMBFqPsFFNA7xl0ii/gXuDi6M0xj3mfRJj8pBSc2jCfA==}
+
+  '@pixi/tilemap@5.0.2':
+    resolution: {integrity: sha512-J+K1eU7uB58WPVD33d7usXrhKA03IGq3IfPvXBFr1027Bb9ScxrGhH0NomR9VpVVUPiHkK7FcTGuOtJMVGAv6A==}
+    peerDependencies:
+      pixi.js: '>=8.5.0'
 
   '@types/earcut@3.0.0':
     resolution: {integrity: sha512-k/9fOUGO39yd2sCjrbAJvGDEQvRwRnQIZlBz43roGwUZo5SHAmyVvSFyaVVZkicRVCaDXPKlbxrUcBuJoSWunQ==}
@@ -110,6 +118,10 @@ snapshots:
   '@newkrok/nape-js@3.42.0': {}
 
   '@pixi/colord@2.9.6': {}
+
+  '@pixi/tilemap@5.0.2(pixi.js@8.19.0)':
+    dependencies:
+      pixi.js: 8.19.0
 
   '@types/earcut@3.0.0': {}
 

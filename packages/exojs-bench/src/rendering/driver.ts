@@ -22,7 +22,7 @@ import type { ArchetypeSpec, Backend, CellResult, CellSpec, EngineAdapter } from
 import type { MatrixSelection } from './selection';
 import { applyPlan, applySelection } from './selection';
 import { usesRenderTargets } from './traits';
-import { isScrolling } from './world';
+import { isScrolling, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from './world';
 
 // Re-exported so the rendering barrel and the CLI keep importing the selection
 // surface from `driver` unchanged. It lives in its own module because the tests
@@ -453,9 +453,9 @@ export type CellResultSink = (result: CellResult) => void;
  * discipline is untouched - means a failing cell costs only itself: it becomes
  * an `unavailable` datapoint carrying the error, and the run continues.
  */
-const runCellInPage = async (page: import('playwright').Page, spec: CellSpec): Promise<CellResult> => {
+const runCellInPage = async (page: import('playwright').Page, spec: CellSpec, hold: boolean): Promise<CellResult> => {
   try {
-    return await page.evaluate(cell => globalThis.__runBaselineCell!(cell), spec);
+    return await page.evaluate(args => globalThis.__runBaselineCell!(args.cell, args.hold), { cell: spec, hold });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
 
@@ -487,13 +487,13 @@ const CELL_WEDGED = Symbol('cell-wedged');
  * closes; its rejection is swallowed so it never surfaces as an unhandled
  * rejection (`runCellInPage` already never rejects on a normal cell error).
  */
-const runCellOrWedge = async (page: import('playwright').Page, spec: CellSpec): Promise<CellResult | typeof CELL_WEDGED> => {
+const runCellOrWedge = async (page: import('playwright').Page, spec: CellSpec, hold = false): Promise<CellResult | typeof CELL_WEDGED> => {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<typeof CELL_WEDGED>(resolvePromise => {
     timer = setTimeout(() => resolvePromise(CELL_WEDGED), CELL_TIMEOUT_MS);
   });
 
-  const run = runCellInPage(page, spec).then(result => {
+  const run = runCellInPage(page, spec, hold).then(result => {
     if (timer !== undefined) {
       clearTimeout(timer);
     }
@@ -527,6 +527,9 @@ const runCellOrWedge = async (page: import('playwright').Page, spec: CellSpec): 
  * For WebGPU the adapter identity is read once; a null or software adapter emits
  * every cell as `unavailable` rather than measuring a software rasterizer.
  */
+/** File stem of one cell's captured frame - the cell's identity, safe for a file name. */
+const captureName = (cell: CellSpec): string => `${cell.backend}-${cell.archetype}-${String(cell.nodeCount)}-${cell.engine}-${cell.config}`;
+
 const runBackend = async (options: {
   baseUrl: string;
   backend: Backend;
@@ -538,8 +541,10 @@ const runBackend = async (options: {
   platform?: PlatformDeclaration;
   /** Replaces the per-backend launch flags; see {@link runMatrix}. */
   launchFlags?: readonly string[];
+  /** Directory to capture each measured cell's last frame into; see {@link runMatrix}. */
+  captureDir?: string;
 }): Promise<{ provenance: Provenance; results: CellResult[] }> => {
-  const { baseUrl, backend, browser: browserName, cells, engineVersion, onCellResult } = options;
+  const { baseUrl, backend, browser: browserName, cells, engineVersion, onCellResult, captureDir } = options;
   const flags = resolveLaunchFlags(browserName, backend, options.launchFlags);
 
   // Group cells by arm (engine|config) in first-seen order so each arm runs in its
@@ -620,7 +625,7 @@ const runBackend = async (options: {
 
         while (remaining.length > 0) {
           const cell = remaining[0]!;
-          const outcome = await runCellOrWedge(page, cell);
+          const outcome = await runCellOrWedge(page, cell, captureDir !== undefined);
 
           if (outcome === CELL_WEDGED) {
             collect(
@@ -636,6 +641,20 @@ const runBackend = async (options: {
           }
 
           collect(outcome);
+
+          // Frame capture: the canvas as the measured cell left it. The cell was
+          // asked to HOLD its scene for exactly this, because some arms blank the
+          // canvas when they release their context and a capture taken after
+          // teardown would compare teardown policies rather than scenes.
+          // `page.screenshot` rather than a canvas readback: a WebGPU canvas
+          // never yields its contents to `drawImage`.
+          if (captureDir !== undefined && outcome.status === 'ok') {
+            await page.screenshot({
+              path: resolve(captureDir, `${captureName(cell)}.png`),
+              clip: { x: 0, y: 0, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT },
+            });
+            await page.evaluate(() => globalThis.__disposeHeldCell!());
+          }
 
           if (backend === 'webgl2' && renderer === null && outcome.status === 'ok') {
             renderer = await readRendererInPage(page);
@@ -1035,6 +1054,16 @@ export const runMatrix = async (options: {
    * GPU number.
    */
   launchFlags?: readonly string[];
+  /**
+   * Directory each measured cell's final frame is captured into, as
+   * `<backend>-<archetype>-<count>-<engine>-<config>.png`.
+   *
+   * For checking that two arms asked to render one scene actually rendered it -
+   * a cell that draws nothing measures a frame nobody would ship, and its number
+   * looks like a win. Off unless asked for: a capture costs a full readback per
+   * cell, which has no place in a reportable run.
+   */
+  captureDir?: string;
 }): Promise<MatrixOutcome> => {
   const engineVersion = readEngineVersion();
   const libraries = readLibraryProvenance(RENDERING_LIBRARY_ARMS);
@@ -1073,6 +1102,7 @@ export const runMatrix = async (options: {
         onCellResult,
         ...(options.platform !== undefined && { platform: options.platform }),
         ...(options.launchFlags !== undefined && { launchFlags: options.launchFlags }),
+        ...(options.captureDir !== undefined && { captureDir: options.captureDir }),
       });
 
       provenance.push(outcome.provenance);

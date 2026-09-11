@@ -120,14 +120,18 @@ describe('suite resolution', () => {
     }
   });
 
-  it('full keeps every rung of every existing development ladder', () => {
+  it('full keeps every rung of every existing development ladder, extreme loads aside', () => {
     const full = new Set(planFor('full', 'rendering').workloads.map(workload => `${workload.scenarioId}/${String(workload.value)}`));
+    const extreme = new Set(
+      planFor('full', 'rendering', true)
+        .workloads.filter(workload => workload.extreme)
+        .map(workload => `${workload.scenarioId}/${String(workload.value)}`),
+    );
+    const missing = ARCHETYPES.flatMap(archetype =>
+      archetype.nodeCounts.map(nodeCount => `${archetype.id}/${String(nodeCount)}`).filter(key => !full.has(key) && !extreme.has(key)),
+    );
 
-    for (const archetype of ARCHETYPES) {
-      for (const nodeCount of archetype.nodeCounts) {
-        expect(full).toContain(`${archetype.id}/${String(nodeCount)}`);
-      }
-    }
+    expect(missing).toStrictEqual([]);
   });
 
   it('extreme loads are admitted only by full plus the flag', () => {
