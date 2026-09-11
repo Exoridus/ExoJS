@@ -140,8 +140,21 @@ const parityCommands = { writeParityEvidence, resetParityEvidence };
 // reachable only over CDP, which lives on the node side. See the command module.
 const allocationCommands = { startHeapSampling, stopHeapSampling, emitAllocationRecord };
 
+/**
+ * Worker cap for the jsdom lane.
+ *
+ * Vitest otherwise sizes its fork pool at one worker per core, which saturates a
+ * developer machine for the several minutes the unit lane runs - and the pre-push
+ * hook runs it on every push. Half the cores keeps the machine usable and costs
+ * little wall time, since the lane is not purely CPU-bound. CI keeps the default:
+ * its runners have few cores and nothing else to serve. `EXOJS_TEST_MAX_WORKERS`
+ * overrides both (a plain count or a `"50%"`-style share).
+ */
+const maxWorkers = process.env['EXOJS_TEST_MAX_WORKERS'] ?? (process.env['CI'] ? undefined : '50%');
+
 export default defineConfig({
   test: {
+    ...(maxWorkers === undefined ? {} : { maxWorkers }),
     coverage: {
       provider: 'istanbul',
       reporter: ['lcov', 'clover', 'text-summary'],
