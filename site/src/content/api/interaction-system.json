@@ -6,10 +6,10 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 14,
+  "memberCount": 15,
   "counts": {
     "constructors": 1,
-    "methods": 11,
+    "methods": 12,
     "properties": 2,
     "events": 0
   },
@@ -419,6 +419,82 @@
           ],
           "returnType": "RenderNode | null",
           "description": "Return the deepest interactive node currently under the given pointer, or under any active pointer when pointerId is omitted (the first pointer with a hit wins). null when no pointer is hovering an interactive node."
+        },
+        {
+          "name": "nodeAt",
+          "signature": "nodeAt(x: number, y: number): RenderNode | null",
+          "signatureTokens": [
+            {
+              "text": "nodeAt",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "RenderNode | null",
+          "description": "The deepest interactive node at a point, or null where the point hits none. x and y are in the same space a pointer event reports - design/screen coordinates, not world ones - and are resolved exactly as an event would be: an active scope wins, otherwise the screen-fixed UI layer is tried before the camera world, and clipping, visibility and hit-test flags all apply. Purely a query. It changes no hover, capture or focus state and emits no events, so it is safe to call for a hovered tooltip at a computed position, an editor's selection, a gamepad-driven cursor, or a test - all cases where synthesising a pointer event would leave the interaction state believing a pointer had moved. For what the user's pointer is actually over, prefer getHoveredNode: it reports the result the last real event already resolved instead of testing again."
         },
         {
           "name": "popScope",
