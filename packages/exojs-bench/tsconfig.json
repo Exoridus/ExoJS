@@ -1,14 +1,16 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "_comment": "The rendering domain benchmarks the engine through its internal `#*` subpath imports (resolved in the browser page by the driver's Vite alias, never in the Node CLI); the `#* -> ../../src/*` path reproduces the root package.json wildcard for the type-checker. The physics domain instead imports the `@codexo/exojs-physics` package (which itself imports the `@codexo/exojs` barrel), and neither exposes a `@codexo/exojs-source` export condition, so those specifiers are mapped to source here — mirroring the runtime aliasing in scripts/glsl-loader.ts and vitest.config.ts's aliasConfig.",
+  "_comment": "The rendering domain benchmarks the engine through its internal `#*` subpath imports (resolved in the browser page by the driver's Vite alias, never in the Node CLI); the `#* -> ../../src/*` path reproduces the root package.json wildcard for the type-checker. The physics domain instead imports the `@codexo/exojs-physics` package (which itself imports the `@codexo/exojs` barrel), and the rendering extension arms import `@codexo/exojs-particles` and `@codexo/exojs-tilemap`; none of those expose a `@codexo/exojs-source` export condition, and their package entries point at `dist`, which the type-check runs without, so their entries are mapped to source here; `@codexo/exojs-particles-source` is in `customConditions` for the same reason one level down, since `@codexo/exojs-particles` resolves its own `#*` imports through a package `imports` map that otherwise lands on stale `dist` declarations — mirroring the runtime aliasing in scripts/glsl-loader.ts and vitest.config.ts's aliasConfig.",
   "extends": "@codexo/exojs-config/typescript/test.json",
   "compilerOptions": {
     "noEmit": true,
-    "customConditions": ["@codexo/exojs-source"],
+    "customConditions": ["@codexo/exojs-source", "@codexo/exojs-particles-source"],
     "types": ["vitest/globals", "node", "@webgpu/types"],
     "paths": {
       "#*": ["../../src/*"],
+      "@codexo/exojs-particles": ["../exojs-particles/src/index.ts"],
       "@codexo/exojs-physics": ["../exojs-physics/src/index.ts"],
+      "@codexo/exojs-tilemap": ["../exojs-tilemap/src/index.ts"],
       "@codexo/exojs": ["../../src/index.ts"],
       "@codexo/exojs/extensions": ["../../src/extensions/index.ts"],
       "@codexo/exojs/renderer-sdk": ["../../src/renderer-sdk.ts"],
