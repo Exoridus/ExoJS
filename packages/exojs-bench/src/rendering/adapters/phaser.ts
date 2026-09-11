@@ -3,6 +3,7 @@ import * as Phaser from 'phaser';
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
 import { isParticleLifecycle, isParticles, PARTICLE_ALPHA, PARTICLE_LIFETIME, PARTICLE_STEP, particleSeedAt } from '../particles';
+import { isPickingScene, PICK_RECT_SIZE, pickPointAt, pickRectAt } from '../picking';
 import {
   createDigitAtlasCanvas,
   createDistinctTextureCanvas,
@@ -15,7 +16,16 @@ import {
 } from '../sceneAssets';
 import type { TilemapExtent } from '../tilemap';
 import { isTilemap, isTilemapEditing, TILE_SIZE, tileIdAt, tilemapCameraAt, tilemapCameraFrameFor, tilemapEditsAt, tilemapExtent } from '../tilemap';
-import { hasFullViewportLeaves, isChurning, isTextArchetype, isTextUpdating, leafAlpha, textForLeaf, usesRenderTargets } from '../traits';
+import {
+  hasFullViewportLeaves,
+  isChurning,
+  isTextArchetype,
+  isTextUpdating,
+  leafAlpha,
+  pointerQueriesPerFrame,
+  textForLeaf,
+  usesRenderTargets,
+} from '../traits';
 import { GRID_MARGIN, gridLayout, gridPosition, isScrolling, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '../world';
 
 /**
@@ -276,6 +286,58 @@ export const createPhaserAdapter = (): EngineAdapter => {
     particleSpec = null;
   };
 
+  /** Hit-test scene state, or nulls for every archetype that resolves no queries. */
+  let pickingSpec: ArchetypeSpec | null = null;
+  let pickPointer: Phaser.Input.Pointer | null = null;
+  let pickHits = 0;
+
+  /**
+   * Build the picking scene: interactive rectangles on the shared layout.
+   *
+   * `setInteractive` is what gives an object the input data Phaser's hit test
+   * reads; without it the object is invisible to the query and the row would
+   * search an empty list.
+   */
+  const buildPickingScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const key = `${SCENE_KEY}-pick`;
+
+    if (game!.textures.exists(key)) {
+      game!.textures.remove(key);
+    }
+
+    game!.textures.addCanvas(key, createParticleCanvas());
+
+    const container = scene!.add.container(0, 0);
+
+    for (let index = 0; index < nodeCount; index += 1) {
+      const at = pickRectAt(index);
+      const rect = scene!.add.image(at.x, at.y, key).setOrigin(0, 0).setDisplaySize(PICK_RECT_SIZE, PICK_RECT_SIZE);
+
+      rect.setInteractive();
+      container.add(rect);
+    }
+
+    root = container;
+    pickPointer = scene!.input.activePointer;
+    pickingSpec = spec;
+
+    // The input plugin moves newly interactive objects out of its pending queue
+    // in `preUpdate`, which the stopped game loop never runs - so without this
+    // the hit test searches an empty list and reports a very fast nothing.
+    // Driven here, at build time, the way the harness already drives the
+    // renderer's own phases; it is outside the measured window either way.
+    // `preUpdate` runs on the plugin at runtime but is absent from Phaser's
+    // published types, which describe the input surface a game uses rather than
+    // the phases its loop drives.
+    (scene!.input as unknown as { preUpdate(): void }).preUpdate();
+  };
+
+  /** Drop the picking scene so a rebuild (or teardown) leaks nothing. */
+  const releasePicking = (): void => {
+    pickPointer = null;
+    pickingSpec = null;
+  };
+
   return {
     engine: 'phaser',
     config: 'webgl2',
@@ -328,7 +390,12 @@ export const createPhaserAdapter = (): EngineAdapter => {
           // `physics` config). The render loop is halted below.
           banner: false,
           audio: { noAudio: true },
-          input: { keyboard: false, mouse: false, touch: false, gamepad: false },
+          // Mouse input stays ON although the harness dispatches no events: the
+          // input plugin is what registers an interactive object, and with it
+          // off the picking archetype's hit test searches an empty list and
+          // reports a very fast nothing. The loop is stopped, so no input is
+          // processed per frame and no other archetype pays for this.
+          input: { keyboard: false, mouse: true, touch: false, gamepad: false },
           disableContextMenu: true,
           autoFocus: false,
           // The scene's `create` fires once the scene reaches RUNNING; resolve
@@ -354,9 +421,16 @@ export const createPhaserAdapter = (): EngineAdapter => {
 
       releaseTilemap();
       releaseParticles();
+      releasePicking();
 
       if (isParticles(spec)) {
         buildParticleScene(spec, nodeCount);
+
+        return;
+      }
+
+      if (isPickingScene(spec)) {
+        buildPickingScene(spec, nodeCount);
 
         return;
       }
@@ -499,11 +573,41 @@ export const createPhaserAdapter = (): EngineAdapter => {
       mutableIndices = selectedIndices;
     },
 
+    pickHits(): number {
+      return pickHits;
+    },
+
     mutationSignature(): string {
       return mutationSignature(mutableIndices);
     },
 
     mutate(frame: number): void {
+      // Picking scene: one block of point queries through Phaser's own hit test.
+      // The pointer is moved to each point first because the query reads its
+      // position, and that move is part of what this arm costs.
+      if (pickingSpec !== null && scene !== null && pickPointer !== null) {
+        const queries = pointerQueriesPerFrame(pickingSpec);
+        let hits = 0;
+
+        for (let index = 0; index < queries; index += 1) {
+          const point = pickPointAt(index, queries);
+
+          pickPointer.x = point.x;
+          pickPointer.y = point.y;
+
+          // `hitTestPointer` is the plugin's own entry point - it picks the
+          // camera and the interactive list itself, which is the path a Phaser
+          // project's input actually takes.
+          if (scene.input.hitTestPointer(pickPointer).length > 0) {
+            hits += 1;
+          }
+        }
+
+        pickHits = hits;
+
+        return;
+      }
+
       // Particle scenes: the lifecycle one steps Phaser's emitter, which is the
       // simulation under comparison; the draw-only one steps nothing, so its
       // particles stay where the build put them.
@@ -592,6 +696,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
     teardown(): void {
       releaseTilemap();
       releaseParticles();
+      releasePicking();
 
       if (game !== null) {
         // `destroy` only FLAGS pending destruction (normally consumed by the next

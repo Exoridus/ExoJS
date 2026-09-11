@@ -23,6 +23,7 @@ import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../
 import { BLUR_TAPS_PER_SIDE } from '../archetypes';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
 import { isParticleLifecycle, isParticles, PARTICLE_ALPHA, PARTICLE_LIFETIME, PARTICLE_PREROLL_STEPS, PARTICLE_STEP, particleSeedAt } from '../particles';
+import { isPickingScene, PICK_RECT_SIZE, pickPointAt, pickRectAt } from '../picking';
 import { createBlurSourceCanvas, createDistinctTextureCanvas, createParticleCanvas, createTileAtlasCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
 import type { TilemapExtent } from '../tilemap';
 import {
@@ -48,6 +49,7 @@ import {
   isTextUpdating,
   leafAlpha,
   maskDepth,
+  pointerQueriesPerFrame,
   textForLeaf,
 } from '../traits';
 import {
@@ -562,6 +564,48 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
     blurTexture = null;
   };
 
+  /** Hit-test scene state, or nulls for every archetype that resolves no queries. */
+  let pickingSpec: ArchetypeSpec | null = null;
+  let pickTexture: Texture | null = null;
+  let pickHits = 0;
+
+  /**
+   * Build the picking scene: interactive rectangles on the shared layout.
+   *
+   * `eventMode: 'static'` is what puts a container into Pixi's event boundary,
+   * which is the structure the comparison is about; a `'none'` container is
+   * skipped by the hit test entirely and would make the row measure an empty
+   * search.
+   */
+  const buildPickingScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const texture = Texture.from(createParticleCanvas());
+    const scene = new Container();
+
+    scene.eventMode = 'static';
+
+    for (let index = 0; index < nodeCount; index += 1) {
+      const rect = new Sprite(texture);
+      const at = pickRectAt(index);
+
+      rect.width = PICK_RECT_SIZE;
+      rect.height = PICK_RECT_SIZE;
+      rect.position.set(at.x, at.y);
+      rect.eventMode = 'static';
+      scene.addChild(rect);
+    }
+
+    root = scene;
+    pickTexture = texture;
+    pickingSpec = spec;
+  };
+
+  /** Drop the picking scene so a rebuild (or teardown) leaks nothing. */
+  const releasePicking = (): void => {
+    pickTexture?.destroy(true);
+    pickTexture = null;
+    pickingSpec = null;
+  };
+
   return {
     engine: 'pixi',
     config,
@@ -630,6 +674,7 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
       releaseTilemap();
       releaseParticles();
       releaseBlur();
+      releasePicking();
 
       textures = [];
 
@@ -655,6 +700,12 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
 
       if (isBlurEffect(spec)) {
         buildBlurScene(spec, nodeCount);
+
+        return;
+      }
+
+      if (isPickingScene(spec)) {
+        buildPickingScene(spec, nodeCount);
 
         return;
       }
@@ -860,11 +911,40 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
       sceneRoot.position.set(VIEWPORT_WIDTH / 2 - start.x, VIEWPORT_HEIGHT / 2 - start.y);
     },
 
+    pickHits(): number {
+      return pickHits;
+    },
+
     mutationSignature(): string {
       return mutationSignature(mutableIndices);
     },
 
     mutate(frame: number): void {
+      // Picking scene: one block of point queries through Pixi's own event
+      // boundary, the structure under comparison. The boundary reports the root
+      // itself where nothing was hit, which is this arm's way of saying "no
+      // target" and is counted as a miss.
+      if (pickingSpec !== null && app !== null && root !== null) {
+        const boundary = app.renderer.events.rootBoundary;
+        const queries = pointerQueriesPerFrame(pickingSpec);
+        let hits = 0;
+
+        boundary.rootTarget = root;
+
+        for (let index = 0; index < queries; index += 1) {
+          const point = pickPointAt(index, queries);
+          const target = boundary.hitTest(point.x, point.y);
+
+          if (target !== null && target !== root) {
+            hits += 1;
+          }
+        }
+
+        pickHits = hits;
+
+        return;
+      }
+
       // Particle scenes: the lifecycle one advances the shared update rule; the
       // draw-only one submits the same quads every frame by design.
       if (particleSpec !== null) {
@@ -1008,6 +1088,7 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
       releaseTilemap();
       releaseParticles();
       releaseBlur();
+      releasePicking();
 
       if (root !== null) {
         root.destroy({ children: true });

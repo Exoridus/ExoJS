@@ -44,6 +44,7 @@ import {
   PARTICLE_TINT,
   particleSeedAt,
 } from '../particles';
+import { isPickingScene, PICK_RECT_SIZE, pickPointAt, pickRectAt } from '../picking';
 import { createBlurSourceCanvas, createDistinctTextureCanvas, createParticleCanvas, createTileAtlasCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
 import type { TilemapExtent } from '../tilemap';
 import {
@@ -69,6 +70,7 @@ import {
   isTextUpdating,
   leafAlpha,
   maskDepth,
+  pointerQueriesPerFrame,
   textForLeaf,
 } from '../traits';
 import {
@@ -726,6 +728,59 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
     blurTexture = null;
   };
 
+  /** Hit-test scene state, or nulls for every archetype that resolves no queries. */
+  let pickingSpec: ArchetypeSpec | null = null;
+  let pickTexture: Texture | null = null;
+  /**
+   * Hits the last block resolved.
+   *
+   * Published on the adapter so a smoke run can check that every arm resolved
+   * the identical points to the identical answers - a picking row where one arm
+   * silently searched a smaller scene would otherwise read as a faster index.
+   */
+  let pickHits = 0;
+
+  /**
+   * Build the picking scene: interactive rectangles on the shared layout, with
+   * the engine's interaction index attached to them.
+   *
+   * `attachRoot` is what puts the nodes into that index, which is the structure
+   * the comparison is actually about - without it the engine would walk the tree
+   * per query and the row would measure a fallback rather than the feature.
+   */
+  const buildPickingScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const texture = new Texture(createParticleCanvas());
+    const scene = new Container();
+
+    for (let index = 0; index < nodeCount; index += 1) {
+      const rect = new Sprite(texture);
+      const at = pickRectAt(index);
+
+      rect.width = PICK_RECT_SIZE;
+      rect.height = PICK_RECT_SIZE;
+      rect.setPosition(at.x, at.y);
+      rect.interactive = true;
+      scene.addChild(rect);
+    }
+
+    root = scene;
+    pickTexture = texture;
+    pickingSpec = spec;
+
+    app!.interaction.attachRoot(scene);
+  };
+
+  /** Drop the picking scene so a rebuild (or teardown) leaks nothing. */
+  const releasePicking = (): void => {
+    if (pickingSpec !== null && root !== null) {
+      app?.interaction.detachRoot(root);
+    }
+
+    pickTexture?.destroy();
+    pickTexture = null;
+    pickingSpec = null;
+  };
+
   return {
     engine: 'exojs',
     config,
@@ -784,6 +839,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       releaseTilemap();
       releaseParticles();
       releaseBlur();
+      releasePicking();
       sharedMeshGeometry?.destroy();
       sharedMeshGeometry = null;
 
@@ -805,6 +861,12 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
 
       if (isBlurEffect(spec)) {
         buildBlurScene(spec, nodeCount);
+
+        return;
+      }
+
+      if (isPickingScene(spec)) {
+        buildPickingScene(spec, nodeCount);
 
         return;
       }
@@ -1069,11 +1131,36 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       app.rendering.view.setCenter(start.x, start.y);
     },
 
+    pickHits(): number {
+      return pickHits;
+    },
+
     mutationSignature(): string {
       return mutationSignature(mutableIndices);
     },
 
     mutate(frame: number): void {
+      // Picking scene: one block of point queries through the engine's own
+      // public query, inside the bracket because resolving them IS the frame's
+      // work here. The hit count is kept so a smoke run can check that every arm
+      // resolved the same points to the same answers.
+      if (pickingSpec !== null && app !== null) {
+        const queries = pointerQueriesPerFrame(pickingSpec);
+        let hits = 0;
+
+        for (let index = 0; index < queries; index += 1) {
+          const point = pickPointAt(index, queries);
+
+          if (app.interaction.nodeAt(point.x, point.y) !== null) {
+            hits += 1;
+          }
+        }
+
+        pickHits = hits;
+
+        return;
+      }
+
       // Particle scenes: the lifecycle one advances the simulation and tops the
       // pool back up, both inside the bracket, because ageing, moving, fading and
       // respawning ARE the per-frame work it measures. The draw-only scene

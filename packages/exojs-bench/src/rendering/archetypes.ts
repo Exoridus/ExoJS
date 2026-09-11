@@ -98,6 +98,24 @@ const BLUR_RADIUS = BLUR_SIGMA * 2;
 export const BLUR_TAPS_PER_SIDE = 4;
 
 /**
+ * Interactive rectangle counts for the picking scene. The query cost is what
+ * scales here, so the ladder sweeps how much scene the hit test has to search -
+ * a thousand is an ordinary interface, a hundred thousand is a map of clickable
+ * entities.
+ */
+const PICKING_COUNTS = [1_000, 10_000, 100_000] as const;
+
+/**
+ * Point queries resolved per frame.
+ *
+ * A block rather than one, because a single hit test is far below the clock's
+ * resolution: a hundred of them is a duration the timer can actually separate,
+ * and it is also roughly what an interface with hover, tooltips and a drag
+ * candidate resolves while a pointer moves.
+ */
+export const POINTER_QUERIES_PER_FRAME = 100;
+
+/**
  * Characters per text leaf across both text archetypes. Twelve is the length of
  * an ordinary label (a score, a name, a damage number) - long enough that layout
  * and glyph iteration dominate the per-node cost, short enough that no arm's
@@ -701,6 +719,26 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     mutationFraction: 0,
     cullingEnabled: false,
     blurRadius: BLUR_RADIUS,
+  },
+  // HIT TESTING - the one cost a pointer-driven interface pays every frame that
+  // no drawing archetype touches. The scene is a field of interactive
+  // rectangles and the frame's work is a block of point queries against it, so
+  // what scales is each arm's spatial index rather than its renderer.
+  //
+  // All three arms expose a point query, and each is asked the identical
+  // hundred points: ExoJS through `interaction.nodeAt`, Pixi through its event
+  // boundary's `hitTest`, Phaser through `input.hitTest`. Nothing here writes a
+  // replacement search - the arm's own index is the thing under comparison.
+  {
+    id: 'interaction-picking',
+    category: 'interaction',
+    crossArm: true,
+    nodeCounts: PICKING_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    pointerQueriesPerFrame: POINTER_QUERIES_PER_FRAME,
   },
   {
     id: 'mask-clip-animated',

@@ -33,6 +33,12 @@ export const isTextUpdating = (spec: ArchetypeSpec): boolean => isTextArchetype(
 /** Whether the per-frame mutation destroys and rebuilds each selected leaf. */
 export const isChurning = (spec: ArchetypeSpec): boolean => spec.churn === true && spec.mutationFraction > 0;
 
+/** Point queries the archetype resolves per frame; `0` when it resolves none. */
+export const pointerQueriesPerFrame = (spec: ArchetypeSpec): number => Math.max(0, Math.trunc(spec.pointerQueriesPerFrame ?? 0));
+
+/** Whether the archetype measures hit testing rather than drawing. */
+export const isPicking = (spec: ArchetypeSpec): boolean => pointerQueriesPerFrame(spec) > 0;
+
 /** Blur reach in logical pixels for the effect scene; `0` when the archetype renders no blur. */
 export const blurRadius = (spec: ArchetypeSpec): number => Math.max(0, spec.blurRadius ?? 0);
 
