@@ -102,6 +102,11 @@ export const loadIdFor = (value: number): string => {
  * scene on those, so they are development rows and never a published comparison.
  * They keep running under `full` through the domain ladder.
  */
+/**
+ * `fx-blur` is deliberately absent. It is measured, but its two arms do not
+ * produce the same picture (see its archetype), so it is an internal probe
+ * rather than a published comparison and has no business in a reference plan.
+ */
 export const RENDERING_SCENARIOS: readonly ScenarioLoads[] = [
   {
     scenarioId: 'static-heavy',
@@ -326,15 +331,6 @@ export const RENDERING_SCENARIOS: readonly ScenarioLoads[] = [
       [1_000, ''],
       [10_000, 'r*'],
       [100_000, ''],
-    ]),
-  },
-  {
-    scenarioId: 'fx-blur',
-    unit: 'viewport',
-    loads: loads([
-      [360, '', '640 x 360'],
-      [720, 'r*', '1280 x 720'],
-      [1_080, '', '1920 x 1080'],
     ]),
   },
 ];
