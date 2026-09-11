@@ -26,7 +26,7 @@ import { BlurFilter, Color, ColorMatrixFilter, Sprite } from '@codexo/exojs';
 
 let sprite: Sprite;
 
-const blur = new BlurFilter({ radius: 3, quality: 2 });
+const blur = new BlurFilter({ strength: 3 });
 const tint = new ColorMatrixFilter().tint(new Color(140, 210, 255));
 
 sprite.filters = [blur, tint];
@@ -46,7 +46,7 @@ Set `cacheAsTexture = true` on a filtered subtree that doesn't change each frame
 
 ## BlurFilter
 
-A separable Gaussian blur, built from draw calls rather than a shader: the input is swept along X into a scratch target, then that scratch is swept along Y into the output, each sweep summing Gaussian-weighted offset copies additively. Chaining the two sweeps is what makes the kernel isotropic — it reaches diagonally, not only along the axes. Higher quality produces more taps per sweep and a smoother result at the cost of more draw calls:
+A separable Gaussian blur: the input is swept along X into a scratch target, then that scratch is swept along Y into the output, each sweep sampling the whole kernel in one draw. Chaining the two sweeps is what makes the kernel isotropic — it reaches diagonally, not only along the axes:
 
 ```ts
 import { BlurFilter, Sprite } from '@codexo/exojs';
@@ -54,17 +54,18 @@ import { BlurFilter, Sprite } from '@codexo/exojs';
 declare const sprite: Sprite;
 declare const tween: { progress: number };
 
-const blur = new BlurFilter({ radius: 4, quality: 2 });
+const blur = new BlurFilter({ strength: 4 });
 sprite.filters = [blur];
 
-// Live — animate the radius without reconstructing anything
-blur.radius = tween.progress * 12;
-blur.quality = 3;
+// Live — animate the strength without reconstructing anything
+blur.strength = tween.progress * 6;
 ```
 
-`radius` clamps to >= 0 (0 = no blur). `quality` floors to >= 1 and controls the tap count: `quality * 2 + 1` per sweep, spread evenly across `[-radius, +radius]`. Their spacing is therefore `radius / quality` — a wide blur wants a higher quality or the kernel shows as bands.
+`strength` is the Gaussian standard deviation in logical units and clamps to >= 0 (0 = no blur). It is the same quantity CSS `blur()` and Pixi's `strength` take, so a value carried over from either produces the same blur here.
 
-A blur reaches `radius` logical units outside the drawable it is applied to, on every edge, and that extra extent is part of what gets rendered — see [Effects can change a drawable's extent](#effects-can-change-a-drawables-extent). `quality` changes the smoothness, not the reach.
+The tap count follows the strength on its own — there is nothing to match by hand. `quality` is an optional cap on the taps one sweep may take per side, for trading smoothness against texture fetches on a weak device; capping does not shorten the blur, it widens the taps' spacing inside the same kernel.
+
+A blur reaches `strength * 3` logical units outside the drawable it is applied to, on every edge — the point the Gaussian is truncated at — and that extra extent is part of what gets rendered; see [Effects can change a drawable's extent](#effects-can-change-a-drawables-extent).
 
 ## ColorMatrixFilter
 
@@ -199,7 +200,7 @@ declare const hero: Sprite;
 declare const enemy: Sprite;
 
 const world = new Container();
-world.filters = [new BlurFilter({ radius: 2 })];
+world.filters = [new BlurFilter({ strength: 2 })];
 world.addChild(hero);   // hero is drawn into container's RT, then blurred
 world.addChild(enemy);  // enemy is drawn into same RT, then blurred
 ```
@@ -219,9 +220,10 @@ import { BlurFilter, Sprite } from '@codexo/exojs';
 
 declare const sprite: Sprite; // 100 x 50 logical units
 
-// 8 units of reach, then 4 more out of that result: 12 units on every edge,
-// so the capture domain is 124 x 74 and the composite lands 12 units up-left.
-sprite.filters = [new BlurFilter({ radius: 8 }), new BlurFilter({ radius: 4 })];
+// 12 units of reach (3 x 4), then 6 more (3 x 2) out of that result: 18 units
+// on every edge, so the capture domain is 136 x 86 and the composite lands
+// 18 units up-left.
+sprite.filters = [new BlurFilter({ strength: 4 }), new BlurFilter({ strength: 2 })];
 ```
 
 Filters that only recolour what they are handed — `ColorMatrixFilter`, `LutFilter`, most custom shader filters — preserve their input bounds and need to do nothing. A custom filter that samples away from its own fragment should override `getOutputBounds` so its result is not clipped:
@@ -235,13 +237,13 @@ Filters that only recolour what they are handed — `ColorMatrixFilter`, `LutFil
 
 The edges move independently, so an effect that only reaches one way — a drop shadow — declares exactly that, and one that reduces its output declares that instead.
 
-The bounds are always in **logical units**, never device pixels. Rendering the same chain on a `pixelRatio: 2` surface allocates twice the texels on each axis; the blur's 8-unit reach is still 8 units.
+The bounds are always in **logical units**, never device pixels. Rendering the same chain on a `pixelRatio: 2` surface allocates twice the texels on each axis; the blur's 12-unit reach is still 12 units.
 
 <Callout type="note" title="A clip still cuts">
 Effects expand what a drawable looks like; `clip` is how you take that back. A node with `clip = true` confines its final, filtered output to its clip region, blur tail included. That is intentional, not a bug — reach for it when a filtered node has to stay inside a panel.
 </Callout>
 
-Mutating a filter after attaching it is enough on its own. `blur.radius = 12` tells every node the filter is attached to that its output is stale, so a `cacheAsTexture` node re-bakes at the new extent; you never have to remove and re-add the filter. A custom filter with state of its own should call `this.invalidate()` after a change that affects what it draws.
+Mutating a filter after attaching it is enough on its own. `blur.strength = 12` tells every node the filter is attached to that its output is stale, so a `cacheAsTexture` node re-bakes at the new extent; you never have to remove and re-add the filter. A custom filter with state of its own should call `this.invalidate()` after a change that affects what it draws.
 
 ## Filter resolution
 
@@ -252,7 +254,7 @@ Lower it for a filter whose output has no fine detail to lose. A blur is the obv
 ```ts
 import { BlurFilter, Container } from '@codexo/exojs';
 
-const blur = new BlurFilter({ radius: 8 });
+const blur = new BlurFilter({ strength: 4 });
 const world = new Container();
 
 blur.resolution = 0.5; // quarter the fill cost, low-frequency output anyway
@@ -262,7 +264,7 @@ world.filters = [blur];
 Two things to know before reaching for it:
 
 - **A chain shares one target size**, so the whole chain runs at the lowest resolution any of its filters asks for. One filter at `0.5` makes every filter in that list render at `0.5`.
-- **Pixel-valued filter parameters are in logical units**, not target texels. `BlurFilter.radius` covers the same on-screen distance at every resolution and every device pixel ratio; the filter scales it into texels itself. A custom filter that offsets by pixels has to do the same with the `resolution` argument its `apply` receives.
+- **Pixel-valued filter parameters are in logical units**, not target texels. `BlurFilter.strength` covers the same on-screen distance at every resolution and every device pixel ratio; the filter scales it into texels itself. A custom filter that offsets by pixels has to do the same with the `resolution` argument its `apply` receives.
 
 Very large filtered subtrees are clamped: if `bounds × resolution` would exceed the device's maximum texture size, the resolution drops until it fits rather than the frame failing.
 
@@ -281,7 +283,7 @@ The next chapter, [Custom mesh shaders](/ExoJS/en/guide/effects/custom-mesh-shad
 <a id="blur-filter"></a>
 <ExamplePreview chapter="filters" slug="blur-filter" />
 
-A single `BlurFilter` with an interactive radius slider — the basic filter pattern.
+A single `BlurFilter` with an interactive strength slider — the basic filter pattern.
 
 <a id="filter-stack"></a>
 <ExamplePreview chapter="filters" slug="filter-stack" />

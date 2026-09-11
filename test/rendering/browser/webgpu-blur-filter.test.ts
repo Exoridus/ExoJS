@@ -14,7 +14,7 @@ import { BLUR_SCENE_SIZE, blurScene, CLEAR, DIAGONAL, ON_AXIS, OUTSIDE_HIGH, OUT
 describe('BlurFilter kernel shape (WebGPU)', () => {
   test('colour reaches the diagonal quadrant and stays symmetric', async ctx => {
     const backend = await createWebGpuTestBackend(BLUR_SCENE_SIZE);
-    const { root, texture } = blurScene([new BlurFilter({ radius: 8, quality: 4 })]);
+    const { root, texture } = blurScene([new BlurFilter({ strength: 4 })]);
 
     try {
       if (!(await renderWebGpuOnce(ctx, backend, root, CLEAR))) return;

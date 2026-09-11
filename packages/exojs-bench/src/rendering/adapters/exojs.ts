@@ -59,8 +59,8 @@ import {
   tilemapExtent,
 } from '../tilemap';
 import {
-  blurRadius,
-  compositeBlurRadius,
+  blurStrength,
+  compositeBlurStrength,
   filterChainDepth,
   hasFullViewportLeaves,
   hasMaskMotion,
@@ -364,7 +364,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
   /** Shared by every mesh leaf in `mixed-sprite-mesh-static`; absent for the array case. */
   let sharedMeshGeometry: Geometry | null = null;
   /**
-   * The `composite` archetype's bloom stack (`spec.compositeBlurRadius`, see
+   * The `composite` archetype's bloom stack (`spec.compositeBlurStrength`, see
    * `EngineAdapter.ts`); `null` for every single-pass archetype, in which case
    * `renderFrame` takes the ordinary scene-render path. The pipeline owns its
    * passes, but the textures, the filter and the overlay sprite are the arm's -
@@ -424,13 +424,13 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
    * ExoJS app writes a post-processing stack with - and it is what the Pixi arm's
    * hand-rolled `render({ target })` sequence is being compared against.
    */
-  const buildComposite = (sceneRoot: Container, radius: number): void => {
+  const buildComposite = (sceneRoot: Container, strength: number): void => {
     const capture = new RenderTexture(VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
     const bloom = new RenderTexture(Math.round(VIEWPORT_WIDTH * BLOOM_DOWNSCALE), Math.round(VIEWPORT_HEIGHT * BLOOM_DOWNSCALE));
     // A single blur from the full-size capture into the half-size target is both
     // the downsample and the blur: the filter sizes its sweep to the OUTPUT, so
     // the wide kernel runs over a quarter of the fragments.
-    const filter = new BlurFilter({ radius, quality: 2 });
+    const filter = new BlurFilter({ strength, quality: 2 });
     const overlay = new Sprite(bloom).setBlendMode(BlendModes.Additive);
 
     overlay.width = VIEWPORT_WIDTH;
@@ -715,9 +715,9 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
 
     root = new Container();
     root.addChild(sprite);
-    // Nine taps at the archetype's reach: `quality` is taps per side, so 4 gives
-    // the 4 + 1 + 4 the shared contract asks for.
-    root.filters = [new BlurFilter({ radius: blurRadius(spec), quality: BLUR_TAPS_PER_SIDE })];
+    // `quality` caps the taps per side, so 4 gives the 4 + 1 + 4 the shared
+    // contract asks for instead of the count the strength would derive.
+    root.filters = [new BlurFilter({ strength: blurStrength(spec), quality: BLUR_TAPS_PER_SIDE })];
 
     blurTexture = texture;
   };
@@ -1101,10 +1101,10 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         maskedLevels.push({ container, base: rect });
       }
 
-      const bloomRadius = compositeBlurRadius(spec);
+      const bloomStrength = compositeBlurStrength(spec);
 
-      if (bloomRadius > 0) {
-        buildComposite(sceneRoot, bloomRadius);
+      if (bloomStrength > 0) {
+        buildComposite(sceneRoot, bloomStrength);
       }
 
       root = sceneRoot;

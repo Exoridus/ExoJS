@@ -11,7 +11,7 @@ describe('DropShadowFilter bounds', () => {
 
     filter.getOutputBounds(new Rectangle(100, 100, 50, 20), output);
 
-    expect([output.x, output.y, output.width, output.height]).toEqual([100, 91, 63, 29]);
+    expect([output.x, output.y, output.width, output.height]).toEqual([100, 85, 69, 38]);
     filter.destroy();
   });
 

@@ -195,11 +195,11 @@ export const WEBGPU_ALLOC_ARCHETYPES: readonly WebGpuAllocArchetype[] = [
     build: () => decoratedSprites(100, makeCanvasTexture(), sprite => sprite.addFilter(new ColorMatrixFilter())),
   },
   {
-    id: 'filter/blur-q3 100',
-    rationale: 'Three blur draws per filter pass while the pass count stays at one — varies draws per pass, not passes.',
+    id: 'filter/blur-wide 100',
+    rationale: 'A separable blur — two passes of one draw each — against the single-pass colour filter above it.',
     warmup: EFFECT_WARMUP,
     frames: EFFECT_FRAMES,
-    build: () => decoratedSprites(100, makeCanvasTexture(), sprite => sprite.addFilter(new BlurFilter({ radius: 4, quality: 3 }))),
+    build: () => decoratedSprites(100, makeCanvasTexture(), sprite => sprite.addFilter(new BlurFilter({ strength: 2 }))),
   },
   {
     id: 'filter/container 1000',

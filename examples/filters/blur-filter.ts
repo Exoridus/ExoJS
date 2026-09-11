@@ -4,7 +4,7 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 // High-detail, high-contrast content so the blur visibly softens hard edges.
 const PIXEL_GRID = assets.technical.filtering.pixelGrid128;
 
-const MAX_RADIUS = 14;
+const MAX_STRENGTH = 8;
 
 class BlurFilterScene extends Scene {
   private blur!: BlurFilter;
@@ -18,7 +18,7 @@ class BlurFilterScene extends Scene {
     const app = this.app;
     const { width, height } = app;
 
-    this.blur = new BlurFilter({ radius: 4, quality: 2 });
+    this.blur = new BlurFilter({ strength: 2 });
     this.sprite = new Sprite(this.loader.get(PIXEL_GRID))
       .setAnchor(0.5)
       .setScale(4.5)
@@ -28,22 +28,22 @@ class BlurFilterScene extends Scene {
     this.hud = mountControls({
       title: 'Blur Filter',
       controls: [
-        { keys: 'Radius', action: 'soften the sprite (box-blur passes)' },
+        { keys: 'Strength', action: 'soften the sprite (Gaussian standard deviation)' },
         { keys: 'Filter', action: 'toggle to compare before / after' },
       ],
       status: this.statusText(),
-      hint: 'Drag the Radius slider — the live value is shown to its right.',
+      hint: 'Drag the Strength slider — the live value is shown to its right.',
     });
 
     this.panel = mountControlPanel({ title: 'Blur' });
     this.slider = this.panel.addSlider({
-      label: 'Radius',
+      label: 'Strength',
       min: 0,
-      max: MAX_RADIUS,
+      max: MAX_STRENGTH,
       step: 0.1,
-      value: this.blur.radius,
+      value: this.blur.strength,
       onChange: value => {
-        this.blur.radius = value;
+        this.blur.strength = value;
         this.refresh();
       },
     });
@@ -63,7 +63,7 @@ class BlurFilterScene extends Scene {
       return 'Filter: OFF (original sprite)';
     }
 
-    return `Radius: ${this.blur.radius.toFixed(1)} px`;
+    return `Strength: ${this.blur.strength.toFixed(1)} px`;
   }
 
   private refresh(): void {

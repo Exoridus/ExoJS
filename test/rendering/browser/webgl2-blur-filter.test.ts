@@ -4,7 +4,7 @@
  * The filter used to draw its input at offsets along the X axis and again at
  * offsets along the Y axis, all additively into one target. That is a CROSS,
  * not a blur: a pixel diagonally off a corner is reached by neither sweep and
- * stays black, however large the radius. `BlurFilter` promises a general blur,
+ * stays black, however strong the blur. `BlurFilter` promises a general blur,
  * so these specs read the corner.
  */
 import { describe, expect, test } from 'vitest';
@@ -16,8 +16,7 @@ import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { createWebGl2TestBackend, readWebGl2Pixel, renderWebGl2Once } from './_backendSetup';
 import { BLUR_SCENE_SIZE, blurScene, CLEAR, DIAGONAL, ON_AXIS, OUTSIDE_HIGH, OUTSIDE_LOW } from './_blurFilterFixture';
 
-const RADIUS = 8;
-const QUALITY = 4;
+const STRENGTH = 4;
 
 const withScene = async (
   filters: () => readonly [BlurFilter, ...ColorMatrixFilter[]],
@@ -37,7 +36,7 @@ const withScene = async (
   }
 };
 
-const blur = (): readonly [BlurFilter] => [new BlurFilter({ radius: RADIUS, quality: QUALITY })];
+const blur = (): readonly [BlurFilter] => [new BlurFilter({ strength: STRENGTH })];
 
 describe('BlurFilter kernel shape (WebGL2)', () => {
   test('colour reaches the diagonal quadrant, not only the two axes', async () => {
@@ -71,10 +70,10 @@ describe('BlurFilter kernel shape (WebGL2)', () => {
 
   test('the spread is not clipped to the subject bounds', async () => {
     await withScene(blur, pixel => {
-      // `radius` out from the edge is the furthest the kernel reaches; one
-      // pixel short of that must still carry colour, and well beyond it must
-      // be untouched background.
-      expect(pixel(OUTSIDE_HIGH + RADIUS - 2, 31)[0]!).toBeGreaterThan(0);
+      // Well inside the kernel's reach (three standard deviations) the tail
+      // must still carry colour, and well beyond it must be untouched
+      // background.
+      expect(pixel(OUTSIDE_HIGH + STRENGTH + 2, 31)[0]!).toBeGreaterThan(0);
       expect(pixel(2, 2)).toEqual([0, 0, 0, 255]);
     });
   });
@@ -91,7 +90,7 @@ describe('BlurFilter kernel shape (WebGL2)', () => {
 
   test('a blur composes with a second filter in the chain', async () => {
     await withScene(
-      () => [new BlurFilter({ radius: RADIUS, quality: QUALITY }), new ColorMatrixFilter().tint(new Color(255, 0, 0))],
+      () => [new BlurFilter({ strength: STRENGTH }), new ColorMatrixFilter().tint(new Color(255, 0, 0))],
       pixel => {
         const corner = pixel(DIAGONAL[0], DIAGONAL[1]);
 

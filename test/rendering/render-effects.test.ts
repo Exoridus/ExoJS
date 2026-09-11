@@ -3,7 +3,6 @@ import { Rectangle } from '#math/Rectangle';
 import { BackendTargetPass } from '#rendering/BackendTargetPass';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
-import { BlurFilter } from '#rendering/filters/BlurFilter';
 import { Filter } from '#rendering/filters/Filter';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
@@ -171,25 +170,11 @@ describe('render effects', () => {
     texture.destroy();
   });
 
-  // `ColorMatrixFilter` is not covered here: it runs a compiled shader over a
-  // fullscreen quad rather than issuing drawables, so this backend stand-in
-  // cannot execute it at all. Its passes and pixels are covered by
-  // `browser/webgl2-color-matrix-filter.test.ts` and its WebGPU twin.
-
-  test('built-in BlurFilter performs multi-sample composition', () => {
-    const { runtime, draw } = createRuntime();
-    const input = new RenderTexture(16, 16);
-    const output = new RenderTexture(16, 16);
-    const filter = new BlurFilter({ radius: 2, quality: 1 });
-
-    filter.apply(runtime, input, output);
-
-    expect(draw.mock.calls.length).toBeGreaterThan(1);
-
-    filter.destroy();
-    input.destroy();
-    output.destroy();
-  });
+  // `ColorMatrixFilter` and `BlurFilter` are not covered here: both run a
+  // compiled shader over a fullscreen quad rather than issuing drawables, so
+  // this backend stand-in cannot execute them at all. Their passes and pixels
+  // are covered by `browser/webgl2-color-matrix-filter.test.ts`,
+  // `browser/webgl2-blur-filter.test.ts` and their WebGPU twins.
 
   test('applies chained filters in declaration order', () => {
     const { runtime } = createRuntime();

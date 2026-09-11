@@ -22,7 +22,7 @@ class FilterStackScene extends Scene {
       .setAnchor(0.5)
       .setScale(4)
       .setPosition(width / 2, height / 2);
-    this.blur = new BlurFilter({ radius: 4, quality: 2 });
+    this.blur = new BlurFilter({ strength: 2 });
     this.tint = new ColorMatrixFilter().tint(new Color(140, 210, 255));
     this.custom = new ShaderFilter({ glsl: { fragment: glsl }, wgsl });
     this.rebuild();

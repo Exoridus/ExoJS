@@ -1,7 +1,7 @@
 import { ARCHETYPES } from '../src/rendering/archetypes';
 import type { ArchetypeId, ArchetypeSpec } from '../src/rendering/EngineAdapter';
 import {
-  compositeBlurRadius,
+  compositeBlurStrength,
   filterChainDepth,
   hasMaskMotion,
   isChurning,
@@ -125,7 +125,7 @@ describe('render-target archetypes', () => {
     const composite = byId.composite;
     const filtered = byId['filter-chain-1'];
 
-    expect(compositeBlurRadius(composite)).toBeGreaterThan(0);
+    expect(compositeBlurStrength(composite)).toBeGreaterThan(0);
     expect(composite.nestingDepth).toBe(filtered.nestingDepth);
     expect(composite.textureCount).toBe(filtered.textureCount);
     expect(composite.mutationFraction).toBe(filtered.mutationFraction);

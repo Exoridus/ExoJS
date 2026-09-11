@@ -184,21 +184,21 @@ export const FILTER_ARCHETYPES: readonly AllocationArchetype[] = [
 
   // ── DRAWS per filter pass: pass count held at one ────────────────────────
   {
-    id: 'filter/blur-q1 100',
-    rationale: 'BlurFilter quality 1 — one pass, six draws. Varies draws per pass while the pass and target counts match color/100.',
+    id: 'filter/blur-narrow 100',
+    rationale: 'A narrow BlurFilter — two passes, one draw each. Varies the kernel width while pass and target counts stay fixed.',
     warmup: WARMUP,
     build: () =>
       buildDecoratedSprites(100, sprite => {
-        sprite.addFilter(new BlurFilter({ radius: 2, quality: 1 }));
+        sprite.addFilter(new BlurFilter({ strength: 1 }));
       }),
   },
   {
-    id: 'filter/blur-q3 100',
-    rationale: 'BlurFilter quality 3 — one pass, fourteen draws. If cost tracks draws rather than passes, this row says so.',
+    id: 'filter/blur-wide 100',
+    rationale: 'A wider BlurFilter — the same two passes and draws, twice the taps. If cost tracks fragments rather than draws, this row says so.',
     warmup: WARMUP,
     build: () =>
       buildDecoratedSprites(100, sprite => {
-        sprite.addFilter(new BlurFilter({ radius: 4, quality: 3 }));
+        sprite.addFilter(new BlurFilter({ strength: 2 }));
       }),
   },
 
@@ -287,8 +287,8 @@ export const FILTERED_NODE_COUNT: Readonly<Record<string, number>> = {
   'filter/color 100 margin': 100,
   'filter/stack2 100': 100,
   'filter/stack3 100': 100,
-  'filter/blur-q1 100': 100,
-  'filter/blur-q3 100': 100,
+  'filter/blur-narrow 100': 100,
+  'filter/blur-wide 100': 100,
   'filter/container 1000': 1,
   'filter/container-cached 1000': 1,
 };

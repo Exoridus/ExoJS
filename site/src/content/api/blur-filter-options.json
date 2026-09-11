@@ -51,14 +51,14 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Taps per side of each sweep: a sweep takes quality * 2 + 1 of them, spread evenly across [-radius, +radius]. It buys smoothness, not reach. Because the taps always span the whole radius, their SPACING is radius / quality - so a wide blur wants a higher quality or the kernel shows as bands. Default 1, which is three taps: cheap, and honest only for small radii."
+          "description": "Upper bound on the taps one sweep may take per side, as a cost cap. Omit it and the tap count follows strength on its own, which is the usual case; set it to trade smoothness for texture fetches on a weak device. Capping does not shorten the blur: the taps still span the full kernel, so a cap well below the derived count widens their spacing and can show as banding. The ceiling is 32 either way."
         },
         {
-          "name": "radius",
-          "signature": "radius?: number",
+          "name": "strength",
+          "signature": "strength?: number",
           "signatureTokens": [
             {
-              "text": "radius",
+              "text": "strength",
               "kind": "name"
             },
             {
@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Blur extent in LOGICAL units - unchanged by the display's pixel ratio."
+          "description": "Gaussian standard deviation in LOGICAL units - unchanged by the display's pixel ratio. The same quantity CSS blur() and Pixi's strength take, so a value carried over from either produces the same blur here. Default 2."
         }
       ],
       "paragraphs": [],

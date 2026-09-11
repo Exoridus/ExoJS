@@ -298,15 +298,15 @@ export interface ArchetypeSpec {
    */
   readonly particles?: 'draw' | 'lifecycle';
   /**
-   * Blur reach in logical pixels for the effect scene, or `undefined` for every
-   * archetype that renders no blur.
+   * Gaussian standard deviation in logical pixels for the effect scene, or
+   * `undefined` for every archetype that renders no blur.
    *
    * Setting it replaces the scene with ONE textured quad under a separable
    * two-pass Gaussian blur, and the node count becomes the HEIGHT of that quad
    * rather than a number of nodes - the scene measures how a blur scales with
    * the area it covers, which is what an effect pass actually costs.
    */
-  readonly blurRadius?: number;
+  readonly blurStrength?: number;
   /**
    * Point queries resolved against the scene each frame, or `undefined` for an
    * archetype that resolves none.
@@ -364,13 +364,15 @@ export interface ArchetypeSpec {
    * walk, a resolution change, and a full-screen additive blend on top of the
    * target ping-pong the filter rows already measure.
    *
-   * The radius is what makes the blur a real separable sweep rather than a blit;
-   * it is deliberately modest, because the archetype measures the pass structure
-   * and not fragment ALU.
+   * Stated as the Gaussian standard deviation, which is what BOTH arms'
+   * filters take, so neither can end up sweeping further than the other. It is
+   * what makes the blur a real separable sweep rather than a blit, and
+   * deliberately modest, because the archetype measures the pass structure and
+   * not fragment ALU.
    *
    * WebGL2/WebGPU arms only - see the Phaser exclusion in `archetypes.ts`.
    */
-  readonly compositeBlurRadius?: number;
+  readonly compositeBlurStrength?: number;
 }
 
 /** One matrix cell: a single (engine, config, backend, archetype, node count) combination to measure. */

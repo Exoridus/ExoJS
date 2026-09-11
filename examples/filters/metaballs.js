@@ -17,7 +17,7 @@ class MetaballsScene extends Scene {
   init() {
     this.balls = new Graphics();
     this.points = Array.from({ length: 8 }, (_, i) => ({ a: (i / 8) * Math.PI * 2, r: 120 + (i % 3) * 56 }));
-    this.blur = new BlurFilter({ radius: 12, quality: 3 });
+    this.blur = new BlurFilter({ strength: 6 });
     this.threshold = new ShaderFilter({ glsl: { fragment: glsl }, wgsl });
     // Order matters: blur first (build the field), threshold second.
     this.balls.filters = [this.blur, this.threshold];
@@ -26,13 +26,13 @@ class MetaballsScene extends Scene {
       hint: 'Hard circles are blurred into a scalar field, then thresholded — so nearby blobs merge.',
     });
     mountControlPanel({ title: 'Field' }).addSlider({
-      label: 'Blur radius',
-      min: 2,
-      max: 24,
-      step: 0.5,
-      value: 12,
+      label: 'Blur strength',
+      min: 1,
+      max: 12,
+      step: 0.25,
+      value: 6,
       onChange: value => {
-        this.blur.radius = value;
+        this.blur.strength = value;
       },
     });
   }

@@ -54,6 +54,15 @@ const litSpanOnRow = (frame: Uint8ClampedArray, row: number): readonly [number, 
   return first === -1 ? null : [first, last];
 };
 
+/** One row's red channel, for comparing two frames pixel by pixel. */
+const rowOf = (frame: Uint8ClampedArray, row: number): number[] => {
+  const values: number[] = [];
+
+  for (let x = 0; x < size; x++) values.push(frame[(row * size + x) * 4]!);
+
+  return values;
+};
+
 const litSpanOnColumn = (frame: Uint8ClampedArray, column: number): readonly [number, number] | null => {
   let first = -1;
   let last = -1;
@@ -69,7 +78,7 @@ const litSpanOnColumn = (frame: Uint8ClampedArray, column: number): readonly [nu
 };
 
 interface SceneOptions {
-  readonly radii: readonly number[];
+  readonly strengths: readonly number[];
   readonly clip?: boolean;
 }
 
@@ -84,7 +93,7 @@ const render = async (ctx: { skip: (reason: string) => void }, options: SceneOpt
   const texture = createWhiteTexture();
   const root = new Container();
   const sprite = new Sprite(texture);
-  const filters = options.radii.filter(radius => radius > 0).map(radius => new BlurFilter({ radius }));
+  const filters = options.strengths.filter(strength => strength > 0).map(strength => new BlurFilter({ strength }));
   const owner = backend as unknown as Record<string, unknown>;
   const original = backend.acquireRenderTexture.bind(backend);
   const sizes: Array<[number, number]> = [];
@@ -122,7 +131,7 @@ const render = async (ctx: { skip: (reason: string) => void }, options: SceneOpt
 
 describe('WebGPU consumes the same planned effect bounds', () => {
   test('a blur tail escapes the source bounds on every edge', async ctx => {
-    const scene = await render(ctx, { radii: [10] });
+    const scene = await render(ctx, { strengths: [5] });
 
     if (scene === null) return;
 
@@ -146,7 +155,7 @@ describe('WebGPU consumes the same planned effect bounds', () => {
     // 6-unit blurs puts a 12-unit margin on every side of a 32-square. Any
     // backend-local recomputation of the expansion would show up here. Five
     // borrows - three chain targets plus one separable-blur scratch each.
-    const scene = await render(ctx, { radii: [6, 6] });
+    const scene = await render(ctx, { strengths: [3, 3] });
 
     if (scene === null) return;
 
@@ -154,7 +163,7 @@ describe('WebGPU consumes the same planned effect bounds', () => {
       expect(scene.sizes).toHaveLength(5);
 
       for (const recorded of scene.sizes) {
-        expect(recorded).toEqual([contentSide + 24, contentSide + 24]);
+        expect(recorded).toEqual([contentSide + 36, contentSide + 36]);
       }
     } finally {
       scene.dispose();
@@ -162,8 +171,8 @@ describe('WebGPU consumes the same planned effect bounds', () => {
   });
 
   test('an explicit clip still cuts the expanded blur', async ctx => {
-    const unclipped = await render(ctx, { radii: [10] });
-    const clipped = await render(ctx, { radii: [10], clip: true });
+    const unclipped = await render(ctx, { strengths: [5] });
+    const clipped = await render(ctx, { strengths: [5], clip: true });
 
     if (unclipped === null || clipped === null) {
       unclipped?.dispose();
@@ -185,12 +194,39 @@ describe('WebGPU consumes the same planned effect bounds', () => {
     }
   });
 
-  test('a cached node follows a radius mutated after attachment', async ctx => {
+  /** One row of a cached, blurred square built at `strength` in one go, or `null` when WebGPU is unavailable. */
+  const freshCachedRow = async (ctx: Parameters<typeof renderWebGpuOnce>[0], strength: number): Promise<number[] | null> => {
     const backend = await createWebGpuTestBackend(size, 1);
     const texture = createWhiteTexture();
     const root = new Container();
     const sprite = new Sprite(texture);
-    const blur = new BlurFilter({ radius: 3 });
+    const blur = new BlurFilter({ strength });
+
+    sprite.width = contentSide;
+    sprite.height = contentSide;
+    sprite.setPosition(contentLeft, contentLeft);
+    root.addChild(sprite);
+    root.cacheAsTexture = true;
+    root.addFilter(blur);
+
+    try {
+      if (!(await renderWebGpuOnce(ctx, backend, root))) return null;
+
+      return rowOf(readWebGpuFrame(backend, size), centre);
+    } finally {
+      root.destroy();
+      blur.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  };
+
+  test('a cached node follows a strength mutated after attachment', async ctx => {
+    const backend = await createWebGpuTestBackend(size, 1);
+    const texture = createWhiteTexture();
+    const root = new Container();
+    const sprite = new Sprite(texture);
+    const blur = new BlurFilter({ strength: 1.5 });
 
     sprite.width = contentSide;
     sprite.height = contentSide;
@@ -211,7 +247,7 @@ describe('WebGPU consumes the same planned effect bounds', () => {
 
       const before = litSpanOnRow(readWebGpuFrame(backend, size), centre)!;
 
-      blur.radius = 14;
+      blur.strength = 7;
 
       if (!(await renderWebGpuOnce(ctx, backend, root))) return;
 
@@ -219,6 +255,17 @@ describe('WebGPU consumes the same planned effect bounds', () => {
 
       expect(after[0], `${before.join('..')} vs ${after.join('..')}`).toBeLessThan(before[0]);
       expect(after[1], `${before.join('..')} vs ${after.join('..')}`).toBeGreaterThan(before[1]);
+
+      // The barrier's texture is RESIZED IN PLACE when the effect bounds
+      // change, and the composite sprite already holds it - so a composite that
+      // does not re-read the frame samples the new texture through the old UVs.
+      // That still moves both span edges, which is why the row is compared
+      // against a node that was never mutated rather than only its extent.
+      const fresh = await freshCachedRow(ctx, 7);
+
+      if (fresh !== null) {
+        expect(rowOf(readWebGpuFrame(backend, size), centre)).toEqual(fresh);
+      }
     } finally {
       dispose();
     }

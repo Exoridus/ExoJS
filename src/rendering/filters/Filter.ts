@@ -36,7 +36,7 @@ export abstract class Filter {
    * resolution any of its filters asks for.
    *
    * ```ts
-   * const blur = new BlurFilter({ radius: 8 });
+   * const blur = new BlurFilter({ strength: 4 });
    *
    * blur.resolution = 0.5; // half-resolution blur, quarter the fill cost
    * ```

@@ -228,7 +228,7 @@ Common pass-reduction strategies, in order of impact:
 1. **Remove filters you don't need.** Every filter the panel lists is active. If a `BlurFilter` on a background element is invisible under a solid overlay, removing it saves a pass.
 2. **Enable `cacheAsTexture`** on filtered drawables that don't change every frame. The inspector shows `[cached]` when active. Cached drawables bake their filters once and skip per-frame re-application.
 3. **Consolidate filter stacks.** Two `ColorMatrixFilter` instances on the same drawable cost two passes. Most color adjustments (brightness, contrast, saturation) can be combined into a single `ColorMatrixFilter` or replaced with a custom `ShaderFilter` that applies both in one pass.
-4. **Reduce drawable size.** Filter passes render at the drawable's bounding-box resolution (ceil). A 2048×2048 sprite with a blur costs far more than a 256×256 one with the same blur radius. The panel shows the resolution each drawable renders at.
+4. **Reduce drawable size.** Filter passes render at the drawable's bounding-box resolution (ceil). A 2048×2048 sprite with a blur costs far more than a 256×256 one with the same blur strength. The panel shows the resolution each drawable renders at.
 
 ### External GPU capture tools
 
