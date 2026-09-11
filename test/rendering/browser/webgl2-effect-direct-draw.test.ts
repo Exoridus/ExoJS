@@ -110,7 +110,7 @@ describe('effect direct-draw pixel behaviour (WebGL2)', () => {
 
     try {
       sprite.setPosition(24, 24);
-      filtered.addFilter(new BlurFilter({ radius: 4, quality: 3 }));
+      filtered.addFilter(new BlurFilter({ strength: 2 }));
       filtered.addChild(sprite);
       root.addChild(filtered);
 

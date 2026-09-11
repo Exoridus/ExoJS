@@ -15,7 +15,7 @@ class GameScene extends Scene {
     this.addChild(this.player);
     // ... game setup ...
 
-    this.blur = new BlurFilter({ radius: 0, quality: 2 });
+    this.blur = new BlurFilter({ strength: 0 });
 
     // Pause overlay on the UI layer, hidden until paused.
     this.pausePanel = new Panel({ width: 420, height: 140, cornerRadius: 18, color: new Color(0, 0, 0, 0.6) });
@@ -61,9 +61,9 @@ class GameScene extends Scene {
     this.pauseLabel.visible = pausing;
 
     if (pausing) {
-      this.blur.radius = 0;
+      this.blur.strength = 0;
       this.root.filters = [this.blur];
-      this.app.tweens.create(this.blur).to({ radius: 6 }, 0.35).start();
+      this.app.tweens.create(this.blur).to({ strength: 3 }, 0.35).start();
     } else {
       this.root.clearFilters();
     }

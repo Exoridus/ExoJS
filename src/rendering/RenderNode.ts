@@ -42,6 +42,9 @@ interface RenderNodeSpriteLike extends Drawable {
   width: number;
   height: number;
   setTexture(texture: RenderTexture | null): this;
+  /** Extent of the region the sprite samples, for detecting a texture resized in place. */
+  readonly textureFrame: { readonly width: number; readonly height: number };
+  resetTextureFrame(): this;
   setBlendMode(blendMode: BlendModes): this;
   setTint(color: Color): this;
   setPosition(x: number, y: number): this;
@@ -1082,6 +1085,16 @@ export abstract class RenderNode extends SceneNode {
     const sprite = this._getCacheSprite();
 
     sprite.setTexture(texture).setBlendMode(blendMode).setTint(Color.white).setPosition(x, y).setRotation(0).setScale(1, 1);
+
+    // An effect texture is RESIZED IN PLACE when the barrier's bounds change -
+    // a filter whose reach grew, a subtree that got bigger - and `setTexture`
+    // is a no-op for a texture the sprite already holds, so the frame it
+    // samples would keep the previous texture's size. The composite would then
+    // read the new texture through the old UVs: the picture is stretched and
+    // cut off at the old extent rather than merely stale.
+    if (sprite.textureFrame.width !== texture.width || sprite.textureFrame.height !== texture.height) {
+      sprite.resetTextureFrame();
+    }
 
     sprite.width = width;
     sprite.height = height;

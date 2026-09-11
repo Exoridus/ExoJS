@@ -39,11 +39,11 @@ export const pointerQueriesPerFrame = (spec: ArchetypeSpec): number => Math.max(
 /** Whether the archetype measures hit testing rather than drawing. */
 export const isPicking = (spec: ArchetypeSpec): boolean => pointerQueriesPerFrame(spec) > 0;
 
-/** Blur reach in logical pixels for the effect scene; `0` when the archetype renders no blur. */
-export const blurRadius = (spec: ArchetypeSpec): number => Math.max(0, spec.blurRadius ?? 0);
+/** Gaussian standard deviation in logical pixels for the effect scene; `0` when the archetype renders no blur. */
+export const blurStrength = (spec: ArchetypeSpec): number => Math.max(0, spec.blurStrength ?? 0);
 
 /** Whether the archetype renders the standalone blur effect rather than a scene of nodes. */
-export const isBlurEffect = (spec: ArchetypeSpec): boolean => blurRadius(spec) > 0;
+export const isBlurEffect = (spec: ArchetypeSpec): boolean => blurStrength(spec) > 0;
 
 /** Chained post-process filter count on the scene root; `0` when the archetype is unfiltered. */
 export const filterChainDepth = (spec: ArchetypeSpec): number => Math.max(0, Math.trunc(spec.filterChainDepth ?? 0));
@@ -54,11 +54,11 @@ export const maskDepth = (spec: ArchetypeSpec): number => Math.max(0, Math.trunc
 /** Whether the archetype moves its mask rects every frame (see `ArchetypeSpec.maskMotion`). */
 export const hasMaskMotion = (spec: ArchetypeSpec): boolean => maskDepth(spec) > 0 && spec.maskMotion === true;
 
-/** Bloom-composite blur extent in logical px; `0` when the archetype renders the scene in one pass. */
-export const compositeBlurRadius = (spec: ArchetypeSpec): number => Math.max(0, spec.compositeBlurRadius ?? 0);
+/** Bloom-composite Gaussian standard deviation in logical px; `0` when the archetype renders the scene in one pass. */
+export const compositeBlurStrength = (spec: ArchetypeSpec): number => Math.max(0, spec.compositeBlurStrength ?? 0);
 
 /** Whether the archetype renders the bloom-shaped capture/blur/composite multipass. */
-export const isComposite = (spec: ArchetypeSpec): boolean => compositeBlurRadius(spec) > 0;
+export const isComposite = (spec: ArchetypeSpec): boolean => compositeBlurStrength(spec) > 0;
 
 /**
  * Whether the archetype exercises render-target machinery - a filter chain, a

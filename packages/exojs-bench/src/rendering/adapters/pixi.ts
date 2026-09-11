@@ -38,8 +38,8 @@ import {
   tilemapExtent,
 } from '../tilemap';
 import {
-  blurRadius,
-  compositeBlurRadius,
+  blurStrength,
+  compositeBlurStrength,
   filterChainDepth,
   hasFullViewportLeaves,
   hasMaskMotion,
@@ -552,7 +552,7 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
     scene.addChild(sprite);
     // `strength` is Pixi's sigma, while the archetype states a reach; halving
     // converts one into the other, so both arms blur the same distance.
-    scene.filters = [new BlurFilter({ strength: blurRadius(spec) / 2, quality: 1, kernelSize: BLUR_TAPS_PER_SIDE * 2 + 1 })];
+    scene.filters = [new BlurFilter({ strength: blurStrength(spec), quality: 1, kernelSize: BLUR_TAPS_PER_SIDE * 2 + 1 })];
 
     root = scene;
     blurTexture = texture;
@@ -880,9 +880,9 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
       // viewport. `renderFrame` drives the four passes explicitly.
       releaseBloom();
 
-      const bloomRadius = compositeBlurRadius(spec);
+      const bloomStrength = compositeBlurStrength(spec);
 
-      if (bloomRadius > 0) {
+      if (bloomStrength > 0) {
         const capture = RenderTexture.create({ width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT });
         const blurred = RenderTexture.create({
           width: Math.round(VIEWPORT_WIDTH * BLOOM_DOWNSCALE),
@@ -892,7 +892,7 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
         const overlay = new Sprite(blurred);
 
         source.scale.set(BLOOM_DOWNSCALE);
-        source.filters = [new BlurFilter({ strength: bloomRadius, quality: 2 })];
+        source.filters = [new BlurFilter({ strength: bloomStrength, quality: 2 })];
         overlay.width = VIEWPORT_WIDTH;
         overlay.height = VIEWPORT_HEIGHT;
         overlay.blendMode = 'add';

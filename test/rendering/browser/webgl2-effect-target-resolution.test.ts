@@ -279,7 +279,7 @@ describe('WebGL2 effect target resolution', () => {
       const backend = await createBackend(pixelRatio);
       const texture = createSolidTexture('#ffffff');
       const { root } = createSubject(texture);
-      const blur = new BlurFilter({ radius: 8, quality: 1 });
+      const blur = new BlurFilter({ strength: 4 });
 
       root.filters = [blur];
 

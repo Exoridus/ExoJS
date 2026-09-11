@@ -131,7 +131,7 @@ describe('ColorMatrixFilter grading (WebGL2)', () => {
   });
 
   test('it composes with a blur in the same chain', async () => {
-    await render('#ffffff', [new BlurFilter({ radius: 4, quality: 3 }), new ColorMatrixFilter().tint(new Color(255, 0, 0))], pixel => {
+    await render('#ffffff', [new BlurFilter({ strength: 2 }), new ColorMatrixFilter().tint(new Color(255, 0, 0))], pixel => {
       const centre = pixel(SAMPLE, SAMPLE);
 
       expect(centre[0]).toBeGreaterThan(40);

@@ -28,10 +28,10 @@ export const STAGE_SIZE = 360;
 /** Full-stage quads the `overdraw` scene stacks. Chosen so DPR 3 is genuinely fill-bound on a phone without wedging it. */
 export const OVERDRAW_LAYERS = 24;
 
-/** Blur radius, in target texels, at scale 1. */
-export const BLUR_RADIUS = 6;
+/** Blur strength (Gaussian standard deviation) in logical units, at scale 1. */
+export const BLUR_STRENGTH = 3;
 
-/** Blur sample quality. Kept low: the probe measures target SIZE cost, not filter quality. */
+/** Tap cap per side. Kept low: the probe measures target SIZE cost, not filter quality. */
 export const BLUR_QUALITY = 2;
 
 /** Logical font sizes the `text-ratio` scene renders, smallest first. */
@@ -384,12 +384,12 @@ export const createProbeScene = (id: ProbeSceneId, options: ProbeSceneOptions): 
   }
 
   if (id === 'blur') {
-    // `radius` is in LOGICAL units since internal targets inherit the surface
+    // `strength` is in LOGICAL units since internal targets inherit the surface
     // resolution, so it is NOT scaled here - the
     // filter converts it into target texels itself. Both arms therefore blur
     // over the same on-screen distance and differ only in how finely it is
     // sampled, which is exactly the comparison this scene is for.
-    const filter = new BlurFilter({ radius: BLUR_RADIUS, quality: BLUR_QUALITY });
+    const filter = new BlurFilter({ strength: BLUR_STRENGTH, quality: BLUR_QUALITY });
 
     filter.resolution = pinned;
     filters.push(filter);

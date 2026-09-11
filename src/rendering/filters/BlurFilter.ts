@@ -1,26 +1,62 @@
-import { Color } from '#core/Color';
 import type { ReadonlyRectangle, Rectangle } from '#math/Rectangle';
-import { BackendTargetPass } from '#rendering/BackendTargetPass';
-import { drawDrawableDirect } from '#rendering/plan/drawDrawableDirect';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import { Sprite } from '#rendering/sprite/Sprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
-import { BlendModes } from '#rendering/types';
+import { UniformArray } from '#rendering/uniforms/uniformDeclarations';
+import { UniformType } from '#rendering/uniforms/UniformType';
 
 import { Filter } from './Filter';
+import { createFilterShader, ShaderFilter } from './ShaderFilter';
+import glslFragment from './shaders/blur.frag';
+import wgslFragment from './shaders/blur.wgsl';
+
+/**
+ * Taps per side one sweep may take, and with it the size of the tap table the
+ * shader reads. Thirty-two keeps the kernel sampled at one texel or finer up to
+ * a strength of about ten logical units, which covers the blurs a scene
+ * actually asks for, and bounds one sweep at 65 texture fetches.
+ */
+const MAX_TAPS_PER_SIDE = 32;
+
+/** Tap-table entries: the centre tap plus one per positive-side tap. */
+const TAP_ENTRIES = MAX_TAPS_PER_SIDE + 1;
+
+/**
+ * Standard deviations the kernel spans on each side.
+ *
+ * Three is the usual truncation point: it keeps 99.7% of the Gaussian's mass,
+ * so the discarded tail is below what eight-bit output can show, and it is what
+ * makes {@link BlurFilter.strength} convertible to a reach at all.
+ */
+const KERNEL_SIGMAS = 3;
+
+/**
+ * The blur source pair, built once and shared by every instance. Exported so
+ * the structural parity checks can read the same object the filter runs rather
+ * than a copy of it.
+ * @internal
+ */
+export const blurShader = createFilterShader({
+  glsl: { fragment: glslFragment },
+  wgsl: wgslFragment,
+  uniforms: { uTaps: new UniformArray(UniformType.Vec4, TAP_ENTRIES) },
+});
 
 /** Construction-time options for a {@link BlurFilter}. */
 export interface BlurFilterOptions {
-  /** Blur extent in LOGICAL units - unchanged by the display's pixel ratio. */
-  readonly radius?: number;
   /**
-   * Taps per side of each sweep: a sweep takes `quality * 2 + 1` of them,
-   * spread evenly across `[-radius, +radius]`. It buys smoothness, not reach.
+   * Gaussian standard deviation in LOGICAL units - unchanged by the display's
+   * pixel ratio. The same quantity CSS `blur()` and Pixi's `strength` take, so
+   * a value carried over from either produces the same blur here. Default `2`.
+   */
+  readonly strength?: number;
+  /**
+   * Upper bound on the taps one sweep may take per side, as a cost cap. Omit it
+   * and the tap count follows {@link strength} on its own, which is the usual
+   * case; set it to trade smoothness for texture fetches on a weak device.
    *
-   * Because the taps always span the whole radius, their SPACING is
-   * `radius / quality` - so a wide blur wants a higher quality or the kernel
-   * shows as bands. Default `1`, which is three taps: cheap, and honest only
-   * for small radii.
+   * Capping does not shorten the blur: the taps still span the full kernel, so
+   * a cap well below the derived count widens their spacing and can show as
+   * banding. The ceiling is 32 either way.
    */
   readonly quality?: number;
 }
@@ -29,141 +65,111 @@ export interface BlurFilterOptions {
  * Gaussian blur {@link Filter}, run as two separable passes.
  *
  * The input is swept along X into a scratch target, then that scratch is swept
- * along Y into the output, each sweep taking `quality * 2 + 1` taps spread over
- * ±`radius` logical units and weighted by a Gaussian. Because the two sweeps are
+ * along Y into the output, each sweep sampling a Gaussian kernel of
+ * {@link strength} standard deviations in ONE draw. Because the two sweeps are
  * chained rather than summed, the effective 2D kernel is their product - a real
  * isotropic blur that reaches diagonally as well as along the axes.
  *
  * (Summing the two sweeps into one target instead, which is what this filter
  * used to do, produces a cross: a pixel diagonally off a corner is touched by
- * neither sweep and stays black at any radius.)
+ * neither sweep and stays black at any strength.)
  *
- * Higher `quality` values add taps and smooth the result at the cost of extra
- * draw calls; they do not change how far the blur reaches.
+ * ```ts
+ * // The same blur as CSS `filter: blur(4px)`.
+ * subtree.filters = [new BlurFilter({ strength: 4 })];
+ * ```
+ *
+ * The kernel is truncated at three standard deviations, so the filter reaches
+ * `strength * 3` logical units outside its input on every edge and the tap
+ * count follows the strength without the caller choosing one.
+ *
+ * Runs on a {@link ShaderFilter} carrying both a GLSL and a WGSL source, so it
+ * works on either backend without the caller choosing one.
  */
 export class BlurFilter extends Filter {
-  private readonly _sprite: Sprite = new Sprite(null);
-  private readonly _sampleTint: Color = Color.white.clone();
-  /** One redirect pass per axis, re-pointed per application - see {@link BackendTargetPass.retarget}. */
-  private readonly _horizontalPass: BackendTargetPass = new BackendTargetPass(backend => this._drawSamples(backend, true));
-  private readonly _verticalPass: BackendTargetPass = new BackendTargetPass(backend => this._drawSamples(backend, false));
-  private _radius = 2;
-  private _quality = 1;
+  private readonly _shaderFilter = ShaderFilter.from(blurShader);
   /**
-   * Normalised Gaussian tap weights, one per tap, rebuilt only when `quality`
-   * changes. They are independent of `radius`: a tap's weight is a function of
-   * its position as a FRACTION of the radius (see {@link _rebuildWeights}), so
-   * scaling the radius scales the offsets and leaves the weights alone.
+   * Normalised Gaussian tap weights for the current kernel, index `0` the
+   * centre. Rebuilt only when the resolved kernel changes, which a filter
+   * applied to many nodes at one resolution means is once.
    */
-  private _weights: Float32Array;
-  /**
-   * Target resolution of the pass currently running, staged by {@link apply} so
-   * the sample loop can convert {@link radius} from logical units to texels
-   * without the pass body taking a parameter it would have to capture.
-   */
-  private _passResolution = 1;
+  private readonly _weights = new Float32Array(TAP_ENTRIES);
+  private _strength: number;
+  private _quality: number;
+  /** Kernel the cached weights describe, so a re-application rebuilds nothing. */
+  private _builtSigma = -1;
+  private _builtTapsPerSide = -1;
+  private _tapsPerSide = 0;
+  private _tapSpacing = 0;
 
   public constructor(options: BlurFilterOptions = {}) {
     super();
 
-    this._radius = Math.max(0, options.radius ?? 2);
-    this._quality = Math.max(1, Math.floor(options.quality ?? 1));
-    this._weights = new Float32Array(0);
-    this._rebuildWeights();
+    this._strength = Math.max(0, options.strength ?? 2);
+    this._quality = clampTapLimit(options.quality);
   }
 
   /**
-   * Blur extent in LOGICAL units.
+   * Gaussian standard deviation in LOGICAL units.
    *
    * Independent of the display: the filter scales it into target texels itself,
-   * so a radius of 8 covers the same on-screen distance at every
+   * so a strength of 8 covers the same on-screen distance at every
    * {@link Filter.resolution} and every device pixel ratio.
    */
-  public get radius(): number {
-    return this._radius;
+  public get strength(): number {
+    return this._strength;
   }
 
-  public set radius(radius: number) {
-    const next = Math.max(0, radius);
+  public set strength(strength: number) {
+    const next = Math.max(0, strength);
 
-    if (this._radius !== next) {
-      this._radius = next;
+    if (this._strength !== next) {
+      this._strength = next;
       this.invalidate();
     }
   }
 
-  /** Taps per side of each sweep - see {@link BlurFilterOptions.quality}. */
+  /** Tap cap per side - see {@link BlurFilterOptions.quality}. `0` means derived. */
   public get quality(): number {
     return this._quality;
   }
 
   public set quality(quality: number) {
-    const next = Math.max(1, Math.floor(quality));
+    const next = clampTapLimit(quality);
 
     if (this._quality !== next) {
       this._quality = next;
-      this._rebuildWeights();
       this.invalidate();
     }
   }
 
   /**
-   * Gaussian weights for the current tap count, normalised to sum to 1.
-   *
-   * Taps sit evenly across `[-radius, +radius]`, so tap `k` is at the fraction
-   * `t ∈ [-1, 1]` of the radius. Choosing `σ = radius / 2` makes the weight
-   * `exp(-t² / 2σ'²)` with `σ' = 1/2`, i.e. `exp(-2t²)` - a pure function of
-   * `t`, which is why the radius never enters here. The outermost tap keeps
-   * `e⁻² ≈ 0.135` of the centre's weight: far enough down to look Gaussian,
-   * far enough up that the declared reach is actually used rather than being
-   * a radius the kernel truncates away to nothing.
-   */
-  private _rebuildWeights(): void {
-    const taps = this._quality * 2 + 1;
-
-    if (this._weights.length !== taps) {
-      this._weights = new Float32Array(taps);
-    }
-
-    const tapWeight = (tap: number): number => {
-      const t = taps === 1 ? 0 : (tap / (taps - 1)) * 2 - 1;
-
-      return Math.exp(-2 * t * t);
-    };
-
-    let total = 0;
-
-    for (let tap = 0; tap < taps; tap++) {
-      total += tapWeight(tap);
-    }
-
-    for (let tap = 0; tap < taps; tap++) {
-      this._weights[tap] = tapWeight(tap) / total;
-    }
-  }
-
-  /**
-   * The blur reaches `radius` logical units outside its input on every edge.
-   *
-   * Read off the sampling loop rather than assumed: each sweep draws its source
-   * at offsets spread evenly over `[-radius, +radius]`, so the horizontal sweep
-   * moves a value at most `radius` in x and the vertical one at most `radius`
-   * in y. Chaining them means a value can travel `radius` in BOTH - the corner
-   * of the box, which is exactly what this rectangle already declares.
-   * `quality` adds taps between those extremes and does not change the reach.
+   * The blur reaches `strength * 3` logical units outside its input on every
+   * edge - the point the kernel is truncated at, and therefore the furthest a
+   * value can travel along one sweep. Chaining the two sweeps means it can
+   * travel that far in BOTH, which is the corner of the box this rectangle
+   * already declares. `quality` redistributes the taps inside that reach and
+   * does not change it.
    */
   public override getOutputBounds(input: ReadonlyRectangle, output: Rectangle): void {
-    const radius = this._radius;
+    const reach = this._strength * KERNEL_SIGMAS;
 
-    output.set(input.x - radius, input.y - radius, input.width + radius * 2, input.height + radius * 2);
+    output.set(input.x - reach, input.y - reach, input.width + reach * 2, input.height + reach * 2);
   }
 
   public apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, resolution = 1): void {
-    this._passResolution = resolution;
+    // `strength` is logical; the target is `resolution` texels per logical unit,
+    // so the kernel has to scale with it. Without this the blur would shrink to
+    // 1/resolution of its authored width the moment targets started inheriting
+    // the surface resolution.
+    const sigma = this._strength * resolution;
 
-    if (this._radius <= 0) {
-      this._stage(input, output);
-      backend.execute(this._verticalPass.retarget(output, output.view, Color.transparentBlack));
+    this._buildKernel(sigma);
+
+    if (this._tapsPerSide === 0) {
+      // A degenerate kernel is a copy, and a copy needs no second sweep.
+      this._stageTaps(0, 0);
+      this._shaderFilter.apply(backend, input, output, resolution);
 
       return;
     }
@@ -175,61 +181,90 @@ export class BlurFilter extends Filter {
     const scratch = backend.acquireRenderTexture(output.width, output.height);
 
     try {
-      this._stage(input, scratch);
-      backend.execute(this._horizontalPass.retarget(scratch, scratch.view, Color.transparentBlack));
+      this._stageTaps(this._tapSpacing / output.width, 0);
+      this._shaderFilter.apply(backend, input, scratch, resolution);
 
-      this._stage(scratch, output);
-      backend.execute(this._verticalPass.retarget(output, output.view, Color.transparentBlack));
+      // The kernel is symmetric about the centre tap, so the vertical sweep
+      // needs no v-axis orientation correction: +offset and -offset are both
+      // sampled whichever way the backend stores the effect domain.
+      this._stageTaps(0, this._tapSpacing / output.height);
+      this._shaderFilter.apply(backend, scratch, output, resolution);
     } finally {
       backend.releaseRenderTexture(scratch);
     }
   }
 
-  /** Point the shared sprite at one sweep's source, sized to its target. */
-  private _stage(source: RenderTexture, target: RenderTexture): void {
-    this._sprite.setTexture(source).setBlendMode(BlendModes.Additive).setRotation(0).setScale(1, 1);
-    this._sprite.width = target.width;
-    this._sprite.height = target.height;
+  public override destroy(): void {
+    super.destroy();
+    this._shaderFilter.destroy();
   }
 
   /**
-   * One sweep's body. A method rather than an inline closure so the sample loop
-   * reads its parameters off the instance instead of capturing them - the
-   * closure would otherwise be rebuilt for every filtered node, every frame.
+   * Resolve the tap count, their spacing and their weights for `sigma` texels.
+   *
+   * One tap per texel is the finest the target can show, so the derived count
+   * is the truncated reach in texels; the cap only ever widens the spacing,
+   * which keeps the reach - and therefore the bounds this filter declared -
+   * true whatever the cap is.
    */
-  private _drawSamples(backend: RenderBackend, horizontal: boolean): void {
-    // `radius` is logical; the target is `resolution` texels per logical unit,
-    // so the offsets have to scale with it. Without this the blur would shrink
-    // to 1/resolution of its authored width the moment targets started
-    // inheriting the surface resolution.
-    const radius = this._radius * this._passResolution;
+  private _buildKernel(sigma: number): void {
+    const reach = sigma * KERNEL_SIGMAS;
+    const limit = this._quality === 0 ? MAX_TAPS_PER_SIDE : this._quality;
+    const tapsPerSide = sigma <= 0 ? 0 : Math.min(limit, Math.max(1, Math.ceil(reach)));
 
-    if (radius <= 0) {
-      this._sampleTint.set(255, 255, 255, 1);
-      drawDrawableDirect(this._sprite.setTint(this._sampleTint).setPosition(0, 0), backend);
+    this._tapsPerSide = tapsPerSide;
+    this._tapSpacing = tapsPerSide === 0 ? 0 : reach / tapsPerSide;
 
+    if (this._builtSigma === sigma && this._builtTapsPerSide === tapsPerSide) {
       return;
     }
 
-    const taps = this._weights.length;
+    this._builtSigma = sigma;
+    this._builtTapsPerSide = tapsPerSide;
+    this._weights[0] = 1;
 
-    for (let tap = 0; tap < taps; tap++) {
-      const t = taps === 1 ? 0 : (tap / (taps - 1)) * 2 - 1;
-      const offset = t * radius;
+    if (tapsPerSide === 0) {
+      return;
+    }
 
-      // Additive blending scales each draw by the sprite's tint alpha, so the
-      // tap weight rides in as alpha and the sweep sums to a weighted average.
-      // `setTint` copies, so the shared colour can be rewritten per tap.
-      this._sampleTint.set(255, 255, 255, this._weights[tap]);
-      this._sprite.setTint(this._sampleTint);
+    const spacing = this._tapSpacing;
+    const denominator = 2 * sigma * sigma;
+    // The centre is counted once and every other tap twice - the loop below
+    // writes one entry per MIRROR PAIR, and both halves of the pair carry the
+    // weight the normalisation has to account for.
+    let total = 1;
 
-      drawDrawableDirect(this._sprite.setPosition(horizontal ? offset : 0, horizontal ? 0 : offset), backend);
+    for (let tap = 1; tap <= tapsPerSide; tap++) {
+      const distance = tap * spacing;
+      const weight = Math.exp(-(distance * distance) / denominator);
+
+      this._weights[tap] = weight;
+      total += weight * 2;
+    }
+
+    for (let tap = 0; tap <= tapsPerSide; tap++) {
+      // In-bounds: `tap` <= `tapsPerSide` <= MAX_TAPS_PER_SIDE.
+      this._weights[tap] = this._weights[tap]! / total;
     }
   }
 
-  public override destroy(): void {
-    super.destroy();
-    this._sampleTint.destroy();
-    this._sprite.destroy();
+  /**
+   * Write the resolved kernel into the shader's tap table, stepping by
+   * `(du, dv)` UV units per tap. Entry 0 is the centre: its weight in `z` and
+   * the table's used length in `w`, which is what bounds the shader's loop.
+   */
+  private _stageTaps(du: number, dv: number): void {
+    const taps = this._shaderFilter.uniforms.uTaps;
+    const tapsPerSide = this._tapsPerSide;
+
+    taps.at(0).set(0, 0, this._weights[0]!, tapsPerSide + 1);
+
+    for (let tap = 1; tap <= tapsPerSide; tap++) {
+      // In-bounds: `tap` <= `tapsPerSide` <= MAX_TAPS_PER_SIDE.
+      taps.at(tap).set(du * tap, dv * tap, this._weights[tap]!, 0);
+    }
   }
 }
+
+/** `0` for "derive from the strength", otherwise a tap cap inside the shader's table. */
+const clampTapLimit = (quality: number | undefined): number => (quality === undefined ? 0 : Math.min(MAX_TAPS_PER_SIDE, Math.max(1, Math.floor(quality))));

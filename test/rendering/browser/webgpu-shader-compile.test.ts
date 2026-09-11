@@ -38,6 +38,7 @@
 
 import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 
+import { blurShader } from '#rendering/filters/BlurFilter';
 import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
 import { dropShadowShader } from '#rendering/filters/DropShadowFilter';
 import { spriteMaterialPrologueWgsl } from '#rendering/sprite/materialSources';
@@ -79,9 +80,10 @@ const shaders: readonly ShaderEntry[] = [
   { name: 'WebGpuStencilClipper', source: stencilWriteShaderSource },
   { name: 'WebGpuTextRenderer', source: textShaderSource },
   { name: 'spriteMaterialSources spriteMaterialPrologueWgsl (custom-material prelude)', source: spriteMaterialPrologueWgsl },
-  // The two stock filters that declare a typed uniform schema: what a backend
+  // The stock filters that declare a typed uniform schema: what a backend
   // compiles is the author's body plus the generated block, so that is what has
   // to compile.
+  { name: 'BlurFilter (generated uniform block)', source: blurShader._resolveWgsl(filterUniformGroup)! },
   { name: 'ColorMatrixFilter (generated uniform block)', source: colorMatrixShader._resolveWgsl(filterUniformGroup)! },
   { name: 'DropShadowFilter (generated uniform block)', source: dropShadowShader._resolveWgsl(filterUniformGroup)! },
 ];

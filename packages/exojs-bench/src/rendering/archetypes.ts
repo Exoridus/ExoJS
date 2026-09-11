@@ -77,16 +77,11 @@ const BLUR_HEIGHTS = [360, 720, 1_080] as const;
 /**
  * Standard deviation of the shared Gaussian, in logical pixels.
  *
- * The contract is stated as SIGMA because that is the one number both filters
- * can be configured from: ExoJS takes a reach (two sigma, which is what a
- * nine-tap kernel spans) and Pixi takes the sigma itself. Handing both the same
- * figure under two meanings is what made one arm blur twice as far as the other
- * while the comparison claimed they matched.
+ * Both filters are configured from it directly - ExoJS's `strength` and Pixi's
+ * `strength` are the same quantity - so neither arm can end up blurring further
+ * than the other while the comparison claims they match.
  */
 export const BLUR_SIGMA = 2;
-
-/** Blur reach in logical pixels - two sigma, the span of the nine-tap kernel. */
-const BLUR_RADIUS = BLUR_SIGMA * 2;
 
 /**
  * Taps per side of the shared blur kernel, so both arms sweep 4 + 1 + 4 = nine.
@@ -599,7 +594,7 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     textureCount: 1,
     mutationFraction: 0,
     cullingEnabled: false,
-    compositeBlurRadius: 4,
+    compositeBlurStrength: 2,
   },
   {
     id: 'mask-clip',
@@ -718,7 +713,7 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     textureCount: 1,
     mutationFraction: 0,
     cullingEnabled: false,
-    blurRadius: BLUR_RADIUS,
+    blurStrength: BLUR_SIGMA,
   },
   // HIT TESTING - the one cost a pointer-driven interface pays every frame that
   // no drawing archetype touches. The scene is a field of interactive

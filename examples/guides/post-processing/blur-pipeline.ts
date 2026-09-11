@@ -23,7 +23,7 @@ class PostProcessScene extends Scene {
   override init(): void {
     this.sceneRt = new RenderTexture(800, 600);
     this.blurredRt = new RenderTexture(800, 600);
-    this.blur = new BlurFilter({ radius: 4, quality: 2 });
+    this.blur = new BlurFilter({ strength: 2 });
     this.worldLayer = new Container();
     this.final = new Sprite(this.blurredRt);
 

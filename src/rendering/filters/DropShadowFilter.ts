@@ -1,5 +1,5 @@
 import { Color } from '#core/Color';
-import type { ReadonlyRectangle, Rectangle } from '#math/Rectangle';
+import { type ReadonlyRectangle, Rectangle } from '#math/Rectangle';
 import { BackendTargetPass } from '#rendering/BackendTargetPass';
 import { drawDrawableDirect } from '#rendering/plan/drawDrawableDirect';
 import type { RenderBackend } from '#rendering/RenderBackend';
@@ -30,9 +30,13 @@ export interface DropShadowFilterOptions {
   readonly offsetX?: number;
   /** Shadow offset along y in LOGICAL units. Default `4`. */
   readonly offsetY?: number;
-  /** Softness: the blur radius applied to the silhouette, in logical units. Default `4`. */
+  /**
+   * Softness: the Gaussian standard deviation the silhouette is blurred by, in
+   * logical units - the same quantity {@link BlurFilterOptions.strength} takes.
+   * Default `2`.
+   */
   readonly blur?: number;
-  /** Blur smoothness, see {@link BlurFilterOptions.quality}. Default `1`. */
+  /** Tap cap for that blur, see {@link BlurFilterOptions.quality}. Derived when omitted. */
   readonly quality?: number;
   /** Shadow colour; its alpha is the shadow's opacity. Default black at `0.5`. */
   readonly color?: Color;
@@ -75,6 +79,9 @@ export class DropShadowFilter extends Filter {
   private _offsetX: number;
   private _offsetY: number;
   private _shadowOnly: boolean;
+  /** Scratch for {@link getOutputBounds}: the shifted input, and its blurred spread. */
+  private readonly _shiftedBounds = new Rectangle();
+  private readonly _spreadBounds = new Rectangle();
   /** Staged by {@link apply} for the composite body, which takes no parameters. */
   private _passInput: RenderTexture | null = null;
   private _passShadow: RenderTexture | null = null;
@@ -86,7 +93,7 @@ export class DropShadowFilter extends Filter {
     this._offsetY = options.offsetY ?? 4;
     this._shadowOnly = options.shadowOnly ?? false;
     this._color = options.color?.clone() ?? new Color(0, 0, 0, 0.5);
-    this._blur = new BlurFilter({ radius: options.blur ?? 4, quality: options.quality ?? 1 });
+    this._blur = new BlurFilter({ strength: options.blur ?? 2, ...(options.quality !== undefined && { quality: options.quality }) });
     this._writeColor();
   }
 
@@ -114,26 +121,29 @@ export class DropShadowFilter extends Filter {
     }
   }
 
-  /** Blur radius applied to the silhouette, in logical units. `0` gives a hard-edged shadow. */
+  /** Blur applied to the silhouette, in logical units. `0` gives a hard-edged shadow. */
   public get blur(): number {
-    return this._blur.radius;
+    return this._blur.strength;
   }
 
   public set blur(blur: number) {
-    if (this._blur.radius !== Math.max(0, blur)) {
-      this._blur.radius = blur;
+    if (this._blur.strength !== Math.max(0, blur)) {
+      this._blur.strength = blur;
       this.invalidate();
     }
   }
 
-  /** Blur smoothness, see {@link BlurFilterOptions.quality}. */
+  /** Tap cap for that blur, see {@link BlurFilterOptions.quality}. */
   public get quality(): number {
     return this._blur.quality;
   }
 
   public set quality(quality: number) {
-    if (this._blur.quality !== Math.max(1, Math.floor(quality))) {
-      this._blur.quality = quality;
+    const previous = this._blur.quality;
+
+    this._blur.quality = quality;
+
+    if (this._blur.quality !== previous) {
       this.invalidate();
     }
   }
@@ -171,19 +181,22 @@ export class DropShadowFilter extends Filter {
   }
 
   /**
-   * The shadow reaches `blur` logical units beyond the input, shifted by the
+   * The shadow reaches as far beyond the input as its blur does, shifted by the
    * offset; the source keeps its own extent, so the result is the union.
    */
   public override getOutputBounds(input: ReadonlyRectangle, output: Rectangle): void {
-    const reach = this._blur.radius;
-    const shadowLeft = input.x + this._offsetX - reach;
-    const shadowTop = input.y + this._offsetY - reach;
-    const shadowRight = input.x + input.width + this._offsetX + reach;
-    const shadowBottom = input.y + input.height + this._offsetY + reach;
-    const left = Math.min(input.x, shadowLeft);
-    const top = Math.min(input.y, shadowTop);
-    const right = Math.max(input.x + input.width, shadowRight);
-    const bottom = Math.max(input.y + input.height, shadowBottom);
+    const shifted = this._shiftedBounds;
+    const spread = this._spreadBounds;
+
+    shifted.set(input.x + this._offsetX, input.y + this._offsetY, input.width, input.height);
+    // Asked of the blur rather than recomputed here, so the two can never
+    // disagree about how far a given strength reaches.
+    this._blur.getOutputBounds(shifted, spread);
+
+    const left = Math.min(input.x, spread.x);
+    const top = Math.min(input.y, spread.y);
+    const right = Math.max(input.x + input.width, spread.x + spread.width);
+    const bottom = Math.max(input.y + input.height, spread.y + spread.height);
 
     output.set(left, top, right - left, bottom - top);
   }

@@ -28,7 +28,7 @@ class FilterChainScene extends Scene {
     this.sceneRt = new RenderTexture(800, 600);
     this.tmpRt = new RenderTexture(800, 600);
     this.outRt = new RenderTexture(800, 600);
-    this.blur = new BlurFilter({ radius: 6, quality: 2 });
+    this.blur = new BlurFilter({ strength: 3 });
     this.color = new ColorMatrixFilter().tint(new Color(140, 190, 255));
     this.final = new Sprite(this.outRt);
 
