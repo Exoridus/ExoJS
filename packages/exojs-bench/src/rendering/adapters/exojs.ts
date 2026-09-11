@@ -32,6 +32,7 @@ import { View } from '#rendering/View';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
+import { BLUR_TAPS_PER_SIDE } from '../archetypes';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
 import {
   isParticleLifecycle,
@@ -43,7 +44,8 @@ import {
   PARTICLE_TINT,
   particleSeedAt,
 } from '../particles';
-import { createDistinctTextureCanvas, createParticleCanvas, createTileAtlasCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
+import { isPickingScene, PICK_RECT_SIZE, pickPointAt, pickRectAt } from '../picking';
+import { createBlurSourceCanvas, createDistinctTextureCanvas, createParticleCanvas, createTileAtlasCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
 import type { TilemapExtent } from '../tilemap';
 import {
   isTilemap,
@@ -57,15 +59,18 @@ import {
   tilemapExtent,
 } from '../tilemap';
 import {
+  blurRadius,
   compositeBlurRadius,
   filterChainDepth,
   hasFullViewportLeaves,
   hasMaskMotion,
+  isBlurEffect,
   isChurning,
   isTextArchetype,
   isTextUpdating,
   leafAlpha,
   maskDepth,
+  pointerQueriesPerFrame,
   textForLeaf,
 } from '../traits';
 import {
@@ -687,6 +692,95 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
     particleLifetime = null;
   };
 
+  /** The blur scene's texture, kept so teardown releases it. */
+  let blurTexture: Texture | null = null;
+
+  /**
+   * Build the blur scene: one textured quad under a separable two-pass Gaussian.
+   *
+   * A single quad on purpose - the archetype measures the filter's own target
+   * passes, and a scene of nodes would mix traversal cost into a figure about an
+   * effect. The node count is the filtered HEIGHT; the quad keeps a 16:9 shape,
+   * so the count scales the area the blur has to cover.
+   */
+  const buildBlurScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const texture = new Texture(createBlurSourceCanvas());
+    const sprite = new Sprite(texture);
+    const height = nodeCount;
+    const width = Math.round((height * 16) / 9);
+
+    sprite.width = width;
+    sprite.height = height;
+    sprite.setPosition((VIEWPORT_WIDTH - width) / 2, (VIEWPORT_HEIGHT - height) / 2);
+
+    root = new Container();
+    root.addChild(sprite);
+    // Nine taps at the archetype's reach: `quality` is taps per side, so 4 gives
+    // the 4 + 1 + 4 the shared contract asks for.
+    root.filters = [new BlurFilter({ radius: blurRadius(spec), quality: BLUR_TAPS_PER_SIDE })];
+
+    blurTexture = texture;
+  };
+
+  /** Drop the blur scene's texture so a rebuild (or teardown) leaks nothing. */
+  const releaseBlur = (): void => {
+    blurTexture?.destroy();
+    blurTexture = null;
+  };
+
+  /** Hit-test scene state, or nulls for every archetype that resolves no queries. */
+  let pickingSpec: ArchetypeSpec | null = null;
+  let pickTexture: Texture | null = null;
+  /**
+   * Hits the last block resolved.
+   *
+   * Published on the adapter so a smoke run can check that every arm resolved
+   * the identical points to the identical answers - a picking row where one arm
+   * silently searched a smaller scene would otherwise read as a faster index.
+   */
+  let pickHits = 0;
+
+  /**
+   * Build the picking scene: interactive rectangles on the shared layout, with
+   * the engine's interaction index attached to them.
+   *
+   * `attachRoot` is what puts the nodes into that index, which is the structure
+   * the comparison is actually about - without it the engine would walk the tree
+   * per query and the row would measure a fallback rather than the feature.
+   */
+  const buildPickingScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const texture = new Texture(createParticleCanvas());
+    const scene = new Container();
+
+    for (let index = 0; index < nodeCount; index += 1) {
+      const rect = new Sprite(texture);
+      const at = pickRectAt(index);
+
+      rect.width = PICK_RECT_SIZE;
+      rect.height = PICK_RECT_SIZE;
+      rect.setPosition(at.x, at.y);
+      rect.interactive = true;
+      scene.addChild(rect);
+    }
+
+    root = scene;
+    pickTexture = texture;
+    pickingSpec = spec;
+
+    app!.interaction.attachRoot(scene);
+  };
+
+  /** Drop the picking scene so a rebuild (or teardown) leaks nothing. */
+  const releasePicking = (): void => {
+    if (pickingSpec !== null && root !== null) {
+      app?.interaction.detachRoot(root);
+    }
+
+    pickTexture?.destroy();
+    pickTexture = null;
+    pickingSpec = null;
+  };
+
   return {
     engine: 'exojs',
     config,
@@ -744,6 +838,8 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       releaseComposite();
       releaseTilemap();
       releaseParticles();
+      releaseBlur();
+      releasePicking();
       sharedMeshGeometry?.destroy();
       sharedMeshGeometry = null;
 
@@ -759,6 +855,18 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       // in the system's own storage rather than in the scene graph.
       if (isParticles(spec)) {
         buildParticleScene(spec, nodeCount);
+
+        return;
+      }
+
+      if (isBlurEffect(spec)) {
+        buildBlurScene(spec, nodeCount);
+
+        return;
+      }
+
+      if (isPickingScene(spec)) {
+        buildPickingScene(spec, nodeCount);
 
         return;
       }
@@ -1023,11 +1131,36 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       app.rendering.view.setCenter(start.x, start.y);
     },
 
+    pickHits(): number {
+      return pickHits;
+    },
+
     mutationSignature(): string {
       return mutationSignature(mutableIndices);
     },
 
     mutate(frame: number): void {
+      // Picking scene: one block of point queries through the engine's own
+      // public query, inside the bracket because resolving them IS the frame's
+      // work here. The hit count is kept so a smoke run can check that every arm
+      // resolved the same points to the same answers.
+      if (pickingSpec !== null && app !== null) {
+        const queries = pointerQueriesPerFrame(pickingSpec);
+        let hits = 0;
+
+        for (let index = 0; index < queries; index += 1) {
+          const point = pickPointAt(index, queries);
+
+          if (app.interaction.nodeAt(point.x, point.y) !== null) {
+            hits += 1;
+          }
+        }
+
+        pickHits = hits;
+
+        return;
+      }
+
       // Particle scenes: the lifecycle one advances the simulation and tops the
       // pool back up, both inside the bracket, because ageing, moving, fading and
       // respawning ARE the per-frame work it measures. The draw-only scene

@@ -474,6 +474,8 @@ const ARCHETYPE_DESCRIPTIONS: Readonly<Record<string, string>> = {
   'tilemap-edit': 'Tile ids replaced every frame; stresses getting a tile change to the GPU.',
   'particles-draw': 'A fixed set of quads submitted through the particle path; no simulation.',
   'particles-lifecycle': 'A steady particle effect: ageing, movement, fading and respawning.',
+  'interaction-picking': 'A block of point queries against a field of interactive rectangles; stresses the hit-test index.',
+  'fx-blur': 'A separable two-pass Gaussian over a fixed area; stresses the target passes a filter runs.',
 };
 
 /**
@@ -513,6 +515,8 @@ const ARCHETYPE_TITLES: Readonly<Record<string, string>> = {
   'tilemap-edit': 'Editing tiles',
   'particles-draw': 'Drawing particles',
   'particles-lifecycle': 'Particle effect',
+  'interaction-picking': 'Hit testing',
+  'fx-blur': 'Blur effect',
   'box-stack': 'Box stack',
   'many-dynamic': 'Many active bodies',
   'mixed-static-dynamic': 'Static level, falling bodies',

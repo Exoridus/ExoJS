@@ -132,12 +132,12 @@ describe('render-target archetypes', () => {
     expect(composite.nodeCounts).toEqual(filtered.nodeCounts);
   });
 
-  test('exactly the filter, mask and composite rows use render targets', () => {
+  test('exactly the filter, mask, composite and blur rows use render targets', () => {
     expect(
       ARCHETYPES.filter(usesRenderTargets)
         .map(archetype => archetype.id)
         .sort(),
-    ).toEqual(['composite', 'filter-chain-1', 'filter-chain-2', 'filter-chain-4', 'mask-clip', 'mask-clip-animated']);
+    ).toEqual(['composite', 'filter-chain-1', 'filter-chain-2', 'filter-chain-4', 'fx-blur', 'mask-clip', 'mask-clip-animated']);
   });
 });
 

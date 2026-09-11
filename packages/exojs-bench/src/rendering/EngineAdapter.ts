@@ -16,6 +16,8 @@ export type ArchetypeId =
   | 'tilemap-edit'
   | 'particles-draw'
   | 'particles-lifecycle'
+  | 'fx-blur'
+  | 'interaction-picking'
   | 'batch-breaking'
   | 'batch-breaking-atlased'
   | 'split-screen'
@@ -43,7 +45,16 @@ export type ArchetypeId =
  * cell. Nothing in the report aggregates across archetypes.
  */
 export type ArchetypeCategory =
-  'node-scaling' | 'fill-and-state' | 'material-variety' | 'text' | 'render-targets' | 'camera-and-world' | 'submission' | 'tilemaps' | 'particles';
+  | 'node-scaling'
+  | 'fill-and-state'
+  | 'material-variety'
+  | 'text'
+  | 'render-targets'
+  | 'camera-and-world'
+  | 'submission'
+  | 'tilemaps'
+  | 'particles'
+  | 'interaction';
 
 /** Structural definition of a scene archetype, independent of any engine or backend. */
 export interface ArchetypeSpec {
@@ -287,6 +298,26 @@ export interface ArchetypeSpec {
    */
   readonly particles?: 'draw' | 'lifecycle';
   /**
+   * Blur reach in logical pixels for the effect scene, or `undefined` for every
+   * archetype that renders no blur.
+   *
+   * Setting it replaces the scene with ONE textured quad under a separable
+   * two-pass Gaussian blur, and the node count becomes the HEIGHT of that quad
+   * rather than a number of nodes - the scene measures how a blur scales with
+   * the area it covers, which is what an effect pass actually costs.
+   */
+  readonly blurRadius?: number;
+  /**
+   * Point queries resolved against the scene each frame, or `undefined` for an
+   * archetype that resolves none.
+   *
+   * Setting it makes the scene a field of interactive rectangles and the frame's
+   * work a block of that many hit tests - the cost a pointer-driven interface
+   * pays per frame, which no drawing archetype touches. The node count is how
+   * many interactive rectangles the query has to search.
+   */
+  readonly pointerQueriesPerFrame?: number;
+  /**
    * Number of chained post-process filters applied to the scene root, or
    * `undefined` for the unfiltered scene every other archetype builds.
    *
@@ -458,6 +489,14 @@ export interface EngineAdapter {
    * blocking the run.
    */
   mutationSignature?(): string;
+  /**
+   * Hits the picking archetype's last block of queries resolved, for a smoke
+   * run to compare across arms: identical points against an identical layout
+   * have to produce an identical count, or one arm searched a different scene
+   * and its timing is not comparable. Optional - only the picking arms report
+   * it.
+   */
+  pickHits?(): number;
   /**
    * The live WebGPU device when this adapter was initialised on the `'webgpu'`
    * backend, so the harness can attach a structural probe to it - unlike a

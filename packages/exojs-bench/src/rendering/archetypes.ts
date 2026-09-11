@@ -67,6 +67,55 @@ const PARTICLE_DRAW_COUNTS = [1_000, 10_000, 100_000, 1_000_000] as const;
 const PARTICLE_LIFECYCLE_COUNTS = [1_000, 10_000, 100_000] as const;
 
 /**
+ * Filtered heights for the blur scene, in logical pixels; the quad keeps a 16:9
+ * shape, so the count is also the area. 720 is the viewport itself, 360 a
+ * quarter of that area and 1080 more than twice it - an effect applied to a
+ * region larger than the screen, which a zoomed-out camera produces.
+ */
+const BLUR_HEIGHTS = [360, 720, 1_080] as const;
+
+/**
+ * Standard deviation of the shared Gaussian, in logical pixels.
+ *
+ * The contract is stated as SIGMA because that is the one number both filters
+ * can be configured from: ExoJS takes a reach (two sigma, which is what a
+ * nine-tap kernel spans) and Pixi takes the sigma itself. Handing both the same
+ * figure under two meanings is what made one arm blur twice as far as the other
+ * while the comparison claimed they matched.
+ */
+export const BLUR_SIGMA = 2;
+
+/** Blur reach in logical pixels - two sigma, the span of the nine-tap kernel. */
+const BLUR_RADIUS = BLUR_SIGMA * 2;
+
+/**
+ * Taps per side of the shared blur kernel, so both arms sweep 4 + 1 + 4 = nine.
+ *
+ * Exported because each arm configures its own filter from it, and a tap count
+ * that differed between them would be a quality difference published as a
+ * performance one.
+ */
+export const BLUR_TAPS_PER_SIDE = 4;
+
+/**
+ * Interactive rectangle counts for the picking scene. The query cost is what
+ * scales here, so the ladder sweeps how much scene the hit test has to search -
+ * a thousand is an ordinary interface, a hundred thousand is a map of clickable
+ * entities.
+ */
+const PICKING_COUNTS = [1_000, 10_000, 100_000] as const;
+
+/**
+ * Point queries resolved per frame.
+ *
+ * A block rather than one, because a single hit test is far below the clock's
+ * resolution: a hundred of them is a duration the timer can actually separate,
+ * and it is also roughly what an interface with hover, tooltips and a drag
+ * candidate resolves while a pointer moves.
+ */
+export const POINTER_QUERIES_PER_FRAME = 100;
+
+/**
  * Characters per text leaf across both text archetypes. Twelve is the length of
  * an ordinary label (a score, a name, a damage number) - long enough that layout
  * and glyph iteration dominate the per-node cost, short enough that no arm's
@@ -642,6 +691,54 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     mutationFraction: 0,
     cullingEnabled: false,
     particles: 'lifecycle',
+  },
+  // A BLUR OVER A FIXED AREA - the one effect every 2D project reaches for, and
+  // the only archetype whose load is an AREA rather than a node count. The scene
+  // is a single textured quad, so nothing about scene traversal enters the
+  // measurement: what scales is the filter's own target passes.
+  //
+  // NOT a cross-arm comparison, and the reason is the finding. Both arms are
+  // configured to the same contract - a separable two-pass Gaussian, nine taps,
+  // sigma 2 - but they do not produce the same picture: a capture of the two at
+  // 1280x720 differs on 45 % of its pixels. Two filters whose output differs
+  // that much are not doing the same work, so a wall-clock row would attribute a
+  // difference in effect to a difference in speed. The structural counters say
+  // as much on their own: ExoJS issues about twenty draw calls where Pixi issues
+  // three, which is a tap-per-draw implementation against a nine-tap shader.
+  //
+  // It stays in the matrix as an ExoJS-internal probe because that structure is
+  // worth tracking. Making it a published comparison needs the two outputs
+  // brought inside a stated tolerance first.
+  {
+    id: 'fx-blur',
+    category: 'render-targets',
+    crossArm: false,
+    nodeCounts: BLUR_HEIGHTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    blurRadius: BLUR_RADIUS,
+  },
+  // HIT TESTING - the one cost a pointer-driven interface pays every frame that
+  // no drawing archetype touches. The scene is a field of interactive
+  // rectangles and the frame's work is a block of point queries against it, so
+  // what scales is each arm's spatial index rather than its renderer.
+  //
+  // All three arms expose a point query, and each is asked the identical
+  // hundred points: ExoJS through `interaction.nodeAt`, Pixi through its event
+  // boundary's `hitTest`, Phaser through `input.hitTest`. Nothing here writes a
+  // replacement search - the arm's own index is the thing under comparison.
+  {
+    id: 'interaction-picking',
+    category: 'interaction',
+    crossArm: true,
+    nodeCounts: PICKING_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    pointerQueriesPerFrame: POINTER_QUERIES_PER_FRAME,
   },
   {
     id: 'mask-clip-animated',
