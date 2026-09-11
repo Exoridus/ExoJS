@@ -1,7 +1,7 @@
 /**
  * Builds the core package: `exo.esm.js`, `exo.debug.esm.js`, the preserveModules
  * `dist/esm` tree (with declarations), `exo.iife.js`, and (production only)
- * `exo.iife.min.js`.
+ * `exo.iife.min.js`, `exo.full.iife.js` and `exo.full.iife.min.js`.
  *
  * Bundling runs on Rolldown; declarations are a separate `tsc
  * --emitDeclarationOnly` pass over `dist/esm`, since Rolldown has no
@@ -11,11 +11,14 @@
  * inner dev loop this mode serves, and `pnpm typecheck` already covers type
  * correctness.
  *
- * `EXOJS_FULL_BUNDLE=1` additionally builds the opt-in all-in-one IIFE bundle
- * (core + every extension package), transpiling TypeScript source across
- * multiple rootDirs (src/ and each extension package's src/) - Rolldown's
- * built-in transpiler has no single-Program rootDir constraint, so this needs
- * no separate esbuild-based path the way the previous Rollup pipeline did.
+ * The production build also emits the all-in-one IIFE bundle (`exo.full.iife.js`
+ * and its minified twin: core + every extension package except react, whose
+ * peer cannot ship in a script-tag bundle), transpiling TypeScript source
+ * across multiple rootDirs (src/ and each extension package's src/) -
+ * Rolldown's built-in transpiler has no single-Program rootDir constraint, so
+ * this needs no separate esbuild-based path the way the previous Rollup
+ * pipeline did. The dev build and watch mode skip it: it is the slowest job of
+ * the set and nothing in the inner loop reads it.
  */
 import { spawnSync } from 'node:child_process';
 import { dirname, relative as relativePath, resolve as resolvePath } from 'node:path';
@@ -227,7 +230,7 @@ if (watchMode) {
 } else {
   const jobs =
     buildMode === 'production'
-      ? [bundled(true), debugBundled(true), modules(), iife(false), iife(true)]
+      ? [bundled(true), debugBundled(true), modules(), iife(false), iife(true), fullBundle(false), fullBundle(true)]
       : [bundled(true), debugBundled(true), modules(), iife(false)];
 
   for (const job of jobs) {
@@ -235,11 +238,4 @@ if (watchMode) {
   }
   await emitDeclarations();
   writeSourceStamp(resolvePath(rootDir, 'src'), resolvePath(rootDir, 'dist'));
-
-  if (process.env.EXOJS_FULL_BUNDLE === '1') {
-    const fullBundleJobs = buildMode === 'production' ? [fullBundle(false), fullBundle(true)] : [fullBundle(false)];
-    for (const job of fullBundleJobs) {
-      await runJob(job);
-    }
-  }
 }

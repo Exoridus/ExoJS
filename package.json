@@ -21,6 +21,10 @@
     "dist/exo.iife.js.map",
     "dist/exo.iife.min.js",
     "dist/exo.iife.min.js.map",
+    "dist/exo.full.iife.js",
+    "dist/exo.full.iife.js.map",
+    "dist/exo.full.iife.min.js",
+    "dist/exo.full.iife.min.js.map",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"
@@ -206,6 +210,11 @@
     {
       "path": "dist/exo.iife.min.js",
       "limit": "340 KB",
+      "gzip": true
+    },
+    {
+      "path": "dist/exo.full.iife.min.js",
+      "limit": "550 KB",
       "gzip": true
     },
     {

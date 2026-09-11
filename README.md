@@ -132,7 +132,7 @@ npm run dev
 npm install @codexo/exojs
 ```
 
-ExoJS ships as ESM — use `import` syntax with a modern bundler or runtime. A prebuilt IIFE bundle (`dist/exo.iife.js`, global `Exo`) is included for CDN and script-tag usage.
+ExoJS ships as ESM — use `import` syntax with a modern bundler or runtime. Prebuilt IIFE bundles are included for CDN and script-tag usage: `dist/exo.iife.js` (the core) and `dist/exo.full.iife.js` (core plus every extension except React), both on the global `Exo`.
 Optional packages install independently — add only what your project needs:
 
 ```bash

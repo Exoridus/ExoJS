@@ -3,8 +3,9 @@
  *
  * A self-contained, offline-servable snapshot of a coordinated release:
  *
- *   npm/      the four official tarballs (Core, Particles, Tilemap, Tiled)
- *   vendor/   each package's ESM tree (exojs, exojs-particles, exojs-tilemap, exojs-tiled)
+ *   npm/      every lockstep tarball (Core + extensions)
+ *   vendor/   every lockstep package's ESM tree, plus Core's single-file
+ *             bundles (exo.esm.js, the IIFE pair, the full IIFE pair)
  *   examples/ src/** (TS), js/** (transpiled), assets/**, examples.json
  *   site/     the built static site (itself servable; references ./vendor + ./examples)
  *   README.md CHANGELOG.md LICENSE release-manifest.json checksums.sha256
@@ -18,6 +19,7 @@ import { basename, dirname, join, relative, resolve } from 'node:path';
 import { ModuleKind, ScriptTarget, transpileModule } from 'typescript';
 
 import type { CommandRunner } from './command-runner.ts';
+import { LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
 import { type ReleaseManifest, renderChecksums, serializeManifest, sha256File } from './manifest.ts';
 
 export interface AssembleOptions {
@@ -32,14 +34,29 @@ export interface AssembleOptions {
   manifest: ReleaseManifest;
 }
 
-const VENDOR_PACKAGES = [
-  { name: 'exojs', vendorDir: 'exojs' },
-  { name: 'exojs-particles', vendorDir: 'exojs-particles' },
-  { name: 'exojs-tilemap', vendorDir: 'exojs-tilemap' },
-  { name: 'exojs-tiled', vendorDir: 'exojs-tiled' },
-  { name: 'exojs-physics', vendorDir: 'exojs-physics' },
-  { name: 'exojs-audio-fx', vendorDir: 'exojs-audio-fx' },
+/**
+ * Core's single-file bundles, shipped under `vendor/exojs/` beside the ESM
+ * tree so the archive serves a script tag as well as an import map. The list
+ * mirrors the bundle entries of the root `package.json#files`; the test suite
+ * pins the two together.
+ */
+export const CORE_BUNDLE_FILES = [
+  'exo.esm.js',
+  'exo.esm.js.map',
+  'exo.debug.esm.js',
+  'exo.debug.esm.js.map',
+  'exo.iife.js',
+  'exo.iife.js.map',
+  'exo.iife.min.js',
+  'exo.iife.min.js.map',
+  'exo.full.iife.js',
+  'exo.full.iife.js.map',
+  'exo.full.iife.min.js',
+  'exo.full.iife.min.js.map',
 ] as const;
+
+/** `vendor/<dir>` for a lockstep package: the npm name without its scope. */
+export const vendorDirFor = (packageName: string): string => packageName.replace(/^@codexo\//, '');
 
 const FORBIDDEN_PATTERNS: { label: string; test: (text: string) => boolean }[] = [
   { label: 'workspace: specifier', test: t => t.includes('workspace:') },
@@ -204,13 +221,24 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
     copyFile(resolve(options.stagingDir, record.file), npmOut);
   }
 
-  // vendor/ - each package's ESM tree, taken from the built site's vendor dir.
-  for (const { name, vendorDir } of VENDOR_PACKAGES) {
-    const from = resolve(options.siteDistDir, 'vendor', vendorDir, 'esm');
+  // vendor/ - every lockstep package's ESM tree, read from the package's own
+  // dist so the set cannot drift from the release matrix, plus Core's bundles.
+  for (const pkg of LOCKSTEP_PACKAGES) {
+    const distDir = resolve(options.rootDir, pkg.dir, 'dist');
+    const from = join(distDir, 'esm');
     if (!existsSync(from)) {
-      throw new Error(`[full-zip] Missing vendored ESM for ${name} at ${from}. Run "pnpm site:build" first.`);
+      throw new Error(`[full-zip] Missing built ESM for ${pkg.name} at ${from}. Build every lockstep package first.`);
     }
-    cpSync(from, join(treeDir, 'vendor', vendorDir, 'esm'), { recursive: true });
+    const vendorDir = join(treeDir, 'vendor', vendorDirFor(pkg.name));
+    cpSync(from, join(vendorDir, 'esm'), { recursive: true });
+    if (pkg.isExtension) continue;
+    for (const file of CORE_BUNDLE_FILES) {
+      const bundle = join(distDir, file);
+      if (!existsSync(bundle)) {
+        throw new Error(`[full-zip] Missing Core bundle ${file} at ${bundle}. Run a production "pnpm build" first.`);
+      }
+      copyFile(bundle, vendorDir);
+    }
   }
 
   // examples/ - src/** (TS), js/** (transpiled), assets/**, examples.json.
