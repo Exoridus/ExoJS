@@ -17,7 +17,18 @@ import {
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
 import { createDistinctTextureCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
-import { compositeBlurRadius, filterChainDepth, hasMaskMotion, isChurning, isTextArchetype, isTextUpdating, maskDepth, textForLeaf } from '../traits';
+import {
+  compositeBlurRadius,
+  filterChainDepth,
+  hasFullViewportLeaves,
+  hasMaskMotion,
+  isChurning,
+  isTextArchetype,
+  isTextUpdating,
+  leafAlpha,
+  maskDepth,
+  textForLeaf,
+} from '../traits';
 import {
   BLOOM_DOWNSCALE,
   cameraCenterAt,
@@ -304,7 +315,8 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
       // the shared mutation selection below.
       const world = worldExtent(spec, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
       const layout = gridLayout(nodeCount, world.width, world.height, GRID_MARGIN);
-      const overdraw = spec.id === 'overdraw';
+      const overdraw = hasFullViewportLeaves(spec);
+      const alpha = leafAlpha(spec);
 
       // Shared, canonical mutation selection - the SAME helper the ExoJS arm
       // routes through, so both arms select the byte-for-byte identical index set
@@ -367,6 +379,12 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
         if (overdraw) {
           sprite.width = VIEWPORT_WIDTH;
           sprite.height = VIEWPORT_HEIGHT;
+        }
+
+        // A fixed leaf alpha is what makes a stack of full-viewport quads a
+        // blend workload: every layer has to be composited rather than skipped.
+        if (alpha < 1) {
+          sprite.alpha = alpha;
         }
 
         const { x, y } = leafPosition(i);

@@ -8,8 +8,10 @@ export type Backend = 'webgl2' | 'webgpu';
 export type ArchetypeId =
   | 'static-heavy'
   | 'dynamic-heavy'
+  | 'dynamic-all'
   | 'deep-hierarchy'
   | 'overdraw'
+  | 'fill-layers'
   | 'batch-breaking'
   | 'batch-breaking-atlased'
   | 'split-screen'
@@ -238,6 +240,24 @@ export interface ArchetypeSpec {
    * to them.
    */
   readonly churn?: boolean;
+  /**
+   * When `true`, every leaf is stretched to the whole viewport and stacked at
+   * the origin, so the scene's cost is fill rather than node count.
+   *
+   * Read through {@link '../rendering/traits'.hasFullViewportLeaves} rather than
+   * by testing the archetype id in each arm, so every arm lays the scene out the
+   * same way.
+   */
+  readonly fullViewportLeaves?: boolean;
+  /**
+   * Alpha every leaf carries, or `undefined` for opaque leaves.
+   *
+   * Meaningful together with {@link fullViewportLeaves}: a stack of
+   * viewport-sized quads is a blend workload only while each of them is
+   * translucent. Opaque, the cost depends on whatever occlusion policy each arm
+   * happens to have, which is a different comparison.
+   */
+  readonly leafAlpha?: number;
   /**
    * Number of chained post-process filters applied to the scene root, or
    * `undefined` for the unfiltered scene every other archetype builds.

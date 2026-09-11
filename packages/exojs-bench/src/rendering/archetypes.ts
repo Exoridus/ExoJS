@@ -20,6 +20,22 @@ const GPU_BOUND_COUNTS = [1_000, 5_000, 25_000] as const;
 const TEXT_COUNTS = [200, 1_000, 5_000] as const;
 
 /**
+ * Node counts for `dynamic-all`. Three steps spanning 100x, sharing 1k and 100k
+ * with the sprite ladder so the row can be read against `static-heavy` and
+ * `dynamic-heavy` at both ends of the sweep. The intermediate rungs the sprite
+ * ladder carries would only refine a slope this archetype states plainly.
+ */
+const DYNAMIC_ALL_COUNTS = [1_000, 10_000, 100_000] as const;
+
+/**
+ * Layer counts for `fill-layers`. The load is full-screen layers, not scene
+ * nodes, so the ladder is three steps of a few dozen rather than thousands: 8 is
+ * an ordinary parallax stack, 32 a heavy one, and 128 past anything that ships.
+ * At 1280x720 the top step already resolves the viewport 128 times over.
+ */
+const FILL_LAYER_COUNTS = [8, 32, 128] as const;
+
+/**
  * Characters per text leaf across both text archetypes. Twelve is the length of
  * an ordinary label (a score, a name, a damage number) - long enough that layout
  * and glyph iteration dominate the per-node cost, short enough that no arm's
@@ -73,6 +89,25 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     mutationFraction: 0.075,
     cullingEnabled: false,
   },
+  // EVERY leaf moves, every frame. `dynamic-heavy` builds the identical scene
+  // and moves 7.5 % of it, which is the shape a real scene has - a few actors
+  // over a mostly still background - so the delta between the two rows is what
+  // the remaining 92.5 % costs once it stops being still.
+  //
+  // It is a separate archetype rather than a raised `mutationFraction` on
+  // `dynamic-heavy` because the two answer different questions and both are
+  // worth publishing; changing the existing one would also silently invalidate
+  // every number measured under its name.
+  {
+    id: 'dynamic-all',
+    category: 'node-scaling',
+    crossArm: true,
+    nodeCounts: DYNAMIC_ALL_COUNTS,
+    nestingDepth: 4,
+    textureCount: 1,
+    mutationFraction: 1,
+    cullingEnabled: false,
+  },
   {
     id: 'deep-hierarchy',
     category: 'node-scaling',
@@ -99,6 +134,31 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     textureCount: 1,
     mutationFraction: 0,
     cullingEnabled: false,
+    fullViewportLeaves: true,
+  },
+  // The same geometry as `overdraw` at a workload a real scene reaches: a
+  // handful of translucent full-screen layers rather than thousands of them.
+  // `overdraw` sweeps 1k to 25k viewport-sized quads, which is a fill-rate
+  // ceiling probe and not something anything ships; this sweeps 8 to 128, the
+  // range a parallax background, a weather pass and a few tint overlays add up
+  // to.
+  //
+  // `leafAlpha: 0.05` is what makes it a blend workload: every layer has to be
+  // composited, and none of them can be skipped by an occlusion policy the way
+  // an opaque top layer could. The load is the LAYER COUNT rather than a node
+  // count, which is why it carries its own short ladder instead of the sprite
+  // one.
+  {
+    id: 'fill-layers',
+    category: 'fill-and-state',
+    crossArm: true,
+    nodeCounts: FILL_LAYER_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    fullViewportLeaves: true,
+    leafAlpha: 0.05,
   },
   // 40 textures: must exceed EVERY sprite-batcher slot ceiling any granted
   // backend/tier reaches, or the archetype silently stops breaking batches on
