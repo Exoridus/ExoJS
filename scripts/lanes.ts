@@ -3,6 +3,8 @@ import { pathToFileURL } from 'node:url';
 
 import { selectLanes, type Lane } from './ci/lanes.ts';
 import { effectiveLanes, selectAreas, type LaneAreas } from './ci/select-lanes.ts';
+import { atLeastOutputMode, readOutputOptions } from './lib/output.ts';
+import { runCommand } from './lib/run-command.ts';
 
 /**
  * Local lane runner - the pre-push hook's half of the lane table.
@@ -72,8 +74,9 @@ const SMOKE_LANE: Lane = {
   local: 'browser',
 };
 
-const main = (): void => {
-  const argv = process.argv.slice(2);
+const main = async (): Promise<void> => {
+  const outputOptions = readOutputOptions(process.argv.slice(2));
+  const argv = outputOptions.argv;
   const run = argv.includes('--run');
   const quick = argv.includes('--quick');
   const testsOnly = argv.includes('--tests-only');
@@ -97,16 +100,18 @@ const main = (): void => {
     .filter(lane => !(testsOnly && lane.local === 'gate'));
 
   const scope = all ? 'every lane' : `${files.length} changed file(s) since ${base}`;
-  process.stdout.write(`lanes: ${scope}\n`);
-  process.stdout.write(
-    `lanes: engine=${areas.engine} site=${areas.site} audioFx=${areas.audioFx} tilemapWorker=${areas.tilemapWorker} exampleCatalog=${areas.exampleCatalog} benchStructural=${areas.benchStructural}\n\n`,
-  );
+  if (!run || outputOptions.mode !== 'silent') {
+    process.stdout.write(`lanes: ${scope}\n`);
+    process.stdout.write(
+      `lanes: engine=${areas.engine} site=${areas.site} audioFx=${areas.audioFx} tilemapWorker=${areas.tilemapWorker} exampleCatalog=${areas.exampleCatalog} benchStructural=${areas.benchStructural}\n\n`,
+    );
 
-  for (const lane of selected) {
-    process.stdout.write(`  ${lane.run}${lane.local === 'browser' ? '   (browser)' : ''}\n`);
-  }
-  if (selected.length === 0) {
-    process.stdout.write('  (nothing to run)\n');
+    for (const lane of selected) {
+      process.stdout.write(`  ${lane.run}${lane.local === 'browser' ? '   (browser)' : ''}\n`);
+    }
+    if (selected.length === 0) {
+      process.stdout.write('  (nothing to run)\n');
+    }
   }
 
   if (!run) {
@@ -115,18 +120,26 @@ const main = (): void => {
   }
 
   for (const lane of selected) {
-    process.stdout.write(`\n=== ${lane.id} ===\n\n`);
-    const result = spawnSync(lane.run, { stdio: 'inherit', shell: true });
+    if (outputOptions.mode === 'normal' || outputOptions.mode === 'verbose') {
+      process.stdout.write(`\n=== ${lane.id} ===\n\n`);
+    }
+    const result = await runCommand({
+      label: lane.id,
+      command: lane.run,
+      output: atLeastOutputMode(outputOptions.mode, lane.minimumOutput ?? 'silent'),
+    });
     if (result.status !== 0) {
-      process.stderr.write(`\nlanes: ${lane.id} failed (exit ${result.status ?? 'signal'}).\n`);
-      process.exit(result.status ?? 1);
+      if (outputOptions.mode === 'normal' || outputOptions.mode === 'verbose') {
+        process.stderr.write(`\nlanes: ${lane.id} failed (exit ${result.status}).\n`);
+      }
+      process.exit(result.status);
     }
   }
 
-  process.stdout.write('\nlanes: all selected lanes passed.\n');
+  if (outputOptions.mode !== 'silent') process.stdout.write('\nlanes: all selected lanes passed.\n');
 };
 
 const invokedPath = process.argv[1];
 if (invokedPath && import.meta.url === pathToFileURL(invokedPath).href) {
-  main();
+  await main();
 }

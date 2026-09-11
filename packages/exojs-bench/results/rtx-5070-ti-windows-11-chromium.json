@@ -12,7 +12,7 @@
       "prerelease": false
     },
     "engineVersion": "0.17.0",
-    "measuredAt": "2026-09-06T17:02:01.221Z",
+    "measuredAt": "2026-09-09T15:39:44.282Z",
     "runs": 4
   },
   "rendering": {
@@ -41,7 +41,7 @@
             "headless": true,
             "software": false,
             "engineVersion": "0.17.0",
-            "timestamp": "2026-09-06T09:11:43.021Z"
+            "timestamp": "2026-09-09T14:29:34.661Z"
           },
           {
             "backend": "webgpu",
@@ -67,7 +67,7 @@
             "software": false,
             "slotTier": 16,
             "engineVersion": "0.17.0",
-            "timestamp": "2026-09-06T09:25:27.695Z"
+            "timestamp": "2026-09-09T14:43:58.301Z"
           }
         ]
       },
@@ -95,7 +95,7 @@
             "headless": true,
             "software": false,
             "engineVersion": "0.17.0",
-            "timestamp": "2026-09-06T09:29:12.221Z"
+            "timestamp": "2026-09-09T14:48:09.791Z"
           },
           {
             "backend": "webgpu",
@@ -121,7 +121,7 @@
             "software": false,
             "slotTier": 16,
             "engineVersion": "0.17.0",
-            "timestamp": "2026-09-06T09:42:45.835Z"
+            "timestamp": "2026-09-09T15:02:35.495Z"
           }
         ]
       },
@@ -149,7 +149,7 @@
             "headless": true,
             "software": false,
             "engineVersion": "0.17.0",
-            "timestamp": "2026-09-06T15:40:04.255Z"
+            "timestamp": "2026-09-09T15:06:47.979Z"
           },
           {
             "backend": "webgpu",
@@ -175,7 +175,7 @@
             "software": false,
             "slotTier": 16,
             "engineVersion": "0.17.0",
-            "timestamp": "2026-09-06T15:53:45.041Z"
+            "timestamp": "2026-09-09T15:21:11.773Z"
           }
         ]
       },
@@ -203,7 +203,7 @@
             "headless": true,
             "software": false,
             "engineVersion": "0.17.0",
-            "timestamp": "2026-09-06T16:15:18.189Z"
+            "timestamp": "2026-09-09T15:25:21.159Z"
           },
           {
             "backend": "webgpu",
@@ -229,7 +229,7 @@
             "software": false,
             "slotTier": 16,
             "engineVersion": "0.17.0",
-            "timestamp": "2026-09-06T16:29:11.668Z"
+            "timestamp": "2026-09-09T15:39:44.282Z"
           }
         ]
       }
@@ -251,9 +251,10 @@
     "backends": [
       {
         "backend": "webgl2",
-        "headlineCount": 5000,
+        "headlineCount": 1000,
         "competitors": [
           "excalibur",
+          "phaser",
           "pixi"
         ],
         "sections": [
@@ -263,35 +264,35 @@
               {
                 "archetype": "static-heavy",
                 "category": "Node scaling",
-                "count": 5000,
+                "count": 1000,
                 "cells": [
                   {
                     "competitor": "excalibur",
-                    "referenceMs": 0.05000000596191967,
-                    "referenceP95Ms": 0.10999999225168722,
+                    "referenceMs": 0.1549999974668026,
+                    "referenceP95Ms": 0.19999999925494194,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 15.46000000089407,
-                    "competitorP95Ms": 16.524999996996485,
+                    "competitorMs": 3.631249997764826,
+                    "competitorP95Ms": 4.592499997466803,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "exojs",
-                      "ratio": 0.003234153037453306,
-                      "factor": 309.1999631493745,
-                      "label": "ExoJS leads clearly (309.20x)",
+                      "ratio": 0.04268502514621991,
+                      "factor": 23.42741972329745,
+                      "label": "ExoJS leads clearly (23.43x)",
                       "structural": true
                     },
-                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 2/0/0 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side",
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/0 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.044999999925494194,
-                        "maxMs": 0.06000000238418579,
-                        "ratio": 1.3333333885228194
+                        "minMs": 0.14000000059604645,
+                        "maxMs": 0.1550000011920929,
+                        "ratio": 1.1071428609441738
                       },
                       "competitor": {
-                        "minMs": 15.07999999995809,
-                        "maxMs": 15.927499999990687,
-                        "ratio": 1.0562002652543072
+                        "minMs": 3.5049999989569187,
+                        "maxMs": 3.6950000002980232,
+                        "ratio": 1.0542082742931949
                       },
                       "stable": true,
                       "rungs": [
@@ -303,12 +304,49 @@
                     }
                   },
                   {
-                    "competitor": "pixi",
-                    "referenceMs": 0.05000000596191967,
-                    "referenceP95Ms": 0.10999999225168722,
+                    "competitor": "phaser",
+                    "referenceMs": 0.1549999974668026,
+                    "referenceP95Ms": 0.19999999925494194,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.04749999850173481,
-                    "competitorP95Ms": 0.10249999462394044,
+                    "competitorMs": 0.5700000002980232,
+                    "competitorP95Ms": 0.7650000005960464,
+                    "competitorOverFrameBudget": false,
+                    "verdict": {
+                      "side": "exojs",
+                      "ratio": 0.27192981997501964,
+                      "factor": 3.6774194168622745,
+                      "label": "ExoJS leads (3.68x)",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/0 vs 1/0/1, none of them large enough to account for the gap); the difference is CPU-side",
+                    "aggregate": {
+                      "runs": 4,
+                      "reference": {
+                        "minMs": 0.14000000059604645,
+                        "maxMs": 0.1550000011920929,
+                        "ratio": 1.1071428609441738
+                      },
+                      "competitor": {
+                        "minMs": 0.5699999965727329,
+                        "maxMs": 0.5749999992549419,
+                        "ratio": 1.0087719345829347
+                      },
+                      "stable": true,
+                      "rungs": [
+                        "exojs-leads",
+                        "exojs-leads",
+                        "exojs-leads",
+                        "exojs-leads"
+                      ]
+                    }
+                  },
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.1549999974668026,
+                    "referenceP95Ms": 0.19999999925494194,
+                    "referenceOverFrameBudget": false,
+                    "competitorMs": 0.13750000298023224,
+                    "competitorP95Ms": 0.17500000074505806,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "neither",
@@ -317,24 +355,24 @@
                       "label": "unstable across runs",
                       "structural": false
                     },
-                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 2/0/0 vs 1/0/0, none of them large enough to account for the gap); the difference is CPU-side",
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/0 vs 1/0/0, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.044999999925494194,
-                        "maxMs": 0.06000000238418579,
-                        "ratio": 1.3333333885228194
+                        "minMs": 0.14000000059604645,
+                        "maxMs": 0.1550000011920929,
+                        "ratio": 1.1071428609441738
                       },
                       "competitor": {
-                        "minMs": 0.0400000000372529,
-                        "maxMs": 0.054999977350234985,
-                        "ratio": 1.3749994324753065
+                        "minMs": 0.125,
+                        "maxMs": 0.14500000327825546,
+                        "ratio": 1.1600000262260437
                       },
                       "stable": false,
                       "rungs": [
                         "level",
-                        "competitor-leads",
                         "level",
+                        "competitor-leads",
                         "level"
                       ]
                     }
@@ -344,35 +382,35 @@
               {
                 "archetype": "dynamic-heavy",
                 "category": "Node scaling",
-                "count": 5000,
+                "count": 1000,
                 "cells": [
                   {
                     "competitor": "excalibur",
-                    "referenceMs": 0.38999998988583684,
-                    "referenceP95Ms": 0.6200000047683716,
+                    "referenceMs": 0.3374999985098839,
+                    "referenceP95Ms": 0.4299999997019768,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 15.237499996786937,
-                    "competitorP95Ms": 16.18750000721775,
+                    "competitorMs": 3.7025000024586916,
+                    "competitorP95Ms": 4.484999995678663,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "exojs",
-                      "ratio": 0.025594749136543027,
-                      "factor": 39.0705138255192,
-                      "label": "ExoJS leads clearly (39.07x)",
+                      "ratio": 0.09115462479021277,
+                      "factor": 10.97037042609131,
+                      "label": "ExoJS leads clearly (10.97x)",
                       "structural": true
                     },
-                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 2/0/1 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side",
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/1 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.36000001430511475,
-                        "maxMs": 0.5750000000043656,
-                        "ratio": 1.5972221587664426
+                        "minMs": 0.3049999997019768,
+                        "maxMs": 0.3449999988079071,
+                        "ratio": 1.1311475381803782
                       },
                       "competitor": {
-                        "minMs": 14.96999999997206,
-                        "maxMs": 15.572499990463257,
-                        "ratio": 1.0402471603535284
+                        "minMs": 3.6149999983608723,
+                        "maxMs": 3.7274999991059303,
+                        "ratio": 1.03112033217042
                       },
                       "stable": true,
                       "rungs": [
@@ -384,32 +422,69 @@
                     }
                   },
                   {
-                    "competitor": "pixi",
-                    "referenceMs": 0.38999998988583684,
-                    "referenceP95Ms": 0.6200000047683716,
+                    "competitor": "phaser",
+                    "referenceMs": 0.3374999985098839,
+                    "referenceP95Ms": 0.4299999997019768,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.18375001102685928,
-                    "competitorP95Ms": 0.33499999390915036,
+                    "competitorMs": 0.5675000008195639,
+                    "competitorP95Ms": 0.8274999968707561,
                     "competitorOverFrameBudget": false,
                     "verdict": {
-                      "side": "competitor",
-                      "ratio": 2.122448797180368,
-                      "factor": 2.122448797180368,
-                      "label": "competitor leads (2.12x)",
+                      "side": "exojs",
+                      "ratio": 0.594713652903045,
+                      "factor": 1.681481491333827,
+                      "label": "ExoJS leads (1.68x)",
                       "structural": false
                     },
-                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 2/0/1 vs 1/0/1, none of them large enough to account for the gap); the difference is CPU-side",
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/1 vs 1/0/1, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.36000001430511475,
-                        "maxMs": 0.5750000000043656,
-                        "ratio": 1.5972221587664426
+                        "minMs": 0.3049999997019768,
+                        "maxMs": 0.3449999988079071,
+                        "ratio": 1.1311475381803782
                       },
                       "competitor": {
-                        "minMs": 0.16999999999825377,
-                        "maxMs": 0.19499999983236194,
-                        "ratio": 1.147058822555088
+                        "minMs": 0.5549999997019768,
+                        "maxMs": 0.5874999985098839,
+                        "ratio": 1.058558556442088
+                      },
+                      "stable": true,
+                      "rungs": [
+                        "exojs-leads",
+                        "exojs-leads",
+                        "exojs-leads",
+                        "exojs-leads"
+                      ]
+                    }
+                  },
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.3374999985098839,
+                    "referenceP95Ms": 0.4299999997019768,
+                    "referenceOverFrameBudget": false,
+                    "competitorMs": 0.24499999731779099,
+                    "competitorP95Ms": 0.33500000461935997,
+                    "competitorOverFrameBudget": false,
+                    "verdict": {
+                      "side": "competitor",
+                      "ratio": 1.3775510294071986,
+                      "factor": 1.3775510294071986,
+                      "label": "competitor leads (1.38x)",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/1 vs 1/0/1, none of them large enough to account for the gap); the difference is CPU-side",
+                    "aggregate": {
+                      "runs": 4,
+                      "reference": {
+                        "minMs": 0.3049999997019768,
+                        "maxMs": 0.3449999988079071,
+                        "ratio": 1.1311475381803782
+                      },
+                      "competitor": {
+                        "minMs": 0.22999999672174454,
+                        "maxMs": 0.25999999791383743,
+                        "ratio": 1.1304347896508324
                       },
                       "stable": true,
                       "rungs": [
@@ -425,35 +500,35 @@
               {
                 "archetype": "deep-hierarchy",
                 "category": "Node scaling",
-                "count": 5000,
+                "count": 1000,
                 "cells": [
                   {
                     "competitor": "excalibur",
-                    "referenceMs": 0.11000001430511475,
-                    "referenceP95Ms": 0.22000000975094736,
+                    "referenceMs": 0.1837499998509884,
+                    "referenceP95Ms": 0.23000000044703484,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 21.990000000048894,
-                    "competitorP95Ms": 23.499999999417923,
-                    "competitorOverFrameBudget": true,
+                    "competitorMs": 4.872500000521541,
+                    "competitorP95Ms": 6.535000003874302,
+                    "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "exojs",
-                      "ratio": 0.005002274411317425,
-                      "factor": 199.90906491206164,
-                      "label": "ExoJS leads clearly (199.91x)",
+                      "ratio": 0.037711646963842015,
+                      "factor": 26.51700682706331,
+                      "label": "ExoJS leads clearly (26.52x)",
                       "structural": true
                     },
-                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 2/0/1 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side",
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/1 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.10000000000218279,
-                        "maxMs": 0.125,
-                        "ratio": 1.2499999999727152
+                        "minMs": 0.16999999433755875,
+                        "maxMs": 0.1900000013411045,
+                        "ratio": 1.1176471039395033
                       },
                       "competitor": {
-                        "minMs": 21.66500000655651,
-                        "maxMs": 22.469999998807907,
-                        "ratio": 1.0371567039929739
+                        "minMs": 4.799999997019768,
+                        "maxMs": 5.02250000089407,
+                        "ratio": 1.0463541675025934
                       },
                       "stable": true,
                       "rungs": [
@@ -465,36 +540,73 @@
                     }
                   },
                   {
-                    "competitor": "pixi",
-                    "referenceMs": 0.11000001430511475,
-                    "referenceP95Ms": 0.22000000975094736,
+                    "competitor": "phaser",
+                    "referenceMs": 0.1837499998509884,
+                    "referenceP95Ms": 0.23000000044703484,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.08874999545514584,
-                    "competitorP95Ms": 0.19999999622814357,
+                    "competitorMs": 0.5974999982863665,
+                    "competitorP95Ms": 0.8500000014901161,
                     "competitorOverFrameBudget": false,
                     "verdict": {
-                      "side": "competitor",
-                      "ratio": 1.2394368443737966,
-                      "factor": 1.2394368443737966,
-                      "label": "competitor leads (1.24x)",
+                      "side": "exojs",
+                      "ratio": 0.3075313813857481,
+                      "factor": 3.2517006735831706,
+                      "label": "ExoJS leads (3.25x)",
                       "structural": false
                     },
-                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 2/0/1 vs 1/0/1, none of them large enough to account for the gap); the difference is CPU-side",
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/1 vs 1/0/1, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.10000000000218279,
-                        "maxMs": 0.125,
-                        "ratio": 1.2499999999727152
+                        "minMs": 0.16999999433755875,
+                        "maxMs": 0.1900000013411045,
+                        "ratio": 1.1176471039395033
                       },
                       "competitor": {
-                        "minMs": 0.08000000001629815,
-                        "maxMs": 0.09000000357627869,
-                        "ratio": 1.125000044474291
+                        "minMs": 0.5899999961256981,
+                        "maxMs": 0.7874999977648258,
+                        "ratio": 1.334745767688193
                       },
                       "stable": true,
                       "rungs": [
-                        "competitor-leads",
+                        "exojs-leads",
+                        "exojs-leads",
+                        "exojs-leads",
+                        "exojs-leads"
+                      ]
+                    }
+                  },
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.1837499998509884,
+                    "referenceP95Ms": 0.23000000044703484,
+                    "referenceOverFrameBudget": false,
+                    "competitorMs": 0.14999999850988388,
+                    "competitorP95Ms": 0.2150000035762787,
+                    "competitorOverFrameBudget": false,
+                    "verdict": {
+                      "side": "neither",
+                      "ratio": null,
+                      "factor": null,
+                      "label": "unstable across runs",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/1 vs 1/0/1, none of them large enough to account for the gap); the difference is CPU-side",
+                    "aggregate": {
+                      "runs": 4,
+                      "reference": {
+                        "minMs": 0.16999999433755875,
+                        "maxMs": 0.1900000013411045,
+                        "ratio": 1.1176471039395033
+                      },
+                      "competitor": {
+                        "minMs": 0.13500000536441803,
+                        "maxMs": 0.15000000223517418,
+                        "ratio": 1.1111110835163693
+                      },
+                      "stable": false,
+                      "rungs": [
+                        "level",
                         "competitor-leads",
                         "competitor-leads",
                         "competitor-leads"
@@ -506,35 +618,35 @@
               {
                 "archetype": "lifecycle-churn",
                 "category": "Node scaling",
-                "count": 5000,
+                "count": 1000,
                 "cells": [
                   {
                     "competitor": "excalibur",
-                    "referenceMs": 4.823749991657678,
-                    "referenceP95Ms": 5.097500002382731,
+                    "referenceMs": 1.1087500024586916,
+                    "referenceP95Ms": 1.4750000014901161,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 45.1499999910593,
-                    "competitorP95Ms": 59.43749999650754,
-                    "competitorOverFrameBudget": true,
+                    "competitorMs": 8.625,
+                    "competitorP95Ms": 14.514999996870756,
+                    "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "exojs",
-                      "ratio": 0.10683831655842496,
-                      "factor": 9.35993782205606,
-                      "label": "ExoJS leads clearly (9.36x)",
+                      "ratio": 0.12855072492274686,
+                      "factor": 7.779030422434059,
+                      "label": "ExoJS leads clearly (7.78x)",
                       "structural": true
                     },
-                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 2/0/2 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side",
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/4 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 4.46750000002794,
-                        "maxMs": 5.327500015497208,
-                        "ratio": 1.1925014024541443
+                        "minMs": 1.012499999254942,
+                        "maxMs": 1.1549999974668026,
+                        "ratio": 1.1407407390782427
                       },
                       "competitor": {
-                        "minMs": 41.61499999999069,
-                        "maxMs": 55.800000000046566,
-                        "ratio": 1.34086266971186
+                        "minMs": 8.337500002235174,
+                        "maxMs": 9.379999998956919,
+                        "ratio": 1.1250374808326553
                       },
                       "stable": true,
                       "rungs": [
@@ -546,32 +658,69 @@
                     }
                   },
                   {
-                    "competitor": "pixi",
-                    "referenceMs": 4.823749991657678,
-                    "referenceP95Ms": 5.097500002382731,
+                    "competitor": "phaser",
+                    "referenceMs": 1.1087500024586916,
+                    "referenceP95Ms": 1.4750000014901161,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 2.1437499999592546,
-                    "competitorP95Ms": 2.6375000001571607,
+                    "competitorMs": 1.4262499958276749,
+                    "competitorP95Ms": 1.9100000001490116,
                     "competitorOverFrameBudget": false,
                     "verdict": {
-                      "side": "competitor",
-                      "ratio": 2.2501457687460578,
-                      "factor": 2.2501457687460578,
-                      "label": "competitor leads (2.25x)",
+                      "side": "neither",
+                      "ratio": null,
+                      "factor": null,
+                      "label": "unstable across runs",
                       "structural": false
                     },
-                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 2/0/2 vs 1/0/2, none of them large enough to account for the gap); the difference is CPU-side",
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/4 vs 1/0/1, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 4.46750000002794,
-                        "maxMs": 5.327500015497208,
-                        "ratio": 1.1925014024541443
+                        "minMs": 1.012499999254942,
+                        "maxMs": 1.1549999974668026,
+                        "ratio": 1.1407407390782427
                       },
                       "competitor": {
-                        "minMs": 1.989999994635582,
-                        "maxMs": 2.415000006556511,
-                        "ratio": 1.2135678457621086
+                        "minMs": 1.385000005364418,
+                        "maxMs": 1.4499999955296516,
+                        "ratio": 1.046931400659548
+                      },
+                      "stable": false,
+                      "rungs": [
+                        "level",
+                        "exojs-leads",
+                        "exojs-leads",
+                        "exojs-leads"
+                      ]
+                    }
+                  },
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 1.1087500024586916,
+                    "referenceP95Ms": 1.4750000014901161,
+                    "referenceOverFrameBudget": false,
+                    "competitorMs": 0.7225000001490116,
+                    "competitorP95Ms": 0.864999994635582,
+                    "competitorOverFrameBudget": false,
+                    "verdict": {
+                      "side": "competitor",
+                      "ratio": 1.5346020792110977,
+                      "factor": 1.5346020792110977,
+                      "label": "competitor leads (1.53x)",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/4 vs 1/0/2, none of them large enough to account for the gap); the difference is CPU-side",
+                    "aggregate": {
+                      "runs": 4,
+                      "reference": {
+                        "minMs": 1.012499999254942,
+                        "maxMs": 1.1549999974668026,
+                        "ratio": 1.1407407390782427
+                      },
+                      "competitor": {
+                        "minMs": 0.6675000041723251,
+                        "maxMs": 0.794999998062849,
+                        "ratio": 1.191011225608334
                       },
                       "stable": true,
                       "rungs": [
@@ -592,35 +741,72 @@
               {
                 "archetype": "overdraw",
                 "category": "Fill and GPU state",
-                "count": 5000,
+                "count": 1000,
                 "cells": [
                   {
                     "competitor": "excalibur",
-                    "referenceMs": 0.04250000836327672,
-                    "referenceP95Ms": 0.0799999893642962,
+                    "referenceMs": 0.0925000049173832,
+                    "referenceP95Ms": 0.12999999895691872,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 14.863749995827675,
-                    "competitorP95Ms": 15.484999999403954,
+                    "competitorMs": 4.763749999925494,
+                    "competitorP95Ms": 56.24249999970198,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "exojs",
-                      "ratio": 0.0028593059204579377,
-                      "factor": 349.7352251975343,
-                      "label": "ExoJS leads clearly (349.74x)",
+                      "ratio": 0.019417476760709505,
+                      "factor": 51.49999726140836,
+                      "label": "ExoJS leads clearly (51.50x)",
                       "structural": true
                     },
-                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 2/0/0 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side",
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/0 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.040000000000873115,
-                        "maxMs": 0.04500001668930054,
-                        "ratio": 1.125000417207957
+                        "minMs": 0.07750000059604645,
+                        "maxMs": 0.09749999642372131,
+                        "ratio": 1.2580644603078253
                       },
                       "competitor": {
-                        "minMs": 14.494999999995343,
-                        "maxMs": 18.90250000008382,
-                        "ratio": 1.304070369098992
+                        "minMs": 3.339999996125698,
+                        "maxMs": 5.114999998360872,
+                        "ratio": 1.5314371270341682
+                      },
+                      "stable": true,
+                      "rungs": [
+                        "exojs-leads-clearly",
+                        "exojs-leads-clearly",
+                        "exojs-leads-clearly",
+                        "exojs-leads-clearly"
+                      ]
+                    }
+                  },
+                  {
+                    "competitor": "phaser",
+                    "referenceMs": 0.0925000049173832,
+                    "referenceP95Ms": 0.12999999895691872,
+                    "referenceOverFrameBudget": false,
+                    "competitorMs": 0.5400000009685755,
+                    "competitorP95Ms": 0.7450000047683716,
+                    "competitorOverFrameBudget": false,
+                    "verdict": {
+                      "side": "exojs",
+                      "ratio": 0.17129630509531443,
+                      "factor": 5.83783753796423,
+                      "label": "ExoJS leads clearly (5.84x)",
+                      "structural": true
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/0 vs 1/0/1, none of them large enough to account for the gap); the difference is CPU-side",
+                    "aggregate": {
+                      "runs": 4,
+                      "reference": {
+                        "minMs": 0.07750000059604645,
+                        "maxMs": 0.09749999642372131,
+                        "ratio": 1.2580644603078253
+                      },
+                      "competitor": {
+                        "minMs": 0.5325000025331974,
+                        "maxMs": 0.5500000007450581,
+                        "ratio": 1.032863846250911
                       },
                       "stable": true,
                       "rungs": [
@@ -633,35 +819,35 @@
                   },
                   {
                     "competitor": "pixi",
-                    "referenceMs": 0.04250000836327672,
-                    "referenceP95Ms": 0.0799999893642962,
+                    "referenceMs": 0.0925000049173832,
+                    "referenceP95Ms": 0.12999999895691872,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.04250000836327672,
-                    "competitorP95Ms": 0.08250000416592229,
+                    "competitorMs": 0.10625000298023224,
+                    "competitorP95Ms": 0.14000000059604645,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "neither",
-                      "ratio": 1,
-                      "factor": 1,
-                      "label": "level",
+                      "ratio": null,
+                      "factor": null,
+                      "label": "unstable across runs",
                       "structural": false
                     },
-                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 2/0/0 vs 1/0/0, none of them large enough to account for the gap); the difference is CPU-side",
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/0 vs 1/0/0, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.040000000000873115,
-                        "maxMs": 0.04500001668930054,
-                        "ratio": 1.125000417207957
+                        "minMs": 0.07750000059604645,
+                        "maxMs": 0.09749999642372131,
+                        "ratio": 1.2580644603078253
                       },
                       "competitor": {
-                        "minMs": 0.03500000000349246,
-                        "maxMs": 0.050000011920928955,
-                        "ratio": 1.4285717690268493
+                        "minMs": 0.08999999612569809,
+                        "maxMs": 0.10999999940395355,
+                        "ratio": 1.2222222682134625
                       },
-                      "stable": true,
+                      "stable": false,
                       "rungs": [
-                        "level",
+                        "exojs-leads",
                         "level",
                         "level",
                         "level"
@@ -673,35 +859,35 @@
               {
                 "archetype": "batch-breaking",
                 "category": "Fill and GPU state",
-                "count": 5000,
+                "count": 1000,
                 "cells": [
                   {
                     "competitor": "excalibur",
-                    "referenceMs": 1.0937499925494194,
-                    "referenceP95Ms": 1.8125000083819032,
+                    "referenceMs": 0.4100000001490116,
+                    "referenceP95Ms": 0.5099999979138374,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 21.14249999076128,
-                    "competitorP95Ms": 27.11500000063097,
-                    "competitorOverFrameBudget": true,
+                    "competitorMs": 4.668749997392297,
+                    "competitorP95Ms": 6.33500000089407,
+                    "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "exojs",
-                      "ratio": 0.05173229244542318,
-                      "factor": 19.33028583751601,
-                      "label": "ExoJS leads clearly (19.33x)",
+                      "ratio": 0.08781793850131507,
+                      "factor": 11.387195111452371,
+                      "label": "ExoJS leads clearly (11.39x)",
                       "structural": true
                     },
-                    "mechanism": "ExoJS issues fewer buffer uploads (0 vs 313 per frame)",
+                    "mechanism": "ExoJS issues fewer buffer uploads (0 vs 63 per frame)",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 1.0649999999950523,
-                        "maxMs": 1.272499999962747,
-                        "ratio": 1.1948356807217453
+                        "minMs": 0.3825000002980232,
+                        "maxMs": 0.42499999701976776,
+                        "ratio": 1.1111111024539368
                       },
                       "competitor": {
-                        "minMs": 20.09000000002561,
-                        "maxMs": 22.28249999997206,
-                        "ratio": 1.109133897458619
+                        "minMs": 4.357500001788139,
+                        "maxMs": 4.887500002980232,
+                        "ratio": 1.1216293748650839
                       },
                       "stable": true,
                       "rungs": [
@@ -713,32 +899,69 @@
                     }
                   },
                   {
-                    "competitor": "pixi",
-                    "referenceMs": 1.0937499925494194,
-                    "referenceP95Ms": 1.8125000083819032,
+                    "competitor": "phaser",
+                    "referenceMs": 0.4100000001490116,
+                    "referenceP95Ms": 0.5099999979138374,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.7437500059604645,
-                    "competitorP95Ms": 1.0750000029802322,
+                    "competitorMs": 0.9825000017881393,
+                    "competitorP95Ms": 1.3224999979138374,
                     "competitorOverFrameBudget": false,
                     "verdict": {
-                      "side": "competitor",
-                      "ratio": 1.4705882134911337,
-                      "factor": 1.4705882134911337,
-                      "label": "competitor leads (1.47x)",
+                      "side": "exojs",
+                      "ratio": 0.4173027983743675,
+                      "factor": 2.396341466905016,
+                      "label": "ExoJS leads (2.40x)",
                       "structural": false
                     },
-                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 313/5000/0 vs 313/5000/0, none of them large enough to account for the gap); the difference is CPU-side",
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 63/1000/0 vs 63/1000/1, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 1.0649999999950523,
-                        "maxMs": 1.272499999962747,
-                        "ratio": 1.1948356807217453
+                        "minMs": 0.3825000002980232,
+                        "maxMs": 0.42499999701976776,
+                        "ratio": 1.1111111024539368
                       },
                       "competitor": {
-                        "minMs": 0.7299999999959255,
-                        "maxMs": 0.8700000001117587,
-                        "ratio": 1.1917808220775543
+                        "minMs": 0.9424999989569187,
+                        "maxMs": 1.0249999947845936,
+                        "ratio": 1.087533152168678
+                      },
+                      "stable": true,
+                      "rungs": [
+                        "exojs-leads",
+                        "exojs-leads",
+                        "exojs-leads",
+                        "exojs-leads"
+                      ]
+                    }
+                  },
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.4100000001490116,
+                    "referenceP95Ms": 0.5099999979138374,
+                    "referenceOverFrameBudget": false,
+                    "competitorMs": 0.31250000186264515,
+                    "competitorP95Ms": 0.38500000536441803,
+                    "competitorOverFrameBudget": false,
+                    "verdict": {
+                      "side": "competitor",
+                      "ratio": 1.3119999926567079,
+                      "factor": 1.3119999926567079,
+                      "label": "competitor leads (1.31x)",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 63/1000/0 vs 63/1000/0, none of them large enough to account for the gap); the difference is CPU-side",
+                    "aggregate": {
+                      "runs": 4,
+                      "reference": {
+                        "minMs": 0.3825000002980232,
+                        "maxMs": 0.42499999701976776,
+                        "ratio": 1.1111111024539368
+                      },
+                      "competitor": {
+                        "minMs": 0.3049999997019768,
+                        "maxMs": 0.3200000002980232,
+                        "ratio": 1.0491803298711584
                       },
                       "stable": true,
                       "rungs": [
@@ -754,35 +977,35 @@
               {
                 "archetype": "mixed-blend",
                 "category": "Fill and GPU state",
-                "count": 5000,
+                "count": 1000,
                 "cells": [
                   {
                     "competitor": "excalibur",
-                    "referenceMs": 0.19749999642226612,
-                    "referenceP95Ms": 0.2649999928471516,
+                    "referenceMs": 0.16500000096857548,
+                    "referenceP95Ms": 0.19999999925494194,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 13.91125001013279,
-                    "competitorP95Ms": 14.850000008940697,
+                    "competitorMs": 3.4412500001490116,
+                    "competitorP95Ms": 4.595000002533197,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "exojs",
-                      "ratio": 0.01419714233288953,
-                      "factor": 70.43671018803339,
-                      "label": "ExoJS leads clearly (70.44x)",
+                      "ratio": 0.04794769370473831,
+                      "factor": 20.856060484535412,
+                      "label": "ExoJS leads clearly (20.86x)",
                       "structural": true
                     },
-                    "mechanism": "competitor issues fewer draw calls (120 vs 1 per frame)",
+                    "mechanism": "competitor issues fewer draw calls (26 vs 1 per frame)",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.1899999976158142,
-                        "maxMs": 0.22999999998137355,
-                        "ratio": 1.2105263308815433
+                        "minMs": 0.14750000089406967,
+                        "maxMs": 0.17499999701976776,
+                        "ratio": 1.18644065056954
                       },
                       "competitor": {
-                        "minMs": 13.692500000004657,
-                        "maxMs": 14.399999999674037,
-                        "ratio": 1.0516706225794514
+                        "minMs": 3.369999997317791,
+                        "maxMs": 3.5075000002980232,
+                        "ratio": 1.040801187860436
                       },
                       "stable": true,
                       "rungs": [
@@ -794,37 +1017,74 @@
                     }
                   },
                   {
-                    "competitor": "pixi",
-                    "referenceMs": 0.19749999642226612,
-                    "referenceP95Ms": 0.2649999928471516,
+                    "competitor": "phaser",
+                    "referenceMs": 0.16500000096857548,
+                    "referenceP95Ms": 0.19999999925494194,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.07750000059604645,
-                    "competitorP95Ms": 0.1299999998882413,
+                    "competitorMs": 0.5525000002235174,
+                    "competitorP95Ms": 0.767500001937151,
                     "competitorOverFrameBudget": false,
                     "verdict": {
-                      "side": "competitor",
-                      "ratio": 2.54838703101044,
-                      "factor": 2.54838703101044,
-                      "label": "competitor leads (2.55x)",
+                      "side": "exojs",
+                      "ratio": 0.2986425355689116,
+                      "factor": 3.3484848301833763,
+                      "label": "ExoJS leads (3.35x)",
                       "structural": false
                     },
-                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 120/0/0 vs 158/0/0, none of them large enough to account for the gap); the difference is CPU-side",
+                    "mechanism": "competitor issues fewer draw calls (26 vs 1 per frame)",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.1899999976158142,
-                        "maxMs": 0.22999999998137355,
-                        "ratio": 1.2105263308815433
+                        "minMs": 0.14750000089406967,
+                        "maxMs": 0.17499999701976776,
+                        "ratio": 1.18644065056954
                       },
                       "competitor": {
-                        "minMs": 0.07499999999708962,
-                        "maxMs": 0.09500000020489097,
-                        "ratio": 1.2666666694476993
+                        "minMs": 0.494999997317791,
+                        "maxMs": 0.6124999970197678,
+                        "ratio": 1.2373737380579046
                       },
                       "stable": true,
                       "rungs": [
+                        "exojs-leads",
+                        "exojs-leads",
+                        "exojs-leads",
+                        "exojs-leads"
+                      ]
+                    }
+                  },
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.16500000096857548,
+                    "referenceP95Ms": 0.19999999925494194,
+                    "referenceOverFrameBudget": false,
+                    "competitorMs": 0.11750000156462193,
+                    "competitorP95Ms": 0.1550000011920929,
+                    "competitorOverFrameBudget": false,
+                    "verdict": {
+                      "side": "neither",
+                      "ratio": null,
+                      "factor": null,
+                      "label": "unstable across runs",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 26/0/0 vs 32/0/0, none of them large enough to account for the gap); the difference is CPU-side",
+                    "aggregate": {
+                      "runs": 4,
+                      "reference": {
+                        "minMs": 0.14750000089406967,
+                        "maxMs": 0.17499999701976776,
+                        "ratio": 1.18644065056954
+                      },
+                      "competitor": {
+                        "minMs": 0.11500000208616257,
+                        "maxMs": 0.125,
+                        "ratio": 1.086956502021148
+                      },
+                      "stable": false,
+                      "rungs": [
                         "competitor-leads",
-                        "competitor-leads",
+                        "level",
                         "competitor-leads",
                         "competitor-leads"
                       ]
@@ -840,35 +1100,72 @@
               {
                 "archetype": "batch-breaking-atlased",
                 "category": "Material variety",
-                "count": 5000,
+                "count": 1000,
                 "cells": [
                   {
                     "competitor": "excalibur",
-                    "referenceMs": 0.025000002977321856,
-                    "referenceP95Ms": 0.05499998852610588,
+                    "referenceMs": 0.07249999791383743,
+                    "referenceP95Ms": 0.0950000062584877,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 13.768750004819594,
-                    "competitorP95Ms": 15.059999995399266,
+                    "competitorMs": 3.3762500006705523,
+                    "competitorP95Ms": 4.394999999552965,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "exojs",
-                      "ratio": 0.0018157060712534463,
-                      "factor": 550.749934602391,
-                      "label": "ExoJS leads clearly (550.75x)",
+                      "ratio": 0.021473527700685172,
+                      "factor": 46.56896686649638,
+                      "label": "ExoJS leads clearly (46.57x)",
                       "structural": true
                     },
-                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 2/0/0 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side",
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/0 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.024999999906867743,
-                        "maxMs": 0.025000005960464478,
-                        "ratio": 1.0000002421438703
+                        "minMs": 0.07000000029802322,
+                        "maxMs": 0.07499999552965164,
+                        "ratio": 1.0714285030048725
                       },
                       "competitor": {
-                        "minMs": 13.229999999981374,
-                        "maxMs": 14.069999992847443,
-                        "ratio": 1.063492062952929
+                        "minMs": 3.342500001192093,
+                        "maxMs": 3.4049999974668026,
+                        "ratio": 1.018698577786812
+                      },
+                      "stable": true,
+                      "rungs": [
+                        "exojs-leads-clearly",
+                        "exojs-leads-clearly",
+                        "exojs-leads-clearly",
+                        "exojs-leads-clearly"
+                      ]
+                    }
+                  },
+                  {
+                    "competitor": "phaser",
+                    "referenceMs": 0.07249999791383743,
+                    "referenceP95Ms": 0.0950000062584877,
+                    "referenceOverFrameBudget": false,
+                    "competitorMs": 0.6287500001490116,
+                    "competitorP95Ms": 0.7800000011920929,
+                    "competitorOverFrameBudget": false,
+                    "verdict": {
+                      "side": "exojs",
+                      "ratio": 0.11530814774815933,
+                      "factor": 8.672414044704514,
+                      "label": "ExoJS leads clearly (8.67x)",
+                      "structural": true
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/0 vs 1/0/1, none of them large enough to account for the gap); the difference is CPU-side",
+                    "aggregate": {
+                      "runs": 4,
+                      "reference": {
+                        "minMs": 0.07000000029802322,
+                        "maxMs": 0.07499999552965164,
+                        "ratio": 1.0714285030048725
+                      },
+                      "competitor": {
+                        "minMs": 0.505000002682209,
+                        "maxMs": 0.7149999998509884,
+                        "ratio": 1.415841576343377
                       },
                       "stable": true,
                       "rungs": [
@@ -881,11 +1178,11 @@
                   },
                   {
                     "competitor": "pixi",
-                    "referenceMs": 0.025000002977321856,
-                    "referenceP95Ms": 0.05499998852610588,
+                    "referenceMs": 0.07249999791383743,
+                    "referenceP95Ms": 0.0950000062584877,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.025000003166496754,
-                    "competitorP95Ms": 0.05500000715255737,
+                    "competitorMs": 0.08125000260770321,
+                    "competitorP95Ms": 0.11249999701976776,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "neither",
@@ -894,25 +1191,25 @@
                       "label": "unstable across runs",
                       "structural": false
                     },
-                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 2/0/0 vs 1/0/0, none of them large enough to account for the gap); the difference is CPU-side",
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/0 vs 1/0/0, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.024999999906867743,
-                        "maxMs": 0.025000005960464478,
-                        "ratio": 1.0000002421438703
+                        "minMs": 0.07000000029802322,
+                        "maxMs": 0.07499999552965164,
+                        "ratio": 1.0714285030048725
                       },
                       "competitor": {
-                        "minMs": 0.02000000001862645,
-                        "maxMs": 0.025000005960464478,
-                        "ratio": 1.2500002968590704
+                        "minMs": 0.07999999821186066,
+                        "maxMs": 0.08999999612569809,
+                        "ratio": 1.1249999767169352
                       },
                       "stable": false,
                       "rungs": [
                         "level",
                         "level",
-                        "competitor-leads",
-                        "level"
+                        "level",
+                        "exojs-leads"
                       ]
                     }
                   }
@@ -926,35 +1223,72 @@
               {
                 "archetype": "text-static",
                 "category": "Text",
-                "count": 5000,
+                "count": 1000,
                 "cells": [
                   {
                     "competitor": "excalibur",
-                    "referenceMs": 0.035000005504116416,
-                    "referenceP95Ms": 0.08750000176951289,
+                    "referenceMs": 0.11750000156462193,
+                    "referenceP95Ms": 0.1549999974668026,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 61.69999999401625,
-                    "competitorP95Ms": 65.81000000424683,
-                    "competitorOverFrameBudget": true,
+                    "competitorMs": 13.134999999776483,
+                    "competitorP95Ms": 16.672500003129244,
+                    "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "exojs",
-                      "ratio": 0.0005672610292951501,
-                      "factor": 1762.8568654584813,
-                      "label": "ExoJS leads clearly (1762.86x)",
+                      "ratio": 0.008945565402864212,
+                      "factor": 111.78723255209981,
+                      "label": "ExoJS leads clearly (111.79x)",
                       "structural": true
                     },
-                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/0 vs 3/4/3, none of them large enough to account for the gap); the difference is CPU-side",
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/0 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.029999999998835847,
-                        "maxMs": 0.03999999165534973,
-                        "ratio": 1.3333330552300646
+                        "minMs": 0.11499999463558197,
+                        "maxMs": 0.13499999791383743,
+                        "ratio": 1.1739130800973732
                       },
                       "competitor": {
-                        "minMs": 58.76999999996042,
-                        "maxMs": 63.56499998271465,
-                        "ratio": 1.0815892459206646
+                        "minMs": 12.792500000447035,
+                        "maxMs": 13.327499996870756,
+                        "ratio": 1.0418213794336546
+                      },
+                      "stable": true,
+                      "rungs": [
+                        "exojs-leads-clearly",
+                        "exojs-leads-clearly",
+                        "exojs-leads-clearly",
+                        "exojs-leads-clearly"
+                      ]
+                    }
+                  },
+                  {
+                    "competitor": "phaser",
+                    "referenceMs": 0.11750000156462193,
+                    "referenceP95Ms": 0.1549999974668026,
+                    "referenceOverFrameBudget": false,
+                    "competitorMs": 2.280000001192093,
+                    "competitorP95Ms": 3.405000001192093,
+                    "competitorOverFrameBudget": false,
+                    "verdict": {
+                      "side": "exojs",
+                      "ratio": 0.05153508837859093,
+                      "factor": 19.40425507090868,
+                      "label": "ExoJS leads clearly (19.40x)",
+                      "structural": true
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/0 vs 1/0/1, none of them large enough to account for the gap); the difference is CPU-side",
+                    "aggregate": {
+                      "runs": 4,
+                      "reference": {
+                        "minMs": 0.11499999463558197,
+                        "maxMs": 0.13499999791383743,
+                        "ratio": 1.1739130800973732
+                      },
+                      "competitor": {
+                        "minMs": 2.1424999982118607,
+                        "maxMs": 2.3975000008940697,
+                        "ratio": 1.1190198379906806
                       },
                       "stable": true,
                       "rungs": [
@@ -967,11 +1301,11 @@
                   },
                   {
                     "competitor": "pixi",
-                    "referenceMs": 0.035000005504116416,
-                    "referenceP95Ms": 0.08750000176951289,
+                    "referenceMs": 0.11750000156462193,
+                    "referenceP95Ms": 0.1549999974668026,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.030000000493600965,
-                    "competitorP95Ms": 0.06499999645166099,
+                    "competitorMs": 0.09999999776482582,
+                    "competitorP95Ms": 0.13000000268220901,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "neither",
@@ -984,21 +1318,21 @@
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.029999999998835847,
-                        "maxMs": 0.03999999165534973,
-                        "ratio": 1.3333330552300646
+                        "minMs": 0.11499999463558197,
+                        "maxMs": 0.13499999791383743,
+                        "ratio": 1.1739130800973732
                       },
                       "competitor": {
-                        "minMs": 0.025000000023283064,
-                        "maxMs": 0.032499998807907104,
-                        "ratio": 1.2999999511055649
+                        "minMs": 0.0925000011920929,
+                        "maxMs": 0.10499999672174454,
+                        "ratio": 1.1351350850654927
                       },
                       "stable": false,
                       "rungs": [
                         "competitor-leads",
                         "level",
-                        "level",
-                        "level"
+                        "competitor-leads",
+                        "competitor-leads"
                       ]
                     }
                   }
@@ -1007,35 +1341,35 @@
               {
                 "archetype": "text-dynamic",
                 "category": "Text",
-                "count": 5000,
+                "count": 1000,
                 "cells": [
                   {
                     "competitor": "excalibur",
-                    "referenceMs": 15.301249997613922,
-                    "referenceP95Ms": 18.275000008339703,
+                    "referenceMs": 3.724999997764826,
+                    "referenceP95Ms": 5.092499997466803,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 63.270000003278255,
-                    "competitorP95Ms": 66.95499999821186,
-                    "competitorOverFrameBudget": true,
+                    "competitorMs": 13.507500002160668,
+                    "competitorP95Ms": 17.554999999701977,
+                    "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "exojs",
-                      "ratio": 0.2418405246850183,
-                      "factor": 4.134956295279443,
-                      "label": "ExoJS leads (4.13x)",
+                      "ratio": 0.27577271865030334,
+                      "factor": 3.6261744994002147,
+                      "label": "ExoJS leads (3.63x)",
                       "structural": false
                     },
-                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/3 vs 3/4/3, none of them large enough to account for the gap); the difference is CPU-side",
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/3 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 15.075000017881393,
-                        "maxMs": 15.745000000111759,
-                        "ratio": 1.0444444432129776
+                        "minMs": 3.557499997317791,
+                        "maxMs": 3.7825000025331974,
+                        "ratio": 1.0632466634954454
                       },
                       "competitor": {
-                        "minMs": 60.8574999999837,
-                        "maxMs": 64.75249999994412,
-                        "ratio": 1.064001971818781
+                        "minMs": 13.269999999552965,
+                        "maxMs": 13.697499997913837,
+                        "ratio": 1.0322155236153183
                       },
                       "stable": true,
                       "rungs": [
@@ -1047,32 +1381,69 @@
                     }
                   },
                   {
-                    "competitor": "pixi",
-                    "referenceMs": 15.301249997613922,
-                    "referenceP95Ms": 18.275000008339703,
+                    "competitor": "phaser",
+                    "referenceMs": 3.724999997764826,
+                    "referenceP95Ms": 5.092499997466803,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 33.903750000892614,
-                    "competitorP95Ms": 35.63499999279156,
-                    "competitorOverFrameBudget": true,
+                    "competitorMs": 2.642500001937151,
+                    "competitorP95Ms": 3.814999997615814,
+                    "competitorOverFrameBudget": false,
+                    "verdict": {
+                      "side": "competitor",
+                      "ratio": 1.4096499508170752,
+                      "factor": 1.4096499508170752,
+                      "label": "competitor leads (1.41x)",
+                      "structural": false
+                    },
+                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/3 vs 1/0/1, none of them large enough to account for the gap); the difference is CPU-side",
+                    "aggregate": {
+                      "runs": 4,
+                      "reference": {
+                        "minMs": 3.557499997317791,
+                        "maxMs": 3.7825000025331974,
+                        "ratio": 1.0632466634954454
+                      },
+                      "competitor": {
+                        "minMs": 2.425000000745058,
+                        "maxMs": 2.905000001192093,
+                        "ratio": 1.1979381444534265
+                      },
+                      "stable": true,
+                      "rungs": [
+                        "competitor-leads",
+                        "competitor-leads",
+                        "competitor-leads",
+                        "competitor-leads"
+                      ]
+                    }
+                  },
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 3.724999997764826,
+                    "referenceP95Ms": 5.092499997466803,
+                    "referenceOverFrameBudget": false,
+                    "competitorMs": 7.403750000521541,
+                    "competitorP95Ms": 10.432500001043081,
+                    "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "exojs",
-                      "ratio": 0.45131438254503037,
-                      "factor": 2.2157503475977167,
-                      "label": "ExoJS leads (2.22x)",
+                      "ratio": 0.5031234168498973,
+                      "factor": 1.9875838939501036,
+                      "label": "ExoJS leads (1.99x)",
                       "structural": false
                     },
                     "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/0/3 vs 1/0/2, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 15.075000017881393,
-                        "maxMs": 15.745000000111759,
-                        "ratio": 1.0444444432129776
+                        "minMs": 3.557499997317791,
+                        "maxMs": 3.7825000025331974,
+                        "ratio": 1.0632466634954454
                       },
                       "competitor": {
-                        "minMs": 33.605000004172325,
-                        "maxMs": 34.142500000074506,
-                        "ratio": 1.0159946435302916
+                        "minMs": 7.285000000149012,
+                        "maxMs": 7.767500001937151,
+                        "ratio": 1.066231983771897
                       },
                       "stable": true,
                       "rungs": [
@@ -1093,42 +1464,42 @@
               {
                 "archetype": "filter-chain-1",
                 "category": "Render targets",
-                "count": 5000,
+                "count": 1000,
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 0.09624999761581421,
-                    "referenceP95Ms": 0.16250000894069672,
+                    "referenceMs": 0.3200000002980232,
+                    "referenceP95Ms": 0.4049999974668026,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.48375000059604645,
-                    "competitorP95Ms": 0.7424999934155494,
+                    "competitorMs": 0.45749999955296516,
+                    "competitorP95Ms": 0.5399999991059303,
                     "competitorOverFrameBudget": false,
                     "verdict": {
-                      "side": "neither",
-                      "ratio": null,
-                      "factor": null,
-                      "label": "unstable across runs",
+                      "side": "exojs",
+                      "ratio": 0.699453553247439,
+                      "factor": 1.429687497271516,
+                      "label": "ExoJS leads (1.43x)",
                       "structural": false
                     },
                     "mechanism": "competitor issues fewer texture binds (9 vs 3 per frame)",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.08999999999650754,
-                        "maxMs": 0.11000000033527613,
-                        "ratio": 1.222222225994941
+                        "minMs": 0.30000000447034836,
+                        "maxMs": 0.33500000089406967,
+                        "ratio": 1.116666653007269
                       },
                       "competitor": {
-                        "minMs": 0.3600000000005821,
-                        "maxMs": 0.5825000000186265,
-                        "ratio": 1.6180555556046794
+                        "minMs": 0.4399999976158142,
+                        "maxMs": 0.4699999988079071,
+                        "ratio": 1.0681818212605705
                       },
-                      "stable": false,
+                      "stable": true,
                       "rungs": [
                         "exojs-leads",
-                        "exojs-leads-clearly",
                         "exojs-leads",
-                        "exojs-leads-clearly"
+                        "exojs-leads",
+                        "exojs-leads"
                       ]
                     }
                   }
@@ -1137,42 +1508,42 @@
               {
                 "archetype": "filter-chain-2",
                 "category": "Render targets",
-                "count": 5000,
+                "count": 1000,
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 0.09999999939464033,
-                    "referenceP95Ms": 0.19749999884516,
+                    "referenceMs": 0.2875000014901161,
+                    "referenceP95Ms": 0.3499999977648258,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.39124999940395355,
-                    "competitorP95Ms": 0.6275000125169754,
+                    "competitorMs": 0.44749999791383743,
+                    "competitorP95Ms": 0.5350000001490116,
                     "competitorOverFrameBudget": false,
                     "verdict": {
-                      "side": "neither",
-                      "ratio": null,
-                      "factor": null,
-                      "label": "unstable across runs",
+                      "side": "exojs",
+                      "ratio": 0.642458106883549,
+                      "factor": 1.5565217238067455,
+                      "label": "ExoJS leads (1.56x)",
                       "structural": false
                     },
                     "mechanism": "competitor issues fewer texture binds (11 vs 3 per frame)",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.09000000001105946,
-                        "maxMs": 0.10999998450279236,
-                        "ratio": 1.222222049880836
+                        "minMs": 0.25999999791383743,
+                        "maxMs": 0.29499999806284904,
+                        "ratio": 1.13461538626862
                       },
                       "competitor": {
-                        "minMs": 0.27749999999650754,
-                        "maxMs": 0.5775000001303852,
-                        "ratio": 2.081081081577129
+                        "minMs": 0.4350000023841858,
+                        "maxMs": 0.4624999985098839,
+                        "ratio": 1.0632183815516638
                       },
-                      "stable": false,
+                      "stable": true,
                       "rungs": [
                         "exojs-leads",
                         "exojs-leads",
                         "exojs-leads",
-                        "exojs-leads-clearly"
+                        "exojs-leads"
                       ]
                     }
                   }
@@ -1181,40 +1552,40 @@
               {
                 "archetype": "filter-chain-4",
                 "category": "Render targets",
-                "count": 5000,
+                "count": 1000,
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 0.08999998867511749,
-                    "referenceP95Ms": 0.1649999909568578,
+                    "referenceMs": 0.24500000104308128,
+                    "referenceP95Ms": 0.29250000417232513,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.4212499923305586,
-                    "competitorP95Ms": 0.6199999968521297,
+                    "competitorMs": 0.3974999990314245,
+                    "competitorP95Ms": 0.4649999998509884,
                     "competitorOverFrameBudget": false,
                     "verdict": {
-                      "side": "neither",
-                      "ratio": null,
-                      "factor": null,
-                      "label": "unstable across runs",
+                      "side": "exojs",
+                      "ratio": 0.6163522053838111,
+                      "factor": 1.6224489687309323,
+                      "label": "ExoJS leads (1.62x)",
                       "structural": false
                     },
                     "mechanism": "competitor issues fewer texture binds (15 vs 7 per frame)",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.08000000000174623,
-                        "maxMs": 0.10000000009313226,
-                        "ratio": 1.2500000011368684
+                        "minMs": 0.22499999403953552,
+                        "maxMs": 0.25,
+                        "ratio": 1.1111111405455043
                       },
                       "competitor": {
-                        "minMs": 0.2575000000069849,
-                        "maxMs": 0.5324999988079071,
-                        "ratio": 2.0679611603629615
+                        "minMs": 0.3725000023841858,
+                        "maxMs": 0.4100000038743019,
+                        "ratio": 1.1006711442955635
                       },
-                      "stable": false,
+                      "stable": true,
                       "rungs": [
                         "exojs-leads",
-                        "exojs-leads-clearly",
+                        "exojs-leads",
                         "exojs-leads",
                         "exojs-leads"
                       ]
@@ -1225,35 +1596,79 @@
               {
                 "archetype": "composite",
                 "category": "Render targets",
-                "count": 5000,
+                "count": 1000,
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 0.13874999433755875,
-                    "referenceP95Ms": 0.22499999403953552,
+                    "referenceMs": 0.36499999836087227,
+                    "referenceP95Ms": 0.45749999955296516,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.09624999761581421,
-                    "competitorP95Ms": 0.18500000357744284,
+                    "competitorMs": 0.36249999701976776,
+                    "competitorP95Ms": 0.4750000052154064,
                     "competitorOverFrameBudget": false,
                     "verdict": {
-                      "side": "competitor",
-                      "ratio": 1.4415584184363828,
-                      "factor": 1.4415584184363828,
-                      "label": "competitor leads (1.44x)",
+                      "side": "neither",
+                      "ratio": 1.0068965554804354,
+                      "factor": 1,
+                      "label": "level",
                       "structural": false
                     },
                     "mechanism": "ExoJS issues fewer draw calls (5 vs 8 per frame)",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.1299999999901047,
-                        "maxMs": 0.16749999998137355,
-                        "ratio": 1.2884615384163327
+                        "minMs": 0.33500000089406967,
+                        "maxMs": 0.375,
+                        "ratio": 1.1194029820870919
                       },
                       "competitor": {
-                        "minMs": 0.09000000002561137,
-                        "maxMs": 0.13000000035390258,
-                        "ratio": 1.4444444479656486
+                        "minMs": 0.35750000178813934,
+                        "maxMs": 0.3724999986588955,
+                        "ratio": 1.041958032995047
+                      },
+                      "stable": true,
+                      "rungs": [
+                        "level",
+                        "level",
+                        "level",
+                        "level"
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "archetype": "mask-clip",
+                "category": "Render targets",
+                "count": 1000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.24249999970197678,
+                    "referenceP95Ms": 0.29500000178813934,
+                    "referenceOverFrameBudget": false,
+                    "competitorMs": 0.14000000059604645,
+                    "competitorP95Ms": 0.1875,
+                    "competitorOverFrameBudget": false,
+                    "verdict": {
+                      "side": "competitor",
+                      "ratio": 1.7321428476395655,
+                      "factor": 1.7321428476395655,
+                      "label": "competitor leads (1.73x)",
+                      "structural": false
+                    },
+                    "mechanism": "ExoJS issues fewer draw calls (4 vs 10 per frame)",
+                    "aggregate": {
+                      "runs": 4,
+                      "reference": {
+                        "minMs": 0.2199999988079071,
+                        "maxMs": 0.24500000476837158,
+                        "ratio": 1.1136363913451346
+                      },
+                      "competitor": {
+                        "minMs": 0.13500000536441803,
+                        "maxMs": 0.14249999821186066,
+                        "ratio": 1.055555500366072
                       },
                       "stable": true,
                       "rungs": [
@@ -1267,44 +1682,44 @@
                 ]
               },
               {
-                "archetype": "mask-clip",
+                "archetype": "mask-clip-animated",
                 "category": "Render targets",
-                "count": 5000,
+                "count": 1000,
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 1.2824999934528023,
-                    "referenceP95Ms": 1.6300000101327896,
+                    "referenceMs": 0.2587500009685755,
+                    "referenceP95Ms": 0.32750000059604645,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.05000000013387762,
-                    "competitorP95Ms": 0.08500000179628842,
+                    "competitorMs": 0.19500000029802322,
+                    "competitorP95Ms": 0.24249999970197678,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "competitor",
-                      "ratio": 25.64999980037683,
-                      "factor": 25.64999980037683,
-                      "label": "competitor leads clearly (25.65x)",
-                      "structural": true
+                      "ratio": 1.326923079862162,
+                      "factor": 1.326923079862162,
+                      "label": "competitor leads (1.33x)",
+                      "structural": false
                     },
                     "mechanism": "ExoJS issues fewer draw calls (4 vs 10 per frame)",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 1.110000000000582,
-                        "maxMs": 1.3500000089406967,
-                        "ratio": 1.21621622427026
+                        "minMs": 0.23499999940395355,
+                        "maxMs": 0.2850000038743019,
+                        "ratio": 1.2127659770092203
                       },
                       "competitor": {
-                        "minMs": 0.04500001668930054,
-                        "maxMs": 0.054999977350234985,
-                        "ratio": 1.2222212656048212
+                        "minMs": 0.1899999976158142,
+                        "maxMs": 0.20000000298023224,
+                        "ratio": 1.0526316078415872
                       },
                       "stable": true,
                       "rungs": [
-                        "competitor-leads-clearly",
-                        "competitor-leads-clearly",
-                        "competitor-leads-clearly",
-                        "competitor-leads-clearly"
+                        "competitor-leads",
+                        "competitor-leads",
+                        "competitor-leads",
+                        "competitor-leads"
                       ]
                     }
                   }
@@ -1318,35 +1733,35 @@
               {
                 "archetype": "scrolling-world",
                 "category": "Camera and world",
-                "count": 5000,
+                "count": 1000,
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 0.04749999940395355,
-                    "referenceP95Ms": 0.22749999165534973,
+                    "referenceMs": 0.16499999910593033,
+                    "referenceP95Ms": 0.39499999582767487,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.027500002877786756,
-                    "competitorP95Ms": 0.05500000008032657,
+                    "competitorMs": 0.09999999776482582,
+                    "competitorP95Ms": 0.1275000013411045,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "competitor",
-                      "ratio": 1.727272524844784,
-                      "factor": 1.727272524844784,
-                      "label": "competitor leads (1.73x)",
+                      "ratio": 1.6500000279396778,
+                      "factor": 1.6500000279396778,
+                      "label": "competitor leads (1.65x)",
                       "structural": false
                     },
-                    "mechanism": "competitor issues fewer draw calls (90 vs 1 per frame)",
+                    "mechanism": "competitor issues fewer draw calls (120 vs 1 per frame)",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.04000000000814907,
-                        "maxMs": 0.049999999813735485,
-                        "ratio": 1.2499999950887286
+                        "minMs": 0.14249999821186066,
+                        "maxMs": 0.17249999940395355,
+                        "ratio": 1.2105263267967952
                       },
                       "competitor": {
-                        "minMs": 0.024999999994179234,
-                        "maxMs": 0.030000001192092896,
-                        "ratio": 1.2000000479631125
+                        "minMs": 0.0949999988079071,
+                        "maxMs": 0.10999999940395355,
+                        "ratio": 1.1578947450975963
                       },
                       "stable": true,
                       "rungs": [
@@ -1388,448 +1803,7 @@
             "reason": "ExoJS-internal structural probe: a competitor arm renders a different scene here, so a wall-clock comparison would not be like for like"
           }
         ],
-        "webgl1": [
-          {
-            "archetype": "static-heavy",
-            "category": "Node scaling",
-            "count": 5000,
-            "cells": [
-              {
-                "competitor": "phaser",
-                "referenceMs": 0.05000000596191967,
-                "referenceP95Ms": 0.10999999225168722,
-                "referenceOverFrameBudget": false,
-                "competitorMs": 1.9737500044284388,
-                "competitorP95Ms": 2.3874999922700226,
-                "competitorOverFrameBudget": false,
-                "verdict": {
-                  "side": "exojs",
-                  "ratio": 0.02533249188080369,
-                  "factor": 39.47499538163375,
-                  "label": "ExoJS leads clearly (39.47x)",
-                  "structural": true
-                },
-                "mechanism": null,
-                "aggregate": {
-                  "runs": 4,
-                  "reference": {
-                    "minMs": 0.044999999925494194,
-                    "maxMs": 0.06000000238418579,
-                    "ratio": 1.3333333885228194
-                  },
-                  "competitor": {
-                    "minMs": 1.8875000000116415,
-                    "maxMs": 2.0674999952316284,
-                    "ratio": 1.0953642358775506
-                  },
-                  "stable": true,
-                  "rungs": [
-                    "exojs-leads-clearly",
-                    "exojs-leads-clearly",
-                    "exojs-leads-clearly",
-                    "exojs-leads-clearly"
-                  ]
-                }
-              }
-            ]
-          },
-          {
-            "archetype": "dynamic-heavy",
-            "category": "Node scaling",
-            "count": 5000,
-            "cells": [
-              {
-                "competitor": "phaser",
-                "referenceMs": 0.38999998988583684,
-                "referenceP95Ms": 0.6200000047683716,
-                "referenceOverFrameBudget": false,
-                "competitorMs": 2.3937500113388523,
-                "competitorP95Ms": 2.732500003417954,
-                "competitorOverFrameBudget": false,
-                "verdict": {
-                  "side": "neither",
-                  "ratio": null,
-                  "factor": null,
-                  "label": "unstable across runs",
-                  "structural": false
-                },
-                "mechanism": null,
-                "aggregate": {
-                  "runs": 4,
-                  "reference": {
-                    "minMs": 0.36000001430511475,
-                    "maxMs": 0.5750000000043656,
-                    "ratio": 1.5972221587664426
-                  },
-                  "competitor": {
-                    "minMs": 2.279999999969732,
-                    "maxMs": 2.427499994635582,
-                    "ratio": 1.0646929801174596
-                  },
-                  "stable": false,
-                  "rungs": [
-                    "exojs-leads-clearly",
-                    "exojs-leads-clearly",
-                    "exojs-leads",
-                    "exojs-leads-clearly"
-                  ]
-                }
-              }
-            ]
-          },
-          {
-            "archetype": "deep-hierarchy",
-            "category": "Node scaling",
-            "count": 5000,
-            "cells": [
-              {
-                "competitor": "phaser",
-                "referenceMs": 0.11000001430511475,
-                "referenceP95Ms": 0.22000000975094736,
-                "referenceOverFrameBudget": false,
-                "competitorMs": 2.477500000037253,
-                "competitorP95Ms": 2.825000000098953,
-                "competitorOverFrameBudget": false,
-                "verdict": {
-                  "side": "exojs",
-                  "ratio": 0.04439960214065014,
-                  "factor": 22.522724344064518,
-                  "label": "ExoJS leads clearly (22.52x)",
-                  "structural": true
-                },
-                "mechanism": null,
-                "aggregate": {
-                  "runs": 4,
-                  "reference": {
-                    "minMs": 0.10000000000218279,
-                    "maxMs": 0.125,
-                    "ratio": 1.2499999999727152
-                  },
-                  "competitor": {
-                    "minMs": 1.5250000059604645,
-                    "maxMs": 2.5850000083446503,
-                    "ratio": 1.6950819660597864
-                  },
-                  "stable": true,
-                  "rungs": [
-                    "exojs-leads-clearly",
-                    "exojs-leads-clearly",
-                    "exojs-leads-clearly",
-                    "exojs-leads-clearly"
-                  ]
-                }
-              }
-            ]
-          },
-          {
-            "archetype": "overdraw",
-            "category": "Fill and GPU state",
-            "count": 5000,
-            "cells": [
-              {
-                "competitor": "phaser",
-                "referenceMs": 0.04250000836327672,
-                "referenceP95Ms": 0.0799999893642962,
-                "referenceOverFrameBudget": false,
-                "competitorMs": 2.05124999769032,
-                "competitorP95Ms": 2.6175000013317913,
-                "competitorOverFrameBudget": false,
-                "verdict": {
-                  "side": "exojs",
-                  "ratio": 0.02071907783601763,
-                  "factor": 48.264696330336676,
-                  "label": "ExoJS leads clearly (48.26x)",
-                  "structural": true
-                },
-                "mechanism": null,
-                "aggregate": {
-                  "runs": 4,
-                  "reference": {
-                    "minMs": 0.040000000000873115,
-                    "maxMs": 0.04500001668930054,
-                    "ratio": 1.125000417207957
-                  },
-                  "competitor": {
-                    "minMs": 1.9149999999790452,
-                    "maxMs": 2.7450000047683716,
-                    "ratio": 1.4334203680409445
-                  },
-                  "stable": true,
-                  "rungs": [
-                    "exojs-leads-clearly",
-                    "exojs-leads-clearly",
-                    "exojs-leads-clearly",
-                    "exojs-leads-clearly"
-                  ]
-                }
-              }
-            ]
-          },
-          {
-            "archetype": "batch-breaking",
-            "category": "Fill and GPU state",
-            "count": 5000,
-            "cells": [
-              {
-                "competitor": "phaser",
-                "referenceMs": 1.0937499925494194,
-                "referenceP95Ms": 1.8125000083819032,
-                "referenceOverFrameBudget": false,
-                "competitorMs": 3.8137499913573265,
-                "competitorP95Ms": 4.170000008336501,
-                "competitorOverFrameBudget": false,
-                "verdict": {
-                  "side": "exojs",
-                  "ratio": 0.28679121469106844,
-                  "factor": 3.486857158707599,
-                  "label": "ExoJS leads (3.49x)",
-                  "structural": false
-                },
-                "mechanism": null,
-                "aggregate": {
-                  "runs": 4,
-                  "reference": {
-                    "minMs": 1.0649999999950523,
-                    "maxMs": 1.272499999962747,
-                    "ratio": 1.1948356807217453
-                  },
-                  "competitor": {
-                    "minMs": 3.6049999999813735,
-                    "maxMs": 4.3600000001024455,
-                    "ratio": 1.209431345388342
-                  },
-                  "stable": true,
-                  "rungs": [
-                    "exojs-leads",
-                    "exojs-leads",
-                    "exojs-leads",
-                    "exojs-leads"
-                  ]
-                }
-              }
-            ]
-          },
-          {
-            "archetype": "mixed-blend",
-            "category": "Fill and GPU state",
-            "count": 5000,
-            "cells": [
-              {
-                "competitor": "phaser",
-                "referenceMs": 0.19749999642226612,
-                "referenceP95Ms": 0.2649999928471516,
-                "referenceOverFrameBudget": false,
-                "competitorMs": 2.163749999104766,
-                "competitorP95Ms": 2.364999994635582,
-                "competitorOverFrameBudget": false,
-                "verdict": {
-                  "side": "exojs",
-                  "ratio": 0.09127671704401161,
-                  "factor": 10.955696396462443,
-                  "label": "ExoJS leads clearly (10.96x)",
-                  "structural": true
-                },
-                "mechanism": null,
-                "aggregate": {
-                  "runs": 4,
-                  "reference": {
-                    "minMs": 0.1899999976158142,
-                    "maxMs": 0.22999999998137355,
-                    "ratio": 1.2105263308815433
-                  },
-                  "competitor": {
-                    "minMs": 2.084999993443489,
-                    "maxMs": 2.349999999627471,
-                    "ratio": 1.1270983247085389
-                  },
-                  "stable": true,
-                  "rungs": [
-                    "exojs-leads-clearly",
-                    "exojs-leads-clearly",
-                    "exojs-leads-clearly",
-                    "exojs-leads-clearly"
-                  ]
-                }
-              }
-            ]
-          },
-          {
-            "archetype": "batch-breaking-atlased",
-            "category": "Material variety",
-            "count": 5000,
-            "cells": [
-              {
-                "competitor": "phaser",
-                "referenceMs": 0.025000002977321856,
-                "referenceP95Ms": 0.05499998852610588,
-                "referenceOverFrameBudget": false,
-                "competitorMs": 1.8950000083714258,
-                "competitorP95Ms": 2.250000005995389,
-                "competitorOverFrameBudget": false,
-                "verdict": {
-                  "side": "exojs",
-                  "ratio": 0.01319261365006906,
-                  "factor": 75.7999913076182,
-                  "label": "ExoJS leads clearly (75.80x)",
-                  "structural": true
-                },
-                "mechanism": null,
-                "aggregate": {
-                  "runs": 4,
-                  "reference": {
-                    "minMs": 0.024999999906867743,
-                    "maxMs": 0.025000005960464478,
-                    "ratio": 1.0000002421438703
-                  },
-                  "competitor": {
-                    "minMs": 1.4524999856948853,
-                    "maxMs": 2.334999999962747,
-                    "ratio": 1.607573165548548
-                  },
-                  "stable": true,
-                  "rungs": [
-                    "exojs-leads-clearly",
-                    "exojs-leads-clearly",
-                    "exojs-leads-clearly",
-                    "exojs-leads-clearly"
-                  ]
-                }
-              }
-            ]
-          },
-          {
-            "archetype": "text-static",
-            "category": "Text",
-            "count": 5000,
-            "cells": [
-              {
-                "competitor": "phaser",
-                "referenceMs": 0.035000005504116416,
-                "referenceP95Ms": 0.08750000176951289,
-                "referenceOverFrameBudget": false,
-                "competitorMs": 9.974999998812564,
-                "competitorP95Ms": 10.5625,
-                "competitorOverFrameBudget": false,
-                "verdict": {
-                  "side": "exojs",
-                  "ratio": 0.0035087724820333692,
-                  "factor": 284.9999551468466,
-                  "label": "ExoJS leads clearly (285.00x)",
-                  "structural": true
-                },
-                "mechanism": null,
-                "aggregate": {
-                  "runs": 4,
-                  "reference": {
-                    "minMs": 0.029999999998835847,
-                    "maxMs": 0.03999999165534973,
-                    "ratio": 1.3333330552300646
-                  },
-                  "competitor": {
-                    "minMs": 8.909999999974389,
-                    "maxMs": 10.822500005364418,
-                    "ratio": 1.2146464652520232
-                  },
-                  "stable": true,
-                  "rungs": [
-                    "exojs-leads-clearly",
-                    "exojs-leads-clearly",
-                    "exojs-leads-clearly",
-                    "exojs-leads-clearly"
-                  ]
-                }
-              }
-            ]
-          },
-          {
-            "archetype": "text-dynamic",
-            "category": "Text",
-            "count": 5000,
-            "cells": [
-              {
-                "competitor": "phaser",
-                "referenceMs": 15.301249997613922,
-                "referenceP95Ms": 18.275000008339703,
-                "referenceOverFrameBudget": false,
-                "competitorMs": 11.643749997019768,
-                "competitorP95Ms": 12.357499986886978,
-                "competitorOverFrameBudget": false,
-                "verdict": {
-                  "side": "competitor",
-                  "ratio": 1.3141170156977173,
-                  "factor": 1.3141170156977173,
-                  "label": "competitor leads (1.31x)",
-                  "structural": false
-                },
-                "mechanism": null,
-                "aggregate": {
-                  "runs": 4,
-                  "reference": {
-                    "minMs": 15.075000017881393,
-                    "maxMs": 15.745000000111759,
-                    "ratio": 1.0444444432129776
-                  },
-                  "competitor": {
-                    "minMs": 10.372499999997672,
-                    "maxMs": 12.270000000018626,
-                    "ratio": 1.1829356471459513
-                  },
-                  "stable": true,
-                  "rungs": [
-                    "competitor-leads",
-                    "competitor-leads",
-                    "competitor-leads",
-                    "competitor-leads"
-                  ]
-                }
-              }
-            ]
-          },
-          {
-            "archetype": "lifecycle-churn",
-            "category": "Node scaling",
-            "count": 5000,
-            "cells": [
-              {
-                "competitor": "phaser",
-                "referenceMs": 4.823749991657678,
-                "referenceP95Ms": 5.097500002382731,
-                "referenceOverFrameBudget": false,
-                "competitorMs": 15.714999994350364,
-                "competitorP95Ms": 16.26000000355998,
-                "competitorOverFrameBudget": false,
-                "verdict": {
-                  "side": "exojs",
-                  "ratio": 0.3069519563087397,
-                  "factor": 3.257838822809703,
-                  "label": "ExoJS leads (3.26x)",
-                  "structural": false
-                },
-                "mechanism": null,
-                "aggregate": {
-                  "runs": 4,
-                  "reference": {
-                    "minMs": 4.46750000002794,
-                    "maxMs": 5.327500015497208,
-                    "ratio": 1.1925014024541443
-                  },
-                  "competitor": {
-                    "minMs": 14.945000000298023,
-                    "maxMs": 16.419999986886978,
-                    "ratio": 1.0986952148919065
-                  },
-                  "stable": true,
-                  "rungs": [
-                    "exojs-leads",
-                    "exojs-leads",
-                    "exojs-leads",
-                    "exojs-leads"
-                  ]
-                }
-              }
-            ]
-          }
-        ]
+        "webgl1": []
       },
       {
         "backend": "webgpu",
@@ -1848,11 +1822,11 @@
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 0.1524999999674037,
-                    "referenceP95Ms": 0.2050000000745058,
+                    "referenceMs": 0.24625000171363354,
+                    "referenceP95Ms": 0.32500000298023224,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.14374999911524355,
-                    "competitorP95Ms": 0.22499999462161213,
+                    "competitorMs": 0.28500000201165676,
+                    "competitorP95Ms": 0.3500000014901161,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "neither",
@@ -1865,21 +1839,21 @@
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.11499997973442078,
-                        "maxMs": 0.16250000894069672,
-                        "ratio": 1.4130438050160687
+                        "minMs": 0.22999999672174454,
+                        "maxMs": 0.29250000044703484,
+                        "ratio": 1.2717391505048723
                       },
                       "competitor": {
-                        "minMs": 0.12250000005587935,
-                        "maxMs": 0.23499998450279236,
-                        "ratio": 1.9183672195558794
+                        "minMs": 0.2849999964237213,
+                        "maxMs": 0.29999999701976776,
+                        "ratio": 1.0526315816991987
                       },
                       "stable": false,
                       "rungs": [
                         "level",
-                        "exojs-leads",
                         "level",
-                        "competitor-leads"
+                        "level",
+                        "exojs-leads"
                       ]
                     }
                   }
@@ -1892,35 +1866,35 @@
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 0.42750000359956175,
-                    "referenceP95Ms": 0.6174999922513962,
+                    "referenceMs": 0.6887500025331974,
+                    "referenceP95Ms": 0.8749999962747097,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.28249999543186277,
-                    "competitorP95Ms": 0.4050000023562461,
+                    "competitorMs": 0.5300000011920929,
+                    "competitorP95Ms": 0.642500001937151,
                     "competitorOverFrameBudget": false,
                     "verdict": {
-                      "side": "competitor",
-                      "ratio": 1.5132743734952452,
-                      "factor": 1.5132743734952452,
-                      "label": "competitor leads (1.51x)",
+                      "side": "neither",
+                      "ratio": null,
+                      "factor": null,
+                      "label": "unstable across runs",
                       "structural": false
                     },
                     "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/2/1 vs 1/2/2, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.4050000000279397,
-                        "maxMs": 0.5499999821186066,
-                        "ratio": 1.3580246471127502
+                        "minMs": 0.6225000023841858,
+                        "maxMs": 0.7124999985098839,
+                        "ratio": 1.1445783064754964
                       },
                       "competitor": {
-                        "minMs": 0.2550000000046566,
-                        "maxMs": 0.3474999964237213,
-                        "ratio": 1.362745083989708
+                        "minMs": 0.5199999958276749,
+                        "maxMs": 0.5449999943375587,
+                        "ratio": 1.0480769205970701
                       },
-                      "stable": true,
+                      "stable": false,
                       "rungs": [
-                        "competitor-leads",
+                        "level",
                         "competitor-leads",
                         "competitor-leads",
                         "competitor-leads"
@@ -1936,38 +1910,38 @@
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 0.14875000179745257,
-                    "referenceP95Ms": 0.26750000519677997,
+                    "referenceMs": 0.3049999978393316,
+                    "referenceP95Ms": 0.375,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.1537500098347664,
-                    "competitorP95Ms": 0.23999999463558197,
+                    "competitorMs": 0.2999999988824129,
+                    "competitorP95Ms": 0.35999999940395355,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "neither",
-                      "ratio": null,
-                      "factor": null,
-                      "label": "unstable across runs",
+                      "ratio": 1.0166666632518173,
+                      "factor": 1,
+                      "label": "level",
                       "structural": false
                     },
                     "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/2/1 vs 1/2/2, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.14000000001396984,
-                        "maxMs": 0.23000001907348633,
-                        "ratio": 1.6428572789323992
+                        "minMs": 0.29500000178813934,
+                        "maxMs": 0.3100000023841858,
+                        "ratio": 1.0508474593394037
                       },
                       "competitor": {
-                        "minMs": 0.12749999994412065,
-                        "maxMs": 0.18500000005587935,
-                        "ratio": 1.4509803932310525
+                        "minMs": 0.2875000014901161,
+                        "maxMs": 0.3099999986588955,
+                        "ratio": 1.0782608593118665
                       },
-                      "stable": false,
+                      "stable": true,
                       "rungs": [
                         "level",
-                        "competitor-leads",
                         "level",
-                        "exojs-leads"
+                        "level",
+                        "level"
                       ]
                     }
                   }
@@ -1980,31 +1954,31 @@
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 4.812500000902219,
-                    "referenceP95Ms": 5.1775000024354085,
+                    "referenceMs": 3.555000001564622,
+                    "referenceP95Ms": 4.704999998211861,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 2.1162499859929085,
-                    "competitorP95Ms": 2.4899999976623803,
+                    "competitorMs": 2.551249999552965,
+                    "competitorP95Ms": 2.9200000017881393,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "competitor",
-                      "ratio": 2.2740697142376,
-                      "factor": 2.2740697142376,
-                      "label": "competitor leads (2.27x)",
+                      "ratio": 1.393434591744257,
+                      "factor": 1.393434591744257,
+                      "label": "competitor leads (1.39x)",
                       "structural": false
                     },
-                    "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/2/1 vs 1/2/3, none of them large enough to account for the gap); the difference is CPU-side",
+                    "mechanism": "competitor issues fewer buffer uploads (13 vs 3 per frame)",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 4.5999999940395355,
-                        "maxMs": 7.394999999785796,
-                        "ratio": 1.6076086976886719
+                        "minMs": 3.4024999998509884,
+                        "maxMs": 3.662499997764826,
+                        "ratio": 1.0764144005658263
                       },
                       "competitor": {
-                        "minMs": 2.080000000074506,
-                        "maxMs": 2.147499999962747,
-                        "ratio": 1.0324519230220306
+                        "minMs": 2.544999998062849,
+                        "maxMs": 2.6150000020861626,
+                        "ratio": 1.027504913193161
                       },
                       "stable": true,
                       "rungs": [
@@ -2029,37 +2003,37 @@
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 0.11999998986721039,
-                    "referenceP95Ms": 0.16500000655651093,
+                    "referenceMs": 0.16375000402331352,
+                    "referenceP95Ms": 0.2199999988079071,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.12000000008265488,
-                    "competitorP95Ms": 0.17749999999068677,
+                    "competitorMs": 0.1849999986588955,
+                    "competitorP95Ms": 0.2524999976158142,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "neither",
-                      "ratio": null,
-                      "factor": null,
-                      "label": "unstable across runs",
+                      "ratio": 0.8851351632993096,
+                      "factor": 1,
+                      "label": "level",
                       "structural": false
                     },
                     "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/2/0 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.060000000055879354,
-                        "maxMs": 0.1474999999627471,
-                        "ratio": 2.4583333304229504
+                        "minMs": 0.16250000149011612,
+                        "maxMs": 0.17249999940395355,
+                        "ratio": 1.0615384481362338
                       },
                       "competitor": {
-                        "minMs": 0.10000000894069672,
-                        "maxMs": 0.1525000035762787,
-                        "ratio": 1.524999899417171
+                        "minMs": 0.17999999970197678,
+                        "maxMs": 0.19500000029802322,
+                        "ratio": 1.0833333367826763
                       },
-                      "stable": false,
+                      "stable": true,
                       "rungs": [
                         "level",
                         "level",
-                        "exojs-leads",
+                        "level",
                         "level"
                       ]
                     }
@@ -2073,31 +2047,31 @@
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 0.7700000011827797,
-                    "referenceP95Ms": 0.9350000023841858,
+                    "referenceMs": 0.8775000013411045,
+                    "referenceP95Ms": 1.2575000002980232,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.4725000000325963,
-                    "competitorP95Ms": 0.6425000000745058,
+                    "competitorMs": 0.5937500018626451,
+                    "competitorP95Ms": 0.7925000004470348,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "competitor",
-                      "ratio": 1.629629632020444,
-                      "factor": 1.629629632020444,
-                      "label": "competitor leads (1.63x)",
+                      "ratio": 1.477894734464524,
+                      "factor": 1.477894734464524,
+                      "label": "competitor leads (1.48x)",
                       "structural": false
                     },
                     "mechanism": "competitor issues fewer texture binds (626 vs 314 per frame)",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.690000000060536,
-                        "maxMs": 0.8125,
-                        "ratio": 1.177536231780749
+                        "minMs": 0.8075000010430813,
+                        "maxMs": 0.8900000005960464,
+                        "ratio": 1.1021671819769616
                       },
                       "competitor": {
-                        "minMs": 0.4325000047683716,
-                        "maxMs": 0.5149999856948853,
-                        "ratio": 1.1907513988830984
+                        "minMs": 0.5824999995529652,
+                        "maxMs": 0.5975000038743019,
+                        "ratio": 1.0257510803997396
                       },
                       "stable": true,
                       "rungs": [
@@ -2117,38 +2091,38 @@
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 0.22749999462394044,
-                    "referenceP95Ms": 0.30749999987892807,
+                    "referenceMs": 0.3374999985098839,
+                    "referenceP95Ms": 0.4675000011920929,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.29625000001396984,
-                    "competitorP95Ms": 0.37500000244472176,
+                    "competitorMs": 0.37124999798834324,
+                    "competitorP95Ms": 0.5324999988079071,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "neither",
-                      "ratio": null,
-                      "factor": null,
-                      "label": "unstable across runs",
+                      "ratio": 0.909090910003132,
+                      "factor": 1,
+                      "label": "level",
                       "structural": false
                     },
                     "mechanism": "competitor issues fewer texture binds (240 vs 159 per frame)",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.22000000020489097,
-                        "maxMs": 0.26500000059604645,
-                        "ratio": 1.2045454561329363
+                        "minMs": 0.3150000050663948,
+                        "maxMs": 0.3449999988079071,
+                        "ratio": 1.095238073838091
                       },
                       "competitor": {
-                        "minMs": 0.26999998092651367,
-                        "maxMs": 0.3199999928474426,
-                        "ratio": 1.1851852424187301
+                        "minMs": 0.36500000208616257,
+                        "maxMs": 0.39000000059604645,
+                        "ratio": 1.0684931462109482
                       },
-                      "stable": false,
+                      "stable": true,
                       "rungs": [
                         "level",
                         "level",
-                        "exojs-leads",
-                        "exojs-leads"
+                        "level",
+                        "level"
                       ]
                     }
                   }
@@ -2166,37 +2140,37 @@
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 0.08750000596046448,
-                    "referenceP95Ms": 0.12750000250525773,
+                    "referenceMs": 0.16250000149011612,
+                    "referenceP95Ms": 0.20749999955296516,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.09250000398606062,
-                    "competitorP95Ms": 0.13999999989755452,
+                    "competitorMs": 0.17999999970197678,
+                    "competitorP95Ms": 0.23000000044703484,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "neither",
-                      "ratio": null,
-                      "factor": null,
-                      "label": "unstable across runs",
+                      "ratio": 0.902777787550916,
+                      "factor": 1,
+                      "label": "level",
                       "structural": false
                     },
                     "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/2/0 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.05999999993946403,
-                        "maxMs": 0.10999999986961484,
-                        "ratio": 1.8333333330099575
+                        "minMs": 0.1599999964237213,
+                        "maxMs": 0.16499999910593033,
+                        "ratio": 1.0312500174622987
                       },
                       "competitor": {
-                        "minMs": 0.0800000000745058,
-                        "maxMs": 0.12000000476837158,
-                        "ratio": 1.500000058207661
+                        "minMs": 0.17999999970197678,
+                        "maxMs": 0.1850000023841858,
+                        "ratio": 1.0277777927249303
                       },
-                      "stable": false,
+                      "stable": true,
                       "rungs": [
                         "level",
                         "level",
-                        "exojs-leads",
+                        "level",
                         "level"
                       ]
                     }
@@ -2215,38 +2189,38 @@
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 0.10750000504776835,
-                    "referenceP95Ms": 0.15000000596046448,
+                    "referenceMs": 0.2374999988824129,
+                    "referenceP95Ms": 0.29500000178813934,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.11749999993480742,
-                    "competitorP95Ms": 0.15500000026077032,
+                    "competitorMs": 0.21749999932944775,
+                    "competitorP95Ms": 0.26999999955296516,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "neither",
-                      "ratio": null,
-                      "factor": null,
-                      "label": "unstable across runs",
+                      "ratio": 1.0919540212166674,
+                      "factor": 1,
+                      "label": "level",
                       "structural": false
                     },
                     "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/2/0 vs 1/2/1, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.08499999344348907,
-                        "maxMs": 0.1699999999254942,
-                        "ratio": 2.000000153394318
+                        "minMs": 0.22500000149011612,
+                        "maxMs": 0.24500000104308128,
+                        "ratio": 1.0888888863133797
                       },
                       "competitor": {
-                        "minMs": 0.0949999988079071,
-                        "maxMs": 0.13999998569488525,
-                        "ratio": 1.4736840784384586
+                        "minMs": 0.19999999552965164,
+                        "maxMs": 0.23499999940395355,
+                        "ratio": 1.1750000232830649
                       },
-                      "stable": false,
+                      "stable": true,
                       "rungs": [
                         "level",
                         "level",
                         "level",
-                        "competitor-leads"
+                        "level"
                       ]
                     }
                   }
@@ -2259,31 +2233,31 @@
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 16.501249998807907,
-                    "referenceP95Ms": 19.192500004777685,
-                    "referenceOverFrameBudget": false,
-                    "competitorMs": 34.44374999520369,
-                    "competitorP95Ms": 35.6449999952456,
+                    "referenceMs": 18.540000000968575,
+                    "referenceP95Ms": 22.15249999985099,
+                    "referenceOverFrameBudget": true,
+                    "competitorMs": 37.40625,
+                    "competitorP95Ms": 40.60249999910593,
                     "competitorOverFrameBudget": true,
                     "verdict": {
                       "side": "exojs",
-                      "ratio": 0.47907820725402184,
-                      "factor": 2.0873418679004314,
-                      "label": "ExoJS leads (2.09x)",
+                      "ratio": 0.49563909777025433,
+                      "factor": 2.0175970872732365,
+                      "label": "ExoJS leads (2.02x)",
                       "structural": false
                     },
                     "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 1/2/3 vs 1/2/3, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 15.977499999979045,
-                        "maxMs": 22.47000000020489,
-                        "ratio": 1.4063526834757853
+                        "minMs": 18.277499996125698,
+                        "maxMs": 18.87000000104308,
+                        "ratio": 1.0324169063079183
                       },
                       "competitor": {
-                        "minMs": 34.31750000012107,
-                        "maxMs": 34.855000004172325,
-                        "ratio": 1.015662562950371
+                        "minMs": 36.75499999523163,
+                        "maxMs": 39.872499998658895,
+                        "ratio": 1.0848183921597527
                       },
                       "stable": true,
                       "rungs": [
@@ -2308,31 +2282,31 @@
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 0.23749999701976776,
-                    "referenceP95Ms": 0.3199999928474426,
+                    "referenceMs": 0.3925000000745058,
+                    "referenceP95Ms": 0.47749999910593033,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.6874999964493327,
-                    "competitorP95Ms": 0.819999998784624,
+                    "competitorMs": 1.0974999982863665,
+                    "competitorP95Ms": 1.3250000029802322,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "exojs",
-                      "ratio": 0.3454545429037992,
-                      "factor": 2.8947368634792454,
-                      "label": "ExoJS leads (2.89x)",
+                      "ratio": 0.35763098012515193,
+                      "factor": 2.7961783390523185,
+                      "label": "ExoJS leads (2.80x)",
                       "structural": false
                     },
                     "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 3/6/3 vs 2/4/2, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.17999999999301508,
-                        "maxMs": 0.3600000003352761,
-                        "ratio": 2.0000000019402555
+                        "minMs": 0.3674999997019768,
+                        "maxMs": 0.3999999985098839,
+                        "ratio": 1.088435370977586
                       },
                       "competitor": {
-                        "minMs": 0.5049999998882413,
-                        "maxMs": 0.8550000190734863,
-                        "ratio": 1.6930693450746566
+                        "minMs": 1.0649999976158142,
+                        "maxMs": 1.1099999994039536,
+                        "ratio": 1.0422535229003564
                       },
                       "stable": true,
                       "rungs": [
@@ -2352,31 +2326,31 @@
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 0.2150000035762787,
-                    "referenceP95Ms": 0.279999993450474,
+                    "referenceMs": 0.35999999940395355,
+                    "referenceP95Ms": 0.4700000025331974,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.6199999980162829,
-                    "competitorP95Ms": 0.8000000054016709,
+                    "competitorMs": 0.8799999989569187,
+                    "competitorP95Ms": 1.0700000040233135,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "exojs",
-                      "ratio": 0.34677420042609775,
-                      "factor": 2.8837208730385737,
-                      "label": "ExoJS leads (2.88x)",
+                      "ratio": 0.4090909088984871,
+                      "factor": 2.4444444455942254,
+                      "label": "ExoJS leads (2.44x)",
                       "structural": false
                     },
                     "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 4/8/3 vs 3/6/3, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.17749999999068677,
-                        "maxMs": 0.34000000008381903,
-                        "ratio": 1.9154929583192026
+                        "minMs": 0.3425000011920929,
+                        "maxMs": 0.380000002682209,
+                        "ratio": 1.109489055064511
                       },
                       "competitor": {
-                        "minMs": 0.5600000000558794,
-                        "maxMs": 0.695000022649765,
-                        "ratio": 1.2410714688935978
+                        "minMs": 0.7100000008940697,
+                        "maxMs": 0.8974999971687794,
+                        "ratio": 1.2640845014628166
                       },
                       "stable": true,
                       "rungs": [
@@ -2396,31 +2370,31 @@
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 0.24125000089406967,
-                    "referenceP95Ms": 0.32999998331069946,
+                    "referenceMs": 0.4087500013411045,
+                    "referenceP95Ms": 0.5075000002980232,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.7175000041024759,
-                    "competitorP95Ms": 0.9000000001396984,
+                    "competitorMs": 1.0762499999254942,
+                    "competitorP95Ms": 1.2525000013411045,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "exojs",
-                      "ratio": 0.33623693312148534,
-                      "factor": 2.9740932702318315,
-                      "label": "ExoJS leads (2.97x)",
+                      "ratio": 0.37979094203893254,
+                      "factor": 2.6330275141145667,
+                      "label": "ExoJS leads (2.63x)",
                       "structural": false
                     },
                     "mechanism": "structurally equivalent at this scale (draw/bind/upload per frame: 6/12/3 vs 5/10/5, none of them large enough to account for the gap); the difference is CPU-side",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.19500000006519258,
-                        "maxMs": 0.3850000000093132,
-                        "ratio": 1.974358973746665
+                        "minMs": 0.3674999997019768,
+                        "maxMs": 0.41499999910593033,
+                        "ratio": 1.1292516991631933
                       },
                       "competitor": {
-                        "minMs": 0.6899999999441206,
-                        "maxMs": 0.8549999892711639,
-                        "ratio": 1.2391304193339214
+                        "minMs": 0.8125,
+                        "maxMs": 1.094999998807907,
+                        "ratio": 1.3476923062251165
                       },
                       "stable": true,
                       "rungs": [
@@ -2440,11 +2414,11 @@
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 0.27250000089406967,
-                    "referenceP95Ms": 0.44749999046325684,
+                    "referenceMs": 0.39375000074505806,
+                    "referenceP95Ms": 0.494999997317791,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.34750000946223736,
-                    "competitorP95Ms": 0.4424999987240881,
+                    "competitorMs": 0.4874999988824129,
+                    "competitorP95Ms": 0.6150000020861626,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "neither",
@@ -2457,21 +2431,21 @@
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.19999999995343387,
-                        "maxMs": 0.3925000000745058,
-                        "ratio": 1.962500000829459
+                        "minMs": 0.3799999952316284,
+                        "maxMs": 0.4049999974668026,
+                        "ratio": 1.065789480391797
                       },
                       "competitor": {
-                        "minMs": 0.29499998688697815,
-                        "maxMs": 0.3674999999348074,
-                        "ratio": 1.245762767018718
+                        "minMs": 0.47999999672174454,
+                        "maxMs": 0.5225000008940697,
+                        "ratio": 1.0885416759637236
                       },
                       "stable": false,
                       "rungs": [
                         "level",
                         "level",
                         "exojs-leads",
-                        "level"
+                        "exojs-leads"
                       ]
                     }
                   }
@@ -2484,38 +2458,82 @@
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 1.6575000062584877,
-                    "referenceP95Ms": 1.967500001192093,
+                    "referenceMs": 0.35249999910593033,
+                    "referenceP95Ms": 0.4299999997019768,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.12999999523162842,
-                    "competitorP95Ms": 0.2125000017695129,
+                    "competitorMs": 0.2512499988079071,
+                    "competitorP95Ms": 0.3199999965727329,
                     "competitorOverFrameBudget": false,
                     "verdict": {
-                      "side": "competitor",
-                      "ratio": 12.750000515809445,
-                      "factor": 12.750000515809445,
-                      "label": "competitor leads clearly (12.75x)",
-                      "structural": true
+                      "side": "neither",
+                      "ratio": null,
+                      "factor": null,
+                      "label": "unstable across runs",
+                      "structural": false
                     },
                     "mechanism": "ExoJS issues fewer draw calls (4 vs 10 per frame)",
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 1.4449999999487773,
-                        "maxMs": 2.6625000000931323,
-                        "ratio": 1.842560553762985
+                        "minMs": 0.32999999821186066,
+                        "maxMs": 0.369999997317791,
+                        "ratio": 1.1212121191596196
                       },
                       "competitor": {
-                        "minMs": 0.12250000005587935,
-                        "maxMs": 0.17999999225139618,
-                        "ratio": 1.4693876911778592
+                        "minMs": 0.24500000476837158,
+                        "maxMs": 0.3049999997019768,
+                        "ratio": 1.2448979337381259
                       },
-                      "stable": true,
+                      "stable": false,
                       "rungs": [
-                        "competitor-leads-clearly",
-                        "competitor-leads-clearly",
-                        "competitor-leads-clearly",
-                        "competitor-leads-clearly"
+                        "level",
+                        "competitor-leads",
+                        "competitor-leads",
+                        "competitor-leads"
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "archetype": "mask-clip-animated",
+                "category": "Render targets",
+                "count": 5000,
+                "cells": [
+                  {
+                    "competitor": "pixi",
+                    "referenceMs": 0.35624999925494194,
+                    "referenceP95Ms": 0.4424999989569187,
+                    "referenceOverFrameBudget": false,
+                    "competitorMs": 0.32124999910593033,
+                    "competitorP95Ms": 0.4050000049173832,
+                    "competitorOverFrameBudget": false,
+                    "verdict": {
+                      "side": "neither",
+                      "ratio": null,
+                      "factor": null,
+                      "label": "unstable across runs",
+                      "structural": false
+                    },
+                    "mechanism": "ExoJS issues fewer draw calls (4 vs 10 per frame)",
+                    "aggregate": {
+                      "runs": 4,
+                      "reference": {
+                        "minMs": 0.32750000059604645,
+                        "maxMs": 0.41499999910593033,
+                        "ratio": 1.2671755674828544
+                      },
+                      "competitor": {
+                        "minMs": 0.3199999965727329,
+                        "maxMs": 0.32999999821186066,
+                        "ratio": 1.0312500054569682
+                      },
+                      "stable": false,
+                      "rungs": [
+                        "competitor-leads",
+                        "level",
+                        "level",
+                        "level"
                       ]
                     }
                   }
@@ -2533,11 +2551,11 @@
                 "cells": [
                   {
                     "competitor": "pixi",
-                    "referenceMs": 0.13249999238178134,
-                    "referenceP95Ms": 0.3124999850988388,
+                    "referenceMs": 0.23000000044703484,
+                    "referenceP95Ms": 0.4299999997019768,
                     "referenceOverFrameBudget": false,
-                    "competitorMs": 0.09249999932944775,
-                    "competitorP95Ms": 0.15000000759027898,
+                    "competitorMs": 0.19250000081956387,
+                    "competitorP95Ms": 0.24000000208616257,
                     "competitorOverFrameBudget": false,
                     "verdict": {
                       "side": "neither",
@@ -2550,21 +2568,21 @@
                     "aggregate": {
                       "runs": 4,
                       "reference": {
-                        "minMs": 0.09499999997206032,
-                        "maxMs": 0.16499999165534973,
-                        "ratio": 1.7368420179355426
+                        "minMs": 0.2150000035762787,
+                        "maxMs": 0.23499999940395355,
+                        "ratio": 1.0930232348604552
                       },
                       "competitor": {
-                        "minMs": 0.08500000019557774,
-                        "maxMs": 0.13499999046325684,
-                        "ratio": 1.5882351782662751
+                        "minMs": 0.1899999976158142,
+                        "maxMs": 0.19500000029802322,
+                        "ratio": 1.0263158039207936
                       },
                       "stable": false,
                       "rungs": [
                         "level",
                         "competitor-leads",
                         "level",
-                        "competitor-leads"
+                        "level"
                       ]
                     }
                   }
@@ -2603,1017 +2621,8 @@
       }
     ]
   },
-  "physics": {
-    "runs": [
-      {
-        "browser": "chromium",
-        "browserVersion": "151.0.7922.34",
-        "host": {
-          "cpu": "AMD Ryzen 7 3700X 8-Core Processor",
-          "cpuCount": 16,
-          "os": "win32 10.0.26200",
-          "platformVersion": {
-            "major": 11,
-            "source": "detected",
-            "evidence": "os.release() reported '10.0.26200'; build 26200 is Windows 11 (Windows 11 starts at build 22000)"
-          },
-          "arch": "x64"
-        },
-        "prerelease": {
-          "value": false,
-          "source": "assumed-stable",
-          "evidence": "browser version '151.0.7922.34' carries no pre-release marker and none was declared; the operating system's own release status cannot be read at runtime"
-        },
-        "fixedDelta": 0.016666666666666666,
-        "clock": {
-          "resolutionMs": 0.004999995231628418,
-          "crossOriginIsolated": true
-        },
-        "caveats": [
-          "Step time is CPU wall-clock per step() over the timed window (median/p95), measured in one chromium page (same-run discipline). No number here was taken in Node.",
-          "The page's performance.now() resolves to 5.0us (cross-origin isolated: true). A cell whose step is too fast to time individually at that resolution batches steps per timing sample and records the batch as stepsPerSample; median and p95 are then per-step averages over that batch.",
-          "Scenes are warmed to steady state before timing; the per-cell warmupSteps/timedSteps counts are recorded for honesty.",
-          "All arms build the byte-identical scene (bodies, positions, shapes, sizes, static/dynamic split, gravity, perturbed-body set) from the shared deterministic RNG, and the perturbed-body selection is asserted equal across arms before each cell is timed.",
-          "Each arm runs at its own engine defaults for solver iterations, contact model and sleeping - those engine differences are the measured quantity in a native-vs-adapter comparison, disclosed per arm below.",
-          "Arm roles: matter-js and planck are the PURE-JS PEERS exojs-physics is compared against; rapier is a Rust/WASM engine and stands as the REFERENCE CEILING for what leaving JavaScript buys, not as a peer a JS solver is expected to match.",
-          "exojs-physics arm (native runtime, pure JS): TGS-Soft solver, 4 sub-steps per fixed step, sleeping ON by default (resting bodies deactivate). Contact count = solid contacts in the world contact graph.",
-          "matter-js arm (pure-JS peer): constraint solver at matter defaults (6 position / 4 velocity / 2 constraint iterations), sleeping OFF by default (a settled stack keeps paying full solve cost); matter's default per-step air drag (frictionAir) is zeroed so all arms integrate the same pure-gravity field; gravity (px/s^2) and perturbation velocity (px/s) are mapped into matter's px-per-step unit model. Contact count = active colliding pairs (engine.pairs.collisionActive), a pair-level proxy, not identical in semantics to the exojs solid-contact count.",
-          "planck arm (pure-JS peer): Box2D port at planck defaults (8 velocity / 3 position iterations per step), sleeping ON by default; Settings.lengthUnitsPerMeter is set to 30 so planck's absolute MKS tolerances are interpreted at the scene's pixel scale, which is the knob planck gives a pixel-coordinate game - positions, gravity (px/s^2) and velocity (px/s) then carry over unconverted. Contact count = the world contact list filtered by isTouching(), a touching collider-pair count. Rays are answered from planck's dynamic tree, but World.rayCast is Box2D's non-solid ray (an origin inside a fixture is not a hit). Continuous collision runs for every body (planck's default), where exojs and rapier restrict it to bullets and matter has none.",
-          "rapier arm (WASM reference ceiling, not a pure-JS peer): TGS-Soft solver at rapier defaults (4 solver / 1 internal PGS iterations), auto-sleeping ON; default lengthUnit=1 is fed a px-scale world (tuned for ~1-unit objects), exactly what attaching rapier with pixel coordinates yields. Contact count = collider pairs with a solid narrow-phase manifold (numContacts > 0), deduped."
-        ],
-        "engineVersion": "0.17.0",
-        "timestamp": "2026-09-06T10:03:08.002Z"
-      },
-      {
-        "browser": "chromium",
-        "browserVersion": "151.0.7922.34",
-        "host": {
-          "cpu": "AMD Ryzen 7 3700X 8-Core Processor",
-          "cpuCount": 16,
-          "os": "win32 10.0.26200",
-          "platformVersion": {
-            "major": 11,
-            "source": "detected",
-            "evidence": "os.release() reported '10.0.26200'; build 26200 is Windows 11 (Windows 11 starts at build 22000)"
-          },
-          "arch": "x64"
-        },
-        "prerelease": {
-          "value": false,
-          "source": "assumed-stable",
-          "evidence": "browser version '151.0.7922.34' carries no pre-release marker and none was declared; the operating system's own release status cannot be read at runtime"
-        },
-        "fixedDelta": 0.016666666666666666,
-        "clock": {
-          "resolutionMs": 0.004999995231628418,
-          "crossOriginIsolated": true
-        },
-        "caveats": [
-          "Step time is CPU wall-clock per step() over the timed window (median/p95), measured in one chromium page (same-run discipline). No number here was taken in Node.",
-          "The page's performance.now() resolves to 5.0us (cross-origin isolated: true). A cell whose step is too fast to time individually at that resolution batches steps per timing sample and records the batch as stepsPerSample; median and p95 are then per-step averages over that batch.",
-          "Scenes are warmed to steady state before timing; the per-cell warmupSteps/timedSteps counts are recorded for honesty.",
-          "All arms build the byte-identical scene (bodies, positions, shapes, sizes, static/dynamic split, gravity, perturbed-body set) from the shared deterministic RNG, and the perturbed-body selection is asserted equal across arms before each cell is timed.",
-          "Each arm runs at its own engine defaults for solver iterations, contact model and sleeping - those engine differences are the measured quantity in a native-vs-adapter comparison, disclosed per arm below.",
-          "Arm roles: matter-js and planck are the PURE-JS PEERS exojs-physics is compared against; rapier is a Rust/WASM engine and stands as the REFERENCE CEILING for what leaving JavaScript buys, not as a peer a JS solver is expected to match.",
-          "exojs-physics arm (native runtime, pure JS): TGS-Soft solver, 4 sub-steps per fixed step, sleeping ON by default (resting bodies deactivate). Contact count = solid contacts in the world contact graph.",
-          "matter-js arm (pure-JS peer): constraint solver at matter defaults (6 position / 4 velocity / 2 constraint iterations), sleeping OFF by default (a settled stack keeps paying full solve cost); matter's default per-step air drag (frictionAir) is zeroed so all arms integrate the same pure-gravity field; gravity (px/s^2) and perturbation velocity (px/s) are mapped into matter's px-per-step unit model. Contact count = active colliding pairs (engine.pairs.collisionActive), a pair-level proxy, not identical in semantics to the exojs solid-contact count.",
-          "planck arm (pure-JS peer): Box2D port at planck defaults (8 velocity / 3 position iterations per step), sleeping ON by default; Settings.lengthUnitsPerMeter is set to 30 so planck's absolute MKS tolerances are interpreted at the scene's pixel scale, which is the knob planck gives a pixel-coordinate game - positions, gravity (px/s^2) and velocity (px/s) then carry over unconverted. Contact count = the world contact list filtered by isTouching(), a touching collider-pair count. Rays are answered from planck's dynamic tree, but World.rayCast is Box2D's non-solid ray (an origin inside a fixture is not a hit). Continuous collision runs for every body (planck's default), where exojs and rapier restrict it to bullets and matter has none.",
-          "rapier arm (WASM reference ceiling, not a pure-JS peer): TGS-Soft solver at rapier defaults (4 solver / 1 internal PGS iterations), auto-sleeping ON; default lengthUnit=1 is fed a px-scale world (tuned for ~1-unit objects), exactly what attaching rapier with pixel coordinates yields. Contact count = collider pairs with a solid narrow-phase manifold (numContacts > 0), deduped."
-        ],
-        "engineVersion": "0.17.0",
-        "timestamp": "2026-09-06T10:17:54.524Z"
-      },
-      {
-        "browser": "chromium",
-        "browserVersion": "151.0.7922.34",
-        "host": {
-          "cpu": "AMD Ryzen 7 3700X 8-Core Processor",
-          "cpuCount": 16,
-          "os": "win32 10.0.26200",
-          "platformVersion": {
-            "major": 11,
-            "source": "detected",
-            "evidence": "os.release() reported '10.0.26200'; build 26200 is Windows 11 (Windows 11 starts at build 22000)"
-          },
-          "arch": "x64"
-        },
-        "prerelease": {
-          "value": false,
-          "source": "assumed-stable",
-          "evidence": "browser version '151.0.7922.34' carries no pre-release marker and none was declared; the operating system's own release status cannot be read at runtime"
-        },
-        "fixedDelta": 0.016666666666666666,
-        "clock": {
-          "resolutionMs": 0.004999999888241291,
-          "crossOriginIsolated": true
-        },
-        "caveats": [
-          "Step time is CPU wall-clock per step() over the timed window (median/p95), measured in one chromium page (same-run discipline). No number here was taken in Node.",
-          "The page's performance.now() resolves to 5.0us (cross-origin isolated: true). A cell whose step is too fast to time individually at that resolution batches steps per timing sample and records the batch as stepsPerSample; median and p95 are then per-step averages over that batch.",
-          "Scenes are warmed to steady state before timing; the per-cell warmupSteps/timedSteps counts are recorded for honesty.",
-          "All arms build the byte-identical scene (bodies, positions, shapes, sizes, static/dynamic split, gravity, perturbed-body set) from the shared deterministic RNG, and the perturbed-body selection is asserted equal across arms before each cell is timed.",
-          "Each arm runs at its own engine defaults for solver iterations, contact model and sleeping - those engine differences are the measured quantity in a native-vs-adapter comparison, disclosed per arm below.",
-          "Arm roles: matter-js and planck are the PURE-JS PEERS exojs-physics is compared against; rapier is a Rust/WASM engine and stands as the REFERENCE CEILING for what leaving JavaScript buys, not as a peer a JS solver is expected to match.",
-          "exojs-physics arm (native runtime, pure JS): TGS-Soft solver, 4 sub-steps per fixed step, sleeping ON by default (resting bodies deactivate). Contact count = solid contacts in the world contact graph.",
-          "matter-js arm (pure-JS peer): constraint solver at matter defaults (6 position / 4 velocity / 2 constraint iterations), sleeping OFF by default (a settled stack keeps paying full solve cost); matter's default per-step air drag (frictionAir) is zeroed so all arms integrate the same pure-gravity field; gravity (px/s^2) and perturbation velocity (px/s) are mapped into matter's px-per-step unit model. Contact count = active colliding pairs (engine.pairs.collisionActive), a pair-level proxy, not identical in semantics to the exojs solid-contact count.",
-          "planck arm (pure-JS peer): Box2D port at planck defaults (8 velocity / 3 position iterations per step), sleeping ON by default; Settings.lengthUnitsPerMeter is set to 30 so planck's absolute MKS tolerances are interpreted at the scene's pixel scale, which is the knob planck gives a pixel-coordinate game - positions, gravity (px/s^2) and velocity (px/s) then carry over unconverted. Contact count = the world contact list filtered by isTouching(), a touching collider-pair count. Rays are answered from planck's dynamic tree, but World.rayCast is Box2D's non-solid ray (an origin inside a fixture is not a hit). Continuous collision runs for every body (planck's default), where exojs and rapier restrict it to bullets and matter has none.",
-          "rapier arm (WASM reference ceiling, not a pure-JS peer): TGS-Soft solver at rapier defaults (4 solver / 1 internal PGS iterations), auto-sleeping ON; default lengthUnit=1 is fed a px-scale world (tuned for ~1-unit objects), exactly what attaching rapier with pixel coordinates yields. Contact count = collider pairs with a solid narrow-phase manifold (numContacts > 0), deduped."
-        ],
-        "engineVersion": "0.17.0",
-        "timestamp": "2026-09-06T16:33:07.319Z"
-      },
-      {
-        "browser": "chromium",
-        "browserVersion": "151.0.7922.34",
-        "host": {
-          "cpu": "AMD Ryzen 7 3700X 8-Core Processor",
-          "cpuCount": 16,
-          "os": "win32 10.0.26200",
-          "platformVersion": {
-            "major": 11,
-            "source": "detected",
-            "evidence": "os.release() reported '10.0.26200'; build 26200 is Windows 11 (Windows 11 starts at build 22000)"
-          },
-          "arch": "x64"
-        },
-        "prerelease": {
-          "value": false,
-          "source": "assumed-stable",
-          "evidence": "browser version '151.0.7922.34' carries no pre-release marker and none was declared; the operating system's own release status cannot be read at runtime"
-        },
-        "fixedDelta": 0.016666666666666666,
-        "clock": {
-          "resolutionMs": 0.004999999888241291,
-          "crossOriginIsolated": true
-        },
-        "caveats": [
-          "Step time is CPU wall-clock per step() over the timed window (median/p95), measured in one chromium page (same-run discipline). No number here was taken in Node.",
-          "The page's performance.now() resolves to 5.0us (cross-origin isolated: true). A cell whose step is too fast to time individually at that resolution batches steps per timing sample and records the batch as stepsPerSample; median and p95 are then per-step averages over that batch.",
-          "Scenes are warmed to steady state before timing; the per-cell warmupSteps/timedSteps counts are recorded for honesty.",
-          "All arms build the byte-identical scene (bodies, positions, shapes, sizes, static/dynamic split, gravity, perturbed-body set) from the shared deterministic RNG, and the perturbed-body selection is asserted equal across arms before each cell is timed.",
-          "Each arm runs at its own engine defaults for solver iterations, contact model and sleeping - those engine differences are the measured quantity in a native-vs-adapter comparison, disclosed per arm below.",
-          "Arm roles: matter-js and planck are the PURE-JS PEERS exojs-physics is compared against; rapier is a Rust/WASM engine and stands as the REFERENCE CEILING for what leaving JavaScript buys, not as a peer a JS solver is expected to match.",
-          "exojs-physics arm (native runtime, pure JS): TGS-Soft solver, 4 sub-steps per fixed step, sleeping ON by default (resting bodies deactivate). Contact count = solid contacts in the world contact graph.",
-          "matter-js arm (pure-JS peer): constraint solver at matter defaults (6 position / 4 velocity / 2 constraint iterations), sleeping OFF by default (a settled stack keeps paying full solve cost); matter's default per-step air drag (frictionAir) is zeroed so all arms integrate the same pure-gravity field; gravity (px/s^2) and perturbation velocity (px/s) are mapped into matter's px-per-step unit model. Contact count = active colliding pairs (engine.pairs.collisionActive), a pair-level proxy, not identical in semantics to the exojs solid-contact count.",
-          "planck arm (pure-JS peer): Box2D port at planck defaults (8 velocity / 3 position iterations per step), sleeping ON by default; Settings.lengthUnitsPerMeter is set to 30 so planck's absolute MKS tolerances are interpreted at the scene's pixel scale, which is the knob planck gives a pixel-coordinate game - positions, gravity (px/s^2) and velocity (px/s) then carry over unconverted. Contact count = the world contact list filtered by isTouching(), a touching collider-pair count. Rays are answered from planck's dynamic tree, but World.rayCast is Box2D's non-solid ray (an origin inside a fixture is not a hit). Continuous collision runs for every body (planck's default), where exojs and rapier restrict it to bullets and matter has none.",
-          "rapier arm (WASM reference ceiling, not a pure-JS peer): TGS-Soft solver at rapier defaults (4 solver / 1 internal PGS iterations), auto-sleeping ON; default lengthUnit=1 is fed a px-scale world (tuned for ~1-unit objects), exactly what attaching rapier with pixel coordinates yields. Contact count = collider pairs with a solid narrow-phase manifold (numContacts > 0), deduped."
-        ],
-        "engineVersion": "0.17.0",
-        "timestamp": "2026-09-06T17:02:01.221Z"
-      }
-    ],
-    "libraries": [
-      {
-        "name": "@codexo/exojs-physics",
-        "version": "0.17.0"
-      },
-      {
-        "name": "matter-js",
-        "version": "0.20.0"
-      },
-      {
-        "name": "planck",
-        "version": "1.5.0"
-      },
-      {
-        "name": "@dimforge/rapier2d-compat",
-        "version": "0.19.3"
-      }
-    ],
-    "section": {
-      "title": "Physics",
-      "rows": [
-        {
-          "archetype": "box-stack",
-          "category": "Physics",
-          "count": 10000,
-          "cells": [
-            {
-              "competitor": "matter-js",
-              "referenceMs": 17.857500004116446,
-              "referenceP95Ms": 18.54750000545755,
-              "referenceOverFrameBudget": true,
-              "competitorMs": 68.2212499936577,
-              "competitorP95Ms": 70.55750000104308,
-              "competitorOverFrameBudget": true,
-              "verdict": {
-                "side": "exojs",
-                "ratio": 0.26175861635160014,
-                "factor": 3.8203135924923184,
-                "label": "ExoJS leads (3.82x)",
-                "structural": false
-              },
-              "mechanism": "ExoJS resolves fewer solved contacts (10002 vs 22463); the counters are not semantically identical across arms (see the run's caveats)",
-              "aggregate": {
-                "runs": 4,
-                "reference": {
-                  "minMs": 17.09249999979511,
-                  "maxMs": 19.375,
-                  "ratio": 1.1335381015200967
-                },
-                "competitor": {
-                  "minMs": 67.44750000000931,
-                  "maxMs": 71.04250000417233,
-                  "ratio": 1.0533007154329295
-                },
-                "stable": true,
-                "rungs": [
-                  "exojs-leads",
-                  "exojs-leads",
-                  "exojs-leads",
-                  "exojs-leads"
-                ]
-              }
-            },
-            {
-              "competitor": "planck",
-              "referenceMs": 17.857500004116446,
-              "referenceP95Ms": 18.54750000545755,
-              "referenceOverFrameBudget": true,
-              "competitorMs": 134.02000000327826,
-              "competitorP95Ms": 210.6250000030268,
-              "competitorOverFrameBudget": true,
-              "verdict": {
-                "side": "exojs",
-                "ratio": 0.13324503808147764,
-                "factor": 7.504969899055549,
-                "label": "ExoJS leads clearly (7.50x)",
-                "structural": true
-              },
-              "mechanism": "ExoJS resolves fewer solved contacts (10002 vs 19865); the counters are not semantically identical across arms (see the run's caveats)",
-              "aggregate": {
-                "runs": 4,
-                "reference": {
-                  "minMs": 17.09249999979511,
-                  "maxMs": 19.375,
-                  "ratio": 1.1335381015200967
-                },
-                "competitor": {
-                  "minMs": 133.01750000030734,
-                  "maxMs": 134.8974999994971,
-                  "ratio": 1.0141334786714937
-                },
-                "stable": true,
-                "rungs": [
-                  "exojs-leads-clearly",
-                  "exojs-leads-clearly",
-                  "exojs-leads-clearly",
-                  "exojs-leads-clearly"
-                ]
-              }
-            },
-            {
-              "competitor": "rapier",
-              "referenceMs": 17.857500004116446,
-              "referenceP95Ms": 18.54750000545755,
-              "referenceOverFrameBudget": true,
-              "competitorMs": 16.467499998863786,
-              "competitorP95Ms": 23.14250000147149,
-              "competitorOverFrameBudget": false,
-              "verdict": {
-                "side": "neither",
-                "ratio": 1.0844086840958596,
-                "factor": 1,
-                "label": "level",
-                "structural": false
-              },
-              "mechanism": "ExoJS resolves fewer solved contacts (10002 vs 17880); the counters are not semantically identical across arms (see the run's caveats)",
-              "aggregate": {
-                "runs": 4,
-                "reference": {
-                  "minMs": 17.09249999979511,
-                  "maxMs": 19.375,
-                  "ratio": 1.1335381015200967
-                },
-                "competitor": {
-                  "minMs": 16.18749999953434,
-                  "maxMs": 16.777499988675117,
-                  "ratio": 1.036447875778085
-                },
-                "stable": true,
-                "rungs": [
-                  "level",
-                  "level",
-                  "level",
-                  "level"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "archetype": "many-dynamic",
-          "category": "Physics",
-          "count": 2200,
-          "cells": [
-            {
-              "competitor": "matter-js",
-              "referenceMs": 17.383750001201406,
-              "referenceP95Ms": 18.43250000406988,
-              "referenceOverFrameBudget": true,
-              "competitorMs": 15.19125000294298,
-              "competitorP95Ms": 16.00250000366941,
-              "competitorOverFrameBudget": false,
-              "verdict": {
-                "side": "neither",
-                "ratio": null,
-                "factor": null,
-                "label": "unstable across runs",
-                "structural": false
-              },
-              "mechanism": "identical scene (2204 bodies, 6190 contacts, 0 joints on both arms); the difference is solver cost",
-              "aggregate": {
-                "runs": 4,
-                "reference": {
-                  "minMs": 17.149999999906868,
-                  "maxMs": 17.689999997615814,
-                  "ratio": 1.0314868803330541
-                },
-                "competitor": {
-                  "minMs": 14.135000000242144,
-                  "maxMs": 16.12999999523163,
-                  "ratio": 1.1411390162685042
-                },
-                "stable": false,
-                "rungs": [
-                  "level",
-                  "level",
-                  "competitor-leads",
-                  "level"
-                ]
-              }
-            },
-            {
-              "competitor": "planck",
-              "referenceMs": 17.383750001201406,
-              "referenceP95Ms": 18.43250000406988,
-              "referenceOverFrameBudget": true,
-              "competitorMs": 27.416249997215346,
-              "competitorP95Ms": 29.06500000297092,
-              "competitorOverFrameBudget": true,
-              "verdict": {
-                "side": "exojs",
-                "ratio": 0.6340673871505791,
-                "factor": 1.5771194359859402,
-                "label": "ExoJS leads (1.58x)",
-                "structural": false
-              },
-              "mechanism": "identical scene (2204 bodies, 6190 contacts, 0 joints on both arms); the difference is solver cost",
-              "aggregate": {
-                "runs": 4,
-                "reference": {
-                  "minMs": 17.149999999906868,
-                  "maxMs": 17.689999997615814,
-                  "ratio": 1.0314868803330541
-                },
-                "competitor": {
-                  "minMs": 25.53250000020489,
-                  "maxMs": 29.80000001192093,
-                  "ratio": 1.1671399201676997
-                },
-                "stable": true,
-                "rungs": [
-                  "exojs-leads",
-                  "exojs-leads",
-                  "exojs-leads",
-                  "exojs-leads"
-                ]
-              }
-            },
-            {
-              "competitor": "rapier",
-              "referenceMs": 17.383750001201406,
-              "referenceP95Ms": 18.43250000406988,
-              "referenceOverFrameBudget": true,
-              "competitorMs": 3.908750013099052,
-              "competitorP95Ms": 4.112500008894131,
-              "competitorOverFrameBudget": false,
-              "verdict": {
-                "side": "competitor",
-                "ratio": 4.447393653455649,
-                "factor": 4.447393653455649,
-                "label": "competitor leads (4.45x)",
-                "structural": false
-              },
-              "mechanism": "identical scene (2204 bodies, 6190 contacts, 0 joints on both arms); the difference is solver cost",
-              "aggregate": {
-                "runs": 4,
-                "reference": {
-                  "minMs": 17.149999999906868,
-                  "maxMs": 17.689999997615814,
-                  "ratio": 1.0314868803330541
-                },
-                "competitor": {
-                  "minMs": 3.8699999996460974,
-                  "maxMs": 3.9249999970197678,
-                  "ratio": 1.014211885627571
-                },
-                "stable": true,
-                "rungs": [
-                  "competitor-leads",
-                  "competitor-leads",
-                  "competitor-leads",
-                  "competitor-leads"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "archetype": "mixed-static-dynamic",
-          "category": "Physics",
-          "count": 3200,
-          "cells": [
-            {
-              "competitor": "matter-js",
-              "referenceMs": 17.4987500035204,
-              "referenceP95Ms": 18.545000007841736,
-              "referenceOverFrameBudget": true,
-              "competitorMs": 11.001249989843927,
-              "competitorP95Ms": 12.917499995790422,
-              "competitorOverFrameBudget": false,
-              "verdict": {
-                "side": "competitor",
-                "ratio": 1.590614704663088,
-                "factor": 1.590614704663088,
-                "label": "competitor leads (1.59x)",
-                "structural": false
-              },
-              "mechanism": "identical scene (3313 bodies, 3863 contacts, 0 joints on both arms); the difference is solver cost",
-              "aggregate": {
-                "runs": 4,
-                "reference": {
-                  "minMs": 16.050000000046566,
-                  "maxMs": 17.64249999821186,
-                  "ratio": 1.0992211836860233
-                },
-                "competitor": {
-                  "minMs": 10.819999999832362,
-                  "maxMs": 11.390000000596046,
-                  "ratio": 1.0526802218828573
-                },
-                "stable": true,
-                "rungs": [
-                  "competitor-leads",
-                  "competitor-leads",
-                  "competitor-leads",
-                  "competitor-leads"
-                ]
-              }
-            },
-            {
-              "competitor": "planck",
-              "referenceMs": 17.4987500035204,
-              "referenceP95Ms": 18.545000007841736,
-              "referenceOverFrameBudget": true,
-              "competitorMs": 89.73499999195337,
-              "competitorP95Ms": 110.02250000834465,
-              "competitorOverFrameBudget": true,
-              "verdict": {
-                "side": "exojs",
-                "ratio": 0.19500473622432193,
-                "factor": 5.128080575692577,
-                "label": "ExoJS leads clearly (5.13x)",
-                "structural": true
-              },
-              "mechanism": "identical scene (3313 bodies, 3863 contacts, 0 joints on both arms); the difference is solver cost",
-              "aggregate": {
-                "runs": 4,
-                "reference": {
-                  "minMs": 16.050000000046566,
-                  "maxMs": 17.64249999821186,
-                  "ratio": 1.0992211836860233
-                },
-                "competitor": {
-                  "minMs": 89.4550000000745,
-                  "maxMs": 128.59250000002794,
-                  "ratio": 1.4375104801287892
-                },
-                "stable": true,
-                "rungs": [
-                  "exojs-leads-clearly",
-                  "exojs-leads-clearly",
-                  "exojs-leads-clearly",
-                  "exojs-leads-clearly"
-                ]
-              }
-            },
-            {
-              "competitor": "rapier",
-              "referenceMs": 17.4987500035204,
-              "referenceP95Ms": 18.545000007841736,
-              "referenceOverFrameBudget": true,
-              "competitorMs": 7.757500006817281,
-              "competitorP95Ms": 8.884999997913837,
-              "competitorOverFrameBudget": false,
-              "verdict": {
-                "side": "competitor",
-                "ratio": 2.2557202691772504,
-                "factor": 2.2557202691772504,
-                "label": "competitor leads (2.26x)",
-                "structural": false
-              },
-              "mechanism": "ExoJS resolves fewer solved contacts (3863 vs 6105); the counters are not semantically identical across arms (see the run's caveats)",
-              "aggregate": {
-                "runs": 4,
-                "reference": {
-                  "minMs": 16.050000000046566,
-                  "maxMs": 17.64249999821186,
-                  "ratio": 1.0992211836860233
-                },
-                "competitor": {
-                  "minMs": 7.647500000195578,
-                  "maxMs": 7.892499998211861,
-                  "ratio": 1.0320366130120977
-                },
-                "stable": true,
-                "rungs": [
-                  "competitor-leads",
-                  "competitor-leads",
-                  "competitor-leads",
-                  "competitor-leads"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "archetype": "raycast",
-          "category": "Physics",
-          "count": 3200,
-          "cells": [
-            {
-              "competitor": "matter-js",
-              "referenceMs": 24.08500001579523,
-              "referenceP95Ms": 25.60749999433756,
-              "referenceOverFrameBudget": true,
-              "competitorMs": 21.662499994738027,
-              "competitorP95Ms": 26.87250000052154,
-              "competitorOverFrameBudget": true,
-              "verdict": {
-                "side": "neither",
-                "ratio": 1.1118291989218994,
-                "factor": 1,
-                "label": "level",
-                "structural": false
-              },
-              "mechanism": "identical scene (3313 bodies, 3863 contacts, 0 joints on both arms) with 38 vs 52 ray hits per step; the difference is query and solver cost",
-              "aggregate": {
-                "runs": 4,
-                "reference": {
-                  "minMs": 19.442500000353903,
-                  "maxMs": 24.40250000031665,
-                  "ratio": 1.2551112254016954
-                },
-                "competitor": {
-                  "minMs": 21.240000009536743,
-                  "maxMs": 21.994999999878928,
-                  "ratio": 1.035546138889039
-                },
-                "stable": true,
-                "rungs": [
-                  "level",
-                  "level",
-                  "level",
-                  "level"
-                ]
-              }
-            },
-            {
-              "competitor": "planck",
-              "referenceMs": 24.08500001579523,
-              "referenceP95Ms": 25.60749999433756,
-              "referenceOverFrameBudget": true,
-              "competitorMs": 102.21500001102686,
-              "competitorP95Ms": 124.2175000011921,
-              "competitorOverFrameBudget": true,
-              "verdict": {
-                "side": "neither",
-                "ratio": null,
-                "factor": null,
-                "label": "unstable across runs",
-                "structural": false
-              },
-              "mechanism": "identical scene (3313 bodies, 3863 contacts, 0 joints on both arms) with 38 vs 38 ray hits per step; the difference is query and solver cost",
-              "aggregate": {
-                "runs": 4,
-                "reference": {
-                  "minMs": 19.442500000353903,
-                  "maxMs": 24.40250000031665,
-                  "ratio": 1.2551112254016954
-                },
-                "competitor": {
-                  "minMs": 95.49999999953434,
-                  "maxMs": 112.4199999999255,
-                  "ratio": 1.1771727748740697
-                },
-                "stable": false,
-                "rungs": [
-                  "exojs-leads",
-                  "exojs-leads",
-                  "exojs-leads-clearly",
-                  "exojs-leads"
-                ]
-              }
-            },
-            {
-              "competitor": "rapier",
-              "referenceMs": 24.08500001579523,
-              "referenceP95Ms": 25.60749999433756,
-              "referenceOverFrameBudget": true,
-              "competitorMs": 7.9787500004749745,
-              "competitorP95Ms": 9.055000006686896,
-              "competitorOverFrameBudget": false,
-              "verdict": {
-                "side": "competitor",
-                "ratio": 3.018643272989059,
-                "factor": 3.018643272989059,
-                "label": "competitor leads (3.02x)",
-                "structural": false
-              },
-              "mechanism": "ExoJS resolves fewer solved contacts (3863 vs 6105); the counters are not semantically identical across arms (see the run's caveats)",
-              "aggregate": {
-                "runs": 4,
-                "reference": {
-                  "minMs": 19.442500000353903,
-                  "maxMs": 24.40250000031665,
-                  "ratio": 1.2551112254016954
-                },
-                "competitor": {
-                  "minMs": 7.875,
-                  "maxMs": 8.064999997615814,
-                  "ratio": 1.0241269838242304
-                },
-                "stable": true,
-                "rungs": [
-                  "competitor-leads",
-                  "competitor-leads",
-                  "competitor-leads",
-                  "competitor-leads"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "archetype": "body-churn",
-          "category": "Physics",
-          "count": 2400,
-          "cells": [
-            {
-              "competitor": "matter-js",
-              "referenceMs": 18.999999999883585,
-              "referenceP95Ms": 19.68500000028871,
-              "referenceOverFrameBudget": true,
-              "competitorMs": 20.967499998863786,
-              "competitorP95Ms": 22.18749999627471,
-              "competitorOverFrameBudget": true,
-              "verdict": {
-                "side": "neither",
-                "ratio": 0.9061643019393433,
-                "factor": 1,
-                "label": "level",
-                "structural": false
-              },
-              "mechanism": "ExoJS resolves fewer solved contacts (2282 vs 6244); the counters are not semantically identical across arms (see the run's caveats)",
-              "aggregate": {
-                "runs": 4,
-                "reference": {
-                  "minMs": 18.490000009536743,
-                  "maxMs": 19.52750000357628,
-                  "ratio": 1.0561114112225212
-                },
-                "competitor": {
-                  "minMs": 19.102500000037253,
-                  "maxMs": 22.439999997615814,
-                  "ratio": 1.1747153512666957
-                },
-                "stable": true,
-                "rungs": [
-                  "level",
-                  "level",
-                  "level",
-                  "level"
-                ]
-              }
-            },
-            {
-              "competitor": "planck",
-              "referenceMs": 18.999999999883585,
-              "referenceP95Ms": 19.68500000028871,
-              "referenceOverFrameBudget": true,
-              "competitorMs": 60.34249999804888,
-              "competitorP95Ms": 74.5774999926798,
-              "competitorOverFrameBudget": true,
-              "verdict": {
-                "side": "exojs",
-                "ratio": 0.31486928782363893,
-                "factor": 3.1759210525483477,
-                "label": "ExoJS leads (3.18x)",
-                "structural": false
-              },
-              "mechanism": "ExoJS resolves fewer solved contacts (2282 vs 5242); the counters are not semantically identical across arms (see the run's caveats)",
-              "aggregate": {
-                "runs": 4,
-                "reference": {
-                  "minMs": 18.490000009536743,
-                  "maxMs": 19.52750000357628,
-                  "ratio": 1.0561114112225212
-                },
-                "competitor": {
-                  "minMs": 54.72750000655651,
-                  "maxMs": 65.47750000003725,
-                  "ratio": 1.196427755556034
-                },
-                "stable": true,
-                "rungs": [
-                  "exojs-leads",
-                  "exojs-leads",
-                  "exojs-leads",
-                  "exojs-leads"
-                ]
-              }
-            },
-            {
-              "competitor": "rapier",
-              "referenceMs": 18.999999999883585,
-              "referenceP95Ms": 19.68500000028871,
-              "referenceOverFrameBudget": true,
-              "competitorMs": 2.010000005364418,
-              "competitorP95Ms": 2.072499994188547,
-              "competitorOverFrameBudget": false,
-              "verdict": {
-                "side": "competitor",
-                "ratio": 9.452736293121967,
-                "factor": 9.452736293121967,
-                "label": "competitor leads clearly (9.45x)",
-                "structural": true
-              },
-              "mechanism": "identical scene (2404 bodies, 2282 contacts, 0 joints on both arms); the difference is solver cost",
-              "aggregate": {
-                "runs": 4,
-                "reference": {
-                  "minMs": 18.490000009536743,
-                  "maxMs": 19.52750000357628,
-                  "ratio": 1.0561114112225212
-                },
-                "competitor": {
-                  "minMs": 1.9950000001117587,
-                  "maxMs": 2.0249999999068677,
-                  "ratio": 1.0150375938814178
-                },
-                "stable": true,
-                "rungs": [
-                  "competitor-leads-clearly",
-                  "competitor-leads-clearly",
-                  "competitor-leads-clearly",
-                  "competitor-leads-clearly"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "archetype": "joints",
-          "category": "Physics",
-          "count": 15000,
-          "cells": [
-            {
-              "competitor": "matter-js",
-              "referenceMs": 18.786250002216548,
-              "referenceP95Ms": 19.200000000186265,
-              "referenceOverFrameBudget": true,
-              "competitorMs": 21.28500000119675,
-              "competitorP95Ms": 22.977499997708946,
-              "competitorOverFrameBudget": true,
-              "verdict": {
-                "side": "neither",
-                "ratio": null,
-                "factor": null,
-                "label": "unstable across runs",
-                "structural": false
-              },
-              "mechanism": "competitor resolves fewer solved contacts (13125 vs 0); the counters are not semantically identical across arms (see the run's caveats)",
-              "aggregate": {
-                "runs": 4,
-                "reference": {
-                  "minMs": 16.9549999833107,
-                  "maxMs": 22.009999999776483,
-                  "ratio": 1.2981421422259845
-                },
-                "competitor": {
-                  "minMs": 20.07249999931082,
-                  "maxMs": 23.239999994635582,
-                  "ratio": 1.1578029640270775
-                },
-                "stable": false,
-                "rungs": [
-                  "exojs-leads",
-                  "exojs-leads",
-                  "level",
-                  "level"
-                ]
-              }
-            },
-            {
-              "competitor": "planck",
-              "referenceMs": 18.786250002216548,
-              "referenceP95Ms": 19.200000000186265,
-              "referenceOverFrameBudget": true,
-              "competitorMs": 1.554999997606501,
-              "competitorP95Ms": 1.7799999942071736,
-              "competitorOverFrameBudget": false,
-              "verdict": {
-                "side": "competitor",
-                "ratio": 12.081189730632067,
-                "factor": 12.081189730632067,
-                "label": "competitor leads clearly (12.08x)",
-                "structural": true
-              },
-              "mechanism": "competitor resolves fewer solved contacts (13125 vs 0); the counters are not semantically identical across arms (see the run's caveats)",
-              "aggregate": {
-                "runs": 4,
-                "reference": {
-                  "minMs": 16.9549999833107,
-                  "maxMs": 22.009999999776483,
-                  "ratio": 1.2981421422259845
-                },
-                "competitor": {
-                  "minMs": 1.449999988079071,
-                  "maxMs": 1.7850000001490116,
-                  "ratio": 1.2310344929821284
-                },
-                "stable": true,
-                "rungs": [
-                  "competitor-leads-clearly",
-                  "competitor-leads-clearly",
-                  "competitor-leads-clearly",
-                  "competitor-leads-clearly"
-                ]
-              }
-            },
-            {
-              "competitor": "rapier",
-              "referenceMs": 18.786250002216548,
-              "referenceP95Ms": 19.200000000186265,
-              "referenceOverFrameBudget": true,
-              "competitorMs": 0.6599999981699511,
-              "competitorP95Ms": 0.8049999887589365,
-              "competitorOverFrameBudget": false,
-              "verdict": {
-                "side": "competitor",
-                "ratio": 28.464015233798616,
-                "factor": 28.464015233798616,
-                "label": "competitor leads clearly (28.46x)",
-                "structural": true
-              },
-              "mechanism": "competitor resolves fewer solved contacts (13125 vs 1875); the counters are not semantically identical across arms (see the run's caveats)",
-              "aggregate": {
-                "runs": 4,
-                "reference": {
-                  "minMs": 16.9549999833107,
-                  "maxMs": 22.009999999776483,
-                  "ratio": 1.2981421422259845
-                },
-                "competitor": {
-                  "minMs": 0.6524999998509884,
-                  "maxMs": 0.6899999976158142,
-                  "ratio": 1.0574712609553865
-                },
-                "stable": true,
-                "rungs": [
-                  "competitor-leads-clearly",
-                  "competitor-leads-clearly",
-                  "competitor-leads-clearly",
-                  "competitor-leads-clearly"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "archetype": "settling-pile",
-          "category": "Physics",
-          "count": 5800,
-          "cells": [
-            {
-              "competitor": "matter-js",
-              "referenceMs": 17.37999999523163,
-              "referenceP95Ms": 18.1850000070408,
-              "referenceOverFrameBudget": true,
-              "competitorMs": 69.99624999961816,
-              "competitorP95Ms": 71.24750000145286,
-              "competitorOverFrameBudget": true,
-              "verdict": {
-                "side": "exojs",
-                "ratio": 0.24829901595194656,
-                "factor": 4.02740218750416,
-                "label": "ExoJS leads (4.03x)",
-                "structural": false
-              },
-              "mechanism": "identical scene (5804 bodies, 12178 contacts, 0 joints on both arms); the difference is solver cost",
-              "aggregate": {
-                "runs": 4,
-                "reference": {
-                  "minMs": 16.882500000298023,
-                  "maxMs": 17.707500000018626,
-                  "ratio": 1.0488671701291894
-                },
-                "competitor": {
-                  "minMs": 68.00499999988824,
-                  "maxMs": 74.98250000178814,
-                  "ratio": 1.1026027498259152
-                },
-                "stable": true,
-                "rungs": [
-                  "exojs-leads",
-                  "exojs-leads",
-                  "exojs-leads",
-                  "exojs-leads"
-                ]
-              }
-            },
-            {
-              "competitor": "planck",
-              "referenceMs": 17.37999999523163,
-              "referenceP95Ms": 18.1850000070408,
-              "referenceOverFrameBudget": true,
-              "competitorMs": 128.29124999721535,
-              "competitorP95Ms": 132.16749999765307,
-              "competitorOverFrameBudget": true,
-              "verdict": {
-                "side": "exojs",
-                "ratio": 0.13547299598069917,
-                "factor": 7.381544881036438,
-                "label": "ExoJS leads clearly (7.38x)",
-                "structural": true
-              },
-              "mechanism": "identical scene (5804 bodies, 12178 contacts, 0 joints on both arms); the difference is solver cost",
-              "aggregate": {
-                "runs": 4,
-                "reference": {
-                  "minMs": 16.882500000298023,
-                  "maxMs": 17.707500000018626,
-                  "ratio": 1.0488671701291894
-                },
-                "competitor": {
-                  "minMs": 121.03749999962747,
-                  "maxMs": 139.1925000101328,
-                  "ratio": 1.1499948363983161
-                },
-                "stable": true,
-                "rungs": [
-                  "exojs-leads-clearly",
-                  "exojs-leads-clearly",
-                  "exojs-leads-clearly",
-                  "exojs-leads-clearly"
-                ]
-              }
-            },
-            {
-              "competitor": "rapier",
-              "referenceMs": 17.37999999523163,
-              "referenceP95Ms": 18.1850000070408,
-              "referenceOverFrameBudget": true,
-              "competitorMs": 11.788749997969717,
-              "competitorP95Ms": 12.372500006109476,
-              "competitorOverFrameBudget": false,
-              "verdict": {
-                "side": "competitor",
-                "ratio": 1.4742869259442137,
-                "factor": 1.4742869259442137,
-                "label": "competitor leads (1.47x)",
-                "structural": false
-              },
-              "mechanism": "identical scene (5804 bodies, 12178 contacts, 0 joints on both arms); the difference is solver cost",
-              "aggregate": {
-                "runs": 4,
-                "reference": {
-                  "minMs": 16.882500000298023,
-                  "maxMs": 17.707500000018626,
-                  "ratio": 1.0488671701291894
-                },
-                "competitor": {
-                  "minMs": 11.677500000223517,
-                  "maxMs": 11.900000005960464,
-                  "ratio": 1.019053736307659
-                },
-                "stable": true,
-                "rungs": [
-                  "competitor-leads",
-                  "competitor-leads",
-                  "competitor-leads",
-                  "competitor-leads"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    }
-  },
   "signature": {
     "algorithm": "sha256",
-    "value": "d376f6126d5c8de4fa59485d8e1c2901e1253dbd293f59534d9cf3f5883c18c9"
+    "value": "cb202ad3f559b846de40a2326a448fade95ae78e30a01dea4866a65d29623885"
   }
 }

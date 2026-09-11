@@ -34,10 +34,10 @@ const PAGE_DIR = resolve(HERE, 'page');
  * stamped into that run's provenance caveats.
  *
  * Each disclosure opens with the arm's ROLE, because the arms are not one flat
- * field of competitors: matter.js and planck.js are the pure-JS PEERS, the
- * libraries an ExoJS app would realistically attach instead of the native
- * runtime, and they are what `exojs-physics` is compared against. rapier is a
- * Rust engine compiled to WASM and stands as the REFERENCE CEILING - the
+ * field of competitors: matter.js, planck.js and nape-js are the JavaScript
+ * peers, the libraries an ExoJS app would realistically attach instead of the
+ * native runtime, and they are what `exojs-physics` is compared against. rapier
+ * is a Rust engine compiled to WASM and stands as the REFERENCE CEILING - the
  * ambient cost of leaving JavaScript - not as a peer a JS solver is expected to
  * match.
  */
@@ -48,6 +48,8 @@ const ARM_DISCLOSURES: Readonly<Record<string, string>> = {
     "matter-js arm (pure-JS peer): constraint solver at matter defaults (6 position / 4 velocity / 2 constraint iterations), sleeping OFF by default (a settled stack keeps paying full solve cost); matter's default per-step air drag (frictionAir) is zeroed so all arms integrate the same pure-gravity field; gravity (px/s^2) and perturbation velocity (px/s) are mapped into matter's px-per-step unit model. Contact count = active colliding pairs (engine.pairs.collisionActive), a pair-level proxy, not identical in semantics to the exojs solid-contact count.",
   planck:
     "planck arm (pure-JS peer): Box2D port at planck defaults (8 velocity / 3 position iterations per step), sleeping ON by default; Settings.lengthUnitsPerMeter is set to 30 so planck's absolute MKS tolerances are interpreted at the scene's pixel scale, which is the knob planck gives a pixel-coordinate game - positions, gravity (px/s^2) and velocity (px/s) then carry over unconverted. Contact count = the world contact list filtered by isTouching(), a touching collider-pair count. Rays are answered from planck's dynamic tree, but World.rayCast is Box2D's non-solid ray (an origin inside a fixture is not a hit). Continuous collision runs for every body (planck's default), where exojs and rapier restrict it to bullets and matter has none.",
+  'nape-js':
+    'nape-js arm (pure-JS peer): default single-step solver with default velocity/position iterations (10/10), sleeping and dynamic AABB broadphase at library defaults. Materials, body layouts, joints and perturbations come from the shared neutral scene descriptor. Contact count = active collision arbiters; ray queries use Space.rayCast with outer-surface semantics. These counters are engine-specific structural proxies, not a claim that every solver performs identical internal work.',
   rapier:
     'rapier arm (WASM reference ceiling, not a pure-JS peer): TGS-Soft solver at rapier defaults (4 solver / 1 internal PGS iterations), auto-sleeping ON; default lengthUnit=1 is fed a px-scale world (tuned for ~1-unit objects), exactly what attaching rapier with pixel coordinates yields. Contact count = collider pairs with a solid narrow-phase manifold (numContacts > 0), deduped.',
 };
@@ -357,7 +359,7 @@ export const runPhysicsMatrix = async (
         'Scenes are warmed to steady state before timing; the per-cell warmupSteps/timedSteps counts are recorded for honesty.',
         'All arms build the byte-identical scene (bodies, positions, shapes, sizes, static/dynamic split, gravity, perturbed-body set) from the shared deterministic RNG, and the perturbed-body selection is asserted equal across arms before each cell is timed.',
         'Each arm runs at its own engine defaults for solver iterations, contact model and sleeping - those engine differences are the measured quantity in a native-vs-adapter comparison, disclosed per arm below.',
-        'Arm roles: matter-js and planck are the PURE-JS PEERS exojs-physics is compared against; rapier is a Rust/WASM engine and stands as the REFERENCE CEILING for what leaving JavaScript buys, not as a peer a JS solver is expected to match.',
+        'Arm roles: matter-js, planck and nape-js are the JAVASCRIPT PEERS exojs-physics is compared against; rapier is a Rust/WASM engine and stands as the REFERENCE CEILING for what leaving JavaScript buys, not as a peer a JS solver is expected to match.',
         ...(unavailableArms.length > 0
           ? [
               `Arms this browser could not run, recorded as unavailable cells rather than omitted: ${unavailableArms.map(arm => `${arm.engine} (${arm.reason})`).join('; ')}`,

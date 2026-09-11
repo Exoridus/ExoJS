@@ -1,0 +1,1298 @@
+{
+  "schemaVersion": 6,
+  "profile": {
+    "slug": "m3-max-macos-27-beta-webkit",
+    "gpu": "m3-max",
+    "os": "macos-27-beta",
+    "browser": "webkit",
+    "platform": {
+      "name": "macos",
+      "version": 27,
+      "versionSource": "declared",
+      "prerelease": true
+    },
+    "engineVersion": "0.17.0",
+    "measuredAt": "2026-09-09T19:14:13.252Z",
+    "runs": 4
+  },
+  "physics": {
+    "runs": [
+      {
+        "browser": "webkit",
+        "browserVersion": "26.5",
+        "host": {
+          "cpu": "Apple M3 Max",
+          "cpuCount": 16,
+          "os": "darwin 27.0.0",
+          "platformVersion": {
+            "major": 27,
+            "source": "declared",
+            "evidence": "the runner declared '27-beta'; os.release() reported '27.0.0' on darwin, which is the kernel version and does not name the operating system's own major version; declare it with --platform=<major>[-beta]"
+          },
+          "arch": "arm64"
+        },
+        "prerelease": {
+          "value": true,
+          "source": "declared",
+          "evidence": "the runner declared the platform as '27-beta'"
+        },
+        "fixedDelta": 0.016666666666666666,
+        "clock": {
+          "resolutionMs": 0.01999999999999602,
+          "crossOriginIsolated": true
+        },
+        "caveats": [
+          "Step time is CPU wall-clock per step() over the timed window (median/p95), measured in one webkit page (same-run discipline). No number here was taken in Node.",
+          "The page's performance.now() resolves to 20.0us (cross-origin isolated: true). A cell whose step is too fast to time individually at that resolution batches steps per timing sample and records the batch as stepsPerSample; median and p95 are then per-step averages over that batch.",
+          "Scenes are warmed to steady state before timing; the per-cell warmupSteps/timedSteps counts are recorded for honesty.",
+          "All arms build the byte-identical scene (bodies, positions, shapes, sizes, static/dynamic split, gravity, perturbed-body set) from the shared deterministic RNG, and the perturbed-body selection is asserted equal across arms before each cell is timed.",
+          "Each arm runs at its own engine defaults for solver iterations, contact model and sleeping - those engine differences are the measured quantity in a native-vs-adapter comparison, disclosed per arm below.",
+          "Arm roles: matter-js, planck and nape-js are the JAVASCRIPT PEERS exojs-physics is compared against; rapier is a Rust/WASM engine and stands as the REFERENCE CEILING for what leaving JavaScript buys, not as a peer a JS solver is expected to match.",
+          "exojs-physics arm (native runtime, pure JS): TGS-Soft solver, 4 sub-steps per fixed step, sleeping ON by default (resting bodies deactivate). Contact count = solid contacts in the world contact graph.",
+          "matter-js arm (pure-JS peer): constraint solver at matter defaults (6 position / 4 velocity / 2 constraint iterations), sleeping OFF by default (a settled stack keeps paying full solve cost); matter's default per-step air drag (frictionAir) is zeroed so all arms integrate the same pure-gravity field; gravity (px/s^2) and perturbation velocity (px/s) are mapped into matter's px-per-step unit model. Contact count = active colliding pairs (engine.pairs.collisionActive), a pair-level proxy, not identical in semantics to the exojs solid-contact count.",
+          "planck arm (pure-JS peer): Box2D port at planck defaults (8 velocity / 3 position iterations per step), sleeping ON by default; Settings.lengthUnitsPerMeter is set to 30 so planck's absolute MKS tolerances are interpreted at the scene's pixel scale, which is the knob planck gives a pixel-coordinate game - positions, gravity (px/s^2) and velocity (px/s) then carry over unconverted. Contact count = the world contact list filtered by isTouching(), a touching collider-pair count. Rays are answered from planck's dynamic tree, but World.rayCast is Box2D's non-solid ray (an origin inside a fixture is not a hit). Continuous collision runs for every body (planck's default), where exojs and rapier restrict it to bullets and matter has none.",
+          "rapier arm (WASM reference ceiling, not a pure-JS peer): TGS-Soft solver at rapier defaults (4 solver / 1 internal PGS iterations), auto-sleeping ON; default lengthUnit=1 is fed a px-scale world (tuned for ~1-unit objects), exactly what attaching rapier with pixel coordinates yields. Contact count = collider pairs with a solid narrow-phase manifold (numContacts > 0), deduped.",
+          "nape-js arm (pure-JS peer): default single-step solver with default velocity/position iterations (10/10), sleeping and dynamic AABB broadphase at library defaults. Materials, body layouts, joints and perturbations come from the shared neutral scene descriptor. Contact count = active collision arbiters; ray queries use Space.rayCast with outer-surface semantics. These counters are engine-specific structural proxies, not a claim that every solver performs identical internal work."
+        ],
+        "engineVersion": "0.17.0",
+        "timestamp": "2026-09-09T18:50:50.763Z"
+      },
+      {
+        "browser": "webkit",
+        "browserVersion": "26.5",
+        "host": {
+          "cpu": "Apple M3 Max",
+          "cpuCount": 16,
+          "os": "darwin 27.0.0",
+          "platformVersion": {
+            "major": 27,
+            "source": "declared",
+            "evidence": "the runner declared '27-beta'; os.release() reported '27.0.0' on darwin, which is the kernel version and does not name the operating system's own major version; declare it with --platform=<major>[-beta]"
+          },
+          "arch": "arm64"
+        },
+        "prerelease": {
+          "value": true,
+          "source": "declared",
+          "evidence": "the runner declared the platform as '27-beta'"
+        },
+        "fixedDelta": 0.016666666666666666,
+        "clock": {
+          "resolutionMs": 0.01999999999999602,
+          "crossOriginIsolated": true
+        },
+        "caveats": [
+          "Step time is CPU wall-clock per step() over the timed window (median/p95), measured in one webkit page (same-run discipline). No number here was taken in Node.",
+          "The page's performance.now() resolves to 20.0us (cross-origin isolated: true). A cell whose step is too fast to time individually at that resolution batches steps per timing sample and records the batch as stepsPerSample; median and p95 are then per-step averages over that batch.",
+          "Scenes are warmed to steady state before timing; the per-cell warmupSteps/timedSteps counts are recorded for honesty.",
+          "All arms build the byte-identical scene (bodies, positions, shapes, sizes, static/dynamic split, gravity, perturbed-body set) from the shared deterministic RNG, and the perturbed-body selection is asserted equal across arms before each cell is timed.",
+          "Each arm runs at its own engine defaults for solver iterations, contact model and sleeping - those engine differences are the measured quantity in a native-vs-adapter comparison, disclosed per arm below.",
+          "Arm roles: matter-js, planck and nape-js are the JAVASCRIPT PEERS exojs-physics is compared against; rapier is a Rust/WASM engine and stands as the REFERENCE CEILING for what leaving JavaScript buys, not as a peer a JS solver is expected to match.",
+          "exojs-physics arm (native runtime, pure JS): TGS-Soft solver, 4 sub-steps per fixed step, sleeping ON by default (resting bodies deactivate). Contact count = solid contacts in the world contact graph.",
+          "matter-js arm (pure-JS peer): constraint solver at matter defaults (6 position / 4 velocity / 2 constraint iterations), sleeping OFF by default (a settled stack keeps paying full solve cost); matter's default per-step air drag (frictionAir) is zeroed so all arms integrate the same pure-gravity field; gravity (px/s^2) and perturbation velocity (px/s) are mapped into matter's px-per-step unit model. Contact count = active colliding pairs (engine.pairs.collisionActive), a pair-level proxy, not identical in semantics to the exojs solid-contact count.",
+          "planck arm (pure-JS peer): Box2D port at planck defaults (8 velocity / 3 position iterations per step), sleeping ON by default; Settings.lengthUnitsPerMeter is set to 30 so planck's absolute MKS tolerances are interpreted at the scene's pixel scale, which is the knob planck gives a pixel-coordinate game - positions, gravity (px/s^2) and velocity (px/s) then carry over unconverted. Contact count = the world contact list filtered by isTouching(), a touching collider-pair count. Rays are answered from planck's dynamic tree, but World.rayCast is Box2D's non-solid ray (an origin inside a fixture is not a hit). Continuous collision runs for every body (planck's default), where exojs and rapier restrict it to bullets and matter has none.",
+          "rapier arm (WASM reference ceiling, not a pure-JS peer): TGS-Soft solver at rapier defaults (4 solver / 1 internal PGS iterations), auto-sleeping ON; default lengthUnit=1 is fed a px-scale world (tuned for ~1-unit objects), exactly what attaching rapier with pixel coordinates yields. Contact count = collider pairs with a solid narrow-phase manifold (numContacts > 0), deduped.",
+          "nape-js arm (pure-JS peer): default single-step solver with default velocity/position iterations (10/10), sleeping and dynamic AABB broadphase at library defaults. Materials, body layouts, joints and perturbations come from the shared neutral scene descriptor. Contact count = active collision arbiters; ray queries use Space.rayCast with outer-surface semantics. These counters are engine-specific structural proxies, not a claim that every solver performs identical internal work."
+        ],
+        "engineVersion": "0.17.0",
+        "timestamp": "2026-09-09T18:58:36.106Z"
+      },
+      {
+        "browser": "webkit",
+        "browserVersion": "26.5",
+        "host": {
+          "cpu": "Apple M3 Max",
+          "cpuCount": 16,
+          "os": "darwin 27.0.0",
+          "platformVersion": {
+            "major": 27,
+            "source": "declared",
+            "evidence": "the runner declared '27-beta'; os.release() reported '27.0.0' on darwin, which is the kernel version and does not name the operating system's own major version; declare it with --platform=<major>[-beta]"
+          },
+          "arch": "arm64"
+        },
+        "prerelease": {
+          "value": true,
+          "source": "declared",
+          "evidence": "the runner declared the platform as '27-beta'"
+        },
+        "fixedDelta": 0.016666666666666666,
+        "clock": {
+          "resolutionMs": 0.01999999999999602,
+          "crossOriginIsolated": true
+        },
+        "caveats": [
+          "Step time is CPU wall-clock per step() over the timed window (median/p95), measured in one webkit page (same-run discipline). No number here was taken in Node.",
+          "The page's performance.now() resolves to 20.0us (cross-origin isolated: true). A cell whose step is too fast to time individually at that resolution batches steps per timing sample and records the batch as stepsPerSample; median and p95 are then per-step averages over that batch.",
+          "Scenes are warmed to steady state before timing; the per-cell warmupSteps/timedSteps counts are recorded for honesty.",
+          "All arms build the byte-identical scene (bodies, positions, shapes, sizes, static/dynamic split, gravity, perturbed-body set) from the shared deterministic RNG, and the perturbed-body selection is asserted equal across arms before each cell is timed.",
+          "Each arm runs at its own engine defaults for solver iterations, contact model and sleeping - those engine differences are the measured quantity in a native-vs-adapter comparison, disclosed per arm below.",
+          "Arm roles: matter-js, planck and nape-js are the JAVASCRIPT PEERS exojs-physics is compared against; rapier is a Rust/WASM engine and stands as the REFERENCE CEILING for what leaving JavaScript buys, not as a peer a JS solver is expected to match.",
+          "exojs-physics arm (native runtime, pure JS): TGS-Soft solver, 4 sub-steps per fixed step, sleeping ON by default (resting bodies deactivate). Contact count = solid contacts in the world contact graph.",
+          "matter-js arm (pure-JS peer): constraint solver at matter defaults (6 position / 4 velocity / 2 constraint iterations), sleeping OFF by default (a settled stack keeps paying full solve cost); matter's default per-step air drag (frictionAir) is zeroed so all arms integrate the same pure-gravity field; gravity (px/s^2) and perturbation velocity (px/s) are mapped into matter's px-per-step unit model. Contact count = active colliding pairs (engine.pairs.collisionActive), a pair-level proxy, not identical in semantics to the exojs solid-contact count.",
+          "planck arm (pure-JS peer): Box2D port at planck defaults (8 velocity / 3 position iterations per step), sleeping ON by default; Settings.lengthUnitsPerMeter is set to 30 so planck's absolute MKS tolerances are interpreted at the scene's pixel scale, which is the knob planck gives a pixel-coordinate game - positions, gravity (px/s^2) and velocity (px/s) then carry over unconverted. Contact count = the world contact list filtered by isTouching(), a touching collider-pair count. Rays are answered from planck's dynamic tree, but World.rayCast is Box2D's non-solid ray (an origin inside a fixture is not a hit). Continuous collision runs for every body (planck's default), where exojs and rapier restrict it to bullets and matter has none.",
+          "rapier arm (WASM reference ceiling, not a pure-JS peer): TGS-Soft solver at rapier defaults (4 solver / 1 internal PGS iterations), auto-sleeping ON; default lengthUnit=1 is fed a px-scale world (tuned for ~1-unit objects), exactly what attaching rapier with pixel coordinates yields. Contact count = collider pairs with a solid narrow-phase manifold (numContacts > 0), deduped.",
+          "nape-js arm (pure-JS peer): default single-step solver with default velocity/position iterations (10/10), sleeping and dynamic AABB broadphase at library defaults. Materials, body layouts, joints and perturbations come from the shared neutral scene descriptor. Contact count = active collision arbiters; ray queries use Space.rayCast with outer-surface semantics. These counters are engine-specific structural proxies, not a claim that every solver performs identical internal work."
+        ],
+        "engineVersion": "0.17.0",
+        "timestamp": "2026-09-09T19:06:25.228Z"
+      },
+      {
+        "browser": "webkit",
+        "browserVersion": "26.5",
+        "host": {
+          "cpu": "Apple M3 Max",
+          "cpuCount": 16,
+          "os": "darwin 27.0.0",
+          "platformVersion": {
+            "major": 27,
+            "source": "declared",
+            "evidence": "the runner declared '27-beta'; os.release() reported '27.0.0' on darwin, which is the kernel version and does not name the operating system's own major version; declare it with --platform=<major>[-beta]"
+          },
+          "arch": "arm64"
+        },
+        "prerelease": {
+          "value": true,
+          "source": "declared",
+          "evidence": "the runner declared the platform as '27-beta'"
+        },
+        "fixedDelta": 0.016666666666666666,
+        "clock": {
+          "resolutionMs": 0.01999999999999602,
+          "crossOriginIsolated": true
+        },
+        "caveats": [
+          "Step time is CPU wall-clock per step() over the timed window (median/p95), measured in one webkit page (same-run discipline). No number here was taken in Node.",
+          "The page's performance.now() resolves to 20.0us (cross-origin isolated: true). A cell whose step is too fast to time individually at that resolution batches steps per timing sample and records the batch as stepsPerSample; median and p95 are then per-step averages over that batch.",
+          "Scenes are warmed to steady state before timing; the per-cell warmupSteps/timedSteps counts are recorded for honesty.",
+          "All arms build the byte-identical scene (bodies, positions, shapes, sizes, static/dynamic split, gravity, perturbed-body set) from the shared deterministic RNG, and the perturbed-body selection is asserted equal across arms before each cell is timed.",
+          "Each arm runs at its own engine defaults for solver iterations, contact model and sleeping - those engine differences are the measured quantity in a native-vs-adapter comparison, disclosed per arm below.",
+          "Arm roles: matter-js, planck and nape-js are the JAVASCRIPT PEERS exojs-physics is compared against; rapier is a Rust/WASM engine and stands as the REFERENCE CEILING for what leaving JavaScript buys, not as a peer a JS solver is expected to match.",
+          "exojs-physics arm (native runtime, pure JS): TGS-Soft solver, 4 sub-steps per fixed step, sleeping ON by default (resting bodies deactivate). Contact count = solid contacts in the world contact graph.",
+          "matter-js arm (pure-JS peer): constraint solver at matter defaults (6 position / 4 velocity / 2 constraint iterations), sleeping OFF by default (a settled stack keeps paying full solve cost); matter's default per-step air drag (frictionAir) is zeroed so all arms integrate the same pure-gravity field; gravity (px/s^2) and perturbation velocity (px/s) are mapped into matter's px-per-step unit model. Contact count = active colliding pairs (engine.pairs.collisionActive), a pair-level proxy, not identical in semantics to the exojs solid-contact count.",
+          "planck arm (pure-JS peer): Box2D port at planck defaults (8 velocity / 3 position iterations per step), sleeping ON by default; Settings.lengthUnitsPerMeter is set to 30 so planck's absolute MKS tolerances are interpreted at the scene's pixel scale, which is the knob planck gives a pixel-coordinate game - positions, gravity (px/s^2) and velocity (px/s) then carry over unconverted. Contact count = the world contact list filtered by isTouching(), a touching collider-pair count. Rays are answered from planck's dynamic tree, but World.rayCast is Box2D's non-solid ray (an origin inside a fixture is not a hit). Continuous collision runs for every body (planck's default), where exojs and rapier restrict it to bullets and matter has none.",
+          "rapier arm (WASM reference ceiling, not a pure-JS peer): TGS-Soft solver at rapier defaults (4 solver / 1 internal PGS iterations), auto-sleeping ON; default lengthUnit=1 is fed a px-scale world (tuned for ~1-unit objects), exactly what attaching rapier with pixel coordinates yields. Contact count = collider pairs with a solid narrow-phase manifold (numContacts > 0), deduped.",
+          "nape-js arm (pure-JS peer): default single-step solver with default velocity/position iterations (10/10), sleeping and dynamic AABB broadphase at library defaults. Materials, body layouts, joints and perturbations come from the shared neutral scene descriptor. Contact count = active collision arbiters; ray queries use Space.rayCast with outer-surface semantics. These counters are engine-specific structural proxies, not a claim that every solver performs identical internal work."
+        ],
+        "engineVersion": "0.17.0",
+        "timestamp": "2026-09-09T19:14:13.252Z"
+      }
+    ],
+    "libraries": [
+      {
+        "name": "@codexo/exojs-physics",
+        "version": "0.17.0"
+      },
+      {
+        "name": "matter-js",
+        "version": "0.20.0"
+      },
+      {
+        "name": "planck",
+        "version": "1.5.0"
+      },
+      {
+        "name": "@dimforge/rapier2d-compat",
+        "version": "0.19.3"
+      },
+      {
+        "name": "@newkrok/nape-js",
+        "version": "3.42.0"
+      }
+    ],
+    "section": {
+      "title": "Physics",
+      "rows": [
+        {
+          "archetype": "box-stack",
+          "category": "Physics",
+          "count": 10000,
+          "cells": [
+            {
+              "competitor": "matter-js",
+              "referenceMs": 10.235000000000355,
+              "referenceP95Ms": 11.230000000000018,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 22.664999999993597,
+              "competitorP95Ms": 26.17000000000553,
+              "competitorOverFrameBudget": true,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.45157732186204486,
+                "factor": 2.214460185636816,
+                "label": "ExoJS leads (2.21x)",
+                "structural": false
+              },
+              "mechanism": "ExoJS resolves fewer solved contacts (10002 vs 22396); the counters are not semantically identical across arms (see the run's caveats)",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 9.659999999999854,
+                  "maxMs": 10.389999999999873,
+                  "ratio": 1.0755693581780568
+                },
+                "competitor": {
+                  "minMs": 21.779999999998836,
+                  "maxMs": 23.069999999992433,
+                  "ratio": 1.0592286501374502
+                },
+                "stable": true,
+                "rungs": [
+                  "exojs-leads",
+                  "exojs-leads",
+                  "exojs-leads",
+                  "exojs-leads"
+                ]
+              }
+            },
+            {
+              "competitor": "nape-js",
+              "referenceMs": 10.235000000000355,
+              "referenceP95Ms": 11.230000000000018,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 26.220000000001164,
+              "competitorP95Ms": 31.570000000006985,
+              "competitorOverFrameBudget": true,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.3903508771929787,
+                "factor": 2.5617977528090137,
+                "label": "ExoJS leads (2.56x)",
+                "structural": false
+              },
+              "mechanism": "identical scene (10001 bodies, 10002 contacts, 0 joints on both arms); the difference is solver cost",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 9.659999999999854,
+                  "maxMs": 10.389999999999873,
+                  "ratio": 1.0755693581780568
+                },
+                "competitor": {
+                  "minMs": 25.620000000024447,
+                  "maxMs": 27.410000000003492,
+                  "ratio": 1.069867291177882
+                },
+                "stable": true,
+                "rungs": [
+                  "exojs-leads",
+                  "exojs-leads",
+                  "exojs-leads",
+                  "exojs-leads"
+                ]
+              }
+            },
+            {
+              "competitor": "planck",
+              "referenceMs": 10.235000000000355,
+              "referenceP95Ms": 11.230000000000018,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 72.32499999999709,
+              "competitorP95Ms": 90.47999999999593,
+              "competitorOverFrameBudget": true,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.14151399930868672,
+                "factor": 7.0664386907664465,
+                "label": "ExoJS leads clearly (7.07x)",
+                "structural": true
+              },
+              "mechanism": "ExoJS resolves fewer solved contacts (10002 vs 19865); the counters are not semantically identical across arms (see the run's caveats)",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 9.659999999999854,
+                  "maxMs": 10.389999999999873,
+                  "ratio": 1.0755693581780568
+                },
+                "competitor": {
+                  "minMs": 71.86000000000058,
+                  "maxMs": 73.41000000000349,
+                  "ratio": 1.0215697188978972
+                },
+                "stable": true,
+                "rungs": [
+                  "exojs-leads-clearly",
+                  "exojs-leads-clearly",
+                  "exojs-leads-clearly",
+                  "exojs-leads-clearly"
+                ]
+              }
+            },
+            {
+              "competitor": "rapier",
+              "referenceMs": 10.235000000000355,
+              "referenceP95Ms": 11.230000000000018,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 7.264999999999418,
+              "competitorP95Ms": 9.779999999969732,
+              "competitorOverFrameBudget": false,
+              "verdict": {
+                "side": "competitor",
+                "ratio": 1.4088093599451033,
+                "factor": 1.4088093599451033,
+                "label": "competitor leads (1.41x)",
+                "structural": false
+              },
+              "mechanism": "ExoJS resolves fewer solved contacts (10002 vs 17880); the counters are not semantically identical across arms (see the run's caveats)",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 9.659999999999854,
+                  "maxMs": 10.389999999999873,
+                  "ratio": 1.0755693581780568
+                },
+                "competitor": {
+                  "minMs": 7.079999999987194,
+                  "maxMs": 7.5600000000267755,
+                  "ratio": 1.0677966101752048
+                },
+                "stable": true,
+                "rungs": [
+                  "competitor-leads",
+                  "competitor-leads",
+                  "competitor-leads",
+                  "competitor-leads"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "archetype": "many-dynamic",
+          "category": "Physics",
+          "count": 2200,
+          "cells": [
+            {
+              "competitor": "matter-js",
+              "referenceMs": 8.63000000000011,
+              "referenceP95Ms": 9.5,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 8.080000000001746,
+              "competitorP95Ms": 8.989999999997963,
+              "competitorOverFrameBudget": false,
+              "verdict": {
+                "side": "neither",
+                "ratio": 1.0680693069304759,
+                "factor": 1,
+                "label": "level",
+                "structural": false
+              },
+              "mechanism": "identical scene (2204 bodies, 6233 contacts, 0 joints on both arms); the difference is solver cost",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 8.159999999999854,
+                  "maxMs": 8.679999999998472,
+                  "ratio": 1.0637254901959101
+                },
+                "competitor": {
+                  "minMs": 8.020000000004075,
+                  "maxMs": 8.10000000000582,
+                  "ratio": 1.0099750623443524
+                },
+                "stable": true,
+                "rungs": [
+                  "level",
+                  "level",
+                  "level",
+                  "level"
+                ]
+              }
+            },
+            {
+              "competitor": "nape-js",
+              "referenceMs": 8.63000000000011,
+              "referenceP95Ms": 9.5,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 8.875,
+              "competitorP95Ms": 9.790000000008149,
+              "competitorOverFrameBudget": false,
+              "verdict": {
+                "side": "neither",
+                "ratio": 0.9723943661971954,
+                "factor": 1,
+                "label": "level",
+                "structural": false
+              },
+              "mechanism": "identical scene (2204 bodies, 6233 contacts, 0 joints on both arms); the difference is solver cost",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 8.159999999999854,
+                  "maxMs": 8.679999999998472,
+                  "ratio": 1.0637254901959101
+                },
+                "competitor": {
+                  "minMs": 8.820000000006985,
+                  "maxMs": 8.939999999973224,
+                  "ratio": 1.0136054421730323
+                },
+                "stable": true,
+                "rungs": [
+                  "level",
+                  "level",
+                  "level",
+                  "level"
+                ]
+              }
+            },
+            {
+              "competitor": "planck",
+              "referenceMs": 8.63000000000011,
+              "referenceP95Ms": 9.5,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 9.35000000000582,
+              "competitorP95Ms": 10.910000000003492,
+              "competitorOverFrameBudget": false,
+              "verdict": {
+                "side": "neither",
+                "ratio": 0.9229946524058542,
+                "factor": 1,
+                "label": "level",
+                "structural": false
+              },
+              "mechanism": "identical scene (2204 bodies, 6233 contacts, 0 joints on both arms); the difference is solver cost",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 8.159999999999854,
+                  "maxMs": 8.679999999998472,
+                  "ratio": 1.0637254901959101
+                },
+                "competitor": {
+                  "minMs": 9.320000000006985,
+                  "maxMs": 9.380000000004657,
+                  "ratio": 1.0064377682400887
+                },
+                "stable": true,
+                "rungs": [
+                  "level",
+                  "level",
+                  "level",
+                  "level"
+                ]
+              }
+            },
+            {
+              "competitor": "rapier",
+              "referenceMs": 8.63000000000011,
+              "referenceP95Ms": 9.5,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 1.9199999999837019,
+              "competitorP95Ms": 2.0599999999976717,
+              "competitorOverFrameBudget": false,
+              "verdict": {
+                "side": "competitor",
+                "ratio": 4.494791666704878,
+                "factor": 4.494791666704878,
+                "label": "competitor leads (4.49x)",
+                "structural": false
+              },
+              "mechanism": "identical scene (2204 bodies, 6233 contacts, 0 joints on both arms); the difference is solver cost",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 8.159999999999854,
+                  "maxMs": 8.679999999998472,
+                  "ratio": 1.0637254901959101
+                },
+                "competitor": {
+                  "minMs": 1.8999999999941792,
+                  "maxMs": 1.9200000000419095,
+                  "ratio": 1.0105263158146272
+                },
+                "stable": true,
+                "rungs": [
+                  "competitor-leads",
+                  "competitor-leads",
+                  "competitor-leads",
+                  "competitor-leads"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "archetype": "mixed-static-dynamic",
+          "category": "Physics",
+          "count": 3200,
+          "cells": [
+            {
+              "competitor": "matter-js",
+              "referenceMs": 8.514999999999418,
+              "referenceP95Ms": 9.719999999999345,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 5.444999999992433,
+              "competitorP95Ms": 6.310000000004948,
+              "competitorOverFrameBudget": false,
+              "verdict": {
+                "side": "competitor",
+                "ratio": 1.5638200183675393,
+                "factor": 1.5638200183675393,
+                "label": "competitor leads (1.56x)",
+                "structural": false
+              },
+              "mechanism": "identical scene (3313 bodies, 3670 contacts, 0 joints on both arms); the difference is solver cost",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 8.43999999999869,
+                  "maxMs": 8.540000000000873,
+                  "ratio": 1.011848341232488
+                },
+                "competitor": {
+                  "minMs": 5.430000000000291,
+                  "maxMs": 5.4799999999959255,
+                  "ratio": 1.0092081031299507
+                },
+                "stable": true,
+                "rungs": [
+                  "competitor-leads",
+                  "competitor-leads",
+                  "competitor-leads",
+                  "competitor-leads"
+                ]
+              }
+            },
+            {
+              "competitor": "nape-js",
+              "referenceMs": 8.514999999999418,
+              "referenceP95Ms": 9.719999999999345,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 11.069999999992433,
+              "competitorP95Ms": 13.199999999982538,
+              "competitorOverFrameBudget": false,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.7691960252940595,
+                "factor": 1.3000587199052482,
+                "label": "ExoJS leads (1.30x)",
+                "structural": false
+              },
+              "mechanism": "identical scene (3313 bodies, 3670 contacts, 0 joints on both arms); the difference is solver cost",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 8.43999999999869,
+                  "maxMs": 8.540000000000873,
+                  "ratio": 1.011848341232488
+                },
+                "competitor": {
+                  "minMs": 10.960000000020955,
+                  "maxMs": 11.089999999996508,
+                  "ratio": 1.01186131386636
+                },
+                "stable": true,
+                "rungs": [
+                  "exojs-leads",
+                  "exojs-leads",
+                  "exojs-leads",
+                  "exojs-leads"
+                ]
+              }
+            },
+            {
+              "competitor": "planck",
+              "referenceMs": 8.514999999999418,
+              "referenceP95Ms": 9.719999999999345,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 19.3550000000032,
+              "competitorP95Ms": 30.039999999993597,
+              "competitorOverFrameBudget": true,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.4399380005165595,
+                "factor": 2.2730475631244302,
+                "label": "ExoJS leads (2.27x)",
+                "structural": false
+              },
+              "mechanism": "identical scene (3313 bodies, 3670 contacts, 0 joints on both arms); the difference is solver cost",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 8.43999999999869,
+                  "maxMs": 8.540000000000873,
+                  "ratio": 1.011848341232488
+                },
+                "competitor": {
+                  "minMs": 19.29000000000815,
+                  "maxMs": 19.610000000015134,
+                  "ratio": 1.0165889061693545
+                },
+                "stable": true,
+                "rungs": [
+                  "exojs-leads",
+                  "exojs-leads",
+                  "exojs-leads",
+                  "exojs-leads"
+                ]
+              }
+            },
+            {
+              "competitor": "rapier",
+              "referenceMs": 8.514999999999418,
+              "referenceP95Ms": 9.719999999999345,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 3.654999999984284,
+              "competitorP95Ms": 4.129999999975553,
+              "competitorOverFrameBudget": false,
+              "verdict": {
+                "side": "competitor",
+                "ratio": 2.329685362526958,
+                "factor": 2.329685362526958,
+                "label": "competitor leads (2.33x)",
+                "structural": false
+              },
+              "mechanism": "ExoJS resolves fewer solved contacts (3670 vs 6105); the counters are not semantically identical across arms (see the run's caveats)",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 8.43999999999869,
+                  "maxMs": 8.540000000000873,
+                  "ratio": 1.011848341232488
+                },
+                "competitor": {
+                  "minMs": 3.6499999999941792,
+                  "maxMs": 3.6900000000023283,
+                  "ratio": 1.0109589041118392
+                },
+                "stable": true,
+                "rungs": [
+                  "competitor-leads",
+                  "competitor-leads",
+                  "competitor-leads",
+                  "competitor-leads"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "archetype": "raycast",
+          "category": "Physics",
+          "count": 3200,
+          "cells": [
+            {
+              "competitor": "matter-js",
+              "referenceMs": 10.55999999999949,
+              "referenceP95Ms": 11.710000000000946,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 13.419999999998254,
+              "competitorP95Ms": 16.830000000009022,
+              "competitorOverFrameBudget": false,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.7868852459017038,
+                "factor": 1.2708333333332291,
+                "label": "ExoJS leads (1.27x)",
+                "structural": false
+              },
+              "mechanism": "identical scene (3313 bodies, 3670 contacts, 0 joints on both arms) with 41 vs 49 ray hits per step; the difference is query and solver cost",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 10.459999999999127,
+                  "maxMs": 10.630000000001019,
+                  "ratio": 1.0162523900575435
+                },
+                "competitor": {
+                  "minMs": 13.369999999995343,
+                  "maxMs": 13.570000000006985,
+                  "ratio": 1.0149588631272783
+                },
+                "stable": true,
+                "rungs": [
+                  "exojs-leads",
+                  "exojs-leads",
+                  "exojs-leads",
+                  "exojs-leads"
+                ]
+              }
+            },
+            {
+              "competitor": "nape-js",
+              "referenceMs": 10.55999999999949,
+              "referenceP95Ms": 11.710000000000946,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 28.210000000006403,
+              "competitorP95Ms": 33.079999999987194,
+              "competitorOverFrameBudget": true,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.37433534207717456,
+                "factor": 2.67140151515225,
+                "label": "ExoJS leads (2.67x)",
+                "structural": false
+              },
+              "mechanism": "identical scene (3313 bodies, 3670 contacts, 0 joints on both arms) with 41 vs 41 ray hits per step; the difference is query and solver cost",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 10.459999999999127,
+                  "maxMs": 10.630000000001019,
+                  "ratio": 1.0162523900575435
+                },
+                "competitor": {
+                  "minMs": 27.300000000046566,
+                  "maxMs": 28.55999999999767,
+                  "ratio": 1.0461538461519764
+                },
+                "stable": true,
+                "rungs": [
+                  "exojs-leads",
+                  "exojs-leads",
+                  "exojs-leads",
+                  "exojs-leads"
+                ]
+              }
+            },
+            {
+              "competitor": "planck",
+              "referenceMs": 10.55999999999949,
+              "referenceP95Ms": 11.710000000000946,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 19.89500000001135,
+              "competitorP95Ms": 30.85000000000582,
+              "competitorOverFrameBudget": true,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.5307866298061557,
+                "factor": 1.8839962121223777,
+                "label": "ExoJS leads (1.88x)",
+                "structural": false
+              },
+              "mechanism": "identical scene (3313 bodies, 3670 contacts, 0 joints on both arms) with 41 vs 37 ray hits per step; the difference is query and solver cost",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 10.459999999999127,
+                  "maxMs": 10.630000000001019,
+                  "ratio": 1.0162523900575435
+                },
+                "competitor": {
+                  "minMs": 19.830000000001746,
+                  "maxMs": 20.010000000009313,
+                  "ratio": 1.0090771558248892
+                },
+                "stable": true,
+                "rungs": [
+                  "exojs-leads",
+                  "exojs-leads",
+                  "exojs-leads",
+                  "exojs-leads"
+                ]
+              }
+            },
+            {
+              "competitor": "rapier",
+              "referenceMs": 10.55999999999949,
+              "referenceP95Ms": 11.710000000000946,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 3.749999999985448,
+              "competitorP95Ms": 4.139999999984866,
+              "competitorOverFrameBudget": false,
+              "verdict": {
+                "side": "competitor",
+                "ratio": 2.8160000000107916,
+                "factor": 2.8160000000107916,
+                "label": "competitor leads (2.82x)",
+                "structural": false
+              },
+              "mechanism": "ExoJS resolves fewer solved contacts (3670 vs 6105); the counters are not semantically identical across arms (see the run's caveats)",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 10.459999999999127,
+                  "maxMs": 10.630000000001019,
+                  "ratio": 1.0162523900575435
+                },
+                "competitor": {
+                  "minMs": 3.7000000000116415,
+                  "maxMs": 3.779999999969732,
+                  "ratio": 1.0216216216102267
+                },
+                "stable": true,
+                "rungs": [
+                  "competitor-leads",
+                  "competitor-leads",
+                  "competitor-leads",
+                  "competitor-leads"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "archetype": "body-churn",
+          "category": "Physics",
+          "count": 2400,
+          "cells": [
+            {
+              "competitor": "matter-js",
+              "referenceMs": 11.340000000000146,
+              "referenceP95Ms": 12.890000000003056,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 9.840000000003783,
+              "competitorP95Ms": 11.450000000004366,
+              "competitorOverFrameBudget": false,
+              "verdict": {
+                "side": "neither",
+                "ratio": 1.1524390243898155,
+                "factor": 1,
+                "label": "level",
+                "structural": false
+              },
+              "mechanism": "ExoJS resolves fewer solved contacts (2282 vs 6230); the counters are not semantically identical across arms (see the run's caveats)",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 10.939999999995052,
+                  "maxMs": 11.679999999996653,
+                  "ratio": 1.0676416819014567
+                },
+                "competitor": {
+                  "minMs": 9.740000000005239,
+                  "maxMs": 9.89999999999418,
+                  "ratio": 1.0164271047216482
+                },
+                "stable": true,
+                "rungs": [
+                  "level",
+                  "level",
+                  "level",
+                  "level"
+                ]
+              }
+            },
+            {
+              "competitor": "nape-js",
+              "referenceMs": 11.340000000000146,
+              "referenceP95Ms": 12.890000000003056,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 5.789999999979045,
+              "competitorP95Ms": 12.499999999970896,
+              "competitorOverFrameBudget": false,
+              "verdict": {
+                "side": "competitor",
+                "ratio": 1.9585492228050407,
+                "factor": 1.9585492228050407,
+                "label": "competitor leads (1.96x)",
+                "structural": false
+              },
+              "mechanism": "identical scene (2404 bodies, 2282 contacts, 0 joints on both arms); the difference is solver cost",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 10.939999999995052,
+                  "maxMs": 11.679999999996653,
+                  "ratio": 1.0676416819014567
+                },
+                "competitor": {
+                  "minMs": 5.160000000032596,
+                  "maxMs": 5.839999999967404,
+                  "ratio": 1.1317829457229673
+                },
+                "stable": true,
+                "rungs": [
+                  "competitor-leads",
+                  "competitor-leads",
+                  "competitor-leads",
+                  "competitor-leads"
+                ]
+              }
+            },
+            {
+              "competitor": "planck",
+              "referenceMs": 11.340000000000146,
+              "referenceP95Ms": 12.890000000003056,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 9.839999999996508,
+              "competitorP95Ms": 10.89999999999418,
+              "competitorOverFrameBudget": false,
+              "verdict": {
+                "side": "neither",
+                "ratio": 1.1524390243906677,
+                "factor": 1,
+                "label": "level",
+                "structural": false
+              },
+              "mechanism": "ExoJS resolves fewer solved contacts (2282 vs 5242); the counters are not semantically identical across arms (see the run's caveats)",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 10.939999999995052,
+                  "maxMs": 11.679999999996653,
+                  "ratio": 1.0676416819014567
+                },
+                "competitor": {
+                  "minMs": 9.739999999990687,
+                  "maxMs": 9.929999999993015,
+                  "ratio": 1.0195071868585739
+                },
+                "stable": true,
+                "rungs": [
+                  "level",
+                  "level",
+                  "level",
+                  "level"
+                ]
+              }
+            },
+            {
+              "competitor": "rapier",
+              "referenceMs": 11.340000000000146,
+              "referenceP95Ms": 12.890000000003056,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 1.1600000000034925,
+              "competitorP95Ms": 1.209999999991851,
+              "competitorOverFrameBudget": false,
+              "verdict": {
+                "side": "competitor",
+                "ratio": 9.77586206893621,
+                "factor": 9.77586206893621,
+                "label": "competitor leads clearly (9.78x)",
+                "structural": true
+              },
+              "mechanism": "identical scene (2404 bodies, 2282 contacts, 0 joints on both arms); the difference is solver cost",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 10.939999999995052,
+                  "maxMs": 11.679999999996653,
+                  "ratio": 1.0676416819014567
+                },
+                "competitor": {
+                  "minMs": 1.1599999999743886,
+                  "maxMs": 1.179999999993015,
+                  "ratio": 1.0172413793267827
+                },
+                "stable": true,
+                "rungs": [
+                  "competitor-leads-clearly",
+                  "competitor-leads-clearly",
+                  "competitor-leads-clearly",
+                  "competitor-leads-clearly"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "archetype": "joints",
+          "category": "Physics",
+          "count": 15000,
+          "cells": [
+            {
+              "competitor": "matter-js",
+              "referenceMs": 9.350000000000364,
+              "referenceP95Ms": 10.580000000001746,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 9.464999999996508,
+              "competitorP95Ms": 10.69999999999709,
+              "competitorOverFrameBudget": false,
+              "verdict": {
+                "side": "neither",
+                "ratio": 0.9878499735873021,
+                "factor": 1,
+                "label": "level",
+                "structural": false
+              },
+              "mechanism": "competitor resolves fewer solved contacts (13125 vs 0); the counters are not semantically identical across arms (see the run's caveats)",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 9.260000000002037,
+                  "maxMs": 9.419999999998254,
+                  "ratio": 1.0172786177101707
+                },
+                "competitor": {
+                  "minMs": 9.080000000001746,
+                  "maxMs": 9.539999999993597,
+                  "ratio": 1.0506607929506346
+                },
+                "stable": true,
+                "rungs": [
+                  "level",
+                  "level",
+                  "level",
+                  "level"
+                ]
+              }
+            },
+            {
+              "competitor": "nape-js",
+              "referenceMs": 9.350000000000364,
+              "referenceP95Ms": 10.580000000001746,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 0,
+              "competitorP95Ms": 0.0009999999980209394,
+              "competitorOverFrameBudget": false,
+              "verdict": {
+                "side": "neither",
+                "ratio": null,
+                "factor": null,
+                "label": "not comparable",
+                "structural": false
+              },
+              "mechanism": "competitor resolves fewer solved contacts (13125 vs 0); the counters are not semantically identical across arms (see the run's caveats)",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 9.260000000002037,
+                  "maxMs": 9.419999999998254,
+                  "ratio": 1.0172786177101707
+                },
+                "competitor": {
+                  "minMs": 0,
+                  "maxMs": 0,
+                  "ratio": null
+                },
+                "stable": true,
+                "rungs": [
+                  "not-comparable",
+                  "not-comparable",
+                  "not-comparable",
+                  "not-comparable"
+                ]
+              }
+            },
+            {
+              "competitor": "planck",
+              "referenceMs": 9.350000000000364,
+              "referenceP95Ms": 10.580000000001746,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 0.6399999999994179,
+              "competitorP95Ms": 0.6600000000180444,
+              "competitorOverFrameBudget": false,
+              "verdict": {
+                "side": "competitor",
+                "ratio": 14.609375000013856,
+                "factor": 14.609375000013856,
+                "label": "competitor leads clearly (14.61x)",
+                "structural": true
+              },
+              "mechanism": "competitor resolves fewer solved contacts (13125 vs 0); the counters are not semantically identical across arms (see the run's caveats)",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 9.260000000002037,
+                  "maxMs": 9.419999999998254,
+                  "ratio": 1.0172786177101707
+                },
+                "competitor": {
+                  "minMs": 0.639999999984866,
+                  "maxMs": 0.6799999999930151,
+                  "ratio": 1.0625000000142109
+                },
+                "stable": true,
+                "rungs": [
+                  "competitor-leads-clearly",
+                  "competitor-leads-clearly",
+                  "competitor-leads-clearly",
+                  "competitor-leads-clearly"
+                ]
+              }
+            },
+            {
+              "competitor": "rapier",
+              "referenceMs": 9.350000000000364,
+              "referenceP95Ms": 10.580000000001746,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 0.29999999998835847,
+              "competitorP95Ms": 0.34000000002561137,
+              "competitorOverFrameBudget": false,
+              "verdict": {
+                "side": "competitor",
+                "ratio": 31.166666667877305,
+                "factor": 31.166666667877305,
+                "label": "competitor leads clearly (31.17x)",
+                "structural": true
+              },
+              "mechanism": "competitor resolves fewer solved contacts (13125 vs 1875); the counters are not semantically identical across arms (see the run's caveats)",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 9.260000000002037,
+                  "maxMs": 9.419999999998254,
+                  "ratio": 1.0172786177101707
+                },
+                "competitor": {
+                  "minMs": 0.29999999998835847,
+                  "maxMs": 0.3200000000069849,
+                  "ratio": 1.0666666667313418
+                },
+                "stable": true,
+                "rungs": [
+                  "competitor-leads-clearly",
+                  "competitor-leads-clearly",
+                  "competitor-leads-clearly",
+                  "competitor-leads-clearly"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "archetype": "settling-pile",
+          "category": "Physics",
+          "count": 5800,
+          "cells": [
+            {
+              "competitor": "matter-js",
+              "referenceMs": 8.82499999999709,
+              "referenceP95Ms": 9.979999999995925,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 25.220000000001164,
+              "competitorP95Ms": 29.330000000001746,
+              "competitorOverFrameBudget": true,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.34992069785871066,
+                "factor": 2.857790368273029,
+                "label": "ExoJS leads (2.86x)",
+                "structural": false
+              },
+              "mechanism": "identical scene (5804 bodies, 12187 contacts, 0 joints on both arms); the difference is solver cost",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 8.559999999997672,
+                  "maxMs": 8.839999999996508,
+                  "ratio": 1.0327102803737047
+                },
+                "competitor": {
+                  "minMs": 25.04999999998836,
+                  "maxMs": 25.330000000001746,
+                  "ratio": 1.0111776447111185
+                },
+                "stable": true,
+                "rungs": [
+                  "exojs-leads",
+                  "exojs-leads",
+                  "exojs-leads",
+                  "exojs-leads"
+                ]
+              }
+            },
+            {
+              "competitor": "nape-js",
+              "referenceMs": 8.82499999999709,
+              "referenceP95Ms": 9.979999999995925,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 35.81500000001688,
+              "competitorP95Ms": 43.20000000001164,
+              "competitorOverFrameBudget": true,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.24640513751201815,
+                "factor": 4.058356940513167,
+                "label": "ExoJS leads (4.06x)",
+                "structural": false
+              },
+              "mechanism": "identical scene (5804 bodies, 12187 contacts, 0 joints on both arms); the difference is solver cost",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 8.559999999997672,
+                  "maxMs": 8.839999999996508,
+                  "ratio": 1.0327102803737047
+                },
+                "competitor": {
+                  "minMs": 34.85999999998603,
+                  "maxMs": 36.84000000002561,
+                  "ratio": 1.0567986230648414
+                },
+                "stable": true,
+                "rungs": [
+                  "exojs-leads",
+                  "exojs-leads",
+                  "exojs-leads",
+                  "exojs-leads"
+                ]
+              }
+            },
+            {
+              "competitor": "planck",
+              "referenceMs": 8.82499999999709,
+              "referenceP95Ms": 9.979999999995925,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 45.02499999997963,
+              "competitorP95Ms": 54.179999999993015,
+              "competitorOverFrameBudget": true,
+              "verdict": {
+                "side": "exojs",
+                "ratio": 0.19600222098836387,
+                "factor": 5.101983002832235,
+                "label": "ExoJS leads clearly (5.10x)",
+                "structural": true
+              },
+              "mechanism": "identical scene (5804 bodies, 12187 contacts, 0 joints on both arms); the difference is solver cost",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 8.559999999997672,
+                  "maxMs": 8.839999999996508,
+                  "ratio": 1.0327102803737047
+                },
+                "competitor": {
+                  "minMs": 44.679999999993015,
+                  "maxMs": 45.86999999999534,
+                  "ratio": 1.02663384064464
+                },
+                "stable": true,
+                "rungs": [
+                  "exojs-leads-clearly",
+                  "exojs-leads-clearly",
+                  "exojs-leads-clearly",
+                  "exojs-leads-clearly"
+                ]
+              }
+            },
+            {
+              "competitor": "rapier",
+              "referenceMs": 8.82499999999709,
+              "referenceP95Ms": 9.979999999995925,
+              "referenceOverFrameBudget": false,
+              "competitorMs": 4.7999999999883585,
+              "competitorP95Ms": 5.279999999998836,
+              "competitorOverFrameBudget": false,
+              "verdict": {
+                "side": "competitor",
+                "ratio": 1.8385416666705194,
+                "factor": 1.8385416666705194,
+                "label": "competitor leads (1.84x)",
+                "structural": false
+              },
+              "mechanism": "identical scene (5804 bodies, 12187 contacts, 0 joints on both arms); the difference is solver cost",
+              "aggregate": {
+                "runs": 4,
+                "reference": {
+                  "minMs": 8.559999999997672,
+                  "maxMs": 8.839999999996508,
+                  "ratio": 1.0327102803737047
+                },
+                "competitor": {
+                  "minMs": 4.740000000048894,
+                  "maxMs": 4.880000000004657,
+                  "ratio": 1.0295358649692654
+                },
+                "stable": true,
+                "rungs": [
+                  "competitor-leads",
+                  "competitor-leads",
+                  "competitor-leads",
+                  "competitor-leads"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "signature": {
+    "algorithm": "sha256",
+    "value": "e9ab0ae10d27ef5fbe3c0417663d3738a90cd1c97f9438f967cf23d57a68016f"
+  }
+}

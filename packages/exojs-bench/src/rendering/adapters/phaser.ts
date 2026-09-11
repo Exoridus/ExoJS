@@ -18,26 +18,16 @@ import { GRID_MARGIN, gridLayout, gridPosition, isScrolling, VIEWPORT_HEIGHT, VI
  * cycling, overdraw stacking, top-left anchoring) is a faithful transcription of
  * the other arms so the comparison rests on the same neutral archetypes.
  *
- * WEBGL VERSION DISCLOSURE - EMPIRICAL, and the reason this arm is measured as it
- * is. Phaser 4 "Caladan" is often described as a from-scratch WebGL2 renderer;
- * against the installed 4.2.1 source it is NOT. Its `WebGLRenderer.init` requests
- * a `'webgl'` (WebGL**1**) context by default (`canvas.getContext('webgl')`,
- * `WebGLRenderer.js:709`), its shaders are GLSL ES 1.00 (`attribute`/`varying`;
- * no `#version 300 es` anywhere in the dist), and it polyfills the WebGL2-core
- * features it needs (instanced arrays, VAO) from WebGL1 extensions - its renderer
- * is an evolution of the Phaser 3.85+ WebGL path, not a WebGL2 rewrite.
+ * WEBGL VERSION DISCLOSURE - EMPIRICAL. Phaser 4.2.1's default renderer asks for
+ * a WebGL1 context, but its public `GameConfig.context` path accepts a caller-
+ * created context. This adapter supplies a real WebGL2 context through that path
+ * and verifies after boot that Phaser retained the same object. The fallback path
+ * is deliberately not used: a browser without WebGL2 makes this arm unavailable
+ * instead of silently changing the measured backend.
  *
- * By deliberate decision this arm renders through Phaser's OWN default context
- * (WebGL, i.e. WebGL1) - exactly as a stock Phaser 4 app would - rather than
- * injecting a WebGL2 context to force backend parity. That keeps the arm honest:
- * its CPU-time column is measured identically to the other arms and IS cross-arm
- * comparable, but its GPU/structural columns are NOT WebGL2-backend-comparable.
- * The harness's WebGL2 draw-call structural probe cannot attach to a WebGL
- * (WebGL1) context, so this arm reports NO structural counters - disclosed per
- * cell by the harness (`page/harness.ts::attachProbes`) and in the report
- * Methodology; the counts are omitted, never faked. Phaser 4 ships NO WebGPU
- * renderer (`Phaser.AUTO/CANVAS/WEBGL/HEADLESS` only), so this arm supports the
- * `'webgl2'` backend request only and never runs `'webgpu'`.
+ * Phaser 4 ships NO WebGPU renderer (`Phaser.AUTO/CANVAS/WEBGL/HEADLESS` only),
+ * so this arm supports the `'webgl2'` backend request only and never runs
+ * `'webgpu'`.
  *
  * The harness owns frame cadence, so Phaser's own `requestAnimationFrame` game
  * loop (`TimeStep`) is halted right after boot (`game.loop.stop()`), and one
@@ -124,12 +114,11 @@ export const createPhaserAdapter = (): EngineAdapter => {
 
   return {
     engine: 'phaser',
-    config: 'default',
+    config: 'webgl2',
 
     supports(target: Backend): boolean {
-      // Phaser 4 renders WebGL (WebGL1) via its default context and ships no
-      // WebGPU renderer; it runs under the harness 'webgl2' request (disclosed)
-      // and never the 'webgpu' backend.
+      // Phaser 4 ships no WebGPU renderer; the adapter supplies WebGL2 through
+      // the public context injection path below.
       return target === 'webgl2';
     },
 
@@ -139,26 +128,30 @@ export const createPhaserAdapter = (): EngineAdapter => {
       // one here, i.e. a row that looks comparable and is not - so the arm sits
       // the archetype out instead.
       //
-      // The render-target archetypes are sat out for the reason this arm's header
-      // comment establishes empirically: Phaser 4 renders a WebGL1 context, so a
-      // filter- or mask-heavy row's gap would be attributable to the backend
-      // generation rather than to the engine.
+      // Render-target archetypes remain out until their Phaser semantics are
+      // validated against the shared filter/mask contract.
       return !isScrolling(spec) && !usesRenderTargets(spec);
     },
 
     async init(canvas: HTMLCanvasElement, target: Backend): Promise<void> {
       if (target !== 'webgl2') {
-        throw new Error(`The phaser adapter only runs under the harness 'webgl2' backend request (Phaser 4 renders WebGL1); got '${target}'.`);
+        throw new Error(`The phaser adapter only runs under the harness 'webgl2' backend request; got '${target}'.`);
+      }
+
+      const context = canvas.getContext('webgl2', { antialias: false, powerPreference: 'high-performance' });
+
+      if (context === null) {
+        throw new Error('Phaser requires a WebGL2 context for this arm.');
       }
 
       await new Promise<void>(resolve => {
         game = new Phaser.Game({
-          // Force WebGL (never AUTO/Canvas): a Canvas fallback would silently
-          // measure a different renderer. Phaser 4's WebGLRenderer creates its
-          // own default `'webgl'` (WebGL1) context - no `context` is injected, so
-          // this measures a stock Phaser 4 app's renderer honestly.
+          // Force WebGL and pass the already-created WebGL2 context. Phaser's
+          // public type incorrectly calls this CanvasRenderingContext2D, but its
+          // WebGLRenderer reads the value as the renderer context at runtime.
           type: Phaser.WEBGL,
           canvas,
+          context: context as unknown as CanvasRenderingContext2D,
           width: VIEWPORT_WIDTH,
           height: VIEWPORT_HEIGHT,
           backgroundColor: '#000000',
@@ -182,6 +175,11 @@ export const createPhaserAdapter = (): EngineAdapter => {
 
       // Halt Phaser's own requestAnimationFrame loop; the harness drives frames.
       game!.loop.stop();
+
+      if (game!.context !== context) {
+        throw new Error('Phaser did not retain the injected WebGL2 context.');
+      }
+
       scene = game!.scene.getScene(SCENE_KEY);
     },
 

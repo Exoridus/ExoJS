@@ -111,6 +111,14 @@ jobs:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
       - run: ${{ matrix.run }}
+      - name: Upload tooling logs on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: tooling-logs-${{ matrix.id }}
+          path: .workspace/logs/
+          retention-days: 1
+          if-no-files-found: warn
 
   test:
     name: test (${{ matrix.id }})
@@ -246,6 +254,15 @@ jobs:
           EXOJS_PACKAGE_PATH: ..
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: pnpm site:build
+
+      - name: Upload tooling logs on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: tooling-logs-site
+          path: .workspace/logs/
+          retention-days: 1
+          if-no-files-found: warn
 
       # Deploy Pages ships exactly this artifact; it builds nothing itself.
       - uses: actions/upload-artifact@v4

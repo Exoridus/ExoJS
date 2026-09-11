@@ -1,0 +1,807 @@
+---
+/**
+ * BenchComparisonTable - the comparisons of one domain, as a matrix or as cards.
+ *
+ * Wide, the block is a matrix: one archetype per row, one comparison pair per
+ * column, so a reader follows a single archetype across every backend and every
+ * opponent on one line. Narrow, the same markup becomes one card per archetype
+ * with its comparisons stacked inside it. The switch is a container query on the
+ * block's own width, not on the viewport: a docs page can hand this component
+ * 700px of room inside a 1400px window, and a matrix squeezed into that is a
+ * matrix nobody can read. Measurements never scroll sideways at any width.
+ *
+ * A cell's first glance carries three things and no more: which way the pair
+ * went and by how much, the two medians, and a disclosure. Everything a reader
+ * needs only when verifying a row - p95, the range the pooled runs observed,
+ * the spread factor, the structural evidence, what each run concluded - sits
+ * behind that disclosure. It is not hidden, it is ranked: printing all of it in
+ * primary type is what made the previous table unreadable.
+ *
+ * The bar is a diverging one on a fixed log axis shared by every column and
+ * every table on the page, so a length means the same thing wherever it is
+ * read. A comparison past the axis is drawn cut rather than rescaling everyone
+ * else into a few pixels, and its exact factor is printed beside it either way.
+ * The bar keeps a track of its own, apart from the text: a mark that grows
+ * outward from a centre, laid over text that reads from the left, gives a
+ * column two competing origins and no continuous line to scan down.
+ *
+ * A pair whose runs landed on different rungs publishes no verdict. Its bar is
+ * the interval those runs spanned, drawn hollow and in neither side's hue, and
+ * its figure is the factor of the two pooled medians with a tilde - the pair's
+ * central observation, not a decision. An arm that produced no shared cell at
+ * all prints a dash: that is a gap in the matrix, not a result, and spelling it
+ * out in every affected row only crowds the ones that carry numbers.
+ */
+
+import {
+    armLabel,
+    describeRungs,
+    formatBand,
+    formatApproximate,
+    formatFactor,
+    formatMs,
+    formatRange,
+    formatSpread,
+    frameShare,
+    FRAME_BUDGET_MS,
+    isWideSpread,
+    outcomeOf,
+    pooledFactor,
+    ratioBand,
+    rungSide,
+    type ProfileCell,
+    type ProfileSpread,
+} from '../lib/bench-profiles';
+import type { ComparisonTable } from '../lib/bench-tables';
+
+interface Props {
+    table: ComparisonTable;
+    /** Accessible name for the table, since the caption carries the reading terms rather than a title. */
+    label: string;
+}
+
+const { table, label } = Astro.props;
+const { columns, rows, unit, countColumn } = table;
+
+/**
+ * Half-width of the axis in decades, fixed for every column and every table.
+ *
+ * A per-column axis makes a given bar length mean something different in each
+ * column, which is the one thing a shared visual scale exists to prevent. Two
+ * decades holds every comparison a reader is weighing against another; the
+ * handful of order-of-magnitude outliers saturate at the edge, marked as cut,
+ * and are read from their printed factor instead.
+ */
+const AXIS_DECADES = 2;
+
+/** Where a ratio sits on the axis, as a percentage from its left edge. */
+const positionOf = (ratio: number): number => 50 + (Math.max(-AXIS_DECADES, Math.min(AXIS_DECADES, Math.log10(ratio))) / AXIS_DECADES) * 50;
+
+/** True where a ratio runs past the axis and its bar is drawn cut. */
+const saturates = (ratio: number): boolean => Math.abs(Math.log10(ratio)) > AXIS_DECADES;
+
+/** A bar from the centre out to one ratio. */
+const barOf = (ratio: number): string => {
+    const at = positionOf(ratio);
+
+    return at < 50 ? `right:50%;width:${String(50 - at)}%` : `left:50%;width:${String(at - 50)}%`;
+};
+
+/** A bar spanning the interval two ratios bound. */
+const intervalOf = (low: number, high: number): string => {
+    const from = positionOf(low);
+    const to = positionOf(high);
+
+    return `left:${String(Math.min(from, to))}%;width:${String(Math.max(2, Math.abs(to - from)))}%`;
+};
+
+/** The range a pooled measurement observed, in milliseconds, or a dash where it reported none. */
+const rangeOf = (spread: ProfileSpread | undefined): string => (spread === undefined || formatRange(spread) === '' ? '-' : formatRange(spread));
+
+/** Consecutive columns that share a heading, such as the backend they were measured on. */
+const groups = columns.reduce<{ label: string; span: number }[]>((built, column) => {
+    if (column.group === null) return built;
+
+    const last = built.at(-1);
+
+    if (last !== undefined && last.label === column.group) {
+        last.span += 1;
+
+        return built;
+    }
+
+    return [...built, { label: column.group, span: 1 }];
+}, []);
+
+/** What a cell announces itself as once the block is stacked into cards. */
+const labelOf = (index: number): string => {
+    const column = columns[index];
+
+    if (column === undefined) return '';
+
+    return column.group === null ? `vs ${column.label}` : `${column.group} · vs ${column.label}`;
+};
+
+/** The word beside a factor: which arm the comparison favours, or nothing where it favours neither. */
+const winnerOf = (cell: ProfileCell): string => {
+    const side = cell.verdict.side;
+
+    return side === 'exojs' ? 'ExoJS' : side === 'competitor' ? armLabel(cell.competitor) : '';
+};
+---
+
+<figure class="comparison">
+    <table aria-label={label}>
+        <thead>
+            {groups.length > 0 && (
+                <tr class="groups">
+                    <td colspan={countColumn ? 2 : 1} />
+                    {groups.map(group => (
+                        <th scope="colgroup" colspan={group.span}>
+                            {group.label}
+                        </th>
+                    ))}
+                </tr>
+            )}
+            <tr>
+                <th scope="col" class="col-archetype">Archetype</th>
+                {countColumn && <th scope="col" class="col-count">{unit === 'bodies' ? 'Bodies' : 'Nodes'}</th>}
+                {columns.map(column => (
+                    <th scope="col" class="col-arm">
+                        {column.overline !== '' && <span class="overline">{column.overline}</span>}
+                        <span class="arm">
+                            <i>vs</i>
+                            {column.label}
+                        </span>
+                    </th>
+                ))}
+            </tr>
+        </thead>
+        <tbody>
+            {rows.map((row, index) => (
+                <>
+                    {row.section !== null && row.section !== rows[index - 1]?.section && (
+                        <tr class="section">
+                            <td colspan={columns.length + (countColumn ? 2 : 1)}>{row.section}</td>
+                        </tr>
+                    )}
+                    <tr>
+                        <th scope="row">
+                            {row.archetype}
+                            {row.count !== null && !countColumn && (
+                                <span class="row-count">
+                                    {row.count} {unit}
+                                </span>
+                            )}
+                        </th>
+                        {countColumn && (
+                            <td class="count" data-label="Bodies">
+                                {row.count}
+                            </td>
+                        )}
+                        {row.entries.map((entry, column) => {
+                            const cell = entry.cell;
+
+                            if (cell === null) {
+                                const reason =
+                                    entry.count === null
+                                        ? 'This archetype was not measured on this backend.'
+                                        : `No shared cell at ${String(entry.count)} ${unit}: the arm sits this archetype out, or exceeded the run budget there.`;
+
+                                return (
+                                    <td class="cell empty" data-label={labelOf(column)} title={reason}>
+                                        <span class="dash" aria-label={reason}>
+                                            -
+                                        </span>
+                                        <details class="more empty-more">
+                                            <summary>Details</summary>
+                                            <p>{reason}</p>
+                                        </details>
+                                    </td>
+                                );
+                            }
+
+                            const outcome = outcomeOf(cell);
+                            const mixed = outcome === 'unstable';
+                            const band = mixed ? ratioBand(cell) : null;
+                            const factor = mixed ? pooledFactor(cell) : cell.verdict.factor;
+                            const ratio = cell.verdict.ratio;
+                            const plotted = !mixed && ratio !== null && Number.isFinite(ratio) && ratio > 0;
+
+                            return (
+                                <td class="cell" data-label={labelOf(column)}>
+                                    <span class="tracks">
+                                        <span class="plot">
+                                            <span class="axis" />
+                                            {band !== null && (
+                                                <span
+                                                    class:list={['fill', 'mixed', (saturates(band.low) || saturates(band.high)) && 'cut']}
+                                                    style={intervalOf(band.low, band.high)}
+                                                />
+                                            )}
+                                            {plotted && ratio !== null && (
+                                                <span
+                                                    class:list={['fill', outcome, saturates(ratio) && (ratio < 1 ? 'cut-left' : 'cut-right')]}
+                                                    style={barOf(ratio)}
+                                                />
+                                            )}
+                                        </span>
+                                        <span class="track">
+                                            <span class:list={['verdict', mixed ? 'unclear' : outcome]}>
+                                                <b>{mixed ? (factor === null ? '-' : formatApproximate(factor)) : formatFactor(factor)}</b>
+                                                <i>{mixed ? 'no clear lead' : winnerOf(cell)}</i>
+                                            </span>
+                                            <span class="medians">
+                                                <b class:list={[cell.referenceOverFrameBudget && 'warn']}>{formatMs(cell.referenceMs)}</b>
+                                                <em>vs</em>
+                                                <b class:list={[cell.competitorOverFrameBudget && 'warn']}>{formatMs(cell.competitorMs)}</b> ms
+                                            </span>
+                                        </span>
+                                        <details class="more">
+                                                <summary>Details</summary>
+                                                <dl>
+                                                    <div>
+                                                        <dt>p95</dt>
+                                                        <dd>
+                                                            {formatMs(cell.referenceP95Ms)} vs {formatMs(cell.competitorP95Ms)} ms
+                                                        </dd>
+                                                    </div>
+                                                    <div>
+                                                        <dt>run range</dt>
+                                                        <dd>
+                                                            <span class:list={[isWideSpread(cell.aggregate.reference) && 'warn']}>
+                                                                {rangeOf(cell.aggregate.reference)}
+                                                            </span>{' '}
+                                                            vs{' '}
+                                                            <span class:list={[isWideSpread(cell.aggregate.competitor) && 'warn']}>
+                                                                {rangeOf(cell.aggregate.competitor)}
+                                                            </span>{' '}
+                                                            ms
+                                                        </dd>
+                                                    </div>
+                                                    <div>
+                                                        <dt>spread</dt>
+                                                        <dd>
+                                                            {formatSpread(cell.aggregate.reference)} vs {formatSpread(cell.aggregate.competitor)}
+                                                        </dd>
+                                                    </div>
+                                                    {band !== null && (
+                                                        <div>
+                                                            <dt>run ratios</dt>
+                                                            <dd>{formatBand(band)}</dd>
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <dt>60 fps frame</dt>
+                                                        <dd>
+                                                            {[
+                                                                { name: 'ExoJS', share: frameShare(cell.referenceMs) },
+                                                                { name: armLabel(cell.competitor), share: frameShare(cell.competitorMs) },
+                                                            ].map(entry => (
+                                                                <span class="budget-row">
+                                                                    <em>{entry.name}</em>
+                                                                    <span class="budget">
+                                                                        <i
+                                                                            class:list={[entry.share !== null && entry.share > 100 && 'over']}
+                                                                            style={`width:${String(Math.min(100, entry.share ?? 0))}%`}
+                                                                        />
+                                                                    </span>
+                                                                    <b class:list={[entry.share !== null && entry.share > 100 && 'warn']}>
+                                                                        {entry.share === null ? '-' : `${entry.share.toFixed(1)}%`}
+                                                                    </b>
+                                                                </span>
+                                                            ))}
+                                                        </dd>
+                                                    </div>
+                                                    <div>
+                                                        <dt>runs</dt>
+                                                        <dd>
+                                                            <span class="runs" title={describeRungs(cell.aggregate.rungs)}>
+                                                                {cell.aggregate.rungs.map(rung => (
+                                                                    <span class:list={['run', rungSide(rung)]} />
+                                                                ))}
+                                                            </span>
+                                                            {describeRungs(cell.aggregate.rungs)}
+                                                        </dd>
+                                                    </div>
+                                                    {cell.mechanism !== null && (
+                                                        <div>
+                                                            <dt>mechanism</dt>
+                                                            <dd>{cell.mechanism}</dd>
+                                                        </div>
+                                                    )}
+                                            </dl>
+                                        </details>
+                                    </span>
+                                </td>
+                            );
+                        })}
+                    </tr>
+                </>
+            ))}
+        </tbody>
+    </table>
+    <figcaption>
+        Bars share one log axis across the whole page: the centre is 1.00x and each side reaches 100x, with anything past that drawn cut. A hollow bar is a
+        pair whose pooled runs landed on different rungs; it spans the interval they produced, publishes no verdict, and prints the two medians' own factor
+        with a tilde. A dash is a pair with no shared cell. Open a comparison for its p95, what share of a {FRAME_BUDGET_MS} ms frame each time takes, and
+        which way each pooled run fell.
+    </figcaption>
+</figure>
+
+<style>
+    .comparison {
+        margin: 0;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+
+    th,
+    td {
+        padding: 0.5rem 0.7rem;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid var(--line-soft);
+    }
+
+    thead th {
+        background: var(--bg-elevated);
+        padding-block: 0.5rem;
+        vertical-align: bottom;
+    }
+
+    tr.groups th {
+        padding-block: 0.4rem 0;
+        border-bottom: 0;
+        font-family: var(--f-mono);
+        font-size: 0.66rem;
+        font-weight: 600;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: var(--fg-faint);
+    }
+
+    tr.groups th + th {
+        border-left: 1px solid var(--line-soft);
+    }
+
+    tr.groups td {
+        background: var(--bg-elevated);
+        border-bottom: 0;
+    }
+
+    .overline {
+        display: block;
+        font-family: var(--f-mono);
+        font-size: 0.62rem;
+        font-weight: 400;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: var(--fg-faint);
+    }
+
+    .arm {
+        display: block;
+        font-family: var(--f-mono);
+        font-size: 0.82rem;
+        color: var(--fg);
+    }
+
+    /* The column is a comparison, not a third measurement column; the word says so without competing with the name. */
+    .arm i {
+        font-style: normal;
+        margin-right: 0.35rem;
+        font-weight: 400;
+        color: var(--fg-faint);
+    }
+
+    .col-archetype {
+        width: 12rem;
+    }
+
+    .col-count {
+        width: 5rem;
+    }
+
+    .col-arm {
+        width: 20rem;
+    }
+
+    tbody th {
+        font-family: var(--f-mono);
+        font-size: 0.78rem;
+        font-weight: 600;
+        overflow-wrap: anywhere;
+    }
+
+    .row-count {
+        display: none;
+    }
+
+    tr.section td {
+        background: var(--bg-panel);
+        padding-block: 0.25rem;
+        font-size: 0.64rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--fg-faint);
+    }
+
+    .count {
+        font-family: var(--f-mono);
+        font-size: 0.76rem;
+        color: var(--fg-muted);
+        text-align: right;
+    }
+
+    .dash {
+        display: block;
+        font-family: var(--f-mono);
+        font-size: 0.9rem;
+        color: var(--fg-faint);
+    }
+
+    /* The text track is sized to its longest line; the plot takes whatever the column has left, so the axis is as wide as the layout allows. */
+    .tracks {
+        display: grid;
+        grid-template-columns: 10.5rem minmax(4rem, 1fr);
+        align-items: start;
+        gap: var(--s-3);
+    }
+
+    .track {
+        min-width: 0;
+        order: 1;
+    }
+
+    /* The disclosure spans the cell rather than the text track: its rows are prose and wrap badly in ten rem. */
+    .more {
+        grid-column: 1 / -1;
+        order: 3;
+    }
+
+    .plot {
+        position: relative;
+        display: block;
+        order: 2;
+        height: 14px;
+        margin-top: 0.2rem;
+    }
+
+    .axis {
+        position: absolute;
+        left: 50%;
+        top: -0.55rem;
+        bottom: -0.85rem;
+        width: 1px;
+        background: var(--line);
+    }
+
+    .fill {
+        position: absolute;
+        top: 3px;
+        height: 8px;
+        border-radius: 2px;
+    }
+
+    .fill.clear-lead,
+    .fill.lead {
+        background: var(--bench-lead);
+    }
+
+    .fill.level {
+        background: var(--fg-faint);
+        min-width: 3px;
+    }
+
+    .fill.loss,
+    .fill.clear-loss {
+        background: var(--bench-loss);
+    }
+
+    /*
+     * A pair the runs split on is drawn as the interval they spanned: hollow,
+     * in neither side's hue, and crossing the centre wherever the runs did.
+     * Filling it would make an undecided measurement look like a decided one.
+     */
+    .fill.mixed {
+        background: none;
+        border: 1px dashed color-mix(in oklab, var(--fg-faint), transparent 15%);
+    }
+
+    /* A cut end says the bar ran past the shared axis; its printed factor is still the measured one. */
+    .fill.cut-right,
+    .fill.cut {
+        clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 50%, calc(100% - 5px) 100%, 0 100%);
+    }
+
+    .fill.cut-left {
+        clip-path: polygon(5px 0, 100% 0, 100% 100%, 5px 100%, 0 50%);
+    }
+
+    .verdict {
+        display: block;
+        font-family: var(--f-mono);
+        line-height: 1.25;
+    }
+
+    .verdict b {
+        font-size: 0.88rem;
+        font-weight: 700;
+    }
+
+    .verdict i {
+        font-style: normal;
+        margin-left: 0.4rem;
+        font-size: 0.72rem;
+        color: var(--fg-muted);
+    }
+
+    .verdict.clear-lead b,
+    .verdict.lead b {
+        color: var(--bench-lead);
+    }
+
+    .verdict.level b {
+        color: var(--fg-muted);
+    }
+
+    .verdict.loss b,
+    .verdict.clear-loss b {
+        color: var(--bench-loss);
+    }
+
+    .verdict.unclear b {
+        color: var(--fg-muted);
+    }
+
+    /* Without a side to name, the state gets the line the winner's name would have had. */
+    .verdict.unclear i {
+        display: block;
+        margin-left: 0;
+    }
+
+    .medians {
+        display: block;
+        margin-top: 0.25rem;
+        font-family: var(--f-mono);
+        font-size: 0.76rem;
+        color: var(--fg-muted);
+    }
+
+    .medians b {
+        font-weight: 600;
+        color: var(--fg);
+    }
+
+    .medians em {
+        font-style: normal;
+        margin: 0 0.15rem;
+        opacity: 0.7;
+    }
+
+    /* Amber is a measurement warning and nothing else: a time past the frame, or runs that moved too far to trust. */
+    .warn {
+        color: var(--bench-mark);
+    }
+
+    .more summary {
+        cursor: pointer;
+        font-family: var(--f-mono);
+        font-size: 0.68rem;
+        color: var(--fg-faint);
+    }
+
+    .more summary:hover {
+        color: var(--fg-muted);
+    }
+
+    .more dl {
+        display: grid;
+        grid-template-columns: 6.5rem minmax(0, 1fr);
+        column-gap: var(--s-3);
+        margin: 0.4rem 0 0;
+        font-family: var(--f-mono);
+        font-size: 0.68rem;
+        line-height: 1.5;
+        color: var(--fg-muted);
+    }
+
+    .more dl > div {
+        display: contents;
+    }
+
+    .more dt {
+        color: var(--fg-faint);
+    }
+
+    .more dd {
+        margin: 0 0 0.35rem;
+        overflow-wrap: anywhere;
+    }
+
+    .empty-more p {
+        max-width: 32rem;
+        margin: 0.4rem 0 0;
+        font-family: var(--f-mono);
+        font-size: 0.68rem;
+        line-height: 1.5;
+        color: var(--fg-muted);
+    }
+
+    /*
+     * A millisecond figure only means something against the frame it has to fit
+     * in. Nothing is derived from the share - no verdict, no capacity figure -
+     * it restates the published time in the unit a reader already thinks in.
+     */
+    .budget-row {
+        display: grid;
+        grid-template-columns: 4.5rem minmax(3rem, 1fr) 3rem;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .budget-row em {
+        font-style: normal;
+        color: var(--fg-faint);
+    }
+
+    .budget {
+        display: block;
+        height: 5px;
+        border-radius: 3px;
+        background: color-mix(in oklab, var(--fg-faint), transparent 85%);
+    }
+
+    .budget i {
+        display: block;
+        height: 100%;
+        border-radius: 3px;
+        background: var(--fg-muted);
+    }
+
+    .budget i.over {
+        background: var(--bench-mark);
+    }
+
+    .budget-row b {
+        font-weight: 400;
+        text-align: right;
+    }
+
+    /*
+     * The profile records which rung each pooled run reached but not the median
+     * behind it, so a run can be shown as a side and never on the axis. Four
+     * marks that sit together and four that straddle the middle are different
+     * measurements with the same printed range.
+     */
+    .runs {
+        display: inline-flex;
+        gap: 3px;
+        margin-right: 0.5rem;
+        vertical-align: middle;
+    }
+
+    .run {
+        width: 7px;
+        height: 7px;
+        border-radius: 2px;
+    }
+
+    .run.exojs {
+        background: var(--bench-lead);
+    }
+
+    .run.competitor {
+        background: var(--bench-loss);
+    }
+
+    .run.neither {
+        background: var(--fg-faint);
+    }
+
+    figcaption {
+        max-width: none;
+        margin-top: var(--s-3);
+        color: var(--fg-faint);
+        font-size: 0.72rem;
+        line-height: 1.5;
+    }
+
+    /*
+     * Narrow, the matrix becomes one card per archetype. The switch is on this
+     * block's own width because a docs page can hand it far less room than the
+     * window suggests, and it is a real re-layout rather than a scrollbar: the
+     * measurements never move sideways.
+     */
+    @container (width < 56rem) {
+        table,
+        thead,
+        tbody,
+        tr,
+        th,
+        td {
+            display: block;
+            width: auto;
+        }
+
+        thead {
+            display: none;
+        }
+
+        tbody tr:not(.section) {
+            margin-bottom: var(--s-3);
+            border: 1px solid var(--line-soft);
+            border-radius: var(--r-3);
+            background: var(--bg-elevated);
+            padding: var(--s-3) var(--s-4);
+        }
+
+        tbody tr.section td {
+            margin: var(--s-5) 0 var(--s-2);
+            padding: 0;
+            background: none;
+            border-bottom: 0;
+        }
+
+        th,
+        td {
+            padding: 0;
+            border-bottom: 0;
+        }
+
+        tbody th[scope='row'] {
+            font-size: 0.92rem;
+            padding-bottom: var(--s-2);
+            margin-bottom: var(--s-2);
+            border-bottom: 1px solid var(--line-soft);
+        }
+
+        .row-count {
+            display: block;
+            margin-top: 0.15rem;
+            font-size: 0.7rem;
+            font-weight: 400;
+            color: var(--fg-faint);
+        }
+
+        .cell,
+        .count {
+            padding: var(--s-2) 0;
+            border-top: 1px solid color-mix(in oklab, var(--line-soft), transparent 45%);
+            text-align: left;
+        }
+
+        .cell::before,
+        .count::before {
+            content: attr(data-label);
+            display: block;
+            margin-bottom: 0.35rem;
+            font-family: var(--f-mono);
+            font-size: 0.68rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: var(--fg-faint);
+        }
+
+        /* Stacked, the bar leads the comparison full width: there is no column of bars left to align down. */
+        .tracks {
+            grid-template-columns: minmax(0, 1fr);
+            gap: var(--s-2);
+        }
+
+        .plot {
+            order: 0;
+            margin-top: 0;
+        }
+
+        .axis {
+            top: -2px;
+            bottom: -2px;
+        }
+    }
+</style>

@@ -179,6 +179,14 @@ script of its own: `pnpm lint --fix`, `pnpm test --coverage`,
 through one runner, `pnpm perf <name>` (`pnpm perf` lists them); the
 cross-library benchmarks through `pnpm bench` (see `packages/exojs-bench`).
 
+The root gate and lane runners share an output policy. `auto` is the default:
+it uses `normal` for an interactive terminal and `compact` for CI or redirected
+output. Override it with `--output normal|compact|silent|verbose`, or set
+`EXOJS_OUTPUT` for a process tree. Compact and silent runs stream complete
+output to `.workspace/logs/` without buffering it in memory; failures print the
+last diagnostic lines and the log path. Benchmark and release lanes keep at
+least normal output.
+
 ## Shared configuration
 
 `@codexo/exojs-config` (private, unpublished, never a runtime dependency) centralizes

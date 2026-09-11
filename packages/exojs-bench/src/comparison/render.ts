@@ -206,9 +206,9 @@ const renderRenderingBlocks = (input: RenderingInput): string[] => {
     }
 
     if (backend.webgl1.length > 0) {
-      lines.push('### WebGL1 arms - CPU time only', '');
+      lines.push('### Legacy WebGL1 arms - CPU time only', '');
       lines.push(
-        'Phaser 4 renders a WebGL1 context (verified against the installed dist). A gap against it can be caused by the backend generation as much as by the engine, and the WebGL2 structural probe cannot attach to say which - so these rows carry NO mechanism and are observations, not findings. They never share a table with the WebGL2/WebGPU arms.',
+        'These rows come from profiles measured before the Phaser arm received its verified WebGL2 context path. A gap against them can be caused by the backend generation as much as by the engine, and the WebGL2 structural probe could not attach to say which - so these rows carry NO mechanism and are observations, not findings.',
         '',
       );
 

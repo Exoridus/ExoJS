@@ -14,9 +14,9 @@
 // provenance/report skeletons, the Vite server, CLI arg parsing) live under
 // `../shared` and are shared with the rendering domain.
 //
-// The matter.js, planck.js and rapier adapter arms live under `adapters/`
-// alongside the native arm: each implements the `PhysicsAdapter` interface and
-// builds the shared deterministic scene from `adapters/scene.ts`. Their
+// The matter.js, planck.js, nape-js and rapier adapter arms live under
+// `adapters/` alongside the native arm: each implements the `PhysicsAdapter`
+// interface and builds the shared deterministic scene from `adapters/scene.ts`. Their
 // competitor libraries are loaded lazily via dynamic `import()`; a factory that
 // rejects (an unlinked competitor, or a browser that refuses the arm) is
 // recorded as an unavailable arm carrying that reason, never omitted.

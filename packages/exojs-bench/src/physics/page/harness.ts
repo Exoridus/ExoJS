@@ -120,6 +120,16 @@ const ARM_FACTORIES: ReadonlyArray<{
       return module.createRapierAdapter();
     },
   },
+  {
+    engine: 'nape-js',
+    config: 'default',
+    library: '@newkrok/nape-js',
+    create: async (): Promise<PhysicsAdapter> => {
+      const module = await import('../adapters/nape-js');
+
+      return module.createNapeJsAdapter();
+    },
+  },
 ];
 
 /** One arm's resolution outcome, cached so a matrix of cells constructs each arm once. */

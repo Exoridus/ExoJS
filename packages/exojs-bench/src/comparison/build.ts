@@ -31,18 +31,8 @@ export const REFERENCE_ENGINE = 'exojs';
 /** The reference arm's config. The retained tier is an opt-in and is reported separately, never as "the ExoJS number". */
 export const REFERENCE_CONFIG = 'current';
 
-/**
- * Arms that render through a WebGL1 context and therefore never share a row with
- * the WebGL2/WebGPU arms.
- *
- * Phaser 4's renderer is WebGL1 (verified against the installed dist, see
- * `adapters/phaser.ts`), so a gap against it can be caused by the backend
- * generation as much as by the engine, and the harness's WebGL2 structural probe
- * cannot attach to report which. Its rows go into their own clearly delimited
- * block, comparing CPU time only and stating that they carry no structural
- * mechanism - an observation rather than a finding.
- */
-const WEBGL1_ENGINES: readonly string[] = ['phaser'];
+/** Legacy arm identities whose old profiles measured Phaser through WebGL1. */
+const LEGACY_WEBGL1_ARM_KEYS: readonly string[] = ['phaser|default'];
 
 /** Category section order in the published table. */
 const CATEGORY_ORDER: readonly ArchetypeCategory[] = [
@@ -157,14 +147,17 @@ export interface BackendComparison {
   /** Rows measured but excluded, with reasons - published so the omissions are auditable. */
   readonly excluded: readonly ExcludedRow[];
   /**
-   * The separate WebGL1 block: CPU-time-only rows against the arms in
-   * {@link WEBGL1_ENGINES}. Empty when no such arm ran on this backend.
+   * The separate legacy WebGL1 block: CPU-time-only rows for profiles measured
+   * before Phaser's WebGL2 context injection. Empty for new profiles.
    */
   readonly webgl1: readonly ComparisonRow[];
 }
 
 /** Key identifying one arm's cell within a backend. */
 const cellKey = (engine: string, config: string, archetype: string, count: number): string => `${engine}|${config}|${archetype}|${count}`;
+
+/** Identity used to preserve the old CPU-only Phaser block while new WebGL2 profiles migrate. */
+const armKeyOf = (result: { readonly spec: { readonly engine: string; readonly config: string } }): string => `${result.spec.engine}|${result.spec.config}`;
 
 /** Whether a result can be compared at all: it measured, and it measured something. */
 const isComparable = (result: { status: string; note?: string }): boolean => result.status === 'ok';
@@ -210,8 +203,8 @@ const buildBackend = (backend: Backend, results: readonly CellResult[]): Backend
   const onBackend = results.filter(result => result.spec.backend === backend);
   const byKey = new Map(onBackend.map(result => [cellKey(result.spec.engine, result.spec.config, result.spec.archetype, result.spec.nodeCount), result]));
   const armEngines = [...new Set(onBackend.map(result => result.spec.engine))].filter(engine => engine !== REFERENCE_ENGINE).sort();
-  const competitors = armEngines.filter(engine => !WEBGL1_ENGINES.includes(engine));
-  const webgl1Engines = armEngines.filter(engine => WEBGL1_ENGINES.includes(engine));
+  const webgl1Engines = [...new Set(onBackend.filter(result => LEGACY_WEBGL1_ARM_KEYS.includes(armKeyOf(result))).map(result => result.spec.engine))];
+  const competitors = armEngines.filter(engine => !webgl1Engines.includes(engine));
   // Only archetypes the run actually MEASURED can constrain the count. An
   // archetype absent from the run says nothing about which count is valid, and
   // letting it veto would make every subset run produce an empty table; it is
