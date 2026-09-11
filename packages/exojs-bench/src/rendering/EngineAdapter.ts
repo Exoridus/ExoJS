@@ -14,6 +14,8 @@ export type ArchetypeId =
   | 'fill-layers'
   | 'tilemap-scroll'
   | 'tilemap-edit'
+  | 'particles-draw'
+  | 'particles-lifecycle'
   | 'batch-breaking'
   | 'batch-breaking-atlased'
   | 'split-screen'
@@ -41,7 +43,7 @@ export type ArchetypeId =
  * cell. Nothing in the report aggregates across archetypes.
  */
 export type ArchetypeCategory =
-  'node-scaling' | 'fill-and-state' | 'material-variety' | 'text' | 'render-targets' | 'camera-and-world' | 'submission' | 'tilemaps';
+  'node-scaling' | 'fill-and-state' | 'material-variety' | 'text' | 'render-targets' | 'camera-and-world' | 'submission' | 'tilemaps' | 'particles';
 
 /** Structural definition of a scene archetype, independent of any engine or backend. */
 export interface ArchetypeSpec {
@@ -273,6 +275,17 @@ export interface ArchetypeSpec {
    * dimensions.
    */
   readonly tilemap?: 'scroll' | 'edit';
+  /**
+   * Renders particles instead of a sprite scene, and whether the scene also
+   * simulates them.
+   *
+   * `'draw'` submits a fixed set of quads through the arm's particle draw path
+   * and advances nothing; `'lifecycle'` runs a steady effect - ageing, movement,
+   * fading, respawning - on top of that same path. The two answer different
+   * questions and a figure from one says nothing about the other, which is why
+   * they are separate archetypes. See `particles.ts` for the shared scene.
+   */
+  readonly particles?: 'draw' | 'lifecycle';
   /**
    * Number of chained post-process filters applied to the scene root, or
    * `undefined` for the unfiltered scene every other archetype builds.

@@ -52,6 +52,21 @@ const TILEMAP_COUNTS = [10_000, 100_000, 1_000_000] as const;
 const TILEMAP_EDIT_COUNTS = [10_000, 100_000] as const;
 
 /**
+ * Particle counts for the draw-only scene. Four steps spanning 1000x: the top
+ * one is a million quads submitted in a frame, which is where a particle draw
+ * path either holds up or does not.
+ */
+const PARTICLE_DRAW_COUNTS = [1_000, 10_000, 100_000, 1_000_000] as const;
+
+/**
+ * Particle counts for the lifecycle scene. It stops below the million the
+ * draw-only scene reaches: a million simulated particles measures each arm's
+ * update loop rather than the effect, and no effect anything ships keeps that
+ * many alive at once.
+ */
+const PARTICLE_LIFECYCLE_COUNTS = [1_000, 10_000, 100_000] as const;
+
+/**
  * Characters per text leaf across both text archetypes. Twelve is the length of
  * an ordinary label (a score, a name, a damage number) - long enough that layout
  * and glyph iteration dominate the per-node cost, short enough that no arm's
@@ -592,6 +607,41 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     mutationFraction: 0,
     cullingEnabled: true,
     tilemap: 'edit',
+  },
+  // PARTICLES. Two scenes on one draw path, kept apart because they answer
+  // different questions and a figure from one would be read as the other.
+  //
+  // `particles-draw` submits a fixed set of small translucent quads and
+  // simulates nothing, so it measures the submission path alone: an arm's
+  // particle renderer, Pixi's `ParticleContainer`, a Phaser emitter whose
+  // simulation is not stepped. A million quads here is a million quads drawn,
+  // NOT a million interactive sprites, and nothing in the published figure may
+  // suggest otherwise.
+  {
+    id: 'particles-draw',
+    category: 'particles',
+    crossArm: true,
+    nodeCounts: PARTICLE_DRAW_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    particles: 'draw',
+  },
+  // The same draw path with a steady effect on top: every particle ages, moves,
+  // fades and respawns at the end of its life, with the pool held at the node
+  // count. The delta against the row above is what the simulation costs, which
+  // is the half a bare container never pays.
+  {
+    id: 'particles-lifecycle',
+    category: 'particles',
+    crossArm: true,
+    nodeCounts: PARTICLE_LIFECYCLE_COUNTS,
+    nestingDepth: 1,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    particles: 'lifecycle',
   },
   {
     id: 'mask-clip-animated',

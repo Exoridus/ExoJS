@@ -53,6 +53,7 @@ const CATEGORY_ORDER: readonly ArchetypeCategory[] = [
   'render-targets',
   'camera-and-world',
   'tilemaps',
+  'particles',
   'submission',
 ];
 
@@ -65,6 +66,7 @@ const CATEGORY_TITLES: Readonly<Record<ArchetypeCategory, string>> = {
   'render-targets': 'Render targets',
   'camera-and-world': 'Camera and world',
   tilemaps: 'Tilemaps',
+  particles: 'Particles',
   submission: 'Submission paths',
 };
 

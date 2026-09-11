@@ -1,7 +1,9 @@
+import { AlphaFadeOverLifetime, Curve, particlesExtension, ParticleSystem } from '@codexo/exojs-particles';
 import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
 
 import { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import type { Seconds } from '#core/units';
 import { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
 import { CallbackRenderPass } from '#rendering/CallbackRenderPass';
@@ -31,7 +33,17 @@ import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
-import { createDistinctTextureCanvas, createTileAtlasCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
+import {
+  isParticleLifecycle,
+  isParticles,
+  PARTICLE_ALPHA,
+  PARTICLE_LIFETIME,
+  PARTICLE_PREROLL_STEPS,
+  PARTICLE_STEP,
+  PARTICLE_TINT,
+  particleSeedAt,
+} from '../particles';
+import { createDistinctTextureCanvas, createParticleCanvas, createTileAtlasCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
 import type { TilemapExtent } from '../tilemap';
 import {
   isTilemap,
@@ -563,6 +575,118 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
     tilemapSpec = null;
   };
 
+  /** The particle system the particle scenes draw, or `null` for every other archetype. */
+  let particleSystem: ParticleSystem | null = null;
+  let particleTexture: Texture | null = null;
+  let particleSpec: ArchetypeSpec | null = null;
+
+  /**
+   * Fill the system up to its capacity, giving each particle the shared scene's
+   * deterministic state.
+   *
+   * `emit()` returns `null` once the pool is full, which is what holds the live
+   * count at the node count: the scene tops the pool up every frame rather than
+   * spawning at a rate and hoping the two balance out.
+   */
+  const fillParticles = (count: number, initial: boolean): void => {
+    for (let filled = 0; filled < count; filled += 1) {
+      const particle = particleSystem!.emit();
+
+      if (particle === null) {
+        return;
+      }
+
+      // The cursor walks the whole seed set rather than restarting at zero, so a
+      // respawn lands on the next unused layout instead of piling every
+      // replacement onto the same handful of positions - which is what turned
+      // the pool into a few dense clusters while the arms beside it stayed
+      // evenly spread.
+      const index = particleCursor % count;
+
+      particleCursor += 1;
+
+      const seed = particleSeedAt(index, count);
+
+      particle.position.set(seed.x, seed.y);
+      particle.velocity.set(seed.velocityX, seed.velocityY);
+      // The sprite is already PARTICLE_SIZE square, and `scale` is a factor:
+      // setting it to the size would draw a quad four times too large.
+      particle.scale.set(1, 1);
+      particle.color = PARTICLE_TINT;
+      if (particleLifetime === null) {
+        // The draw-only scene never advances, so its particles must not expire:
+        // a finite life would shrink the pool over a long cell for no reason the
+        // scene is measuring.
+        particle.lifetime = Number.MAX_SAFE_INTEGER;
+      } else {
+        // On the first fill each particle gets what is LEFT of one lifetime, so
+        // the pool starts evenly aged and its respawns land on different frames
+        // instead of arriving as one burst.
+        particle.lifetime = initial ? Math.max(PARTICLE_STEP, particleLifetime - seed.age) : particleLifetime;
+      }
+    }
+  };
+
+  /** Next seed index a spawn takes; see {@link fillParticles}. */
+  let particleCursor = 0;
+
+  /** Seconds a particle lives, or `null` in the draw-only scene, which never ages one. */
+  let particleLifetime: number | null = null;
+
+  /**
+   * Build the particle scene: a system at the node count's capacity, filled
+   * once, and - for the lifecycle scene - advanced through one full lifetime so
+   * the timed window sees a steady pool rather than a settling one.
+   */
+  const buildParticleScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const texture = new Texture(createParticleCanvas());
+    const system = new ParticleSystem(texture, { capacity: nodeCount });
+
+    particleSystem = system;
+    particleTexture = texture;
+    particleSpec = spec;
+    particleLifetime = isParticleLifecycle(spec) ? PARTICLE_LIFETIME : null;
+    particleCursor = 0;
+
+    system.setBlendMode(BlendModes.Normal);
+
+    if (particleLifetime !== null) {
+      // Linear fade over the life, the shared scene's one update rule. Every arm
+      // applies the same one, so no arm is paying for an effect the others skip.
+      // From the scene's alpha to zero. The module's default curve starts at 1,
+      // which would make this arm's particles twice as bright as every other
+      // arm's for the whole of their lives.
+      system.addUpdateModule(
+        new AlphaFadeOverLifetime(
+          new Curve([
+            { t: 0, v: PARTICLE_ALPHA },
+            { t: 1, v: 0 },
+          ]),
+        ),
+      );
+    }
+
+    root = new Container();
+    root.addChild(system);
+
+    fillParticles(nodeCount, true);
+
+    for (let step = 0; step < (particleLifetime === null ? 0 : PARTICLE_PREROLL_STEPS); step += 1) {
+      system.update(PARTICLE_STEP as Seconds);
+      fillParticles(nodeCount, false);
+    }
+  };
+
+  /** Drop the particle scene so a rebuild (or teardown) leaks no GPU resources. */
+  const releaseParticles = (): void => {
+    particleSystem?.destroy();
+    particleSystem = null;
+    particleTexture?.destroy();
+    particleTexture = null;
+    particleSpec = null;
+    particleLifetime = null;
+  };
+
   return {
     engine: 'exojs',
     config,
@@ -591,7 +715,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         // contributes renderer bindings rather than scene work, and an engine
         // configured differently per archetype would make two archetypes'
         // numbers describe two engines.
-        extensions: [tilemapExtension],
+        extensions: [tilemapExtension, particlesExtension],
       });
 
       // Boot the full production init path (awaits the backend's async
@@ -619,6 +743,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       releaseBatchScene();
       releaseComposite();
       releaseTilemap();
+      releaseParticles();
       sharedMeshGeometry?.destroy();
       sharedMeshGeometry = null;
 
@@ -626,6 +751,14 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       // a packed layer rather than nodes, so nothing below applies to them.
       if (isTilemap(spec)) {
         buildTilemapScene(spec, nodeCount);
+
+        return;
+      }
+
+      // The particle scenes leave the sprite path behind too: their leaves live
+      // in the system's own storage rather than in the scene graph.
+      if (isParticles(spec)) {
+        buildParticleScene(spec, nodeCount);
 
         return;
       }
@@ -895,6 +1028,19 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
     },
 
     mutate(frame: number): void {
+      // Particle scenes: the lifecycle one advances the simulation and tops the
+      // pool back up, both inside the bracket, because ageing, moving, fading and
+      // respawning ARE the per-frame work it measures. The draw-only scene
+      // advances nothing - it submits the same quads every frame by design.
+      if (particleSpec !== null && particleSystem !== null) {
+        if (particleLifetime !== null) {
+          particleSystem.update(PARTICLE_STEP as Seconds);
+          fillParticles(particleSystem.capacity, false);
+        }
+
+        return;
+      }
+
       // Tilemap scenes: move the window, then submit this frame's tile changes.
       // Both belong in the bracket - scrolling and editing ARE the per-frame work
       // these scenes do, and an edit an arm defers past the draw would not be an
@@ -1048,6 +1194,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       releaseBatchScene();
       releaseComposite();
       releaseTilemap();
+      releaseParticles();
 
       if (root !== null) {
         root.destroy();

@@ -8,6 +8,8 @@ import {
   Culler,
   type Filter,
   Graphics,
+  Particle,
+  ParticleContainer,
   Rectangle,
   RendererType,
   RenderTexture,
@@ -19,7 +21,8 @@ import {
 
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
-import { createDistinctTextureCanvas, createTileAtlasCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
+import { isParticleLifecycle, isParticles, PARTICLE_ALPHA, PARTICLE_LIFETIME, PARTICLE_PREROLL_STEPS, PARTICLE_STEP, particleSeedAt } from '../particles';
+import { createDistinctTextureCanvas, createParticleCanvas, createTileAtlasCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
 import type { TilemapExtent } from '../tilemap';
 import {
   isTilemap,
@@ -413,6 +416,111 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
     tilemapSpec = null;
   };
 
+  /** The particle scene's container, or `null` for every other archetype. */
+  let particleContainer: ParticleContainer | null = null;
+  let particleList: Particle[] = [];
+  let particleTexture: Texture | null = null;
+  let particleSpec: ArchetypeSpec | null = null;
+  /** Per-particle simulation state the lifecycle scene advances; empty in the draw-only scene. */
+  let particleVelocityX: Float32Array = new Float32Array(0);
+  let particleVelocityY: Float32Array = new Float32Array(0);
+  let particleAge: Float32Array = new Float32Array(0);
+
+  /**
+   * Advance the lifecycle scene by one fixed step: age, move, fade, and respawn
+   * whatever reached the end of its life.
+   *
+   * This is HARNESS code, not a Pixi feature, and the comparison says so.
+   * `ParticleContainer` is a draw path - it has no emitter, no ageing and no
+   * respawn - so the lifecycle scene pairs it with exactly the shared update
+   * rule every other arm runs, written out here. It sits inside the measured
+   * bracket, because it is work this arm genuinely performs.
+   */
+  const advanceParticles = (): void => {
+    const count = particleList.length;
+
+    for (let index = 0; index < count; index += 1) {
+      const particle = particleList[index]!;
+      let age = particleAge[index]! + PARTICLE_STEP;
+
+      if (age >= PARTICLE_LIFETIME) {
+        const seed = particleSeedAt(index, count);
+
+        age = 0;
+        particle.x = seed.x;
+        particle.y = seed.y;
+        particleVelocityX[index] = seed.velocityX;
+        particleVelocityY[index] = seed.velocityY;
+      } else {
+        particle.x += particleVelocityX[index]! * PARTICLE_STEP;
+        particle.y += particleVelocityY[index]! * PARTICLE_STEP;
+      }
+
+      particleAge[index] = age;
+      particle.alpha = PARTICLE_ALPHA * (1 - age / PARTICLE_LIFETIME);
+    }
+  };
+
+  /**
+   * Build the particle scene: one `ParticleContainer` holding the node count's
+   * worth of particles.
+   *
+   * The draw-only scene declares every property static, which is the fastest
+   * shape this API offers and the one a project drawing a fixed set of quads
+   * would use. The lifecycle scene declares position and colour dynamic,
+   * because it changes both every frame - declaring them static there would
+   * measure a scene whose motion never reaches the GPU.
+   */
+  const buildParticleScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const texture = Texture.from(createParticleCanvas());
+    const lifecycle = isParticleLifecycle(spec);
+    const container = new ParticleContainer({
+      dynamicProperties: { position: lifecycle, rotation: false, vertex: false, uvs: false, color: lifecycle },
+    });
+
+    particleList = new Array<Particle>(nodeCount);
+    particleVelocityX = new Float32Array(lifecycle ? nodeCount : 0);
+    particleVelocityY = new Float32Array(lifecycle ? nodeCount : 0);
+    particleAge = new Float32Array(lifecycle ? nodeCount : 0);
+
+    for (let index = 0; index < nodeCount; index += 1) {
+      const seed = particleSeedAt(index, nodeCount);
+      // Centred, because the ExoJS particle storage positions a particle by its
+      // centre; left at Pixi's top-left default the two arms would draw the same
+      // scene half a particle apart.
+      const particle = new Particle({ texture, x: seed.x, y: seed.y, alpha: PARTICLE_ALPHA, anchorX: 0.5, anchorY: 0.5 });
+
+      if (lifecycle) {
+        particleVelocityX[index] = seed.velocityX;
+        particleVelocityY[index] = seed.velocityY;
+        // Evenly aged at the start, so respawns land on different frames
+        // instead of arriving as one burst.
+        particleAge[index] = seed.age;
+      }
+
+      particleList[index] = particle;
+      container.addParticle(particle);
+    }
+
+    particleContainer = container;
+    particleTexture = texture;
+    particleSpec = spec;
+
+    for (let step = 0; step < (lifecycle ? PARTICLE_PREROLL_STEPS : 0); step += 1) {
+      advanceParticles();
+    }
+  };
+
+  /** Drop the particle scene so a rebuild (or teardown) leaks no GPU resources. */
+  const releaseParticles = (): void => {
+    particleContainer?.destroy({ children: true });
+    particleContainer = null;
+    particleList = [];
+    particleTexture?.destroy(true);
+    particleTexture = null;
+    particleSpec = null;
+  };
+
   return {
     engine: 'pixi',
     config,
@@ -479,6 +587,7 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
       }
 
       releaseTilemap();
+      releaseParticles();
 
       textures = [];
 
@@ -491,6 +600,13 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
       if (isTilemap(spec)) {
         buildTilemapScene(spec, nodeCount);
         root = tileRoot;
+
+        return;
+      }
+
+      if (isParticles(spec)) {
+        buildParticleScene(spec, nodeCount);
+        root = particleContainer;
 
         return;
       }
@@ -701,6 +817,16 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
     },
 
     mutate(frame: number): void {
+      // Particle scenes: the lifecycle one advances the shared update rule; the
+      // draw-only one submits the same quads every frame by design.
+      if (particleSpec !== null) {
+        if (isParticleLifecycle(particleSpec)) {
+          advanceParticles();
+        }
+
+        return;
+      }
+
       // Tilemap scenes: move the window, reveal the chunks it now overlaps, and
       // submit this frame's tile changes. An edit means repainting the chunk that
       // holds it - `Tilemap` has no per-tile update - and that repaint is the
@@ -832,6 +958,7 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
     teardown(): void {
       releaseBloom();
       releaseTilemap();
+      releaseParticles();
 
       if (root !== null) {
         root.destroy({ children: true });

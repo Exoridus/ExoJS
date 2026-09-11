@@ -1,3 +1,4 @@
+import { PARTICLE_SIZE } from './particles';
 import { TILE_SIZE, TILE_VARIANTS } from './tilemap';
 import { SPRITE_SIZE } from './world';
 
@@ -46,6 +47,32 @@ export const createDistinctTextureCanvas = (index: number, total: number): HTMLC
 
   context.fillStyle = `hsl(${hue}, 70%, 55%)`;
   context.fillRect(0, 0, SPRITE_SIZE, SPRITE_SIZE);
+
+  return canvas;
+};
+
+/**
+ * The particle sprite: one flat white {@link PARTICLE_SIZE} square.
+ *
+ * White and opaque, so the per-particle tint and alpha every arm applies are
+ * what decide the drawn colour - a coloured or pre-faded source would let one
+ * arm's tint handling show up as a brightness difference rather than as the
+ * cost it is.
+ */
+export const createParticleCanvas = (): HTMLCanvasElement => {
+  const canvas = document.createElement('canvas');
+
+  canvas.width = PARTICLE_SIZE;
+  canvas.height = PARTICLE_SIZE;
+
+  const context = canvas.getContext('2d');
+
+  if (context === null) {
+    throw new Error('A 2D context is required to generate the benchmark particle sprite.');
+  }
+
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, PARTICLE_SIZE, PARTICLE_SIZE);
 
   return canvas;
 };

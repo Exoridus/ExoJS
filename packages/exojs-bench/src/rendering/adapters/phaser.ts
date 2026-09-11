@@ -2,9 +2,11 @@ import * as Phaser from 'phaser';
 
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
+import { isParticleLifecycle, isParticles, PARTICLE_ALPHA, PARTICLE_LIFETIME, PARTICLE_STEP, particleSeedAt } from '../particles';
 import {
   createDigitAtlasCanvas,
   createDistinctTextureCanvas,
+  createParticleCanvas,
   createTileAtlasCanvas,
   DIGIT_ALPHABET,
   DIGIT_CELL_HEIGHT,
@@ -183,6 +185,97 @@ export const createPhaserAdapter = (): EngineAdapter => {
     tilemapSpec = null;
   };
 
+  /** The particle scene's emitter, or `null` for every other archetype. */
+  let particleEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+  let particleSpec: ArchetypeSpec | null = null;
+  /** Milliseconds of emitter time already simulated, so `preUpdate` gets a monotonic clock. */
+  let particleClockMs = 0;
+
+  /**
+   * Build the particle scene on Phaser's own emitter.
+   *
+   * The draw-only scene emits the whole pool at once and then never steps the
+   * emitter: the harness drives rendering alone, so an unstepped emitter holds
+   * its particles exactly where they were put - which is the resting simulation
+   * this scene asks every arm for. Their positions are overwritten from the
+   * shared layout, so this arm draws the identical picture rather than its own
+   * random spread.
+   *
+   * The lifecycle scene keeps Phaser's emitter doing the simulating, configured
+   * to the shared contract: a two second life, a steady rate that holds the pool
+   * at the node count, a linear drift and a linear fade. Its particles do not
+   * land on the same coordinates as the other arms' - the emitter draws its own
+   * randoms - and they are not supposed to: the comparison is of equal work, not
+   * of identical pixels, and forcing the positions would replace the emitter
+   * under test with harness code.
+   */
+  const buildParticleScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const key = `${SCENE_KEY}-particle`;
+
+    if (game!.textures.exists(key)) {
+      game!.textures.remove(key);
+    }
+
+    game!.textures.addCanvas(key, createParticleCanvas());
+
+    particleClockMs = 0;
+
+    if (isParticleLifecycle(spec)) {
+      const emitter = scene!.add.particles(0, 0, key, {
+        lifespan: PARTICLE_LIFETIME * 1000,
+        speed: { min: 20, max: 60 },
+        angle: { min: 0, max: 360 },
+        alpha: { start: PARTICLE_ALPHA, end: 0 },
+        // One emission per frame of the share of the pool that expires in it, so
+        // the live count holds at the node count instead of oscillating.
+        frequency: 0,
+        quantity: Math.max(1, Math.round(nodeCount / (PARTICLE_LIFETIME / PARTICLE_STEP))),
+        maxAliveParticles: nodeCount,
+        // Spread over the viewport through the emitter's own per-particle x/y
+        // ranges, so the pool fills the frame the way every other arm's does.
+        x: { min: 0, max: VIEWPORT_WIDTH },
+        y: { min: 0, max: VIEWPORT_HEIGHT },
+      });
+
+      // One full lifetime before the timed window, like every other arm's
+      // preroll: the pool reaches its steady state outside the measurement.
+      emitter.fastForward(PARTICLE_LIFETIME * 1000, PARTICLE_STEP * 1000);
+      particleClockMs = PARTICLE_LIFETIME * 1000;
+      particleEmitter = emitter;
+    } else {
+      const emitter = scene!.add.particles(0, 0, key, {
+        lifespan: Number.MAX_SAFE_INTEGER,
+        speed: 0,
+        alpha: PARTICLE_ALPHA,
+        emitting: false,
+        maxAliveParticles: nodeCount,
+      });
+
+      emitter.explode(nodeCount);
+
+      let index = 0;
+
+      emitter.forEachAlive(particle => {
+        const seed = particleSeedAt(index, nodeCount);
+
+        index += 1;
+        particle.x = seed.x;
+        particle.y = seed.y;
+      }, null);
+
+      particleEmitter = emitter;
+    }
+
+    particleSpec = spec;
+  };
+
+  /** Drop the particle scene so a rebuild (or teardown) leaks nothing. */
+  const releaseParticles = (): void => {
+    particleEmitter?.destroy();
+    particleEmitter = null;
+    particleSpec = null;
+  };
+
   return {
     engine: 'phaser',
     config: 'webgl2',
@@ -260,6 +353,13 @@ export const createPhaserAdapter = (): EngineAdapter => {
       }
 
       releaseTilemap();
+      releaseParticles();
+
+      if (isParticles(spec)) {
+        buildParticleScene(spec, nodeCount);
+
+        return;
+      }
 
       // The tilemap scenes leave the sprite path behind: the leaves are tiles in
       // a layer rather than game objects, so nothing below applies to them.
@@ -404,6 +504,18 @@ export const createPhaserAdapter = (): EngineAdapter => {
     },
 
     mutate(frame: number): void {
+      // Particle scenes: the lifecycle one steps Phaser's emitter, which is the
+      // simulation under comparison; the draw-only one steps nothing, so its
+      // particles stay where the build put them.
+      if (particleSpec !== null && particleEmitter !== null) {
+        if (isParticleLifecycle(particleSpec)) {
+          particleClockMs += PARTICLE_STEP * 1000;
+          particleEmitter.preUpdate(particleClockMs, PARTICLE_STEP * 1000);
+        }
+
+        return;
+      }
+
       // Tilemap scenes: scroll the camera, then submit this frame's tile changes.
       // The GPU layer reads its tiles from a data texture that does not follow a
       // tile write on its own, so regenerating that texture is what actually
@@ -462,7 +574,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
     },
 
     renderFrame(): void {
-      if (game === null || (root === null && tileLayer === null)) {
+      if (game === null || (root === null && tileLayer === null && particleEmitter === null)) {
         throw new Error('renderFrame was called before buildScene.');
       }
 
@@ -479,6 +591,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
 
     teardown(): void {
       releaseTilemap();
+      releaseParticles();
 
       if (game !== null) {
         // `destroy` only FLAGS pending destruction (normally consumed by the next
