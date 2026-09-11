@@ -196,7 +196,6 @@ jobs:
       - name: Build core
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-          EXOJS_FULL_BUNDLE: '1'
         run: pnpm build
 
       - name: Build extension packages

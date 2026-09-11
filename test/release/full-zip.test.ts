@@ -1,10 +1,11 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { scanForbiddenContent, writeSiteServer } from '../../scripts/release/full-zip';
+import { CORE_BUNDLE_FILES, scanForbiddenContent, vendorDirFor, writeSiteServer } from '../../scripts/release/full-zip';
+import { LOCKSTEP_PACKAGES } from '../../scripts/release/lockstep-packages';
 
 let tree: string;
 
@@ -19,6 +20,23 @@ beforeEach(() => {
 });
 
 afterEach(() => rmSync(tree, { recursive: true, force: true }));
+
+describe('vendor tree', () => {
+  it('ships exactly the single-file bundles the npm tarball ships', () => {
+    const files = (JSON.parse(readFileSync(resolve(import.meta.dirname!, '..', '..', 'package.json'), 'utf8')) as { files: string[] }).files;
+    const bundles = files.filter(f => f.startsWith('dist/') && !f.endsWith('/')).map(f => f.slice('dist/'.length));
+
+    expect([...CORE_BUNDLE_FILES].sort()).toEqual([...bundles].sort());
+  });
+
+  it('gives every lockstep package a distinct vendor directory', () => {
+    const dirs = LOCKSTEP_PACKAGES.map(p => vendorDirFor(p.name));
+
+    expect(new Set(dirs).size).toBe(LOCKSTEP_PACKAGES.length);
+    expect(dirs).toContain('exojs');
+    expect(dirs.every(d => !d.includes('/') && !d.startsWith('@'))).toBe(true);
+  });
+});
 
 describe('scanForbiddenContent', () => {
   it('passes a clean tree (compiled ESM + TS example sources, no forbidden patterns)', () => {

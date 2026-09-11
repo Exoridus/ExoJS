@@ -15,8 +15,8 @@
  *     directory instead and need no edit.
  *   - `scripts/ci/select-lanes.ts` RUNTIME_PACKAGES (dependency-free ESM that
  *     runs before any install, so it cannot import this TS module).
- *   - `site/scripts/sync-exo-vendor.ts` / `full-zip.ts` vendor tree - a smaller,
- *     site-owned set (the offline examples site only embeds packages it uses).
+ *   - `site/scripts/sync-exo-vendor.ts` vendor tree - a smaller, site-owned
+ *     set (the offline examples site only embeds packages it uses).
  */
 
 /** Order is canonical PUBLISH_ORDER: Core first (peer of every extension), then extensions. */
