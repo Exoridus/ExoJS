@@ -10,6 +10,14 @@ import type { PhysicsReportData } from '../src/physics/report';
 import type { Provenance } from '../src/rendering/driver';
 import type { ArchetypeId, Backend, CellResult } from '../src/rendering/EngineAdapter';
 import type { ReportData } from '../src/rendering/report';
+import type { ClockReport } from '../src/shared/clock';
+import type { TimerCheck } from '../src/shared/timerCheck';
+
+/**
+ * A clock fine enough that no fixture duration trips the timer check, so a test
+ * asserts on the comparison it is about rather than on the grid it was read on.
+ */
+const FINE_CLOCK: ClockReport = { resolutionMs: 0.001, crossOriginIsolated: true };
 
 /** A measured rendering cell, with everything the comparison does not read left at a neutral value. */
 const cell = (options: {
@@ -40,6 +48,7 @@ const cell = (options: {
   queueMsMedian: null,
   queueMsP95: null,
   structural: { drawCalls: options.drawCalls ?? 1, textureBinds: options.textureBinds ?? 1, bufferUploads: options.bufferUploads ?? 1 },
+  clock: FINE_CLOCK,
   status: options.status ?? 'ok',
 });
 
@@ -66,6 +75,7 @@ const stamp = (engineVersion = '0.17.0', overrides: Partial<Provenance> = {}): P
   browser: 'chromium',
   browserVersion: '151.0.7922.34',
   os: 'win32 10.0.26200',
+  clock: FINE_CLOCK,
   platformVersion: { major: 11, source: 'detected', evidence: "os.release() reported '10.0.26200'" },
   prerelease: { value: false, source: 'assumed-stable', evidence: 'no marker, none declared' },
   flags: ['--force-device-scale-factor=1'],
@@ -271,23 +281,53 @@ describe('buildRenderingComparison', () => {
     expect(blocks.map(block => block.backend)).toEqual(['webgl2']);
   });
 
-  test('picks one count for the whole table and applies it to every row', () => {
+  test('publishes a row per measured load rather than collapsing onto one count', () => {
     const [block] = buildRenderingComparison(fixture());
-    const counts = new Set(block!.sections.flatMap(section => section.rows.map(row => row.count)));
+    const rows = block!.sections.flatMap(section => section.rows);
 
-    expect(block!.headlineCount).toBe(5_000);
-    expect([...counts]).toEqual([5_000]);
+    expect(rows.filter(row => row.archetype === 'static-heavy').map(row => row.count)).toEqual([1_000, 5_000]);
+    expect(rows.filter(row => row.archetype === 'static-heavy').map(row => row.loadId)).toEqual(['1k', '5k']);
+  });
+
+  test('states the unit each load is counted in and marks the catalog headline', () => {
+    const [block] = buildRenderingComparison(fixture());
+    const rows = block!.sections.flatMap(section => section.rows);
+
+    expect(rows.find(row => row.archetype === 'static-heavy')!.unit).toBe('sprites');
+    expect(rows.find(row => row.archetype === 'text-static')!.unit).toBe('labels');
+    expect(rows.find(row => row.archetype === 'text-static' && row.count === 1_000)!.primary).toBe(true);
+    expect(rows.find(row => row.archetype === 'text-static' && row.count === 5_000)!.primary).toBe(false);
   });
 
   test('computes each verdict from the two medians', () => {
     const [block] = buildRenderingComparison(fixture());
     const rows = block!.sections.flatMap(section => section.rows);
-    const scaling = rows.find(row => row.archetype === 'static-heavy')!;
-    const text = rows.find(row => row.archetype === 'text-static')!;
+    const scaling = rows.find(row => row.archetype === 'static-heavy' && row.count === 5_000)!;
+    const text = rows.find(row => row.archetype === 'text-static' && row.count === 5_000)!;
 
     expect(scaling.cells[0]!.verdict.side).toBe('exojs');
     expect(scaling.cells[0]!.verdict.structural).toBe(true);
     expect(text.cells[0]!.verdict.side).toBe('neither');
+  });
+
+  test('qualifies each cell against the grid its own session read it on', () => {
+    const coarse: ClockReport = { resolutionMs: 0.5, crossOriginIsolated: false };
+    const [block] = buildRenderingComparison([
+      cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 5_000, cpuMsMedian: 1 }),
+      { ...cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 5_000, cpuMsMedian: 40, drawCalls: 50 }), clock: coarse },
+    ]);
+    const row = block!.sections.flatMap(section => section.rows).find(entry => entry.archetype === 'static-heavy')!;
+
+    // 40 ms clears a 0.5 ms grid, but the ExoJS arm's 1 ms does not stand ten
+    // steps above it, so the pair publishes no factor.
+    expect(row.cells[0]!.timer).toBe<TimerCheck>('resolved');
+
+    const [limited] = buildRenderingComparison([
+      { ...cell({ engine: 'exojs', archetype: 'static-heavy', nodeCount: 5_000, cpuMsMedian: 1 }), clock: coarse },
+      cell({ engine: 'pixi', config: 'default', archetype: 'static-heavy', nodeCount: 5_000, cpuMsMedian: 40, drawCalls: 50 }),
+    ]);
+
+    expect(limited!.sections.flatMap(section => section.rows)[0]!.cells[0]!.timer).toBe<TimerCheck>('limited');
   });
 
   test('files rows under category sections and never emits a category row', () => {
@@ -361,35 +401,48 @@ describe('buildPhysicsComparison', () => {
       physicsCell({ engine: 'matter-js', archetype, bodyCount, stepMsMedian: competitorMs, contactCount: 50 }),
     ]);
 
-  test('publishes a row per archetype at the top of that archetype own ladder', () => {
+  test('publishes a row per measured rung of the archetype own ladder', () => {
     const section = buildPhysicsComparison(sweep('box-stack', 1, 3));
 
-    expect(section.rows).toHaveLength(1);
-    expect(section.rows[0]!.count).toBe(ladderOf('box-stack').at(-1));
-    expect(section.rows[0]!.cells[0]!.verdict.side).toBe('exojs');
+    expect(section.rows.map(row => row.count)).toEqual([...ladderOf('box-stack')]);
+    expect(section.rows.every(row => row.cells[0]!.verdict.side === 'exojs')).toBe(true);
   });
 
-  test('gives each archetype the count from its OWN ladder, never one archetype the count of another', () => {
+  test('gives each archetype the counts from its OWN ladder, never one archetype the counts of another', () => {
     const section = buildPhysicsComparison([...sweep('box-stack', 1, 3), ...sweep('joints', 1, 3)]);
-    const counts = new Map(section.rows.map(row => [row.archetype, row.count]));
+    const counts = (archetype: string): number[] => section.rows.filter(row => row.archetype === archetype).map(row => row.count);
 
-    expect(counts.get('box-stack')).toBe(ladderOf('box-stack').at(-1));
-    expect(counts.get('joints')).toBe(ladderOf('joints').at(-1));
+    expect(counts('box-stack')).toEqual([...ladderOf('box-stack')]);
+    expect(counts('joints')).toEqual([...ladderOf('joints')]);
     // The two ladders share no rung, so a single table-wide count would have had
     // to publish one of these rows at the other's size, or publish neither.
-    expect(counts.get('box-stack')).not.toBe(counts.get('joints'));
+    expect(counts('box-stack').some(count => counts('joints').includes(count))).toBe(false);
   });
 
-  test('lowers one archetype to its next rung without moving any other archetype', () => {
+  test('drops only the rung an arm failed at, leaving every other rung of every archetype', () => {
     const ladder = ladderOf('box-stack');
     const results = [...sweep('box-stack', 1, 3), ...sweep('joints', 1, 3)].map(result =>
       result.spec.archetype === 'box-stack' && result.spec.bodyCount === ladder.at(-1) ? { ...result, status: 'exceeded' as const } : result,
     );
     const section = buildPhysicsComparison(results);
-    const counts = new Map(section.rows.map(row => [row.archetype, row.count]));
+    const counts = (archetype: string): number[] => section.rows.filter(row => row.archetype === archetype).map(row => row.count);
 
-    expect(counts.get('box-stack')).toBe(ladder.at(-2));
-    expect(counts.get('joints')).toBe(ladderOf('joints').at(-1));
+    expect(counts('box-stack')).toEqual(ladder.slice(0, -1));
+    expect(counts('joints')).toEqual([...ladderOf('joints')]);
+  });
+
+  test('checks the timer against the batch the clock bracketed, not the per-step quotient', () => {
+    const coarse: ClockReport = { resolutionMs: 0.001, crossOriginIsolated: false };
+    // 0.002 ms per step is two steps of the grid and would read as limited on its
+    // own; the harness timed 20 of them at once, so the bracket was 0.040 ms.
+    const batched = sweep('box-stack', 0.002, 0.002).map(result => ({ ...result, stepsPerSample: 20 }));
+
+    expect(buildPhysicsComparison(batched, coarse).rows[0]!.cells[0]!.timer).toBe<TimerCheck>('resolved');
+    expect(buildPhysicsComparison(sweep('box-stack', 0.002, 0.002), coarse).rows[0]!.cells[0]!.timer).toBe<TimerCheck>('limited');
+  });
+
+  test('reports an unrecorded clock as unknown rather than as a pass', () => {
+    expect(buildPhysicsComparison(sweep('box-stack', 1, 3)).rows[0]!.cells[0]!.timer).toBe<TimerCheck>('unknown');
   });
 
   test('publishes each arm p95 beside its median, and computes the verdict from the medians alone', () => {
@@ -572,20 +625,25 @@ describe('aggregatePhysicsRuns', () => {
     expect(() => aggregatePhysicsRuns([run(2), older])).toThrow(/different machine/);
   });
 
-  test('pools each archetype at the count its own ladder produced, and publishes its p95', () => {
-    const pooled = aggregatePhysicsRuns([run(3), run(3), run(3)]).section.rows[0]!;
+  test('pools every rung the ladder produced, keeping each load apart, and publishes its p95', () => {
+    const section = aggregatePhysicsRuns([run(3), run(3), run(3)]).section;
 
-    expect(pooled.count).toBe(boxStackLadder.at(-1));
-    expect(pooled.cells[0]!.referenceP95Ms).toBe(1.2);
-    expect(pooled.cells[0]!.competitorP95Ms).toBeCloseTo(3.6, 10);
+    expect(section.rows.map(row => row.count)).toEqual([...boxStackLadder]);
+    expect(section.rows[0]!.cells[0]!.referenceP95Ms).toBe(1.2);
+    expect(section.rows[0]!.cells[0]!.competitorP95Ms).toBeCloseTo(3.6, 10);
   });
 
-  test('rejects runs whose rows landed on different counts, which would pool medians of different scenes', () => {
+  test('drops a rung one run could not measure instead of pooling it with the rungs that stayed', () => {
     const lowered = physicsRun(
       run(3).results.map(result => (result.spec.bodyCount === boxStackLadder.at(-1) ? { ...result, status: 'exceeded' as const } : result)),
     );
+    const section = aggregatePhysicsRuns([run(3), run(3), lowered]).section;
+    const top = section.rows.find(row => row.count === boxStackLadder.at(-1))!;
 
-    expect(() => aggregatePhysicsRuns([run(3), run(3), lowered])).toThrow(/at different counts/);
+    // The rung is still published - two runs measured it - but it can no longer
+    // claim a verdict, because one run placed the pair on no rung at all.
+    expect(top.cells[0]!.aggregate.runs).toBe(2);
+    expect(top.cells[0]!.aggregate.stable).toBe(false);
   });
 
   test('recomputes the frame-budget mark from the pooled median, not from any one run', () => {
@@ -680,10 +738,12 @@ describe('renderComparison', () => {
         ),
       ),
     });
-    const row = document.split('\n').find(line => line.startsWith('| `box-stack`'))!;
+    const rows = document.split('\n').filter(line => line.startsWith('| `box-stack`'));
+    const row = rows.at(-1)!;
 
     expect(document).toContain('own body-count ladder');
     expect(document).toContain('rows are not comparable with one another');
+    expect(rows).toHaveLength(ladder.length);
     expect(row).toContain(`| ${String(ladder.at(-1))} |`);
     expect(row).toContain('20.000 ms');
     expect(row).toContain('over the 16.7 ms frame');

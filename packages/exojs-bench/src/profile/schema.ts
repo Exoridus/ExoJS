@@ -1,6 +1,7 @@
 import type { AggregatedBackendComparison, AggregatedSection } from '../comparison/pooled';
 import type { PhysicsClockReport } from '../physics/page/contract';
 import type { Backend } from '../rendering/EngineAdapter';
+import type { ClockReport } from '../shared/clock';
 import type { PlatformVersionStamp, PrereleaseStamp, RenderingBrowser } from '../shared/provenance';
 
 /**
@@ -54,9 +55,16 @@ export const BENCH_PROFILE_SCHEMA_VERSION = 7;
  * have since moved, and because the per-cell seed folds the body count in, a
  * moved rung is a different scene rather than the same one measured again.
  *
- * Version 6 is still read. Version 7 only adds the GPU frame time beside each
- * arm's CPU time, so every figure a version 6 document publishes still means
- * what it meant; such a cell reports no GPU time rather than a wrong one.
+ * Version 6 is still read, and every figure it publishes still means what it
+ * meant. Version 7 adds four things beside those figures rather than changing
+ * any of them: the GPU frame time next to each arm's CPU time; the load each row
+ * was measured at, with the unit it is counted in, so an archetype measured at
+ * several loads publishes a row per load instead of one row at a single
+ * table-wide count; what the measuring page's clock resolved to, recorded per
+ * rendering stamp; and, per published comparison, what the timer check made of
+ * the two durations behind it. A version 6 document carries none of those, so a
+ * reader offers one load per row and states that the clock was not recorded,
+ * rather than inferring either.
  */
 export const SUPPORTED_BENCH_PROFILE_SCHEMA_VERSIONS: readonly number[] = [6, BENCH_PROFILE_SCHEMA_VERSION];
 
@@ -202,6 +210,16 @@ export interface RenderingStamp {
   readonly software: boolean;
   /** Resolved WebGPU sprite-batch texture-slot tier; absent for a backend that negotiates none. */
   readonly slotTier?: number;
+  /**
+   * What the clock of this backend's first measuring page resolved to, or `null`
+   * where no session opened.
+   *
+   * Provenance for the reader: a run opens one browser session per arm, so this
+   * describes the conditions rather than qualifying any one comparison. What
+   * qualifies a comparison is the per-cell check the published model carries,
+   * which was taken against the grid of the session that actually timed it.
+   */
+  readonly clock: ClockReport | null;
   /** Engine version under test. */
   readonly engineVersion: string;
   /** ISO-8601 timestamp of the run. */

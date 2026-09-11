@@ -41,6 +41,7 @@ const toRenderingStamp = (provenance: Provenance): RenderingStamp => ({
   os: provenance.os,
   platformVersion: { ...provenance.platformVersion },
   prerelease: { ...provenance.prerelease },
+  clock: provenance.clock === null ? null : { ...provenance.clock },
   flags: [...provenance.flags],
   headless: provenance.headless,
   software: provenance.software,

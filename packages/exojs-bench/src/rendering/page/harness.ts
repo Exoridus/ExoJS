@@ -3,6 +3,8 @@
 // engine module instances) but never runs during a matrix cell.
 import './timerProbe';
 
+import type { ClockReport } from '../../shared/clock';
+import { probeClock } from '../../shared/clock';
 import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
 import { createCpuTimer, median, percentile, shouldAbort } from '../../shared/timing';
 import { createExoJsAdapter } from '../adapters/exojs';
@@ -136,6 +138,18 @@ const HARD_FRAME_BUDGET_MS = FRAME_BUDGET_MS * 10;
  * remainder means the harness has a bug (a fractional draw call is nonsense),
  * so the raw totals are surfaced instead and flagged via the returned note.
  */
+/**
+ * This page's clock grid, probed once and reused by every cell the session
+ * measures.
+ *
+ * Probing per cell would cost a five-figure loop before each measurement and
+ * answer the same question every time: the coarsening is a property of the
+ * browsing context, which does not change between two cells of one session.
+ */
+let probedClock: ClockReport | null = null;
+
+const pageClock = (): ClockReport => (probedClock ??= probeClock());
+
 const perFrameStructural = (totals: StructuralCounters, frames: number): { structural: StructuralCounters; note: string | null } => {
   const draws = totals.drawCalls / frames;
   const binds = totals.textureBinds / frames;
@@ -436,6 +450,7 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
       queueMsMedian,
       queueMsP95,
       structural,
+      clock: pageClock(),
       status: exceeded ? 'exceeded' : 'ok',
       ...(note !== null && { note }),
     };
@@ -583,12 +598,20 @@ const profileDispose = (): void => {
 
 declare global {
   var __runBaselineCell: ((cell: CellSpec) => Promise<CellResult>) | undefined;
+  /**
+   * Reports what THIS page's clock resolves to. Exposed from the page rather
+   * than evaluated as a driver-side function so the probe runs in the same
+   * browsing context as the cells it qualifies: the coarsening depends on the
+   * context, and one session's grid says nothing about another's.
+   */
+  var __probeClock: (() => ClockReport) | undefined;
   var __profileSetup: ((cell: CellSpec, warmupFrames: number) => Promise<void>) | undefined;
   var __profileFrames: ((count: number) => number) | undefined;
   var __profileDispose: (() => void) | undefined;
 }
 
 globalThis.__runBaselineCell = runBaselineCell;
+globalThis.__probeClock = probeClock;
 globalThis.__profileSetup = profileSetup;
 globalThis.__profileFrames = profileFrames;
 globalThis.__profileDispose = profileDispose;

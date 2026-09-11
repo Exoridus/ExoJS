@@ -13,6 +13,13 @@ import {
   recordBaseline,
   UNGUARDED_ARCHETYPES,
 } from '../src/rendering/structuralGate';
+import type { ClockReport } from '../src/shared/clock';
+
+/**
+ * A clock fine enough that no fixture duration trips the timer check, so a test
+ * asserts on the comparison it is about rather than on the grid it was read on.
+ */
+const FINE_CLOCK: ClockReport = { resolutionMs: 0.001, crossOriginIsolated: true };
 
 /** A measured cell with the counters the gate reads. */
 const cell = (options: {
@@ -40,6 +47,7 @@ const cell = (options: {
   queueMsMedian: null,
   queueMsP95: null,
   structural: { drawCalls: options.drawCalls, textureBinds: options.textureBinds ?? 0, bufferUploads: options.bufferUploads ?? 0 },
+  clock: FINE_CLOCK,
   status: options.status ?? 'ok',
   ...(options.note !== undefined && { note: options.note }),
 });

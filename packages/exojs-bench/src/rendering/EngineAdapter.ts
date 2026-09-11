@@ -1,3 +1,4 @@
+import type { ClockReport } from '../shared/clock';
 import type { BaseCellResult } from '../shared/result';
 
 /** Rendering backend under test. */
@@ -356,6 +357,16 @@ export interface CellResult extends BaseCellResult<CellSpec> {
   readonly queueMsP95: number | null;
   /** Structural draw-call counters gathered while measuring this cell. */
   readonly structural: StructuralCounters;
+  /**
+   * What the clock of the page this cell was measured in resolved to, or `null`
+   * where no page produced the cell.
+   *
+   * Recorded per cell rather than per backend because a rendering run opens one
+   * browser session per arm: a grid read from whichever page happened to be open
+   * would qualify cells it never timed. The comparison builder checks each
+   * measured duration against the grid it was actually read on.
+   */
+  readonly clock: ClockReport | null;
 }
 
 /** Neutral contract an engine arm implements so the harness can drive it identically across arms. */

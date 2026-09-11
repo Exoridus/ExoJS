@@ -5,6 +5,7 @@ import type { Provenance } from '../rendering/driver';
 import type { ReportData } from '../rendering/report';
 import { exceedsFrameBudget } from '../shared/frameBudget';
 import type { LibraryProvenance, PlatformVersionStamp, PrereleaseStamp } from '../shared/provenance';
+import { mergeTimerChecks } from '../shared/timerCheck';
 import { median } from '../shared/timing';
 import type { BackendComparison, ComparisonCell, ComparisonRow, ComparisonSection, ExcludedRow } from './build';
 import { buildPhysicsComparison, buildRenderingComparison } from './build';
@@ -289,6 +290,11 @@ const aggregateCell = (perRun: readonly ComparisonCell[], runCount: number): Agg
     competitorOverFrameBudget: exceedsFrameBudget(competitorMs),
     verdict: stable ? pooled : UNSTABLE_VERDICT,
     mechanism: first.mechanism,
+    // Merged from the per-run checks rather than recomputed from the pooled
+    // medians: a limitation any run established stands for the pooled figure,
+    // and pooling the durations first would let a well-resolved repetition carry
+    // a limited one past the threshold.
+    timer: mergeTimerChecks(perRun.map(cell => cell.timer)),
     aggregate: {
       runs: perRun.length,
       reference: references.length > 0 ? spreadOf(references) : NO_SPREAD,
@@ -318,13 +324,11 @@ const groupBy = <T>(values: readonly T[], key: (value: T) => string): Map<string
 };
 
 /**
- * Pool one archetype's row across the runs that produced it.
+ * Pool one archetype's row at one load across the runs that produced it.
  *
- * The runs have to agree on the row's count. Each run picks it from the
- * archetype's ladder and lowers it only when some arm failed to produce a valid
- * cell, so a disagreement means the runs measured different scenes - and pooling
- * their medians would publish a number belonging to neither at a size only some
- * of them used.
+ * Rows are grouped by archetype AND load, so two loads of one archetype never
+ * merge. The count is still checked, because the load id is derived from it and
+ * a disagreement would mean the runs measured different scenes under one id.
  */
 const aggregateRow = (perRun: readonly ComparisonRow[], runCount: number, domain: string): AggregatedRow => {
   const first = perRun[0]!;
@@ -333,7 +337,7 @@ const aggregateRow = (perRun: readonly ComparisonRow[], runCount: number, domain
   if (counts.length > 1) {
     throw new IncomparableRunsError(
       domain,
-      `${domain} runs measured '${first.archetype}' at different counts (${counts.map(String).join(', ')}), so their medians describe different scenes. Re-measure: a row's count only moves when an arm failed to produce a valid cell.`,
+      `${domain} runs measured '${first.archetype}' at different counts under one load id (${counts.map(String).join(', ')}), so their medians describe different scenes.`,
     );
   }
 
@@ -342,11 +346,20 @@ const aggregateRow = (perRun: readonly ComparisonRow[], runCount: number, domain
     cell => cell.competitor,
   );
 
-  return { archetype: first.archetype, category: first.category, count: first.count, cells: [...cells.values()].map(group => aggregateCell(group, runCount)) };
+  return {
+    archetype: first.archetype,
+    category: first.category,
+    count: first.count,
+    loadId: first.loadId,
+    unit: first.unit,
+    primary: first.primary,
+    ...(first.label !== undefined && { label: first.label }),
+    cells: [...cells.values()].map(group => aggregateCell(group, runCount)),
+  };
 };
 
 const aggregateRows = (perRun: ReadonlyArray<readonly ComparisonRow[]>, runCount: number, domain: string): readonly AggregatedRow[] =>
-  [...groupBy(perRun.flat(), row => row.archetype).values()].map(group => aggregateRow(group, runCount, domain));
+  [...groupBy(perRun.flat(), row => `${row.archetype}|${row.loadId}`).values()].map(group => aggregateRow(group, runCount, domain));
 
 const aggregateSection = (perRun: readonly ComparisonSection[], runCount: number, domain: string): AggregatedSection => ({
   title: perRun[0]!.title,
@@ -478,7 +491,7 @@ export const aggregatePhysicsRuns = (runs: readonly PhysicsReportData[]): Aggreg
     runs: runs.map(run => run.provenance),
     libraries: runs[0]!.libraries,
     section: aggregateSection(
-      runs.map(run => buildPhysicsComparison(run.results)),
+      runs.map(run => buildPhysicsComparison(run.results, run.provenance.clock)),
       runs.length,
       'physics',
     ),

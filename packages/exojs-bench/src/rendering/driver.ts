@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import type { Browser } from 'playwright';
 import { chromium, webkit } from 'playwright';
 
+import type { ClockReport } from '../shared/clock';
 import type { BaseProvenance, LibraryProvenance, PlatformDeclaration, PlatformVersionStamp, PrereleaseStamp, RenderingBrowser } from '../shared/provenance';
 import {
   classifyPrerelease,
@@ -74,6 +75,15 @@ export interface Provenance extends BaseProvenance {
   readonly headless: boolean;
   /** True when the adapter is a software rasterizer - timings are then untrusted. */
   readonly software: boolean;
+  /**
+   * The clock grid the run's FIRST session observed, or `null` where no session
+   * opened.
+   *
+   * Provenance only. A run opens one session per arm, so this describes the
+   * conditions rather than qualifying any particular measurement; each cell
+   * carries the grid of the session that actually timed it.
+   */
+  readonly clock: ClockReport | null;
   /**
    * Resolved WebGPU sprite-batch texture-slot tier for this run's adapter (8 /
    * 16 / 32), or `undefined` for the WebGL2 backend (whose batcher uses a fixed
@@ -395,8 +405,15 @@ export const readWebGpuAdapter = async (page: import('playwright').Page, browser
   return { adapter, usable: true, note: '', slotTier };
 };
 
-/** A cell that could not be measured: zeroed timings/structure, `unavailable` status, and an explanatory note. */
-const unavailableCell = (spec: CellSpec, note: string): CellResult => ({
+/**
+ * A cell that could not be measured: zeroed timings/structure, `unavailable`
+ * status, and an explanatory note.
+ *
+ * `clock` carries the session's grid where a session existed, so a cell that
+ * failed inside a live page is still attributed to the page it failed in. It is
+ * `null` only where no page produced the cell at all.
+ */
+const unavailableCell = (spec: CellSpec, note: string, clock: ClockReport | null = null): CellResult => ({
   spec,
   cpuMsMedian: 0,
   cpuMsP95: 0,
@@ -405,6 +422,7 @@ const unavailableCell = (spec: CellSpec, note: string): CellResult => ({
   queueMsMedian: null,
   queueMsP95: null,
   structural: { drawCalls: 0, textureBinds: 0, bufferUploads: 0 },
+  clock,
   status: 'unavailable',
   note,
 });
@@ -554,6 +572,10 @@ const runBackend = async (options: {
   // read once and reused across every arm's session (same GPU, same flags).
   let renderer: string | null = null;
   let webgpuIdentity: WebGpuIdentity | null = null;
+  // The first session's grid, kept for the backend's provenance line. It
+  // describes the run's conditions and is NOT what qualifies a cell: each cell
+  // carries the grid of the session that produced it.
+  let clock: ClockReport | null = null;
   // Read off the first session and reused: every session in a run launches the
   // same build, and a run with no session at all reports the absence rather than
   // an invented version.
@@ -577,12 +599,19 @@ const runBackend = async (options: {
         await page.goto(baseUrl, { waitUntil: 'load' });
         await page.waitForFunction(() => typeof globalThis.__runBaselineCell === 'function');
 
+        // Probed in THIS page, before its cells run: the grid belongs to the
+        // browsing context, and this run opens one session per arm, so a value
+        // read from another session would qualify cells it never timed.
+        const sessionClock = await page.evaluate(() => globalThis.__probeClock!());
+
+        clock ??= sessionClock;
+
         if (backend === 'webgpu') {
           webgpuIdentity ??= await readWebGpuAdapter(page, browserName);
 
           if (!webgpuIdentity.usable) {
             for (const cell of remaining) {
-              collect(unavailableCell(cell, webgpuIdentity.note));
+              collect(unavailableCell(cell, webgpuIdentity.note, sessionClock));
             }
 
             remaining = [];
@@ -598,6 +627,7 @@ const runBackend = async (options: {
               unavailableCell(
                 cell,
                 `cell wedged the browser (no result after ${CELL_TIMEOUT_MS}ms — a mid-frame GPU-driver stall the in-page guards cannot interrupt); isolated as unavailable, browser relaunched for the arm's remaining cells`,
+                sessionClock,
               ),
             );
             remaining = remaining.slice(1);
@@ -626,6 +656,7 @@ const runBackend = async (options: {
   const platform = {
     browser: browserName,
     browserVersion,
+    clock,
     os: readOsRelease(),
     platformVersion: readPlatformVersion(options.platform),
     prerelease: classifyPrerelease({ browserVersion, declared: declaredPrereleaseOf(options.platform) }),
@@ -882,6 +913,9 @@ export const profileCell = async (options: {
           prerelease: classifyPrerelease({ browserVersion, declared: declaredPrereleaseOf(options.platform) }),
           flags,
           headless: true,
+          // A CPU profile reports attributed self time, never a wall-clock
+          // figure anyone compares, so no grid is probed for it.
+          clock: null,
           engineVersion,
           timestamp: new Date().toISOString(),
           software: isSoftwareRenderer(adapter),

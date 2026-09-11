@@ -26,6 +26,7 @@ const renderingStamp = (adapter: string, backend: RenderingStamp['backend'] = 'w
   os: '',
   platformVersion: WINDOWS_11,
   prerelease: { value: false, source: 'assumed-stable', evidence: 'no marker, none declared' },
+  clock: { resolutionMs: 0.001, crossOriginIsolated: true },
   flags: [],
   headless: true,
   software: false,
