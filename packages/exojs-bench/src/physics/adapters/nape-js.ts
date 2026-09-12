@@ -1,6 +1,6 @@
 import type * as Nape from '@newkrok/nape-js';
 
-import type { PhysicsAdapter, PhysicsArchetypeSpec, PhysicsSleepCensus, PhysicsStructuralCounters } from '../PhysicsAdapter';
+import type { PhysicsAdapter, PhysicsArchetypeSpec, PhysicsBodySpread, PhysicsSleepCensus, PhysicsStructuralCounters } from '../PhysicsAdapter';
 import type { PerStepWork } from './perStepWork';
 import { createPerStepWork } from './perStepWork';
 import type { BodyDesc } from './scene';
@@ -140,6 +140,31 @@ export const createNapeJsAdapter = async (): Promise<PhysicsAdapter> => {
       const dynamic = bodies.filter(body => !body.isStatic());
 
       return { dynamic: dynamic.length, awake: dynamic.filter(body => !body.isSleeping).length };
+    },
+
+    sampleBodySpread(): PhysicsBodySpread {
+      if (space === null) {
+        throw new Error('nape-js adapter: sampleBodySpread() called before setup().');
+      }
+
+      const current = space;
+      let minY = Number.POSITIVE_INFINITY;
+      let maxY = Number.NEGATIVE_INFINITY;
+      let maxSpeed = 0;
+
+      for (let index = 0; index < current.bodies.length; index++) {
+        const body = current.bodies.at(index);
+
+        if (body.isStatic()) {
+          continue;
+        }
+
+        minY = Math.min(minY, body.position.y);
+        maxY = Math.max(maxY, body.position.y);
+        maxSpeed = Math.max(maxSpeed, Math.hypot(body.velocity.x, body.velocity.y));
+      }
+
+      return { minY, maxY, maxSpeed };
     },
 
     teardown(): void {

@@ -6,11 +6,11 @@
   "subsystem": "physics",
   "importPath": "@codexo/exojs-physics",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 8,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 7,
+    "properties": 8,
     "events": 0
   },
   "sections": [
@@ -131,6 +131,31 @@
           "params": [],
           "returnType": null,
           "description": "Second body."
+        },
+        {
+          "name": "collideConnected",
+          "signature": "collideConnected?: boolean",
+          "signatureTokens": [
+            {
+              "text": "collideConnected",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the two bodies this joint connects also collide with each other. Default true. false is what a chain, a ragdoll, a pendulum or a vehicle assembly usually wants, and what Box2D defaults to: a joint already decides how its two bodies may move relative to one another, so letting their touching colliders push each other apart at the same time gives the pair two constraint systems with different opinions, plus a contact per link that nothing needs. The default is nevertheless true for now, which is the behaviour every joint has had so far. A revolute chain measured over a long window gains energy once those contacts are gone - a settled chain reaching several thousand px/s with nothing driving it - so the contacts have been damping a stability problem in the joint solver rather than only costing time. Shipping false as the default would make that the behaviour every existing chain and ragdoll gets from an update, which is not a trade a default may make. Once the solver holds a chain on its own the default is worth revisiting. Nothing about a contact is weakened under true: the narrow phase produces it, the contact graph holds it, collision events fire, a ContactModifier sees it and the solver resolves it, exactly as for any unjointed pair. It is fixed at construction, and it follows the joint's presence in the world rather than Joint.enabled: disabling a joint suspends its constraint, and a ragdoll whose joints are momentarily disabled must not start pushing its own limbs apart. Removing the joint from the world does let the pair collide again, and both bodies are woken so they respond to it."
         },
         {
           "name": "dampingRatio",

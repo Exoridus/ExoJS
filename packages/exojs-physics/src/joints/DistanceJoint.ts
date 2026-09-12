@@ -2,10 +2,11 @@ import type { PointLike } from '@codexo/exojs';
 
 import { applyInverseTransform, applyTransform } from '../math';
 import type { PhysicsBody } from '../PhysicsBody';
+import type { JointOptions } from './Joint';
 import { Joint } from './Joint';
 
 /** Construction options for a {@link DistanceJoint}. */
-export interface DistanceJointOptions {
+export interface DistanceJointOptions extends JointOptions {
   /** First body (often a static anchor). */
   bodyA: PhysicsBody;
   /** Second body. */
@@ -74,7 +75,7 @@ export class DistanceJoint extends Joint {
   private _impulse = 0;
 
   public constructor(options: DistanceJointOptions) {
-    super(options.bodyA, options.bodyB);
+    super(options.bodyA, options.bodyB, options.collideConnected);
 
     const ax = options.anchorA?.x ?? options.bodyA.x;
     const ay = options.anchorA?.y ?? options.bodyA.y;

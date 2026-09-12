@@ -43,9 +43,19 @@ interface Props {
     comparisons: readonly CardComparison[];
     /** Which comparison the block opens on; the rest stay one control away. */
     selected?: string;
+    /**
+     * True where this row's arms are known not to be doing the same work, so it
+     * publishes their figures and no comparison between them.
+     *
+     * Separate from the per-cell states: those describe what one pair's runs or
+     * clock established, while this describes the row - so it has to outrank
+     * them, or the block would still print a factor and a winner for a
+     * comparison the page says it is not making.
+     */
+    withheld?: boolean;
 }
 
-const { comparisons, selected } = Astro.props;
+const { comparisons, selected, withheld = false } = Astro.props;
 const opening = comparisons.find(entry => entry.id === selected) ?? comparisons[0];
 
 /** The range a pooled measurement observed, in milliseconds, or a dash where it reported none. */
@@ -81,17 +91,19 @@ const rangeOf = (spread: ProfileSpread): string => (formatRange(spread) === '' ?
                     </h4>
 
                     <p class="verdict">
-                        <b>{OUTCOME_STATUS[outcome]}</b>
+                        <b>{withheld ? 'Not comparable' : OUTCOME_STATUS[outcome]}</b>
                         {/*
                           * A comparison the clock never drew publishes no factor, whatever
                           * figure the ladder happened to reach from the two raw samples: the
                           * ratio of two durations the clock did not separate is the ratio of
                           * its own grid, not of the libraries.
                           */}
-                        {isQuantitative(outcome) && factor !== null && outcome !== 'level' && (
+                        {!withheld && isQuantitative(outcome) && factor !== null && outcome !== 'level' && (
                             <span class="figure">{mixed ? formatApproximate(factor) : formatFactor(factor)}</span>
                         )}
-                        <span class="says">{OUTCOME_NOTES[outcome]}</span>
+                        <span class="says">
+                            {withheld ? 'Both times are published; the comparison between them is not.' : OUTCOME_NOTES[outcome]}
+                        </span>
                     </p>
 
                     <dl>

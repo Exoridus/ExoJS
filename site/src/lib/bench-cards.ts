@@ -14,7 +14,7 @@
  */
 
 import type { BenchProfileDocument, LoadUnit, ProfileBackendName, ProfileCell, ProfileRow, ProfileSection } from './bench-profiles';
-import { armLabel, formatLoad, isQuantitative, orderArms, outcomeOf, publishedMs } from './bench-profiles';
+import { armLabel, formatLoad, isQuantitative, orderArms, outcomeOf, publishedMs, withheldScenario } from './bench-profiles';
 
 /** One arm's time on one load of one scenario. */
 export interface CardArm {
@@ -71,6 +71,15 @@ export interface CardLoad {
   readonly unit?: LoadUnit;
   /** The published comparisons behind the row, in the same arm order. */
   readonly comparisons: readonly CardComparison[];
+  /**
+   * Why this load publishes no cross-arm comparison, or `undefined` where it
+   * publishes one; see `withheldScenario`.
+   *
+   * A withheld load keeps every arm's time and loses every bar, factor and
+   * winner: the arms ran the same scene and are not doing the same work in it,
+   * which a bar length would assert they were.
+   */
+  readonly withheld: string | undefined;
   /**
    * How many libraries this load compares, where that is fewer than the block's
    * widest row; `null` where it compares all of them.
@@ -188,8 +197,11 @@ const loadOf = (row: ProfileRow): CardLoad | null => {
     return null;
   }
 
+  const withheld = withheldScenario(row.archetype);
   const cells = orderArms(row.cells, cell => cell.competitor);
-  const arms = [reference, ...cells.map(competitorArm)];
+  // A withheld row loses its quantitative treatment wholesale rather than per
+  // arm: the doubt is about the comparison, so no arm in it may keep a bar.
+  const arms = [reference, ...cells.map(competitorArm)].map(arm => (withheld === undefined ? arm : { ...arm, quantitative: false }));
   // Every published figure sets the scale, because the bars are durations: an
   // arm whose PAIR the clock could not separate still took the time it reports,
   // and leaving it out of the maximum would draw it past the end of its track.
@@ -206,6 +218,7 @@ const loadOf = (row: ProfileRow): CardLoad | null => {
     ...(row.unit !== undefined && { unit: row.unit }),
     comparisons: cells.map(cell => ({ id: cell.competitor, label: armLabel(cell.competitor), cell, outcome: outcomeOf(cell) })),
     measuredArms: null,
+    withheld,
   };
 };
 

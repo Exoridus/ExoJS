@@ -2,10 +2,11 @@ import type { PointLike } from '@codexo/exojs';
 
 import { applyInverseTransform, applyTransform } from '../math';
 import type { PhysicsBody } from '../PhysicsBody';
+import type { JointOptions } from './Joint';
 import { Joint } from './Joint';
 
 /** Construction options for a {@link WeldJoint}. */
-export interface WeldJointOptions {
+export interface WeldJointOptions extends JointOptions {
   /** First body. */
   bodyA: PhysicsBody;
   /** Second body. */
@@ -88,7 +89,7 @@ export class WeldJoint extends Joint {
   private _impulseAngle = 0;
 
   public constructor(options: WeldJointOptions) {
-    super(options.bodyA, options.bodyB);
+    super(options.bodyA, options.bodyB, options.collideConnected);
 
     const ax = options.anchor?.x ?? (options.bodyA.x + options.bodyB.x) / 2;
     const ay = options.anchor?.y ?? (options.bodyA.y + options.bodyB.y) / 2;

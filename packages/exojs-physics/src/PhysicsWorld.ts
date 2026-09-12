@@ -9,7 +9,7 @@ import type { PhysicsBinding } from './binding/PhysicsBinding';
 import { authoredCollider, Collider } from './Collider';
 import type { SweepHit } from './collision/sweep';
 import { canSweep, sweepProxies } from './collision/sweep';
-import type { ContactRecord } from './ContactGraph';
+import { bodyPairKey, type ContactRecord } from './ContactGraph';
 import type { ContactModifier } from './ContactModifier';
 import type { CollisionEvent, SensorEvent } from './events';
 import type { Joint } from './joints/Joint';
@@ -422,6 +422,16 @@ export class PhysicsWorld implements BodyOwner {
   /** Pooled scratch for re-syncing a single body's broad-phase leaves. */
   private readonly _leafScratch: Collider[] = [];
   private readonly _joints: Joint[] = [];
+  /**
+   * Body pairs the live joints have taken out of collision, reference-counted:
+   * several joints may connect one pair, and the pair collides again only once
+   * the last of them is gone.
+   *
+   * Keyed on the pair rather than expressed through collision filters, because
+   * a ragdoll limb has to keep colliding with everything except the limb it is
+   * jointed to - which a category/mask pair cannot say.
+   */
+  private readonly _uncollidableJointPairs = new Map<number, number>();
   private readonly _bindings = new BindingRegistry();
   private readonly _query: QueryEngine;
   private readonly _commands: Array<() => void> = [];
@@ -491,6 +501,7 @@ export class PhysicsWorld implements BodyOwner {
     this.interpolation = options.interpolation ?? false;
     this.frameAlphaSource = options.frameAlphaSource ?? (() => this.timeStepper.alpha);
     this._query = new QueryEngine(this._detectionColliders, this._backend.spatialIndex);
+    this._backend.contactGraph._useUncollidablePairs(this._uncollidableJointPairs);
   }
 
   /** Live bodies (read-only view). */
@@ -627,6 +638,7 @@ export class PhysicsWorld implements BodyOwner {
     this._defer(() => {
       if (!this._joints.includes(joint)) {
         this._joints.push(joint);
+        this._holdPairApart(joint, 1);
       }
     });
 
@@ -643,8 +655,30 @@ export class PhysicsWorld implements BodyOwner {
 
       if (index !== -1) {
         this._joints.splice(index, 1);
+        this._holdPairApart(joint, -1);
       }
     });
+  }
+
+  /**
+   * Reference-count one joint's claim that its two bodies do not collide.
+   *
+   * Driven from the deferred add and remove rather than from the constructor,
+   * so the set describes the joints the world is actually stepping.
+   */
+  private _holdPairApart(joint: Joint, delta: 1 | -1): void {
+    if (joint.collideConnected) {
+      return;
+    }
+
+    const key = bodyPairKey(joint.bodyA.id, joint.bodyB.id);
+    const held = (this._uncollidableJointPairs.get(key) ?? 0) + delta;
+
+    if (held > 0) {
+      this._uncollidableJointPairs.set(key, held);
+    } else {
+      this._uncollidableJointPairs.delete(key);
+    }
   }
 
   // ── stepping ───────────────────────────────────────────────────────────
@@ -930,6 +964,7 @@ export class PhysicsWorld implements BodyOwner {
     this._colliders.length = 0;
     this._detectionColliders.length = 0;
     this._joints.length = 0;
+    this._uncollidableJointPairs.clear();
     this._commands.length = 0;
     this._bindings.clear();
     this._backend.destroy();

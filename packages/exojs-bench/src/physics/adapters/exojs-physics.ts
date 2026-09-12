@@ -1,6 +1,6 @@
 import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld, RevoluteJoint } from '@codexo/exojs-physics';
 
-import type { PhysicsAdapter, PhysicsArchetypeSpec, PhysicsSleepCensus, PhysicsStructuralCounters } from '../PhysicsAdapter';
+import type { PhysicsAdapter, PhysicsArchetypeSpec, PhysicsBodySpread, PhysicsSleepCensus, PhysicsStructuralCounters } from '../PhysicsAdapter';
 import type { PerStepWork } from './perStepWork';
 import { createPerStepWork } from './perStepWork';
 import type { BodyDesc } from './scene';
@@ -107,6 +107,28 @@ export const createExoJsPhysicsAdapter = (): PhysicsAdapter => {
       const dynamic = world.bodies.filter(body => body.type !== 'static');
 
       return { dynamic: dynamic.length, awake: dynamic.filter(body => !body.isSleeping).length };
+    },
+
+    sampleBodySpread(): PhysicsBodySpread {
+      if (world === null) {
+        throw new Error('exojs-physics adapter: sampleBodySpread() called before setup().');
+      }
+
+      let minY = Number.POSITIVE_INFINITY;
+      let maxY = Number.NEGATIVE_INFINITY;
+      let maxSpeed = 0;
+
+      for (const body of world.bodies) {
+        if (body.type === 'static') {
+          continue;
+        }
+
+        minY = Math.min(minY, body.y);
+        maxY = Math.max(maxY, body.y);
+        maxSpeed = Math.max(maxSpeed, Math.hypot(body.linearVelocityX, body.linearVelocityY));
+      }
+
+      return { minY, maxY, maxSpeed };
     },
 
     teardown(): void {

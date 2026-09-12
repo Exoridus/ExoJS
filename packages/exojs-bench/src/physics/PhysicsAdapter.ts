@@ -214,6 +214,24 @@ export interface PhysicsAdapter extends PhysicsArmIdentity {
    * sleep state omits it, and no number a cell publishes depends on it.
    */
   sampleSleepState?(): PhysicsSleepCensus;
+  /**
+   * Where the world's dynamic bodies are and how fast they move, for the same
+   * class of diagnostic as {@link sampleSleepState} and under the same rule:
+   * outside any timed window, and read by no measurement.
+   *
+   * A contact count says a pair touches; it does not say whether a scene is
+   * hanging where it was built or has collapsed into a heap, and those are
+   * different findings with the same counter.
+   */
+  sampleBodySpread?(): PhysicsBodySpread;
+}
+
+/** Extent and peak speed of a world's dynamic bodies, at the moment of the call. */
+export interface PhysicsBodySpread {
+  readonly minY: number;
+  readonly maxY: number;
+  /** Largest linear speed any dynamic body carries, so a settled scene is distinguishable from a moving one. */
+  readonly maxSpeed: number;
 }
 
 /** How many of a world's dynamic bodies are still awake, at the moment of the call. */

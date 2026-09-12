@@ -2,10 +2,11 @@ import type { PointLike } from '@codexo/exojs';
 
 import { applyInverseRotation, applyInverseTransform, applyRotation, applyTransform } from '../math';
 import type { PhysicsBody } from '../PhysicsBody';
+import type { JointOptions } from './Joint';
 import { Joint } from './Joint';
 
 /** Construction options for a {@link PrismaticJoint}. */
-export interface PrismaticJointOptions {
+export interface PrismaticJointOptions extends JointOptions {
   /** First body (often a static rail anchor). */
   bodyA: PhysicsBody;
   /** Second body (the slider). */
@@ -83,7 +84,7 @@ export class PrismaticJoint extends Joint {
   private _upperImpulse = 0;
 
   public constructor(options: PrismaticJointOptions) {
-    super(options.bodyA, options.bodyB);
+    super(options.bodyA, options.bodyB, options.collideConnected);
 
     applyInverseTransform(options.bodyA.transform, options.anchor.x, options.anchor.y, scratch);
     this._localAnchorAx = scratch.x;

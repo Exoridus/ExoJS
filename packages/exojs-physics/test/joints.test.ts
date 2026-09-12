@@ -622,3 +622,121 @@ describe('joints', () => {
     expect(Number.isFinite(wheel.y)).toBe(true);
   });
 });
+
+/**
+ * Whether a joint's two bodies also collide with each other.
+ *
+ * `false` takes the pair out of collision before the narrow phase, which is
+ * what a chain or a ragdoll usually wants: a chain pinned at the edge its links
+ * share otherwise carries one contact per jointed pair, and the contact solver
+ * spends every step pushing apart what the joint is holding together.
+ *
+ * The default stays `true` - the behaviour every joint has had so far - because
+ * a revolute chain measured over a long window gains energy once those contacts
+ * are gone. These cover what the option does, not whether a chain stays settled
+ * without the contacts; that is a solver question and is deliberately not
+ * pinned by an assertion here.
+ *
+ * The contacts are counted through the world's own contact graph rather than
+ * through a derived position, because the point is whether the pair reaches the
+ * narrow phase at all.
+ */
+describe('connected-body collision', () => {
+  /** Two overlapping boxes, jointed at the point they share. */
+  const pinnedPair = (collideConnected?: boolean): { world: PhysicsWorld; joint: RevoluteJoint } => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, enableSleeping: false });
+    const a = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+    const b = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 10, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+    const joint = world.addJoint(
+      new RevoluteJoint({ bodyA: a, bodyB: b, anchor: { x: 5, y: 0 }, ...(collideConnected !== undefined && { collideConnected }) }),
+    );
+
+    return { world, joint };
+  };
+
+  const contacts = (world: PhysicsWorld): number => world.backend.contactGraph.solidContacts.length;
+
+  it('leaves a jointed pair colliding by default', () => {
+    const { world } = pinnedPair();
+
+    world.step(FRAME);
+
+    expect(contacts(world)).toBeGreaterThan(0);
+  });
+
+  it('takes an opted-out pair out of the contact graph', () => {
+    const { world } = pinnedPair(false);
+
+    world.step(FRAME);
+
+    expect(contacts(world)).toBe(0);
+  });
+
+  it('reports what the joint was constructed with', () => {
+    expect(pinnedPair().joint.collideConnected).toBe(true);
+    expect(pinnedPair(false).joint.collideConnected).toBe(false);
+  });
+
+  it('lets the pair collide again once the joint is removed', () => {
+    const { world, joint } = pinnedPair(false);
+
+    world.step(FRAME);
+    expect(contacts(world)).toBe(0);
+
+    world.removeJoint(joint);
+    world.step(FRAME);
+
+    expect(contacts(world)).toBeGreaterThan(0);
+  });
+
+  it('keeps the pair apart while any joint of it still asks for that', () => {
+    const { world, joint } = pinnedPair(false);
+    const [a, b] = world.bodies;
+    // A second joint on the same pair, opting in. The pair is held apart while
+    // either joint asks for it: a reference count, not a last-writer-wins flag.
+    const second = world.addJoint(new RevoluteJoint({ bodyA: a!, bodyB: b!, anchor: { x: 5, y: 0 }, collideConnected: true }));
+
+    world.step(FRAME);
+    expect(contacts(world)).toBe(0);
+
+    world.removeJoint(joint);
+    world.step(FRAME);
+    expect(contacts(world)).toBeGreaterThan(0);
+
+    world.removeJoint(second);
+    world.step(FRAME);
+    expect(contacts(world)).toBeGreaterThan(0);
+  });
+
+  it('does not let a disabled joint start pushing its own bodies apart', () => {
+    // Suspending the constraint must not hand the pair to the contact solver:
+    // a ragdoll whose joints are briefly disabled would come apart at the seams.
+    const { world, joint } = pinnedPair(false);
+
+    joint.enabled = false;
+    world.step(FRAME);
+
+    expect(contacts(world)).toBe(0);
+  });
+
+  it('builds a chain of edge-to-edge links with no contact between the links', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY }, enableSleeping: false });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    let previous = anchor;
+
+    for (let index = 1; index <= 8; index++) {
+      const link = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: index * 16 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
+
+      world.addJoint(new RevoluteJoint({ bodyA: previous, bodyB: link, anchor: { x: 0, y: index * 16 - 8 }, collideConnected: false }));
+      previous = link;
+    }
+
+    advance(world, 0.5);
+
+    // What the option guarantees, and only that: the seams the joints hold are
+    // not also contacts. Whether the chain stays settled over a long window is
+    // a property of the joint solver and is not asserted here.
+    expect(contacts(world)).toBe(0);
+    expect(Number.isFinite(previous.y)).toBe(true);
+  });
+});

@@ -53,6 +53,7 @@ import {
     pooledFactor,
     ratioBand,
     rungSide,
+    withheldScenario,
     type ProfileCell,
     type ProfileSpread,
 } from '../lib/bench-profiles';
@@ -218,8 +219,15 @@ const winnerOf = (cell: ProfileCell): string => {
                                 {row.load}
                             </td>
                         )}
+                        {/*
+                          * A row whose arms are known not to do the same work
+                          * publishes their times and no comparison: the factor,
+                          * the bar and the winner all go, the same way they do
+                          * for a pair the clock could not separate.
+                          */}
                         {row.entries.map((entry, column) => {
                             const cell = entry.cell;
+                            const withheld = withheldScenario(row.archetype) !== undefined;
 
                             if (cell === null) {
                                 const reason =
@@ -240,7 +248,7 @@ const winnerOf = (cell: ProfileCell): string => {
                             const mixed = outcome === 'unstable';
                             const level = outcome === 'level';
                             // A pair the clock never separated publishes neither a figure nor a bar; only its two times survive.
-                            const unresolved = outcome === 'timer-limited' || outcome === 'timer-unknown';
+                            const unresolved = withheld || outcome === 'timer-limited' || outcome === 'timer-unknown';
                             const band = mixed ? ratioBand(cell) : null;
                             const factor = mixed ? pooledFactor(cell) : cell.verdict.factor;
                             const ratio = cell.verdict.ratio;
@@ -271,8 +279,16 @@ const winnerOf = (cell: ProfileCell): string => {
                                                 {/* A pair inside the noise band is named, not scored: its factor is pinned to 1 by the ladder, so printing 1.00x beside two medians that differ would claim a precision the ladder never measured. */}
                                                 <b>{unresolved ? '-' : mixed ? (factor === null ? '-' : formatApproximate(factor)) : level ? 'similar' : formatFactor(factor)}</b>
                                                 {/* The word alone; what it means is stated once in the legend rather than in every cell that carries it. */}
-                                                <i title={unresolved || mixed ? OUTCOME_NOTES[outcome] : undefined}>
-                                                    {unresolved ? OUTCOME_STATUS[outcome] : mixed ? OUTCOME_STATUS.unstable : level ? '' : winnerOf(cell)}
+                                                <i title={withheld ? withheldScenario(row.archetype) : unresolved || mixed ? OUTCOME_NOTES[outcome] : undefined}>
+                                                    {withheld
+                                                        ? 'not comparable'
+                                                        : unresolved
+                                                          ? OUTCOME_STATUS[outcome]
+                                                          : mixed
+                                                            ? OUTCOME_STATUS.unstable
+                                                            : level
+                                                              ? ''
+                                                              : winnerOf(cell)}
                                                 </i>
                                             </span>
                                             <span class="medians">
@@ -291,7 +307,8 @@ const winnerOf = (cell: ProfileCell): string => {
                         <td colspan={columns.length + (countColumn ? 2 : 1)}>
                             <details class="row-more">
                                 {/* The row already names its archetype; the label repeats it only where a reader reaches the summary without that context. */}
-                                <summary aria-label={`How ${row.archetype} was measured`}>Measurement detail</summary>
+                                <summary aria-label={`How ${archetypeTitle(row.archetype)} was measured`}>Measurement detail</summary>
+                                {withheldScenario(row.archetype) !== undefined && <p class="row-withheld">{withheldScenario(row.archetype)}</p>}
                                 <div class="arms">
                                     {row.entries.map((entry, column) => {
                                         const cell = entry.cell;
@@ -777,6 +794,13 @@ const winnerOf = (cell: ProfileCell): string => {
     tr.detail > td {
         padding: 0 0.7rem 0.5rem;
         border-bottom: 1px solid var(--line-soft);
+    }
+
+    .row-withheld {
+        margin: 0.4rem 0 0.6rem;
+        font-size: 0.8rem;
+        line-height: 1.45;
+        color: var(--fg-muted);
     }
 
     .row-more summary {

@@ -2,10 +2,11 @@ import type { PointLike } from '@codexo/exojs';
 
 import { applyInverseRotation, applyInverseTransform, applyRotation, applyTransform } from '../math';
 import type { PhysicsBody } from '../PhysicsBody';
+import type { JointOptions } from './Joint';
 import { Joint } from './Joint';
 
 /** Construction options for a {@link WheelJoint}. */
-export interface WheelJointOptions {
+export interface WheelJointOptions extends JointOptions {
   /** First body (the chassis). */
   bodyA: PhysicsBody;
   /** Second body (the wheel). */
@@ -92,7 +93,7 @@ export class WheelJoint extends Joint {
   private _upperImpulse = 0;
 
   public constructor(options: WheelJointOptions) {
-    super(options.bodyA, options.bodyB);
+    super(options.bodyA, options.bodyB, options.collideConnected);
 
     applyInverseTransform(options.bodyA.transform, options.anchor.x, options.anchor.y, scratch);
     this._localAnchorAx = scratch.x;

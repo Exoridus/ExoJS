@@ -656,6 +656,28 @@ const ARCHETYPE_TITLES: Readonly<Record<string, string>> = {
   'settling-pile': 'Settling pile',
 };
 
+/**
+ * Scenarios whose CROSS-ARM comparison is withheld, and why.
+ *
+ * Not a scenario that is hidden, and not one that is dropped from the page: the
+ * arms all ran it, and each arm's own times are published. What is withheld is
+ * the comparison between them - no factor, no winner, no bar read as a
+ * performance claim - because the arms are known not to be doing the same work.
+ *
+ * Withholding is a statement about the measurement and never about the result.
+ * A row is listed here only for a documented reason that applies whichever way
+ * the figures came out, and a row is never listed because ExoJS trails on it;
+ * removing a losing card and quietly keeping a winning one is exactly what a
+ * fixed headline set exists to prevent.
+ */
+const WITHHELD_SCENARIOS: Readonly<Record<string, string>> = {
+  joints:
+    'Each link is pinned at the edge it shares with the next, so whether that pair also registers a contact follows from each library default for connected bodies rather than from the scene: ExoJS resolves one contact per jointed pair, Rapier one per chain, and Matter.js, Planck and Nape-JS none. The arms are not doing the same contact work, so their times are published and no comparison is drawn from them.',
+};
+
+/** Why a scenario publishes no cross-arm comparison, or `undefined` where it publishes one. */
+export const withheldScenario = (archetype: string): string | undefined => WITHHELD_SCENARIOS[archetype];
+
 /** The readable title for a scenario, falling back to its id where none is written. */
 export const archetypeTitle = (archetype: string): string => ARCHETYPE_TITLES[archetype] ?? archetype;
 

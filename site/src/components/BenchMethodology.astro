@@ -187,11 +187,12 @@ pnpm bench:compare -- \
         not.
     </p>
     <p>
-        One scenario currently carries an <strong>open equivalence question</strong>. In the joint-chain scenario the links are pinned at the edge they
-        share, so whether two jointed links also register a contact comes down to each engine's own contact margin and its default for connected
-        bodies - and the arms do not agree: ExoJS reports one contact for every jointed pair, Rapier one per chain, and matter.js, planck and Nape-JS
-        none. Its per-arm times are published like every other row, but what the scenario loads is not the same work in every arm, so the cross-arm
-        comparison there is not settled and is not read as one. What the neutral scene should require of every arm is a decision the harness owes
-        before that row is treated as a result.
+        One scenario publishes <strong>no cross-arm comparison</strong>. In the joint-chain scenario each link is pinned at the edge it shares with the
+        next, so whether that pair also registers a contact follows from each library's default for connected bodies and from its contact margin at a
+        touching edge rather than from the scene: ExoJS resolves one contact per jointed pair, Rapier one per chain, and Matter.js, Planck and Nape-JS
+        none. Every arm ran the identical scene and every arm's own times are published, but they are not doing the same work in it - so that row carries
+        no factor, no winner and no bar to be read as a performance claim, and it is marked as such on the card. It stays on the page rather than being
+        removed: a row is withheld for a reason that holds whichever way the figures came out, never because one arm trails on it. The comparison returns
+        once one semantics is chosen and every arm is configured to it, which needs a re-measurement rather than a change to this page.
     </p>
 </details>

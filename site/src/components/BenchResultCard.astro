@@ -177,6 +177,13 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
       */}
     {card.loads.map(load => (
         <div class="bench-load-panel" data-load={load.id} hidden={load.id !== opening?.id}>
+            {load.withheld !== undefined && (
+                <p class="withheld">
+                    <b>Not comparable</b>
+                    <span>Each library's own time is published; the comparison between them is withheld.</span>
+                </p>
+            )}
+
             {load.measuredArms !== null && <p class="coverage">{load.measuredArms} libraries measured</p>}
 
             <ul class="arms">
@@ -184,7 +191,15 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
                     <li class:list={['arm', { reference: arm.reference, absent: arm.ms === null }]}>
                         <span class="name">{arm.label}</span>
                         <span class="track">
-                            {widthOf(arm.ms, load.maxMs) !== null && <span class="bar" style={`width:${String(widthOf(arm.ms, load.maxMs))}%`} />}
+                            {/*
+                              * A withheld row draws nothing. Its bars would be
+                              * durations like any other, but side by side on one
+                              * track they are read as the comparison the row is
+                              * published without.
+                              */}
+                            {load.withheld === undefined && widthOf(arm.ms, load.maxMs) !== null && (
+                                <span class="bar" style={`width:${String(widthOf(arm.ms, load.maxMs))}%`} />
+                            )}
                         </span>
                         <span class="time">
                             {arm.ms === null ? (
@@ -221,7 +236,13 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
               * labelling the first as timing-limited claims a measurement.
               * The sentence lives in the note the chip opens.
               */}
-            {statesOf(load).length > 0 && (
+            {/*
+              * Suppressed on a withheld row: these words are the ladder's
+              * verdicts, and a row that publishes no comparison must not print
+              * `clear loss` beside one arm of it. The withheld note above says
+              * what the row is instead.
+              */}
+            {load.withheld === undefined && statesOf(load).length > 0 && (
                 <p class="states">
                     {statesOf(load).map(state => (
                         <button type="button" class="mark" data-explains={noteId(load.id, state)} aria-describedby={noteId(load.id, state)}>
@@ -239,6 +260,8 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
                 </p>
 
                 {/* What every marker and state word on this card means, as text rather than as a tooltip a touch reader cannot reach. */}
+                {load.withheld !== undefined && <p class="why">{load.withheld}</p>}
+
                 {explained.length > 0 && (
                     <dl class="notes">
                         {explained.map(entry => (
@@ -250,7 +273,7 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
                     </dl>
                 )}
 
-                <BenchMeasurementDetail comparisons={load.comparisons} />
+                <BenchMeasurementDetail comparisons={load.comparisons} withheld={load.withheld !== undefined} />
             </details>
         </div>
     ))}
@@ -314,6 +337,35 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
     .coverage {
         margin: 0 0 0.4rem;
         font-size: 0.76rem;
+        color: var(--color-text-muted);
+    }
+
+    .withheld {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.3rem 0.5rem;
+        margin: 0 0 0.5rem;
+        font-size: 0.78rem;
+        color: var(--color-text-muted);
+    }
+
+    .withheld b {
+        padding: 0.15rem 0.4rem;
+        border: 1px solid currentcolor;
+        border-radius: 0.3rem;
+        font-size: 0.72rem;
+        font-weight: 600;
+    }
+
+    .withheld span {
+        flex: 1 1 12rem;
+    }
+
+    .why {
+        margin: 0 0 0.7rem;
+        font-size: 0.78rem;
+        line-height: 1.45;
         color: var(--color-text-muted);
     }
 
