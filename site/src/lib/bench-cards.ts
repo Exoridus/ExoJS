@@ -13,8 +13,8 @@
  * assembled to suit the numbers inside it.
  */
 
-import type { BenchProfileDocument, ProfileBackendName, ProfileCell, ProfileRow, ProfileSection } from './bench-profiles';
-import { armLabel, formatLoad, outcomeOf } from './bench-profiles';
+import type { BenchProfileDocument, LoadUnit, ProfileBackendName, ProfileCell, ProfileRow, ProfileSection } from './bench-profiles';
+import { armLabel, formatLoad, isQuantitative, orderArms, outcomeOf, publishedMs } from './bench-profiles';
 
 /** One arm's time on one load of one scenario. */
 export interface CardArm {
@@ -22,7 +22,7 @@ export interface CardArm {
   readonly id: string;
   /** Human label, e.g. `PixiJS`. */
   readonly label: string;
-  /** Milliseconds, or `null` where the arm produced no comparable figure. */
+  /** Milliseconds, or `null` where the arm published no figure here. */
   readonly ms: number | null;
   /** 95th percentile of the same window, or `null`. */
   readonly p95Ms: number | null;
@@ -31,6 +31,25 @@ export interface CardArm {
   /** True when the figure is past a whole 60 fps frame. */
   readonly overFrameBudget: boolean;
   /** What the comparison this arm belongs to could establish; see `outcomeOf`. */
+  readonly outcome: ReturnType<typeof outcomeOf>;
+  /**
+   * True where the figure may be drawn as a length.
+   *
+   * False is not a slow result but a comparison that was never drawn, so the
+   * row keeps its words and loses its bar. Plotting one would give the arm that
+   * produced nothing the shortest bar on the card, which reads as the fastest.
+   */
+  readonly quantitative: boolean;
+}
+
+/** One competitor's comparison on one load, for the detail a card opens. */
+export interface CardComparison {
+  /** Arm id, e.g. `pixi`. */
+  readonly id: string;
+  /** Human label, e.g. `PixiJS`. */
+  readonly label: string;
+  /** The published cell, verbatim - the detail and the row are the same measurement by construction. */
+  readonly cell: ProfileCell;
   readonly outcome: ReturnType<typeof outcomeOf>;
 }
 
@@ -42,10 +61,26 @@ export interface CardLoad {
   readonly label: string;
   /** Whether this is the load the card opens on. */
   readonly primary: boolean;
-  /** ExoJS first, then the competitors in the profile's own order. */
+  /** ExoJS first, then the competitors in a fixed order; see `orderArms`. */
   readonly arms: readonly CardArm[];
-  /** Largest measured figure on this load, for scaling the bars. */
+  /** Largest plottable figure on this load, for scaling the bars. */
   readonly maxMs: number;
+  /** Scene size this load was measured at. */
+  readonly count: number;
+  /** What `count` counts, where the row states one. */
+  readonly unit?: LoadUnit;
+  /** The published comparisons behind the row, in the same arm order. */
+  readonly comparisons: readonly CardComparison[];
+  /**
+   * How many libraries this load compares, where that is fewer than the block's
+   * widest row; `null` where it compares all of them.
+   *
+   * A card that silently shows two rows where its neighbours show four reads as
+   * a page that lost a library. The figure says how many were measured; why an
+   * arm is missing is a property of that arm's adapter and coverage and stays
+   * in the full results.
+   */
+  readonly measuredArms: number | null;
 }
 
 /** One scenario's card. */
@@ -54,6 +89,8 @@ export interface BenchCard {
   readonly id: string;
   /** The section the scenario is filed under. */
   readonly category: string;
+  /** The rendering backend these loads were measured on; absent for physics, which has no backend axis. */
+  readonly backend?: ProfileBackendName;
   /** Loads, in the order the harness measured them. */
   readonly loads: readonly CardLoad[];
 }
@@ -119,22 +156,28 @@ const referenceArm = (cells: readonly ProfileCell[]): CardArm | null => {
   return {
     id: 'exojs',
     label: armLabel('exojs'),
-    ms: first.referenceMs,
-    p95Ms: first.referenceP95Ms,
+    ms: publishedMs(first, first.referenceMs),
+    p95Ms: publishedMs(first, first.referenceP95Ms),
     reference: true,
     overFrameBudget: first.referenceOverFrameBudget,
     outcome: outcomeOf(first),
+    // ExoJS's own figure belongs to every pair in the row, so it is plottable
+    // as soon as any one of them drew a comparison. Reading it off the first
+    // cell alone would hide the reference bar whenever the arm that happens to
+    // sort first is the one the clock could not separate.
+    quantitative: cells.some(cell => isQuantitative(outcomeOf(cell))),
   };
 };
 
 const competitorArm = (cell: ProfileCell): CardArm => ({
   id: cell.competitor,
   label: armLabel(cell.competitor),
-  ms: cell.competitorMs,
-  p95Ms: cell.competitorP95Ms,
+  ms: publishedMs(cell, cell.competitorMs),
+  p95Ms: publishedMs(cell, cell.competitorP95Ms),
   reference: false,
   overFrameBudget: cell.competitorOverFrameBudget,
   outcome: outcomeOf(cell),
+  quantitative: isQuantitative(outcomeOf(cell)),
 });
 
 /** One row becomes one selectable load. */
@@ -145,20 +188,29 @@ const loadOf = (row: ProfileRow): CardLoad | null => {
     return null;
   }
 
-  const arms = [reference, ...row.cells.map(competitorArm)];
-  const measured = arms.map(arm => arm.ms).filter((ms): ms is number => ms !== null && Number.isFinite(ms));
+  const cells = orderArms(row.cells, cell => cell.competitor);
+  const arms = [reference, ...cells.map(competitorArm)];
+  // Every published figure sets the scale, because the bars are durations: an
+  // arm whose PAIR the clock could not separate still took the time it reports,
+  // and leaving it out of the maximum would draw it past the end of its track.
+  // What is excluded is what was never published at all, which is already null.
+  const plotted = arms.map(arm => arm.ms).filter((ms): ms is number => ms !== null && Number.isFinite(ms));
 
   return {
     id: row.loadId ?? String(row.count),
     label: formatLoad(row),
     primary: row.primary ?? false,
     arms,
-    maxMs: measured.length > 0 ? Math.max(...measured) : 0,
+    maxMs: plotted.length > 0 ? Math.max(...plotted) : 0,
+    count: row.count,
+    ...(row.unit !== undefined && { unit: row.unit }),
+    comparisons: cells.map(cell => ({ id: cell.competitor, label: armLabel(cell.competitor), cell, outcome: outcomeOf(cell) })),
+    measuredArms: null,
   };
 };
 
 /** Group a domain's sections into one card per scenario. */
-const cardsOf = (sections: readonly ProfileSection[]): readonly BenchCard[] => {
+const cardsOf = (sections: readonly ProfileSection[], backend?: ProfileBackendName): readonly BenchCard[] => {
   const byScenario = new Map<string, { category: string; loads: CardLoad[] }>();
 
   for (const section of sections) {
@@ -176,14 +228,24 @@ const cardsOf = (sections: readonly ProfileSection[]): readonly BenchCard[] => {
     }
   }
 
-  return [...byScenario.entries()].map(([id, card]) => ({ id, category: card.category, loads: card.loads }));
+  // Marked against the widest row the same block published, not against a list
+  // of arms the page holds: what a comparison "should" carry is whatever that
+  // machine's run actually measured, and a profile taken against three arms
+  // must not report every one of its rows as short of a fourth.
+  const cards = [...byScenario.entries()].map(([id, card]) => ({ id, category: card.category, loads: card.loads, ...(backend !== undefined && { backend }) }));
+  const widest = Math.max(0, ...cards.flatMap(card => card.loads.map(load => load.arms.length)));
+
+  return cards.map(card => ({
+    ...card,
+    loads: card.loads.map(load => ({ ...load, measuredArms: load.arms.length < widest ? load.arms.length : null })),
+  }));
 };
 
 /** The rendering cards of one profile on one backend, or an empty list where it measured none. */
 export const renderingCards = (document: BenchProfileDocument, backend: ProfileBackendName): readonly BenchCard[] => {
   const block = document.rendering?.backends.find(entry => entry.backend === backend);
 
-  return block === undefined ? [] : cardsOf(block.sections);
+  return block === undefined ? [] : cardsOf(block.sections, backend);
 };
 
 /** The physics cards of one profile. Physics has no backend axis. */

@@ -27,7 +27,9 @@ import {
   armsOfSection,
   BACKEND_LABELS,
   type BenchProfileDocument,
+  formatLoad,
   isWasmReferenceArm,
+  orderArms,
   type ProfileBackend,
   type ProfileCell,
   type ProfileRow,
@@ -52,7 +54,7 @@ export interface ComparisonEntry {
   readonly count: number | null;
 }
 
-/** One archetype, across every column of a table. */
+/** One archetype at one load, across every column of a table. */
 export interface ComparisonRow {
   readonly key: string;
   readonly archetype: string;
@@ -60,6 +62,10 @@ export interface ComparisonRow {
   readonly section: string | null;
   /** The size every column measured this row at, or `null` where they differ. */
   readonly count: number | null;
+  /** How the load reads, with its unit: `10,000 sprites`. */
+  readonly load: string;
+  /** Whether this is the scenario's headline load - the one a card opens on. */
+  readonly primary: boolean;
   readonly description?: string;
   readonly entries: readonly ComparisonEntry[];
 }
@@ -68,7 +74,7 @@ export interface ComparisonRow {
 export interface ComparisonTable {
   readonly columns: readonly ComparisonColumn[];
   readonly rows: readonly ComparisonRow[];
-  /** What a count is counted in: `nodes` for rendering, `bodies` for physics. */
+  /** What a count is counted in where a row states no unit of its own. */
   readonly unit: string;
   /** True where the rows were measured at different sizes, so the size belongs in a column of its own. */
   readonly countColumn: boolean;
@@ -102,6 +108,9 @@ const preferredColumn = (columns: readonly ComparisonColumn[]): number => {
   return 0;
 };
 
+/** A row's load, as the identity a table keys on. */
+const loadKey = (row: ProfileRow): string => row.loadId ?? String(row.count);
+
 const entryOf = (key: string, row: ProfileRow | undefined, arm: string): ComparisonEntry => ({
   key,
   cell: row?.cells.find(cell => cell.competitor === arm) ?? null,
@@ -112,51 +121,69 @@ const entryOf = (key: string, row: ProfileRow | undefined, arm: string): Compari
 const rowsOf = (backend: ProfileBackend): readonly ProfileRow[] => backend.sections.flatMap(section => section.rows);
 
 /**
- * The rendering table: one column per backend-and-arm pair.
+ * The rendering table: one column per backend-and-arm pair, one row per
+ * archetype and load.
  *
- * Archetypes are collected in the order the first backend publishes them and
- * then extended by any a later backend adds, so the categories stay in the
- * order the harness wrote them rather than being sorted into a ranking.
+ * Rows are collected in the order the first backend publishes them and then
+ * extended by any a later backend adds, so the categories stay in the order the
+ * harness wrote them rather than being sorted into a ranking.
  */
 export const renderingComparison = (document: BenchProfileDocument): ComparisonTable => {
   const backends = document.rendering?.backends ?? [];
   const columns = backends.flatMap(backend =>
-    backend.competitors.map(arm => ({
+    orderArms(backend.competitors, arm => arm).map(arm => ({
       key: `${backend.backend}-${arm}`,
       group: BACKEND_LABELS[backend.backend],
       overline: '',
       label: armLabel(arm),
     })),
   );
-  const archetypes: { archetype: string; section: string }[] = [];
+
+  /**
+   * Every archetype-and-load pair the backends published, in the order the
+   * first backend wrote them.
+   *
+   * The load is part of a row's identity and not a property of the table. An
+   * archetype is measured at several of them, and a table keyed on the
+   * archetype alone showed whichever load the harness happened to write first -
+   * so a card opening on its headline load and the table describing the same
+   * scenario were two different measurements under one name.
+   */
+  const keys: { archetype: string; loadId: string; section: string; row: ProfileRow }[] = [];
 
   for (const backend of backends) {
     for (const section of backend.sections) {
       for (const row of section.rows) {
-        if (!archetypes.some(entry => entry.archetype === row.archetype)) archetypes.push({ archetype: row.archetype, section: section.title });
+        const loadId = loadKey(row);
+
+        if (!keys.some(entry => entry.archetype === row.archetype && entry.loadId === loadId)) {
+          keys.push({ archetype: row.archetype, loadId, section: section.title, row });
+        }
       }
     }
   }
 
-  const rows = archetypes.map(({ archetype, section }) => {
+  const rows = keys.map(({ archetype, loadId, section, row: first }) => {
     const entries = backends.flatMap(backend => {
-      const row = rowsOf(backend).find(candidate => candidate.archetype === archetype);
+      const row = rowsOf(backend).find(candidate => candidate.archetype === archetype && loadKey(candidate) === loadId);
 
-      return backend.competitors.map(arm => entryOf(`${backend.backend}-${arm}`, row, arm));
+      return orderArms(backend.competitors, arm => arm).map(arm => entryOf(`${backend.backend}-${arm}`, row, arm));
     });
     const counts = [...new Set(entries.map(entry => entry.count).filter((count): count is number => count !== null))];
 
     return {
-      key: archetype,
+      key: `${archetype}-${loadId}`,
       archetype,
       section,
       count: counts.length === 1 ? (counts[0] ?? null) : null,
+      load: formatLoad(first),
+      primary: first.primary ?? false,
       description: archetypeDescription(archetype),
       entries,
     };
   });
 
-  return { columns, rows, unit: 'nodes', countColumn: false, defaultColumn: preferredColumn(columns) };
+  return { columns, rows, unit: 'nodes', countColumn: true, defaultColumn: preferredColumn(columns) };
 };
 
 const singleBlockTable = (
@@ -169,10 +196,12 @@ const singleBlockTable = (
   columns,
   defaultColumn: preferredColumn(columns),
   rows: rows.map(row => ({
-    key: row.archetype,
+    key: `${row.archetype}-${loadKey(row)}`,
     archetype: row.archetype,
     section: null,
     count: row.count,
+    load: formatLoad(row),
+    primary: row.primary ?? false,
     description: archetypeDescription(row.archetype),
     entries: arms.map(arm => entryOf(arm, row, arm)),
   })),
@@ -192,7 +221,7 @@ export const physicsComparison = (document: BenchProfileDocument): ComparisonTab
 
   if (section === undefined) return null;
 
-  const arms = armsOfSection(section);
+  const arms = orderArms(armsOfSection(section), arm => arm);
 
   return singleBlockTable(
     section.rows,
@@ -220,13 +249,13 @@ export const physicsComparison = (document: BenchProfileDocument): ComparisonTab
 export const webgl1Comparison = (backend: ProfileBackend): ComparisonTable | null => {
   if (backend.webgl1.length === 0) return null;
 
-  const arms = [...new Set(backend.webgl1.flatMap(row => row.cells.map(cell => cell.competitor)))].sort();
+  const arms = orderArms([...new Set(backend.webgl1.flatMap(row => row.cells.map(cell => cell.competitor)))], arm => arm);
 
   return singleBlockTable(
     backend.webgl1,
     arms,
     arms.map(arm => ({ key: arm, group: null, overline: 'WebGL1, CPU time only', label: armLabel(arm) })),
     'nodes',
-    false,
+    true,
   );
 };

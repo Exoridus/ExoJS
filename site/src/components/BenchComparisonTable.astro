@@ -34,6 +34,7 @@
  */
 
 import {
+    archetypeTitle,
     armLabel,
     describeRungs,
     formatBand,
@@ -45,7 +46,9 @@ import {
     frameShare,
     FRAME_BUDGET_MS,
     isWideSpread,
-    measuredMs,
+    OUTCOME_NOTES,
+    OUTCOME_STATUS,
+    publishedMs,
     outcomeOf,
     pooledFactor,
     ratioBand,
@@ -62,7 +65,7 @@ interface Props {
 }
 
 const { table, label } = Astro.props;
-const { columns, rows, unit, countColumn, defaultColumn } = table;
+const { columns, rows, countColumn, defaultColumn } = table;
 
 /**
  * Half-width of the axis in decades, fixed for every column and every table.
@@ -183,7 +186,7 @@ const winnerOf = (cell: ProfileCell): string => {
             )}
             <tr>
                 <th scope="col" class="col-archetype">Archetype</th>
-                {countColumn && <th scope="col" class="col-count">{unit === 'bodies' ? 'Bodies' : 'Nodes'}</th>}
+                {countColumn && <th scope="col" class="col-count">Load</th>}
                 {columns.map((column, index) => (
                     <th scope="col" class="col-arm" data-group={column.group ?? undefined} data-column={String(index)}>
                         {column.overline !== '' && <span class="overline">{column.overline}</span>}
@@ -205,17 +208,14 @@ const winnerOf = (cell: ProfileCell): string => {
                     )}
                     <tr>
                         <th scope="row">
-                            {row.archetype}
+                            {/* Plain words, as the cards name it: the archetype id is the contract with the harness and belongs in the details. */}
+                            {archetypeTitle(row.archetype)}
                             {row.description !== undefined && <span class="row-description">{row.description}</span>}
-                            {row.count !== null && !countColumn && (
-                                <span class="row-count">
-                                    {row.count} {unit}
-                                </span>
-                            )}
+                            {!countColumn && <span class="row-count">{row.load}</span>}
                         </th>
                         {countColumn && (
-                            <td class="count" data-label="Bodies">
-                                {row.count}
+                            <td class="count" data-label="Load">
+                                {row.load}
                             </td>
                         )}
                         {row.entries.map((entry, column) => {
@@ -225,7 +225,7 @@ const winnerOf = (cell: ProfileCell): string => {
                                 const reason =
                                     entry.count === null
                                         ? 'This archetype was not measured on this backend.'
-                                        : `No shared cell at ${String(entry.count)} ${unit}: the arm sits this archetype out, or exceeded the run budget there.`;
+                                        : `No shared cell at ${row.load}: the arm sits this archetype out, or exceeded the run budget there.`;
 
                                 return (
                                     <td class="cell empty" data-label={labelOf(column)} data-group={columns[column]?.group ?? undefined} data-column={String(column)} title={reason}>
@@ -245,8 +245,8 @@ const winnerOf = (cell: ProfileCell): string => {
                             const factor = mixed ? pooledFactor(cell) : cell.verdict.factor;
                             const ratio = cell.verdict.ratio;
                             const plotted = !mixed && !unresolved && ratio !== null && Number.isFinite(ratio) && ratio > 0;
-                            const referenceMs = measuredMs(cell, cell.referenceMs);
-                            const competitorMs = measuredMs(cell, cell.competitorMs);
+                            const referenceMs = publishedMs(cell, cell.referenceMs);
+                            const competitorMs = publishedMs(cell, cell.competitorMs);
 
                             return (
                                 <td class="cell" data-label={labelOf(column)} data-group={columns[column]?.group ?? undefined} data-column={String(column)}>
@@ -271,7 +271,9 @@ const winnerOf = (cell: ProfileCell): string => {
                                                 {/* A pair inside the noise band is named, not scored: its factor is pinned to 1 by the ladder, so printing 1.00x beside two medians that differ would claim a precision the ladder never measured. */}
                                                 <b>{unresolved ? '-' : mixed ? (factor === null ? '-' : formatApproximate(factor)) : level ? 'similar' : formatFactor(factor)}</b>
                                                 {/* The word alone; what it means is stated once in the legend rather than in every cell that carries it. */}
-                                                <i>{outcome === 'timer-limited' ? 'below the timer' : outcome === 'timer-unknown' ? '' : mixed ? 'no clear lead' : level ? '' : winnerOf(cell)}</i>
+                                                <i title={unresolved || mixed ? OUTCOME_NOTES[outcome] : undefined}>
+                                                    {unresolved ? OUTCOME_STATUS[outcome] : mixed ? OUTCOME_STATUS.unstable : level ? '' : winnerOf(cell)}
+                                                </i>
                                             </span>
                                             <span class="medians">
                                                 <b class:list={[cell.referenceOverFrameBudget && 'warn']}>{formatMs(referenceMs)}</b>
@@ -296,30 +298,29 @@ const winnerOf = (cell: ProfileCell): string => {
 
                                         if (cell === null) {
                                             return (
-                                                <section class="arm-detail absent">
+                                                <section class="arm-detail absent" data-group={columns[column]?.group ?? undefined} data-column={String(column)}>
                                                     <h4>{labelOf(column)}</h4>
                                                     <p>
                                                         {entry.count === null
                                                             ? 'Not measured on this backend.'
-                                                            : `No shared cell at ${String(entry.count)} ${unit}: the arm sits this archetype out, or exceeded the run budget there.`}
+                                                            : `No shared cell at ${row.load}: the arm sits this archetype out, or exceeded the run budget there.`}
                                                     </p>
                                                 </section>
                                             );
                                         }
 
                                         const band = outcomeOf(cell) === 'unstable' ? ratioBand(cell) : null;
-                                        const referenceMs = measuredMs(cell, cell.referenceMs);
-                                        const competitorMs = measuredMs(cell, cell.competitorMs);
-                                        const hasGpuTiming = cell.referenceGpuMs !== undefined || cell.competitorGpuMs !== undefined;
+                                        const referenceMs = publishedMs(cell, cell.referenceMs);
+                                        const competitorMs = publishedMs(cell, cell.competitorMs);
 
                                         return (
-                                            <section class="arm-detail">
+                                            <section class="arm-detail" data-group={columns[column]?.group ?? undefined} data-column={String(column)}>
                                                 <h4>{labelOf(column)}</h4>
                                                 <dl>
                                                     <div>
                                                         <dt>p95</dt>
                                                         <dd>
-                                                            {formatMs(measuredMs(cell, cell.referenceP95Ms))} vs {formatMs(measuredMs(cell, cell.competitorP95Ms))} ms
+                                                            {formatMs(publishedMs(cell, cell.referenceP95Ms))} vs {formatMs(publishedMs(cell, cell.competitorP95Ms))} ms
                                                         </dd>
                                                     </div>
                                                     <div>
@@ -357,15 +358,6 @@ const winnerOf = (cell: ProfileCell): string => {
                                                             ))}
                                                         </dd>
                                                     </div>
-                                                    {hasGpuTiming && (
-                                                        <div>
-                                                            <dt>GPU</dt>
-                                                            <dd>
-                                                                {formatMs(measuredMs(cell, cell.referenceGpuMs ?? null))} vs{' '}
-                                                                {formatMs(measuredMs(cell, cell.competitorGpuMs ?? null))} ms of GPU execution
-                                                            </dd>
-                                                        </div>
-                                                    )}
                                                     <div>
                                                         <dt>runs</dt>
                                                         <dd>

@@ -2,13 +2,13 @@
 /** A deliberately separate, browser-only probe. It never changes published profile data. */
 ---
 
-<section class="local-probe" aria-labelledby="local-probe-title">
+<section id="run-locally" class="local-probe" aria-labelledby="local-probe-title">
     <div class="local-probe-copy">
-        <p class="eyebrow">Local, not published</p>
+        <p class="eyebrow">One local test, not a published comparison</p>
         <h2 id="local-probe-title">Run on this device</h2>
         <p>
-            Run a short WebGL2 workload in this browser. It reports this device's local frame cost and capabilities; it is not mixed into the published
-            cross-library comparisons.
+            Runs a short WebGL2 workload in this browser and reports this device's own frame cost and capabilities. It measures ExoJS alone against nothing,
+            is not a cross-library reference run, and is never mixed into the published comparisons.
         </p>
     </div>
     <div class="local-probe-actions">

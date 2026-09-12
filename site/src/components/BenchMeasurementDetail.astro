@@ -1,0 +1,323 @@
+---
+/**
+ * The terms behind one measured row: what each pair produced beyond the median
+ * a card prints.
+ *
+ * It renders exactly the comparisons it is handed and never reaches back into
+ * the profile for more, so the block a card opens describes that card's current
+ * load, backend and profile by construction rather than by two views agreeing
+ * to look up the same key.
+ *
+ * There is no GPU line. The published field behind it is the frame bracket the
+ * run observed, which is a hardware timer on a backend that granted one and the
+ * present cadence otherwise, and the profile records no mark saying which - so
+ * the page cannot state what such a value is, and does not print it under a
+ * name that would.
+ */
+
+import {
+    armLabel,
+    describeRungs,
+    formatApproximate,
+    formatBand,
+    formatFactor,
+    formatMs,
+    formatRange,
+    formatSpread,
+    frameShare,
+    FRAME_BUDGET_MS,
+    isQuantitative,
+    isWideSpread,
+    OUTCOME_NOTES,
+    OUTCOME_STATUS,
+    pooledFactor,
+    publishedMs,
+    ratioBand,
+    rungSide,
+    type ProfileSpread,
+} from '../lib/bench-profiles';
+import type { CardComparison } from '../lib/bench-cards';
+
+interface Props {
+    /** The comparisons of one load, in the card's own arm order. */
+    comparisons: readonly CardComparison[];
+    /** Which comparison the block opens on; the rest stay one control away. */
+    selected?: string;
+}
+
+const { comparisons, selected } = Astro.props;
+const opening = comparisons.find(entry => entry.id === selected) ?? comparisons[0];
+
+/** The range a pooled measurement observed, in milliseconds, or a dash where it reported none. */
+const rangeOf = (spread: ProfileSpread): string => (formatRange(spread) === '' ? '-' : formatRange(spread));
+---
+
+{comparisons.length === 0 ? (
+    <p class="none">No library produced a comparable measurement at this load.</p>
+) : (
+    <div class="detail">
+        {comparisons.length > 1 && (
+            <div class="pick" role="group" aria-label="Compared library">
+                {comparisons.map(entry => (
+                    <button type="button" data-comparison={entry.id} aria-pressed={entry.id === opening?.id ? 'true' : 'false'}>
+                        vs {entry.label}
+                    </button>
+                ))}
+            </div>
+        )}
+
+        {comparisons.map(entry => {
+            const { cell, outcome } = entry;
+            const mixed = outcome === 'unstable';
+            const band = mixed ? ratioBand(cell) : null;
+            const factor = mixed ? pooledFactor(cell) : cell.verdict.factor;
+            const referenceMs = publishedMs(cell, cell.referenceMs);
+            const competitorMs = publishedMs(cell, cell.competitorMs);
+
+            return (
+                <section class="pair" data-comparison={entry.id} hidden={entry.id !== opening?.id}>
+                    <h4>
+                        ExoJS <i>vs</i> {entry.label}
+                    </h4>
+
+                    <p class="verdict">
+                        <b>{OUTCOME_STATUS[outcome]}</b>
+                        {/*
+                          * A comparison the clock never drew publishes no factor, whatever
+                          * figure the ladder happened to reach from the two raw samples: the
+                          * ratio of two durations the clock did not separate is the ratio of
+                          * its own grid, not of the libraries.
+                          */}
+                        {isQuantitative(outcome) && factor !== null && outcome !== 'level' && (
+                            <span class="figure">{mixed ? formatApproximate(factor) : formatFactor(factor)}</span>
+                        )}
+                        <span class="says">{OUTCOME_NOTES[outcome]}</span>
+                    </p>
+
+                    <dl>
+                        <div>
+                            <dt>median</dt>
+                            <dd>
+                                {formatMs(referenceMs)} vs {formatMs(competitorMs)} ms
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>p95</dt>
+                            <dd>
+                                {formatMs(publishedMs(cell, cell.referenceP95Ms))} vs {formatMs(publishedMs(cell, cell.competitorP95Ms))} ms
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>run range</dt>
+                            <dd>
+                                <span class:list={[isWideSpread(cell.aggregate.reference) && 'warn']}>{rangeOf(cell.aggregate.reference)}</span> vs{' '}
+                                <span class:list={[isWideSpread(cell.aggregate.competitor) && 'warn']}>{rangeOf(cell.aggregate.competitor)}</span> ms, spread{' '}
+                                {formatSpread(cell.aggregate.reference)} vs {formatSpread(cell.aggregate.competitor)}
+                            </dd>
+                        </div>
+                        {band !== null && (
+                            <div>
+                                <dt>run ratios</dt>
+                                <dd>{formatBand(band)}</dd>
+                            </div>
+                        )}
+                        <div>
+                            <dt>{FRAME_BUDGET_MS} ms frame</dt>
+                            <dd>
+                                {[
+                                    { name: 'ExoJS', share: frameShare(referenceMs) },
+                                    { name: armLabel(cell.competitor), share: frameShare(competitorMs) },
+                                ].map(share => (
+                                    <span class="budget-row">
+                                        <em>{share.name}</em>
+                                        <b class:list={[share.share !== null && share.share > 100 && 'warn']}>
+                                            {share.share === null ? '-' : `${share.share.toFixed(1)}%`}
+                                        </b>
+                                    </span>
+                                ))}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>runs</dt>
+                            <dd>
+                                <span class="runs">
+                                    {cell.aggregate.rungs.map(rung => (
+                                        <span class:list={['run', rungSide(rung)]} />
+                                    ))}
+                                </span>
+                                {describeRungs(cell.aggregate.rungs)}
+                            </dd>
+                        </div>
+                        {cell.mechanism !== null && (
+                            <div>
+                                <dt>mechanism</dt>
+                                <dd>{cell.mechanism}</dd>
+                            </div>
+                        )}
+                    </dl>
+                </section>
+            );
+        })}
+    </div>
+)}
+
+<style>
+    .none {
+        margin: 0;
+        font-size: 0.82rem;
+        color: var(--color-text-muted);
+    }
+
+    .detail {
+        display: flex;
+        flex-direction: column;
+        gap: 0.7rem;
+    }
+
+    .pick {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+    }
+
+    .pick button {
+        font: inherit;
+        font-size: 0.76rem;
+        padding: 0.2rem 0.55rem;
+        border-radius: 999px;
+        border: 1px solid var(--color-border);
+        background: transparent;
+        color: var(--color-text-muted);
+        cursor: pointer;
+    }
+
+    /* The selected comparison is marked by weight and by a filled ground as well as by hue, so it survives a reader who does not separate the two colours. */
+    .pick button[aria-pressed='true'] {
+        border-color: var(--color-accent);
+        background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+        color: var(--color-text);
+        font-weight: 650;
+    }
+
+    .pair h4 {
+        margin: 0 0 0.4rem;
+        font-size: 0.9rem;
+    }
+
+    .pair h4 i {
+        font-style: normal;
+        color: var(--color-text-muted);
+        font-weight: 400;
+    }
+
+    .verdict {
+        margin: 0 0 0.5rem;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.35rem 0.5rem;
+        font-size: 0.82rem;
+    }
+
+    .verdict .figure {
+        font-variant-numeric: tabular-nums;
+        color: var(--color-text-muted);
+    }
+
+    .verdict .says {
+        flex: 1 1 14rem;
+        color: var(--color-text-muted);
+    }
+
+    dl {
+        margin: 0;
+        display: grid;
+        gap: 0.3rem 0.9rem;
+        font-size: 0.8rem;
+    }
+
+    dl > div {
+        display: grid;
+        grid-template-columns: 7.5rem 1fr;
+        gap: 0.5rem;
+        align-items: baseline;
+    }
+
+    dt {
+        color: var(--color-text-muted);
+    }
+
+    dd {
+        margin: 0;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .budget-row {
+        display: inline-flex;
+        gap: 0.35rem;
+        margin-right: 0.9rem;
+    }
+
+    .budget-row em {
+        font-style: normal;
+        color: var(--color-text-muted);
+    }
+
+    .warn {
+        color: var(--amber);
+    }
+
+    .runs {
+        display: inline-flex;
+        gap: 0.2rem;
+        margin-right: 0.4rem;
+        vertical-align: middle;
+    }
+
+    .run {
+        width: 0.45rem;
+        height: 0.45rem;
+        border-radius: 999px;
+        border: 1px solid var(--color-border);
+    }
+
+    .run.exojs {
+        background: var(--color-accent);
+        border-color: var(--color-accent);
+    }
+
+    .run.competitor {
+        background: var(--color-text-muted);
+        border-color: var(--color-text-muted);
+    }
+
+    @media (max-width: 34rem) {
+        dl > div {
+            grid-template-columns: 1fr;
+            gap: 0.1rem;
+        }
+    }
+</style>
+
+<script>
+    // Scoped to the block the click came from: several cards can be open at
+    // once, and each carries its own comparisons. Without the script the
+    // opening comparison is the one that is not `hidden`, so the block still
+    // describes a measured pair.
+    for (const detail of document.querySelectorAll<HTMLElement>('.detail')) {
+        const buttons = detail.querySelectorAll<HTMLButtonElement>('.pick button');
+        const pairs = detail.querySelectorAll<HTMLElement>('.pair');
+
+        for (const button of buttons) {
+            button.addEventListener('click', () => {
+                for (const other of buttons) {
+                    other.setAttribute('aria-pressed', String(other === button));
+                }
+
+                for (const pair of pairs) {
+                    pair.hidden = pair.dataset['comparison'] !== button.dataset['comparison'];
+                }
+            });
+        }
+    }
+</script>

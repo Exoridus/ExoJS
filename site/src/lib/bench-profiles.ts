@@ -405,6 +405,52 @@ export const furtherProfiles: readonly BenchProfileDocument[] = loaded.slice(1);
 /** Display name for a rendering backend. */
 export const BACKEND_LABELS: Readonly<Record<ProfileBackendName, string>> = { webgl2: 'WebGL2', webgpu: 'WebGPU' };
 
+/** Browser engines as they are written, keyed by the slug the harness stores. */
+const BROWSER_LABELS: Readonly<Record<string, string>> = { chromium: 'Chromium', webkit: 'WebKit', firefox: 'Firefox' };
+
+/** Operating systems as they are written, keyed by the normalized platform name. */
+const OS_LABELS: Readonly<Record<string, string>> = { windows: 'Windows', macos: 'macOS', linux: 'Linux' };
+
+/**
+ * A hardware slug written out, e.g. `rtx-5070-ti` as `RTX 5070 Ti`.
+ *
+ * The slug is the harness's file-naming identifier and reads as one on a page.
+ * Only the shape is fixed here - hyphens become spaces, model designations
+ * stay upper case - because the set of machines is contributed and cannot be
+ * enumerated in advance; anything the rules do not recognise is title-cased
+ * rather than dropped.
+ */
+const DEVICE_WORDS: Readonly<Record<string, string>> = { rtx: 'RTX', gtx: 'GTX', rx: 'RX', ti: 'Ti', amd: 'AMD', apple: 'Apple', intel: 'Intel', arc: 'Arc' };
+
+const deviceName = (slug: string): string =>
+  slug
+    .split('-')
+    .map(word => DEVICE_WORDS[word] ?? (/^[a-z]\d/.test(word) || /^\d/.test(word) ? word.toUpperCase() : `${word.charAt(0).toUpperCase()}${word.slice(1)}`))
+    .join(' ');
+
+/**
+ * How a machine is named where a reader picks one.
+ *
+ * Short on purpose: the device and the browser engine are what distinguish the
+ * published profiles from each other, and a heading carrying the slug, the
+ * operating system, its version and the engine version is a filename rather
+ * than a name. Everything it leaves out stays on the profile itself.
+ */
+export const machineName = (profile: BenchProfile): string => `${deviceName(profile.gpu)} · ${BROWSER_LABELS[profile.browser] ?? deviceName(profile.browser)}`;
+
+/**
+ * The platform a profile was measured on, spelled out: `macOS 27 beta`.
+ *
+ * The pre-release marker is part of the name rather than a footnote - a beta
+ * platform's numbers are the beta's, and a reader comparing two machines has to
+ * see that before the figures and not after them.
+ */
+export const platformName = (profile: BenchProfile): string => {
+  const { name, version, prerelease } = profile.platform;
+
+  return `${OS_LABELS[name] ?? deviceName(name)} ${String(version)}${prerelease ? ' beta' : ''}`;
+};
+
 /**
  * How each arm is written where a reader sees it.
  *
@@ -421,12 +467,37 @@ const ARM_LABELS: Readonly<Record<string, string>> = {
   excalibur: 'Excalibur',
   phaser: 'Phaser',
   'matter-js': 'Matter.js',
+  'nape-js': 'Nape-JS',
   planck: 'Planck',
   rapier: 'Rapier',
 };
 
 /** An arm's published name, or its slug where none is known. */
 export const armLabel = (arm: string): string => ARM_LABELS[arm] ?? arm;
+
+/**
+ * The order arms are listed in, per domain, ExoJS first.
+ *
+ * Fixed here and never derived from the measurements. Ordering by time would
+ * move a library up or down the card whenever a re-measurement changed a
+ * number, so a reader following one arm across scenarios would have to find it
+ * again in every card - and a page whose rows reorder themselves around the
+ * result reads as a ranking rather than as a comparison.
+ */
+const ARM_ORDER: readonly string[] = ['exojs', 'exojs-physics', 'pixi', 'phaser', 'excalibur', 'matter-js', 'planck', 'nape-js', 'rapier'];
+
+/**
+ * Arms sorted into {@link ARM_ORDER}, with anything unknown kept behind them in
+ * the order it arrived.
+ *
+ * An arm the harness gained after this list was written must still appear, so
+ * an unknown slug is appended rather than dropped or guessed at a position.
+ */
+export const orderArms = <T>(arms: readonly T[], idOf: (arm: T) => string): readonly T[] =>
+  [...arms]
+    .map((arm, index) => ({ arm, index, rank: ARM_ORDER.indexOf(idOf(arm)) }))
+    .sort((a, b) => (a.rank === -1 ? ARM_ORDER.length + a.index : a.rank) - (b.rank === -1 ? ARM_ORDER.length + b.index : b.rank))
+    .map(entry => entry.arm);
 
 /**
  * What each archetype's workload is, in one line.
@@ -573,13 +644,22 @@ export const FRAME_BUDGET_MS = 16.7;
  */
 const SIGNIFICANT_DIGITS = 3;
 
+/** Most decimals a printed figure carries; also the smallest value that can be printed exactly. */
+const MOST_DECIMALS = 3;
+
 /** A number at {@link SIGNIFICANT_DIGITS}, as a fixed number of decimals for its magnitude. */
 const significant = (value: number): string => {
   const magnitude = value === 0 ? 0 : Math.floor(Math.log10(Math.abs(value)));
 
   // Capped at three: below a tenth of a millisecond the significant-figure rule
   // would keep adding decimals to values the clock delivers in fixed steps.
-  return value.toFixed(Math.max(0, Math.min(3, SIGNIFICANT_DIGITS - 1 - magnitude)));
+  const fixed = value.toFixed(Math.max(0, Math.min(MOST_DECIMALS, SIGNIFICANT_DIGITS - 1 - magnitude)));
+
+  // A trailing zero is a digit the significant-figure rule reached for and the
+  // measurement does not fill: `0.140` and `10.0` claim a place past what
+  // separated the runs, and a column of them reads as precision rather than as
+  // padding. The digits that carry the value are untouched.
+  return fixed.includes('.') ? fixed.replace(/0+$/, '').replace(/\.$/, '') : fixed;
 };
 
 /**
@@ -599,8 +679,20 @@ export const formatFactor = (factor: number | null): string => {
   return `${rounded}x`;
 };
 
-/** A median in milliseconds, or a dash when the arm produced no comparable number. */
-export const formatMs = (ms: number | null): string => (ms === null || !Number.isFinite(ms) ? '-' : significant(ms));
+/**
+ * A median in milliseconds, or a dash when the arm produced no comparable number.
+ *
+ * A positive value the formatter cannot reach is printed as a bound rather than
+ * rounded down: `0.000 ms` is the fastest figure the page can print, and an arm
+ * that took a measurable fraction of a microsecond must not be handed it.
+ */
+export const formatMs = (ms: number | null): string => {
+  if (ms === null || !Number.isFinite(ms)) return '-';
+
+  const printed = significant(ms);
+
+  return ms > 0 && Number.parseFloat(printed) === 0 ? `<${(10 ** -MOST_DECIMALS).toFixed(MOST_DECIMALS)}` : printed;
+};
 
 /**
  * True when the pair produced a comparison at all.
@@ -771,10 +863,55 @@ export const OUTCOME_LABELS: Readonly<Record<CellOutcome, string>> = {
   loss: 'loss',
   'clear-loss': 'clear loss',
   unstable: 'no clear lead',
-  'timer-limited': 'below the timer',
+  // Not "below the timer": that reads as a distance to the observed step size
+  // rather than as what happened, which is that the clock was too coarse to
+  // separate the two durations at all.
+  'timer-limited': 'timing-limited',
   'timer-unknown': 'timer not recorded',
   absent: 'no shared cell',
 };
+
+/**
+ * What a card prints in place of a figure, for the outcomes that publish none.
+ *
+ * Separate from {@link OUTCOME_LABELS}, which is written to be counted -
+ * `3 timing-limited` - while these stand alone on a row where a number would
+ * otherwise be, and have to read as a state rather than as a tally's noun.
+ */
+export const OUTCOME_STATUS: Readonly<Record<CellOutcome, string>> = {
+  'clear-lead': 'Clear lead',
+  lead: 'Lead',
+  level: 'Level',
+  loss: 'Loss',
+  'clear-loss': 'Clear loss',
+  unstable: 'No clear lead',
+  'timer-limited': 'Timing-limited',
+  'timer-unknown': 'Timer not recorded',
+  absent: 'Not available',
+};
+
+/**
+ * One sentence on what each state means, for the marker a reader can reach by
+ * touch or keyboard.
+ *
+ * A coloured glyph and a two-word label are not a statement; these are, and
+ * they are the only place the distinction between a comparison that failed and
+ * a comparison that was never drawn is spelled out beside the row itself.
+ */
+export const OUTCOME_NOTES: Readonly<Record<CellOutcome, string>> = {
+  'clear-lead': 'ExoJS leads by a margin attributable to how the libraries are built.',
+  lead: 'ExoJS leads on this row.',
+  level: 'Inside the band this page treats as no difference.',
+  loss: 'The other library leads on this row.',
+  'clear-loss': 'The other library leads by a margin attributable to how the libraries are built.',
+  unstable: 'The pooled runs reached different conclusions, so no verdict is published.',
+  'timer-limited': "The browser's clock did not separate the two durations, so no comparison is drawn. It is not a failed test.",
+  'timer-unknown': 'This profile was measured before the harness recorded what its clock resolved.',
+  absent: 'This library produced no comparable measurement here.',
+};
+
+/** What the frame-budget marker beside a figure means. */
+export const FRAME_BUDGET_NOTE = `Past a whole ${String(FRAME_BUDGET_MS)} ms frame at 60 fps: this scene alone does not fit in a frame.`;
 
 /**
  * What the timer check established about a comparison.
@@ -812,6 +949,37 @@ export const outcomeOf = (cell: ProfileCell | null): CellOutcome => {
   if (cell.verdict.side === 'exojs') return cell.verdict.structural ? 'clear-lead' : 'lead';
 
   return cell.verdict.structural ? 'clear-loss' : 'loss';
+};
+
+/**
+ * True where a cell's figures may be drawn as a quantity - a bar, a share of a
+ * frame, a winner.
+ *
+ * The three states that fail this are not slow results: they are comparisons
+ * that were never drawn. A cell whose clock did not separate the two durations,
+ * or that no run produced, still carries whatever times it has for a reader who
+ * opens the details, but plotting them would turn the absence of a comparison
+ * into the strongest-looking result on the card - a bar of almost no length
+ * beside arms that took milliseconds.
+ */
+export const isQuantitative = (outcome: CellOutcome): boolean => outcome !== 'timer-limited' && outcome !== 'timer-unknown' && outcome !== 'absent';
+
+/**
+ * One arm's figure as the page may print it, or `null` where the cell published
+ * none for that arm.
+ *
+ * Stricter than {@link measuredMs}, which only catches the stored zero. A
+ * comparison the clock refused also publishes a figure that cannot be read as a
+ * duration: the harness writes the arm's raw sample there, and below the grid
+ * the clock resolved that sample is as likely to be zero as to be the time the
+ * arm took.
+ */
+export const publishedMs = (cell: ProfileCell, ms: number | null): number | null => {
+  const measured = measuredMs(cell, ms);
+
+  if (measured === null) return null;
+
+  return outcomeOf(cell) === 'timer-limited' && measured === 0 ? null : measured;
 };
 
 /** The lowest and highest `exojs / competitor` ratio the pooled runs can have produced. */
