@@ -27,7 +27,7 @@ import {
 } from 'pixi.js';
 
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
-import { BLUR_TAPS_PER_SIDE } from '../archetypes';
+import { BLUR_KERNEL_SIGMAS, BLUR_TAPS_PER_SIDE } from '../archetypes';
 import type { ArchetypeSpec, Backend, EngineAdapter, LayoutDigestReport } from '../EngineAdapter';
 import { isParticleLifecycle, isParticles, PARTICLE_ALPHA, PARTICLE_LIFETIME, PARTICLE_PREROLL_STEPS, PARTICLE_STEP, particleSeedAt } from '../particles';
 import { isPickingScene, PICK_RECT_SIZE, pickPointAt, pickRectAt } from '../picking';
@@ -560,6 +560,23 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
    * one: raising it would run the filter several times over and publish the
    * extra passes as a slower blur rather than as the different effect they are.
    */
+  /**
+   * Standard deviation, in texels, of Pixi's nine-tap weight table at unit tap
+   * spacing.
+   *
+   * `BlurFilter.strength` is NOT a sigma, which is the trap this constant exists
+   * to close. The weights come from a fixed per-kernel-size table and never
+   * change; `strength` scales how far apart the taps are sampled, so it
+   * multiplies whatever standard deviation the table already has. Passing the
+   * archetype's sigma straight through therefore blurred this arm roughly twice
+   * as far as the shared contract asks.
+   *
+   * The table's own value: its ratios are a clean Gaussian - w1/w0 and w2/w0 both
+   * solve exp(-x^2 / 2*sigma^2) at sigma 2.021 - so dividing the target sigma by
+   * it gives the tap spacing that realizes the shared kernel.
+   */
+  const PIXI_KERNEL_SIGMA = 2.021;
+
   const buildBlurScene = (spec: ArchetypeSpec, nodeCount: number): void => {
     const texture = Texture.from(createBlurSourceCanvas());
     const sprite = new Sprite(texture);
@@ -572,10 +589,17 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
 
     const scene = new Container();
 
+    const blur = new BlurFilter({ strength: blurStrength(spec) / PIXI_KERNEL_SIGMA, quality: 1, kernelSize: BLUR_TAPS_PER_SIDE * 2 + 1 });
+
+    // Edge handling is part of the shared contract, and the two filters derive
+    // their reach from different multiples of the blur they were given - Pixi
+    // twice its tap spacing, ExoJS three sigmas. Left alone, this arm would hold
+    // back the effect a few pixels sooner at the filtered region's border and
+    // the difference would read as a different kernel. Stated as the contract's
+    // own reach instead.
+    blur.padding = blurStrength(spec) * BLUR_KERNEL_SIGMAS;
     scene.addChild(sprite);
-    // `strength` is Pixi's sigma, while the archetype states a reach; halving
-    // converts one into the other, so both arms blur the same distance.
-    scene.filters = [new BlurFilter({ strength: blurStrength(spec), quality: 1, kernelSize: BLUR_TAPS_PER_SIDE * 2 + 1 })];
+    scene.filters = [blur];
 
     root = scene;
     blurTexture = texture;

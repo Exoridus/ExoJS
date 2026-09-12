@@ -316,6 +316,15 @@ export const RENDERING_SCENARIOS: readonly ScenarioLoads[] = [
     ]),
   },
   {
+    scenarioId: 'fx-blur',
+    unit: 'viewport',
+    loads: loads([
+      [360, '', '640 x 360'],
+      [720, 'r*', '1280 x 720'],
+      [1_080, '', '1920 x 1080'],
+    ]),
+  },
+  {
     scenarioId: 'ui-layout-update',
     unit: 'widgets',
     loads: loads([

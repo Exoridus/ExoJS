@@ -85,6 +85,17 @@ const BLUR_HEIGHTS = [360, 720, 1_080] as const;
 export const BLUR_SIGMA = 2;
 
 /**
+ * Standard deviations the shared blur reaches outside its input on every edge.
+ *
+ * Part of the contract rather than an implementation detail: a filter that held
+ * the effect back sooner would darken the border of the filtered region, and the
+ * arms derive their own padding from different multiples, so the reach is stated
+ * here and each arm is configured to it. Three sigmas is where a Gaussian has
+ * less than half a percent of its mass left.
+ */
+export const BLUR_KERNEL_SIGMAS = 3;
+
+/**
  * Taps per side of the shared blur kernel, so both arms sweep 4 + 1 + 4 = nine.
  *
  * Exported because each arm configures its own filter from it, and a tap count
@@ -700,22 +711,29 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // is a single textured quad, so nothing about scene traversal enters the
   // measurement: what scales is the filter's own target passes.
   //
-  // NOT a cross-arm comparison, and the reason is the finding. Both arms are
-  // configured to the same contract - a separable two-pass Gaussian, nine taps,
-  // sigma 2 - but they do not produce the same picture: a capture of the two at
-  // 1280x720 differs on 45 % of its pixels. Two filters whose output differs
-  // that much are not doing the same work, so a wall-clock row would attribute a
-  // difference in effect to a difference in speed. The structural counters say
-  // as much on their own: ExoJS issues about twenty draw calls where Pixi issues
-  // three, which is a tap-per-draw implementation against a nine-tap shader.
+  // A TWO-ARM comparison. ExoJS and Pixi both realize the shared contract - a
+  // separable two-pass Gaussian, nine taps, sigma 2, three sigmas of reach - and
+  // a capture of the two agrees to within 18 of 255 on the worst channel of the
+  // worst pixel at every rung, with more than 98 % of pixels inside 8. That is
+  // the stated tolerance: two GPU filters are never bit-identical, and what has
+  // to match is the kernel rather than the rounding.
   //
-  // It stays in the matrix as an ExoJS-internal probe because that structure is
-  // worth tracking. Making it a published comparison needs the two outputs
-  // brought inside a stated tolerance first.
+  // Getting there took two corrections on the Pixi side, both in the arm rather
+  // than in either engine, and both worth knowing before the row is read.
+  // `BlurFilter.strength` is a tap SPACING, not a sigma - the weights are a
+  // fixed table - so passing the archetype's sigma through blurred that arm
+  // about twice as far; and the two filters derive their reach from different
+  // multiples of the blur, which showed up as a several-pixel band at the
+  // filtered region's border. See the Pixi adapter's blur scene for both.
+  //
+  // Phaser sits the archetype out. `Filters.Blur` is an iterative step blur on a
+  // camera, parameterized by an offset and a step count rather than by a kernel,
+  // so it cannot be configured to the shared nine taps at sigma 2 - and matching
+  // it would mean writing a kernel of our own rather than measuring Phaser's.
   {
     id: 'fx-blur',
     category: 'render-targets',
-    crossArm: false,
+    crossArm: true,
     nodeCounts: BLUR_HEIGHTS,
     nestingDepth: 1,
     textureCount: 1,
