@@ -65,7 +65,12 @@ export const createExoJsPhysicsAdapter = (): PhysicsAdapter => {
       bodies = scene.bodies.map(desc => createBody(w, desc));
 
       for (const joint of scene.joints) {
-        w.addJoint(new RevoluteJoint({ bodyA: bodies[joint.bodyA]!, bodyB: bodies[joint.bodyB]!, anchor: { x: joint.x, y: joint.y } }));
+        // Stated rather than inherited: the neutral scene requires that two
+        // jointed links do not also collide, and an arm must not depend on that
+        // happening to be its library's default.
+        w.addJoint(
+          new RevoluteJoint({ bodyA: bodies[joint.bodyA]!, bodyB: bodies[joint.bodyB]!, anchor: { x: joint.x, y: joint.y }, collideConnected: false }),
+        );
       }
 
       stepIndex = 0;

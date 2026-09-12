@@ -145,7 +145,16 @@ export const createRapierAdapter = async (): Promise<PhysicsAdapter> => {
         const a = bodyA.translation();
         const b = bodyB.translation();
 
-        created.createImpulseJoint(R.JointData.revolute({ x: joint.x - a.x, y: joint.y - a.y }, { x: joint.x - b.x, y: joint.y - b.y }), bodyA, bodyB, true);
+        const constraint = created.createImpulseJoint(
+          R.JointData.revolute({ x: joint.x - a.x, y: joint.y - a.y }, { x: joint.x - b.x, y: joint.y - b.y }),
+          bodyA,
+          bodyB,
+          true,
+        );
+
+        // Rapier computes contacts between jointed bodies by default, which is
+        // the opposite of what the neutral scene asks for.
+        constraint.setContactsEnabled(false);
       }
 
       stepIndex = 0;

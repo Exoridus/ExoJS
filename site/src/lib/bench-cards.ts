@@ -265,6 +265,56 @@ export const renderingCards = (document: BenchProfileDocument, backend: ProfileB
 export const physicsCards = (document: BenchProfileDocument): readonly BenchCard[] =>
   document.physics === undefined ? [] : cardsOf([document.physics.section]);
 
+/**
+ * How ExoJS stands on a card, as the ratio of the fastest measured peer to it.
+ *
+ * Above 1 ExoJS is ahead of even the quickest library measured beside it, below
+ * 1 at least one is ahead of ExoJS. Read from the FASTEST peer rather than from
+ * the field, so a single very slow arm cannot lift a card up the page, and from
+ * the card's OPENING load only, so switching a load chip never reorders the
+ * section under the reader's hands.
+ *
+ * `null` where the card publishes no comparison at all - a withheld row, or one
+ * whose figures no comparison established. Those carry no standing to sort by
+ * and keep the order the harness wrote them in.
+ */
+const standingOf = (card: BenchCard): number | null => {
+  const load = openingLoad(card);
+
+  if (load === undefined || load.withheld !== undefined) {
+    return null;
+  }
+
+  const exojs = load.arms.find(arm => arm.reference);
+  const peers = load.arms.filter(arm => !arm.reference && arm.quantitative && arm.ms !== null && arm.ms > 0).map(arm => arm.ms ?? 0);
+
+  if (exojs === null || exojs === undefined || !exojs.quantitative || exojs.ms === null || exojs.ms <= 0 || peers.length === 0) {
+    return null;
+  }
+
+  return Math.min(...peers) / exojs.ms;
+};
+
+/**
+ * Cards ordered within one group, strongest standing first.
+ *
+ * Ordering only - no score is published, nothing is aggregated, and the groups
+ * themselves keep the order the harness wrote them in, so a scenario never
+ * leaves the category it belongs to. Cards that publish no comparison sort
+ * after the ones that do, and ties keep the authored order.
+ */
+const byStanding = (cards: readonly BenchCard[]): readonly BenchCard[] =>
+  cards
+    .map((card, index) => ({ card, index, standing: standingOf(card) }))
+    .sort((a, b) => {
+      if (a.standing === null || b.standing === null) {
+        return (a.standing === null ? 1 : 0) - (b.standing === null ? 1 : 0) || a.index - b.index;
+      }
+
+      return b.standing - a.standing || a.index - b.index;
+    })
+    .map(entry => entry.card);
+
 /** The cards a section opens with, and the ones kept behind its "show all" control. */
 export interface CardSelection {
   readonly headline: readonly BenchCard[];
@@ -276,7 +326,9 @@ export const selectCards = (cards: readonly BenchCard[], preferred: readonly str
   const headline = headlineOrFirst(cards, preferred, count);
   const shown = new Set(headline.map(card => card.id));
 
-  return { headline, rest: cards.filter(card => !shown.has(card.id)) };
+  // Which cards open a section is fixed before any run; only their order within
+  // the section follows the measurements.
+  return { headline: byStanding(headline), rest: byStanding(cards.filter(card => !shown.has(card.id))) };
 };
 
 /** The load a card opens on: its headline, or the first one it carries. */

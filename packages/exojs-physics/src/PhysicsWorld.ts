@@ -12,7 +12,7 @@ import { canSweep, sweepProxies } from './collision/sweep';
 import { bodyPairKey, type ContactRecord } from './ContactGraph';
 import type { ContactModifier } from './ContactModifier';
 import type { CollisionEvent, SensorEvent } from './events';
-import type { Joint } from './joints/Joint';
+import { type Joint, softConstraint } from './joints/Joint';
 import type { BodyOwner } from './PhysicsBody';
 import { PhysicsBody } from './PhysicsBody';
 import type { QueryFilter, RayHit } from './query/QueryEngine';
@@ -850,7 +850,7 @@ export class PhysicsWorld implements BodyOwner {
     this._backend.prepareSolve(h, contactHertz, dampingRatio);
 
     if (hasJoints) {
-      this._prepareJoints(h);
+      this._prepareJoints(h, contactHertz, dampingRatio);
     }
 
     if (hasBullets) {
@@ -1212,9 +1212,13 @@ export class PhysicsWorld implements BodyOwner {
   }
 
   /** Build each joint's per-frame constraint data (once per fixed step). */
-  private _prepareJoints(h: number): void {
+  private _prepareJoints(h: number, contactHertz: number, dampingRatio: number): void {
+    // Twice the contact stiffness: a joint is the harder constraint of the two,
+    // and the pair has to stay separable or the softer one is solved away.
+    const rigid = softConstraint(2 * contactHertz, dampingRatio, h);
+
     for (const joint of this._joints) {
-      joint._prepare(h);
+      joint._prepare(h, rigid);
     }
   }
 

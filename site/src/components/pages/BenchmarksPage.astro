@@ -164,7 +164,7 @@ const leading = browsers[0];
                             ) : (
                                 entry.rendering.map((block, position) => (
                                     <div class="backend-panel" data-backend={block.backend} hidden={position !== 0}>
-                                        <div class="cards">
+                                        <div class:list={['cards', { odd: block.headline.length % 2 === 1 }]}>
                                             {block.headline.map(card => (
                                                 <BenchResultCard card={card} domain="rendering" />
                                             ))}
@@ -173,7 +173,7 @@ const leading = browsers[0];
                                         {block.rest.length > 0 && (
                                             <details class="more">
                                                 <summary>All rendering tests ({block.rest.length} more)</summary>
-                                                <div class="cards">
+                                                <div class:list={['cards', { odd: block.rest.length % 2 === 1 }]}>
                                                     {block.rest.map(card => (
                                                         <BenchResultCard card={card} domain="rendering" />
                                                     ))}
@@ -197,7 +197,7 @@ const leading = browsers[0];
                                 <p class="empty">This machine published no physics measurement.</p>
                             ) : (
                                 <>
-                                    <div class="cards">
+                                    <div class:list={['cards', { odd: entry.physics.headline.length % 2 === 1 }]}>
                                         {entry.physics.headline.map(card => (
                                             <BenchResultCard card={card} domain="physics" />
                                         ))}
@@ -206,7 +206,7 @@ const leading = browsers[0];
                                     {entry.physics.rest.length > 0 && (
                                         <details class="more">
                                             <summary>All physics tests ({entry.physics.rest.length} more)</summary>
-                                            <div class="cards">
+                                            <div class:list={['cards', { odd: entry.physics.rest.length % 2 === 1 }]}>
                                                 {entry.physics.rest.map(card => (
                                                     <BenchResultCard card={card} domain="physics" />
                                                 ))}
@@ -218,6 +218,15 @@ const leading = browsers[0];
                         </section>
                     </div>
                 ))}
+
+                {/*
+                  * One legend for the page. The mark it explains is on a figure
+                  * in almost every card, and repeating the sentence there would
+                  * put it on screen more often than the thing it describes.
+                  */}
+                <p class="legend">
+                    <b>Amber time</b> = over a 16.7 ms frame budget at 60 fps. The measurement is valid; the scene does not fit in one frame.
+                </p>
 
                 {/* Four destinations and no explanatory paragraphs: what each one is is what its name says. */}
                 <nav class="tools" aria-label="Benchmark data">
@@ -430,14 +439,30 @@ const leading = browsers[0];
         font-weight: 650;
     }
 
-    /* Two per row on desktop: a card is a comparison to read, not a tile to scan,
-       and a third column would shrink the bars past the point of being readable. */
+    /*
+     * Two per row on desktop: a card is a comparison to read, not a tile to
+     * scan, and a third column would shrink the bars past the point of being
+     * readable. Each card is as tall as its own content - a row stretched to
+     * its tallest neighbour left a band of empty card under every shorter one.
+     */
     .cards {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        /* Each card is as tall as its own content: a row stretched to its tallest neighbour left a band of empty card under every shorter one. */
         align-items: start;
         gap: var(--s-4);
+    }
+
+    /*
+     * An odd card closes its row instead of leaving a dead track beside it.
+     *
+     * A two-column grid holding an odd number of cards ends with one card and
+     * one empty cell, which reads as content that failed to load. The last card
+     * of an odd set spans the row: one card wider, not a banner, because the
+     * grid is two tracks and not six. The count decides it rather than
+     * `nth-child`, which counts whatever else the container ends up holding.
+     */
+    .cards.odd > :global(.card:last-child) {
+        grid-column: 1 / -1;
     }
 
     /*
@@ -477,11 +502,22 @@ const leading = browsers[0];
         margin-top: var(--s-4);
     }
 
+    .legend {
+        margin-top: var(--s-5) !important;
+        font-size: 0.82rem;
+        color: var(--fg-muted);
+    }
+
+    .legend b {
+        color: var(--amber);
+        font-weight: 650;
+    }
+
     .tools {
         display: flex;
         flex-wrap: wrap;
         gap: var(--s-2) var(--s-4);
-        margin-top: var(--s-6);
+        margin-top: var(--s-4);
         padding-top: var(--s-3);
         border-top: 1px solid var(--line-soft);
         font-size: 0.88rem;

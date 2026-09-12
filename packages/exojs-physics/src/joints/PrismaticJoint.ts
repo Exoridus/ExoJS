@@ -2,7 +2,7 @@ import type { PointLike } from '@codexo/exojs';
 
 import { applyInverseRotation, applyInverseTransform, applyRotation, applyTransform } from '../math';
 import type { PhysicsBody } from '../PhysicsBody';
-import type { JointOptions } from './Joint';
+import type { JointOptions, JointSoftness } from './Joint';
 import { Joint } from './Joint';
 
 /** Construction options for a {@link PrismaticJoint}. */
@@ -113,7 +113,7 @@ export class PrismaticJoint extends Joint {
   }
 
   /** @internal */
-  public override _prepare(h: number): void {
+  public override _prepare(h: number, _rigid: JointSoftness): void {
     const bodyA = this.bodyA;
     const bodyB = this.bodyB;
 

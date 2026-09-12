@@ -1,5 +1,41 @@
 import type { PhysicsBody } from '../PhysicsBody';
 
+/**
+ * Soft-constraint factors for one sub-step, as the solver's "soft step" uses
+ * them: how fast a position error is turned into a bias velocity, how much of
+ * the solved impulse is applied, and how much of the accumulated impulse is
+ * relaxed away again.
+ */
+export interface JointSoftness {
+  readonly biasRate: number;
+  readonly massScale: number;
+  readonly impulseScale: number;
+}
+
+/**
+ * Soft factors for a constraint of `hertz` stiffness at `dampingRatio`, over a
+ * sub-step of `h` seconds.
+ *
+ * The same formulation the contact solver uses. A joint asked for no stiffness
+ * of its own still gets these rather than a raw Baumgarte term: an unscaled
+ * `0.2 / h` bias applies the full position correction as a velocity every
+ * sub-step and relaxes none of the impulse it accumulated, which a single joint
+ * absorbs and a serial chain does not - each link hands its neighbour an
+ * over-correction that the next sub-step corrects again.
+ */
+export const softConstraint = (hertz: number, dampingRatio: number, h: number): JointSoftness => {
+  if (hertz <= 0) {
+    return { biasRate: 0, massScale: 1, impulseScale: 0 };
+  }
+
+  const omega = 2 * Math.PI * hertz;
+  const a1 = 2 * dampingRatio + h * omega;
+  const a2 = h * omega * a1;
+  const a3 = 1 / (1 + a2);
+
+  return { biasRate: omega / a1, massScale: a2 * a3, impulseScale: a3 };
+};
+
 /** Options every joint accepts, whatever it constrains. */
 export interface JointOptions {
   /**
@@ -13,15 +49,12 @@ export interface JointOptions {
    * constraint systems with different opinions, plus a contact per link that
    * nothing needs.
    *
-   * The default is nevertheless `true` for now, which is the behaviour every
-   * joint has had so far. A revolute chain measured over a long window gains
-   * energy once those contacts are gone - a settled chain reaching several
-   * thousand px/s with nothing driving it - so the contacts have been damping
-   * a stability problem in the joint solver rather than only costing time.
-   * Shipping `false` as the default would make that the behaviour every
-   * existing chain and ragdoll gets from an update, which is not a trade a
-   * default may make. Once the solver holds a chain on its own the default is
-   * worth revisiting.
+   * The default is nevertheless `true`, which is the behaviour every joint has
+   * had so far: an existing scene built against it would change shape under an
+   * update that flipped it. Nothing else argues for `true` any more - a chain
+   * of seven links and up used to gain energy without these contacts, and that
+   * defect is fixed in the joint solver rather than damped by them - so the
+   * default is a compatibility choice and is free to be revisited.
    *
    * Nothing about a contact is weakened under `true`: the narrow phase
    * produces it, the contact graph holds it, collision events fire, a
@@ -63,8 +96,12 @@ export abstract class Joint {
     this.collideConnected = collideConnected;
   }
 
-  /** @internal - build this frame's constraint data; called once per fixed step after detection. */
-  public abstract _prepare(h: number): void;
+  /**
+   * @internal - build this frame's constraint data; called once per fixed step
+   * after detection. `rigid` carries the solver's soft factors for a joint that
+   * asks for no stiffness of its own.
+   */
+  public abstract _prepare(h: number, rigid: JointSoftness): void;
   /** @internal - re-apply the accumulated impulse; called each sub-step (TGS-Soft warm-start). */
   public abstract _warmStart(): void;
   /** @internal - one velocity pass; `useBias` is the soft-bias pass, `false` the relax pass. */

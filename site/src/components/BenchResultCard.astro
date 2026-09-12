@@ -231,26 +231,28 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
                                 </button>
                             ) : (
                                 <>
-                                    <b>{formatMs(arm.ms)}</b>
-                                    <span class="unit">ms</span>
                                     {/*
-                                      * A dot, not a boxed exclamation mark. The
-                                      * figure beside it already says the scene
-                                      * does not fit in a frame; a warning badge
-                                      * on top of it reads as a defect report.
-                                      * The control it is drawn on is unchanged.
+                                      * The figure itself carries the mark. A glyph beside it
+                                      * needs a gutter every other row then has to leave empty,
+                                      * which breaks the one column a reader scans straight
+                                      * down - and it reads as a defect report rather than as
+                                      * what it is, a time larger than one frame.
                                       */}
-                                    {arm.overFrameBudget && (
+                                    {arm.overFrameBudget ? (
                                         <button
                                             type="button"
-                                            class="mark over"
+                                            class="figure over"
                                             data-explains={noteId(load.id, 'frame-budget')}
                                             aria-describedby={noteId(load.id, 'frame-budget')}
                                         >
-                                            <span class="glyph" aria-hidden="true">&#8226;</span>
+                                            {formatMs(arm.ms)}
                                             <span class="sr">{FRAME_BUDGET_NOTE}</span>
                                         </button>
+                                    ) : (
+                                        <b>{formatMs(arm.ms)}</b>
                                     )}
+                                    <span class="unit">ms</span>
+
                                 </>
                             )}
                         </span>
@@ -460,6 +462,17 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         color: var(--color-text);
     }
 
+    /* A figure past the frame budget, drawn as the same figure in the warning hue - same box, same alignment, no glyph. */
+    .figure.over {
+        font: inherit;
+        font-weight: 650;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--amber);
+        cursor: pointer;
+    }
+
     .arm.absent .time {
         font-size: 0.78rem;
     }
@@ -495,15 +508,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         background: transparent;
         color: var(--color-text-muted);
         cursor: pointer;
-    }
-
-    .mark.over {
-        margin-left: 0.3rem;
-        padding: 0;
-        border: 0;
-        color: var(--amber);
-        font-size: 1rem;
-        line-height: 0.6;
     }
 
     .sr {
@@ -543,8 +547,9 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         margin: 0;
     }
 
+    /* Its own disclosure section, not a line trailing the results above it. */
     .more {
-        margin-top: 0.2rem;
+        margin-top: 0.65rem;
         font-size: 0.82rem;
     }
 

@@ -2,7 +2,7 @@ import type { PointLike } from '@codexo/exojs';
 
 import { applyInverseTransform, applyTransform } from '../math';
 import type { PhysicsBody } from '../PhysicsBody';
-import type { JointOptions } from './Joint';
+import type { JointOptions, JointSoftness } from './Joint';
 import { Joint } from './Joint';
 
 /** Construction options for a {@link DistanceJoint}. */
@@ -98,7 +98,7 @@ export class DistanceJoint extends Joint {
   }
 
   /** @internal */
-  public override _prepare(h: number): void {
+  public override _prepare(h: number, rigid: JointSoftness): void {
     const bodyA = this.bodyA;
     const bodyB = this.bodyB;
 
@@ -174,10 +174,12 @@ export class DistanceJoint extends Joint {
       this._massScale = a2 * a3;
       this._impulseScale = a3;
     } else {
-      // Rigid: full mass, Baumgarte position bias, no impulse decay.
-      this._biasRate = 0.2 / h;
-      this._massScale = 1;
-      this._impulseScale = 0;
+      // The solver's own softness rather than a raw Baumgarte term; see
+      // `softConstraint`. An unscaled bias relaxes no impulse, which a chain of
+      // these constraints turns into energy.
+      this._biasRate = rigid.biasRate;
+      this._massScale = rigid.massScale;
+      this._impulseScale = rigid.impulseScale;
     }
   }
 

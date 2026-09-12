@@ -893,3 +893,91 @@ describe('joint lifecycle', () => {
     expect(bullet.x).toBeLessThan(wall.x);
   });
 });
+
+/**
+ * A hanging revolute chain has to stay where it was built.
+ *
+ * The scene is the neutral benchmark chain: equal 16 px boxes at density 1,
+ * pinned at the seam they share so every joint starts at zero error, hanging
+ * from a static anchor under gravity, with nothing driving it. Left to itself
+ * it must lose energy, not gain it.
+ *
+ * It did gain it. Chains of seven links and up accelerated along their own axis
+ * from a standing start - 8 links reached ~1760 px/s inside 100 steps and 12
+ * diverged outright - while the same chains held still as long as the links
+ * also collided at their seams. Those contacts were damping a solver defect:
+ * the point constraint solved every sub-step against the anchor error measured
+ * at frame start, so each sub-step re-corrected an error the previous one had
+ * already taken out, and it applied that correction through an unscaled bias
+ * that relaxed none of the impulse it accumulated.
+ *
+ * The window is what the old 0.5 s test could not reach: the growth was not
+ * visible before step 75 and not decisive before several hundred.
+ */
+describe('revolute chain stability', () => {
+  /** Steps to run - ten seconds at the fixed rate, well past where the growth used to be unmistakable. */
+  const WINDOW = 600;
+
+  /** How far a link may hang below where it was built. A soft constraint stretches under load; it must not drift. */
+  const MAX_SAG_PX = 8;
+
+  const hangChain = (links: number): { world: PhysicsWorld; chain: readonly PhysicsBody[] } => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const chain: PhysicsBody[] = [];
+    let previous = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 200 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
+
+    for (let link = 1; link <= links; link++) {
+      const y = 200 + link * 16;
+      const body = world.add(
+        new PhysicsBody({ type: 'dynamic', position: { x: 0, y }, colliders: [{ shape: new BoxShape(16, 16), density: 1, friction: 0.5 }] }),
+      );
+
+      // Connected-body collision off: the seam contacts are exactly what used
+      // to hold this chain together, and the joint has to do it on its own.
+      world.addJoint(new RevoluteJoint({ bodyA: previous, bodyB: body, anchor: { x: 0, y: y - 8 }, collideConnected: false }));
+      chain.push(body);
+      previous = body;
+    }
+
+    return { world, chain };
+  };
+
+  const fastest = (chain: readonly PhysicsBody[]): number =>
+    chain.reduce((peak, body) => Math.max(peak, Math.hypot(body.linearVelocityX, body.linearVelocityY)), 0);
+
+  for (const links of [7, 8, 12]) {
+    it(`holds a ${String(links)}-link chain still for ${String(WINDOW)} steps`, () => {
+      const { world, chain } = hangChain(links);
+      let peak = 0;
+
+      for (let step = 0; step < WINDOW; step++) {
+        world.step(FRAME);
+        peak = Math.max(peak, fastest(chain));
+      }
+
+      // Invariants rather than the numbers this run happens to produce: the
+      // chain stays finite, stays where it was built, and ends at rest.
+      for (const [index, body] of chain.entries()) {
+        const restY = 200 + (index + 1) * 16;
+
+        expect(Number.isFinite(body.x)).toBe(true);
+        expect(Number.isFinite(body.y)).toBe(true);
+        expect(body.y).toBeGreaterThanOrEqual(restY - MAX_SAG_PX);
+        expect(body.y).toBeLessThanOrEqual(restY + MAX_SAG_PX);
+      }
+
+      // A chain under no excitation may only lose speed. The bound is the
+      // settling motion of the first few steps, not the runaway that followed.
+      expect(peak).toBeLessThan(GRAVITY * FRAME * 4);
+      expect(fastest(chain)).toBeLessThan(1);
+    });
+  }
+
+  it('lets a long chain come to rest and sleep', () => {
+    const { world, chain } = hangChain(12);
+
+    advance(world, WINDOW * FRAME);
+
+    expect(chain.every(body => body.isSleeping)).toBe(true);
+  });
+});

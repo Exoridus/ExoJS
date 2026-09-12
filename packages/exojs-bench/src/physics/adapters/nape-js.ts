@@ -74,6 +74,9 @@ export const createNapeJsAdapter = async (): Promise<PhysicsAdapter> => {
           new N.Vec2(joint.x - positionB.x, joint.y - positionB.y),
         );
 
+        // Nape's `ignore` defaults to false, so without this the links collide
+        // as well as being pinned - the scene asks for the pin alone.
+        constraint.ignore = true;
         constraint.space = created;
       }
 

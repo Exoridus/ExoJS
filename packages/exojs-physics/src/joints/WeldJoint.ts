@@ -2,7 +2,7 @@ import type { PointLike } from '@codexo/exojs';
 
 import { applyInverseTransform, applyTransform } from '../math';
 import type { PhysicsBody } from '../PhysicsBody';
-import type { JointOptions } from './Joint';
+import type { JointOptions, JointSoftness } from './Joint';
 import { Joint } from './Joint';
 
 /** Construction options for a {@link WeldJoint}. */
@@ -32,8 +32,8 @@ interface SoftFactors {
   impulseScale: number;
 }
 
-/** Box2D-v3 soft-constraint factors at sub-step `h`, or rigid Baumgarte when `hertz === 0`. */
-const computeSoftFactors = (hertz: number, dampingRatio: number, h: number, out: SoftFactors): void => {
+/** Soft-constraint factors at sub-step `h`, or the solver's own rigid factors when `hertz === 0`. */
+const computeSoftFactors = (hertz: number, dampingRatio: number, h: number, rigid: JointSoftness, out: SoftFactors): void => {
   if (hertz > 0) {
     const omega = 2 * Math.PI * hertz;
     const a1 = 2 * dampingRatio + h * omega;
@@ -44,9 +44,9 @@ const computeSoftFactors = (hertz: number, dampingRatio: number, h: number, out:
     out.massScale = a2 * a3;
     out.impulseScale = a3;
   } else {
-    out.biasRate = 0.2 / h;
-    out.massScale = 1;
-    out.impulseScale = 0;
+    out.biasRate = rigid.biasRate;
+    out.massScale = rigid.massScale;
+    out.impulseScale = rigid.impulseScale;
   }
 };
 
@@ -108,7 +108,7 @@ export class WeldJoint extends Joint {
   }
 
   /** @internal */
-  public override _prepare(h: number): void {
+  public override _prepare(h: number, rigid: JointSoftness): void {
     const bodyA = this.bodyA;
     const bodyB = this.bodyB;
 
@@ -151,8 +151,8 @@ export class WeldJoint extends Joint {
     const kAngle = iA + iB;
     this._effMassAngle = kAngle > 0 ? 1 / kAngle : 0;
 
-    computeSoftFactors(this.linearHertz, this.dampingRatio, h, this._linear);
-    computeSoftFactors(this.angularHertz, this.dampingRatio, h, this._angular);
+    computeSoftFactors(this.linearHertz, this.dampingRatio, h, rigid, this._linear);
+    computeSoftFactors(this.angularHertz, this.dampingRatio, h, rigid, this._angular);
   }
 
   /** @internal */

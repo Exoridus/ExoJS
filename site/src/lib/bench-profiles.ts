@@ -672,7 +672,7 @@ const ARCHETYPE_TITLES: Readonly<Record<string, string>> = {
  */
 const WITHHELD_SCENARIOS: Readonly<Record<string, string>> = {
   joints:
-    'Each link is pinned at the edge it shares with the next, so whether that pair also registers a contact follows from each library default for connected bodies rather than from the scene: ExoJS resolves one contact per jointed pair, Rapier one per chain, and Matter.js, Planck and Nape-JS none. The arms are not doing the same contact work, so their times are published and no comparison is drawn from them.',
+    'The published profiles were measured before the arms agreed on whether two jointed links also collide with each other. Each library defaulted differently, so ExoJS resolved one contact per jointed pair where Matter.js, Planck and Nape-JS resolved none and Rapier one per chain, and the arms were not doing the same work. The harness now configures every arm explicitly, and the comparison returns with the next reference measurement; until then these times stand on their own.',
 };
 
 /** Why a scenario publishes no cross-arm comparison, or `undefined` where it publishes one. */
