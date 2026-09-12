@@ -186,4 +186,12 @@ pnpm bench:compare -- \
         where it leads, with the same mechanism evidence attached, and the rows the harness could not compare are listed with the reason it could
         not.
     </p>
+    <p>
+        One scenario currently carries an <strong>open equivalence question</strong>. In the joint-chain scenario the links are pinned at the edge they
+        share, so whether two jointed links also register a contact comes down to each engine's own contact margin and its default for connected
+        bodies - and the arms do not agree: ExoJS reports one contact for every jointed pair, Rapier one per chain, and matter.js, planck and Nape-JS
+        none. Its per-arm times are published like every other row, but what the scenario loads is not the same work in every arm, so the cross-arm
+        comparison there is not settled and is not read as one. What the neutral scene should require of every arm is a decision the harness owes
+        before that row is treated as a result.
+    </p>
 </details>

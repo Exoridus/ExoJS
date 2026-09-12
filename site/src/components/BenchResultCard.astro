@@ -28,12 +28,28 @@
  * The detail each load opens is rendered from that load's own comparisons, so
  * the load, the backend and the profile a reader is looking at cannot come
  * apart from the ones the numbers were read out of.
+ *
+ * Below the width at which the grid becomes one column, the card gives up its
+ * own frame and becomes a SECTION of the domain's single card, separated from
+ * its neighbours by a rule. Six framed cards in a column is six visual restarts
+ * of the same structure - border, padding, title block, gap - where the frame
+ * has nothing left to separate horizontally, and the section headings carry the
+ * grouping on their own. The chrome is only dropped, not the structure: the
+ * rows, the load control and the per-scenario detail are identical at both
+ * widths, and nothing here becomes a table.
  */
 
 import BenchMeasurementDetail from './BenchMeasurementDetail.astro';
 import { archetypeDescription, archetypeTitle, type CellOutcome, FRAME_BUDGET_NOTE, formatMs, OUTCOME_NOTES, OUTCOME_STATUS } from '../lib/bench-profiles';
 import type { BenchCard } from '../lib/bench-cards';
 import { openingLoad } from '../lib/bench-cards';
+
+/** A scenario description split into what the scene is and what it loads, at the semicolon the descriptions carry. */
+const splitAtClause = (text: string): readonly [string, string | undefined] => {
+    const at = text.indexOf('; ');
+
+    return at === -1 ? [text, undefined] : [`${text.slice(0, at)}.`, text.slice(at + 2)];
+};
 
 interface Props {
     card: BenchCard;
@@ -44,6 +60,16 @@ interface Props {
 const { card, domain } = Astro.props;
 const opening = openingLoad(card);
 const description = archetypeDescription(card.id);
+const [lead, descriptionRest] = description === undefined ? [undefined, undefined] : splitAtClause(description);
+
+/**
+ * The lead clause, unless it only repeats the title.
+ *
+ * `Changing labels; stresses per-frame text invalidation and layout.` reduces to
+ * `Changing labels.` under a heading that already says `Changing labels`, which
+ * on a phone spends a line saying nothing.
+ */
+const descriptionLead = lead !== undefined && lead.replace(/\.$/, '').toLowerCase() === archetypeTitle(card.id).toLowerCase() ? undefined : lead;
 const anchor = `${domain}-${card.id}${card.backend === undefined ? '' : `-${card.backend}`}`;
 
 /**
@@ -111,7 +137,24 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
 <article class="card" id={anchor} style={`--bench-time-ch:${String(timeCharacters)}`}>
     <header>
         <h3>{archetypeTitle(card.id)}</h3>
-        {description !== undefined && <p class="what">{description}</p>}
+        {/*
+          * Split at the semicolon the descriptions already carry: the clause
+          * before it says what the scene is, the clause after it says which
+          * part of the renderer it loads. Narrow, only the first is worth two
+          * lines of a phone screen, and the second is one tap away - so nothing
+          * is rewritten and nothing is lost.
+          */}
+        {description !== undefined && (
+            <p class:list={['what', { 'lead-only': descriptionLead === undefined }]}>
+                {descriptionLead !== undefined && <span class="what-lead">{descriptionLead}</span>}
+                {descriptionRest !== undefined && (
+                    <span class="what-rest">
+                        {descriptionLead === undefined ? '' : '; '}
+                        {descriptionRest}
+                    </span>
+                )}
+            </p>
+        )}
     </header>
 
     {card.loads.length > 1 ? (
@@ -472,6 +515,49 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         .notes > div {
             grid-template-columns: 1fr;
             gap: 0.1rem;
+        }
+    }
+
+    /*
+     * One card per domain, scenarios as sections inside it. The breakpoint is
+     * the one at which the grid collapses to a single column: above it the
+     * frames separate cards that sit side by side, below it they separate
+     * nothing and only cost height.
+     */
+    @media (max-width: 52rem) {
+        .card {
+            border: 0;
+            border-radius: 0;
+            padding: 0.9rem 0 0;
+            background: none;
+            box-shadow: none;
+        }
+
+        /* The rule belongs between sections, so the first one does not open with one. */
+        .card + .card {
+            border-top: 1px solid var(--color-border);
+        }
+
+        .what-rest {
+            display: none;
+        }
+
+        /* Nothing left to print once the lead clause was only the title again. */
+        .what.lead-only {
+            display: none;
+        }
+
+        .what {
+            margin-top: 0.15rem;
+        }
+
+        .load {
+            font-size: 0.72rem;
+            padding: 0.15rem 0.45rem;
+        }
+
+        .more > summary {
+            font-size: 0.78rem;
         }
     }
 </style>

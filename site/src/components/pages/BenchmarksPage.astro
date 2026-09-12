@@ -425,6 +425,24 @@ const leading = browsers[0];
         gap: var(--s-4);
     }
 
+    /*
+     * Narrow, the container is the card and its scenarios are sections of it -
+     * the frame each scenario carried separated nothing once they were stacked,
+     * and ten of them read as ten small pages rather than as one comparison.
+     * The scenario cards drop their own chrome at the same width; see
+     * `BenchResultCard`.
+     */
+    @media (max-width: 52rem) {
+        .cards {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 0;
+            padding: 0.2rem 1rem 1rem;
+            border: 1px solid var(--line-soft);
+            border-radius: var(--r-3);
+            background: var(--bg-elevated);
+        }
+    }
+
     .more {
         margin-top: var(--s-4);
     }
@@ -448,9 +466,5 @@ const leading = browsers[0];
         font-size: 0.88rem;
     }
 
-    @media (max-width: 52rem) {
-        .cards {
-            grid-template-columns: minmax(0, 1fr);
-        }
-    }
+
 </style>
