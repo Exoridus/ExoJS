@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { PhysicsStamp, RenderingStamp } from '../src/profile/schema';
 import { computeProfileSignature } from '../src/profile/signature';
-import { deriveProfileParts, normalizeCpuModel, normalizeGpuAdapter, ProfileSlugError } from '../src/profile/slug';
+import { deriveProfileParts, isIdentifyingPart, normalizeCpuModel, normalizeGpuAdapter, ProfileSlugError } from '../src/profile/slug';
 import type { PlatformVersionStamp } from '../src/shared/provenance';
 
 /**
@@ -71,6 +71,11 @@ describe('normalizeGpuAdapter', () => {
 
   it('reduces a browser that reports a constant instead of the device to a word that names no machine', () => {
     expect(normalizeGpuAdapter('Apple GPU')).toBe('gpu');
+  });
+
+  it("reduces WebKit's WebGPU substitution to a bare vendor word, which names no machine either", () => {
+    expect(normalizeGpuAdapter('apple apple apple apple')).toBe('apple');
+    expect(isIdentifyingPart('apple')).toBe(false);
   });
 });
 
@@ -147,6 +152,27 @@ describe('deriveProfileParts', () => {
       browser: 'webkit',
       platform: { name: 'macos', version: 27, versionSource: 'declared', prerelease: true },
     });
+  });
+
+  it('falls back to the CPU model when only one of the two backends masks the GPU', () => {
+    // The real WebKit pair: WebGL2 reports the constant `Apple GPU`, WebGPU the
+    // substitution `apple apple apple apple`. The second reduces to a vendor
+    // word, which must not win the adapter preference and name the machine.
+    const parts = deriveProfileParts({
+      rendering: [
+        webkitBetaStamp(),
+        renderingStamp('apple apple apple apple', 'webgpu', {
+          browser: 'webkit',
+          browserVersion: '26.5',
+          os: 'darwin 25.0.0',
+          platformVersion: MACOS_27_BETA,
+          prerelease: { value: true, source: 'declared', evidence: `the runner declared the platform as '27-beta'` },
+        }),
+      ],
+      physics: physicsStamp('Apple M3 Max', 'darwin 25.0.0', MACOS_27_BETA, { browser: 'webkit', browserVersion: '26.5' }),
+    });
+
+    expect(parts.slug).toBe('m3-max-macos-27-beta-webkit');
   });
 
   it('refuses a rendering-only profile whose adapter names no machine, naming the domain that would', () => {
