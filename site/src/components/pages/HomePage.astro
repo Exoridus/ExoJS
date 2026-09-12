@@ -5,6 +5,7 @@ import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
 import ExampleThumb from '../../components/ExampleThumb.astro';
 import { GuideExamplePreview } from '../../components/GuideExamplePreview';
 import InstallCommand from '../../components/InstallCommand.astro';
+import { appInfo } from '../../lib/app-info';
 import { getAllExamples, getExamplesForChapter } from '../../lib/examples-catalog';
 import { getExampleExecutionSource } from '../../lib/example-sources';
 import { GUIDE_PARTS } from '../../lib/guide-structure';
@@ -155,6 +156,10 @@ const examples = [
                     </div>
                     <div class="hero-install">
                         <InstallCommand />
+                        <a class="hero-download" href={`${appInfo.repositoryUrl}/releases/latest`} rel="noopener">
+                            <span class="hero-download-label">Or download the latest release</span>
+                            <span class="hero-download-note">Ready-to-use bundles, no build step</span>
+                        </a>
                     </div>
                 </div>
                 <div class="hero-snippet">
@@ -451,6 +456,37 @@ const examples = [
     .hero-install {
         margin-top: var(--s-5);
         max-width: 420px;
+        display: grid;
+        gap: var(--s-3);
+        justify-items: start;
+    }
+
+    /*
+     * `/releases/latest` rather than a tag built from the package version:
+     * GitHub resolves it to whatever is newest, while the version in
+     * `package.json` is the one being developed and is ahead of the last
+     * release for most of a cycle - which would link a tag that does not exist
+     * yet.
+     */
+    .hero-download {
+        display: grid;
+        gap: 2px;
+        text-decoration: none;
+        color: var(--fg-muted);
+        font-size: 13px;
+    }
+
+    .hero-download-label {
+        color: var(--accent);
+        font-weight: 500;
+    }
+
+    .hero-download:hover .hero-download-label {
+        text-decoration: underline;
+    }
+
+    .hero-download-note {
+        color: var(--fg-faint);
     }
 
     .home .btn {
