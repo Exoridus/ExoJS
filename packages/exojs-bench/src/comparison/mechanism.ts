@@ -65,16 +65,40 @@ const dominantCounter = (pairs: readonly CounterPair[]): CounterPair | null => {
   return null;
 };
 
+/** How a rendering row's counters are to be read. */
+export interface RenderingMechanismOptions {
+  /**
+   * Whether the archetype submits nothing by design.
+   *
+   * The zero-draw check below rests on every scene drawing something, so a cell
+   * at zero has to be a cell that failed to build its scene. One archetype
+   * breaks that: the UI-layout scene measures a box-tree solve and its leaves
+   * are layout boxes with no painted surface, so both arms correctly draw
+   * nothing. There the zeros are the evidence rather than the absence of it -
+   * neither arm rendered, so all of the difference is the solve.
+   */
+  readonly drawless?: boolean;
+}
+
 /** Mechanism sentence for a rendering row, or `null` when neither arm reported counters. */
-export const renderingMechanism = (exojs: StructuralCounters | null, competitor: StructuralCounters | null): string | null => {
+export const renderingMechanism = (
+  exojs: StructuralCounters | null,
+  competitor: StructuralCounters | null,
+  options: RenderingMechanismOptions = {},
+): string | null => {
   if (exojs === null || competitor === null) {
     return null;
   }
 
-  // A cell that issued no draw call at all did not render the archetype, so its
-  // counters describe nothing.
   if (exojs.drawCalls === 0 && competitor.drawCalls === 0) {
-    return null;
+    // A cell that issued no draw call at all did not render the archetype, so
+    // its counters describe nothing - unless the archetype draws nothing on
+    // purpose (see `drawless`).
+    if (options.drawless !== true) {
+      return null;
+    }
+
+    return `neither arm submits anything for this scene (draw/bind/upload per frame: ${exojs.drawCalls}/${exojs.textureBinds}/${exojs.bufferUploads} vs ${competitor.drawCalls}/${competitor.textureBinds}/${competitor.bufferUploads}); the whole difference is the per-frame work itself`;
   }
 
   const dominant = dominantCounter([
