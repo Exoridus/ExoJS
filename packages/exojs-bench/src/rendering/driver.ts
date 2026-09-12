@@ -22,6 +22,7 @@ import type { ArchetypeSpec, Backend, CellResult, CellSpec, EngineAdapter } from
 import type { MatrixSelection } from './selection';
 import { applyPlan, applySelection } from './selection';
 import { usesRenderTargets } from './traits';
+import { isUiLayoutScene } from './uiLayout';
 import { isScrolling, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from './world';
 
 // Re-exported so the rendering barrel and the CLI keep importing the selection
@@ -244,8 +245,14 @@ const ADAPTER_CAPABILITIES: readonly EngineAdapter[] = [
   // `mask-clip`): Phaser's adapter and Excalibur 0.32 have no validated
   // per-node equivalent for the shared filter/mask scenes, so approximating
   // the cell would violate the fairness rule.
-  capabilityDescriptor('phaser', 'webgl2', ['webgl2'], spec => !isScrolling(spec) && !usesRenderTargets(spec)),
-  capabilityDescriptor('excalibur', 'default', ['webgl2'], spec => !isScrolling(spec) && !usesRenderTargets(spec)),
+  //
+  // Both sit out the UI-layout archetype as well, and that one is a capability
+  // finding rather than a policy: neither library ships a layout engine at all.
+  // Phaser 4's `Actions.GridAlign` places objects once on a fixed raster and
+  // `GameObjects.Grid` draws one; Excalibur 0.32 has no layout container. A cell
+  // on either arm could only measure a flexbox written inside the harness.
+  capabilityDescriptor('phaser', 'webgl2', ['webgl2'], spec => !isScrolling(spec) && !usesRenderTargets(spec) && !isUiLayoutScene(spec)),
+  capabilityDescriptor('excalibur', 'default', ['webgl2'], spec => !isScrolling(spec) && !usesRenderTargets(spec) && !isUiLayoutScene(spec)),
 ];
 
 /**

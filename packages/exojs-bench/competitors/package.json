@@ -6,12 +6,14 @@
   "dependencies": {
     "pixi.js": "8.19.0",
     "@pixi/tilemap": "5.0.2",
+    "@pixi/layout": "3.2.1",
     "phaser": "4.2.1",
     "excalibur": "0.32.0",
     "matter-js": "0.20.0",
     "planck": "1.5.0",
     "@newkrok/nape-js": "3.42.0",
     "@types/matter-js": "0.20.2",
-    "@dimforge/rapier2d-compat": "0.19.3"
+    "@dimforge/rapier2d-compat": "0.19.3",
+    "yoga-layout": "3.2.1"
   }
 }

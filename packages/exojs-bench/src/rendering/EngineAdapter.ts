@@ -18,6 +18,7 @@ export type ArchetypeId =
   | 'particles-lifecycle'
   | 'fx-blur'
   | 'interaction-picking'
+  | 'ui-layout-update'
   | 'batch-breaking'
   | 'batch-breaking-atlased'
   | 'split-screen'
@@ -318,6 +319,21 @@ export interface ArchetypeSpec {
    */
   readonly pointerQueriesPerFrame?: number;
   /**
+   * Box-tree layout passes resolved per frame, or `undefined` for the scenes
+   * that resolve none.
+   *
+   * Setting it makes the scene a tree of nested horizontal and vertical boxes
+   * and the frame's work a block of that many layout passes, each changing a
+   * tenth of the leaf widths and alternating the viewport the root resolves
+   * against. The node count is how many leaf widgets the tree holds.
+   *
+   * The block is the published unit, not one pass: a single resolve lands under
+   * the clock's resolution on both arms. Nothing is drawn while the block runs -
+   * this archetype measures a layout engine, and a draw would put an arm's
+   * renderer into a number that claims to be about layout.
+   */
+  readonly layoutPassesPerFrame?: number;
+  /**
    * Number of chained post-process filters applied to the scene root, or
    * `undefined` for the unfiltered scene every other archetype builds.
    *
@@ -451,6 +467,14 @@ export interface CellResult extends BaseCellResult<CellSpec> {
 }
 
 /** Neutral contract an engine arm implements so the harness can drive it identically across arms. */
+/** What an arm reports about the geometry its last layout pass produced. */
+export interface LayoutDigestReport {
+  /** Index of the last pass the arm resolved, counted from the first pass of the cell (warmup included). */
+  readonly pass: number;
+  /** Digest of that pass's resolved rectangles, per `uiLayout.ts::layoutDigest`. */
+  readonly digest: number;
+}
+
 export interface EngineAdapter {
   /** Engine label, e.g. `'exojs'` or `'reference'`. */
   readonly engine: string;
@@ -499,6 +523,14 @@ export interface EngineAdapter {
    * it.
    */
   pickHits?(): number;
+  /**
+   * The UI-layout archetype's last resolved pass and a digest of the rectangles
+   * it produced (see `uiLayout.ts::layoutDigest`). The harness checks the digest
+   * against the geometry the shared definition prescribes for that pass, so an
+   * arm that laid out a different scene fails loudly instead of reporting a
+   * faster time for less work. Optional - only the layout arms report it.
+   */
+  layoutDigest?(): LayoutDigestReport;
   /**
    * The live WebGPU device when this adapter was initialised on the `'webgpu'`
    * backend, so the harness can attach a structural probe to it - unlike a

@@ -30,10 +30,12 @@ import { TextureRegion } from '#rendering/texture/TextureRegion';
 import { BlendModes } from '#rendering/types';
 import { View } from '#rendering/View';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
+import { Stack } from '#ui/Stack';
+import { Widget } from '#ui/Widget';
 
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import { BLUR_TAPS_PER_SIDE } from '../archetypes';
-import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
+import type { ArchetypeSpec, Backend, EngineAdapter, LayoutDigestReport } from '../EngineAdapter';
 import {
   isParticleLifecycle,
   isParticles,
@@ -73,6 +75,22 @@ import {
   pointerQueriesPerFrame,
   textForLeaf,
 } from '../traits';
+import type { LayoutRect } from '../uiLayout';
+import {
+  BOX_GAP,
+  BOX_PADDING,
+  forEachMutatedWidget,
+  isUiLayoutScene,
+  LAYOUT_PASSES_PER_FRAME,
+  layoutDigest,
+  layoutTreeShape,
+  layoutViewportAt,
+  ROWS_PER_COLUMN,
+  WIDGET_HEIGHT,
+  WIDGET_WIDE,
+  WIDGET_WIDTH,
+  widgetsInRow,
+} from '../uiLayout';
 import {
   BLOOM_DOWNSCALE,
   cameraCenterAt,
@@ -216,6 +234,18 @@ interface MutableLeaf {
  * the glyph raster - and therefore the atlas pressure a text scene puts on the
  * engine - is a property of the archetype instead of a property of the cell.
  */
+/**
+ * A leaf of the UI-layout tree: a widget with a layout box and nothing painted
+ * in it.
+ *
+ * Painting is left out deliberately. A widget that redrew a background on every
+ * resize would put its own repaint into a number about box-tree layout, and the
+ * Pixi arm's leaf - a plain layout container - draws nothing either. What the
+ * archetype compares is the container that resolves the boxes, so the leaves on
+ * both sides are the same thing: a size the layout engine reads and writes.
+ */
+class LayoutLeaf extends Widget {}
+
 const createTextLeaf = (index: number, glyphs: number): Text => new Text(textForLeaf(index, glyphs), { fontSize: TEXT_FONT_SIZE });
 
 /**
@@ -770,6 +800,110 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
     app!.interaction.attachRoot(scene);
   };
 
+  /** Box-tree layout state, or nulls for every archetype that resolves no layout passes. */
+  let layoutSpec: ArchetypeSpec | null = null;
+  let layoutStack: Stack | null = null;
+  let layoutLeaves: LayoutLeaf[] = [];
+  let layoutWidgets = 0;
+  /**
+   * Passes resolved since the scene was built, warmup included.
+   *
+   * Counted here rather than derived from `mutate`'s frame index: the harness
+   * restarts that index at zero between warmup and the timed window, and a pass
+   * only puts back what the PREVIOUS pass widened - so a restarted index would
+   * leave the last warmup pass's leaves wide for the rest of the cell and the
+   * tree would stop matching the shared definition.
+   */
+  let layoutPass = 0;
+
+  /**
+   * Build the layout scene: a root row of column boxes, each holding rows of
+   * fixed-size leaf widgets, sized to the first viewport before the measurement
+   * window opens.
+   *
+   * `Stack` re-flows on its own whenever a child widget resizes, so a pass here
+   * is a leaf `setSize` and a root `setSize` - there is no separate "solve now"
+   * call to make. That is a different algorithm from the Pixi arm's dirty flag
+   * plus one Yoga solve, and deliberately so: the shared scope is the tree and
+   * the mutation, not how an engine chooses to propagate them.
+   */
+  const buildLayoutScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const shape = layoutTreeShape(nodeCount);
+    const stack = new Stack({ direction: 'row', spacing: BOX_GAP, padding: BOX_PADDING, align: 'start' });
+    const columns: Stack[] = [];
+    const leaves: LayoutLeaf[] = [];
+
+    for (let column = 0; column < shape.columns; column += 1) {
+      const box = new Stack({ direction: 'column', spacing: BOX_GAP, padding: BOX_PADDING, align: 'start' });
+
+      columns.push(box);
+      stack.addItem(box);
+    }
+
+    for (let row = 0; row < shape.rows; row += 1) {
+      const box = new Stack({ direction: 'row', spacing: BOX_GAP, padding: BOX_PADDING, align: 'start' });
+
+      columns[Math.floor(row / ROWS_PER_COLUMN)]!.addItem(box);
+
+      for (let slot = 0; slot < widgetsInRow(shape, row); slot += 1) {
+        const leaf = new LayoutLeaf();
+
+        leaf.setSize(WIDGET_WIDTH, WIDGET_HEIGHT);
+        leaves.push(leaf);
+        box.addItem(leaf);
+      }
+    }
+
+    const viewport = layoutViewportAt(0);
+
+    stack.setSize(viewport.width, viewport.height);
+
+    root = stack;
+    layoutStack = stack;
+    layoutLeaves = leaves;
+    layoutWidgets = shape.widgets;
+    layoutPass = 0;
+    layoutSpec = spec;
+  };
+
+  /** Drop the layout scene so a rebuild (or teardown) leaks nothing. */
+  const releaseLayout = (): void => {
+    layoutSpec = null;
+    layoutStack = null;
+    layoutLeaves = [];
+    layoutWidgets = 0;
+    layoutPass = 0;
+  };
+
+  /**
+   * The resolved leaf rectangles, in leaf-index order and in the root box's
+   * coordinates.
+   *
+   * Read back from the widgets rather than recorded while the pass ran: the
+   * point of the check is that the tree ENDED where the shared definition says,
+   * and a value captured on the way through would be the arm reporting its own
+   * intermediate state. Called outside the timed bracket only.
+   */
+  const layoutRects = (): readonly LayoutRect[] => {
+    const rects: LayoutRect[] = [];
+
+    if (layoutStack === null) {
+      return rects;
+    }
+
+    for (const column of layoutStack.children) {
+      for (const row of (column as Container).children) {
+        for (const leaf of (row as Container).children) {
+          const widget = leaf as LayoutLeaf;
+
+          rects.push({ x: column.x + row.x + widget.x, y: column.y + row.y + widget.y, width: widget.uiWidth, height: widget.uiHeight });
+        }
+      }
+    }
+
+    return rects;
+  };
+
   /** Drop the picking scene so a rebuild (or teardown) leaks nothing. */
   const releasePicking = (): void => {
     if (pickingSpec !== null && root !== null) {
@@ -840,6 +974,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       releaseParticles();
       releaseBlur();
       releasePicking();
+      releaseLayout();
       sharedMeshGeometry?.destroy();
       sharedMeshGeometry = null;
 
@@ -867,6 +1002,12 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
 
       if (isPickingScene(spec)) {
         buildPickingScene(spec, nodeCount);
+
+        return;
+      }
+
+      if (isUiLayoutScene(spec)) {
+        buildLayoutScene(spec, nodeCount);
 
         return;
       }
@@ -1135,11 +1276,43 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       return pickHits;
     },
 
+    layoutDigest(): LayoutDigestReport {
+      return { pass: layoutPass - 1, digest: layoutDigest(layoutRects()) };
+    },
+
     mutationSignature(): string {
       return mutationSignature(mutableIndices);
     },
 
     mutate(frame: number): void {
+      // Layout scene: one block of layout passes, inside the bracket because
+      // resolving the tree IS the frame's work here. Each pass puts the previous
+      // pass's widened leaves back and widens this pass's, then re-sizes the root
+      // to the viewport this pass resolves against. `Stack` re-flows from the
+      // resize itself, so the widths and the root box ARE the pass.
+      if (layoutSpec !== null && layoutStack !== null) {
+        for (let step = 0; step < LAYOUT_PASSES_PER_FRAME; step += 1) {
+          const pass = layoutPass;
+
+          if (pass > 0) {
+            forEachMutatedWidget(pass - 1, layoutWidgets, index => {
+              layoutLeaves[index]?.setSize(WIDGET_WIDTH, WIDGET_HEIGHT);
+            });
+          }
+
+          forEachMutatedWidget(pass, layoutWidgets, index => {
+            layoutLeaves[index]?.setSize(WIDGET_WIDE, WIDGET_HEIGHT);
+          });
+
+          const viewport = layoutViewportAt(pass);
+
+          layoutStack.setSize(viewport.width, viewport.height);
+          layoutPass = pass + 1;
+        }
+
+        return;
+      }
+
       // Picking scene: one block of point queries through the engine's own
       // public query, inside the bracket because resolving them IS the frame's
       // work here. The hit count is kept so a smoke run can check that every arm
@@ -1328,6 +1501,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       releaseComposite();
       releaseTilemap();
       releaseParticles();
+      releaseLayout();
 
       if (root !== null) {
         root.destroy();

@@ -56,6 +56,17 @@ describe('published workload catalog', () => {
       expect(offenders.map(scenario => scenario.scenarioId)).toStrictEqual([]);
     });
 
+    it(`${domain}: every catalogued scenario is an archetype the domain implements`, () => {
+      // A catalogued scenario whose id matches no archetype ladder resolves to
+      // no workload at all, so it drops out of every plan silently - the
+      // published page then shows one scenario fewer than the catalog promises
+      // and nothing in the suite says so. Asserting the ids here is what turns
+      // that into a failure at the catalog, where the typo is.
+      const ladders = domain === 'rendering' ? RENDERING_LADDERS : PHYSICS_LADDERS;
+
+      expect(scenarios.map(scenario => scenario.scenarioId).filter(id => !ladders.has(id))).toStrictEqual([]);
+    });
+
     it(`${domain}: no extreme load is part of the reference plan`, () => {
       for (const scenario of scenarios) {
         for (const load of scenario.loads.filter(entry => entry.extreme === true)) {
@@ -86,10 +97,6 @@ describe('suite resolution', () => {
     }
 
     for (const scenario of RENDERING_SCENARIOS) {
-      if (!RENDERING_LADDERS.has(scenario.scenarioId)) {
-        continue;
-      }
-
       const headline = primaryLoadOf(scenario);
 
       expect(plan.workloads.some(workload => workload.scenarioId === scenario.scenarioId && workload.loadId === headline.loadId && workload.primary)).toBe(

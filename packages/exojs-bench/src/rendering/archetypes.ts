@@ -1,5 +1,6 @@
 import { createRng } from '../shared/rng';
 import type { ArchetypeSpec, Backend, CellSpec, EngineAdapter } from './EngineAdapter';
+import { LAYOUT_PASSES_PER_FRAME } from './uiLayout';
 
 // Re-exported from `shared/` so existing importers (e.g. the archetype tests and
 // `shared/mutation.ts`'s canonical selection) keep a single RNG implementation
@@ -109,6 +110,13 @@ const PICKING_COUNTS = [1_000, 10_000, 100_000] as const;
  * candidate resolves while a pointer moves.
  */
 export const POINTER_QUERIES_PER_FRAME = 100;
+
+/**
+ * Leaf widget counts for the UI-layout scene. A hundred is a settings panel, a
+ * thousand an inventory or a property grid, five thousand the point where a
+ * layout engine's per-node cost is the whole frame.
+ */
+const UI_WIDGET_COUNTS = [100, 1_000, 5_000] as const;
 
 /**
  * Characters per text leaf across both text archetypes. Twelve is the length of
@@ -734,6 +742,35 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     mutationFraction: 0,
     cullingEnabled: false,
     pointerQueriesPerFrame: POINTER_QUERIES_PER_FRAME,
+  },
+  // BOX-TREE LAYOUT - the cost an interface pays when a widget resizes and the
+  // boxes around it have to be resolved again. The scene draws nothing worth
+  // measuring: the frame's work is a block of layout passes over a tree of
+  // nested horizontal and vertical boxes, each pass changing a tenth of the leaf
+  // widths and alternating the viewport the root resolves against.
+  //
+  // A TWO-ARM comparison, and that is a capability finding rather than an
+  // omission. ExoJS resolves the tree through its own `Stack`, Pixi through
+  // `@pixi/layout` over Yoga. Phaser 4 ships no layout engine at all - its
+  // `Actions.GridAlign` places objects on a fixed raster and re-solves nothing -
+  // and Excalibur ships none either, so neither arm has a public path that
+  // answers this question. Building one inside the harness would measure the
+  // harness.
+  //
+  // The two algorithms are allowed to differ; the shared scope is what is
+  // fixed, and `layoutDigest` compares the resolved rectangles outside the
+  // timed bracket so a divergence surfaces as a failed check rather than as a
+  // faster arm.
+  {
+    id: 'ui-layout-update',
+    category: 'interaction',
+    crossArm: true,
+    nodeCounts: UI_WIDGET_COUNTS,
+    nestingDepth: 3,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    layoutPassesPerFrame: LAYOUT_PASSES_PER_FRAME,
   },
   {
     id: 'mask-clip-animated',

@@ -5,6 +5,7 @@ import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
 import { createDigitAtlasCanvas, createDistinctTextureCanvas, DIGIT_ALPHABET, DIGIT_CELL_HEIGHT, DIGIT_CELL_WIDTH, TEXT_FONT_SIZE } from '../sceneAssets';
 import { isTilemap } from '../tilemap';
 import { hasFullViewportLeaves, isChurning, isTextArchetype, isTextUpdating, leafAlpha, textForLeaf, usesRenderTargets } from '../traits';
+import { isUiLayoutScene } from '../uiLayout';
 import { GRID_MARGIN, gridLayout, gridPosition, isScrolling, SPRITE_SIZE, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '../world';
 
 /**
@@ -136,7 +137,11 @@ export const createExcaliburAdapter = (): EngineAdapter => {
       // are being compared on, so its cell would answer a different question
       // than the row it sat in. Building one here would mean writing the arm's
       // missing feature rather than adapting to it.
-      return !isScrolling(spec) && !usesRenderTargets(spec) && !isTilemap(spec);
+      //
+      // The UI-layout archetype is sat out for the same capability reason:
+      // Excalibur 0.32 has no layout container and no flexbox, so the box tree
+      // the archetype re-solves has no public equivalent to build it on.
+      return !isScrolling(spec) && !usesRenderTargets(spec) && !isTilemap(spec) && !isUiLayoutScene(spec);
     },
 
     async init(canvas: HTMLCanvasElement, target: Backend): Promise<void> {

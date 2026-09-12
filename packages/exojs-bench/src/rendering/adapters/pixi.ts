@@ -1,3 +1,10 @@
+// Side-effect import: registers the Yoga-backed `LayoutSystem` on the renderer
+// and mixes `Container.layout` in. Harmless for every other archetype - the
+// system's per-frame hook is disabled in `init` (`autoUpdate: false`), and the
+// mixin only changes a container once a layout is actually assigned to it.
+import '@pixi/layout';
+
+import type { LayoutStyles, LayoutSystemOptions } from '@pixi/layout';
 import { settings as tilemapSettings, Tilemap } from '@pixi/tilemap';
 import {
   Application,
@@ -21,7 +28,7 @@ import {
 
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import { BLUR_TAPS_PER_SIDE } from '../archetypes';
-import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
+import type { ArchetypeSpec, Backend, EngineAdapter, LayoutDigestReport } from '../EngineAdapter';
 import { isParticleLifecycle, isParticles, PARTICLE_ALPHA, PARTICLE_LIFETIME, PARTICLE_PREROLL_STEPS, PARTICLE_STEP, particleSeedAt } from '../particles';
 import { isPickingScene, PICK_RECT_SIZE, pickPointAt, pickRectAt } from '../picking';
 import { createBlurSourceCanvas, createDistinctTextureCanvas, createParticleCanvas, createTileAtlasCanvas, TEXT_FONT_SIZE } from '../sceneAssets';
@@ -52,6 +59,22 @@ import {
   pointerQueriesPerFrame,
   textForLeaf,
 } from '../traits';
+import type { LayoutRect } from '../uiLayout';
+import {
+  BOX_GAP,
+  BOX_PADDING,
+  forEachMutatedWidget,
+  isUiLayoutScene,
+  LAYOUT_PASSES_PER_FRAME,
+  layoutDigest,
+  layoutTreeShape,
+  layoutViewportAt,
+  ROWS_PER_COLUMN,
+  WIDGET_HEIGHT,
+  WIDGET_WIDE,
+  WIDGET_WIDTH,
+  widgetsInRow,
+} from '../uiLayout';
 import {
   BLOOM_DOWNSCALE,
   cameraCenterAt,
@@ -599,6 +622,169 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
     pickingSpec = spec;
   };
 
+  /** Box-tree layout state, or nulls for every archetype that resolves no layout passes. */
+  let layoutSpec: ArchetypeSpec | null = null;
+  let layoutRoot: Container | null = null;
+  let layoutNodes: Container[] = [];
+  let layoutLeaves: Container[] = [];
+  let layoutWidgets = 0;
+  /**
+   * Passes resolved since the scene was built, warmup included.
+   *
+   * Counted here rather than derived from `mutate`'s frame index: the harness
+   * restarts that index at zero between warmup and the timed window, and a pass
+   * only puts back what the PREVIOUS pass widened - so a restarted index would
+   * leave the last warmup pass's leaves wide for the rest of the cell and the
+   * tree would stop matching the shared definition.
+   */
+  let layoutPass = 0;
+
+  /**
+   * Flex properties every box in the layout tree shares.
+   *
+   * `flexShrink: 0` overrides `@pixi/layout`'s default of `1`: the narrow
+   * viewport is deliberately too small for the tree, and a shrinking arm would
+   * answer the overflow by resizing the leaves - which is a different scene from
+   * the one the ExoJS arm lays out, where a stack never resizes what it did not
+   * grow. `alignItems: 'flex-start'` pins the cross axis for the same reason;
+   * Yoga's own default stretches, and stretching is exactly the "differing flex
+   * distribution" the shared scope excludes.
+   */
+  const LAYOUT_BOX_STYLE = {
+    gap: BOX_GAP,
+    padding: BOX_PADDING,
+    alignItems: 'flex-start',
+    flexShrink: 0,
+    boxSizing: 'border-box',
+  } as const satisfies LayoutStyles;
+
+  /** Style of a leaf widget at `width`. Leaves carry no children, so only their box matters. */
+  const layoutLeafStyle = (width: number): LayoutStyles => ({ width, height: WIDGET_HEIGHT, flexShrink: 0, boxSizing: 'border-box' });
+
+  /** Style of the root box against viewport `pass`. */
+  const layoutRootStyle = (pass: number): LayoutStyles => {
+    const viewport = layoutViewportAt(pass);
+
+    return { ...LAYOUT_BOX_STYLE, flexDirection: 'row', width: viewport.width, height: viewport.height };
+  };
+
+  /**
+   * Build the layout scene: a root row of column boxes, each holding rows of
+   * fixed-size leaf containers, resolved once before the measurement window
+   * opens.
+   *
+   * The tree is the ExoJS arm's tree, node for node. What differs is how a
+   * change reaches the solver: assigning a style marks the root dirty, and the
+   * whole tree is re-solved by one `layout.update` call - against the ExoJS
+   * arm's eager per-resize reflow. Both are the arm's own public layout path,
+   * which is what the shared scope permits.
+   */
+  const buildLayoutScene = (spec: ArchetypeSpec, nodeCount: number): void => {
+    const shape = layoutTreeShape(nodeCount);
+    const scene = new Container();
+    const nodes: Container[] = [];
+    const columns: Container[] = [];
+    const leaves: Container[] = [];
+
+    scene.layout = layoutRootStyle(0);
+
+    for (let column = 0; column < shape.columns; column += 1) {
+      const box = new Container();
+
+      box.layout = { ...LAYOUT_BOX_STYLE, flexDirection: 'column' };
+      columns.push(box);
+      nodes.push(box);
+      scene.addChild(box);
+    }
+
+    for (let row = 0; row < shape.rows; row += 1) {
+      const box = new Container();
+
+      box.layout = { ...LAYOUT_BOX_STYLE, flexDirection: 'row' };
+      nodes.push(box);
+      columns[Math.floor(row / ROWS_PER_COLUMN)]!.addChild(box);
+
+      for (let slot = 0; slot < widgetsInRow(shape, row); slot += 1) {
+        const leaf = new Container();
+
+        leaf.layout = layoutLeafStyle(WIDGET_WIDTH);
+        leaves.push(leaf);
+        nodes.push(leaf);
+        box.addChild(leaf);
+      }
+    }
+
+    app!.renderer.layout.update(scene);
+
+    root = scene;
+    layoutRoot = scene;
+    layoutNodes = nodes;
+    layoutLeaves = leaves;
+    layoutWidgets = shape.widgets;
+    layoutPass = 0;
+    layoutSpec = spec;
+  };
+
+  /**
+   * Drop the layout scene.
+   *
+   * Clearing every `layout` explicitly rather than relying on the destroy of the
+   * tree: assigning the first layout replaces `Container.prototype`'s `visible`
+   * accessor page-wide, and only assigning `null` puts the original back. A page
+   * runs every cell of an arm in sequence, so a layout cell that skipped this
+   * would leave that accessor in place for every Pixi cell measured after it.
+   */
+  const releaseLayout = (): void => {
+    for (const node of layoutNodes) {
+      node.layout = null;
+    }
+
+    if (root === layoutRoot) {
+      root = null;
+    }
+
+    layoutRoot?.destroy({ children: true });
+    layoutRoot = null;
+    layoutNodes = [];
+    layoutLeaves = [];
+    layoutWidgets = 0;
+    layoutPass = 0;
+    layoutSpec = null;
+  };
+
+  /**
+   * The resolved leaf rectangles, in leaf-index order and in the root box's
+   * coordinates.
+   *
+   * Read from the Yoga boxes rather than from the containers' transforms: a
+   * transform is only written when the scene is next rendered, so a digest taken
+   * off it would report the previous pass on the arm that batches. Called
+   * outside the timed bracket only.
+   */
+  const layoutRects = (): readonly LayoutRect[] => {
+    const rects: LayoutRect[] = [];
+
+    if (layoutRoot === null) {
+      return rects;
+    }
+
+    for (const column of layoutRoot.children) {
+      const columnBox = column.layout!.computedLayout;
+
+      for (const row of column.children) {
+        const rowBox = row.layout!.computedLayout;
+
+        for (const leaf of row.children) {
+          const box = leaf.layout!.computedLayout;
+
+          rects.push({ x: columnBox.left + rowBox.left + box.left, y: columnBox.top + rowBox.top + box.top, width: box.width, height: box.height });
+        }
+      }
+    }
+
+    return rects;
+  };
+
   /** Drop the picking scene so a rebuild (or teardown) leaks nothing. */
   const releasePicking = (): void => {
     pickTexture?.destroy(true);
@@ -648,6 +834,16 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
         autoStart: false,
         sharedTicker: false,
         hello: false,
+        // The layout pass belongs to the measured block, never to a prerender
+        // hook that would put it outside the bracket. Everything else about the
+        // system is left at its defaults - the intrinsic-size walk's throttle
+        // included, because turning that off would make the arm pay a whole-tree
+        // walk per pass that a Pixi application never pays.
+        //
+        // The cast is the package's own declaration being one level off: it types
+        // the renderer option as the system's whole options object, while the
+        // system reads the inner record out of the renderer options it is handed.
+        layout: { autoUpdate: false } as unknown as LayoutSystemOptions,
       });
 
       if (instance.renderer.type !== EXPECTED_RENDERER_TYPE[target]) {
@@ -675,6 +871,7 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
       releaseParticles();
       releaseBlur();
       releasePicking();
+      releaseLayout();
 
       textures = [];
 
@@ -706,6 +903,12 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
 
       if (isPickingScene(spec)) {
         buildPickingScene(spec, nodeCount);
+
+        return;
+      }
+
+      if (isUiLayoutScene(spec)) {
+        buildLayoutScene(spec, nodeCount);
 
         return;
       }
@@ -915,11 +1118,46 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
       return pickHits;
     },
 
+    layoutDigest(): LayoutDigestReport {
+      return { pass: layoutPass - 1, digest: layoutDigest(layoutRects()) };
+    },
+
     mutationSignature(): string {
       return mutationSignature(mutableIndices);
     },
 
     mutate(frame: number): void {
+      // Layout scene: one block of layout passes, inside the bracket because
+      // resolving the tree IS the frame's work here. Each pass puts the previous
+      // pass's widened leaves back, widens this pass's, re-styles the root to the
+      // viewport it resolves against, and asks the layout system to solve - the
+      // solve is one call here because assigning a style only marks the root
+      // dirty.
+      if (layoutSpec !== null && layoutRoot !== null && app !== null) {
+        const narrow = layoutLeafStyle(WIDGET_WIDTH);
+        const wide = layoutLeafStyle(WIDGET_WIDE);
+
+        for (let step = 0; step < LAYOUT_PASSES_PER_FRAME; step += 1) {
+          const pass = layoutPass;
+
+          if (pass > 0) {
+            forEachMutatedWidget(pass - 1, layoutWidgets, index => {
+              layoutLeaves[index]?.layout?.setStyle(narrow);
+            });
+          }
+
+          forEachMutatedWidget(pass, layoutWidgets, index => {
+            layoutLeaves[index]?.layout?.setStyle(wide);
+          });
+
+          layoutRoot.layout!.setStyle(layoutRootStyle(pass));
+          app.renderer.layout.update(layoutRoot);
+          layoutPass = pass + 1;
+        }
+
+        return;
+      }
+
       // Picking scene: one block of point queries through Pixi's own event
       // boundary, the structure under comparison. The boundary reports the root
       // itself where nothing was hit, which is this arm's way of saying "no
@@ -1089,6 +1327,7 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
       releaseParticles();
       releaseBlur();
       releasePicking();
+      releaseLayout();
 
       if (root !== null) {
         root.destroy({ children: true });

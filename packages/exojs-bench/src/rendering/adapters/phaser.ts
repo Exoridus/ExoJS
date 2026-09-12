@@ -26,6 +26,7 @@ import {
   textForLeaf,
   usesRenderTargets,
 } from '../traits';
+import { isUiLayoutScene } from '../uiLayout';
 import { GRID_MARGIN, gridLayout, gridPosition, isScrolling, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '../world';
 
 /**
@@ -356,7 +357,14 @@ export const createPhaserAdapter = (): EngineAdapter => {
       //
       // Render-target archetypes remain out until their Phaser semantics are
       // validated against the shared filter/mask contract.
-      return !isScrolling(spec) && !usesRenderTargets(spec);
+      //
+      // The UI-layout archetype is sat out for a capability reason rather than a
+      // policy one. Phaser 4 ships no layout engine: `Actions.GridAlign` places
+      // objects once on a fixed raster and `GameObjects.Grid` draws one, and
+      // neither re-solves a box when a child resizes. A cell here could only
+      // measure a flexbox implementation written inside the harness, which is
+      // the arm's missing feature rather than an adaptation to it.
+      return !isScrolling(spec) && !usesRenderTargets(spec) && !isUiLayoutScene(spec);
     },
 
     async init(canvas: HTMLCanvasElement, target: Backend): Promise<void> {
