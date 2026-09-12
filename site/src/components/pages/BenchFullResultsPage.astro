@@ -27,15 +27,16 @@ const { locale } = Astro.props;
 const base = import.meta.env.BASE_URL;
 ---
 
-<DocsLayout title="ExoJS benchmark results" description="Every measured benchmark row, per machine, with spread, p95 and omissions." variant="wide">
+<DocsLayout title="ExoJS benchmark measurements" description="Every measured benchmark row, per machine, with spread, p95 and omissions." variant="wide">
     <div class="prose bench-prose" data-pagefind-body={locale === 'en' ? true : undefined}>
         {locale === 'de' && <EnglishFallbackNotice />}
 
         <header class="bench-head">
-            <h1>Full results</h1>
-            <p class="lede">Every measured row, with the spread its runs observed and the rows the harness left out.</p>
+            <h1>All measurements</h1>
+            <p class="lede">The tables behind the benchmark overview: every measured load, with its spread, its p95 and the rows the harness left out.</p>
             <p class="back">
-                <a href={`${base}${locale}/benchmarks/`}>Back to the cards</a> · <a href={`${base}${locale}/benchmarks/methodology/`}>Methodology</a>
+                <a href={`${base}${locale}/benchmarks/`}>Back to the benchmark overview</a> ·{' '}
+                <a href={`${base}${locale}/benchmarks/methodology/`}>Methodology</a>
             </p>
         </header>
 

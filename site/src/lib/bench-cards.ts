@@ -113,8 +113,12 @@ export interface BenchCard {
  * become a selection of whatever ExoJS happened to win.
  */
 export const RENDERING_HEADLINE_SCENARIOS: readonly string[] = [
-  'dynamic-all',
+  // Read as three pairs across a two-column row, each pair a contrast: a scene
+  // that never changes beside one where everything does, text beside tiles,
+  // an effect beside clipping. The pairing also keeps the two cards of a row
+  // close in height, which is what lets the rows sit on one rhythm.
   'static-heavy',
+  'dynamic-all',
   'text-dynamic',
   'tilemap-scroll',
   'particles-lifecycle',
@@ -153,6 +157,27 @@ const headlineOrFirst = (cards: readonly BenchCard[], preferred: readonly string
 
   return chosen;
 };
+
+/**
+ * The arms of one comparable load, quickest first.
+ *
+ * The section says "lower is better", so the row reads top-down as best to
+ * worst; ExoJS is found by its colour rather than by always being the first
+ * line. Arms without a figure to rank by keep their canonical order behind
+ * the ranked ones, and a withheld load is never handed to this at all - it
+ * publishes no ranking, so it prints none.
+ */
+const fastestFirst = (arms: readonly CardArm[]): readonly CardArm[] =>
+  [...arms]
+    .map((arm, index) => ({ arm, index, ms: arm.quantitative && arm.ms !== null && Number.isFinite(arm.ms) ? arm.ms : null }))
+    .sort((a, b) => {
+      if (a.ms === null || b.ms === null) {
+        return (a.ms === null ? 1 : 0) - (b.ms === null ? 1 : 0) || a.index - b.index;
+      }
+
+      return a.ms - b.ms || a.index - b.index;
+    })
+    .map(entry => entry.arm);
 
 /** ExoJS's own figure, which every cell of a row repeats because every pair shares it. */
 const referenceArm = (cells: readonly ProfileCell[]): CardArm | null => {
@@ -201,7 +226,8 @@ const loadOf = (row: ProfileRow): CardLoad | null => {
   const cells = orderArms(row.cells, cell => cell.competitor);
   // A withheld row loses its quantitative treatment wholesale rather than per
   // arm: the doubt is about the comparison, so no arm in it may keep a bar.
-  const arms = [reference, ...cells.map(competitorArm)].map(arm => (withheld === undefined ? arm : { ...arm, quantitative: false }));
+  const canonical = [reference, ...cells.map(competitorArm)].map(arm => (withheld === undefined ? arm : { ...arm, quantitative: false }));
+  const arms = withheld === undefined ? fastestFirst(canonical) : canonical;
   // Every published figure sets the scale, because the bars are durations: an
   // arm whose PAIR the clock could not separate still took the time it reports,
   // and leaving it out of the maximum would draw it past the end of its track.
@@ -265,56 +291,6 @@ export const renderingCards = (document: BenchProfileDocument, backend: ProfileB
 export const physicsCards = (document: BenchProfileDocument): readonly BenchCard[] =>
   document.physics === undefined ? [] : cardsOf([document.physics.section]);
 
-/**
- * How ExoJS stands on a card, as the ratio of the fastest measured peer to it.
- *
- * Above 1 ExoJS is ahead of even the quickest library measured beside it, below
- * 1 at least one is ahead of ExoJS. Read from the FASTEST peer rather than from
- * the field, so a single very slow arm cannot lift a card up the page, and from
- * the card's OPENING load only, so switching a load chip never reorders the
- * section under the reader's hands.
- *
- * `null` where the card publishes no comparison at all - a withheld row, or one
- * whose figures no comparison established. Those carry no standing to sort by
- * and keep the order the harness wrote them in.
- */
-const standingOf = (card: BenchCard): number | null => {
-  const load = openingLoad(card);
-
-  if (load === undefined || load.withheld !== undefined) {
-    return null;
-  }
-
-  const exojs = load.arms.find(arm => arm.reference);
-  const peers = load.arms.filter(arm => !arm.reference && arm.quantitative && arm.ms !== null && arm.ms > 0).map(arm => arm.ms ?? 0);
-
-  if (exojs === null || exojs === undefined || !exojs.quantitative || exojs.ms === null || exojs.ms <= 0 || peers.length === 0) {
-    return null;
-  }
-
-  return Math.min(...peers) / exojs.ms;
-};
-
-/**
- * Cards ordered within one group, strongest standing first.
- *
- * Ordering only - no score is published, nothing is aggregated, and the groups
- * themselves keep the order the harness wrote them in, so a scenario never
- * leaves the category it belongs to. Cards that publish no comparison sort
- * after the ones that do, and ties keep the authored order.
- */
-const byStanding = (cards: readonly BenchCard[]): readonly BenchCard[] =>
-  cards
-    .map((card, index) => ({ card, index, standing: standingOf(card) }))
-    .sort((a, b) => {
-      if (a.standing === null || b.standing === null) {
-        return (a.standing === null ? 1 : 0) - (b.standing === null ? 1 : 0) || a.index - b.index;
-      }
-
-      return b.standing - a.standing || a.index - b.index;
-    })
-    .map(entry => entry.card);
-
 /** The cards a section opens with, and the ones kept behind its "show all" control. */
 export interface CardSelection {
   readonly headline: readonly BenchCard[];
@@ -326,9 +302,11 @@ export const selectCards = (cards: readonly BenchCard[], preferred: readonly str
   const headline = headlineOrFirst(cards, preferred, count);
   const shown = new Set(headline.map(card => card.id));
 
-  // Which cards open a section is fixed before any run; only their order within
-  // the section follows the measurements.
-  return { headline: byStanding(headline), rest: byStanding(cards.filter(card => !shown.has(card.id))) };
+  // Both lists keep the order they were written in. Sorting cards by how ExoJS
+  // did on them puts a ranking on the page that the scenarios cannot support:
+  // a tile map and a particle effect are different work, and neither is
+  // "better" than the other for costing less.
+  return { headline, rest: cards.filter(card => !shown.has(card.id)) };
 };
 
 /** The load a card opens on: its headline, or the first one it carries. */

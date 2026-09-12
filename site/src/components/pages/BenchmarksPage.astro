@@ -230,7 +230,7 @@ const leading = browsers[0];
 
                 {/* Four destinations and no explanatory paragraphs: what each one is is what its name says. */}
                 <nav class="tools" aria-label="Benchmark data">
-                    <a href={`${base}${locale}/benchmarks/full/`}>Full results</a>
+                    <a href={`${base}${locale}/benchmarks/full/`}>All measurements</a>
                     <a href={`${base}${locale}/benchmarks/methodology/`}>Methodology</a>
                     <a href="#run-locally">Run locally</a>
                     <a href={`${appInfo.repositoryUrl}/tree/main/packages/exojs-bench/results`}>JSON</a>
@@ -442,13 +442,15 @@ const leading = browsers[0];
     /*
      * Two per row on desktop: a card is a comparison to read, not a tile to
      * scan, and a third column would shrink the bars past the point of being
-     * readable. Each card is as tall as its own content - a row stretched to
-     * its tallest neighbour left a band of empty card under every shorter one.
+     * readable. The two cards of a row share a height, so the rows sit on one
+     * rhythm instead of each pair opening a hole under its shorter card; the
+     * headline order pairs cards of similar size, which keeps that shared
+     * height close to what each card needs.
      */
     .cards {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        align-items: start;
+        align-items: stretch;
         gap: var(--s-4);
     }
 

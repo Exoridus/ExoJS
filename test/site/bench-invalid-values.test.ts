@@ -119,12 +119,25 @@ describe('every published profile', () => {
     }
   });
 
-  it('lists the arms of every load in the same fixed order', () => {
-    for (const card of benchProfiles.flatMap(document => physicsCards(document))) {
-      const order = card.loads.map(load => load.arms.map(arm => arm.id).join(','));
+  it('lists the arms of a comparable load quickest first, and a withheld load in canonical order', () => {
+    for (const load of loads) {
+      const ranked = load.arms.filter(arm => arm.quantitative && arm.ms !== null).map(arm => arm.ms ?? 0);
 
-      expect(new Set(order).size).toBe(1);
-      expect(order[0]?.startsWith('exojs')).toBe(true);
+      if (load.withheld !== undefined) {
+        // No ranking is published for a withheld row, so none is printed: ExoJS
+        // leads the canonical order whatever its time.
+        expect(load.arms[0]?.reference).toBe(true);
+        continue;
+      }
+
+      // The section reads "lower is better", so the rows read best to worst.
+      expect(ranked).toStrictEqual([...ranked].sort((a, b) => a - b));
+      // Arms with nothing to rank by sit behind the ranked ones, never between them.
+      const firstUnranked = load.arms.findIndex(arm => !(arm.quantitative && arm.ms !== null));
+
+      if (firstUnranked !== -1) {
+        expect(load.arms.slice(firstUnranked).every(arm => !(arm.quantitative && arm.ms !== null))).toBe(true);
+      }
     }
   });
 
