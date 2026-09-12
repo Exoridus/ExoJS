@@ -744,10 +744,10 @@ describe('connected-body collision', () => {
 /**
  * What a joint's presence in a world means for the bodies it constrains.
  *
- * These are the seams the pair-keyed collision suppression made load-bearing.
- * Body ids are world-scoped and reused, so a claim left behind by a destroyed
- * body would suppress collision for whatever body inherits its id - a defect
- * with no visible cause at the point it appears.
+ * These are the seams the pair-keyed collision suppression made load-bearing. A
+ * joint left behind by a destroyed body keeps being prepared, warm-started and
+ * solved against it, and the pair claim it holds is one nothing can release
+ * again, because the joint that owned it is no longer reachable.
  */
 describe('joint lifecycle', () => {
   const boxBody = (world: PhysicsWorld, x: number, y: number, type: 'static' | 'dynamic' = 'dynamic'): PhysicsBody =>
@@ -781,7 +781,7 @@ describe('joint lifecycle', () => {
     expect(() => world.addJoint(new RevoluteJoint({ bodyA: mine, bodyB: theirs, anchor: { x: 20, y: 0 } }))).toThrow(/another world/);
   });
 
-  it('drops the joints of a destroyed body, and the pair claims they held', () => {
+  it('drops the joints of a destroyed body', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, enableSleeping: false });
     const a = boxBody(world, 0, 0);
     const b = boxBody(world, 10, 0);
@@ -794,15 +794,28 @@ describe('joint lifecycle', () => {
     world.destroyBody(b);
     world.step(FRAME);
 
+    // Ids are never handed out twice, so no later body can inherit the pair
+    // this joint claimed; what the removal has to establish is that the joint
+    // stops being solved against a body that no longer exists.
     expect(world.joints).toHaveLength(0);
+    expect(b.destroyed).toBe(true);
+  });
 
-    // The claim is gone with the joint, so a body that arrives at the freed id
-    // collides normally.
-    const replacement = boxBody(world, 10, 0);
+  it("releases the pair claim a destroyed body's joint held", () => {
+    // The surviving body is put back into contact with a third one, which the
+    // claim would still be suppressing had it outlived the joint.
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, enableSleeping: false });
+    const a = boxBody(world, 0, 0);
+    const b = boxBody(world, 10, 0);
 
+    world.addJoint(new RevoluteJoint({ bodyA: a, bodyB: b, anchor: { x: 5, y: 0 }, collideConnected: false }));
+    world.step(FRAME);
+    expect(world.backend.contactGraph.solidContacts).toHaveLength(0);
+
+    world.destroyBody(b);
+    boxBody(world, 10, 0);
     world.step(FRAME);
 
-    expect(replacement.destroyed).toBe(false);
     expect(world.backend.contactGraph.solidContacts.length).toBeGreaterThan(0);
   });
 
@@ -841,19 +854,42 @@ describe('joint lifecycle', () => {
     expect(world.backend.contactGraph.solidContacts.length).toBeGreaterThan(0);
   });
 
-  it('keeps a bullet from sweeping into the body its joint took it out of collision with', () => {
+  it('sweeps a bullet through the body its joint took it out of collision with', () => {
     // CCD is a second collision path, not a second collision semantics: without
     // the same filter a swept bullet is stopped by a neighbour the discrete path
     // is not allowed to collide it with.
+    //
+    // The assertion is where the bullet ENDED UP, not the contact count: the
+    // sweep runs after detection, so a bullet the old path clamped at the wall
+    // produces its contact on the following step and leaves this one looking
+    // clean either way.
+    //
+    // The joint is a prismatic rail along the flight path rather than a pin:
+    // it has to take the pair out of collision without also holding the bullet
+    // still, which is what a revolute anchor to a static wall would do.
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, enableSleeping: false });
     const wall = boxBody(world, 400, 0, 'static');
     const bullet = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, isBullet: true, colliders: [{ shape: new BoxShape(8, 8) }] }));
 
-    world.addJoint(new RevoluteJoint({ bodyA: wall, bodyB: bullet, anchor: { x: 0, y: 0 }, collideConnected: false }));
-    bullet.linearVelocityX = 60_000; // far enough in one step to sweep clean through the wall
+    world.addJoint(new PrismaticJoint({ bodyA: wall, bodyB: bullet, anchor: { x: 0, y: 0 }, axis: { x: 1, y: 0 }, collideConnected: false }));
+    // 1000 px in one step at 60 Hz, so a clamp at the wall is unmistakable.
+    bullet.linearVelocityX = 60_000;
 
     world.step(FRAME);
 
-    expect(world.backend.contactGraph.solidContacts).toHaveLength(0);
+    expect(bullet.x).toBeGreaterThan(wall.x + 100);
+  });
+
+  it('still stops a bullet at a body it is not jointed to', () => {
+    // The counterpart, so the test above cannot pass by CCD being off entirely.
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, enableSleeping: false });
+    const wall = boxBody(world, 400, 0, 'static');
+    const bullet = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, isBullet: true, colliders: [{ shape: new BoxShape(8, 8) }] }));
+
+    bullet.linearVelocityX = 60_000;
+
+    world.step(FRAME);
+
+    expect(bullet.x).toBeLessThan(wall.x);
   });
 });

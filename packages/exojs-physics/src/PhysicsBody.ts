@@ -578,9 +578,9 @@ export class PhysicsBody {
    * @internal - whether this body belongs to a world OTHER than `owner`.
    *
    * Body ids are scoped to the world that handed them out, so anything keyed on
-   * a pair of them has to know that both came from the same world: two bodies
-   * of two worlds can carry the same id, and a pair key built from them would
-   * name a pair that exists in neither.
+   * a pair of them has to know that both came from the same world: two worlds
+   * count from the same start, so their bodies carry the same ids, and a pair
+   * key built from one of each names a pair that exists in neither.
    *
    * A body attached to no world at all is not foreign - a single-body joint
    * stands its own private anchor in for the second body, and that anchor is

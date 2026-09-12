@@ -1457,10 +1457,10 @@ export class PhysicsWorld implements BodyOwner {
   }
 
   private _teardownBody(body: PhysicsBody): void {
-    // Before the colliders and the id go: a joint left behind would constrain a
-    // destroyed body every step, and its entry in the uncollidable-pair map
-    // would keep suppressing collision for an id the world is free to hand out
-    // again.
+    // A joint left behind would keep constraining a destroyed body every step,
+    // and its entry in the uncollidable-pair map would outlive everything that
+    // could ever release it - a claim on a pair that can no longer exist, held
+    // for as long as the world does.
     this._removeJointsOf(body);
 
     for (const collider of body.colliders) {
