@@ -30,11 +30,13 @@ pnpm --filter @codexo/exojs-bench bench --archetype=fx-blur --backend=webgl2
 
 ```
 === Results ===
-  scenario  load  backend  arm             cpu ms  cpu p95  draws  status
-  --------  ----  -------  --------------  ------  -------  -----  ------
-  fx-blur    720  webgl2   exojs current    0.245    0.340      4  ok
-  fx-blur    720  webgl2   exojs retained   0.220    0.285      4  ok
-  fx-blur    720  webgl2   pixi default     0.120    0.140      3  ok
+  ┌──────────┬──────┬─────────┬────────────────┬────────┬─────────┬───────┬────────┐
+  │ scenario │ load │ backend │ arm            │ cpu ms │ cpu p95 │ draws │ status │
+  ├──────────┼──────┼─────────┼────────────────┼────────┼─────────┼───────┼────────┤
+  │ fx-blur  │  720 │ webgl2  │ exojs current  │  0.230 │   0.310 │     4 │ ok     │
+  │ fx-blur  │  720 │ webgl2  │ exojs retained │  0.220 │   0.255 │     4 │ ok     │
+  │ fx-blur  │  720 │ webgl2  │ pixi default   │  0.120 │   0.205 │     3 │ ok     │
+  └──────────┴──────┴─────────┴────────────────┴────────┴─────────┴───────┴────────┘
 ```
 
 The same rows land in `results.json`, `results.csv` and `results.md` in the

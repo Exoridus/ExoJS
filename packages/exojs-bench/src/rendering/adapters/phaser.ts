@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
+import { phaserCovers } from '../coverage';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
 import { isParticleLifecycle, isParticles, PARTICLE_ALPHA, PARTICLE_LIFETIME, PARTICLE_STEP, particleSeedAt } from '../particles';
 import { isPickingScene, PICK_RECT_SIZE, pickPointAt, pickRectAt } from '../picking';
@@ -24,10 +25,8 @@ import {
   leafAlpha,
   pointerQueriesPerFrame,
   textForLeaf,
-  usesRenderTargets,
 } from '../traits';
-import { isUiLayoutScene } from '../uiLayout';
-import { GRID_MARGIN, gridLayout, gridPosition, isScrolling, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '../world';
+import { GRID_MARGIN, gridLayout, gridPosition, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '../world';
 
 /**
  * Phaser 4.2 arm of the rendering benchmark.
@@ -350,21 +349,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
     },
 
     coversArchetype(spec: ArchetypeSpec): boolean {
-      // This arm builds a fixed, viewport-sized scene with a static camera. A
-      // scrolling archetype would silently render as an ordinary fully-visible
-      // one here, i.e. a row that looks comparable and is not - so the arm sits
-      // the archetype out instead.
-      //
-      // Render-target archetypes remain out until their Phaser semantics are
-      // validated against the shared filter/mask contract.
-      //
-      // The UI-layout archetype is sat out for a capability reason rather than a
-      // policy one. Phaser 4 ships no layout engine: `Actions.GridAlign` places
-      // objects once on a fixed raster and `GameObjects.Grid` draws one, and
-      // neither re-solves a box when a child resizes. A cell here could only
-      // measure a flexbox implementation written inside the harness, which is
-      // the arm's missing feature rather than an adaptation to it.
-      return !isScrolling(spec) && !usesRenderTargets(spec) && !isUiLayoutScene(spec);
+      return phaserCovers(spec);
     },
 
     async init(canvas: HTMLCanvasElement, target: Backend): Promise<void> {

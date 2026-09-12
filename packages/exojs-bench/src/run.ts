@@ -479,6 +479,7 @@ const runRenderingDomain = async (args: Map<string, string>, selector: DomainSel
         String(result.structural.drawCalls),
         result.status,
       ]),
+    { groupBy: 0 },
   );
 
   console.log(`\nReport written to ${outDir} (results.json, results.csv, results.md)`);
@@ -638,6 +639,7 @@ const runPhysicsDomain = async (args: Map<string, string>, selector: DomainSelec
         String(result.stepsPerSample),
         result.status,
       ]),
+    { groupBy: 0 },
   );
 
   // Notes are per cell and long enough that a column would set the table's width

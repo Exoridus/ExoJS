@@ -28,6 +28,7 @@ import {
 
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
 import { BLUR_KERNEL_SIGMAS, BLUR_TAPS_PER_SIDE } from '../archetypes';
+import { pixiCulledCovers } from '../coverage';
 import type { ArchetypeSpec, Backend, EngineAdapter, LayoutDigestReport } from '../EngineAdapter';
 import { isParticleLifecycle, isParticles, PARTICLE_ALPHA, PARTICLE_LIFETIME, PARTICLE_PREROLL_STEPS, PARTICLE_STEP, particleSeedAt } from '../particles';
 import { isPickingScene, PICK_RECT_SIZE, pickPointAt, pickRectAt } from '../picking';
@@ -825,14 +826,7 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
     },
 
     coversArchetype(spec: ArchetypeSpec): boolean {
-      // The stock arm runs everywhere; the culled variant only where culling can
-      // actually remove something.
-      //
-      // The tilemap scenes are the exception among the culling-enabled ones: the
-      // tile path decides chunk visibility itself, and `Culler.shared.cull` acts
-      // on `.cullable` scene nodes it never sees. The variant would therefore
-      // measure the stock arm a second time under another name.
-      return config === 'default' || (spec.cullingEnabled && !isTilemap(spec));
+      return config === 'default' || pixiCulledCovers(spec);
     },
 
     async init(canvas: HTMLCanvasElement, target: Backend): Promise<void> {

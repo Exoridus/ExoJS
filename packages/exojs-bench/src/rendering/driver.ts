@@ -18,11 +18,10 @@ import type { ViteDevServer } from '../shared/viteServer';
 import { readEngineVersion, RENDERING_LIBRARY_ARMS, startViteServer as startPageServer } from '../shared/viteServer';
 import type { RunPlan } from '../suite/plan';
 import { buildMatrix } from './archetypes';
+import { excaliburCovers, phaserCovers, pixiCulledCovers } from './coverage';
 import type { ArchetypeSpec, Backend, CellResult, CellSpec, EngineAdapter } from './EngineAdapter';
 import type { MatrixSelection } from './selection';
 import { applyPlan, applySelection } from './selection';
-import { usesRenderTargets } from './traits';
-import { isUiLayoutScene } from './uiLayout';
 import { isScrolling, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from './world';
 
 // Re-exported so the rendering barrel and the CLI keep importing the selection
@@ -216,43 +215,28 @@ const ADAPTER_CAPABILITIES: readonly EngineAdapter[] = [
   capabilityDescriptor('exojs', 'current', ['webgl2', 'webgpu']),
   capabilityDescriptor('exojs', 'retained', ['webgl2', 'webgpu']),
   // Pixi.js v8 is the direct renderer benchmark and the only other 2D library
-  // that ships WebGPU, so it runs on both backends. It is now a first-class,
-  // committed arm (pinned exact devDependency) rather than the old gitignored
-  // local-only reference; its version + provenance are stamped into the report
-  // header via `readLibraryProvenance`.
+  // that ships WebGPU, so it runs on both backends. It is a first-class,
+  // committed arm (pinned exact devDependency); its version + provenance are
+  // stamped into the report header via `readLibraryProvenance`.
   capabilityDescriptor('pixi', 'default', ['webgl2', 'webgpu']),
-  // Second Pixi arm: stock Pixi PLUS the explicit per-frame `Culler.shared.cull`
-  // a Pixi app that wants culling has to write itself. It runs only on
-  // archetypes with genuine off-screen content (`cullingEnabled`), where the
-  // difference between the two arms is the measurement; on a fully-visible
-  // archetype the cull call could only ever add cost over an identical visible
-  // set, so the variant would just duplicate `pixi default` across the matrix.
-  capabilityDescriptor('pixi', 'culled', ['webgl2', 'webgpu'], spec => spec.cullingEnabled),
+  capabilityDescriptor('pixi', 'culled', ['webgl2', 'webgpu'], pixiCulledCovers),
   // Phaser 4 and Excalibur are committed competitor arms (pinned exact
   // devDependencies). Both are WebGL2-only in this harness and never run WebGPU
   // (Phaser 4 ships no WebGPU renderer; Excalibur 0.32 has none). Phaser's
   // default renderer asks for WebGL1, so the adapter explicitly supplies and
   // verifies a WebGL2 context through Phaser's public context path; Excalibur
   // creates its own real WebGL2 context.
+  //
   // A missing (unlinked) competitor degrades gracefully: its per-cell dynamic
   // import fails in isolation (`runCellInPage` records that cell `unavailable`
   // and the run continues), and it is left out of Vite's pre-bundle set below.
-  // Both sit out the scrolling archetypes: neither arm implements a moving
-  // camera, so they would render a fixed, fully-visible scene under an id that
-  // promises off-screen content - a row that looks comparable and is not.
   //
-  // Both also sit out the render-target archetypes (`filter-chain-*`,
-  // `mask-clip`): Phaser's adapter and Excalibur 0.32 have no validated
-  // per-node equivalent for the shared filter/mask scenes, so approximating
-  // the cell would violate the fairness rule.
-  //
-  // Both sit out the UI-layout archetype as well, and that one is a capability
-  // finding rather than a policy: neither library ships a layout engine at all.
-  // Phaser 4's `Actions.GridAlign` places objects once on a fixed raster and
-  // `GameObjects.Grid` draws one; Excalibur 0.32 has no layout container. A cell
-  // on either arm could only measure a flexbox written inside the harness.
-  capabilityDescriptor('phaser', 'webgl2', ['webgl2'], spec => !isScrolling(spec) && !usesRenderTargets(spec) && !isUiLayoutScene(spec)),
-  capabilityDescriptor('excalibur', 'default', ['webgl2'], spec => !isScrolling(spec) && !usesRenderTargets(spec) && !isUiLayoutScene(spec)),
+  // Which archetypes each arm covers is `coverage.ts`, shared with the adapters
+  // rather than restated here - this list decides which cells EXIST, so a copy
+  // that drifted from an adapter's own answer would publish a row the adapter
+  // never implemented.
+  capabilityDescriptor('phaser', 'webgl2', ['webgl2'], phaserCovers),
+  capabilityDescriptor('excalibur', 'default', ['webgl2'], excaliburCovers),
 ];
 
 /**
