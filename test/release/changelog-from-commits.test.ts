@@ -62,6 +62,25 @@ describe('renderUnreleasedEntries', () => {
     expect(rendered).toContain('  It does things.');
   });
 
+  test('keeps the opening paragraph in front and folds the rest away', () => {
+    const body = ['It does things.', 'And here is the long reasoning.', 'With a second paragraph of it.'].join('\n\n');
+    const rendered = renderUnreleasedEntries([classifyCommit(commit('feat: add a thing (#1)', body))!], '', REPO);
+
+    expect(rendered).toContain('  It does things.');
+    expect(rendered.indexOf('It does things.')).toBeLessThan(rendered.indexOf('<details>'));
+    expect(rendered).toContain('  <summary>Details</summary>');
+    expect(rendered).toContain('  And here is the long reasoning.');
+    expect(rendered).toContain('  With a second paragraph of it.');
+    expect(rendered).toContain('  </details>');
+  });
+
+  test('leaves a single-paragraph body unfolded', () => {
+    const rendered = renderUnreleasedEntries([classifyCommit(commit('feat: add a thing (#1)', 'It does things.'))!], '', REPO);
+
+    expect(rendered).toContain('  It does things.');
+    expect(rendered).not.toContain('<details>');
+  });
+
   test('skips entries whose pull request the section already names', () => {
     const entries = [classifyCommit(commit('feat: add a thing (#1)'))!, classifyCommit(commit('fix: fix a thing (#2)'))!];
     const rendered = renderUnreleasedEntries(entries, '- **Hand-written.** ([#1](x/pull/1))', REPO);

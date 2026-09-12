@@ -111,12 +111,45 @@ const indentBody = (body: string): string =>
     .join('\n')
     .replace(/\n{3,}/gu, '\n\n');
 
+/**
+ * Split a body into its opening paragraph and everything after it.
+ *
+ * A pull request description is written to be read once, by a reviewer with the
+ * diff open. A release is read by someone deciding whether to upgrade, and
+ * pasting a dozen such descriptions end to end leaves them several thousand
+ * words of prose with no shape - the entries stop being scannable and the
+ * release page becomes a wall. The opening paragraph is the part that answers
+ * "what changed"; the rest is the reasoning, the measurements and the
+ * follow-ups, which belong in the release but not in front of it.
+ */
+const splitSummary = (body: string): { summary: string; detail: string } => {
+  const trimmed = body.trim();
+  const separator = trimmed.indexOf('\n\n');
+
+  return separator === -1 ? { summary: trimmed, detail: '' } : { summary: trimmed.slice(0, separator).trim(), detail: trimmed.slice(separator).trim() };
+};
+
 const renderEntry = (entry: ChangelogEntry, repoUrl: string): string => {
   const link = entry.pullRequest !== null ? ` ([#${entry.pullRequest}](${repoUrl}/pull/${entry.pullRequest}))` : '';
   const flag = entry.breaking ? 'BREAKING: ' : '';
   const head = `- **${flag}${entry.title}.**${link}`;
 
-  return entry.body.length > 0 ? `${head}\n${indentBody(entry.body)}` : head;
+  if (entry.body.length === 0) {
+    return head;
+  }
+
+  const { summary, detail } = splitSummary(entry.body);
+  const rendered = [head, indentBody(summary)];
+
+  if (detail.length > 0) {
+    // A fold rather than a cut: everything the description said is still in the
+    // release, one click away, and still in `CHANGELOG.md` for anyone reading
+    // the file. The blank line after the `<summary>` tag is what makes the
+    // Markdown inside render instead of appearing as source.
+    rendered.push(indentBody(['<details>', '<summary>Details</summary>', '', detail, '', '</details>'].join('\n')));
+  }
+
+  return rendered.join('\n');
 };
 
 /**

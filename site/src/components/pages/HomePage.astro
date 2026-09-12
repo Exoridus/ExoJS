@@ -156,9 +156,9 @@ const examples = [
                     </div>
                     <div class="hero-install">
                         <InstallCommand />
-                        <a class="hero-download" href={`${appInfo.repositoryUrl}/releases/latest`} rel="noopener">
+                        <a class="hero-download" href={`${appInfo.repositoryUrl}/releases/latest/download/exojs-full.zip`} rel="noopener">
                             <span class="hero-download-label">Or download the latest release</span>
-                            <span class="hero-download-note">Ready-to-use bundles, no build step</span>
+                            <span class="hero-download-note">Full ZIP, no build step</span>
                         </a>
                     </div>
                 </div>
@@ -462,11 +462,13 @@ const examples = [
     }
 
     /*
-     * `/releases/latest` rather than a tag built from the package version:
-     * GitHub resolves it to whatever is newest, while the version in
-     * `package.json` is the one being developed and is ahead of the last
-     * release for most of a cycle - which would link a tag that does not exist
-     * yet.
+     * The archive itself, through GitHub's `/releases/latest/download/<asset>`
+     * redirect, so the button downloads instead of landing on release notes.
+     * It resolves against whatever release is newest, which is why the release
+     * workflow uploads a second copy of the Full ZIP under a version-less name:
+     * a URL carrying the version would have to be rebuilt for every release,
+     * and the version in `package.json` is the one being developed and is ahead
+     * of the last release for most of a cycle.
      */
     .hero-download {
         display: grid;

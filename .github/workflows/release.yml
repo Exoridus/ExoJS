@@ -162,6 +162,15 @@ jobs:
             --repo "${GITHUB_REPOSITORY}" \
             --out ".release/release-notes.md"
 
+      # A second copy under a version-less name. GitHub serves the assets of the
+      # newest release at /releases/latest/download/<asset-name>, which is a
+      # permanent direct-download URL only for a name that does not move with
+      # the version - so the site can link the archive itself instead of the
+      # release page. The versioned name stays: it is what a downloaded file
+      # should be called once it is on disk.
+      - name: Add the version-less Full ZIP alias
+        run: cp ".release/exojs-${TARGET_TAG}-full.zip" .release/exojs-full.zip
+
       - name: Create GitHub release with Full ZIP
         uses: softprops/action-gh-release@v3
         with:
@@ -170,5 +179,6 @@ jobs:
           files: |
             .release/exojs-${{ env.TARGET_TAG }}-full.zip
             .release/exojs-${{ env.TARGET_TAG }}-full.zip.sha256
+            .release/exojs-full.zip
             .release/artifacts/checksums.sha256
             .release/artifacts/release-manifest.json
