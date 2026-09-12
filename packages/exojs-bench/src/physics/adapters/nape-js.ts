@@ -1,6 +1,6 @@
 import type * as Nape from '@newkrok/nape-js';
 
-import type { PhysicsAdapter, PhysicsArchetypeSpec, PhysicsStructuralCounters } from '../PhysicsAdapter';
+import type { PhysicsAdapter, PhysicsArchetypeSpec, PhysicsSleepCensus, PhysicsStructuralCounters } from '../PhysicsAdapter';
 import type { PerStepWork } from './perStepWork';
 import { createPerStepWork } from './perStepWork';
 import type { BodyDesc } from './scene';
@@ -125,6 +125,21 @@ export const createNapeJsAdapter = async (): Promise<PhysicsAdapter> => {
         jointCount: currentSpace.constraints.length,
         rayHits: perStep.rayHits,
       };
+    },
+
+    sampleSleepState(): PhysicsSleepCensus {
+      if (space === null) {
+        throw new Error('nape-js adapter: sampleSleepState() called before setup().');
+      }
+
+      const current = space;
+      const bodies = Array.from({ length: current.bodies.length }, (_, index) => current.bodies.at(index));
+      // `isStatic()` is a method here while `isSleeping` is a getter, so reading
+      // the first as a property yields a function - which is truthy, and counts
+      // every body in the world as static.
+      const dynamic = bodies.filter(body => !body.isStatic());
+
+      return { dynamic: dynamic.length, awake: dynamic.filter(body => !body.isSleeping).length };
     },
 
     teardown(): void {

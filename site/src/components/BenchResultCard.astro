@@ -31,7 +31,7 @@
  */
 
 import BenchMeasurementDetail from './BenchMeasurementDetail.astro';
-import { archetypeDescription, archetypeTitle, FRAME_BUDGET_NOTE, formatMs, OUTCOME_NOTES, OUTCOME_STATUS } from '../lib/bench-profiles';
+import { archetypeDescription, archetypeTitle, type CellOutcome, FRAME_BUDGET_NOTE, formatMs, OUTCOME_NOTES, OUTCOME_STATUS } from '../lib/bench-profiles';
 import type { BenchCard } from '../lib/bench-cards';
 import { openingLoad } from '../lib/bench-cards';
 
@@ -47,18 +47,68 @@ const description = archetypeDescription(card.id);
 const anchor = `${domain}-${card.id}${card.backend === undefined ? '' : `-${card.backend}`}`;
 
 /**
- * Bar width for one figure, as a percentage of the card's slowest plotted arm.
+ * Bar width for one figure, as a percentage of the card's slowest arm.
  *
- * A measured figure always gets at least a sliver, so a very fast arm stays
- * visible - but the sliver is deliberately narrow enough that nobody reads it as
- * a quantity, and the figure beside it is what the row is read from. A row with
- * no plottable figure gets no bar at all rather than a zero-length one: zero
- * would say the arm took no time, which is the opposite of what happened.
+ * Strictly proportional, with no minimum: a bar is the duration it shows, and a
+ * floor under it would draw two arms two orders of magnitude apart as though
+ * they were within a few per cent of each other. An arm that is fast enough to
+ * disappear from the track is read from its figure, which is why the figure and
+ * not the bar is the strongest text in the row.
+ *
+ * A row with no published figure gets no bar rather than a zero-length one:
+ * zero would say the arm took no time, which is the opposite of what happened.
  */
-const widthOf = (ms: number | null, maxMs: number): number | null => (ms === null || !Number.isFinite(ms) || maxMs <= 0 ? null : Math.max(1.5, (ms / maxMs) * 100));
+const widthOf = (ms: number | null, maxMs: number): number | null => (ms === null || !Number.isFinite(ms) || maxMs <= 0 ? null : (ms / maxMs) * 100);
+
+/**
+ * Width of the card's time column, in characters of its longest figure.
+ *
+ * Fixed per card rather than sized per row. An `auto` column takes its width
+ * from each row's own text, so `186` and `0.14` left their bars starting at
+ * different offsets and ending at different right edges - which makes two bars
+ * of the same length different lengths on screen, and the column is the one
+ * thing a reader scans straight down.
+ */
+const timeCharacters = Math.max(
+    ...card.loads.flatMap(load => load.arms.map(arm => (arm.ms === null ? OUTCOME_STATUS[arm.outcome].length : formatMs(arm.ms).length))),
+);
+
+/** True where any row of the card carries a marker beside its figure, which the column has to leave room for. */
+const hasMarkers = card.loads.some(load => load.arms.some(arm => arm.overFrameBudget));
+
+/** The states this card has to explain, so the notes are written once per card rather than per row. */
+const explained = [
+    ...(hasMarkers ? [{ id: 'frame-budget', label: `Past the frame (!)`, note: FRAME_BUDGET_NOTE }] : []),
+    ...[...new Set(card.loads.flatMap(load => load.arms.filter(arm => !arm.quantitative).map(arm => arm.outcome)))].map(outcome => ({
+        id: outcome,
+        label: OUTCOME_STATUS[outcome],
+        note: OUTCOME_NOTES[outcome],
+    })),
+];
+
+/**
+ * Anchor for one note, unique across the page.
+ *
+ * Keyed by the LOAD as well as the card: every load renders its own copy of the
+ * notes, so an id carrying only the card's name appeared three times on a card
+ * with three loads - and the marker then opened the first copy, which sits in a
+ * load panel the reader is not looking at.
+ */
+const noteId = (loadId: string, id: string): string => `${anchor}-${loadId}-note-${id}`;
+
+/**
+ * The states of one load, in the card's own order.
+ *
+ * Read off the outcomes rather than off `quantitative`, so a comparison that
+ * was never drawn and one the clock demonstrably could not separate are not
+ * reported as the same finding.
+ */
+const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
+    ...new Set(load.arms.filter(arm => !arm.quantitative && arm.ms !== null).map(arm => arm.outcome)),
+];
 ---
 
-<article class="card" id={anchor}>
+<article class="card" id={anchor} style={`--bench-time-ch:${String(timeCharacters)}`}>
     <header>
         <h3>{archetypeTitle(card.id)}</h3>
         {description !== undefined && <p class="what">{description}</p>}
@@ -76,8 +126,14 @@ const widthOf = (ms: number | null, maxMs: number): number | null => (ms === nul
         opening !== undefined && <p class="at">{opening.label}</p>
     )}
 
+    {/*
+      * `bench-load-panel` rather than `panel`: the global stylesheet gives
+      * `.card, .panel` a border, a ground and a shadow, so naming the card's
+      * own inner container `panel` drew a second frame inside every card and
+      * narrowed the bars it holds.
+      */}
     {card.loads.map(load => (
-        <div class="panel" data-load={load.id} hidden={load.id !== opening?.id}>
+        <div class="bench-load-panel" data-load={load.id} hidden={load.id !== opening?.id}>
             {load.measuredArms !== null && <p class="coverage">{load.measuredArms} libraries measured</p>}
 
             <ul class="arms">
@@ -89,16 +145,22 @@ const widthOf = (ms: number | null, maxMs: number): number | null => (ms === nul
                         </span>
                         <span class="time">
                             {arm.ms === null ? (
-                                <span class="state" title={OUTCOME_NOTES[arm.outcome]}>
+                                <button type="button" class="state" data-explains={noteId(load.id, arm.outcome)} aria-describedby={noteId(load.id, arm.outcome)}>
                                     {OUTCOME_STATUS[arm.outcome]}
-                                </span>
+                                </button>
                             ) : (
                                 <>
                                     <b>{formatMs(arm.ms)}</b>
                                     <span class="unit">ms</span>
                                     {arm.overFrameBudget && (
-                                        <button type="button" class="mark over" aria-label={FRAME_BUDGET_NOTE} title={FRAME_BUDGET_NOTE}>
-                                            !
+                                        <button
+                                            type="button"
+                                            class="mark over"
+                                            data-explains={noteId(load.id, 'frame-budget')}
+                                            aria-describedby={noteId(load.id, 'frame-budget')}
+                                        >
+                                            <span class="glyph" aria-hidden="true">!</span>
+                                            <span class="sr">{FRAME_BUDGET_NOTE}</span>
                                         </button>
                                     )}
                                 </>
@@ -108,12 +170,21 @@ const widthOf = (ms: number | null, maxMs: number): number | null => (ms === nul
                 ))}
             </ul>
 
-            {load.arms.some(arm => !arm.quantitative) && (
-                <p class="limited">
-                    <button type="button" class="mark limited" aria-label={OUTCOME_NOTES['timer-limited']} title={OUTCOME_NOTES['timer-limited']}>
-                        Timing-limited
-                    </button>
-                    <span>Some comparisons here are drawn from durations the clock did not separate, so they publish times and no factor.</span>
+            {/*
+              * One chip per state the load actually carries, and the state is
+              * read off the outcome rather than off "not quantitative": a
+              * comparison nothing measured and one whose clock demonstrably
+              * could not separate two durations are different findings, and
+              * labelling the first as timing-limited claims a measurement.
+              * The sentence lives in the note the chip opens.
+              */}
+            {statesOf(load).length > 0 && (
+                <p class="states">
+                    {statesOf(load).map(state => (
+                        <button type="button" class="mark" data-explains={noteId(load.id, state)} aria-describedby={noteId(load.id, state)}>
+                            {OUTCOME_STATUS[state]}
+                        </button>
+                    ))}
                 </p>
             )}
 
@@ -123,6 +194,19 @@ const widthOf = (ms: number | null, maxMs: number): number | null => (ms === nul
                     {load.label}
                     {load.unit === undefined && ' load'} · {card.backend === undefined ? 'Physics' : card.backend === 'webgl2' ? 'WebGL2' : 'WebGPU'}
                 </p>
+
+                {/* What every marker and state word on this card means, as text rather than as a tooltip a touch reader cannot reach. */}
+                {explained.length > 0 && (
+                    <dl class="notes">
+                        {explained.map(entry => (
+                            <div id={noteId(load.id, entry.id)} tabindex="-1">
+                                <dt>{entry.label}</dt>
+                                <dd>{entry.note}</dd>
+                            </div>
+                        ))}
+                    </dl>
+                )}
+
                 <BenchMeasurementDetail comparisons={load.comparisons} />
             </details>
         </div>
@@ -190,6 +274,14 @@ const widthOf = (ms: number | null, maxMs: number): number | null => (ms === nul
         color: var(--color-text-muted);
     }
 
+    /* No frame, no ground: the card is already the box, and the global `.panel` rule is what used to draw a second one here. */
+    .bench-load-panel {
+        border: 0;
+        padding: 0;
+        background: none;
+        box-shadow: none;
+    }
+
     /* No frame of its own: the card is already a box, and a second border around the bars only narrows them. */
     .arms {
         list-style: none;
@@ -200,9 +292,15 @@ const widthOf = (ms: number | null, maxMs: number): number | null => (ms === nul
         gap: 0.4rem;
     }
 
+    /*
+     * The time column is one width for the whole card, from its longest figure
+     * plus room for the unit and a marker. An `auto` column sized itself per
+     * row, which moved every bar's right edge with the length of the number
+     * beside it - so two equal durations drew as two different lengths.
+     */
     .arm {
         display: grid;
-        grid-template-columns: 5.5rem 1fr auto;
+        grid-template-columns: 5.5rem 1fr calc(var(--bench-time-ch, 4) * 1ch + 3.4rem);
         align-items: center;
         gap: 0.5rem;
         font-size: 0.82rem;
@@ -244,6 +342,7 @@ const widthOf = (ms: number | null, maxMs: number): number | null => (ms === nul
         font-size: 0.92rem;
         display: inline-flex;
         align-items: baseline;
+        justify-content: flex-end;
         gap: 0.15rem;
     }
 
@@ -257,9 +356,14 @@ const widthOf = (ms: number | null, maxMs: number): number | null => (ms === nul
     }
 
     .state {
-        color: var(--color-text-muted);
+        font: inherit;
+        font-size: 0.76rem;
+        padding: 0;
+        border: 0;
         border-bottom: 1px dotted var(--color-border);
-        cursor: help;
+        background: none;
+        color: var(--color-text-muted);
+        cursor: pointer;
     }
 
     .unit {
@@ -267,42 +371,71 @@ const widthOf = (ms: number | null, maxMs: number): number | null => (ms === nul
         font-size: 0.76rem;
     }
 
-    /* A button rather than a glyph with a title: a touch reader and a keyboard reader both have to be able to reach what the mark means. */
+    /*
+     * A real control, not a glyph with a `title`: pressing it opens the card's
+     * details and moves the reader to the note that says what the mark means,
+     * which is reachable by touch and by keyboard. A `title` is neither.
+     */
     .mark {
         font: inherit;
         font-size: 0.68rem;
         line-height: 1;
-        margin-left: 0.25rem;
-        padding: 0.15rem 0.3rem;
+        padding: 0.15rem 0.35rem;
         border-radius: 0.3rem;
         border: 1px solid currentcolor;
         background: transparent;
-        cursor: help;
+        color: var(--color-text-muted);
+        cursor: pointer;
     }
 
     .mark.over {
+        margin-left: 0.25rem;
         color: var(--amber);
         font-weight: 700;
-        padding: 0.15rem 0.35rem;
     }
 
-    .mark.limited {
-        color: var(--color-text-muted);
-        flex: 0 0 auto;
+    .sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
     }
 
-    .limited {
+    .states {
         display: flex;
         flex-wrap: wrap;
-        align-items: baseline;
-        gap: 0.35rem;
+        gap: 0.3rem;
         margin: 0.5rem 0 0;
-        font-size: 0.76rem;
+    }
+
+    .notes {
+        margin: 0 0 0.7rem;
+        display: grid;
+        gap: 0.25rem;
+        font-size: 0.78rem;
+    }
+
+    .notes > div {
+        display: grid;
+        grid-template-columns: 8.5rem 1fr;
+        gap: 0.5rem;
+        align-items: baseline;
+    }
+
+    /* The note the marker sends the reader to is marked while it holds focus, so the jump is visible rather than silent. */
+    .notes > div:focus-visible {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 2px;
+    }
+
+    .notes dt {
         color: var(--color-text-muted);
     }
 
-    .limited span {
-        flex: 1 1 12rem;
+    .notes dd {
+        margin: 0;
     }
 
     .more {
@@ -328,17 +461,43 @@ const widthOf = (ms: number | null, maxMs: number): number | null => (ms === nul
 
     @media (max-width: 34rem) {
         .arm {
-            grid-template-columns: 4.5rem 1fr auto;
+            grid-template-columns: 4.5rem 1fr calc(var(--bench-time-ch, 4) * 1ch + 3rem);
             font-size: 0.78rem;
         }
 
         .time {
             font-size: 0.86rem;
         }
+
+        .notes > div {
+            grid-template-columns: 1fr;
+            gap: 0.1rem;
+        }
     }
 </style>
 
 <script>
+    /**
+     * Pressing a marker opens the card's details and moves the reader to the
+     * note that explains it.
+     *
+     * A `title` attribute is not an answer here: it is unreachable by touch and
+     * awkward by keyboard, and the sentence a reader needs is the one thing the
+     * marker cannot carry itself. The note already exists in the details, so
+     * the control reveals it rather than duplicating it into a tooltip.
+     */
+    for (const marker of document.querySelectorAll<HTMLElement>('[data-explains]')) {
+        marker.addEventListener('click', () => {
+            const note = document.getElementById(marker.dataset['explains'] ?? '');
+            const disclosure = note?.closest('details');
+
+            if (disclosure instanceof HTMLDetailsElement) disclosure.open = true;
+
+            note?.focus();
+            note?.scrollIntoView({ block: 'nearest' });
+        });
+    }
+
     // Load switching is per card and nothing else on the page depends on it, so
     // it stays a listener on the card rather than shared state. Without
     // JavaScript every panel but the opening one is `hidden`, which is the same
@@ -346,7 +505,7 @@ const widthOf = (ms: number | null, maxMs: number): number | null => (ms === nul
     // with the detail of that same load inside it.
     for (const card of document.querySelectorAll<HTMLElement>('.card')) {
         const buttons = card.querySelectorAll<HTMLButtonElement>('.load');
-        const panels = card.querySelectorAll<HTMLElement>('.panel');
+        const panels = card.querySelectorAll<HTMLElement>('.bench-load-panel');
 
         for (const button of buttons) {
             button.addEventListener('click', () => {

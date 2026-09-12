@@ -256,8 +256,8 @@ export interface ProfileHost {
 
 /** What the measuring page's clock could resolve, which decides how finely a step is timed. */
 export interface PhysicsClock {
-  /** Smallest non-zero `performance.now()` difference the page observed, in milliseconds. */
-  readonly resolutionMs: number;
+  /** Smallest non-zero `performance.now()` difference the page observed, in milliseconds, or `null` where it observed none. */
+  readonly resolutionMs: number | null;
   /** Whether the page reached a cross-origin-isolated context, which lifts the coarse clamp. */
   readonly crossOriginIsolated: boolean;
 }
@@ -402,11 +402,59 @@ export const referenceProfile: BenchProfileDocument | undefined = loaded[0];
 /** Every profile except the reference one, in the same order. Empty until a second machine is contributed. */
 export const furtherProfiles: readonly BenchProfileDocument[] = loaded.slice(1);
 
+/**
+ * Browsers in the order the page offers them, most practically relevant first.
+ *
+ * An editorial choice, fixed before any run and never derived from the results.
+ * Chromium leads because it is the broadest reference point a reader shipping a
+ * web game actually has; a browser with no published profile simply does not
+ * appear.
+ */
+const BROWSER_ORDER: readonly string[] = ['chromium', 'webkit', 'firefox'];
+
+/** One browser's published profiles: the one the page leads with, and the rest measured in the same browser. */
+export interface BrowserProfiles {
+  readonly browser: string;
+  /** The profile this browser is shown through - newest engine version, widest coverage; see `byRecency`. */
+  readonly reference: BenchProfileDocument;
+  /** Further machines measured in the same browser, in the same order. Usually empty. */
+  readonly others: readonly BenchProfileDocument[];
+}
+
+/**
+ * The published profiles grouped by the browser they were measured in.
+ *
+ * The page's primary axis, and deliberately not the machine. Switching machines
+ * changes the CPU, the GPU, the operating system, the driver stack AND the
+ * browser engine at once, so it is not an A/B of anything a reader can name;
+ * the browser at least names one dimension.
+ *
+ * It is still not a browser benchmark while each browser is measured on its own
+ * machine, which is why the page presents these as separate reference profiles
+ * and prints the machine beside every set of numbers rather than inviting a
+ * reader to divide one browser's figures by another's.
+ */
+export const profilesByBrowser: readonly BrowserProfiles[] = [...new Set(loaded.map(document => document.profile.browser))]
+  .sort((a, b) => {
+    const left = BROWSER_ORDER.indexOf(a);
+    const right = BROWSER_ORDER.indexOf(b);
+
+    return (left === -1 ? BROWSER_ORDER.length : left) - (right === -1 ? BROWSER_ORDER.length : right) || a.localeCompare(b);
+  })
+  .flatMap(browser => {
+    const [reference, ...others] = loaded.filter(document => document.profile.browser === browser);
+
+    return reference === undefined ? [] : [{ browser, reference, others }];
+  });
+
 /** Display name for a rendering backend. */
 export const BACKEND_LABELS: Readonly<Record<ProfileBackendName, string>> = { webgl2: 'WebGL2', webgpu: 'WebGPU' };
 
 /** Browser engines as they are written, keyed by the slug the harness stores. */
 const BROWSER_LABELS: Readonly<Record<string, string>> = { chromium: 'Chromium', webkit: 'WebKit', firefox: 'Firefox' };
+
+/** A browser engine's published name, or its slug written out where none is known. */
+export const browserLabel = (browser: string): string => BROWSER_LABELS[browser] ?? deviceName(browser);
 
 /** Operating systems as they are written, keyed by the normalized platform name. */
 const OS_LABELS: Readonly<Record<string, string>> = { windows: 'Windows', macos: 'macOS', linux: 'Linux' };
@@ -437,6 +485,15 @@ const deviceName = (slug: string): string =>
  * than a name. Everything it leaves out stays on the profile itself.
  */
 export const machineName = (profile: BenchProfile): string => `${deviceName(profile.gpu)} · ${BROWSER_LABELS[profile.browser] ?? deviceName(profile.browser)}`;
+
+/**
+ * Just the hardware, for a place that already names the browser.
+ *
+ * The benchmarks page picks a browser and then states the machine that browser
+ * was measured on, so repeating the engine inside the machine's own name says
+ * it twice on one line.
+ */
+export const deviceLabel = (profile: BenchProfile): string => deviceName(profile.gpu);
 
 /**
  * The platform a profile was measured on, spelled out: `macOS 27 beta`.

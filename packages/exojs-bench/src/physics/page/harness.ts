@@ -229,7 +229,7 @@ const physicsClock = (): PhysicsClockReport => {
   }
 
   return {
-    resolutionMs: Number.isFinite(resolutionMs) ? resolutionMs : 0,
+    resolutionMs: Number.isFinite(resolutionMs) ? resolutionMs : null,
     crossOriginIsolated: globalThis.crossOriginIsolated === true,
   };
 };
@@ -249,10 +249,13 @@ const archetypeFor = (id: PhysicsCellSpec['archetype']): PhysicsArchetypeSpec =>
  * Steps one timing sample must cover for the sample to clear the clock's grid,
  * bounded so the cell still reports a distribution.
  */
-const resolveStepsPerSample = (estimatedStepMs: number, resolutionMs: number, timedSteps: number): number => {
+const resolveStepsPerSample = (estimatedStepMs: number, resolutionMs: number | null, timedSteps: number): number => {
   const cap = Math.max(1, Math.floor(timedSteps / MIN_TIMED_SAMPLES));
 
-  if (resolutionMs <= 0) {
+  // Nothing to derive a batch from. One step per sample is the only honest
+  // choice, and the cell says so in its note rather than reporting a batch
+  // sized against a grid nobody observed.
+  if (resolutionMs === null || resolutionMs <= 0) {
     return 1;
   }
 
@@ -271,7 +274,7 @@ const resolveStepsPerSample = (estimatedStepMs: number, resolutionMs: number, ti
  * timed one at a time or in batches; the batch only decides how finely the
  * window is sampled, never how far the world advances.
  */
-const measureCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec, resolutionMs: number): PhysicsCellOutcome => {
+const measureCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec, resolutionMs: number | null): PhysicsCellOutcome => {
   const archetype = archetypeFor(spec.archetype);
   const seed = seedFor(archetype.scene, spec.bodyCount);
 
@@ -337,13 +340,18 @@ const measureCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec, resolutionM
 
   adapter.teardown();
 
-  // Achieved grid coverage of the shortest sample. Below the target the cell
-  // could not batch far enough without dropping under MIN_TIMED_SAMPLES, and the
-  // reported median carries that much quantisation - said here rather than left
-  // for a reader to infer from the resolution and the median.
+  /*
+   * Grid coverage the median's sample achieved.
+   *
+   * The batch is sized ONCE, from the calibration block, and is not re-derived
+   * while the cell is timed. Falling short of the target therefore says the
+   * timed window came out cheaper than calibration estimated - not that the
+   * batch hit its cap; the note reports the shortfall and leaves the cause to
+   * `stepsPerSample`, which travels with the cell.
+   */
   const stepMsMedian = median(samples);
-  const achievedTicks = resolutionMs > 0 ? (stepMsMedian * stepsPerSample) / resolutionMs : Number.POSITIVE_INFINITY;
-  const coarse = achievedTicks < TICKS_PER_SAMPLE;
+  const sampleMs = stepMsMedian * stepsPerSample;
+  const achievedTicks = resolutionMs === null || resolutionMs <= 0 ? null : sampleMs / resolutionMs;
 
   const notes: string[] = [];
 
@@ -351,9 +359,18 @@ const measureCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec, resolutionM
     notes.push(`aborted: last-${String(ABORT_WINDOW)}-sample median exceeded ${String(STEP_BUDGET_MS)}ms/step`);
   }
 
-  if (coarse) {
+  if (resolutionMs === null || resolutionMs <= 0) {
+    notes.push('clock resolution not observed, so one step per timing sample and no quantisation figure for this cell');
+  } else if (achievedTicks !== null && achievedTicks <= 0) {
+    // A sample the clock returned as zero carries no measurement to quantify.
+    // `100 / 0` printed `Infinity% quantisation`, which reads as an enormous
+    // error bar on a number rather than as the absence of a number.
     notes.push(
-      `coarse timing: one sample spans ${achievedTicks.toFixed(1)} clock ticks of ${(resolutionMs * 1000).toFixed(1)}us (target ${String(TICKS_PER_SAMPLE)}), so the median carries about ${(100 / achievedTicks).toFixed(0)}% quantisation`,
+      `unresolved timing: a sample of ${String(stepsPerSample)} step(s) returned no elapsed time on a ${(resolutionMs * 1000).toFixed(1)}us clock, so this cell has no resolved median`,
+    );
+  } else if (achievedTicks !== null && achievedTicks < TICKS_PER_SAMPLE) {
+    notes.push(
+      `coarse timing: one sample of ${String(stepsPerSample)} step(s) spans ${achievedTicks.toFixed(1)} clock ticks of ${(resolutionMs * 1000).toFixed(1)}us (target ${String(TICKS_PER_SAMPLE)}), so the median carries about ${(100 / achievedTicks).toFixed(0)}% quantisation`,
     );
   }
 
@@ -372,7 +389,7 @@ const measureCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec, resolutionM
 };
 
 /** Drive one matrix cell, or report why its arm could not run it. */
-const runPhysicsCell = async (spec: PhysicsCellSpec, resolutionMs: number): Promise<PhysicsCellOutcome> => {
+const runPhysicsCell = async (spec: PhysicsCellSpec, resolutionMs: number | null): Promise<PhysicsCellOutcome> => {
   const arms = await resolveArms();
   const arm = arms.get(armKey(spec.engine, spec.config));
 
@@ -390,7 +407,7 @@ const runPhysicsCell = async (spec: PhysicsCellSpec, resolutionMs: number): Prom
 declare global {
   var __physicsArms: (() => Promise<PhysicsArmReport[]>) | undefined;
   var __physicsClock: (() => PhysicsClockReport) | undefined;
-  var __runPhysicsCell: ((spec: PhysicsCellSpec, resolutionMs: number) => Promise<PhysicsCellOutcome>) | undefined;
+  var __runPhysicsCell: ((spec: PhysicsCellSpec, resolutionMs: number | null) => Promise<PhysicsCellOutcome>) | undefined;
 }
 
 globalThis.__physicsArms = physicsArms;

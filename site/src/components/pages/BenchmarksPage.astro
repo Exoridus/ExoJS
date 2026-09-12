@@ -17,9 +17,18 @@
  * a reader scroll past several screens of prose that say the same thing
  * whichever card raised the question.
  *
- * Machines are picked, never stacked. Two profiles are two machines measured in
- * two browsers and share no comparison, so a second one appended under the
- * first would read as more evidence about the first.
+ * The page's axis is the BROWSER, not the machine. Switching machines changes
+ * the CPU, the GPU, the operating system, the driver stack and the browser
+ * engine at once, which is not an A/B of anything a reader can name; the
+ * browser names one dimension, and it is the one a reader shipping a web game
+ * chooses between.
+ *
+ * It is still not a browser benchmark, because each browser is currently
+ * measured on its own machine. So these are presented as separate reference
+ * profiles, each printing the machine it was measured on, and the page never
+ * invites a reader to divide one browser's figures by another's. Profiles are
+ * picked and never stacked: two of them share no comparison, so a second one
+ * appended under the first would read as more evidence about the first.
  */
 
 import BenchResultCard from '../BenchResultCard.astro';
@@ -30,11 +39,12 @@ import { appInfo } from '../../lib/app-info';
 import { PHYSICS_HEADLINE_SCENARIOS, physicsCards, RENDERING_HEADLINE_SCENARIOS, renderingCards, selectCards } from '../../lib/bench-cards';
 import {
     BACKEND_LABELS,
-    benchProfiles,
+    browserLabel,
+    type BrowserProfiles,
+    deviceLabel,
     formatDay,
-    machineName,
     platformName,
-    type BenchProfileDocument,
+    profilesByBrowser,
     type ProfileBackendName,
 } from '../../lib/bench-profiles';
 
@@ -54,17 +64,19 @@ const REPRODUCTION_RUNS = 3;
 
 const backends: readonly ProfileBackendName[] = ['webgl2', 'webgpu'];
 
-/** Everything one machine contributes to the page, assembled once per profile. */
-const viewOf = (document: BenchProfileDocument) => ({
-    document,
+/** Everything one browser's reference profile contributes to the page. */
+const viewOf = (group: BrowserProfiles) => ({
+    browser: group.browser,
+    document: group.reference,
+    others: group.others,
     rendering: backends
-        .map(backend => ({ backend, ...selectCards(renderingCards(document, backend), RENDERING_HEADLINE_SCENARIOS, 6) }))
+        .map(backend => ({ backend, ...selectCards(renderingCards(group.reference, backend), RENDERING_HEADLINE_SCENARIOS, 6) }))
         .filter(entry => entry.headline.length > 0),
-    physics: selectCards(physicsCards(document), PHYSICS_HEADLINE_SCENARIOS, 4),
+    physics: selectCards(physicsCards(group.reference), PHYSICS_HEADLINE_SCENARIOS, 4),
 });
 
-const machines = benchProfiles.map(viewOf);
-const leading = machines[0];
+const browsers = profilesByBrowser.map(viewOf);
+const leading = browsers[0];
 ---
 
 <DocsLayout title="ExoJS benchmarks" description="Measured comparisons between ExoJS and other 2D rendering and physics libraries." variant="wide">
@@ -85,39 +97,46 @@ const leading = machines[0];
         ) : (
             <>
                 <div class="profile-head">
-                    {machines.length > 1 && (
-                        <div class="machines" role="group" aria-label="Machine">
-                            {machines.map((entry, index) => (
-                                <button
-                                    type="button"
-                                    class="machine"
-                                    data-machine={entry.document.profile.slug}
-                                    aria-pressed={index === 0 ? 'true' : 'false'}
-                                >
-                                    {machineName(entry.document.profile)}
+                    {/* Offered only where a second browser has a published profile: one choice is not a choice. */}
+                    {browsers.length > 1 && (
+                        <div class="browsers" role="group" aria-label="Reference profile">
+                            {browsers.map((entry, index) => (
+                                <button type="button" class="browser" data-browser={entry.browser} aria-pressed={index === 0 ? 'true' : 'false'}>
+                                    {browserLabel(entry.browser)}
                                 </button>
                             ))}
                         </div>
                     )}
 
-                    {machines.map((entry, index) => {
+                    {browsers.map((entry, index) => {
                         const { profile } = entry.document;
 
                         return (
-                            <p class="stamp" data-machine={profile.slug} hidden={index !== 0}>
-                                {machines.length === 1 && <b>{machineName(profile)}</b>}
+                            <p class="stamp" data-browser={entry.browser} hidden={index !== 0}>
+                                {/*
+                                  * The machine is provenance, not a mode. It is printed beside every
+                                  * set of figures because the browsers are measured on different
+                                  * machines, so one browser's numbers divided by another's would be
+                                  * a hardware ratio wearing a browser's name.
+                                  */}
+                                <b>{deviceLabel(profile)}</b>
                                 <span>{platformName(profile)}</span>
                                 <span>ExoJS {profile.engineVersion}</span>
                                 <span>measured {formatDay(profile.measuredAt)}</span>
                                 {/* Stated once, here, rather than again inside the opening sentence: it is a fact about the run, not about the result. */}
                                 <span>median of {profile.runs} pooled runs</span>
+                                {entry.others.length > 0 && (
+                                    <a href={`${base}${locale}/benchmarks/full/`}>
+                                        {entry.others.length} further {entry.others.length === 1 ? 'machine' : 'machines'} in this browser
+                                    </a>
+                                )}
                             </p>
                         );
                     })}
                 </div>
 
-                {machines.map((entry, index) => (
-                    <div class="machine-panel" data-machine={entry.document.profile.slug} hidden={index !== 0}>
+                {browsers.map((entry, index) => (
+                    <div class="browser-panel" data-browser={entry.browser} hidden={index !== 0}>
                         <section id={index === 0 ? 'rendering' : undefined} class="domain">
                             <div class="domain-head">
                                 <div class="domain-title">
@@ -216,17 +235,17 @@ const leading = machines[0];
 
 <script>
     /**
-     * The machine and the backend choice both belong to the reader and neither
-     * is derived from which one won more rows. Without JavaScript the first
-     * panel of each is the one that is not `hidden`, so the page still shows
-     * measured cards of one machine rather than an empty frame.
+     * The reference profile and the backend choice both belong to the reader and
+     * neither is derived from which one won more rows. Without JavaScript the
+     * first panel of each is the one that is not `hidden`, so the page still
+     * shows measured cards of one profile rather than an empty frame.
      *
-     * Machine panels are switched together with the stamp that names the
-     * machine: a profile's numbers and its provenance are one statement, and
-     * showing one machine's cards under another's stamp is the single mistake
-     * this control can make.
+     * A profile's panel is switched together with the stamp that names the
+     * machine it was measured on: the numbers and their provenance are one
+     * statement, and showing one profile's cards under another's stamp is the
+     * single mistake this control can make.
      */
-    const select = (buttons: NodeListOf<HTMLButtonElement>, panels: NodeListOf<HTMLElement>, key: 'machine' | 'backend', scope?: HTMLElement): void => {
+    const select = (buttons: NodeListOf<HTMLButtonElement>, panels: NodeListOf<HTMLElement>, key: 'browser' | 'backend', scope?: HTMLElement): void => {
         for (const button of buttons) {
             button.addEventListener('click', () => {
                 for (const other of buttons) {
@@ -241,14 +260,14 @@ const leading = machines[0];
     };
 
     select(
-        document.querySelectorAll<HTMLButtonElement>('.machines .machine'),
-        document.querySelectorAll<HTMLElement>('.machine-panel[data-machine], .stamp[data-machine]'),
-        'machine',
+        document.querySelectorAll<HTMLButtonElement>('.browsers .browser'),
+        document.querySelectorAll<HTMLElement>('.browser-panel[data-browser], .stamp[data-browser]'),
+        'browser',
     );
 
-    // Scoped per machine: each panel carries its own backend controls, and a
-    // click in one must not reveal the other machine's hidden panels.
-    for (const panel of document.querySelectorAll<HTMLElement>('.machine-panel')) {
+    // Scoped per profile: each panel carries its own backend controls, and a
+    // click in one must not reveal the other profile's hidden panels.
+    for (const panel of document.querySelectorAll<HTMLElement>('.browser-panel')) {
         select(panel.querySelectorAll<HTMLButtonElement>('.backend'), panel.querySelectorAll<HTMLElement>('.backend-panel'), 'backend', panel);
     }
 </script>
@@ -284,13 +303,13 @@ const leading = machines[0];
         margin-top: var(--s-4);
     }
 
-    .machines {
+    .browsers {
         display: flex;
         flex-wrap: wrap;
         gap: 0.3rem;
     }
 
-    .machines .machine {
+    .browsers .browser {
         font: inherit;
         font-size: 0.85rem;
         padding: 0.3rem 0.8rem;
@@ -301,8 +320,8 @@ const leading = machines[0];
         cursor: pointer;
     }
 
-    /* Weight and a filled ground as well as hue, so the selected machine is legible without separating the two colours. */
-    .machines .machine[aria-pressed='true'] {
+    /* Weight and a filled ground as well as hue, so the selected profile is legible without separating the two colours. */
+    .browsers .browser[aria-pressed='true'] {
         border-color: var(--accent);
         background: color-mix(in srgb, var(--accent) 14%, transparent);
         color: var(--fg);
@@ -326,6 +345,10 @@ const leading = machines[0];
 
     .stamp b {
         font-weight: 600;
+        color: var(--fg-muted);
+    }
+
+    .stamp a {
         color: var(--fg-muted);
     }
 

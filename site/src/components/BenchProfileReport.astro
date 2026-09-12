@@ -228,7 +228,7 @@ const libraries = (isRendering ? rendering?.libraries ?? [] : physics?.libraries
                             <span class="detail">
                                 {physicsHost.host.cpuCount} logical cores, {physicsHost.host.os} {physicsHost.host.arch}, {physicsHost.browser}{' '}
                                 {physicsHost.browserVersion}, fixed step {(physicsHost.fixedDelta * 1000).toFixed(2)} ms, clock resolution{' '}
-                                {physicsHost.clock.resolutionMs} ms
+                                {physicsHost.clock.resolutionMs === null ? 'not observed' : `${String(physicsHost.clock.resolutionMs)} ms`}
                                 {physicsHost.clock.crossOriginIsolated ? ', cross-origin isolated' : ''}
                             </span>
                         </dd>

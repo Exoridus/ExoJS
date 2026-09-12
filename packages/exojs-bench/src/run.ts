@@ -595,7 +595,7 @@ const runPhysicsDomain = async (args: Map<string, string>, selector: DomainSelec
 
   console.log('\n=== Provenance ===');
   console.log(
-    `  browser=${data.provenance.browser}/${data.provenance.browserVersion} cpu="${data.provenance.host.cpu}" (${String(data.provenance.host.cpuCount)} logical) os=${data.provenance.host.os} platformVersion=${String(data.provenance.host.platformVersion.major)} (${data.provenance.host.platformVersion.source}) prerelease=${String(data.provenance.prerelease.value)} (${data.provenance.prerelease.source}) engine=${data.provenance.engineVersion} fixedDelta=${String(data.provenance.fixedDelta)} clock=${(data.provenance.clock.resolutionMs * 1000).toFixed(1)}us (isolated=${String(data.provenance.clock.crossOriginIsolated)})`,
+    `  browser=${data.provenance.browser}/${data.provenance.browserVersion} cpu="${data.provenance.host.cpu}" (${String(data.provenance.host.cpuCount)} logical) os=${data.provenance.host.os} platformVersion=${String(data.provenance.host.platformVersion.major)} (${data.provenance.host.platformVersion.source}) prerelease=${String(data.provenance.prerelease.value)} (${data.provenance.prerelease.source}) engine=${data.provenance.engineVersion} fixedDelta=${String(data.provenance.fixedDelta)} clock=${data.provenance.clock.resolutionMs === null ? 'not-observed' : `${(data.provenance.clock.resolutionMs * 1000).toFixed(1)}us`} (isolated=${String(data.provenance.clock.crossOriginIsolated)})`,
   );
 
   if (!data.provenance.clock.crossOriginIsolated) {

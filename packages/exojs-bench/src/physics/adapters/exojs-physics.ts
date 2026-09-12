@@ -1,6 +1,6 @@
 import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld, RevoluteJoint } from '@codexo/exojs-physics';
 
-import type { PhysicsAdapter, PhysicsArchetypeSpec, PhysicsStructuralCounters } from '../PhysicsAdapter';
+import type { PhysicsAdapter, PhysicsArchetypeSpec, PhysicsSleepCensus, PhysicsStructuralCounters } from '../PhysicsAdapter';
 import type { PerStepWork } from './perStepWork';
 import { createPerStepWork } from './perStepWork';
 import type { BodyDesc } from './scene';
@@ -97,6 +97,16 @@ export const createExoJsPhysicsAdapter = (): PhysicsAdapter => {
         jointCount: world.joints.length,
         rayHits: perStep.rayHits,
       };
+    },
+
+    sampleSleepState(): PhysicsSleepCensus {
+      if (world === null) {
+        throw new Error('exojs-physics adapter: sampleSleepState() called before setup().');
+      }
+
+      const dynamic = world.bodies.filter(body => body.type !== 'static');
+
+      return { dynamic: dynamic.length, awake: dynamic.filter(body => !body.isSleeping).length };
     },
 
     teardown(): void {

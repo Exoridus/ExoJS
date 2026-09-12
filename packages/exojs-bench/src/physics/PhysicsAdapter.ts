@@ -200,4 +200,26 @@ export interface PhysicsAdapter extends PhysicsArmIdentity {
    * a warning, leaving its determinism unverified rather than blocking the run.
    */
   mutationSignature?(): string;
+  /**
+   * Census of how much of the world is still being simulated, for a diagnostic
+   * that runs OUTSIDE any timed window.
+   *
+   * The structural counters say what exists - bodies, constraints, contacts -
+   * and not what is stepped, so they cannot separate a world that legitimately
+   * went to sleep from one that is present but not simulating. Both report the
+   * same bodies and the same joints while one of them costs almost nothing per
+   * step.
+   *
+   * Optional and never read by a measurement: an arm whose library exposes no
+   * sleep state omits it, and no number a cell publishes depends on it.
+   */
+  sampleSleepState?(): PhysicsSleepCensus;
+}
+
+/** How many of a world's dynamic bodies are still awake, at the moment of the call. */
+export interface PhysicsSleepCensus {
+  /** Dynamic bodies in the world. */
+  readonly dynamic: number;
+  /** Of those, how many the engine still integrates and solves. */
+  readonly awake: number;
 }
