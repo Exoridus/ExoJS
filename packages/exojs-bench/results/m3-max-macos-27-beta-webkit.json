@@ -1,8 +1,8 @@
 {
   "schemaVersion": 7,
   "profile": {
-    "slug": "apple-macos-27-beta-webkit",
-    "gpu": "apple",
+    "slug": "m3-max-macos-27-beta-webkit",
+    "gpu": "m3-max",
     "os": "macos-27-beta",
     "browser": "webkit",
     "platform": {
@@ -6627,6 +6627,6 @@
   },
   "signature": {
     "algorithm": "sha256",
-    "value": "4a5fb77cfdcae08ad5ab6e822d6d2756f9477a9813adb1b878d2523b290e6adf"
+    "value": "640ef3c7d832b56fda2fccbfad1eacfe6f148ab469f7444145b25bd0701642dc"
   }
 }
