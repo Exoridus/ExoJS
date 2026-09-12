@@ -200,4 +200,44 @@ export interface PhysicsAdapter extends PhysicsArmIdentity {
    * a warning, leaving its determinism unverified rather than blocking the run.
    */
   mutationSignature?(): string;
+  /**
+   * Census of how much of the world is still being simulated, for a diagnostic
+   * that runs OUTSIDE any timed window.
+   *
+   * The structural counters say what exists - bodies, constraints, contacts -
+   * and not what is stepped, so they cannot separate a world that legitimately
+   * went to sleep from one that is present but not simulating. Both report the
+   * same bodies and the same joints while one of them costs almost nothing per
+   * step.
+   *
+   * Optional and never read by a measurement: an arm whose library exposes no
+   * sleep state omits it, and no number a cell publishes depends on it.
+   */
+  sampleSleepState?(): PhysicsSleepCensus;
+  /**
+   * Where the world's dynamic bodies are and how fast they move, for the same
+   * class of diagnostic as {@link sampleSleepState} and under the same rule:
+   * outside any timed window, and read by no measurement.
+   *
+   * A contact count says a pair touches; it does not say whether a scene is
+   * hanging where it was built or has collapsed into a heap, and those are
+   * different findings with the same counter.
+   */
+  sampleBodySpread?(): PhysicsBodySpread;
+}
+
+/** Extent and peak speed of a world's dynamic bodies, at the moment of the call. */
+export interface PhysicsBodySpread {
+  readonly minY: number;
+  readonly maxY: number;
+  /** Largest linear speed any dynamic body carries, so a settled scene is distinguishable from a moving one. */
+  readonly maxSpeed: number;
+}
+
+/** How many of a world's dynamic bodies are still awake, at the moment of the call. */
+export interface PhysicsSleepCensus {
+  /** Dynamic bodies in the world. */
+  readonly dynamic: number;
+  /** Of those, how many the engine still integrates and solves. */
+  readonly awake: number;
 }

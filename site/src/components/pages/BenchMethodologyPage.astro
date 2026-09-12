@@ -1,0 +1,47 @@
+---
+/**
+ * BenchMethodologyPage - the terms every published benchmark number is read
+ * under, on a page of its own.
+ *
+ * The results page links here rather than carrying it: a reader consults these
+ * once a row surprises them, and several screens of prose above the cards
+ * answered a question nobody had asked yet.
+ */
+
+import BenchMethodology from '../BenchMethodology.astro';
+import DocsLayout from '../../layouts/DocsLayout.astro';
+import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
+
+interface Props {
+    locale: 'en' | 'de';
+}
+
+const { locale } = Astro.props;
+const base = import.meta.env.BASE_URL;
+---
+
+<DocsLayout title="How the ExoJS benchmarks are made" description="Pooling, medians, spreads, the verdict ladder, the frame budget, and how to reproduce a profile.">
+    <div class="prose" data-pagefind-body={locale === 'en' ? true : undefined}>
+        {locale === 'de' && <EnglishFallbackNotice />}
+
+        <h1>How these numbers are made</h1>
+        <p class="lede">The terms the published measurements are read under, and what it takes to reproduce one.</p>
+        <p class="back">
+            <a href={`${base}${locale}/benchmarks/`}>Back to the benchmark overview</a> · <a href={`${base}${locale}/benchmarks/full/`}>All measurements</a>
+        </p>
+
+        <BenchMethodology />
+    </div>
+</DocsLayout>
+
+<style>
+    .lede {
+        color: var(--fg-muted);
+        line-height: 1.6;
+    }
+
+    .back {
+        margin-top: var(--s-3) !important;
+        font-size: 0.88rem;
+    }
+</style>

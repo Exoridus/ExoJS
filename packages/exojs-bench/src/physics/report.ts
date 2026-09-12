@@ -3,6 +3,14 @@ import { csvField, formatCount as count, formatMs as ms, mergeCellResults, merge
 import type { PhysicsProvenance } from './driver';
 import type { PhysicsCellResult } from './PhysicsAdapter';
 
+/**
+ * The observed clock step, or a word saying it was never observed.
+ *
+ * Not `0.0 us`: a clock whose step no probe could read is the absence of the
+ * reading, and printing a zero there reads as the finest clock on record.
+ */
+const formatClockResolution = (resolutionMs: number | null): string => (resolutionMs === null ? 'not observed' : `${(resolutionMs * 1000).toFixed(1)} us`);
+
 /** Everything one physics run produces: the provenance stamp, arm versions, and per-cell results. */
 export interface PhysicsReportData {
   /** The run's provenance stamp (browser, host, engine version, timestep, caveats). */
@@ -91,7 +99,7 @@ const toMarkdown = (data: PhysicsReportData): string => {
   lines.push(`- OS: ${provenance.host.os} (${provenance.host.arch})`);
   lines.push(`- Fixed timestep: ${String(provenance.fixedDelta)} s`);
   lines.push(
-    `- Clock resolution: ${(provenance.clock.resolutionMs * 1000).toFixed(1)} us (cross-origin isolated: ${String(provenance.clock.crossOriginIsolated)})`,
+    `- Clock resolution: ${formatClockResolution(provenance.clock.resolutionMs)} (cross-origin isolated: ${String(provenance.clock.crossOriginIsolated)})`,
   );
   lines.push(`- Timestamp: ${provenance.timestamp}`);
   lines.push('');

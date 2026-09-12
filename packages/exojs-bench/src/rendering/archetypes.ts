@@ -1,5 +1,6 @@
 import { createRng } from '../shared/rng';
 import type { ArchetypeSpec, Backend, CellSpec, EngineAdapter } from './EngineAdapter';
+import { LAYOUT_PASSES_PER_FRAME } from './uiLayout';
 
 // Re-exported from `shared/` so existing importers (e.g. the archetype tests and
 // `shared/mutation.ts`'s canonical selection) keep a single RNG implementation
@@ -84,6 +85,17 @@ const BLUR_HEIGHTS = [360, 720, 1_080] as const;
 export const BLUR_SIGMA = 2;
 
 /**
+ * Standard deviations the shared blur reaches outside its input on every edge.
+ *
+ * Part of the contract rather than an implementation detail: a filter that held
+ * the effect back sooner would darken the border of the filtered region, and the
+ * arms derive their own padding from different multiples, so the reach is stated
+ * here and each arm is configured to it. Three sigmas is where a Gaussian has
+ * less than half a percent of its mass left.
+ */
+export const BLUR_KERNEL_SIGMAS = 3;
+
+/**
  * Taps per side of the shared blur kernel, so both arms sweep 4 + 1 + 4 = nine.
  *
  * Exported because each arm configures its own filter from it, and a tap count
@@ -109,6 +121,13 @@ const PICKING_COUNTS = [1_000, 10_000, 100_000] as const;
  * candidate resolves while a pointer moves.
  */
 export const POINTER_QUERIES_PER_FRAME = 100;
+
+/**
+ * Leaf widget counts for the UI-layout scene. A hundred is a settings panel, a
+ * thousand an inventory or a property grid, five thousand the point where a
+ * layout engine's per-node cost is the whole frame.
+ */
+const UI_WIDGET_COUNTS = [100, 1_000, 5_000] as const;
 
 /**
  * Characters per text leaf across both text archetypes. Twelve is the length of
@@ -692,22 +711,29 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // is a single textured quad, so nothing about scene traversal enters the
   // measurement: what scales is the filter's own target passes.
   //
-  // NOT a cross-arm comparison, and the reason is the finding. Both arms are
-  // configured to the same contract - a separable two-pass Gaussian, nine taps,
-  // sigma 2 - but they do not produce the same picture: a capture of the two at
-  // 1280x720 differs on 45 % of its pixels. Two filters whose output differs
-  // that much are not doing the same work, so a wall-clock row would attribute a
-  // difference in effect to a difference in speed. The structural counters say
-  // as much on their own: ExoJS issues about twenty draw calls where Pixi issues
-  // three, which is a tap-per-draw implementation against a nine-tap shader.
+  // A TWO-ARM comparison. ExoJS and Pixi both realize the shared contract - a
+  // separable two-pass Gaussian, nine taps, sigma 2, three sigmas of reach - and
+  // a capture of the two agrees to within 18 of 255 on the worst channel of the
+  // worst pixel at every rung, with more than 98 % of pixels inside 8. That is
+  // the stated tolerance: two GPU filters are never bit-identical, and what has
+  // to match is the kernel rather than the rounding.
   //
-  // It stays in the matrix as an ExoJS-internal probe because that structure is
-  // worth tracking. Making it a published comparison needs the two outputs
-  // brought inside a stated tolerance first.
+  // Getting there took two corrections on the Pixi side, both in the arm rather
+  // than in either engine, and both worth knowing before the row is read.
+  // `BlurFilter.strength` is a tap SPACING, not a sigma - the weights are a
+  // fixed table - so passing the archetype's sigma through blurred that arm
+  // about twice as far; and the two filters derive their reach from different
+  // multiples of the blur, which showed up as a several-pixel band at the
+  // filtered region's border. See the Pixi adapter's blur scene for both.
+  //
+  // Phaser sits the archetype out. `Filters.Blur` is an iterative step blur on a
+  // camera, parameterized by an offset and a step count rather than by a kernel,
+  // so it cannot be configured to the shared nine taps at sigma 2 - and matching
+  // it would mean writing a kernel of our own rather than measuring Phaser's.
   {
     id: 'fx-blur',
     category: 'render-targets',
-    crossArm: false,
+    crossArm: true,
     nodeCounts: BLUR_HEIGHTS,
     nestingDepth: 1,
     textureCount: 1,
@@ -734,6 +760,35 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
     mutationFraction: 0,
     cullingEnabled: false,
     pointerQueriesPerFrame: POINTER_QUERIES_PER_FRAME,
+  },
+  // BOX-TREE LAYOUT - the cost an interface pays when a widget resizes and the
+  // boxes around it have to be resolved again. The scene draws nothing worth
+  // measuring: the frame's work is a block of layout passes over a tree of
+  // nested horizontal and vertical boxes, each pass changing a tenth of the leaf
+  // widths and alternating the viewport the root resolves against.
+  //
+  // A TWO-ARM comparison, and that is a capability finding rather than an
+  // omission. ExoJS resolves the tree through its own `Stack`, Pixi through
+  // `@pixi/layout` over Yoga. Phaser 4 ships no layout engine at all - its
+  // `Actions.GridAlign` places objects on a fixed raster and re-solves nothing -
+  // and Excalibur ships none either, so neither arm has a public path that
+  // answers this question. Building one inside the harness would measure the
+  // harness.
+  //
+  // The two algorithms are allowed to differ; the shared scope is what is
+  // fixed, and `layoutDigest` compares the resolved rectangles outside the
+  // timed bracket so a divergence surfaces as a failed check rather than as a
+  // faster arm.
+  {
+    id: 'ui-layout-update',
+    category: 'interaction',
+    crossArm: true,
+    nodeCounts: UI_WIDGET_COUNTS,
+    nestingDepth: 3,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    layoutPassesPerFrame: LAYOUT_PASSES_PER_FRAME,
   },
   {
     id: 'mask-clip-animated',

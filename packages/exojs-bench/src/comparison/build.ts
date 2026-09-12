@@ -2,6 +2,7 @@ import { PHYSICS_ARCHETYPES } from '../physics/archetypes';
 import type { PhysicsCellResult } from '../physics/PhysicsAdapter';
 import { ARCHETYPES } from '../rendering/archetypes';
 import type { ArchetypeCategory, Backend, CellResult, StructuralCounters } from '../rendering/EngineAdapter';
+import { isUiLayoutScene } from '../rendering/uiLayout';
 import type { ClockReport } from '../shared/clock';
 import { exceedsFrameBudget } from '../shared/frameBudget';
 import type { TimerCheck } from '../shared/timerCheck';
@@ -352,8 +353,12 @@ const buildBackend = (backend: Backend, results: readonly CellResult[]): Backend
             continue;
           }
 
-          const counters = (result: CellResult): StructuralCounters | null => (result.structural.drawCalls > 0 ? result.structural : null);
-          const mechanism = renderingMechanism(counters(reference), counters(competitorCell));
+          // A drawless archetype keeps its counters: zero draws is what it is
+          // supposed to report, and dropping them would leave the row with no
+          // evidence and take it out of the table.
+          const drawless = isUiLayoutScene(archetype);
+          const counters = (result: CellResult): StructuralCounters | null => (drawless || result.structural.drawCalls > 0 ? result.structural : null);
+          const mechanism = renderingMechanism(counters(reference), counters(competitorCell), { drawless });
 
           cells.push({
             competitor,

@@ -128,28 +128,29 @@ machine".
 ## Producing one
 
 ```sh
-pnpm bootstrap                     # installs the competitor libraries too
-cd packages/exojs-bench
+pnpm bootstrap:dev                 # installs and links the competitor libraries too
 
-pnpm bench -- --out=run-1
-pnpm bench -- --out=run-2
-pnpm bench -- --out=run-3
+pnpm --filter @codexo/exojs-bench bench:reference --out run-1
+pnpm --filter @codexo/exojs-bench bench:reference --out run-2
+pnpm --filter @codexo/exojs-bench bench:reference --out run-3
 
-pnpm bench:compare -- \
-  --rendering=run-1/results.json \
-  --rendering=run-2/results.json \
-  --rendering=run-3/results.json \
-  --profile
+pnpm --filter @codexo/exojs-bench bench:compare --profile \
+  --rendering run-1/rendering/results.json \
+  --rendering run-2/rendering/results.json \
+  --rendering run-3/rendering/results.json \
+  --physics run-1/physics/results.json \
+  --physics run-2/physics/results.json \
+  --physics run-3/physics/results.json
 ```
 
-The harness scripts live in `packages/exojs-bench`; the root `pnpm bench` forwards
-to the same harness, while `bench:compare` is run from the package. The `--`
-separates the harness's flags from pnpm's own, and output directories are
-relative to the package either way.
+`bench:reference` measures both domains at each scenario's headline load and
+writes `run-N/rendering/results.json` and `run-N/physics/results.json` under
+`packages/exojs-bench/`. `--rendering` and `--physics` are repeatable, once per
+run, in run order; both domains of a profile pool the same number of runs.
 
-`--rendering` and `--physics` are repeatable, once per run, in run order. Repeat
-the same three-run pattern for `--domain=physics` and pass both sets to one
-`bench:compare`; both domains of a profile pool the same number of runs.
+Pass no narrowing flag on a reference run - not `--capture`, `--frames`,
+`--backend`, `--archetype`, `--nodes`, `--engine` or `--config`. Each marks the
+run a subset, and a subset is not reportable.
 
 Measure on an otherwise idle machine, and run the repetitions back to back
 rather than days apart: these are wall-clock comparisons, and background load

@@ -87,6 +87,20 @@ const LEADING_NOISE = new Set([
 const NON_IDENTIFYING = new Set(['gpu', 'graphics', 'renderer', 'device', 'processor', 'unknown']);
 
 /**
+ * True when a normalized part is nothing but vendor and product-line words.
+ *
+ * `dropLeadingNoise` keeps a last part rather than reducing to the empty
+ * string, so an adapter made only of those words survives as one of them:
+ * WebKit's WebGPU privacy substitution reports `apple apple apple apple` and
+ * reduced to the bare vendor word `apple`. That passes the category-word check
+ * above - `apple` is a vendor, not a category - and named the machine, which
+ * published one machine's runs under two file names depending on which backend
+ * the pooling read first. A vendor word identifies no machine for the same
+ * reason a category word does not.
+ */
+const isVendorWordOnly = (name: string): boolean => name.split('-').every(word => LEADING_NOISE.has(word));
+
+/**
  * Where a model name ends. Everything from the first of these onward is the
  * graphics API, driver or device-id tail that the adapter string appends after
  * the part name.
@@ -118,7 +132,7 @@ const dropLeadingNoise = (parts: readonly string[]): string[] => {
 };
 
 /** True when a normalized part names a specific machine rather than a category of them. */
-export const isIdentifyingPart = (name: string): boolean => name.length > 0 && !NON_IDENTIFYING.has(name);
+export const isIdentifyingPart = (name: string): boolean => name.length > 0 && !NON_IDENTIFYING.has(name) && !isVendorWordOnly(name);
 
 /**
  * Reduce an adapter string to the GPU part it names.

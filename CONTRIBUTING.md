@@ -14,14 +14,15 @@ A release cuts by merging `next` into `main` and tagging; see
 
 ## Changelog: written by the release cut, not by pull requests
 
-`CHANGELOG.md` is not edited in a pull request. Its `## [Unreleased]` section
-is assembled at the release cut from the squash commits since the last tag:
-the Conventional Commits type files the entry (`feat` under Added, `fix` and
-`perf` under Fixed, `refactor` and any `!` under Changed, `docs` under
-Documentation; `ci`, `build`, `test`, `chore` and `style` stay out), the
-subject becomes the headline, and the pull request description becomes the
-prose. That makes the pull request description the release text - write it
-for a reader of the changelog, not for the reviewer alone.
+`CHANGELOG.md` is not edited in a pull request. Its `## [Unreleased]` section is assembled at the release cut from the squash commits since the last tag: the Conventional Commits type files the entry (`feat` under Added, `fix` and `perf` under Fixed, `refactor` and any `!` under Changed, `docs` under Documentation; `ci`, `build`, `test`, `chore` and `style` stay out), a `!` marks it breaking, and the subject becomes the line, linked to its pull request. The description is not copied in: the changelog is the quick read, the pull request is where the detail lives.
+
+## Commit subjects, pull request descriptions, and prose
+
+A commit is its Conventional Commits subject. It carries the scope, the `!` for a breaking change and the pull request number, and that is the whole of what the changelog and the release notes ever read from it. A body is optional and short; the reasoning belongs in the pull request.
+
+The pull request description is where the detail goes - what changed, why, what was measured, what a breaking change breaks and what to do about it. It is linked from the changelog line, so nothing needs saying twice.
+
+Prose - pull request descriptions, guides, `docs/`, READMEs, commit bodies where there is one - is written in long lines. Break a line where a paragraph ends or where a break carries meaning, never at a column. A wall of text wrapped at seventy characters reads as a wall of text everywhere it is rendered, and a diff over it shows every reflowed line as a change. Code comments follow the formatter; this rule is about text people read.
 
 Two pull requests that both edited the top of the same section conflicted on
 every second merge; the `lint:changelog` gate now fails a branch that touches

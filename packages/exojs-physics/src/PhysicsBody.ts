@@ -575,6 +575,22 @@ export class PhysicsBody {
   }
 
   /**
+   * @internal - whether this body belongs to a world OTHER than `owner`.
+   *
+   * Body ids are scoped to the world that handed them out, so anything keyed on
+   * a pair of them has to know that both came from the same world: two worlds
+   * count from the same start, so their bodies carry the same ids, and a pair
+   * key built from one of each names a pair that exists in neither.
+   *
+   * A body attached to no world at all is not foreign - a single-body joint
+   * stands its own private anchor in for the second body, and that anchor is
+   * deliberately never added anywhere.
+   */
+  public _isForeignTo(owner: BodyOwner): boolean {
+    return this._owner !== null && this._owner !== owner;
+  }
+
+  /**
    * A dynamic body has to carry mass. Boundary geometry (a segment, a chain)
    * reports no mass properties, and a collider may also be given zero density,
    * so a dynamic body can end up with none at all - which the solver cannot tell

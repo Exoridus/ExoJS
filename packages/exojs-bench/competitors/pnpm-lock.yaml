@@ -14,6 +14,9 @@ importers:
       '@newkrok/nape-js':
         specifier: 3.42.0
         version: 3.42.0
+      '@pixi/layout':
+        specifier: 3.2.1
+        version: 3.2.1(@types/react@19.2.18)(pixi.js@8.19.0)(react@19.2.8)(yoga-layout@3.2.1)
       '@pixi/tilemap':
         specifier: 5.0.2
         version: 5.0.2(pixi.js@8.19.0)
@@ -35,6 +38,9 @@ importers:
       planck:
         specifier: 1.5.0
         version: 1.5.0(stage-js@1.0.2)
+      yoga-layout:
+        specifier: 3.2.1
+        version: 3.2.1
 
 packages:
 
@@ -48,6 +54,18 @@ packages:
   '@pixi/colord@2.9.6':
     resolution: {integrity: sha512-nezytU2pw587fQstUu1AsJZDVEynjskwOL+kibwcdxsMBFqPsFFNA7xl0ii/gXuDi6M0xj3mfRJj8pBSc2jCfA==}
 
+  '@pixi/layout@3.2.1':
+    resolution: {integrity: sha512-ANg9pk7qo4psnafupTY47ZYoL2Jp1f8djiEUGJQAPEr+m2QIPaCR+dWjzSl1kqZTHlYmxxVNnztCRfrPu+q62w==}
+    peerDependencies:
+      pixi.js: ^8
+      yoga-layout: ^3
+
+  '@pixi/react@8.0.5':
+    resolution: {integrity: sha512-Z1VRdnv9Gh+lTLzNKjpS7GaTNDjUxRVJNtIdtK2i0sCpigvjx5mvJ72EPLhBFgepB6j3ZCkL0YBb6BqgTGbhGA==}
+    peerDependencies:
+      pixi.js: ^8.2.6
+      react: '>=19.0.0'
+
   '@pixi/tilemap@5.0.2':
     resolution: {integrity: sha512-J+K1eU7uB58WPVD33d7usXrhKA03IGq3IfPvXBFr1027Bb9ScxrGhH0NomR9VpVVUPiHkK7FcTGuOtJMVGAv6A==}
     peerDependencies:
@@ -59,6 +77,14 @@ packages:
   '@types/matter-js@0.20.2':
     resolution: {integrity: sha512-3PPKy3QxvZ89h9+wdBV2488I1JLVs7DEpIkPvgO8JC1mUdiVSO37ZIvVctOTD7hIq8OAL2gJ3ugGSuUip6DhCw==}
 
+  '@types/react-reconciler@0.28.9':
+    resolution: {integrity: sha512-HHM3nxyUZ3zAylX8ZEyrDNd2XZOnQ0D5XfunJF5FLQnZbHHYq4UWvW1QfelQNXv1ICNkwYhfxjwfnqivYB6bFg==}
+    peerDependencies:
+      '@types/react': '*'
+
+  '@types/react@19.2.18':
+    resolution: {integrity: sha512-AnzbBERsrLKtk2XSfTbYRLjQPdy116Sty4q+T+Bp3IC4l6jNBvreVPAHmpq9qhXQM7CXZPjLVmGMw9sy+hxQ3w==}
+
   '@webgpu/types@0.1.71':
     resolution: {integrity: sha512-mMy8/ODcKhab808co15eW+yN+HgXoQxRQHTiBV9Mrvl1r0ufnid7YOcI+gi4eUWSWl9ezD6TW2KXccrL8HCh2A==}
 
@@ -66,6 +92,9 @@ packages:
     resolution: {integrity: sha512-KRYzxepc14G/CEpEGc3Yn+JKaAeT63smlDr+vjB8jRfgTBBI9wRj/nkQEO+ucV8p8I9bfKLWp37uHgFrbntPvw==}
     engines: {node: '>=10.0.0'}
     deprecated: this version has critical issues, please update to the latest version
+
+  csstype@3.2.3:
+    resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
 
   earcut@3.2.3:
     resolution: {integrity: sha512-vnS4AVwp1KHAF13i1vp1/2D5evWy3k5u/iW/B81QVsUZtV8cv2tU0b2VNFlqvh4kYwrFMDdjPCfAmfyJW9y14Q==}
@@ -81,6 +110,11 @@ packages:
 
   ismobilejs@1.1.1:
     resolution: {integrity: sha512-VaFW53yt8QO61k2WJui0dHf4SlL8lxBofUuUmwBo0ljPk0Drz2TiuDW4jo3wDcv41qy/SxrJ+VAzJ/qYqsmzRw==}
+
+  its-fine@2.0.0:
+    resolution: {integrity: sha512-KLViCmWx94zOvpLwSlsx6yOCeMhZYaxrJV87Po5k/FoZzcPSahvK5qJ7fYhS61sZi5ikmh2S3Hz55A2l3U69ng==}
+    peerDependencies:
+      react: ^19.0.0
 
   js-binary-schema-parser@2.0.3:
     resolution: {integrity: sha512-xezGJmOb4lk/M1ZZLTR/jaBHQ4gG/lqQnJqdIv4721DMggsa1bDVlHXNeHYogaIEHD9vCRv0fcL4hMA+Coarkg==}
@@ -103,6 +137,19 @@ packages:
     peerDependencies:
       stage-js: ^1.0.0-alpha.12
 
+  react-reconciler@0.31.0:
+    resolution: {integrity: sha512-7Ob7Z+URmesIsIVRjnLoDGwBEG/tVitidU0nMsqX/eeJaLY89RISO/10ERe0MqmzuKUUB1rmY+h1itMbUHg9BQ==}
+    engines: {node: '>=0.10.0'}
+    peerDependencies:
+      react: ^19.0.0
+
+  react@19.2.8:
+    resolution: {integrity: sha512-PWaYA1L/q9u2u7xYQi+Y3L3Yfnie7XyLeaJICV1MGD6LprsBxcAqGjYyr0eY3p+QdsA+x/Irkt4Qif8D63+Sbw==}
+    engines: {node: '>=0.10.0'}
+
+  scheduler@0.25.0:
+    resolution: {integrity: sha512-xFVuu11jh+xcO7JOAGJNOXld8/TcEHK/4CituBUeUb5hqxJLj9YuemAEuvm9gQ/+pgXYfbQuqAkiYu+u7YEsNA==}
+
   stage-js@1.0.2:
     resolution: {integrity: sha512-EWTRBYlg7Qv9wGUao99/PfRe3KaiQqWmgSvTOXvaWnu1Jk/q/vV8yJVu6bi/3EqDZeMVnCPAjheba6OFc5k1GQ==}
     engines: {node: '>=24.0'}
@@ -110,6 +157,9 @@ packages:
   tiny-lru@11.4.7:
     resolution: {integrity: sha512-w/Te7uMUVeH0CR8vZIjr+XiN41V+30lkDdK+NRIDCUYKKuL9VcmaUEmaPISuwGhLlrTGh5yu18lENtR9axSxYw==}
     engines: {node: '>=12'}
+
+  yoga-layout@3.2.1:
+    resolution: {integrity: sha512-0LPOt3AxKqMdFBZA3HBAt/t/8vIKq7VaQYbuA8WxCgung+p9TVyKRYdpvCb80HcdTN2NkbIKbhNwKUfm3tQywQ==}
 
 snapshots:
 
@@ -119,6 +169,26 @@ snapshots:
 
   '@pixi/colord@2.9.6': {}
 
+  '@pixi/layout@3.2.1(@types/react@19.2.18)(pixi.js@8.19.0)(react@19.2.8)(yoga-layout@3.2.1)':
+    dependencies:
+      pixi.js: 8.19.0
+      yoga-layout: 3.2.1
+    optionalDependencies:
+      '@pixi/react': 8.0.5(@types/react@19.2.18)(pixi.js@8.19.0)(react@19.2.8)
+    transitivePeerDependencies:
+      - '@types/react'
+      - react
+
+  '@pixi/react@8.0.5(@types/react@19.2.18)(pixi.js@8.19.0)(react@19.2.8)':
+    dependencies:
+      its-fine: 2.0.0(@types/react@19.2.18)(react@19.2.8)
+      pixi.js: 8.19.0
+      react: 19.2.8
+      react-reconciler: 0.31.0(react@19.2.8)
+    transitivePeerDependencies:
+      - '@types/react'
+    optional: true
+
   '@pixi/tilemap@5.0.2(pixi.js@8.19.0)':
     dependencies:
       pixi.js: 8.19.0
@@ -127,9 +197,22 @@ snapshots:
 
   '@types/matter-js@0.20.2': {}
 
+  '@types/react-reconciler@0.28.9(@types/react@19.2.18)':
+    dependencies:
+      '@types/react': 19.2.18
+    optional: true
+
+  '@types/react@19.2.18':
+    dependencies:
+      csstype: 3.2.3
+    optional: true
+
   '@webgpu/types@0.1.71': {}
 
   '@xmldom/xmldom@0.8.13': {}
+
+  csstype@3.2.3:
+    optional: true
 
   earcut@3.2.3: {}
 
@@ -142,6 +225,14 @@ snapshots:
       js-binary-schema-parser: 2.0.3
 
   ismobilejs@1.1.1: {}
+
+  its-fine@2.0.0(@types/react@19.2.18)(react@19.2.8):
+    dependencies:
+      '@types/react-reconciler': 0.28.9(@types/react@19.2.18)
+      react: 19.2.8
+    transitivePeerDependencies:
+      - '@types/react'
+    optional: true
 
   js-binary-schema-parser@2.0.3: {}
 
@@ -170,6 +261,20 @@ snapshots:
     dependencies:
       stage-js: 1.0.2
 
+  react-reconciler@0.31.0(react@19.2.8):
+    dependencies:
+      react: 19.2.8
+      scheduler: 0.25.0
+    optional: true
+
+  react@19.2.8:
+    optional: true
+
+  scheduler@0.25.0:
+    optional: true
+
   stage-js@1.0.2: {}
 
   tiny-lru@11.4.7: {}
+
+  yoga-layout@3.2.1: {}

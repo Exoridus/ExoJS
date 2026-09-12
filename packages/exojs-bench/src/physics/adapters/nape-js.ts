@@ -1,6 +1,6 @@
 import type * as Nape from '@newkrok/nape-js';
 
-import type { PhysicsAdapter, PhysicsArchetypeSpec, PhysicsStructuralCounters } from '../PhysicsAdapter';
+import type { PhysicsAdapter, PhysicsArchetypeSpec, PhysicsBodySpread, PhysicsSleepCensus, PhysicsStructuralCounters } from '../PhysicsAdapter';
 import type { PerStepWork } from './perStepWork';
 import { createPerStepWork } from './perStepWork';
 import type { BodyDesc } from './scene';
@@ -74,6 +74,9 @@ export const createNapeJsAdapter = async (): Promise<PhysicsAdapter> => {
           new N.Vec2(joint.x - positionB.x, joint.y - positionB.y),
         );
 
+        // Nape's `ignore` defaults to false, so without this the links collide
+        // as well as being pinned - the scene asks for the pin alone.
+        constraint.ignore = true;
         constraint.space = created;
       }
 
@@ -125,6 +128,46 @@ export const createNapeJsAdapter = async (): Promise<PhysicsAdapter> => {
         jointCount: currentSpace.constraints.length,
         rayHits: perStep.rayHits,
       };
+    },
+
+    sampleSleepState(): PhysicsSleepCensus {
+      if (space === null) {
+        throw new Error('nape-js adapter: sampleSleepState() called before setup().');
+      }
+
+      const current = space;
+      const bodies = Array.from({ length: current.bodies.length }, (_, index) => current.bodies.at(index));
+      // `isStatic()` is a method here while `isSleeping` is a getter, so reading
+      // the first as a property yields a function - which is truthy, and counts
+      // every body in the world as static.
+      const dynamic = bodies.filter(body => !body.isStatic());
+
+      return { dynamic: dynamic.length, awake: dynamic.filter(body => !body.isSleeping).length };
+    },
+
+    sampleBodySpread(): PhysicsBodySpread {
+      if (space === null) {
+        throw new Error('nape-js adapter: sampleBodySpread() called before setup().');
+      }
+
+      const current = space;
+      let minY = Number.POSITIVE_INFINITY;
+      let maxY = Number.NEGATIVE_INFINITY;
+      let maxSpeed = 0;
+
+      for (let index = 0; index < current.bodies.length; index++) {
+        const body = current.bodies.at(index);
+
+        if (body.isStatic()) {
+          continue;
+        }
+
+        minY = Math.min(minY, body.position.y);
+        maxY = Math.max(maxY, body.position.y);
+        maxSpeed = Math.max(maxSpeed, Math.hypot(body.velocity.x, body.velocity.y));
+      }
+
+      return { minY, maxY, maxSpeed };
     },
 
     teardown(): void {

@@ -1,6 +1,6 @@
 {
   "recorded": {
-    "at": "2026-09-11T10:10:10.636Z",
+    "at": "2026-09-12T01:40:26.907Z",
     "engineVersion": "0.17.0",
     "adapter": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
   },
@@ -277,6 +277,16 @@
     },
     {
       "engine": "exojs",
+      "config": "current",
+      "backend": "webgl2",
+      "archetype": "ui-layout-update",
+      "nodeCount": 200,
+      "drawCalls": 0,
+      "textureBinds": 0,
+      "bufferUploads": 0
+    },
+    {
+      "engine": "exojs",
       "config": "retained",
       "backend": "webgl2",
       "archetype": "batch-breaking-atlased",
@@ -542,6 +552,16 @@
       "archetype": "tilemap-scroll",
       "nodeCount": 200,
       "drawCalls": 1,
+      "textureBinds": 0,
+      "bufferUploads": 0
+    },
+    {
+      "engine": "exojs",
+      "config": "retained",
+      "backend": "webgl2",
+      "archetype": "ui-layout-update",
+      "nodeCount": 200,
+      "drawCalls": 0,
       "textureBinds": 0,
       "bufferUploads": 0
     }

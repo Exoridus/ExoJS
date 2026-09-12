@@ -11,3026 +11,403 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ### Changed
 
 - **BREAKING: Retain filtered and clipped scopes, coalesce WebGPU row patches, add hitArea and move culling to RenderNode.** ([#681](https://github.com/Exoridus/ExoJS/pull/681))
-  Two per-frame costs that scaled with the scene rather than with the
-  change.
-
-  **A filter or a clip was a retention floor.** A barrier-bearing node
-  collected through the effect path and never reached the plan builder's
-  group branch, so it never got the automatic persistent render
-  representation. Everything below a filter chain or a rect clip was
-  walked out of the scene graph, transform-derived and material-resolved
-  on every single frame, however static it was. The barrier's content now
-  climbs the same ladder a render root does, while the effect itself stays
-  live in the barrier entry and the effect executor: a changed filter
-  chain, clip rect or target size still takes effect on the frame it
-  changes.
-
-  A 5 000-sprite scene under a colour-matrix chain drops from 3.8 ms to
-  0.25 ms per frame on WebGL2 and from 2.7 ms to 0.35 ms on WebGPU, with
-  the per-frame instance re-upload gone (7 -> 1). Three nested rectangle
-  masks over the same scene drop from 3.9 ms to 2.2 ms (WebGL2) and 3.1 ms
-  to 1.9 ms (WebGPU). Draw calls are unchanged everywhere.
-
-  **A moving node cost a GPU upload of its own on WebGPU.** The retained
-  group bundle wrote each patched transform row with its own
-  `queue.writeBuffer`, so the per-frame upload count followed the number
-  of moving nodes: 375 moved sprites were 375 calls, against one on
-  WebGL2, whose row store is a texture whose dirty rect is unioned and
-  committed once. The bundle now mirrors its rows, marks the blocks a
-  patch touches and uploads them at the end of the patch pass: tight runs
-  while the moves cluster, one span once they scatter. Uploads per frame
-  on `dynamic-heavy` at 5 000 nodes: 369 -> 1.
-
-  Text nodes get the same treatment as sprites: a moved text node no
-  longer costs a `queue.writeBuffer` of its own, since the retained
-  node-data store is now block-mirrored and uploaded per dirty region
-  through the shared `DirtyRowTracker`. A WGSL filter pass writes its
-  resolution and user uniform blocks only when they actually change, which
-  makes the per-frame upload count on `filter-chain-1/2/4` flat in chain
-  depth (11 -> 3 at depth four) instead of growing by two per link.
-
-  The benchmark's structural baseline is re-recorded in the same change:
-  the immediate arm's filter-chain and mask-clip cells now submit what the
-  retained arm already did.
-
-  Measured but not changed here: `lifecycle-churn` is not object
-  construction cost (1.2 us per sprite create/add/destroy) but a full
-  immediate collect after every structural change, which needs an
-  incremental structural delta in the retained source; `mask-clip` keeps
-  ~1.9 ms of entry replay behind nested clips because a recorded fragment
-  cannot carry a barrier, which needs a splice-contract change;
-  `scrolling-world` already renders in one draw call (the earlier "120
-  draws" read raw totals over 120 frames).
-
-  **Also in this change: `hitArea`, and `cullable`/`cullArea` move to
-  `RenderNode`.** A bare `SceneNode` is structural and never rendered, and
-  the cull test is evaluated over render items, so the two culling
-  properties now live on `RenderNode`; semantics unchanged (read live,
-  caller-owned rectangle, default `cullable = true`). `RenderNode.hitArea`
-  accepts a `Rectangle`, `Circle`, `Ellipse` or `Polygon` in the node's
-  own space (default `null`): when set, `contains()` maps the world point
-  through the inverse world transform and tests the shape instead of the
-  bounds, so a round button, a hex cell or a province outline picks
-  exactly, rotated or not. Picking only; bounds, culling and rendering
-  ignore it. Widgets inherit it.
-
-  **Breaking changes**
-  - `cullable` / `cullArea` no longer exist on a bare `SceneNode`; every
-    renderable class keeps them through `RenderNode`.
-
-  ***
-
 - **BREAKING: Multi-stop gradients, caps and slant variants, decorations, line clamping, case mapping and tab stops.** ([#682](https://github.com/Exoridus/ExoJS/pull/682))
-  A sweep across `TextStyle` and `LayoutOptions` that closes the gap
-  between what the text stack can lay out and what display typography
-  actually needs, plus two DX fixes.
-
-  **Multi-stop gradients with an angle.** `gradient: { stops, angle }`
-  replaces `gradientColors` + `gradientAxis`. Up to eight stops, offsets
-  clamped and sorted on the way in, and an angle in degrees following the
-  CSS `linear-gradient` convention (0 = to top, 90 = to right, default
-  180). The ramp spans the ink box corner to corner, so the first and last
-  stops land on the box edges at every angle. Evaluated per fragment from
-  the node's own packed style row, still a `'tint'` change that never
-  touches the atlas. The stop type is reused from the existing
-  `GradientStop`.
-
-  **Caps and slant variants.** `fontStyle` gains `'oblique'`;
-  `fontVariant: 'small-caps'` is new. Both go into the CSS `font`
-  shorthand the rasterizer hands to Canvas 2D, and both are part of a
-  glyph atlas's identity, so a small-cap `a` never shares a cache entry
-  with an ordinary one.
-
-  **Underline and strikethrough.** `underline`, `strikethrough`,
-  `decorationColor`, `decorationThickness`, `decorationOffset`. Rules are
-  quads the layout emits per line, so they follow alignment, wrapping and
-  letter spacing. Their position comes from the font's own ascent, descent
-  and x-height rather than from a fraction of the font size. A rule takes
-  the fill, gradient included, unless `decorationColor` overrides it.
-  `BitmapText` renders no rules: an offline atlas has no opaque block to
-  sample.
-
-  **Line clamping.** `maxLines` caps the laid-out line count after
-  wrapping and clips on its own; pair it with `overflow: 'ellipsis'` for a
-  marker. `ellipsis` configures that marker (`'...'`, `''`, anything).
-  Under a cap the marker also reaches a line that no wrap could shorten,
-  such as `maxLines: 1` on a single unbreakable word.
-
-  **Case mapping.** `textTransform: 'none' | 'uppercase' | 'lowercase' |
-'capitalize'`, applied at layout time per grapheme cluster and under the
-  layout locale. The node's `text` is untouched, and a cluster that
-  changes length under the mapping still traces back to the character it
-  came from, so a caret lands where the reader clicked.
-
-  **Tab stops.** `tabSize` (default 8, the CSS `tab-size` initial value)
-  advances a preserved tab to the next stop from the line origin, so
-  tab-separated values line up as columns. Only reachable under
-  `whiteSpace: 'pre'`; the collapsing modes turn a tab into one space
-  before layout, as CSS does.
-
-  **DX.** `AbstractText.update()` is gone; `syncDirty()` is the name.
-  Stale references to a distance-field package the engine never depended
-  on are replaced with a description of the in-house rasterizer. Glyph
-  caches are keyed by one named `FontVariantKey` instead of four
-  positional strings.
-
-  New guide sections (case, variants, decorations, line clamping, tab
-  stops) and the example `text-fonts/typographic-styling`. Verified on
-  both backends in the browser, including new pixel-probing tests that
-  prove a rule reaches the frame and that `decorationColor` reaches only
-  the rule.
-
-  **Breaking changes**
-  - `TextStyleOptions.gradientColors` / `gradientAxis` -> `gradient`; the
-    `GradientAxis` type is gone. Serialized text styles carry `gradient`
-    instead of the two old keys.
-  - `AbstractText.update()` is removed. `syncDirty()` is the name; the
-    renderer and every extent read already resolve a pending pass on their
-    own, so most callers need nothing.
-  - `GlyphAtlasPool.getAtlas` / `getMetrics` / `getShapedMetrics` /
-    `clearVariant`, and the `GlyphAtlas` / `GlyphMetrics` /
-    `ShapedTextMetrics` constructors, take one named `FontVariantKey` (`{
-family, fontStyle?, fontWeight?, fontVariant? }`, each optional field
-    defaulting to `'normal'`) instead of positional strings. `clearVariant`
-    takes the narrower `FontTypefaceKey`. `ShapedTextSourceOptions` nests
-    its font fields under `font`.
-  - `TextPageQuads` gains `decorations`; the packed per-vertex node index
-    narrows from 24 to 23 bits to make room for the decoration flag.
-
-  ***
-
-- **`ShaderSource.glsl.vertex` is optional.** A sprite material and a shader
-  filter never compiled the author's vertex stage (the sprite vertex program is
-  engine-owned, the filter draws a fullscreen quad), yet the source required a
-  non-empty string, so callers passed a dummy. `glsl: { fragment }` is now
-  enough for both; `ShaderSource.glsl.vertex` reads `null` in that case, and a
-  mesh or particle material without a vertex stage fails with a named error.
-
-- **The extension seams that survived the `@internal` strip lost their
-  underscore prefix.** A member an official package (or any extension author)
-  has to call is API, and now reads like it: `SceneNode._setLocalBounds` is
-  `setLocalBounds`, `RenderNode._collect` is `collect`, `Material._onDispose` is
-  `onDispose`, `AudioBus._getInputNode`/`_getOutputNode` are
-  `getInputNode`/`getOutputNode`, and `Playable._createVoice` is `createVoice`
-  (with `Sound`, `AudioStream` and `AudioGenerator` following). On the renderer
-  SDK, `WebGl2Backend._stageViewportUniform` is `stageViewportUniform`,
-  `_pushTransform` and `_recordRetainedBatch` are `pushTransform` and
-  `recordRetainedBatch` on both backends, `WebGpuBackend._transformStorageWouldGrow`
-  and `_textureUploadWouldMutate` are `transformStorageWouldGrow` and
-  `textureUploadWouldMutate`, the retained replayer contracts
-  (`_scanRetainedNodeIndexRange`, `_rebaseRetainedNodeIndices`,
-  `_configureRetainedVao`, `_validateRetainedBatch`, `_replayRetainedBatch`) and
-  `RetainedGroupBundle`'s `_patchTransformRow`/`_patchTintRow` drop the prefix
-  the same way. Rename the call sites; there are no compatibility aliases. Every
-  remaining underscore member is engine-private and no longer reaches the
-  published `.d.ts` at all.
-
-- **Punctuation keys are named after their `code` on both input surfaces.**
-  `Keyboard.Colon`, `Equals`, `Dash`, `QuestionMark`, `Tilde`, `OpenBracket`,
-  `BackwardSlash`, `ClosedBracket` and `Quotes` are now `Semicolon`, `Equal`,
-  `Minus`, `Slash`, `Backquote`, `BracketLeft`, `Backslash`, `BracketRight` and
-  `Quote`, matching the pattern tokens (`keyboard.semicolon`, ...) and
-  `KeyboardEvent.code`. Channel values, bindings and actions are unchanged.
-
-- **`ShaderFilter` sources get a `uOrientation` auto-bind, so one shader offsets
-  along `v` the same way on both backends.** A WebGL2 render texture stores the
-  effect domain bottom-up and a WebGPU one top-down, which used to make a
-  directional `v` offset move the image up on one backend and down on the other.
-  `uOrientation` is `+1` where `v` grows along the domain's y axis and `-1`
-  where it grows against it (GLSL `uniform float uOrientation`, WGSL
-  `@group(0) @binding(3) var<uniform> uOrientation: f32`); multiply the v
-  component of a directional offset by it. Existing sources that only sample
-  their own texel need no change.
-
-- **Every remaining public duration input takes branded `Seconds` instead of a
-  plain millisecond `number`.** `AudioBus.fadeIn`/`fadeOut`, `Voice.fade`/`stop`
-  (and `crossFade`'s duration), `InputVoice.record`, `Envelope`'s
-  `attack`/`decay`/`release`/`totalDuration` (renamed from the `*Ms` fields,
-  with `trigger`'s `elapsed` following) and its `releaseAt` method (renamed
-  from `release`, which now names the duration field instead),
-  `View.shake`'s duration, `AnimatedSprite`'s `frameDuration`/`frameDurations`,
-  and `PhasedSceneTransition`/`CrossFadeSceneTransition`'s `duration` all match
-  the `Seconds` unit the rest of the engine already uses. Wrap existing
-  millisecond literals with `Time.seconds(ms / 1000)` (or write the value
-  directly in seconds); `Envelope.releaseAt` replaces `envelope.release(...)`
-  now that `release` names the duration property.
-
-- **The published `.d.ts` no longer carries `@internal` members.** The
-  declaration emit now strips them, so consumer autocomplete on `Loader`,
-  `AssetRef`, `Text`, `Tween`, `AudioBus` and the rest shows the API instead of
-  the engine's internals, and the published types finally agree with the
-  published API reference. Types that a public or renderer-SDK signature
-  genuinely exposes became part of the surface rather than disappearing with
-  the tag: `CheckableWidget`, `TextEditWidget`, `UIBackgroundNode`, `Ticker`,
-  `InputVoice`, `ShapeLike`, `PointerChannel`, `GamepadButtonChannel`,
-  `GamepadAxisChannel`, `CatalogResourceLeaf`, `CatalogValueLeaf`,
-  `OwnedNetworkHintSource` and `BmFontAdapter` on the root barrel;
-  `RenderPlanBuilder`, `DrawCommand`, `MaterialKey`, `InstanceDataView`,
-  `InstanceAttributeBinding`, `ShaderProgram`, `RenderPassCoordinator`,
-  `RenderPassDescriptor`, `RenderPassLoad`, `StencilAttachmentMode`, the
-  retained-group payload/replayer types and `WebGpuActiveRenderPass` on
-  `@codexo/exojs/renderer-sdk`. Going the other way, `SpriteFlags` and
-  `ViewFlags` - internal dirty-flag bitmasks that were exported by accident -
-  are gone from the root barrel, `ObservableVector`'s owner constructor is
-  internal (construct a plain vector with `new ObservableVector()`), and
-  `onAudioContextReady` is typed as the `Signal<[AudioContext]>` it always
-  was.
-
-- **`AnimatedSprite.defineClip` is now `addClip`, `Sound.defineSprite` is now
-  `addSprite`, and `Spritesheet.addFrame`/`removeFrame` return `this`.** One
-  verb pair, `add`/`remove`, for every named-registration mutator, and every
-  one of them chainable. Rename the calls; the `clips`/`sprites` constructor
-  options and `setClips`/`setSprites` are unchanged.
-
-- **`Assets.from` rejects a bare path whose suffix no asset type claims, at the
-  literal.** `'hero.pgn'` used to type-check and hand back `unknown`; it now
-  fails to compile with a message naming the path and the way out. Paths that
-  only exist at runtime (`string`, not a literal) are unaffected.
-
-- **`BurstSpawn`'s `loop: boolean` is replaced by `interval: number`, the
-  period in seconds between two runs of the schedule.** `loop: true` restarted
-  the schedule in the same `apply()` call that exhausted it and zeroed the
-  clock, so a schedule with nothing after its final burst re-fired every frame
-  and the emitted count followed the frame rate rather than elapsed time. The
-  period is now declared, the clock wraps by subtracting it so overshoot
-  carries into the next cycle, and a long frame fires every period it covered.
-  Replace `loop: true` with `interval: <seconds>`; a schedule that used a
-  trailing `{ time: period, count: 0 }` entry to fake a period can drop it.
-
-- **`TileSet._setDefinitions` is now `setDefinitions`.** The tilemap SDK
-  contract for extension packages that build tilesets programmatically loses
-  the leading underscore now that the method is the only cross-package member
-  in the extension packages that isn't `@internal`; the other 25
-  package-private members across `@codexo/exojs-physics` and
-  `@codexo/exojs-tilemap` are now tagged `@internal` and no longer appear in
-  the published `.d.ts`. Rename the call.
+- **BREAKING: Name the renderer and audio SDK seams, tag the rest @internal.** ([#672](https://github.com/Exoridus/ExoJS/pull/672))
+- **BREAKING: Name punctuation keys after their code on both surfaces.** ([#667](https://github.com/Exoridus/ExoJS/pull/667))
+- **BREAKING: Strip internals from the declaration emit.** ([#668](https://github.com/Exoridus/ExoJS/pull/668))
+- **BREAKING: Take every public duration input in seconds.** ([#666](https://github.com/Exoridus/ExoJS/pull/666))
+- **BREAKING: Unify add/remove mutator verbs and reject unknown asset suffixes at the literal.** ([#661](https://github.com/Exoridus/ExoJS/pull/661))
+- **Tag package-private members @internal.** ([#673](https://github.com/Exoridus/ExoJS/pull/673))
 
 ### Added
 
 - **Show examples without guide markers and with one-line imports.** ([#683](https://github.com/Exoridus/ExoJS/pull/683))
-  The playground and guide code blocks showed example sources verbatim,
-  including the `// #region guide:...` markers that exist only for snippet
-  extraction and the import lists Prettier had wrapped one specifier per
-  line. The display source now drops the markers (with the blank line they
-  would leave) and joins each wrapped import back onto one line. Execution
-  source and files on disk are unchanged, so snippet extraction,
-  typechecking and formatting keep working on the originals.
-
 - **Add JobScheduler for frame-budgeted generator jobs.** ([#679](https://github.com/Exoridus/ExoJS/pull/679))
-  Heavy work (world generation, batch pathfinding, visibility rebuilds) no
-  longer has to choose between blocking a frame and an `async` update that
-  resumes in a later microtask.
-
-  - `JobScheduler` advances generator jobs one `yield` at a time inside a
-    per-frame time budget (default 2 ms; at least one step per update so a
-    job always progresses), in strict priority order with round-robin inside
-    a priority. Instantiable with its own budget and order, so a scene can
-    own one via `scene.systems.add(new JobScheduler())`.
-  - `Job<T>` handle: frame code polls `status` / `result` / `error`, async
-    code awaits `done` (created lazily, so an unawaited failure never raises
-    an unhandled rejection; cancellation rejects with an `AbortError`).
-    `cancel()` stops the generator at its `yield` and runs `finally` blocks;
-    `{ scope }` lets a `DestroyScope` own the job only while it runs.
-  - `app.jobs` is the application-owned instance, ticked in the `update`
-    phase at the new `SystemOrder.CoreJobs`.
-  - Guide section "Spreading work over frames" in the Application chapter;
-    API docs generated; export snapshot updated.
-
-  Worker-backed jobs are deliberately not part of this: the handle is
-  designed so a `WorkerPool` can hand out the same `Job` later.
-
-  ***
-
-- **`@codexo/exojs-pathfinding`, the official pathfinding extension.** One
-  search core - A\* over integer node handles - serving pluggable navigation
-  spaces. `GridSpace` is a finite window of weighted cells with diagonal
-  policies, `setCost`/`revision` for runtime edits, brushfire clearance for
-  agents wider than one cell, and string-pulling smoothing; `WaypointGraph` is a
-  directed graph whose edges carry a `kind` and a typed payload, which is what a
-  platformer's jump and fall links need and what a grid cannot express, and
-  which degrades to plain Dijkstra when its nodes have no positions.
-  `Pathfinder.findPath`/`findPathBetween` return a `PathResult` whose `status`
-  distinguishes `found`, `unreachable` and `budget-exceeded` instead of throwing
-  or returning `null`, and `floodFrom` answers "everything reachable within this
-  cost". Jump-point search self-enables on a uniform-cost grid and returns the
-  same optimal path from a fraction of the expanded nodes. Paths are
-  reproducible across runs and machines, and a search allocates nothing that
-  scales with the nodes it visits. The package depends on `@codexo/exojs` alone:
-  a tilemap reaches it through the cost callback `GridSpace.from` takes, not
-  through a package edge.
-
-- **Browser-native shaping for bidirectional and contextual text.**
-  `LayoutOptions.shaping` selects how a glyph's appearance is resolved:
-  `'auto'` (the default) keeps ordinary content on the shared glyph atlas and
-  hands text that needs its surroundings - a right-to-left base direction, an
-  explicit bidi control, or any script outside a proven-safe allow-list - to
-  the browser's canvas text engine one complete line at a time, which resolves
-  the bidirectional order and the contextual forms. `'simple'` and `'browser'`
-  force either path; `Text.shapingMode` reports which one settled. Shaped
-  lines are rasterized into pages the node owns and released with it, so no
-  process-wide cache of whole strings accumulates. No runtime dependency is
-  added: the platform provides the segmentation, the shaping and the raster.
-
-- **`LayoutOptions.locale`.** The language tag Unicode segmentation runs
-  under - which clusters count as one character, and where a line may break.
-  It selects no font and loads nothing.
-
-- **`GlyphPlacement.sourceStart` / `sourceEnd` and the same pair on
-  `TextLineMetrics`.** Every laid-out glyph and every laid-out line now carries
-  the UTF-16 range of the string it came from. Nothing in a string marks a soft
-  wrap, so this is what maps a caret, a selection or a hit test onto wrapped
-  text; a glyph that stands for no source character (the ellipsis an overflow
-  appended) reports an empty range at the point it replaced.
-
-- **`TextArea` wraps and scrolls.** A line too long for the field breaks at a
-  word boundary instead of scrolling sideways, and a vertical scrollbar appears
-  along the right edge once the value outgrows the field and drives the scroll
-  position. `wrap: false` restores horizontal scrolling for content whose own
-  line breaks are what matters; `scrollbar: false` and `scrollbarThickness`
-  control the bar, and `TextArea.verticalScrollbar` exposes it. Caret motion,
-  `Home`/`End`, `PageUp`/`PageDown`, hit testing and selection rectangles
-  follow the laid-out lines, so a wrapped line behaves like the two lines it
-  looks like while the value keeps exactly the line breaks the user typed.
-
-- **`when` on `SceneInteraction.observe()` and `scope()`.** Interaction
-  registrations take the same `SceneAvailability` policy the input, tween and
-  audio facades have. The default stays `'always'`, so a pause menu drawn by
-  the paused scene keeps receiving pointer events; `'active'` detaches a
-  registration while the scene is paused and `'paused'` attaches it only then.
-
-- **`DisplacementFilter`.** Warps the filtered node by a direction read out of a
-  map texture - heat haze, water refraction, glass, shockwaves. `map`'s red and
-  green channels are decoded to `[-1, 1]` and scaled by `scale` (one number or
-  `[x, y]`, logical units, default `20`); `offsetU`/`offsetV` move where the map
-  is sampled, so animating them scrolls the distortion. The reach is declared
-  through `getOutputBounds`, and a fragment displaced past the effect domain
-  comes out transparent rather than smearing the border.
-
-- **`PhasedSceneTransition.destroyPhaseState(state)`.** The release half of
-  `createPhaseState()`, called exactly once per session on every exit path -
-  normal completion, an abort before the commit, or the application being
-  destroyed mid-transition. Override it when the phase state owns GPU-backed
-  resources; plain scratch needs no override. A `{ enter, exit }` pair holds
-  one state per side and each side is released through its own phase's hook.
-
-- **A guide chapter and a playground example for writing your own scene
-  transition.** The **Writing your own transition** chapter spells out the
-  lifecycle contract `SceneTransitionLifecycleError` enforces - the
-  definition/session split, what the director guarantees per frame, why
-  `commit()` does not switch the scene in the same call, and what an abort and
-  a `destroy()` have to leave behind - and builds a complete bar-wipe
-  transition against it, both as a full `SceneTransition` and as a
-  `PhasedSceneTransition`. The matching `application-scenes/custom-transition`
-  example runs that transition between two scenes. No API change.
-
-- **`DropShadowFilter`.** A soft, offset silhouette of the filtered node drawn
-  behind it: `offsetX`/`offsetY`, `blur`, `quality`, `color` (alpha is the
-  shadow opacity) and `shadowOnly` for glows and detached shadows. Composed from
-  the stock colour-matrix and blur passes, so it runs on both backends and
-  declares the extra reach it needs through `getOutputBounds`.
-
-- **`@codexo/exojs-lighting`, forward normal-mapped point lighting for
-  sprites.** Lighting happens inside the sprite fragment stage, so a lit scene
-  costs no extra render pass and no extra draw call - sprites sharing one
-  `LitSpriteMaterial` stay in one batch. `PointLight` is plain mutable
-  world-space data (`x`, `y`, `radius`, `color`, `intensity`, `height`);
-  `LightingSystem` collects lights and packs them, together with the active
-  count and the ambient term, into one `rgba32f` data texture per frame, and
-  registers on any `SystemRegistry` like every other system. The light list
-  being a texture rather than a uniform array is what makes the light count a
-  shader loop bound instead of a compiled-in constant: a material user uniform
-  is one `vec4` per name, which would have capped a scene at a handful of
-  lights and needed a recompile to change. `LitSpriteMaterial` samples a
-  tangent-space normal map next to the albedo and rotates the normal by the
-  instance's local-to-world basis, so spinning and mirrored sprites keep their
-  bumps facing the right way. One normal map per material (= per atlas) is the
-  v1 contract; there is no deferred path yet. Two examples ship with it:
-  `lighting/normal-mapped-sprites` and `lighting/many-lights`, which walks from
-  1 to 48 lights over a normal-mapped floor without leaving a single draw call.
-
-- **Custom sprite materials receive the fragment's world position and the
-  instance's local-to-world basis.** `v_worldPosition` / `v_basis` (GLSL) and
-  `worldPosition` / `basis` on `VertexOutput` (WGSL) let a fragment shade
-  against world-space lights and rotate a tangent-space normal with the
-  sprite, which is what a lighting effect needs and what the varyings did not
-  carry before. The `lighting/normal-mapped-sprites` example lights a batch of
-  spinning and mirrored sprites through one material and four point lights.
-
-- **`Scene.animations`, a scene-bound animation facade with the same `when`
-  policy the tween and audio facades already have.** An `AnimatedSprite`
-  attached to a scene tree kept advancing through `SceneDirector.pause()` and
-  through retention, so a pause menu drawn over a "frozen" world still had
-  moving sprites and a suspended scene kept burning frames.
-  `this.animations.add(sprite, { when: 'active' })` binds playback to the
-  scene: frozen while it is paused, frozen while it is retained, stopped when
-  it ends. `when` takes the same `SceneAvailability` values with the same
-  `'always'` default, so an untracked sprite behaves exactly as before.
-
-- **`TrailParticles`, a particle render mode that draws a motion trail behind
-  every particle.** Where `RibbonParticles` connects the particles of one
-  system into a single band, this gives each particle its own strip through the
-  positions it recently occupied, kept in a per-particle ring buffer and drawn
-  in one non-instanced draw. Positions are recorded on each particle's own
-  clock (`interval`), so a trail covers the same travel at any frame rate;
-  `points` sets how far back it reaches, `width` its thickness and `fade` how
-  its alpha falls off towards the tail. CPU-only, like `RibbonParticles`.
+- **Unicode-safe layout, browser-native shaping, and soft-wrapping TextArea.** ([#677](https://github.com/Exoridus/ExoJS/pull/677))
+- **Add the @codexo/exojs-pathfinding extension package.** ([#676](https://github.com/Exoridus/ExoJS/pull/676))
+- **When policy for SceneInteraction, optional GLSL vertex stage, DropShadowFilter guide.** ([#671](https://github.com/Exoridus/ExoJS/pull/671))
+- **Transition authoring kit, and release phase state when a session ends.** ([#670](https://github.com/Exoridus/ExoJS/pull/670))
+- **V-axis orientation uniform for shader filters, and DisplacementFilter.** ([#669](https://github.com/Exoridus/ExoJS/pull/669))
+- **Add the @codexo/exojs-lighting extension package.** ([#664](https://github.com/Exoridus/ExoJS/pull/664))
+- **Expose world position and basis to custom sprite materials.** ([#659](https://github.com/Exoridus/ExoJS/pull/659))
+- **Add DropShadowFilter and fix the vertical mirror in WebGPU shader filter passes.** ([#660](https://github.com/Exoridus/ExoJS/pull/660))
+- **Periodic BurstSpawn and TrailParticles render mode.** ([#656](https://github.com/Exoridus/ExoJS/pull/656))
+- **Frame budgets, GPU frame timing and asset cache inspection.** ([#658](https://github.com/Exoridus/ExoJS/pull/658))
+- **DPR watcher, hit-ordered scroll wheel, pointer lock, animated widget backgrounds.** ([#657](https://github.com/Exoridus/ExoJS/pull/657))
 
 ### Fixed
 
 - **Raise the contact push-out cap to its pixel-scale value and sleep settled piles.** ([#680](https://github.com/Exoridus/ExoJS/pull/680))
-  The soft-constraint push-out was capped at 4 px/s. Box2D-v3's analogue
-  is 3 m/s, which at the pixel scales ExoJS targets is 60-300 px/s, so the
-  cap stood an order of magnitude below the speed it was meant to express.
-  A gravity-driven pile rearranges faster than such a push-out can work:
-  overlap accumulated instead of resolving, and 1000 dynamic circles
-  settled at 4.7 px mean penetration across 4939 touching pairs where the
-  geometry has about 2800. The cap is now 60 px/s, the low end of the
-  honest conversion band and the point where measurement shows the scene
-  stops fighting it.
-
-  The sleep gate compounded the problem: it reset both bodies' timers
-  while a contact's penetration exceeded the sleep tolerance, but a loaded
-  contact rests at the depth its own soft-constraint deflection holds it
-  at, which in a pile is several times a lone body's, so islands never
-  slept and a fully settled scene kept being solved in full. The gate now
-  reads push-out progress instead of depth: a contact deeper than the
-  tolerance blocks sleep only while the last step actually moved its
-  overlap, or while the point has no history at all, so geometry appearing
-  inside a sleeping body still reopens the decision.
-
-  Numbers (median ms/step, touching pairs): `many-dynamic` 1000 bodies
-  35.5 ms / 4875 pairs -> 16.1 ms / 2766; 4000 bodies 235.9 ms / 34 423 ->
-  99.1 ms / 10 894. A settling pile now sleeps completely at 2.4 ms/step
-  instead of never at 5.2. `box-stack` 4000: 16.5 -> 9.7 ms with identical
-  contact counts, which is the sleep gate alone. Three tests whose
-  literals pinned the old cap were retuned deliberately and one was added:
-  a contact resting deeper than the tolerance must still sleep once its
-  push-out has stalled.
-
-  Bench package, same change set:
-  - planck.js joins the physics matrix as a second pure-JS peer
-    (`lengthUnitsPerMeter = 30`; its default of 1 double-counts contacts in
-    pixel coordinates), Rapier is labelled as the WASM reference rather than
-    a peer, and `--engine` filters the physics domain. Contact counts now
-    agree across exojs, matter-js, planck and rapier, which they previously
-    did not.
-  - New `composite` rendering archetype: scene into an offscreen render
-    texture, blur sweeps, additive composite over the direct draw. ExoJS
-    through the public `RenderPipeline`, Pixi hand-rolled with
-    `RenderTexture` and filters. Structural baseline re-recorded for the two
-    new cells; no other counter moved.
-
-  ***
-
-- **Text no longer splits a grapheme cluster.** Layout counted code points, so
-  a combining sequence, an emoji with a skin-tone modifier, a ZWJ sequence and
-  a regional-indicator flag were each placed as several glyphs, could be broken
-  in half by `breakWords` or `maxWidth`, and could be truncated to a dangling
-  mark or a lone regional indicator by `overflow: 'ellipsis'`. The unit of
-  layout is now the grapheme cluster throughout - placement, wrapping,
-  truncation and the caret granularity of the editing widgets - resolved
-  through `Intl.Segmenter`. Where a browser does not provide it, clusters
-  degrade to code points and word boundaries to blank runs; no polyfill ships.
-
-- **Word wrapping is locale-aware rather than a split on spaces.** Text in a
-  script written without inter-word spaces used to overflow as one unbreakable
-  token; it now wraps at its own word boundaries. A run of blanks is one break
-  candidate, and a run that stays inside a line is preserved verbatim.
-
-- **`FadeSceneTransition` no longer leaks a `QuadGeometry` per navigation.**
-  Its per-session phase state allocates one, and nothing released it, so every
-  faded scene change left a backend vertex/index buffer pair behind for the
-  lifetime of the context. It now releases the quad through the new
-  `destroyPhaseState` hook.
-
-- **WebGPU shader filters no longer mirror their input vertically.** The
-  fullscreen pass sampled v = 0 at the bottom of the quad, which is texel row
-  0 on WebGL2 but the last row on WebGPU, so every `ShaderFilter` pass on
-  WebGPU wrote its input upside down. Invisible while the effect domain equals
-  the content bounds; wrong for a filter with asymmetric reach or one that
-  samples away from its own texel.
-
-- **`Application.destroy()` now aborts the lifecycle signal of a navigation
-  still inside `load()`.** Teardown already waited for an in-flight navigation
-  to settle, but nothing told the incoming scene to stop: a `load()` awaiting
-  `Scene.lifecycleSignal` never resolved, so the wait ran out the full
-  five-second grace period and the backend went down while the scene was still
-  preparing. The signal is aborted at the same point the navigation's
-  generation is invalidated, so a cooperative `load()` returns immediately and
-  the incoming scope's teardown completes before anything it depends on is
-  released.
+- **Let the package policy accept Core's sideEffects allowlist.** ([#665](https://github.com/Exoridus/ExoJS/pull/665))
+- **Typed renderer bindings, buffered SceneAudio fades, Color.fromCss, LDtk enum fields.** ([#655](https://github.com/Exoridus/ExoJS/pull/655))
+- **Pause-aware scene animations and abortable in-flight navigation.** ([#654](https://github.com/Exoridus/ExoJS/pull/654))
 
 ### Documentation
 
 - **Bring the README up to the 0.17 surface.** ([#684](https://github.com/Exoridus/ExoJS/pull/684))
-  Package table and install list gain lighting, pathfinding and
-  tilemap-physics, each package linked to its directory. The feature list
-  covers custom sprite materials, the lighting package, the Unicode text
-  stack with its new style properties, exact picking with `hitArea`, the
-  frame-budgeted job scheduler, the transition authoring kit and the
-  pathfinding package. The quickstart compiles again against the current
-  API (`Seconds` instead of the removed `Time` type, a mounted canvas, a
-  colour that still exists; verified with tsc against `src/`), and the
-  roadmap names the 0.18 themes instead of items that have shipped.
-
-  ***
+- **Show the brand mark and the companion.** ([#663](https://github.com/Exoridus/ExoJS/pull/663))
+- **Add the which-call-when table to the loading guide.** ([#662](https://github.com/Exoridus/ExoJS/pull/662))
 
 ## [0.16.2] - 2026-09-03
 
 ### Added
 
-- **`Spritesheet.removeFrame(name)` and `Stack.removeItem(item)`.** Both
-  mirror their existing `add`-side methods, completing the add/remove pair
-  every other mutator on these classes already has.
+- **`Spritesheet.removeFrame(name)` and `Stack.removeItem(item)`.**
 
 ### Fixed
 
-- **Two class doc comments no longer erase their class from the published
-  declarations under `stripInternal`.** `SceneNode` and `Loader` mentioned
-  `@internal` in prose, which TypeScript reads as a real tag on the class; the
-  wording changed. The 22 backend, scene-graph, material, audio, asset-type and
-  tile-set members that official extension packages reach through the SDK entry
-  points are now documented as that SDK contract instead of being tagged
-  `@internal`. The flag itself stays off: 41 internal types still appear in
-  public signatures and must be made public first.
-- **A material drawn into a multi-attachment target now gets a dev-build
-  warning when its fragment shader under-declares outputs.** The guard that
-  refuses a drawable without a material never checked whether a material's
-  own shader actually writes every attachment; a shader with fewer declared
-  outputs than the target's attachment count silently left the extra
-  attachments at their previous contents on WebGL2 (WebGPU already refuses
-  pipeline creation for this). `ShaderSource.countFragmentOutputs` reflects
-  the declared `@location`/`layout(location = n) out` count from the active
-  backend's language and warns once per shader/attachment-count pairing when
-  it falls short.
+- **Two class doc comments no longer erase their class from the published declarations under `stripInternal`.**
+- **A material drawn into a multi-attachment target now gets a dev-build warning when its fragment shader under-declares outputs.**
 - **`RenderTexturePool` keys pooled textures by format as well as size.**
-  `acquire()` matched on `width x height` alone, so a pool holding an
-  `Rgba8` entry could hand it back for a request in a different format.
-  Latent today (every caller acquires the default format), but silent
-  the moment an HDR intermediate requests `Rgba16F`/`Rgba32F`. `acquire()`
-  now takes an optional `format` parameter (defaulting to `Rgba8`) and
-  matches on it too.
-- **`SharedAbort` dropped its unused multi-holder API.** `retain()`, `holders`
-  and `aborted` had no caller anywhere in the tree - cancellation is actually
-  decided by the claim refcount elsewhere - and the class documented an
-  N-holder contract that was never wired up. Removed, along with the doc
-  paragraph describing it.
+- **`SharedAbort` dropped its unused multi-holder API.**
 - **A press that hits no interactive node now clears keyboard focus.**
-  Nothing blurred the focused node on a click or tap that resolved to empty
-  canvas, so an open `Dropdown` stayed open and a `TextInput` kept its caret
-  and DOM transport after the user clicked away from it.
-- **An infinitely repeating `Tween` releases its target once that target is
-  destroyed.** A tween had no link to its target's lifetime, so
-  `repeat(-1)` kept interpolating and writing to a destroyed `SceneNode`
-  forever, pinning it in memory. `Tween.update` now stops itself (and is
-  released from `TweenSystem`) the frame after its target reports
-  `destroyed === true`.
+- **An infinitely repeating `Tween` releases its target once that target is destroyed.**
 - **The fixed-timestep spiral-of-death guard now scales with `fixedTimeStep`.**
-  The catch-up cap was a constant 5 steps regardless of the configured step
-  size, so a step smaller than the default silently ran the simulation slower
-  than wall time once the frame rate dropped enough to hit the clamp - with no
-  warning. The cap is now derived from the existing frame-delta clamp and the
-  configured step, so a smaller step gets proportionally more catch-up steps.
-- **A `Sprite` whose frame was set before its texture finished loading gets the
-  right UVs.** Texture coordinates are the frame divided by the texture's
-  dimensions, so a frame chosen against a still-loading handle - what
-  `Spritesheet` does on an atlas that has not arrived - was computed against
-  0x0 and never recomputed: the sprite sampled a single texel, and a retained
-  product recorded around it kept the non-finite coordinates for the life of
-  the root. The sprite now recomputes its coordinates and announces the change
-  when the payload lands.
-- **Tile layers on WebGL2 sample their own tileset again when a sprite is drawn
-  between them.** `@codexo/exojs-tilemap`'s WebGL2 chunk renderer skipped its
-  texture bind and blend call whenever its private memo matched, but the memo
-  outlived the batch it described - and a sprite drawn between two tile layers
-  binds its own texture to the very unit the tile shader samples. The layer
-  after it drew the sprite's pixels, with the sprite's blend mode. The WebGPU
-  chunk renderer was never affected, so the backends visibly disagreed.
-- **`Text` and `BitmapText` honour `blendMode` on both backends.** The setter
-  is public on every drawable and already broke the render batch, but neither
-  text renderer applied it: WebGPU baked `Normal` into its pipeline, and WebGL2
-  drew with whatever blend state the previously flushed renderer had left, so
-  the same run could composite differently from frame to frame. A text batch
-  now breaks on a blend change and draws with the mode it declares.
-- **Sprites and meshes on WebGL2 draw with the blend mode they declare, even
-  when another renderer type is interleaved.** The WebGL2 blend state is one
-  global the backend owns, but the sprite and mesh renderers kept a private
-  copy and skipped the backend call whenever a batch declared the mode that
-  copy already held. A `Graphics` or nine-slice drawn in between had changed
-  the real state in the meantime, so the next batch composited with a foreign
-  blend mode - visibly disagreeing with WebGPU, which resolves blend per
-  pipeline. Each batch now establishes its blend mode at its own draw call.
-- **Nine-slice sprites on WebGL2 pick up a texture whose payload changed under
-  a stable identity, and keep their own blend mode.** The renderer bound the
-  batch texture only when the identity differed from the last one it had seen,
-  and the bind is what carries the upload - so a skin repainted through
-  `Texture.setSource()` / `updateSource()`, a canvas or `ImageBitmap` texture
-  refreshed per frame, and a `RenderTexture` re-rendered into went on drawing
-  the pixels of their first upload forever. The same memo skipped the live
-  check that rejects a destroyed texture, and its blend counterpart let another
-  renderer's blend mode through. Texture and blend state are now established at
-  the batch's own draw call.
-- **Particle systems on WebGL2 pick up a texture whose payload arrives after
-  the first draw.** `WebGl2ParticleRenderer` bound the system's texture only
-  when its identity changed, which for a single-system scene meant exactly
-  once - while the handle from `loader.get(...)` was still empty. The image
-  landed a few frames later and never reached the GPU, so the system simulated
-  and drew its quads against blank pixels for the rest of its life. The same
-  memo could hold a stale blend mode after another renderer changed it. Both
-  are now offered to the backend on every system, which already collapses a
-  redundant bind and is the only holder of the live GL state.
-- **A payload of one to three bytes is sniffed as `text/plain` instead of
-  throwing.** The MP4 magic-byte check read a 32-bit box size without checking
-  that the buffer holds one, so a truncated or near-empty response surfaced as
-  `Offset is outside the bounds of the DataView` wrapped in a load failure,
-  rather than as the documented fallback.
-- **`WebStorageStore.set()` rejects on a full quota instead of throwing
-  synchronously.** Web Storage is synchronous, so a `QuotaExceededError`
-  escaped the returned promise and never reached the `.catch()` that is the
-  only handler a write has - unlike the serialization failure two lines above
-  it, which did reject.
+- **A `Sprite` whose frame was set before its texture finished loading gets the right UVs.**
+- **Tile layers on WebGL2 sample their own tileset again when a sprite is drawn between them.**
+- **`Text` and `BitmapText` honour `blendMode` on both backends.**
+- **Sprites and meshes on WebGL2 draw with the blend mode they declare, even when another renderer type is interleaved.**
+- **Nine-slice sprites on WebGL2 pick up a texture whose payload changed under a stable identity, and keep their own blend mode.**
+- **Particle systems on WebGL2 pick up a texture whose payload arrives after the first draw.**
+- **A payload of one to three bytes is sniffed as `text/plain` instead of throwing.**
+- **`WebStorageStore.set()` rejects on a full quota instead of throwing synchronously.**
 - **A blocked IndexedDB open no longer leaks the connection it later gets.**
-  The `blocked` event rejected the open, but the request still completed once
-  the blocking connection went away, handing over an `IDBDatabase` nobody was
-  waiting for and nothing closed - which then blocked every future upgrade in
-  its turn. A connection arriving after a rejected open is closed.
 - **A container that packs one source twice is rejected instead of unpacked.**
-  Both entries resolved to a single asset identity, so the second payload
-  replaced the first - and for a texture, video or music entry the replaced one
-  owned a GPU upload or a media element that no owner could release.
-- **Two sources that differ only in a `|` are two assets again.** Resource and
-  source keys joined their fields with an unescaped separator, so a URL
-  carrying an unencoded `|` in its query could compose the very key another
-  request composes from a source plus a discriminator - and the two then shared
-  one residency entry, one fetch and one claim set. The fields are now escaped
-  the way persisted cache record keys already were. Because the source key is
-  part of a persisted record's identity, the default cache layout version is
-  raised: records written by an earlier version are no longer found and are
-  acquired again rather than read under the old spelling.
-- **`awaitBackground()` settles for every caller, and for a queue an eviction
-  emptied.** The residency kept a single resolver slot, so a second concurrent
-  call overwrote the first and that promise never settled - a loading screen
-  and a scene preloader awaiting one drain deadlocked one of them, with no
-  error. Dropping a queued entry because its last claim went away (a scene
-  teardown, a cancelled load) also left the queue counted as unfinished
-  forever, so a lone awaiting caller hung and `onProgress` stayed below its
-  total. Both now settle.
-- **A `get()` or `load()` reaching a source while its container is unpacking
-  joins the unpack.** An unpack registered no in-flight identity, so for the
-  whole window between parsing the index and storing a payload the key looked
-  unknown to the loader and a concurrent acquisition of the same source started
-  a second, competing fetch whose payload overwrote the container's. Which one
-  a consumer saw was timing-dependent, and the loser - a texture upload, a
-  media element - was never released.
+- **Two sources that differ only in a `|` are two assets again.**
+- **`awaitBackground()` settles for every caller, and for a queue an eviction emptied.**
+- **A `get()` or `load()` reaching a source while its container is unpacking joins the unpack.**
 - **A container that fails while unpacking releases what it already claimed.**
-  `Loader.loadContainer` claims every entry up front and only then builds them,
-  but a failure rejected without ever handing the caller the scope holding
-  those claims, so every entry of a failed container stayed resident for the
-  loader's lifetime with no owner able to free it.
-- **A destroyed `LoaderScope` refuses to claim.** `get`, `load` and
-  `loadContainer` still registered claims after `destroy()`, and since destroy
-  is idempotent by contract there was no way to release them: an async
-  continuation that outlived a scene teardown pinned its assets for the
-  application's lifetime, and `Loader.inspect()` listed a destroyed scope as an
-  owner. They now throw instead.
-- **Releasing a font or an image frees what it owns.** Neither factory
-  implemented the per-resource teardown its resources need: a released font
-  stayed registered on `document.fonts` (so CSS and Canvas went on resolving
-  its family) and pinned for the loader's lifetime, and a released image never
-  closed the `ImageBitmap` it had decoded. Only a bitmap the engine decoded
-  itself is closed.
-- **An asset unloaded mid-fetch frees the resource its factory had already
-  built.** The store was skipped, as it must be, but the finished resource -
-  which for a video or a music stream owns a media element - was handed back
-  undisposed and stayed alive until the loader was torn down.
-- **A failed or cancelled `music`/`video` load cleans up after itself.** The
-  element was registered with the factory before the source was attached, and a
-  failure left it there with its object URL unrevoked - and since no resource
-  was built, nothing would ever release it. A repeatedly retried blob-backed
-  load accumulated one element and one live blob per attempt.
-- **A `fetchOptions.signal` set on the loader aborts asset loads too.** Every
-  asset load replaced it with the loader's own cancellation signal, so an
-  application-wide abort signal worked for `.exoa` containers and silently did
-  nothing for every other asset. The two are composed now: either one aborts
-  the request, and neither disables the other.
-- **Options a later `get()` loses are diagnosed in development.** `Loader.get`
-  documents that the same source yields the same instance and that conflicting
-  options on a later call are ignored with a one-time dev warning - but no such
-  warning existed, so a second `get('x.png', { textureOptions })` dropped its
-  sampler request with nothing to diagnose it. The warning now exists (once per
-  source, stripped in production). Options that take part in asset identity are
-  unaffected: they resolve to their own instance and lose nothing.
-- **A `stop()` made while `start()` is still loading is no longer overwritten
-  when the startup run settles.** The startup continuation promoted the state
-  to `Running` unconditionally, so a `stop()` that landed inside the loading
-  window - where the frame loop is live but the state is still `Loading` - was
-  undone the moment `start()` resolved. The application then advertised
-  `Running` for a halted loop, and because both `start()` and `stop()`
-  early-return on that state, the instance was permanently unusable. The
-  promotion now happens only if the loop the run started is still the live one.
-- **A destroyed `Application` stays destroyed.** A `start()` that failed while
-  `destroy()` was running reset the state to `Stopped` from its own catch, and
-  because that continuation resumes after the teardown chain has finished,
-  `Stopped` was the last value written. `state` then lied about a destroyed
-  instance and `start()` accepted it, reinitializing an already-destroyed
-  backend and restarting the frame loop over released subsystems. `Destroying`
-  and `Destroyed` are now terminal - the only transition out of them is
-  `Destroying` to `Destroyed` - so a late startup failure cannot resurrect the
-  application and `start()` rejects as documented.
-- **`Application.destroy()` waits for a scene navigation that is still in
-  flight.** `destroy()` documents that `scenes` is fully disposed before the
-  Loader, rendering context, audio system and backend are released, but a
-  `change()`/`restore()` (or the initial `start(Target)` navigation) still
-  inside `load()` was tracked by nothing the disposal awaited: aborting it only
-  invalidated its generation, so the incoming scene went on to run `init()`,
-  `unload()` and `destroy()` after teardown had finished, against subsystems
-  that no longer existed. The disposal now awaits the run it just aborted, the
-  same way it already awaits a preload. A scene whose `load()` never settles is
-  bounded by `destroy()`'s existing teardown grace period.
+- **A destroyed `LoaderScope` refuses to claim.**
+- **Releasing a font or an image frees what it owns.**
+- **An asset unloaded mid-fetch frees the resource its factory had already built.**
+- **A failed or cancelled `music`/`video` load cleans up after itself.**
+- **A `fetchOptions.signal` set on the loader aborts asset loads too.**
+- **Options a later `get()` loses are diagnosed in development.**
+- **A `stop()` made while `start()` is still loading is no longer overwritten when the startup run settles.**
+- **A destroyed `Application` stays destroyed.**
+- **`Application.destroy()` waits for a scene navigation that is still in flight.**
 - **A destroyed scene graph is no longer pinned by the changed-record index.**
-  The process-wide dirty index recycled a generation by resetting its logical
-  length only, leaving every entry above it in place - and a `SceneNode` links
-  to its parent while a `Container` links to its children, so one retired entry
-  kept a whole destroyed scene alive for the life of the process, long after
-  the index itself reported those marks as outside its window. A recycled
-  generation now drops its references, and a node releases its entry when it is
-  destroyed, which is what leaves nothing pinned once `Application.destroy()`
-  has stopped advancing the index.
 - **A system removed and added back inside the same frame stays registered.**
-  `remove()` marks a registration inactive and queues the structural delete for
-  the frame boundary, but left it in the registry - so the `add()` that
-  followed hit the duplicate-registration no-op, and the queued removal then
-  deleted the system at the end of the frame with no error anywhere. The
-  pattern is what a system re-registering itself to change its order or phase
-  does, and it silently lost the system. `add()` now cancels a pending removal
-  and re-registers with the options that call asks for.
-- **`SystemRegistry.remove()` reports the truth for a buffered add.** Removing
-  a system added earlier in the same frame - one that never became a
-  registration, and for which `has()` answers `false` - returned `true`,
-  contradicting the method's own "true if it was registered". The add is still
-  cancelled; the return value now agrees with `has()`.
-- **Loader claims are released last on both scene teardown paths.** A scope
-  torn down after a failed `load()`/`init()` released its loader claims before
-  calling `scene.destroy()`, while the ordinary teardown - whose documentation
-  names "release loader claims last" as the normative order - released them
-  after it. A `Scene.destroy()` override reaching for `this.loader` therefore
-  saw a live claim scope or a destroyed one depending on whether activation had
-  succeeded, and a claim taken on the failed path was never released. Both
-  paths now release last.
-- **A manual `Application.update()` no longer forks the frame loop.** The
-  public tick rescheduled the next animation frame unconditionally, so calling
-  it while the loop was live - from `onFrame`, from an external fixed-rate
-  host, from a test harness that also lets the loop run - started a second
-  chain alongside the first and silently doubled the frame rate. Scheduling now
-  belongs to the loop's own callback: `update()` runs exactly one frame.
-- **`SceneNode.destroy()` and `RenderNode.destroy()` are idempotent.** Only
-  `Container` guarded re-entry, while the two layers beneath it documented
-  releasing state a second pass must not touch again - so a double `destroy()`
-  on a leaf node took its transform, bounds and flags through a second
-  teardown, and on a `RenderNode` re-ran the filter and signal release as well.
-  A second call is now a no-op at every layer.
-- **Audio objects created while the context is locked again are set up on the
-  next unlock.** `onAudioContextReady` latched after its very first dispatch,
-  so a bus, listener, stream voice, worklet or effect constructed while the
-  context sat suspended - after an iOS audio-session interruption or a bfcache
-  restore - subscribed to a signal that could never fire and stayed silent for
-  the rest of the session. The signal now dispatches once per run of the
-  context, to whoever is subscribed at that moment.
-- **An effect that never finishes its setup no longer silences the bus it is
-  attached to.** `AudioBus` rebuilt its effect chain by disconnecting the bus
-  input first and only then reading each effect's nodes, so an effect still
-  unready on the retry pass threw with the graph half torn down - inside a
-  microtask, where no caller could see it - and the bus stayed cut from its pan
-  stage for good. The chain is now resolved before anything is disconnected,
-  and an unready effect is bypassed with one diagnostic naming it.
+- **`SystemRegistry.remove()` reports the truth for a buffered add.**
+- **Loader claims are released last on both scene teardown paths.**
+- **A manual `Application.update()` no longer forks the frame loop.**
+- **`SceneNode.destroy()` and `RenderNode.destroy()` are idempotent.**
+- **Audio objects created while the context is locked again are set up on the next unlock.**
+- **An effect that never finishes its setup no longer silences the bus it is attached to.**
 - **A worklet effect whose module fails to load degrades to a passthrough.**
-  `WorkletEffect.ready` rejected with nobody attached, so a blocked
-  `addModule` - a Content-Security-Policy forbidding `blob:` worker sources is
-  the realistic case - surfaced as an unhandled rejection. The failure is
-  logged instead and `ready` resolves; the effect keeps passing dry signal.
-- **A rejected `AudioContext.resume()` is logged instead of surfacing as an
-  unhandled rejection.** The autoplay-unlock gesture handler attached no
-  rejection handler, so a context the browser refused to resume produced a bare
-  rejection with no hint of where it came from.
-- **Audio zones only colour spatial voices.** `SpatialZones` documented that it
-  reconciles the live set of spatial voices, but `AudioSystem` handed it every
-  voice - so a reverb zone opened a send on UI blips and music beds that have no
-  position in the world at all. A voice that stops being positional now has its
-  zone sends closed instead of keeping them open untouched.
-- **`AudioZone.height` is documented as the half-band it is.** The option and
-  the field described it two different ways; `height: 100` covers `z` from
-  `-100` to `100`, which both now say.
-- **A per-call `repeat` on `AnimatedSprite.play()` no longer leaks into the next
-  clip.** The override was written on every `play()` and never cleared, so
-  `play('attack', { repeat: 2 })` followed by `play('idle')` stopped the
-  indefinitely-looping idle clip after two cycles. An override now belongs to
-  the playback run that set it.
-- **A single-frame `AnimatedSprite` clip completes.** `update()` returned before
-  any timing ran for a clip with one frame - the shape an Aseprite frame tag
-  covering a single frame exports - so `onComplete` never fired, the sprite
-  stayed `playing`, and its `AnimationSystem` registration was never released.
-  The frame is now held for its own duration and then takes the normal
-  completion path.
-- **`TweenSystem.clear()` and `destroy()` stop the tickers they drop.** Tweens
-  were stopped but registered tickers were only dropped, so a `TweenSequencer`
-  kept reporting `Active` after an application teardown with nothing left to
-  advance it.
+- **A rejected `AudioContext.resume()` is logged instead of surfacing as an unhandled rejection.**
+- **Audio zones only colour spatial voices.**
+- **`AudioZone.height` is documented as the half-band it is.**
+- **A per-call `repeat` on `AnimatedSprite.play()` no longer leaks into the next clip.**
+- **A single-frame `AnimatedSprite` clip completes.**
+- **`TweenSystem.clear()` and `destroy()` stop the tickers they drop.**
 - **A `TweenSequencer` delay stage carries its overshoot into the next stage.**
-  The time past a `wait()` stage's own duration was dropped, so a chain of
-  waits drifted by up to one frame per stage and a repeated sequence
-  accumulated the error - `Tween.update` already carries the same remainder
-  into its next repeat cycle.
 - **A rebuilt particle GPU state no longer delivers garbage death contexts.**
-  `@codexo/exojs-particles` kept the queue of deaths still awaiting a readback
-  when the GPU state was torn down - after a device loss, a backend change or a
-  transition back to CPU modules - so the next state staged that many records
-  out of a freshly zeroed device buffer and every death module saw a
-  zero-valued context, firing `SpawnOnDeath` sub-emitters at the origin.
-- **`RateSpawn` recovers from a negative rate sample.** A distribution that can
-  return a value below zero drove the accumulator down without bound, and the
-  emitter never spawned again. The sampled rate is clamped at zero.
+- **`RateSpawn` recovers from a negative rate sample.**
 - **An out-of-range `ParticleWriter.frame` no longer wraps onto a valid frame.**
-  The frame channel is a `Uint16Array`, so `-1` became `65535` and `70000`
-  became `4464` - both of which can be a frame the system declares, instead of
-  the documented frame-0 fallback. Development builds throw with the offending
-  index; production clamps.
-- **A particle system is no longer culled by the size of one particle.** A
-  `ParticleSystem`'s local bounds cover one texture frame at its local origin -
-  a single pixel for the default white texture - while its particles travel
-  arbitrarily far from there, so the viewport check removed the whole cloud as
-  soon as the emitter's origin scrolled out of view. Systems opt out of culling
-  by default; `cullArea` is the documented way back in for a system whose reach
-  is known.
+- **A particle system is no longer culled by the size of one particle.**
 - **The WebGPU compute path samples the texture frame the CPU path does.**
-  `@codexo/exojs-particles` baked a particle system's frame UVs into a uniform
-  block once, when the GPU state was built, and assumed the whole texture
-  whenever no atlas was declared - so `system.textureFrame` was ignored
-  outright, and a texture swapped in later left the UVs divided by the previous
-  texture's dimensions. The same scene drew a sub-rect on WebGL2 and the whole
-  atlas on WebGPU. Both setters now re-bake the block.
-- **Two update modules of the same class are reported by name instead of
-  breaking WebGPU only.** A module's WGSL `key` names one struct and one member
-  of the composite compute shader's uniform block, so a second module under the
-  same key made the codegen declare each twice - invalid WGSL that failed
-  pipeline creation at the first `update()`, while WebGL2 ran the same scene.
-  `@codexo/exojs-particles` now throws `ParticleModuleKeyCollisionError` naming
-  both modules and the key, before the device is asked to build anything.
+- **Two update modules of the same class are reported by name instead of breaking WebGPU only.**
 - **A focused text field no longer blanks the keyboard and wheel pipeline.**
-  Focusing a field hands host focus to the platform's own text transport, which
-  blurs the canvas - and keyboard and wheel input were gated on the canvas
-  element holding focus alone. Every editing key the widget owns (caret motion,
-  Home/End, selection extension, `Escape`, `Ctrl+A`, `Ctrl+Z`/`Y`, `Enter` in a
-  single-line field) and all wheel scrolling were dead for as long as any field
-  was focused, and the held keys of a running game were released. The gate now
-  treats an engine-owned transport holding host focus as the application
-  holding it, and closes again when focus really leaves - including to a
-  foreign element of the embedding page. Leaving a field hands host focus back
-  to the surface rather than dropping it on the document. A transport that
-  reports an edit for a keystroke the widget also handles (Backspace, Delete,
-  and `Enter` in a multi-line field) now applies it once instead of twice.
-  `app.input.canvasFocused` and `onCanvasFocusChange` mean "this application
-  holds keyboard focus"; a press on a surface the host refuses focus for
-  reports the change instead of flipping the flag silently.
-- **Text input works again in browsers that ship `EditContext`.** The backend
-  attached its context with `EditContext.attachToElement()`, a draft method no
-  browser implements, and hung it on a `<textarea>`, which a host refuses to
-  attach a context to at all. Constructing the transport therefore threw on
-  every Chromium-based browser, leaving text fields focusable but completely
-  dead - no typing, no IME, no clipboard. The context is now attached through
-  the element's own `editContext` property, on a plain focusable element, and
-  detached when the transport is destroyed.
-- **Backspace deletes backwards under the `EditContext` backend.** The
-  direction of a deletion was derived from the selection the platform reports
-  _after_ the update, which it collapses to the start of the removed range - so
-  the test could never come out backward and every backspace deleted the
-  character after the caret. The direction now follows the caret the widget
-  last mirrored in, which is the only thing that separates a backspace from a
-  forward delete.
-- **An IME commit passes the same gates a typed insert does.** Committing a
-  composition applied only `maxLength`, so a `filter` was never consulted and a
-  single-line field could end up holding a newline - breaking the single-line
-  assumptions every caret and hit-test calculation makes. A commit is now
-  admitted, truncated or refused exactly like an insertion, and still creates
-  no undo entry.
-- **A text field forgets modifier keys when it loses focus.** `Shift` and
-  `Control` were latched from key events only the focused field receives, so a
-  field blurred with one held kept it held forever: later arrow keys extended a
-  selection and later `A`/`Z`/`Y` fired shortcuts. Releasing one `Shift` while
-  the other was still down also reported the modifier as released. Both sides
-  of each modifier are now tracked separately and cleared when the field loses
-  focus.
-- **A read-only text field can be selected whole again.** `readOnly` refused
-  every shortcut, select-all included, so the text could not be selected for
-  copying. Only the mutating shortcuts are refused now.
-- **Text-field shortcuts answer to `Meta`.** Select-all, undo and redo were
-  bound to `Control` alone, so `Cmd+A`, `Cmd+Z` and `Cmd+Y` did nothing on
-  macOS.
-- **A second finger no longer drags every slider, scrollbar and text
-  selection.** Widget drags follow the application's pointer signals so they
-  continue outside the widget, but they ignored which contact those signals
-  carried: any second touch moved every widget already being dragged, and
-  lifting either finger ended all of them. Each drag now records the contact
-  that started it and ignores the rest.
-- **`GlyphAtlas.clear()` no longer leaks pages or leaves other nodes drawing
-  stale glyphs.** It discarded every `AtlasPage` (and the GPU texture behind
-  it) and rebuilt a single fresh one, and nothing told a node sharing the
-  atlas that its cached UVs now addressed a different, repacked layout - only
-  the node that happened to call `clear()` re-laid out. Pages are now reset in
-  place instead of discarded, and every node drawing from the atlas re-lays
-  out. A loaded `FontFace` also used to clear only the one raster-density atlas
-  the node's surface ratio resolved to at that moment, which could be the
-  wrong one; it now clears every pixel-ratio and mode variant of the font
-  variant.
-- **A drag or pointer capture no longer survives a scene transition with no
-  button held.** A pointer frame gated by the active scene's state or the
-  director's transition gate discarded the queued events without ending any
-  in-progress drag, releasing capture, or forgetting the pointer - so a node
-  grabbed right before a transition kept following the pointer once the gate
-  lifted. A gated frame now runs the same cleanup a failed dispatch already
-  did.
-- **Colour-glyph (emoji) quads sample the glyph, not a texel span that
-  includes its padding.** The UVs spanned the whole padded atlas slot while
-  the quad was sized to the unpadded glyph, so an emoji rendered compressed
-  and offset up-left. UVs are now offset by the same padding the rasterizer
-  insets the ink by.
-- **Tab, Enter and Escape no longer reach an outgoing scene during a
-  transition.** `FocusController` dispatched every key event regardless of
-  scene state, while a pointer press at the same moment was already
-  swallowed. Key dispatch now honours the same `SceneState` and
-  transition-gate check pointer dispatch does.
-- **A hidden focused node releases focus, and releasing one `Shift` key no
-  longer flips `Tab`'s direction.** Focus eligibility ignored `visible`, so a
-  dialog hidden while still focused kept swallowing keys; and `Shift` was
-  latched per physical key, so releasing one side while the other was still
-  held reported the modifier as up. Eligibility now includes visibility, and
-  `Tab`'s direction reads the aggregate `Shift` channel `InputSystem` already
-  reconciles between both sides.
-- **A `Gamepad`-owned binding on a non-gamepad channel is rejected instead of
-  silently behaving differently from `Application.input`.** `pad.onTrigger(Keyboard.Space)`
-  type-checked and appeared to work, but skipped the construction-baseline
-  watermark and keyboard-capture bookkeeping `InputSystem`'s own binding
-  methods apply. It now throws.
+- **Text input works again in browsers that ship `EditContext`.**
+- **Backspace deletes backwards under the `EditContext` backend.**
+- **An IME commit passes the same gates a typed insert does.**
+- **A text field forgets modifier keys when it loses focus.**
+- **A read-only text field can be selected whole again.**
+- **Text-field shortcuts answer to `Meta`.**
+- **A second finger no longer drags every slider, scrollbar and text selection.**
+- **`GlyphAtlas.clear()` no longer leaks pages or leaves other nodes drawing stale glyphs.**
+- **A drag or pointer capture no longer survives a scene transition with no button held.**
+- **Colour-glyph (emoji) quads sample the glyph, not a texel span that includes its padding.**
+- **Tab, Enter and Escape no longer reach an outgoing scene during a transition.**
+- **A hidden focused node releases focus, and releasing one `Shift` key no longer flips `Tab`'s direction.**
+- **A `Gamepad`-owned binding on a non-gamepad channel is rejected instead of silently behaving differently from `Application.input`.**
 - **`GamepadButtonChannel` no longer admits reserved, token-less channels.**
-  Offsets 24-31 of the button section type-checked but had no
-  `InputToken`, so a custom mapping using one made `serialize()` and
-  `conflicts()` throw a bare error at the worst possible moment. The type now
-  only admits the 24 named, serializable channels.
 - **`BitmapText` no longer accepts a `fontSize` option it silently ignores.**
-  A `BitmapText` draws from a pre-baked atlas at whatever size it was
-  generated at - `scale` is the option that actually resizes it. `fontSize` is
-  now omitted from its options type.
 - **A justified line's reported width matches what was actually drawn.**
-  `TextLineMetrics.width` kept the pre-justify natural width even on a line
-  justify stretched to fill the paragraph, so a selection rectangle built from
-  it stopped short of the justified extent. It now reports the post-justify
-  width.
 - **A stylus's twist angle no longer drifts as it approaches full rotation.**
-  The twist channel (0-359 degrees) was normalized by 359 instead of 360, so
-  180 degrees read back as roughly 0.5014 instead of 0.5 and the error grew
-  toward the top of the range.
-- **A destroyed chain collider could keep answering broad-phase queries
-  forever.** `PhysicsWorld`'s CCD pass re-synced the authored collider list
-  into the broad-phase tree instead of the detection list, so a chain was
-  inserted as its own tree leaf - a leaf the CCD pass never updates and
-  destruction never removes, since only the chain's edge proxies are torn
-  down. `queryAabb`, `rayCast` and `overlapShape` could report a destroyed
-  chain's body indefinitely. The CCD pass now resyncs the detection list,
-  matching what the broad and narrow phases actually read.
-- **`PhysicsWorld.step()` dropped every fixed step's contact and sensor events
-  except the last.** A frame spanning more than one fixed step - a hitch, a
-  slow display, or a `fixedDelta` smaller than the frame time - ran detection
-  several times but dispatched only once, after the last step had already
-  overwritten the earlier steps' event arrays. Collision and sensor events
-  could be silently lost, or a sensor `enter` could arrive with no matching
-  `exit`. Events are now dispatched once per fixed step, as `fixedUpdate()`
-  already did.
-- **`PhysicsWorld.add()` could leave a body permanently half-attached.** A
-  dynamic body with no mass-carrying collider was rejected after its id,
-  owner and `attached` flag were already set, so the error's own documented
-  recovery ("add a solid collider, then add it") failed with "already been
-  added to a world" instead, and `addCollider()` then registered further
-  colliders into a world the body was never actually tracked by. The mass
-  check now runs before any attachment state changes.
-- **Destroying two colliders of the same dynamic body from one event callback
-  could leave it massless.** `destroyCollider`'s mass guard validated against
-  the collider set as it stood before either deferred removal had run, so two
-  individually-legal calls made from the same dispatch both passed and then
-  combined into a dynamic body with `invMass === 0` and live boundary
-  colliders - the exact state the guard exists to reject. The guard now
-  treats a collider already queued for removal as already gone.
-- **A tile layer's rendering stopped following its offset once mutated at
-  runtime.** `@codexo/exojs-tilemap`'s `TileLayerNode` cached
-  `layer.offsetX`/`offsetY` at construction, while `TileColliderStreamer` and
-  `pixelToTile` already read the live, mutable fields - moving a layer at
-  runtime moved its collision but left its pixels in place, with no error.
-  The node now re-reads the offset every frame.
-- **A body added while `PhysicsWorld.destroy()` was running from inside that
-  same dispatch was never marked destroyed.** `destroy()` cleared the queued
-  command list without running it first, so a body added from a collision or
-  sensor callback that itself called `destroy()` stayed `attached === true`
-  and `destroyed === false` against a torn-down world. Queued commands are
-  now drained before the world tears down.
-- **A second `PhysicsWorld` no longer inherits the first world's "already
-  warned about this bullet shape" state.** The dev-only warning for boundary
-  geometry on a bullet body tracked reported shape kinds in a module-level
-  set, so a second world's misconfiguration went unreported once any world
-  had already warned about that shape kind - contradicting the class's own
-  "holds no module-level state" documentation. The set now lives on the
-  world instance.
-- **A renderer bound to more than one drawable type connects, disconnects and
-  pre-warms once, not once per bound type.** `RendererRegistry.connect`,
-  `disconnect` and `renderers()` iterated the underlying map's raw values,
-  which repeats a shared renderer for every target it is bound to, while
-  `destroy()` already deduplicated by instance. Core binds `Text` and
-  `BitmapText` to one renderer, so every WebGPU initialization compiled the
-  text pipelines twice. The three methods now iterate the same deduplicated
-  view `destroy()` uses.
-- **A duplicate renderer target across two bindings no longer leaves an
-  earlier, valid binding's renderer already created.** `materializeRendererBindings`
-  validated each binding's targets and created its renderer in the same pass,
-  so a conflict discovered on a later binding was reported only after an
-  earlier binding's GPU-backed renderer had already been created and bound.
-  The duplicate-target scan now runs over every binding before any renderer
-  is created.
-- **A guide-content-only change now runs the unit lane, which is what
-  validates it.** `test/site/guide-structure.test.ts` and its siblings live
-  under `test/` and check `site/src/content/**`, so they ran on every engine
-  change and never on the guide content they exist to validate. CI lane
-  selection now gates the unit lane on a `guides` area as well as `engine`.
-- **`packages/exojs-bench/test/**` and `packages/create-exo-app/**` changes
-  now run a validation lane.** Neither package is a runtime dependency of
-  the engine, so both sat outside `RUNTIME_PACKAGES` and a change to either
-  left CI green without exercising it. A bench test change now gates the
-  existing structural-gate lane; a create-exo-app change now gates a new
-  verify lane that runs `verify:create-exo-app`.
-- **`cacheAsTexture` no longer risks a bundler tree-shaking away the module
-  that makes it work.** The package declared `"sideEffects": false` while
-  `Sprite.ts`, `Logger.ts` and `theme.ts` register load-bearing state at
-  import time (the sprite factory `cacheAsTexture` depends on, the dev
-  console sink, and the frozen default UI theme), so a bundler that never
-  saw a used export from one of them was free to drop it. Those three
-  modules are now listed in `sideEffects`, and the error a dropped `Sprite.ts`
-  produces now names the cause and the remedy instead of just failing.
-- **`Sprite`, `Video` and the sprite serializer no longer hand the shared
-  `Rectangle.temp` scratch across a call into node code.** `setTextureFrame`
-  reads its `frame` argument again after bounds/origin invalidation
-  re-enters node code, so passing the process-wide `Rectangle.temp` risked a
-  concurrent caller overwriting it before that second read - a synchronous
-  bounds query away from a silently wrong frame. Each call site now passes
-  its own rectangle instead.
+- **A destroyed chain collider could keep answering broad-phase queries forever.**
+- **`PhysicsWorld.step()` dropped every fixed step's contact and sensor events except the last.**
+- **`PhysicsWorld.add()` could leave a body permanently half-attached.**
+- **Destroying two colliders of the same dynamic body from one event callback could leave it massless.**
+- **A tile layer's rendering stopped following its offset once mutated at runtime.**
+- **A body added while `PhysicsWorld.destroy()` was running from inside that same dispatch was never marked destroyed.**
+- **A second `PhysicsWorld` no longer inherits the first world's "already warned about this bullet shape" state.**
+- **A renderer bound to more than one drawable type connects, disconnects and pre-warms once, not once per bound type.**
+- **A duplicate renderer target across two bindings no longer leaves an earlier, valid binding's renderer already created.**
+- **A guide-content-only change now runs the unit lane, which is what validates it.**
+- **`packages/exojs-bench/test/.**
+- **`cacheAsTexture` no longer risks a bundler tree-shaking away the module that makes it work.**
+- **`Sprite`, `Video` and the sprite serializer no longer hand the shared `Rectangle.temp` scratch across a call into node code.**
 
 ## [0.16.1] - 2026-09-02
 
 ### Fixed
 
 - **A still-loading texture no longer halts the application under WebGPU.**
-  `WebGpuBackend` raised when a texture had no source or zero dimensions. That
-  is a lifecycle state, not a caller error, and the frame guard halts the loop
-  after three consecutive throws - so a drawable carrying its own geometry (a
-  `Mesh`, unlike a `Sprite`, which measures 0x0 without a frame and is never
-  submitted) ended the whole application while its image was still decoding.
-  The upload is now skipped and performed by the next frame that finds a
-  source, which is what the WebGL2 backend has always done.
 - **A dirty mark on one channel no longer erases an unread mark on another.**
-  A content change followed by a move left only the move behind, so a reader
-  asking about content was told nothing had changed and went on replaying a
-  stale recording for as long as the node kept moving. Each channel now carries
-  its own mark sequence.
 - **Nine-slice and repeating sprites rebuild when a deferred texture lands.**
-  Both derive their geometry from the texture's dimensions but announced
-  nothing when those dimensions arrived, so a subtree recorded while the handle
-  still reported 0x0 replayed that empty geometry indefinitely.
-- **A `Mesh` no longer draws while its texture is still loading.** It was the
-  one WebGPU renderer without the guard every other one carried, which stayed
-  invisible for as long as the backend raised and took the application down
-  with it. The draw is skipped rather than sampling white, which would flash
-  the geometry as a solid block against the vertex colour, and the mesh
-  invalidates when the image lands.
+- **A `Mesh` no longer draws while its texture is still loading.**
 
 ### Added
 
-- **`isSampleableTexture`** in the renderer SDK answers whether a texture can
-  be sampled right now, across every texture kind. Renderers previously had to
-  reconstruct that rule from `Texture.source` and `DataTexture`, and each one
-  spelled it differently.
-- **`AudioSystem.onPlaybackBlocked`** and the process-wide
-  **`onAudioPlaybackBlocked`** fire when a play call is dropped because the
-  autoplay policy still blocks audio - the moment worth asking for a gesture,
-  as opposed to `locked`, which is true for most of a page's life and says
-  nothing about whether anything wanted to be heard. The process-wide variant
-  carries the blocked system, for hosts that cannot reach the instance.
-- **The playground asks for that gesture.** A visitor who types a `play()` call
-  into a sample that declares no audio previously got silence and no
-  explanation, because the gate was driven by the sample's declared
-  capabilities rather than by what the visitor wrote.
+- **`isSampleableTexture`**
+- **`AudioSystem.onPlaybackBlocked`**
+- **The playground asks for that gesture.**
 
 ## [0.16.0] - 2026-09-01
 
-The scene-model release. `Application`'s frame loop, scene lifecycle, and
-navigation are rebuilt around a normative multiphase `System` contract, a
-typed scene registry with scene-key navigation, pause with a per-binding
-availability policy, retention (suspend a scene instead of destroying it,
-restore it later without re-running `load()`/`init()`), transparent preload,
-and a class-based, composable `SceneTransition` system. This is a pre-1.0
-release and includes intentional breaking changes; see **Changed** and
-**Removed**.
+The scene-model release. `Application`'s frame loop, scene lifecycle, and navigation are rebuilt around a normative multiphase `System` contract, a typed scene registry with scene-key navigation, pause with a per-binding availability policy, retention (suspend a scene instead of destroying it, restore it later without re-running `load()`/`init()`), transparent preload, and a class-based, composable `SceneTransition` system. This is a pre-1.0 release and includes intentional breaking changes; see **Changed** and **Removed**.
 
 ### Added
 
-- **`Color` takes packed numbers and hex strings.** A number is read as
-  `0xRRGGBB`, with alpha as its own argument; a string may be any of the four
-  CSS forms, alpha last:
+- **`Color` takes packed numbers and hex strings.**
 
-  ```ts
-  new Color(0xff6347); // packed, opaque
-  new Color(0xff6347, 0.5); // packed, with alpha
-  Color.fromHex('#f63'); // #RGB, #RGBA, #RRGGBB, #RRGGBBAA
-  Color.from(value, alpha?); // any of those, plus a Color or { r, g, b, a }
-  ```
+- **The shared `Color` corners are frozen in development builds.**
 
-  The channel form is untouched: three or more arguments still mean
-  `(r, g, b, a?)`. Only a call with one or two arguments takes the packed
-  reading, and there were none in this repository.
+- **`DeepReadonly<T>` — `readonly` applied at every level.**
 
-  A number deliberately stops at six digits. JavaScript keeps no leading zeros,
-  so `0x00FF00FF` (opaque green as RGBA) and `0xFF00FF` (magenta as RGB) are the
-  _same_ value at runtime, and `0x000000FF` (opaque black) is indistinguishable
-  from `0x0000FF` (blue). Any "wider than `0xFFFFFF` means RGBA" heuristic
-  silently misreads every colour whose red channel is zero. A string keeps its
-  length and has no such problem.
+- **Audio sprite tables can live in a sidecar file.**
 
-  New alongside them: `color.setHex(value, alpha?)` overwrites in place for
-  loops where the factory's allocation would land in the frame budget, and
-  `Color.toRgb()` returns the `0xRRGGBB` the constructor accepts, so the two
-  round-trip.
+- **Three error classes where callers were told to match on message text.**
 
-- **The shared `Color` corners are frozen in development builds.** `Color.white`
-  and the other named constants have always been shared instances, so a
-  `Color.white.set(...)` anywhere repainted every other reader of the same
-  value. Writing to one now throws in a development build and is unchanged in
-  production, where the freeze is compiled out. Clone first when a named colour
-  is the starting point for a mutable one:
-
-  ```ts
-  const tint = Color.white.clone().set(255, 200, 200);
-  ```
-
-  The `Float32Array` returned by `toArray()` is deliberately not covered: it is
-  a shared, writable buffer, as its own documentation states.
-
-- **`DeepReadonly<T>` — `readonly` applied at every level.** The recursive
-  counterpart to the existing `Mutable<T>`, for descriptor and configuration
-  data handed to a caller who may read it but must not write it. Nested
-  objects, arrays, tuples, `Map` and `Set` are all rewritten; primitives pass
-  through. It is a type-level guarantee only, and it is meant for data, not for
-  class instances — a mapped type drops private fields and leaves methods
-  callable, so a frozen instance still needs `Object.freeze`.
-
-- **Audio sprite tables can live in a sidecar file.** `sprites` on a `sound`
-  asset now also accepts a source string naming a JSON sidecar that holds the
-  same `{ name: { start, end, loop? } }` map, so a table a tool produced no
-  longer has to be pasted into code:
-
-  ```ts
-  Assets.from({ sfx: { type: 'sound', source: 'sfx.ogg', sprites: 'sfx.sprites.json' } });
-  ```
-
-  The sidecar is loaded through the sound's own dependency scope - it is claimed
-  and released with the sound, the way `LdtkProject` claims its atlases - so one
-  asset is configured, not two. Its source resolves against the loader's base
-  path like any other asset source, _not_ relative to the audio file. A
-  malformed sheet fails the load with an `AssetDecodeError` naming the sidecar,
-  including a window only the decoded buffer's duration can reject.
-
-  Deliberately **not** added: a converter for foreign atlas formats.
-  `audiosprite` and Howler store `[offsetMs, durationMs]` tuples in formats that
-  are not even a shared file layout; that conversion belongs in a build step,
-  once, not in the loader on every load.
-
-- **Three error classes where callers were told to match on message text.** The
-  asset layer already reported cache and network failures as narrowable types,
-  and everything else in `audio`, `input`, `math` and the untyped remainder of
-  `assets` threw a bare `Error`. An error now gets its own class when a consumer
-  branches on it and acts differently, which is what these three do:
-
-  | Class                   | Raised for                                                                                                                | What the caller does                                               |
-  | ----------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-  | `AudioUnsupportedError` | No `AudioContext`, `OfflineAudioContext` or `getUserMedia` in this environment                                            | Disable audio outright - it will not work later either             |
-  | `InputBindingError`     | A saved binding profile whose shape, version, kind or tokens this build cannot read                                       | Discard the save, fall back to the declared defaults               |
-  | `AssetDecodeError`      | Bytes that arrived intact but cannot be decoded - a malformed container, rejected XML, undecodable audio, an empty buffer | Drop the asset; unlike a transport failure, retrying will not help |
-
-  `AudioInput.open()` still passes the browser's own `DOMException` through
-  unwrapped when `getUserMedia` exists but fails: its `name`
-  (`NotAllowedError`, `NotFoundError`) is the standard signal to branch on, and
-  hiding it behind an engine class would be a loss.
-
-  Programmer errors deliberately stay a plain `Error` - an action claimed by two
-  `ActionMap`s, a reserved action name, a malformed pattern written in source -
-  so a `catch` around a profile load does not swallow a bug.
-
-  Written down alongside them: a **failure-diagnostics policy** in
-  `CONTRIBUTING.md` covering when to reach for `assert`/`assertDefined`,
-  `invariant`, or a typed error class, and the argument-evaluation trap that
-  makes a formatted assert message allocate in production.
-
-- **A world runtime and a map object spawner — levels stream, authored objects become
-  entities.** Both map adapters stopped at data. LDtk modelled a world as an array of converted
-  levels: `__neighbours` was not parsed at all, world placement survived only as two numbers in
-  `TileMap.properties`, and loading a `.ldtk` file fetched **every** external `.ldtkl` payload and
-  converted **every** level, whether the game wanted them or not. Objects were worse off: both
-  adapters ended at `TileMapObject`, with no contract at all for turning one into a game object,
-  and LDtk threw away the entity `iid` — the only identity it guarantees stable — leaving a
-  numeric id derived from document position that no savegame can rely on.
-
-  `@codexo/exojs-tilemap` now carries the format-neutral runtime both adapters feed:
-
-  | Symbol                  | What it owns                                                                                            |
-  | ----------------------- | ------------------------------------------------------------------------------------------------------- |
-  | `MapWorld` / `MapLevel` | Where levels are: stable id, world bounds, neighbour graph, externality. Metadata only.                 |
-  | `MapWorldRuntime`       | Explicit `loadLevel` / `unloadLevel`; one child `LoaderScope` per level; at most one live level per id. |
-  | `MapLevelRuntime`       | One loaded level's map, scope and spawn session, behind one `destroy()`.                                |
-  | `MapObjectSpawner`      | A local dispatch table from object class to factory.                                                    |
-  | `MapObjectDescriptor`   | The format-neutral view of one authored object.                                                         |
-  | `MapSpawnSession`       | What one spawn produced, keyed by stable source id.                                                     |
-
-  The split is deliberate: ExoJS owns the **mechanism** — identity, ordering, cancellation,
-  rollback, lifetime — and the game owns the **policy**. Nothing watches a camera, guesses a
-  streaming radius, or keeps a global entity registry. A spawner is an instance, so several
-  games, tests, editor previews and mods coexist in one process with nothing to reset between
-  them, and dependencies travel through a caller-defined `TContext` rather than any service
-  locator in the engine.
-
-  Four contract points are pinned and tested rather than left to emerge:
-
-  - **Order** is object-layer order, then object order within the layer, and asynchronous
-    factories are awaited in that order — a fast promise cannot overtake a slow one before it.
-  - **Atomicity**: a factory that throws destroys everything already created, in reverse order,
-    and no session is produced. The failure arrives as `MapSpawnError` with the original error as
-    `cause`.
-  - **Cancellation**: unloading a level mid-load aborts its spawn. A factory already in flight is
-    still awaited — abandoning it would leak whatever it produced — and its result is destroyed
-    with the rest of the rollback, so no result outlives the level it belonged to. Cancelling this
-    way also frees the level id immediately: a `loadLevel` issued in the same turn starts a
-    fresh load instead of joining the one on its way out.
-  - **Teardown order** is spawned objects (reverse spawn order), then the map, then the level's
-    `LoaderScope` last, because everything before it may still be reading a texture the scope
-    keeps resident. Sibling levels are untouched: each holds its own claims.
-
-  On the LDtk side, `__neighbours` is parsed and mapped onto `MapLevelSide` (an unrecognised
-  direction code stays an adjacency rather than being dropped), multi-world projects yield one
-  `MapWorld` per world instead of one merged one — LDtk worlds have independent coordinate
-  spaces, so merging them would invent overlaps — and the entity `iid` now reaches
-  `TileMapObject.sourceId`, which is what `MapSpawnSession.get(id)` and savegame restoration key
-  on. Tiled objects keep their numeric id as a string; both adapters also pass the raw source
-  record through as `TileMapObject.source` for the rare format-specific case.
-
-  Streaming arrives as a **second asset type, not a changed one**: `ldtkMap` is untouched and
-  still loads a whole project eagerly. The new `ldtkProject` type loads the document and every
-  tileset atlas — shared between levels, and a level load that waited on an image fetch would
-  stutter at exactly the wrong moment — and no level payload at all. An external `.ldtkl` file is
-  fetched when its level loads, claimed by that level's scope, and released when it unloads. The
-  same pair already exists on the Tiled side (`tileMap` / `tiledSource`), so the shape is not new.
-
-  Tiled has no world file here and this does not invent one; a Tiled game describes its layout
-  with a `MapWorld` it builds and gives `MapWorldRuntime` a provider. See the new
-  **Worlds and level streaming** guide.
+- **A world runtime and a map object spawner — levels stream, authored objects become entities.**
 
 - **`@codexo/exojs-tilemap-physics` — tilemap collision geometry as physics bodies.**
-  Tile collision data was fully parsed and fully placeable, but turning it into a world a
-  player can stand on was still copy-paste: an example recipe mapped a few object kinds and
-  built one static body per object, with no lifecycle at all. A streamed map therefore kept
-  colliders for chunks that had scrolled away and had none for chunks that had just arrived.
 
-  The new package is the productised bridge. `TileColliderStreamer` owns **one static body
-  per resident chunk** and keeps them in step with the layer: chunks that load get a body,
-  edited chunks are rebuilt, evicted chunks lose theirs. It observes the layer through the
-  public revision counters, so it works with `ChunkStreamer`, a hand-rolled loader, or a
-  bounded layer that is fully resident, and `sync()` returns immediately when nothing has
-  changed. `buildObjectLayerColliders` covers object layers, which have no residency and
-  therefore no lifecycle.
+- **Collision authored per cell reaches the same bridge.**
 
-  Geometry maps as follows, with concave polygons and both polyline forms now handled
-  instead of skipped:
+- **`toConvexPolygonShapes` is public API.**
 
-  | Source                   | Collider                                                            |
-  | ------------------------ | ------------------------------------------------------------------- |
-  | Merged whole-cell region | one box per merged rectangle, or one closed chain per boundary loop |
-  | Rectangle                | `BoxShape`                                                          |
-  | Ellipse                  | `CapsuleShape` along the major axis, `CircleShape` when round       |
-  | Convex polygon           | one `PolygonShape`                                                  |
-  | Concave polygon          | several `PolygonShape`s on the same body                            |
-  | Polyline                 | `ChainShape`, closed when its endpoints coincide                    |
-  | Point                    | nothing                                                             |
+- **Continuous collision now covers the whole shape set.**
 
-  `regionMode: 'outline'` traces a solid region's boundary into closed one-sided chains
-  instead of merged boxes. A body sliding across per-tile boxes catches on their shared
-  edges: measured over a 16-tile run whose cells carry two different `type` strings, a
-  sliding box was thrown 227 px/s upward and stalled from 600 px/s to 266 px/s. The traced
-  boundary of the same run is a single collider and carries the body across at exactly its
-  input speed. Boxes stay the default because a chain has no interior — queries inside it
-  find nothing and a body spawned inside falls through — while merged boxes keep the area
-  semantics most maps rely on.
+- **`ChainShape` — connected boundary geometry that a body can slide along.**
 
-  `@codexo/exojs-tilemap` still never imports physics and `@codexo/exojs-physics` still
-  never imports tilemap; the bridge is a third package that peer-depends on both.
+- **`SegmentShape` — zero-thickness boundary geometry, and a dynamic body must now carry mass.**
 
-- **Collision authored per cell reaches the same bridge.** The tilemap collision layer read
-  one source only: the collision shapes hanging off a tile's tileset definition. That is how
-  Tiled authors collision, and it is the only editor the bridge actually served. LDtk authors
-  collision as `IntGrid` — a per-cell classification that is independent of the tiles a layer
-  draws — and a collision layer built that way commonly draws nothing at all. Such a level
-  produced **zero** colliders, not partial ones: with no placed tile there is no tileset
-  definition to read and no chunk to walk.
+- **`CapsuleShape` — exact capsule geometry for characters and rounded bodies.**
 
-  `buildTileCollisionGeometry` now accepts a second occupancy source,
-  `cells: (tx, ty) => string | null`, feeding the same internal grid that whole-cell tile
-  boxes claim. The string is a classification, not a meaning: it is the merge key for
-  adjacent cells, so two values never fuse into one rectangle, and it is what a
-  `TileColliderStreamer` `material` resolver sees. Deciding that `Water` is a sensor stays
-  the caller's call. With a cell source and no explicit region, a bounded layer walks its
-  full tile extent, and `TileColliderStreamer` covers every chunk-sized partition of that
-  layer rather than only the resident chunks. A partition that produces nothing is cached as
-  empty, so an unrelated edit elsewhere does not re-walk the map.
-
-  `createLdtkIntGridCellSource(layer)` returns an LDtk `IntGrid` layer in that form, classified by the
-  value's authored identifier. `@codexo/exojs-tilemap-physics` gains no knowledge of either
-  editor: it neither depends on nor names a format adapter, which is now covered by a test.
-
-- **`toConvexPolygonShapes` is public API.** Convex decomposition existed but was
-  package-internal, so a caller outside the physics package could not build a collider from
-  a concave outline at all. It now ships as `toConvexPolygonShapes(vertices)`, returning the
-  `PolygonShape`s to attach to one body. An already-convex outline yields exactly one shape,
-  so a caller that does not know whether its input is convex can route everything through
-  it. Part count and order remain explicitly non-contractual; area, centre of mass and
-  rotational inertia of the compound are preserved.
-
-- **Continuous collision now covers the whole shape set.** A bullet was only ever swept
-  against circles and polygons, so a fast body crossed a capsule, a segment or a chain
-  within one step exactly as if `isBullet` had never been set — the shapes most likely to
-  be the thin wall a projectile must not pass.
-
-  Every mass-bearing shape is now cast against every shape kind:
-
-  | Moving shape                                             | Swept against                                |
-  | -------------------------------------------------------- | -------------------------------------------- |
-  | `CircleShape`, `CapsuleShape`, `PolygonShape`/`BoxShape` | circle, capsule, polygon/box, segment, chain |
-  | `SegmentShape`, `ChainShape`                             | not swept as the moving operand              |
-
-  The cast stays exact for a translation. A pair carrying a radius is solved as one
-  configuration-space ring — the Minkowski sum of the target's core and the moving shape's
-  negated start-pose core, cast as a point inflated by both radii — so a capsule meets a
-  corner on its cap arc rather than a radius short of it, which a radius-inflated
-  separating-axis test would report. Radius-free pairs keep the existing swept SAT.
-
-  A chain is swept through its edge proxies and blocks under the same one-sided adjacency
-  rule the discrete narrow phase applies, so a bullet arriving from the hollow side passes
-  through exactly as a slow body does, and the blocking collider handed back is always the
-  authored chain. Boundary geometry as the _moving_ operand stays deliberately unswept: a
-  segment or chain is level structure, and a development build warns once per shape kind if
-  a bullet body carries one.
-
-- **`ChainShape` — connected boundary geometry that a body can slide along.** Level
-  outlines, terrain and side-scroller ground are runs of connected edges, and building them
-  from independent `SegmentShape`s does not work: at a shared vertex two segments carry two
-  different normals, so a body crossing the seam snags, is launched, or receives a normal
-  pointing into the surface.
-
-  `new ChainShape(vertices, { closed })` is one shape over the whole run, open or closed. It
-  owns the adjacency between its edges and uses it to suppress exactly the contacts that
-  cause that snagging, which is why the adjacency belongs to the engine and not to the
-  caller. Coincident vertices are welded and a repeated closing vertex is dropped; collinear
-  vertices are **kept**, because a straight run is authoring data and removing it would move
-  the adjacency of its neighbours.
-
-  Unlike a segment, a chain is **one-sided**: each edge collides only from the side its
-  outward normal points to, following the polygon winding convention — a counter-clockwise
-  run is solid on the outside, a clockwise run is solid on the inside. It has no interior, so
-  `massProperties` is `null` and a `dynamic` body still needs a mass-bearing collider
-  alongside it; static and kinematic bodies (a moving platform, a rotating level piece) carry
-  one on their own.
-
-  Internally a chain collider fans out into engine-owned per-edge proxies, so a body touching
-  several edges at once produces several solver contacts — which is what the one-manifold-per-
-  pair model requires — without any of that partition becoming public. `body.colliders` lists
-  the authored chain and nothing else, queries report the chain (once, however many edges they
-  overlap), and `collisionStart`/`collisionEnd` and `onSensorEnter`/`onSensorExit` fire once for
-  the whole chain: on the first edge contact that begins and the last that ends. The contact
-  modifier still sees one contact per edge, each carrying the authored collider pair, because
-  that is the granularity it decides at.
-
-- **`SegmentShape` — zero-thickness boundary geometry, and a dynamic body must now carry
-  mass.** Level edges and one-off walls had to be modelled as thin boxes, which are solid,
-  carry mass, and behave badly once they are thin enough to matter.
-
-  A `SegmentShape` is a boundary between two local endpoints. It has no interior, so its
-  `massProperties` is `null` and it contributes collision only; it blocks from **both**
-  sides, because there is no inside for it to be outside of. One-way behaviour is the
-  contact modifier's job, not a flag on the geometry. Internally a segment is the same
-  two-vertex ring a capsule is, minus the radius, so segment/polygon and segment/capsule are
-  the routine capsules already added.
-
-  Segment against segment is deliberately **unsupported**: two zero-thickness boundaries
-  have no overlap volume, so there is no stable manifold to report. `collide` produces none
-  and `testOverlap` is `false` — not "sometimes detected but not solved".
-
-  `queryPoint` never hits a segment, at any distance. Answering within an epsilon would make
-  the result depend on an engine constant rather than the authored geometry; AABB queries
-  and ray casts are the meaningful questions, and both work.
-
-  **BREAKING — a `dynamic` body must own at least one collider with mass.** Until now such a
-  body silently ended up with `mass = 0` and `invMass = 0`, which the solver cannot tell
-  apart from a static body; `isMassReady` recorded it and nothing read it. Adding a dynamic
-  body whose colliders are all boundary geometry (or all zero-density) now throws, as does
-  destroying the last mass-bearing collider of a body that still holds others. Removing a
-  body's only collider is still fine — a body with no geometry is one still being assembled.
-
-- **`CapsuleShape` — exact capsule geometry for characters and rounded bodies.** The shape
-  vocabulary was circle, polygon and box, so the standard character collider had to be
-  approximated by a box (catches on edges) or a polygon (its mass then depends on how many
-  sides you chose).
-
-  A capsule is the set of points within `radius` of a segment, and it is treated that way
-  everywhere: `new CapsuleShape(x0, y0, x1, y1, radius)` takes the two spine endpoints, and
-  the area, centroid and rotational inertia are the closed-form values for a rectangle plus
-  two end caps. Nothing about a capsule depends on a tessellation - the debug overlay draws
-  its arcs with line segments, the solver never sees them.
-
-  Internally a capsule is a two-vertex ring with a radius, which is what lets it share the
-  polygon narrow phase rather than adding a parallel one: capsule/polygon and
-  capsule/capsule run the same SAT-and-clip routine as polygon/polygon, with the radii
-  moving where "touching" begins. A capsule resting on its side therefore gets the same
-  two-point manifold a box does, instead of rocking on a single point. Circle/capsule is
-  its own one-point routine, since a circle meets a rounded surface in one place.
-
-  Point queries, AABB queries, ray casts and `overlapShape` all handle capsules. Continuous
-  collision does not sweep them yet - a bullet body carrying a capsule collider logs a
-  development-build warning and can still tunnel; the remaining shape casts follow with the
-  segment and chain shapes.
-
-- **`triangulate` is exported from the core math surface.** The ear-clipping
-  triangulator already backed `MeshBuilder.polygon`, but was module-private, so anything
-  outside core that needed a triangle list for a simple polygon had to reimplement it. It
-  takes a flat `(x, y)` sequence in either winding and returns a `Uint32Array` of triangle
-  indices into it.
+- **`triangulate` is exported from the core math surface.**
 
 - **Bound nodes can be drawn between fixed steps instead of snapping to the latest one.**
-  Physics runs at a fixed rate and the display does not, so at 60 Hz physics on a 144 Hz
-  screen most frames showed the same fixed state twice and then jumped. `PhysicsBinding`
-  wrote the newest fixed transform verbatim and bodies kept no earlier state to blend
-  from, so there was nothing an application could interpolate either.
 
-  A body now brackets its most recent fixed step: `previousX`, `previousY` and
-  `previousAngle` hold the transform that step started from, `x`/`y`/`angle` the one it
-  produced — including when several fixed steps run inside one `step()` call, where the
-  pair describes the last of them. A body that did not move reports `previous === current`
-  rather than a stale pair, and `setTransform()` collapses the pair, because a teleport is
-  a discontinuity and must not be swept across.
+- **A world-level contact modifier decides what a contact does this step.**
 
-  `PhysicsWorld`'s `interpolation` option (default `false`) switches bindings over to
-  placing the node between the two. The blend factor comes from `frameAlphaSource`, which
-  defaults to the world's own accumulator — correct for a world driven with `step()`. A
-  world registered as a `System` goes through `fixedUpdate()` and bypasses that
-  accumulator, so it has to be pointed at the host's own fraction
-  (`() => app.frameAlpha`); physics deliberately does not run a second clock, which would
-  drift from the host's the moment a step is clamped or dropped. Interpolated presentation
-  moves to the world's new variable-rate `update()` phase, since the factor is only final
-  once the frame's last fixed step has run.
-
-  Angles are blended with a plain lerp: body angles are continuous and unbounded, never
-  wrapped into a range, so there is no shortest-arc case. Interpolation is presentation
-  only — the simulation is bit-identical either way.
-
-- **A world-level contact modifier decides what a contact does this step.** There was no
-  `preSolve`/`enableContact` anywhere in the physics API, so a one-way platform — solid
-  from above, passable from below — could not be expressed at all: collision filters answer
-  "may these two touch", not "should this particular contact push right now".
-
-  `PhysicsWorld.contactModifier` runs once per solid contact per fixed step, after contact
-  generation and before island building and the solver. It gets the two colliders, the two
-  bodies, the A→B normal, the manifold point count and the deepest penetration, and it may
-  change three things: `enabled`, `friction` and `restitution`. All three are re-derived
-  from the two colliders before every step, so a change applies to that step only.
-
-  Disabling a contact skips it in the solver without touching detection: it stays
-  geometrically touching and `onCollisionStart`/`onCollisionEnd` still describe the real
-  geometry. It also does not join its two bodies into one sleeping island — which is why
-  the hook runs before the sleep pass, not after — and its warm-start impulses are dropped,
-  so re-enabling it starts from zero rather than releasing a stale impulse. Sensors never
-  reach the modifier; they produce no contact to solve.
-
-  There is at most one modifier per world. It mutates simulation state, so a multi-listener
-  signal would make the outcome depend on registration order.
-
-- **Particles are addressed by channel, and a death is a snapshot.** The whole
-  particle SoA was public and the guide recommended mutating it, which made the
-  CPU/GPU packing a permanent contract — and on the GPU path it was not even
-  true: only the compute shader advances position, velocity, scale, rotation and
-  colour, nothing reads them back, so every CPU reader saw the values a particle
-  was born with. A sub-emitter fired at the parent's birthplace on WebGPU and at
-  its death place on WebGL2.
-
-  An update module and a render mode now receive a `ParticleBatch` — `position`,
-  `velocity`, `scale`, `rotation`, `timing`, `color`, `frame`, `count`,
-  `isAlive` — whose arrays are still the simulation's own storage, so bulk loops
-  keep their speed while the packing behind the names stays free to change.
-
-  ```ts
-  class Sway extends UpdateModule {
-    apply(particles: ParticleBatch, dt: number): void {
-      const { x: velX } = particles.velocity;
-      const { elapsed } = particles.timing;
-
-      for (let i = 0; i < particles.count; i++) {
-        velX[i] += Math.sin(elapsed[i] * 8) * 250 * dt;
-      }
-    }
-  }
-  ```
-
-  Particles come into existence through `system.emit()`, which returns a writer
-  for one particle at its spawn defaults — the one per-particle write that is
-  true on both backends. `liveCount` is read-only, `spawn()` and the raw arrays
-  are gone, and a spawn module fills what an emitter hands it rather than
-  writing slots.
-
-  A death module receives a `ParticleDeathContext` — position, velocity,
-  rotation, scale, colour, elapsed and lifetime at the moment of death — instead
-  of a slot. On the GPU path the compute shader appends a death record and the
-  system reads it back, so both backends report the same death state; the slot
-  is deliberately absent, because it may already hold a different particle by
-  the time the callback runs. Delivery is exactly once per expired particle, in
-  slot order, but no longer necessarily in the frame it expired: a GPU death
-  arrives with its readback, typically the next frame. Readbacks overlap - the
-  records travel through a ring of staging buffers, so consecutive frames that
-  each report deaths do not wait on one another, and neither the frame loop nor
-  the simulation ever blocks on a mapping. Deaths reported while every staging
-  slot is still in flight stay on the device and travel with the next batch;
-  batches are delivered in the order they were submitted. Exactly-once holds
-  while that backlog fits the system's capacity - past it the excess is dropped
-  rather than stalling the frame loop, and a development build reports it once
-  per system. A system without death modules allocates no death buffer and reads
-  nothing back.
+- **Particles are addressed by channel, and a death is a snapshot.**
 
 - **Particle modules can be changed while particles are in flight.**
-  `addUpdateModule` threw after the first `update()` and `clearUpdateModules`
-  left the system compiled, so there was no way to retune a running effect. The
-  simulation state and the compiled program are now separate lifetimes: changing
-  the module list rebuilds the program, and on the GPU path the live particles
-  keep the position and velocity the device has been integrating. Adding a
-  module without a `wgsl()` implementation to a running GPU system is the one
-  transition that cannot preserve them — the simulation moves to the CPU, which
-  has no copy of the device's state, so the system clears its particles rather
-  than continuing from stale values.
 
-- **`music` and `video` assets actually stream.** Both types downloaded the
-  complete file into an `ArrayBuffer`, wrapped it in a blob and only then handed
-  it to the media element, so "streaming" described the decode and nothing else -
-  a long video cost its full size in memory before a single frame played. A
-  URL-backed `music`/`video` asset now hands the resolved URL to the element and
-  lets the browser own the transport.
-
-  ```ts
-  const intro = await loader.load(Asset.type('video', 'video/intro.mp4'));
-  const packed = await loader.load(Asset.type('video', 'video/logo.mp4', { download: true }));
-  ```
-
-  The contract that comes with it:
-
-  - **Readiness is `canplay`** for both transports (it was `canplaythrough`), and
-    a streamed asset being ready means it can start playing, not that it has
-    fully arrived.
-  - **`download: true`** fetches the complete bytes through the loader's
-    cache pipeline first - cacheable, available offline, real byte progress, and
-    what container (`.exoa`) entries always do. Streamed media reports asset-level
-    progress only: the loader cannot see inside a browser-owned transfer and does
-    not invent a percentage for one.
-  - **A failure before readiness fails the load** and is reported by
-    `Loader.onError`, as before. **A failure after readiness** - a transfer that
-    breaks mid-playback - now reaches the new `Video.onError` / `AudioStream.onError`
-    signals instead, so one load can never appear to fail twice.
-  - **Streamed media defaults to `crossOrigin: 'anonymous'`**, set before the
-    source. Without it a cross-origin video plays but cannot be uploaded as a
-    texture. Pass `crossOrigin: null` for playback-only media, or
-    `'use-credentials'` where the host requires it.
-  - **Releasing the last claim detaches the element** (pause, drop source,
-    reload), ending playback and the transfer rather than leaving a released
-    video streaming in the background. Cancelling a load in flight does the same
-    and rejects with an `AbortError`.
-  - **The transport is not identity, the CORS mode is.** One URL is one asset
-    however its bytes arrived, so a container entry and a network load share a
-    single resident resource - and `download: true` therefore decides how the
-    asset is built by the load that materializes it, not for a load that joins
-    one already resident. A non-default `crossOrigin` is identity instead: it is
-    baked into the element, so `null`, `'anonymous'` and `'use-credentials'` for
-    one URL are separate assets and no consumer is handed an element whose CORS
-    mode it did not ask for.
-  - **A container entry never rebuilds a resident asset.** Unpacking an entry
-    whose canonical asset is already resident (or already being fetched) now
-    claims it and stops there, instead of storing a second payload under one
-    identity.
-
-  `AssetLoaderContext` gained `resolveUrl(source)` for custom handlers that need
-  to hand a URL to a browser primitive rather than fetch it themselves.
+- **`music` and `video` assets actually stream.**
 
 - **Asset ownership is explicit and safe for several consumers at once.**
-  `Loader.createScope(options?)` returns a `LoaderScope` — an owner with `get`,
-  `load`, `release` and `destroy` whose lifetime you decide. Several scopes can
-  hold the same asset independently: they share one fetch and one resident
-  payload, and one scope releasing never invalidates another. Every call creates
-  a new owner and never looks one up, so `name` is a label for `inspect()` and
-  never an identifier; two scopes created as `createScope({ name: 'world' })`
-  cannot free each other's assets. `SceneLoader` is now such a scope, and scene
-  teardown is unchanged.
 
-  ```ts
-  const level = app.loader.createScope({ name: 'level-1' });
-  const hud = app.loader.createScope({ name: 'ui:hud' });
+- **`AssetLoaderContext.scope` owns an asset's sub-assets.**
 
-  const font = level.get('fonts/ui.png');
-  hud.get('fonts/ui.png'); // the same instance — one fetch, two owners
+- **Effects declare the bounds they produce.**
 
-  level.destroy(); // the font stays loaded: the HUD still owns it
-  ```
+- **HiDPI runtime text — `Text.pixelRatio`.**
 
-  Scopes nest: `scope.createScope(options?)` creates a child that claims
-  independently but cannot outlive its parent. Destroying the child frees only
-  its own claims; destroying the parent destroys every child it still has,
-  recursively, so a scope created under `scene.loader` is cleaned up with that
-  scene. The hierarchy is a lifetime hierarchy only — it never affects asset
-  identity, and a child holding the same asset as its parent is two claims.
-
-  Each scope also reports its own foreground progress via `onLoadStart` /
-  `onLoadProgress` / `onLoadComplete` / `onLoadError`, while the loader keeps
-  reporting the aggregate, so a streamed chunk no longer interleaves with
-  unrelated work in one counter.
-
-- **`AssetLoaderContext.scope` owns an asset's sub-assets.** A handler that loads
-  dependencies — a bitmap font pulling its page textures, a Tiled map pulling its
-  tilesets — now loads them through `context.scope`, which lives exactly as long
-  as the asset being built. The claims drop when that asset loses its last owner,
-  and a dependency another consumer holds independently survives.
-
-- **Effects declare the bounds they produce.** A drawable's source bounds were
-  assumed to be its final visual bounds, so an effect that reaches outside what
-  it was handed had nowhere to put the result — a `BlurFilter` was clipped by its
-  own input on all four sides, and its tail was not faint but absent. `Filter`
-  now answers a `Bounds -> Bounds` question via `getOutputBounds(input, output)`,
-  defaulting to the identity so a colour matrix, a LUT or an existing custom
-  filter needs no change. A chain composes sequentially — each filter asked with
-  its predecessor's output — and the capture domain is the union of the source
-  bounds and every stage's answer, which represents asymmetric effects (a drop
-  shadow) and bounds-reducing ones (a crop) rather than only symmetric padding.
-  Bounds stay in LOGICAL units at every pixel ratio: a `pixelRatio: 2` surface
-  allocates twice the texels and the blur's 8-unit reach is still 8 units. An
-  explicit `clip` remains intentionally restrictive and still cuts the expanded
-  result.
-
-  Mutating an attached filter is now enough on its own. `blur.radius = 12` marks
-  every node the filter is attached to as dirty — including shared attachments —
-  so a `cacheAsTexture` node re-bakes at the new extent instead of replaying the
-  result the filter produced before the change. A custom filter with state of its
-  own calls `this.invalidate()`.
-
-- **HiDPI runtime text — `Text.pixelRatio`.** Runtime SDF and colour glyphs are
-  rasterized at the pixel ratio of the `Application` that draws them, instead of
-  always at one device pixel per logical unit. A `pixelRatio: 2` surface renders
-  its text from a 2x font onto 2x atlas tiles with no opt-in, and the resolution
-  is deterministic: nothing in the text stack reads `window.devicePixelRatio`, so
-  an application pinned at 2 renders text at 2 on a device reporting 3. The new
-  `TextOptions.pixelRatio` / `Text.pixelRatio` decouples one node's glyph raster
-  from the surface — for content whose on-screen density exceeds the surface
-  ratio (a node scaled up at runtime, a zoomed camera), or to trade sharpness for
-  atlas memory. Omitted means inherit, which is the value to want: sharpness
-  peaks at one atlas texel per device pixel. The property reads back `undefined`
-  rather than a materialized number; a value that
-  cannot be a density (`0`, negative, `NaN`, `Infinity`) is rejected, not clamped.
-  `Text.rasterPixelRatio` reports the density in force.
-
-  The logical layout is unaffected at every ratio: advances, kerning, wrapping,
-  line breaks, alignment, `textBounds`, `Text.measure` and the logical reach of an
-  outline or shadow are identical, because the SDF buffer scales with the raster
-  grid and the metrics layout consumes never touch it. Only sharpness, tile size
-  and memory change — measured over an ASCII set at 9/11/16px, 146k atlas texels
-  at ratio 1, 582k at 2 and 1.29M at 3, which is where that set outgrows a single
-  1024x1024 page. The pixel ratio is part of the glyph atlas's identity, so two
-  applications at different densities no longer share one set of pages.
-
-- **Multiphase `System` contract.** A `System` implements any subset of
-  `fixedUpdate`/`update`/`draw` (previously `update` + `destroy` were
-  required); `app.systems`/`scene.systems` dispatch each phase in ascending
-  `order`, ties broken by insertion order. Structural add/remove during a
-  frame is buffered to the next frame boundary.
-- **Typed, bidirectional scene registry and scene-key navigation.** `new
-Application({ scenes: { game: GameScene } })` registers scene constructors
-  under a string key; `app.start('game', data?)`/`app.scenes.change('game',
-{ data? })` navigate by key (autocomplete, no cross-scene runtime imports)
-  alongside constructor-based navigation, both first-class. A scene may
-  register a target-bound default `transition` (`{ scene: GameScene,
-transition: sharedFade }` or a per-phase `{ enter, exit }` pair). Data and
-  options are inferred from the scene's own generic, rejecting a mismatched
-  or missing payload at compile time. Unregistered or duplicate registrations
-  raise named errors (`UnregisteredSceneError`, `DuplicateSceneRegistrationError`,
-  `InvalidSceneRegistrationError`).
-- **`Scene<Data, AppLike>` and `ApplicationOf<T>`.** A project-local `Scene`
-  base class can expose a fully-typed `this.app` — including that
-  application's own scene registry, so `this.app.scenes.change('key', ...)`
-  is typed inside scene code — independent of the registry generic on
-  `Scene` itself.
-- **`app.scenes.pause()`/`resume()`** freeze/unfreeze the active scene
-  without changing its `SceneState` (which stays `Active`) — instead they
-  toggle an orthogonal `paused` flag, read via `app.scenes.paused`/`scene.paused`.
-  `update()`/systems stop while paused; `draw()`, interaction, and scene input
-  keep running. `onPause`/`onResume` fire on both `SceneDirector` and the
-  `Scene` itself; `onStateChange` does not fire for pause/resume (the state
-  hasn't changed). Scene input bindings accept `when:
-'active'|'paused'|'always'` (default `'active'`), with edge rules so a
-  press/release pair must both occur in an allowed state to trigger.
-  `this.interaction.capture(root)` confines pointer hit-testing to a subtree
-  for modal UI.
+- **Multiphase `System` contract.**
+- **Typed, bidirectional scene registry and scene-key navigation.**
+- **`Scene<Data, AppLike>` and `ApplicationOf<T>`.**
+- **`app.scenes.pause()`/`resume()`**
 - **`when: 'active' | 'paused' | 'always'` on `scene.tweens`/`scene.audio`.**
-  `scene.tweens.create()`/`.add()`/`.createSequencer()` and `scene.audio.play()`/
-  `.add()` accept a `when` option (default `'always'`, unchanged behavior)
-  mirroring `SceneInputs`' existing policy — opt a specific tween, sequencer,
-  or voice into freezing (`'active'`) or exclusively running (`'paused'`)
-  across `app.scenes.pause()`/`resume()`. `SceneTweens.createSequencer()` is
-  new — sequencers are now tracked for scene-lifetime teardown and retention
-  suspend/restore, closing a previous gap where a sequencer obtained via
-  `app.tweens.createSequencer()` was never tracked at all.
-- **Scene retention.** `change(X, { suspendCurrent: true })` suspends the
-  outgoing scene instead of destroying it; `app.scenes.restore(X)`
-  reactivates the same instance without re-running `load()`/`init()`,
-  returning to `Active` with whichever `paused` flag it had before
-  suspension. Concurrent navigation calls are rejected with
-  `ConcurrentSceneNavigationError` instead of racing silently.
-- **Preload.** `app.scenes.preload(Target, data?)` prepares a scene ahead of
-  time — `load()`/`init()` run and the scope reaches a genuine, cold `Ready`
-  state (no update/draw/input dispatch, no application-wide side effects)
-  without ever becoming visible. A later `change(Target, { data })` with
-  matching data consumes the preload transparently, skipping the wait
-  entirely; mismatched or absent data falls back to a fresh `prepare()`.
-- **`unload(Target, { instance? })` — unified scene discard.** Replaces
-  `releaseScene()`. Checks every candidate (active, retained, preloaded) for
-  `Target`; resolves directly if exactly one exists, otherwise requires
-  `instance: 'active' | 'retained' | 'preloaded' | 'all'` to disambiguate —
-  rejecting with `AmbiguousSceneInstanceError` rather than silently picking
-  one via a fixed priority order.
-- **`SceneTransition` system.** A class-based, composable transition
-  contract replaces the old hardcoded fade-only machinery: an immutable
-  `SceneTransition` definition (reusable across navigations) produces a
-  fresh `SceneTransitionSession` per navigation; `getRequirements()`
-  declares the render resources a transition actually needs
-  (`outgoingFrame`/`currentFrame`); an exact commit/rollback boundary and
-  render-surface boundary make custom transitions safe to author. When no
-  transition is configured, navigation runs a direct fast path with none of
-  this machinery involved — there is no `InstantSceneTransition` type.
-- **`PhasedSceneTransition`.** A simplified single-class `enter()`/`exit()`
-  authoring layer over the full `SceneTransition` contract for the common
-  (non-crossfade) case — a concrete subclass declares `getPhaseRequirements()`
-  plus `enter()`/`exit()` render callbacks; session timing, easing, and
-  the commit handoff between phases are handled once, internally.
-- **Core built-in transitions.** `FadeSceneTransition`, `CrossFadeSceneTransition`,
-  and `SlideSceneTransition` — a class-based, autocomplete-discoverable
-  replacement for the old `{ type: 'fade' }` config-object shape (the only
-  accepted form for `transition` is now a `SceneTransition`/
-  `PhasedSceneTransition` instance).
-- **`Scene.onActivate`/`Scene.onSuspend`.** Fire on every transition into
-  `Active` (fresh activation, a consumed preload, or a restore) and on
-  `Active → Suspended` (retention) respectively — the Scene-level
-  counterparts `SceneScope.suspend()`/`.activate()` previously had no
-  signal for.
-- **Extension app-system bindings.** An `Extension.systems` binding
-  (`ApplicationSystemBinding`) produces a `System` materialised once per
-  `Application`, after every core manager exists, registered on
-  `app.systems` — extensions can no longer only add renderers/assets/
-  serializers.
-- **`Scene.interaction`/`Scene.audio` facades** (`SceneInteraction`,
-  `SceneAudio`) join the existing `Scene.inputs`/`Scene.tweens` — scene-scoped
-  pointer capture/observation and scene-scoped playback, both auto-cleaned up
-  on scene teardown and suspended/resumed across retention.
-- **`PhysicsWorld.fixedUpdate()`** lets `@codexo/exojs-physics` register
-  directly as a system (`app.systems.add(world, { order: SystemOrder.Physics
-})`) instead of being stepped manually from `Scene.update()`.
-- **Scene-less applications.** `new Application({ /* no scenes */ })` +
-  `app.start()` runs the frame loop with no active scene at all —
-  `app.systems` still ticks and draws.
-- **`Assets.compose(...catalogs)` and `Assets.extend(base, entries)`.** Typed
-  catalog composition. `compose()` merges existing catalogs into an ordinary,
-  directly typed `Assets` object that SHARES its inputs' handles (so
-  `Forest.logo === Shared.logo` and loading the composition heals the handles
-  the input catalogs already handed out); it adds no ownership and no claims.
-  Two different catalogs may not declare the same key — a duplicate resolves to
-  a message type naming the key at compile time and throws at runtime — while
-  the same catalog reaching a composition twice (a diamond) deduplicates.
-  `extend()` derives a catalog from a base, adding keys and deliberately
-  overriding existing ones without mutating the base.
-- **`ChordAction` and `SequenceAction`.** Two new action kinds alongside
-  `ButtonAction`/`AxisAction`/`VectorAction`. `ChordAction` is active while
-  every channel of a chord is held at once (`new ChordAction('Control+S')`,
-  `new ChordAction([GamepadButton.LeftShoulder, GamepadButton.RightShoulder])`)
-  and exposes the same `active`/`pressed`/`released` triad as `ButtonAction`.
-  `SequenceAction` recognizes an ordered pattern (`new
-SequenceAction('Up>Up>Down>Down>Left>Right>Left>Right>B>A', { maxGap: 800 })`),
-  exposing `triggered` for the one frame the final step completes plus
-  `progress`. In a string pattern `+` joins the channels of one step and `>`
-  advances to the next; tokens resolve as case-insensitive `Keyboard` enum
-  names — a shortcut syntax for enum lookups, never text or IME input. The
-  array forms (`InputChord`, `InputSequence`) take pointer and gamepad channels
-  too. `SequenceActionOptions` adds `maxGap` (default `600`ms), `timeout`
-  (`3000`ms) and `resetOnMismatch` (`true`); both kinds also accept the shared
-  `threshold`/`gamepadSlot`. Both read the same ordered per-batch input journal
-  as `ButtonAction`, so one atomic platform batch never invents an order
-  between two channels that changed together. New exports: `ChordAction`,
-  `SequenceAction`, `ChordBinding`, `SequenceBinding`, `SequenceActionOptions`,
-  `InputChord`, `InputSequence`.
-- **`|` alternation in `ChordAction`/`SequenceAction` patterns.** `|` separates
-  alternatives within one step, satisfied if any one of them is — precedence,
-  loosest to tightest, is `>` (steps), `|` (alternatives), `+` (channels
-  within one alternative): `'Control+S|Meta+S'` is `Control`-and-`S` or
-  `Meta`-and-`S`; `'A+B|C>D'` is "(`A` and `B`) or `C`, then `D`". Composes
-  with the existing strongest/weakest analog reduction one level deeper: an
-  alternation reports the strongest of its alternatives, each alternative
-  (like any chord) the weakest of its own members. The array form's new
-  `InputAlternation` type wraps every alternative in its own array, even a
-  single-channel one (`[[A, B], [C]]`), so it is never ambiguous with a plain
-  `InputChord` (`[A, B]`, "`A` and `B` required together"); `InputSequence`
-  accepts it in any step, `ChordAction` at its single step. Mixing a bare
-  channel and a nested alternative within the same step is rejected, as is an
-  empty alternative.
-- **`when` on a scene-owned `ActionMap`** — `scene.inputs.attach(map, { when:
-'active' | 'paused' | 'always' })` (`SceneActionMapOptions`, default
-  `'active'`) applies the same availability policy the binding-level `when`
-  option already had, through the same suspend/transition-gate/pause checks. On
-  losing availability the map resets its actions once and goes inert; on
-  regaining it, the ownership watermark and channel baseline are re-armed, so a
-  key held across the gap resyncs as already-active instead of surfacing a
-  synthetic press.
-- **`Loader.inspect()` and `AssetInspection`.** A frozen, key-sorted snapshot
-  array describing every claimed `(type, source)` key — `{ key, type, source,
-state, claims, inFlight, background }` — for diagnostics and support bundles.
-  `claims` counts distinct claim scopes (the same refcount `release()` uses),
-  not consumer handles or `get()` calls, and `state` never reports a settled
-  row as still queued.
-- **Native JS protocol conformance.** `Container` implements `Symbol.iterator`
-  (`for (const child of container)`) over the same frozen document-order
-  snapshot `container.children` returns. `InputBinding` — a caller-owned
-  handle — implements `Symbol.dispose` as an idempotent alias of `unbind()`, so
-  `using binding = app.input.onStart(...)` unbinds at scope exit; the package
-  ships the `SymbolConstructor.dispose`/`Disposable` global augmentation, so
-  `using` type-checks under `es2022` without consumers bumping `lib`/`target`.
-- **`FadeSceneTransitionOptions`** is exported from the root and
-  `core/transitions` barrels (previously unnameable by consumers).
-- **Side-specific keyboard modifier channels.** `Keyboard` gains
-  `ShiftLeft`/`ShiftRight`, `ControlLeft`/`ControlRight`, `AltLeft`/`AltRight`,
-  and `MetaLeft`/`MetaRight`, each occupying a previously-unused channel slot
-  — no existing `Keyboard` member's numeric value changes. `Shift`/`Control`/
-  `Alt`/`Meta` remain as aggregate OR-channels, active whenever either
-  physical side is held; releasing one side while the other stays down keeps
-  the aggregate active instead of clearing it. `keyboardChannelFromCode`
-  now resolves a modifier `code` to its side-specific channel rather than
-  the aggregate. `onKeyDown`/`onKeyUp` keep dispatching exactly once per
-  physical key event, carrying the side-specific channel — the aggregate is
-  buffer state an action reads, not a signal of its own. `ChordAction`/
-  `SequenceAction` string patterns gain shorthand aliases: `Ctrl` for
-  `Control`, `Cmd`/`Command`/`Super` for `Meta`, `Opt` for `Alt`, `Esc` for
-  `Escape`.
+- **Scene retention.**
+- **Preload.**
+- **`unload(Target, { instance? })` — unified scene discard.**
+- **`SceneTransition` system.**
+- **`PhasedSceneTransition`.**
+- **Core built-in transitions.**
+- **`Scene.onActivate`/`Scene.onSuspend`.**
+- **Extension app-system bindings.**
+- **`Scene.interaction`/`Scene.audio` facades.**
+- **`PhysicsWorld.fixedUpdate()`**
+- **Scene-less applications.**
+- **`Assets.compose(...catalogs)` and `Assets.extend(base, entries)`.**
+- **`ChordAction` and `SequenceAction`.**
+- **`|` alternation in `ChordAction`/`SequenceAction` patterns.**
+- **`when` on a scene-owned `ActionMap`**
+- **`Loader.inspect()` and `AssetInspection`.**
+- **Native JS protocol conformance.**
+- **`FadeSceneTransitionOptions`**
+- **Side-specific keyboard modifier channels.**
 - **`Sound.sprite(name)` — the public way to play a named audio sprite.**
-  Sprite definitions (`defineSprite`/`setSprites`/the `sprites` option) had no
-  public playback path at all: the only way to reach one was the `@internal`
-  `Sound._createSpriteVoice`. `sprite(name)` is the named counterpart of
-  `clip(offset, duration)` — it returns a `Sound` over that window, sharing the
-  parent's decoded buffer, so it plays through `app.audio.play()` like any other
-  sound. The result is memoized per name (one shared voice pool per sprite,
-  rather than a fresh pool per call) and discarded when the name is redefined,
-  removed, or the sound is destroyed. An undefined name throws.
-- **`AudioManager.onUnlock` runs every handler exactly once, as soon as audio is
-  usable.** It is the documented home for playback that cannot be deferred past
-  the autoplay gesture, so it now answers the question subscribers are actually
-  asking rather than behaving as a plain one-shot event. Subscribing while audio
-  is already unlocked replays the handler on a microtask — a scene loaded after
-  the user's first click no longer stays silent forever. Subscribing while audio
-  is locked registers it for the next unlock, **including a re-lock** (an iOS
-  audio-session interruption, a bfcache restore), which the previous
-  "has it ever dispatched" test got wrong in both directions: it replayed into a
-  suspended context, and a manager constructed inside that window had a
-  permanently dead `onUnlock` because the global ready signal was already spent.
-  A handler that has already run is never fired again by a later unlock, so
-  looping music started here does not stack a second copy after every
-  interruption. `remove()` cancels a pending handler in either case — including
-  a replay queued but not yet run — and nothing fires once the manager is
-  destroyed.
-- **`Extension.install(app)` and `ExtensionDisposer` — extensions have a
-  lifetime of their own.** An extension descriptor may now carry an
-  `install(app)` hook for whatever the `renderers`/`assets`/`serializers`
-  arrays cannot express: an app-level `System`, a subscription on an
-  application signal, a debug overlay next to the canvas, a worker, an
-  observer. It runs once per `Application` as the final construction step —
-  every core manager and every materialised binding already exists — with
-  dependencies installed ahead of their dependents, and may return an
-  `ExtensionDisposer` (a synchronous `() => void`). The `Application` holds
-  those disposers and runs them in **reverse installation order**: in
-  `destroy()`, after scene teardown and before any subsystem a disposer might
-  still reach for is released; and in the constructor's rollback, so a
-  construction step that throws after some extensions installed no longer
-  strands them. Each disposer is guarded on its own — one that throws is
-  logged and neither the disposers behind it nor the remaining teardown
-  stages are cut short. Per-application state belongs in the `install`
-  closure, never on the descriptor, which stays a shared frozen singleton.
-  An extension's lifetime is exactly its application's: there is no runtime
-  `unregister`, and no scene-level scope.
+- **`AudioManager.onUnlock` runs every handler exactly once, as soon as audio is usable.**
+- **`Extension.install(app)` and `ExtensionDisposer` — extensions have a lifetime of their own.**
 
 ### Fixed
 
-- **The rendering-parity matrix now proves correctness somewhere, not only
-  agreement.** `oracle` was the matrix's own strongest evidence class and
-  appeared zero times in the checked-in evidence: every property compared a
-  rendering against another rendering, so two backends computing a colour the
-  same wrong way agreed perfectly and a backend computing it wrongly every time
-  was perfectly deterministic.
+- **The rendering-parity matrix now proves correctness somewhere, not only agreement.**
 
-  A scene can now declare an oracle - expected pixels derived on the CPU from
-  its own inputs - and a new `oracle-agreement` property checks them per
-  backend. Four scenes carry one, covering exactly the class a traced pixel
-  cannot reach, where the output is computed rather than sampled: premultiplied
-  source-over, additive blending, a colour-matrix channel swap, and a linear
-  gradient ramp. Where a pixel already traces back to its source texel the gap
-  was never open - that is a renderer-independent expectation already - so no
-  blanket oracle mandate was added.
+- **Two empty frames no longer count as cross-backend parity.**
 
-- **Two empty frames no longer count as cross-backend parity.** An empty frame
-  is byte-identical to another empty frame, so a scene that drew nothing filled
-  its parity row with a `traced` claim about nothing. `renders-something`
-  reported the same fact in its own row, but the misleading row was the parity
-  one, so emptiness is now a precondition of the comparison rather than a
-  neighbouring property's business.
-
-- **A typed asset failure no longer loses its class on the way out of the
-  loader.** `AssetDecoder` wrapped every failure except a cancellation, a cache
-  miss and a store failure in a plain `Error` carrying the original as `cause`.
-  An `AssetNetworkError` - documented as narrowable and carrying `status` /
-  `statusText` - therefore never reached a caller as itself. It is now rethrown
-  unwrapped, and an `AssetDecodeError` is rebuilt rather than replaced, so it
-  keeps its type _and_ gains the "which asset, from where" envelope.
+- **A typed asset failure no longer loses its class on the way out of the loader.**
 
 - **Attaching the same audio effect twice built a feedback loop.**
-  `AudioBus.addEffect` and `Voice.addEffect` pushed the effect a second time and
-  rewired the chain, connecting the effect's output back into its own input. The
-  dev build now asserts; production ignores the second attach.
 
-- **A `GamepadMapping` with two controls on one channel silently dropped one of
-  them.** Every control writes into one channel slot per frame, so the pad
-  reported whichever ran last while the other looked dead. The constructor
-  asserts in the dev build.
+- **A `GamepadMapping` with two controls on one channel silently dropped one of them.**
 
 - **`triangulate()` and `buildPath()` accepted an odd-length coordinate list.**
-  The trailing value was dropped or read as half of a point that does not exist,
-  producing NaN vertices or a silently different polygon than the caller
-  described. Both now assert that the length is even.
 
-- **A single-point contact under very high acceleration sank without bound.** The two-point
-  block solve reaches its push-out target exactly, so a face contact rests at the contact slop
-  at any gravity. A single-point contact — a ball, a capsule end, a corner — was solved with the
-  soft mass scale on top of a push-out target that is already capped, so it reached only a
-  fraction of a limited correction. Below the acceleration at which the cap binds that deficit is
-  the spring deflection the soft solver is supposed to have; above it, the contact had no
-  equilibrium at all and the body sank through its collider. Push-out targets that hit the cap
-  are now solved with the hard mass scale, as the block path always was: resting depths below the
-  cap are unchanged to four decimals, and above it the contact settles into a narrow band just
-  under the sleep tolerance instead of diverging. A light body squeezed under a 1000:1 load also
-  stops drifting and settles, where it previously wandered for as long as the scene ran.
+- **A single-point contact under very high acceleration sank without bound.**
 
-- **The block contact solve allocated on every call.** Passing freshly computed impulse deltas to
-  a helper the optimiser declines to inline boxes each one on the heap for the duration of the
-  call. In a settled 200-box scene that was three quarters of the engine's whole steady-state
-  allocation rate — 343 B per body per step, against 66 B for the same scene built from circles,
-  which never took that path. The block path now applies its result in place: 84 B per body per
-  step for the same scene, with the solver frame gone from the allocation profile entirely and
-  step time ~2 % better. The physics allocation gate moves from 600 KB/step to 250 KB/step
-  accordingly.
+- **The block contact solve allocated on every call.**
 
-- **Every real LDtk file failed validation.** LDtk writes an unset optional as an explicit
-  `null` rather than omitting the key, and the validator only tolerated `undefined`. A project
-  that does not save levels separately emits `"externalRelPath": null` on every level, and any
-  layer that draws no tiles (an Entities layer, an IntGrid layer without auto-rules) emits
-  `"__tilesetDefUid": null` — so both threw `LdtkFormatError` before a single tile was read. The
-  bundled fixtures omitted those keys entirely, which is why the suite never saw it. Both fields
-  now accept `null` as "absent", and their declared types say so.
+- **Every real LDtk file failed validation.**
 
-- **Maps authored in Tiled 1.9 were rejected outright.** Tiled 1.9 renamed an object's `type`
-  member to `class` in the JSON format and 1.10 renamed it back, so a file written by either
-  version carries exactly one of the two. `TiledObjectData.type` was required, so every
-  1.9-authored map threw at validation. Both spellings are now accepted, with `class` winning
-  when present and non-empty; `TiledObject.type` reports the class either way, and remains the
-  dispatch key a `MapObjectSpawner` sees.
+- **Maps authored in Tiled 1.9 were rejected outright.**
 
-- **Eight public exports were missing from the full IIFE bundle.** `window.Exo` is assembled
-  from a hand-written entry file: most packages come in through `export *`, but tilemap,
-  tiled, ldtk and tilemap-physics are listed symbol by symbol, because tiled and ldtk
-  re-export tilemap's runtime classes and each of those must appear in the bundle exactly
-  once. The lists were never completed as those packages grew, and nothing failed when they
-  fell behind. Missing were `TILED_OBJECT_ALIGNMENTS`, `resolveTiledObjectAlignment`,
-  `tiledObjectAnchorOffset`, `tiledWangSetToWangSet`, `getLdtkIntGridValueAt`,
-  `ldtkIntGridCsvProperty`, `ldtkIntGridValuesProperty` and `createLdtkIntGridCellSource` —
-  so a `<script>`-tag consumer could not wire up LDtk collision at all.
-
-  All eight are now exported, and a gate keeps the entry honest: a public **value** export may
-  be absent only when the identical binding already reaches the bundle through an earlier
-  package, or when it is recorded as a deliberate omission with a reason. The gate also
-  catches the reverse — an entry listing a symbol its package does not export. Type-only
-  exports stay out of scope, since an IIFE global carries no types.
+- **Eight public exports were missing from the full IIFE bundle.**
 
 - **Ear clipping no longer clips across a vertex sitting on the diagonal it introduces.**
-  `triangulate` accepted an ear whose new diagonal passed exactly through another vertex:
-  the vertex is not _strictly inside_ the ear triangle, so the containment test let it
-  through. Clipping there pinches the ring, and every later clip works on a polygon that is
-  no longer simple — silently emitting triangles that cover area **outside** the outline.
-  The symptom needed no exotic input: an axis-aligned L whose two arms are the same length
-  puts its reflex corner exactly on that diagonal, and a 20x20 L of area 300 was
-  triangulated into 400 units of coverage. Everything downstream inherited it — a filled
-  `Graphics` polygon rendered the extra area, and `decomposeToConvexParts` rejected the
-  outline outright rather than returning wrong colliders, which is why L-shaped collision
-  polygons could not be decomposed at all. A vertex on the open diagonal is now blocking;
-  vertices on the ear's other two edges stay harmless, since those are collinear points
-  along existing polygon edges. The triangulate suite now asserts that the emitted triangles
-  cover exactly the polygon's area — winding and triangle count alone did not catch this.
 
-- **The physics debug overlay draws the geometry the broad phase actually holds.** Its
-  AABB, broad-phase and contact overlays all scanned `world.colliders`, which is the
-  authored set: a chain contributed one union box that no phase ever tests, and its
-  contacts could not be drawn at all, because an authored chain collider is not a
-  narrow-phase operand. All three now scan the solver-side geometry — a chain as its
-  per-edge leaves — so the boxes are the real leaves, a chain links per overlapping edge,
-  and contacts against a chain appear. Internal edge geometry being visible in a debug
-  overlay does not make it public: `world.colliders`, `body.colliders` and every query
-  result are unchanged. The same pass also stops drawing contacts between two colliders of
-  one body, which the simulation itself has never formed.
+- **The physics debug overlay draws the geometry the broad phase actually holds.**
 
-- **Two colliders on the same body no longer collide with each other.** Neither
-  the broad phase nor the contact graph excluded a pair whose colliders belong
-  to one body, so a compound body emitted a `collisionStart` — or a sensor
-  enter — against itself, and carried a self-contact through the solver every
-  step. The impulses happened to cancel, so nothing drifted, but the events were
-  real and the work was wasted. The broad phase now never forms such a pair, so
-  it never enters the persistent set either.
+- **Two colliders on the same body no longer collide with each other.**
 
-- **Capture quantisation no longer drops a pixel at a fractional edge.** An
-  effect's render target was sized `floor(origin)` by `ceil(size)`, rounded
-  independently, which is short whenever the fractional origin pushes the far
-  edge past what `ceil(size)` covers — `x = 0.25, width = 10.5` spans to 10.75
-  and got 10. Both edges are now rounded outward: `floor(min)` and `ceil(max)`.
+- **Capture quantisation no longer drops a pixel at a fractional edge.**
 
-- **A resized render target is viewed from its own centre.** `RenderTexture`
-  `setSize` restated the default view's extent and left its centre at half the
-  ORIGINAL size, so a target resized from 38 to 60 rendered the region
-  `[-11, 49]` — content shifted by the half-difference and the far edge outside
-  the target. Visible on a `cacheAsTexture` node whose capture domain grows: a
-  cached square with its blur grown from radius 3 to 14 read a lit span of
-  `[51, 93]` where the same node built at 14 reads `[34, 93]`.
+- **A resized render target is viewed from its own centre.**
 
-- **SDF text edges follow the density their own normal lands on.** The
-  analytical screen-space width came from a single scalar — device pixels per
-  local unit along the local +x direction — which describes the whole projected
-  footprint only under a similarity transform. Under a non-uniform scale every
-  edge, horizontal ones included, was sized against the horizontal density.
-  Measured on 'H' at 48px, phase-averaged over four subpixel placements, the
-  crossbar's ramp read 0.50 at `scale(4, 4)` and 2.50 at `scale(1, 4)` — both put
-  the same vertical density on screen. The fragment stage now recovers the edge
-  normal from the field and projects the footprint onto it, behind a branch that
-  is flat per node so the isotropic path is unchanged.
+- **SDF text edges follow the density their own normal lands on.**
 
-- **SDF text antialiases against the pixel it lands on.** The `text-sdf` and
-  `text-msdf` shaders faded an edge over a constant width stated in FIELD units,
-  which is a fixed distance in logical pixels and therefore a different number of
-  device pixels in every situation: a hard, aliased step wherever the glyph was
-  dense, and a multi-pixel smear wherever it was magnified — a label scaled up
-  4x faded over roughly four device pixels. The width is now derived from how
-  many device pixels one of the node's local units covers, so an edge lands at
-  about one device pixel whatever the atlas density, the surface ratio, the
-  node's scale and the camera's zoom jointly did to it. Measured on a scanline
-  crossing two stems, the ramp went from 0/4/5 partially-lit pixels at scale
-  1/2/4 to a flat 4/4/3.
+- **SDF text antialiases against the pixel it lands on.**
 
-  It is computed from the transform rather than from a hardware derivative
-  (`fwidth`) because derivatives are implementation-defined: the GLSL and WGSL
-  stages then disagree on the ramp by up to 47 of 255 on the edge pixels, which
-  would have cost the cross-backend parity matrix its bit-exact evidence for
-  text. Derived from the transform the two are byte-identical on every pixel,
-  ramp included. `fwidth` remains the fallback where the field's scale is
-  unknown, which today is `BitmapText`'s MSDF path — an offline atlas carries no
-  distance range in its font data.
-
-  `shadowBlur` is separated out by the same change. It used to share one number
-  with the antialiasing width, so it widened the fill and outline edges as well
-  and carried a floor that applied even with no shadow; it is now the shadow's
-  own softness, still stated in field units so an authored blur covers the same
-  logical distance at every raster density, and it can only ever widen the
-  shadow edge.
-
-- **The runtime glyph atlas is filtered linearly.** Its pages are `DataTexture`s,
-  and that class defaults to `NEAREST` — correct for the lookup tables it exists
-  for, where a row must read back as the exact number written, and wrong for a
-  signed distance field, where bilinear reconstruction between texels is the
-  whole reason the field is resolution-independent. Text drawn at anything other
-  than one atlas texel per device pixel was therefore sampled from a piecewise
-  constant field: staircased when magnified (a node scaled up, or a `pixelRatio`
-  below the surface it is drawn on), jittered when minified. Measured on a
-  4x-magnified glyph, the frame held 12 distinct intensities before and 211
-  after. Colour pages were already linear and are now explicitly so, so the two
-  page kinds visibly agree.
-- **An effect capture no longer repaints the application background.** A filter,
-  mask or `cacheAsTexture` capture clears its own target to transparent black,
-  and `backend.clear(colour)` writes the colour it is handed through to the
-  persistent one — which the pass coordinator saved and restored for the target,
-  the view and the stencil state, but not for the clear colour. One filtered or
-  cached node was therefore enough to clear every LATER frame to transparent
-  black instead of `clearColor`, for the rest of the session. Found on a real
-  device while measuring `NEU-S4`.
+- **The runtime glyph atlas is filtered linearly.**
+- **An effect capture no longer repaints the application background.**
 
 ### Changed
 
-- **BREAKING - `Ease` is a const namespace object, not a class.** It never had a
-  constructor and was never instantiated; `new Ease()` compiled anyway. Call
-  sites are unchanged (`Ease.cubicOut`), and it now matches how `Collision` and
-  `Sweep` are written.
+- **BREAKING - `Ease` is a const namespace object, not a class.**
 
-- **BREAKING - the scene errors moved out of `SceneTypes`.** The nine scene
-  navigation and registration errors, plus `SceneTransitionLifecycleError` and
-  `ShaderFilterBackendError`, now live in files named after what they hold:
-  `core/sceneErrors.ts` and `rendering/filters/ShaderFilterBackendError.ts`.
-  Every one of them is still exported from the package root, so only a deep
-  import needs changing.
+- **BREAKING - the scene errors moved out of `SceneTypes`.**
 
-- **BREAKING - `MaterialKey` lives with the material system.** The interface and
-  its derivation functions move from `rendering/plan/RenderCommand` to
-  `rendering/material/MaterialKey`, which until now held only the two key-hashing
-  helpers while the type it names lived elsewhere. Drawable texture identity is
-  now allocated from one registry rather than two.
+- **BREAKING - `MaterialKey` lives with the material system.**
 
-- **`RenderItemVisibility` and the WebGPU retained-group resources are split by
-  symbol.** `FlatScanVisibility` and `GridVisibility` get their own files beside
-  the contract they implement; `WebGpuRetainedCaptureFrame` and
-  `WebGpuRetainedGroupBundle` likewise, with their shared types in
-  `retainedGroupResources.ts`.
+- **`RenderItemVisibility` and the WebGPU retained-group resources are split by symbol.**
 
 - **BREAKING - the five core `*Manager` classes are now `*System`.**
-  `AudioManager`, `InputManager`, `InteractionManager`, `TweenManager`, and
-  `AnimationManager` become `AudioSystem`, `InputSystem`, `InteractionSystem`,
-  `TweenSystem`, and `AnimationSystem`. All five implement the `System`
-  contract and are registered as the application's core systems, so the old
-  suffix contradicted the contract they fulfil.
 
-  The accessors are unchanged - `app.audio`, `app.input`, `app.interaction`,
-  `app.tweens`, `app.animations` - so only explicit type annotations and
-  imports need updating. Internally, `Tween._attachManager` becomes
-  `_attachSystem`, and the `manager` field of the voice initializer becomes
-  `system`.
+- **BREAKING - the `MathUtils` namespace is gone.**
 
-- **BREAKING - the `MathUtils` namespace is gone.** Its six members are free
-  top-level exports: `trimRotation`, `degreesToRadians`, `radiansToDegrees`,
-  `bezierCurveTo`, `quadraticCurveTo`, and `getDistance` (previously
-  `MathUtils.distance`). The scalar helpers alongside them (`clamp`, `lerp`,
-  `sign`, `inRange`, `isPowerOfTwo`, `TAU`) were already exported this way.
+- **BREAKING - `Color` keeps eleven named constants instead of 142.**
 
-- **BREAKING - `Color` keeps eleven named constants instead of 142.** The class
-  predefined every CSS named colour as a shared static. They cost 1.6 kB gzip in
-  the bundle, cannot be tree-shaken (a `static readonly` is part of one class
-  initializer, so an app that uses only `Color.red` shipped all 142 - measured),
-  and the engine itself used eight of them.
+- **BREAKING - `Color.toRgba()` is now `Color.toRgba8()`.**
 
-  What remains is the eight corners of the RGB cube plus both transparent ends:
-  `black`, `red`, `green`, `blue`, `cyan`, `magenta`, `yellow`, `white`,
-  `transparentBlack`, `transparentWhite`, and `transparent` as CSS `transparent`
-  (defined as `rgba(0, 0, 0, 0)`, so it is the same value as `transparentBlack`).
-  Anything else is a value, not a vocabulary item: `new Color(0x6495ed)`.
+- **BREAKING - `Color.toString()` no longer takes a `prefixed` argument.**
 
-  For scale: Pixi has no named colour statics at all, Phaser none, Excalibur 24.
+- **The default clear colour is opaque black.**
 
-  **`Color.green` changes value.** It was CSS green (`#008000`) and is now the
-  cube corner (`#00ff00`, CSS `lime`). Code that read `Color.green` and expected
-  the darker shade needs `new Color(0x008000)`.
-
-- **BREAKING - `Color.toRgba()` is now `Color.toRgba8()`.** Every caller writes
-  it into a `Uint32Array` row, and that is what it is: one RGBA8 texel as a
-  little-endian `Uint32`, matching `TextureFormat.Rgba8`. The old name invited
-  reading it as a colour literal, which it is not - written out it is
-  `0xAABBGGRR`, the reverse of the `0xRRGGBB` the constructor takes. Use
-  `toRgb()` when a literal is what you want.
-
-- **BREAKING - `Color.toString()` no longer takes a `prefixed` argument.** The
-  unprefixed and alpha-carrying forms moved to `toHex(alpha?, prefixed?)`;
-  `toString()` stays the six-digit CSS form, so a colour can still be handed
-  straight to a canvas or style property.
-
-- **The default clear colour is opaque black**, not cornflower blue. The old
-  default was inherited from XNA's new-project template.
-
-- **BREAKING - three noun-only function exports are renamed.** A noun reads as a
-  value at the call site and hides that it has to be called:
-
-  | Before                    | After                        |
-  | ------------------------- | ---------------------------- |
-  | `tiledObjectAnchorOffset` | `getTiledObjectAnchorOffset` |
-  | `wgslFieldLayout`         | `getWgslFieldLayout`         |
-  | `wgslUniformByteSize`     | `getWgslUniformByteSize`     |
-
-  The package prefix stays: the full IIFE build is one flat `window.Exo` object
-  across every package, so it is the only marker of where a symbol came from.
-  This is the whole rename - the rule now written down in `CONTRIBUTING.md`
-  reshapes existing API only where a change touches it anyway.
+- **BREAKING - three noun-only function exports are renamed.**
 
 - **BREAKING — canvas sizing is a policy object, not a mode string.**
-  `CanvasSizingMode` named five modes along three different technical axes at
-  once, so `'fit'` and `'letterbox'` differed in ways the names never said, and
-  `'letterbox'` was not self-explanatory at all. The responsive machinery also
-  lived in `Application`, which held a `ResizeObserver` whenever a mode could
-  conceivably need one.
 
-  `canvas.sizingMode` is replaced by `canvas.sizing`, an optional
-  `CanvasSizing` instance, and `app.sizingMode` by `app.sizing`. Passing nothing
-  is the fixed case - the canvas stays at `canvas.width` x `canvas.height` and
-  observes nothing - so there is no class to construct for the common case.
+- **BREAKING — a physics `Shape` no longer promises mass.**
 
-  `canvas.width`/`height` now mean exactly one thing: the **base resolution**.
-  From it three axes are derived and kept apart rather than folded together:
+- **BREAKING — one AABB protocol and one point protocol across core and packages.**
 
-  | Axis          | Where to read it               | What it is                                       |
-  | ------------- | ------------------------------ | ------------------------------------------------ |
-  | CSS size      | `app.element` layout box       | How large the canvas appears on the page.        |
-  | Logical view  | `app.width` / `app.height`     | The coordinates nodes and pointers live in.      |
-  | Backing store | `app.canvas.width` / `.height` | The pixels the GPU draws, `render x pixelRatio`. |
+- **BREAKING — one canonical identity is resolved before every fetch.**
 
-  Four built-ins cover the usual cases, and each owns exactly one
-  `ResizeObserver` on the canvas's parent, released on detach:
+- **BREAKING — asset containers claim through normal residency, `.exoa` is version 2.**
 
-  | Policy                         | CSS size                     | Logical view                  | Backing store                                  |
-  | ------------------------------ | ---------------------------- | ----------------------------- | ---------------------------------------------- |
-  | _(omitted)_                    | base, fixed                  | base, fixed                   | base x DPR                                     |
-  | `FixedResolutionCanvasSizing`  | fits the parent, up and down | base, fixed                   | base x DPR                                     |
-  | `CappedResolutionCanvasSizing` | fits the parent, up and down | base, fixed                   | follows the display down, capped at base x DPR |
-  | `ResponsiveCanvasSizing`       | the whole parent             | adapts to the parent's aspect | display size x DPR                             |
-  | `ManualCanvasSizing`           | left to the page             | `app.resize`                  | `app.resize`                                   |
+- **BREAKING — `inspect()` walks the residency, not the claim map.**
 
-  `ResponsiveCanvasSizing` is the only one whose logical view changes shape. It
-  never letterboxes and never crops: a host wider than the base aspect shows
-  more world left and right, a narrower one more above and below. Its optional
-  `minAspect` sets how far the view may narrow horizontally first - `1` allows a
-  square view before vertical growth starts - and defaults to the base aspect,
-  which crops nothing.
-
-  `CanvasSizing` is a public abstract class, so an editor panel, a safe-area
-  inset or a framework-owned layout is a policy of its own: implement
-  `attach(context)`, commit geometry through `context.apply(metrics)`, and
-  release everything in `detach()`. Nothing is created on a policy's behalf, and
-  a policy that observes nothing costs nothing.
-
-  Two behaviours change beyond the naming. ExoJS no longer writes to the canvas's
-  parent element at all - `'letterbox'` used to take over its `display`,
-  `alignItems`, `justifyContent`, `overflow` and `background` - so the area
-  around a fixed-aspect canvas is the page's to style. And the CSS box a policy
-  writes is the canvas's real display rect, where `'fit'`/`'shrink'` used
-  `object-fit` inside a full-size box, which left pointer mapping reading a rect
-  that included the empty bars.
-
-  Migration: `'fit'` and `'shrink'` become `new FixedResolutionCanvasSizing()`,
-  `'fill'` becomes `new ResponsiveCanvasSizing()`, `'letterbox'` becomes
-  `new FixedResolutionCanvasSizing()` with the bars supplied by the container's
-  own CSS, and `'fixed'` becomes no `sizing` at all. `computeLetterboxLayout`
-  and `CanvasSizingMode` are gone with the modes they described.
-
-  The document-based policies reject an `OffscreenCanvas` rather than silently
-  observing nothing: a worker-hosted surface takes no policy, or
-  `ManualCanvasSizing` driven from `app.resize()`.
-
-  In `@codexo/exojs-react`, `canvas.sizing` is captured at creation rather than
-  synced live - a policy is an object, so a fresh instance per render would
-  detach and re-attach the previous one every time. Assign `app.sizing` directly
-  to switch at runtime.
-
-- **BREAKING — a physics `Shape` no longer promises mass.** The abstract base
-  declared `area`, `centroidX`, `centroidY` and `unitInertia`, which is only
-  true of solid geometry. A segment or a chain of edges has no interior, and
-  satisfying that base would have meant inventing `area = 0` and a fake centroid
-  that no reader could tell apart from a degenerate solid.
-
-  Mass is now a capability: `Shape.massProperties` is either a frozen
-  `ShapeMassProperties` (`area`, `centroidX`, `centroidY`, `unitInertia`) or
-  `null` for boundary geometry, and the body's mass model skips a shape that has
-  none. `CircleShape`, `PolygonShape` and `BoxShape` narrow the property to the
-  non-null type, so `shape.massProperties.area` needs no null check; the four
-  loose fields are gone. Nothing about the computed mass, centre of mass or
-  inertia of the shipped shapes changes.
-
-- **BREAKING — one AABB protocol and one point protocol across core and
-  packages.** `@codexo/exojs-physics` published its own `Aabb` and `VectorLike`,
-  structurally identical to core's `AabbLike` and `PointLike` — and imported
-  core's `AabbLike` in the same file it declared `Aabb` in. Two names for one
-  contract is a shape the 1.0 surface should not freeze.
-
-  Physics now uses `AabbLike` and `Readonly<PointLike>` from `@codexo/exojs`;
-  `Aabb` and `VectorLike` are no longer exported from
-  `@codexo/exojs-physics`. `AabbLike` moved to its own module inside core and is
-  exported unchanged. No behaviour changes — the types were mutually assignable
-  already, which is exactly why the duplication was easy to miss.
-
-- **BREAKING — one canonical identity is resolved before every fetch.** Residency
-  had two uncoordinated dedup layers: `get()`, bare paths and the background
-  queue keyed on `typeId:alias`, while the `Asset<T>` descriptor path keyed on a
-  separate identity map. Reaching one asset through both verbs concurrently
-  fetched and decoded it twice, and the alias-keyed store made the opposite
-  mistake — an identity-relevant option (a differing `mimeType`, a differing
-  Tiled format) was swallowed whenever the alias already held a payload, silently
-  handing the second caller the first one's decode.
-
-  A canonical key is now `typeId | locator` plus, where the type declares one, a
-  handler-supplied discriminator. The locator applies the base path, collapses
-  `.`/`..`, drops the fragment (never sent on a fetch) and keeps the query, so
-  `hero.png`, `./hero.png` and `a/../hero.png` are one asset and one request;
-  `blob:` and `data:` sources pass through untouched. The same resolution backs
-  the fetched URL and the cache key, so what is fetched cannot drift from what a
-  load is keyed by. Aliases, catalog keys and container entry names are names for
-  a canonical asset and no longer create residency entries of their own — loading
-  one `Asset` under several record keys stores it once, addressed by its source.
-
-  `AssetHandler.getIdentityKey` becomes `getIdentityDiscriminator` and is
-  narrowed: the core always owns type and locator, and a handler may only
-  contribute the additional identity-relevant part, so an extension cannot build
-  a parallel identity space. Core bindings declare their own — `mimeType` for the
-  decoded types, `family` for fonts. Sampler state, placeholder sizing and
-  playback settings stay out: they belong to a consumer, not to a resource. The
-  conflicting-options warning is gone with the ambiguity it reported.
-
-  Cache-store keys are now the resolved URL, which invalidates previously
-  persisted entries.
-
-- **BREAKING — asset containers claim through normal residency, `.exoa` is
-  version 2.** `loadContainer` stored each unpacked entry under the container's
-  own opaque alias and registered no claim at all: the payloads were resident but
-  invisible to `inspect()`, unreachable by `release`, and had no teardown short
-  of destroying the loader. Index entries now carry the logical `source` they
-  stand in for — the same relative path a network load uses — which the loader
-  canonicalizes like any descriptor. A packed asset and a loose one are therefore
-  one identity with one payload, and a container is no longer welded to the path
-  it was built at. `Loader.loadContainer(url)` resolves to the `LoaderScope` that
-  owns the entries, one ordinary claim each; `LoaderScope.loadContainer(url)`
-  claims them under an existing scope. Version 1 containers are rejected rather
-  than misread — rebuild them with `scripts/build-container`, whose manifest
-  field is renamed from `alias` to `source`.
-
-- **BREAKING — `inspect()` walks the residency, not the claim map.** The one
-  thing a diagnostic snapshot most needs to show — a payload resident with nobody
-  owning it — was exactly what it could not see. Rows now carry `canonicalKey`,
-  `locator`, `aliases` and `owners` (id, optional name, kind) in place of `key`
-  and `source`. A key that only remembers a handle identity for healing is
-  skipped rather than burying the rows that matter. `bytes` and `lastUsed` stay
-  out: there is no honest size for a GPU resource next to an `ArrayBuffer`, and a
-  last-used stamp would cost a write on every read.
-
-- **BREAKING — canvas compositing is one backend-neutral option.** How the
-  finished frame composites against the page used to be spelled per backend:
-  WebGL2 read it from `rendering.webglAttributes.alpha` /
-  `.premultipliedAlpha`, while WebGPU hard-coded its canvas `alphaMode` to
-  `'opaque'`. The two could only agree by coincidence, and they stopped agreeing
-  as soon as anyone passed `webglAttributes` at all — the option is replaced
-  wholesale rather than merged, so `{ antialias: true }` silently dropped the
-  default's `alpha: false` and produced a transparent canvas under WebGL2 and an
-  opaque one under WebGPU. `rendering.alphaMode` (`'opaque' | 'premultiplied'`,
-  default `'opaque'`) is now the single spelling both backends honour: WebGPU
-  passes it to `GPUCanvasConfiguration.alphaMode`, WebGL2 derives `alpha` from it
-  and always requests `premultipliedAlpha` because the engine writes
-  premultiplied colour under both modes. The default preserves today's visible
-  behaviour exactly. This controls the browser-side composite step and nothing
-  else — internal texture and render-target premultiplication, blend modes and
-  material blend state are unaffected. Consequently `webglAttributes` no longer
-  accepts `alpha` or `premultipliedAlpha`; every other WebGL-only context
-  attribute is unchanged.
-- **`Text.measure` no longer rasterizes.** It used to run its layout pass against
-  the shared glyph atlas, so measuring an unfamiliar string rasterized every glyph
-  in it and claimed atlas space. It now reads the font variant's logical metrics
-  directly — one canvas measurement per unseen glyph, no atlas created, no page
-  claimed. This is what makes the answer independent of `pixelRatio` and of which
-  `Application` happens to exist, and it still agrees exactly with the
-  `textBounds` of a node built from the same options. `colorGlyphs`, `sdfRadius`
-  and `pixelRatio` are accepted and ignored there: none of them can move a line
-  break.
-- **BREAKING — effect and cache render targets now inherit the surface
-  resolution.** An internal target (filter input, every filter output, alpha
-  mask, `cacheAsTexture`) used to be `ceil(logical bounds)` texels no matter how
-  large the surface it was composited into, so on a `pixelRatio: 2` display a
-  filtered or cached subtree rasterized at half the linear detail it was then
-  sampled over — a third on `pixelRatio: 3`. Targets now inherit the resolution
-  of the target they are composited into, and the two new knobs opt out of it:
-  `Filter.resolution` and `RenderNode.cacheResolution`, both `'inherit'` by
-  default, both accepting a number. A filter chain shares one target size, so it
-  runs at the lowest resolution any of its filters asks for. Very large barriers
-  are clamped to the device's maximum texture size rather than failing.
-
-  Two consequences worth planning for. Effect cost on a HiDPI display rises with
-  the pixel ratio, where it was previously flat — measured on an iPhone 13 Pro,
-  a blur that held 22 ms at every ratio costs 28 ms at ratio 3 once its target
-  inherits. And `Filter.apply` gains a fourth argument, the target resolution:
-  any custom filter with a pixel-valued parameter must scale it, because those
-  parameters are now LOGICAL units. `BlurFilter.radius` already does, so a blur
-  covers the same on-screen distance as before.
+- **BREAKING — canvas compositing is one backend-neutral option.**
+- **`Text.measure` no longer rasterizes.**
+- **BREAKING — effect and cache render targets now inherit the surface resolution.**
 
 - **BREAKING — `RenderNode.cacheAsBitmap` is now `RenderNode.cacheAsTexture`.**
-  The cache has always been a `RenderTexture` on the GPU, never a bitmap;
-  "bitmap" suggested a CPU raster image. The serialized field
-  (`commonFields`) and the render-pass inspector's `cachedAsBitmap` snapshot
-  field follow the same rename (`cachedAsTexture`). No alias is kept — pre-1.0
-  breaks are clean breaks.
-- **The Core source export condition is now `@codexo/exojs-source`.** It was
-  `@codexo/source`, which read like a package name rather than like "resolve
-  `#*` to source" and did not match the `<package>-source` shape every
-  extension already used (`@codexo/exojs-particles-source`). Purely internal:
-  the condition only selects between `src` and `dist` for package-private `#*`
-  imports and never appears in a consumer's import. Anything running the engine
-  from source (`node --conditions=…`, a `tsconfig.json` `customConditions`
-  entry) must use the new name.
+- **The Core source export condition is now `@codexo/exojs-source`.**
 - **BREAKING — `Material.sampler` is now a real base-texture binding override.**
-  It contains only `scaleMode` and `wrapMode`, applies to the drawable's base
-  texture across WebGPU and WebGL2 (including particle materials), and leaves
-  additional material textures on their own sampler state. `null` continues to
-  inherit the texture sampler. Sampler changes now affect `bindKey`, not
-  `pipelineKey`, and in-place changes are resolved live during retained replay.
-- **BREAKING — `Material` binding schemas are fixed at construction.** Declare
-  every scalar and texture slot through the constructor's `uniforms`/`textures`
-  options. Existing values and texture identities remain live and replaceable,
-  including in-place typed-array mutation; adding/deleting a key or changing a
-  slot between scalar and texture now fails immediately instead of leaving a
-  stale WebGPU bind-group layout.
-- **`WebGpuInstanceArena` renamed `WebGpuPassArena` and exported from
-  `renderer-sdk`.** The class stages bytes against a cursor bound to the open
-  render pass and knows nothing about instances — the name described its first
-  caller, not what it does. Package renderers previously had to hand-rebuild the
-  cursor/grow/reset discipline, which is subtle enough that every copy is a
-  chance to get it wrong.
-- **BREAKING — `SceneManager` renamed `SceneDirector`, `app.scene` renamed
-  `app.scenes`.**
-- **BREAKING — scene construction and navigation are constructor- or
-  key-based, not instance-based.** `app.start(new GameScene())` → `new
-Application({ scenes: { game: GameScene } })` + `app.start(GameScene,
-data?)` or `app.start('game', data?)`; `app.scene.setScene(instance, opts)`
-  → `app.scenes.change(Ctor | 'key', { data?, transition?, suspendCurrent? })`;
-  `setScene(null)` is gone (start another scene, or `app.stop()`).
-- **BREAKING — `setScene()`/`restoreScene()` renamed `change()`/`restore()`,
-  and their `(data?, options?)` variadic argument pair collapses into one
-  options object.** `setScene(X, data, { transition })` →
-  `change(X, { data, transition })`. `retainCurrent` is renamed
-  `suspendCurrent` (matches the state it produces, `SceneState.Suspended`).
-- **BREAKING — `releaseScene()` renamed `unload()`, with explicit
-  disambiguation instead of a silent priority order.** `releaseScene(X)` →
-  `unload(X)`; a target with more than one coexisting activation (active +
-  retained + preloaded) now requires `{ instance: '...' }` rather than
-  resolving via an undocumented `retained → preloaded → active` priority.
+- **BREAKING — `Material` binding schemas are fixed at construction.**
+- **`WebGpuInstanceArena` renamed `WebGpuPassArena` and exported from `renderer-sdk`.**
+- **BREAKING — `SceneManager` renamed `SceneDirector`, `app.scene` renamed `app.scenes`.**
+- **BREAKING — scene construction and navigation are constructor- or key-based, not instance-based.**
+- **BREAKING — `setScene()`/`restoreScene()` renamed `change()`/`restore()`, and their `(data?, options?)` variadic argument pair collapses into one options object.**
+- **BREAKING — `releaseScene()` renamed `unload()`, with explicit disambiguation instead of a silent priority order.**
 - **BREAKING — the `transition` option no longer accepts a config object.**
-  `{ transition: { type: 'fade', duration: 250 } }` →
-  `{ transition: new FadeSceneTransition({ duration: 250 }) }` — note
-  `duration` is now milliseconds, not seconds. `SceneTransition` is a class
-  (abstract base + `FadeSceneTransition`/`CrossFadeSceneTransition`/
-  `SlideSceneTransition`/`PhasedSceneTransition`), not a union type.
-- **BREAKING — `scene.paused` is no longer a writable field.** It is now a
-  read-only getter (mirroring `SceneDirector.paused`) toggled only via
-  `app.scenes.pause()`/`resume()`.
+- **BREAKING — `scene.paused` is no longer a writable field.**
 - **BREAKING — `load`/`init` hooks take `data`, not a `Loader`.**
-  `load(loader)`/`init(loader)` → `load(data)`/`init(data)`; access the
-  loader via `this.loader`/`this.app.loader`. `init()` must be synchronous
-  (a `Promise`-returning `init` is a dev-mode activation error) — move
-  asynchronous setup into `load()`.
-- **BREAKING — `System.destroy()` is optional**; a system implementing none
-  of `fixedUpdate`/`update`/`draw` is no longer valid (at least one phase is
-  required).
-- **BREAKING — user app systems no longer reserve order `100`-`500`.** Core
-  managers (input/interaction/audio/tweens/rendering) moved out of
-  `app.systems` into an internal prepare stage; any plain `order` value is
-  now safe for user systems.
-- **BREAKING — `scene.systems` is attach-gated.** Register scene systems from
-  `init()` — using `scene.systems` before the scene is attached now throws.
-- **`Application.start()`'s startup sequencing** now starts the frame loop
-  before awaiting the initial navigation, rather than after — required so a
-  frame-driven `SceneTransitionSession` can progress on the very first
-  scene activation instead of deadlocking.
-- **`@codexo/exojs-physics`:** `PhysicsWorld` should be registered as a
-  system rather than stepped manually; `step()` remains available for
-  advanced manual driving.
-- **BREAKING — `Container.children` returns a frozen snapshot, not the
-  live array.** `container.children.push(x)` and other mutating array
-  methods now throw in normal (strict-mode) usage — mutate the scene
-  graph only through `addChild`/`addChildAt`/`removeChild`/
-  `removeChildAt`/`removeChildren`. The returned `readonly RenderNode[]`
-  is cached and reuses the same reference across reads until the next
-  structural change; a reference held before that change keeps
-  reflecting the old membership (`const kids = c.children;
-c.removeChild(x); kids` still contains `x`) — it does not update
-  in place.
-- **BREAKING — `SceneNode.parent` is no longer directly writable.** The
-  public setter is removed; reparenting happens exclusively through the
-  same `Container` mutation methods, which now use an internal
-  `_setParent()` path.
-- **BREAKING — `FadeSceneTransition`'s constructor is options-only.** `new
-FadeSceneTransition(color?, options?)` → `new
-FadeSceneTransition(options?)`, with the color folded in as
-  `FadeSceneTransitionOptions.color` (default `Color.black`) alongside
-  `duration`/`easing`/`placement`. The old positional pair silently
-  misassigned an options-only argument to the `color` parameter, so the
-  documented `new FadeSceneTransition({ duration: 300 })` left `color`
-  permanently `undefined` instead of defaulting. Migrate `new
-FadeSceneTransition(Color.white, { duration: 300 })` → `new
-FadeSceneTransition({ color: Color.white, duration: 300 })`.
-- **BREAKING (runtime) — `Loader.release(object)` now throws** when the
-  argument has no claim identity it can resolve, where it previously did
-  nothing at all. The supported forms are unchanged (a handle/value-ref from
-  `get()`, an `Asset` descriptor, an `Assets` catalog, a catalog leaf, or the
-  `(type, source)` pair), and releasing an unclaimed or already-released one
-  of those stays an idempotent no-op. What now throws is anything else — most
-  importantly a **resolved non-leaf resource** (one loaded with
-  `load(Asset.type('bmFont', …))`, or unpacked by `loadContainer()`) and any
-  object the loader has never seen. Such a call still type-checks against the
-  `release(handle: object)` overload, so it starts throwing at runtime in a
-  previously working application: switch it to `release(asset)` or
-  `release(type, source)`. The check depends only on whether the object is a
-  handle this loader ever issued, never on live claim bookkeeping, so the same
-  object's outcome cannot change with unrelated teardown ordering.
-- **BREAKING — a value asset's `parse()` must be synchronous.** A `parse`
-  returning a thenable now fails that ref with an explicit contract error
-  instead of misreading the promise itself as the parsed value. Move
-  asynchronous work into the asset handler's load phase.
-- **Gesture occurrences (pinch/rotate/long-press) are queued on the input
-  frame journal** and dispatched at the frame boundary in true platform-event
-  order, instead of synchronously off the raw `pointermove`/timer callback.
-  Handlers that relied on running mid-event now run on the next frame
-  boundary, in order relative to the pointer phases that produced them.
-- **BREAKING — keyboard channels resolve from the physical key
-  (`KeyboardEvent.code`), fixing bindings on non-US layouts.**
-  `KeyboardEvent.keyCode` reports the layout's own character mapping, so the
-  physical key at the QWERTY "A" position reports the `Q` keyCode on a French
-  AZERTY keyboard and the `Y`/`Z` keys swap on a German QWERTZ one — a WASD
-  binding silently landed on the wrong physical keys for those players. A
-  `Keyboard` member now denotes a physical key POSITION, identical across
-  layouts; the member names and channel values are unchanged (they name the
-  key by its US-QWERTY legend, so `Keyboard.Colon` is the key a QWERTZ
-  keyboard prints "ö" on), and persisted numeric bindings keep working — but
-  the values are opaque slots now, not `keyCode`s. Also: a key ExoJS does not
-  track (media and IME/language keys, and the empty `code` a soft keyboard
-  reports) drives no channel at all instead of writing into whatever slot its
-  `keyCode` happened to fall on; each modifier stays ONE channel covering both
-  physical sides (`ShiftLeft`/`ShiftRight` → `Keyboard.Shift`);
-  `Keyboard.Clear` is removed (it has no `code` — that physical key is
-  `Keyboard.NumPad5`); and `Meta`, `ContextMenu`, `PrintScreen`,
-  `NumPadEqual`, `IntlBackslash`, `IntlRo`, `IntlYen` are added for physical
-  keys that previously had no name. New `keyboardChannelFromCode(code)`
-  resolves a raw DOM `code` to its channel for rebinding UIs that work off DOM
-  events.
-- **BREAKING — `Scene.init`, the frame hooks and the `System` phases must be
-  synchronous, enforced by the type system and by a hard failure in every
-  build.** `Scene.init`/`fixedUpdate`/`update`/`draw` and
-  `SystemMethods.fixedUpdate`/`update`/`draw` now return `Synchronous`
-  instead of `void`, so `override async update()` is a compile error — a bare
-  `void` return type could never reject it, because TypeScript accepts any
-  return type against a `void`-returning signature. Only thenables are
-  rejected; `void` and the engine's fluent `update(delta): this` convention
-  still compile unchanged. At runtime a hook that returns a thenable now
-  throws a lifecycle error naming the owner, the hook and the remedy, in
-  **production as well as development** — previously an async `init()` was a
-  dev-only activation failure and an async frame hook a dev-only warning, so
-  the same broken override silently dropped its timing and swallowed its
-  errors in a production build. Move asynchronous work into `Scene.load()`,
-  which the engine awaits once per activation. `Scene.load()`/`Scene.unload()`
-  are unchanged and stay asynchronous.
+- **BREAKING — `System.destroy()` is optional.**
+- **BREAKING — user app systems no longer reserve order `100`-`500`.**
+- **BREAKING — `scene.systems` is attach-gated.**
+- **`Application.start()`'s startup sequencing.**
+- **`@codexo/exojs-physics`:.**
+- **BREAKING — `Container.children` returns a frozen snapshot, not the live array.**
+- **BREAKING — `SceneNode.parent` is no longer directly writable.**
+- **BREAKING — `FadeSceneTransition`'s constructor is options-only.**
+- **BREAKING (runtime) — `Loader.release(object)` now throws.**
+- **BREAKING — a value asset's `parse()` must be synchronous.**
+- **Gesture occurrences (pinch/rotate/long-press) are queued on the input frame journal.**
+- **BREAKING — keyboard channels resolve from the physical key (`KeyboardEvent.code`), fixing bindings on non-US layouts.**
+- **BREAKING — `Scene.init`, the frame hooks and the `System` phases must be synchronous, enforced by the type system and by a hard failure in every build.**
 
 ### Removed
 
-- **BREAKING — `Segment` is removed.** It modelled the same finite segment as
-  `Line`, differing only in field naming (`startX`/`endX` against
-  `fromX`/`toX`) and in not implementing the collision contract. Its own doc
-  comment claimed it was used by the path and swept-collision utilities; it was
-  not used anywhere — not by `src/`, the packages, the tests, the examples or
-  the guides. Use `Line`.
+- **BREAKING — `Segment` is removed.**
 
-- **BREAKING — `ShapeLike` is no longer exported.** No API in the repository
-  ever accepted one, and two of its implementers (`Vector`, `Line`) return
-  `null` from `collidesWith` unconditionally, so the type promised a collision
-  response it could not deliver. `Collidable` is the collision contract that is
-  actually consumed. The interface itself stays internal as the conformance
-  check for the concrete shape values.
+- **BREAKING — `ShapeLike` is no longer exported.**
 
-- **BREAKING — `Loader.release()` is removed.** Claims were held per scope, but
-  the only scope a direct `app.loader` call could use was one shared symbol. Two
-  unrelated modules that both used `app.loader` therefore shared a single claim,
-  and the first `release()` evicted the payload for both — the second consumer's
-  live handle fell back to `'loading'` with no fetch in flight, and nothing
-  restarted it until someone called `get()` again. Ownership was safe only as
-  long as every consumer remembered it was not the only one.
-
-  Assets acquired on the loader itself are now application-lifetime by
-  construction and are freed only by `destroy()`, so no consumer can drop a claim
-  another one relies on. Anything meant to be freed later is acquired through
-  `scene.loader` or a scope from `loader.scope()`, and released with
-  `scope.release(...)` or `scope.destroy()`.
+- **BREAKING — `Loader.release()` is removed.**
 
 - **BREAKING — playing a `Sound` before the autoplay unlock is now a no-op.**
-  `SoundVoice` started its buffer source in its own constructor with
-  `source.start(0, offset)`. A suspended `AudioContext`'s `currentTime` stands
-  still, so every sound played before the first user gesture was scheduled at
-  the _same_ instant and the whole backlog fired simultaneously on the unlock —
-  while the docs claimed such voices were "deferred". `AudioManager.play()` now
-  returns an already-ended `NoopVoice` for a `Sound` played while
-  `AudioManager.locked`, matching what `AudioGenerator` already did, and warns
-  once per `AudioManager` (re-armed when audio unlocks, so a menu full of click
-  sounds cannot flood the console). `AudioStream` keeps its deferral — a media
-  element owns its own playhead and can honestly be told to play later. Start
-  buffer/generator playback from `app.audio.onUnlock`:
-  `app.audio.onUnlock.add(() => app.audio.play(music, { loop: true }))`.
-- **BREAKING — `Sound.clip()` no longer throws on a not-yet-loaded sound.** It
-  used to require a decoded buffer because it snapshotted one; a clip is now
-  bound to the sound it was cut from and resolves the buffer at playback time,
-  so there is nothing left to require. Code relying on the throw as a
-  load-completion assertion should check `sound.ready` (or `await sound.loaded`)
-  instead.
-- **BREAKING — `Sound._createSpriteVoice` removed.** The `@internal` second
-  playback path is gone; `Sound.sprite(name)` replaces it. Playing a sprite
-  with a `time` offset at or past its clip end now returns an already-ended
-  `NoopVoice` — the same answer every other out-of-range play gives — instead
-  of throwing.
+- **BREAKING — `Sound.clip()` no longer throws on a not-yet-loaded sound.**
+- **BREAKING — `Sound._createSpriteVoice` removed.**
 - **BREAKING — `Extension.systems` and `ApplicationSystemBinding` removed.**
-  A system binding’s `create(app)` was exactly `install: app => { app.systems.add(system) }`,
-  down to the reverse-order destruction `SystemRegistry` performs either way —
-  two hooks running at the same moment with the same argument. Contribute an
-  app-level system from `install(app)` instead; unlike a binding, the same
-  closure can also undo it via the returned `ExtensionDisposer`.
-- **BREAKING — `Scene.onLoad`/`Scene.onUnload` removed.** Redundant with
-  `SceneDirector.onStartScene`/`onStopScene` and the overridable
-  `load()`/`unload()` methods themselves; replaced in spirit by the new
-  `Scene.onActivate`/`onSuspend` for cross-cutting activation/retention
-  concerns.
-- **BREAKING — `super.destroy()` in a `Scene` subclass is no longer
-  necessary.** The base `Scene.destroy()` is now empty — existing
-  `super.destroy()` calls are harmless but can be deleted.
-- **BREAKING — `Loader.unload()`/`Loader.unloadAll()` removed.** Both ignored
-  claim ownership: they forgot every scope's claim, so an app-level call could
-  free assets a scene still held. Use `Loader.release()`, which now also accepts
-  an `Asset` descriptor and a whole `Assets` catalog (`release(handle)`,
-  `release(asset)`, `release(catalog)`, `release(type, source)`) and drops only
-  the caller's own claim — the payload is evicted when the last owner releases.
-  `unload(catalog)` was already just a release of each leaf and maps directly to
-  `release(catalog)`; the hard, claim-forgetting reset is now internal-only.
+- **BREAKING — `Scene.onLoad`/`Scene.onUnload` removed.**
+- **BREAKING — `super.destroy()` in a `Scene` subclass is no longer necessary.**
+- **BREAKING — `Loader.unload()`/`Loader.unloadAll()` removed.**
 
 ### Performance
 
-- **The default rendering path is retained automatically.** The node handed to
-  `render()`/`renderTo()`/`capture()` now gets a persistent render
-  representation of its own: an unchanged scene under an unchanged view replays
-  the recorded GPU batches in O(batches) instead of rebuilding the whole plan
-  from the scene graph every frame. Nothing changes in how scenes are written —
-  no `compile()`, no `markDirty()`, and plain `Container`s keep their
-  transform, bounds, coordinate and per-child culling semantics exactly.
-  `static-heavy` at 25 000 nodes measured 9.800 ms before and 0.255 ms after
-  (WebGPU, one draw call, same session); at 100 000 nodes it is 0.228 ms against
-  Pixi 8's 0.185 ms. WebGL2 lands at 0.170 ms for 25 000 and 0.168 ms for
-  100 000 — flat in node count. A view change is absorbed as long as the capture
-  culled nothing and every kept node still lies inside the new view rect;
-  otherwise, and on any content, structure, transform or ancestor-transform
-  change, the frame re-collects exactly as before. `RetainedContainer` is
-  unaffected and stays the explicit opt-in for group-local transforms and
-  group-wide culling: a group under a render root keeps its own retention tier,
-  including in-place transform-row patching, because the root defers to it
-  instead of absorbing its entries.
-- **Moving nodes no longer throw the retained frame away.** A transform-only
-  descendant move now patches that node's baked transform row in place, the same
-  O(k) reconcile `RetainedContainer` has had, so a scene where a few percent of
-  the nodes move every frame stays on the recorded tier instead of rebuilding.
-  `dynamic-heavy` at 25 000 nodes measured 18.090 ms before and 2.525 ms after
-  (WebGPU, same session; WebGL2 2.113 ms), `deep-hierarchy` 16.908 ms before and
-  0.630 ms after. `static-heavy` is now at parity with Pixi 8 on both node counts
-  (0.165 ms against 0.165 at 25 000, 0.168 against 0.172 at 100 000). Two guards
-  keep this honest against per-child culling, which a `RetainedContainer` does
-  not have to face: a capture that culled anything is never patched (a culled
-  node could move back into view unseen), and a moved node that leaves the view
-  forces a re-collect rather than a stale replay.
-- **Fixed: a retained group could patch the wrong transform row.** The group
-  mapped a captured node index to its stored row using the lowest index among its
-  DIRECT draws, while the backend rebases the stored rows by the lowest index
-  across every recorded batch. A group whose first child was a plain container
-  holding a drawable therefore shifted every patch: the nested node jumped to the
-  moved node's transform and the moved node froze in place. The mapping now spans
-  nested draws, matching the backend.
-- **Text batches can span up to eight atlas textures per draw.** WebGPU and
-  WebGL2 now assign compatible atlas pages to a small texture-slot table instead
-  of ending the batch at every texture change. Mixed-font text with the same
-  shader/page class therefore keeps one draw (and remains retained-recordable)
-  until the eight-slot capacity is exhausted.
-- **WebGPU text flushes share one render pass and one submit.** The WebGPU text
-  renderer rewrote its shared vertex, index and node-data buffers from offset 0
-  on every flush, and ended (submitted) the render pass at the tail of each one
-  to keep those writes from landing under draws already recorded. A frame that
-  alternates sprites and text therefore cost one pass and one submit per text
-  flush. Each flush now appends at pass-scoped cursors and adds the base at bind
-  time, so the whole frame collapses to a single pass again. A capacity growth
-  and a projection rewrite remain real pass boundaries.
-- **WebGPU tile chunks cost one render pass per frame, not one per flush.** The
-  tile-chunk renderer rewrote its shared instance buffer from offset 0 and ended
-  (submitted) the render pass at the tail of every flush, so a frame that broke
-  the tile batch N times — a tileset change, a blend-mode change, an interleaved
-  actor — paid N render passes and N `queue.submit` calls. Each flush now appends
-  at a pass-scoped cursor and binds its own sub-range, so those flushes merge
-  into one pass and one submit. The pass still ends where it must: a capacity
-  growth, a projection rewrite, and the shared transform-storage / texture-upload
-  hazards.
+- **The default rendering path is retained automatically.**
+- **Moving nodes no longer throw the retained frame away.**
+- **Fixed: a retained group could patch the wrong transform row.**
+- **Text batches can span up to eight atlas textures per draw.**
+- **WebGPU text flushes share one render pass and one submit.**
+- **WebGPU tile chunks cost one render pass per frame, not one per flush.**
 - **WebGPU particle draws share one render pass and one submit.**
-  `WebGpuParticleRenderer` opened a render pass, recorded one draw call and
-  ended (submitted) it again — per particle system, because every system
-  rewrote the render mode's shared vertex buffer and the system uniform buffer
-  from offset 0. Each draw call now appends at pass-scoped cursors (a byte
-  offset into the mode's vertex buffer, a slot in a uniform ring) and adds the
-  base at bind time, so a frame's particle draws cost one pass and one submit
-  regardless of how many systems or flushes it contains. A capacity growth and
-  a mid-frame edit to a mode's own vertex geometry still end the pass, since
-  appending cannot cover either.
-- **A frame that ends on a mesh no longer pays an extra pass and submit for
-  the next frame's clear.** `WebGpuMeshRenderer.flush()` honored a pending
-  clear-with-nothing-to-draw by opening a render pass and ending it right
-  back — even though the very next renderer's flush in the same frame would
-  have reused an open one. That empty pass now stays open instead of being
-  closed in place, so a following flush (e.g. the sprite flush right after)
-  appends into it rather than paying for a pass and a `queue.submit` of its
-  own.
-- **A fully mask-clipped tile-chunk flush no longer opens (or counts) an
-  empty render pass.** `WebGpuTileChunkRenderer.flush()` called
-  `acquirePass()` unconditionally, so a flush whose quads were entirely
-  clipped away by the active mask still opened a pass — and counted it in
-  `stats.renderPasses` — even with nothing left to draw and no clear
-  pending. The pass is now only acquired when the flush will actually draw
-  or a clear is still pending.
+- **A frame that ends on a mesh no longer pays an extra pass and submit for the next frame's clear.**
+- **A fully mask-clipped tile-chunk flush no longer opens (or counts) an empty render pass.**
 - **`Container` caches its paint order and child-index lookups.**
-  `InteractionManager` re-sorted every container's children on every single
-  hit-test call, and `getChildIndex()` did a linear `indexOf` scan on every
-  call (including from `swapChildren`/`setChildIndex`). Both are now cached on
-  `Container` itself — the paint-order snapshot skips the sort entirely while
-  every sibling shares a `zIndex` — invalidated by each structural mutator, and
-  by a child's `zIndex` write for the paint order alone.
-- **The retained-text quad-index buffer starts at 1024 quads, not 64.** 64
-  quads is roughly one short line of text, so effectively every real text
-  draw triggered several doubling steps to reach a usable size — each one a
-  fresh buffer allocation plus a CPU index fill (plus, since growth now ends
-  an open pass first, an extra submit). 1024 quads is 24 KiB and covers
-  normal text scenes in a single allocation, in both `WebGpuTextRenderer` and
-  `WebGl2TextRenderer`.
+- **The retained-text quad-index buffer starts at 1024 quads, not 64.**
 - **A tint change rewrites one row instead of throwing the recording away.**
-  Tinting per frame - a hit flash, a selection highlight, a fade - used to
-  invalidate the whole retained product on every frame it happened, because a
-  tint is a content change and content changes rebuild. Tint lives in a
-  per-row store parallel to the transform rows, though, so it is the one
-  content change a recorded product can express in place. A tint write now
-  marks its own channel in the changed-record index, and a product whose only
-  change since it last looked is tints writes those rows (`_patchTintRow` on
-  both backends) and replays.
-
-  Everything else still rebuilds, deliberately: a different texture, geometry
-  or blend mode decides which batch a node belongs to, and no row write says
-  that. The split is what makes the question answerable - "only tints changed"
-  is a property of the marks rather than a guess from a revision that every
-  kind of change bumps.
-
-  Tinting something the frame does not draw - a node the capture culled, or one
-  added after it - writes nothing and rebuilds nothing either: a colour that
-  reaches no recorded draw cannot change the picture.
-
-  Writing through the `tint` instance in place (`sprite.tint.r = 8`) still
-  bypasses the setter and is not observed at all; assign a colour, or call
-  `invalidateContent()` after mutating one.
 
 - **A moved node writes one entry instead of climbing its ancestor chain.**
-  Every own-transform mutation used to walk from the node to the scene root,
-  offering the moved row to the enclosing transform group and to every render
-  root above it, because a moved node cannot know which retained products
-  recorded it. That walk ran on every `setPosition` in a scene with any
-  retention live. The engine now keeps one changed-record index: a mutation
-  marks the node once, and each retained product pulls the marks it cares about
-  against the row map it already keeps - a recorded node costs it a map hit
-  rather than the mutator a walk.
 
-  The index is bounded by construction, which is what separates it from a
-  change journal: a node marked a thousand times in a frame holds one entry,
-  ordering comes from the node's own mark sequence, and the marks live in a
-  ring of eight generations. A product that has not looked for longer than that
-  is told so and rebuilds, rather than being handed a partial answer. Nothing
-  is marked at all while no retained consumer exists.
-
-- **A root drawn to two render targets in one frame keeps its retention.** A
-  captured product is compiled for the target it was recorded against, and a
-  root held exactly one. Drawing the same root into a `RenderTexture` and onto
-  the screen within the same frame - a minimap, a portal, a mirror, a
-  post-processing source - therefore had each draw discard the other's product
-  and capture again, every frame, with no steady state to settle into. Measured
-  on a 2000-leaf scrolling world with the indexed tier refused: all 20 draws of
-  a 10-frame window missed their keys and walked the scene graph (28 809 nodes
-  culled), against 0 for the same scene drawn twice to a single target. A root
-  now holds one product per render target, at most two, evicting the least
-  recently used one beyond that - the screen plus one offscreen target is the
-  case that recurs every frame, and each product is a full instruction set plus
-  its recorded entries. A third target in one frame re-captures exactly as
-  before. Roots served by the indexed slot tier were never affected: that tier
-  is keyed on the backend alone.
+- **A root drawn to two render targets in one frame keeps its retention.**
 
 ### Fixed
 
-- **Custom WebGPU `SpriteMaterial` shaders now honour
-  `Texture.premultiplyAlpha`.** The engine carries the per-texture flag through
-  the opaque value passed to `sampleBase()`, so custom materials match the stock
-  sprite shader and WebGL2 even when one batch mixes textures with different
-  upload-alpha modes.
-- **Retained `SpriteMaterial` batches now keep live uniforms and material
-  textures on WebGPU and WebGL2.** Retained groups record instance/transform
-  data while resolving material state at replay, deduplicated once per material
-  and render plan. Uniform or texture-value changes stay on the O(batches)
-  instruction tier; blend/sampler structure changes preflight-invalidate the
-  set, entry-replays once with live material keys, and records a replacement.
-- **Text draws past 16384 quads no longer silently corrupt.** `WebGpuTextRenderer`
-  and `WebGl2TextRenderer` computed glyph vertex indices as `quadIndex * 4` into a
-  `Uint16` index buffer, which wraps once a flush's cumulative quad count reaches
-  16384 — with no error and no warning, just wrong geometry (a later glyph's draw
-  silently reading an earlier glyph's vertex slot). The ceiling was tighter than it
-  looked in the WebGPU live path specifically, since one running vertex cursor
-  spans every batch of a flush, not just one draw. Both renderers' index buffers
-  (live and retained) now use `Uint32` (`'uint32'` in WebGPU, `UNSIGNED_INT` in
-  WebGL2 — both core, no extension), at the cost of doubling index-buffer memory.
-- **A single `Text`/`BitmapText` node with more than 16384 visible glyphs on
-  one atlas page no longer silently corrupts.** `buildTextPageQuads`
-  (`TextLayout.ts`) packed one node's own glyph placements into a `Uint16`
-  index buffer — a ceiling one layer above the renderer-level fix just above,
-  reachable per node instead of per flush. `TextPageQuads.indices` is now a
-  `Uint32Array`.
+- **Custom WebGPU `SpriteMaterial` shaders now honour `Texture.premultiplyAlpha`.**
+- **Retained `SpriteMaterial` batches now keep live uniforms and material textures on WebGPU and WebGL2.**
+- **Text draws past 16384 quads no longer silently corrupt.**
+- **A single `Text`/`BitmapText` node with more than 16384 visible glyphs on one atlas page no longer silently corrupts.**
 - **Writing to `view.viewport` directly now invalidates the camera.**
-  `View.viewport` hands out the live `Rectangle`, but its setters only marked
-  the rectangle's own cached edge normals — so `view.viewport.x = 0.5` changed
-  what the backend reads when it opens a render pass while `View.updateId`
-  stood still, and every backend guard keyed on that counter was blind to it.
-  `Rectangle` now takes an optional owner notification, invoked from the single
-  internal point that both its position and its (now observable) size report
-  to; `View` hooks it, so direct writes, `viewport.set(…)`, a write one level
-  down such as `viewport.size.width = …`, and `View.reset()` all advance
-  `updateId` exactly as `setViewport` does. A `Rectangle` mutated back to the
-  value it already holds still notifies nobody, and `clone()` does not carry
-  the callback over.
-- **Particles no longer render through a stale viewport on WebGPU.** A pass
-  carries the viewport it was opened with and cannot be given another one, so
-  moving a camera's viewport between two particle draws that shared a pass made
-  the second draw render into the first one's rectangle — visible in
-  split-screen, picture-in-picture and minimap scenes, where a view renders
-  into a sub-rectangle of the canvas. `WebGpuParticleRenderer` now ends the
-  pass when the view was invalidated after it was opened, as the sprite
-  renderers already did. Unlike their guard this one does not ask whether the
-  recorded draws are its own: the viewport belongs to the pass, so a pass
-  opened by any renderer already carries it. A frame that does not move its
-  camera keeps the same pass and submit counts as before.
-- **A paused voice is no longer the pool's preferred eviction victim.** A paused
-  `SoundVoice` stays in the pool while its bookkeeping ages against the still
-  running context clock, so `FirstInFirstOut` saw the oldest entry and
-  `LeastRecentlyUsed` the one with the least time left — and picked it. A scene
-  that suspended a looping ambience, then let other code keep triggering the
-  same `Sound`, had that ambience evicted and silently dropped, because
-  `SceneAudio.restore()` passes over a voice that is `ended` rather than
-  `paused`. Victim selection now considers unpaused voices first and falls back
-  to a paused one only when the pool holds nothing else.
+- **Particles no longer render through a stale viewport on WebGPU.**
+- **A paused voice is no longer the pool's preferred eviction victim.**
 - **Pausing a voice whose source had already played out no longer strands it.**
-  `onended` is an asynchronous task, so a source can be past its window end
-  while the callback is still in flight; `pause()` retires the source and clears
-  that callback, which left the voice permanently `paused` with `ended === false`
-  — holding its pool slot, the manager's voice registry entry and its place in
-  `SceneAudio`'s suspended set, with nothing left that could finish it.
-  `pause()` now ends such a voice instead.
-- **`AudioManager.destroy()` drops its subscription to the global
-  `onAudioContextReady`**, like `AudioBus` and `AudioListener` already did. A
-  handler that throws during that dispatch terminates the dispatch itself, so a
-  destroyed `Application` could otherwise prevent a live one's buses from ever
-  being set up.
+- **`AudioManager.destroy()` drops its subscription to the global `onAudioContextReady`**
 - **Each `Application` now gets its own spatial listener.**
-  `AudioContext.listener` belongs to the process-wide `AudioContext`, so two
-  `Application`s writing their absolute world position into it every frame
-  simply overwrote each other — last writer per frame won, and both mixes
-  panned against whichever ticked last. The real WebAudio listener is now
-  pinned at the origin (orientation unchanged) and every spatial voice writes
-  its panner position **relative** to its own manager's `AudioListener`.
-  Distance, attenuation and the distance model are mathematically identical,
-  and the Doppler path is untouched (it always worked in absolute world
-  coordinates in JS). Two consequences worth knowing: listener motion is now
-  smoothed per voice rather than once centrally (the central
-  `SmoothedAudioParam`s on `AudioListener` are gone), and
-  `app.audio.spatial.teleportThreshold` is measured on the source-to-listener
-  offset — a listener warp snaps every spatial voice, and a source warping
-  together with the listener no longer crosses the threshold at all.
-- **Scene pause now actually stops `Sound` playback.** `SceneAudio` detects
-  pausable voices by duck-typing `pause`/`resume`, and `AudioStreamVoice` was
-  the only implementation of `Pausable` — so every buffer-backed ambience or
-  loop kept playing straight through `scene.pause()` and retention
-  `suspend()`. `SoundVoice` now implements `Pausable`: `pause()` reads the
-  playhead and retires the buffer source (which can be neither repositioned
-  nor halted in place), `resume()` starts a fresh one at exactly that offset,
-  and `time`/`paused` report the frozen state. Every operation that would
-  otherwise rebuild the source — `seek`, `loop`, `playbackRate`, `detune`, the
-  per-frame Doppler tick — stays inert while paused. Note the honest limit:
-  resume is sample-exact but not phase-continuous, so on sustained tonal
-  material the seam can be audible.
-- **A `Sound.clip()`/`Sound.sprite()` sub-sound now survives eviction and
-  reload.** Both used to snapshot the parent's `AudioBuffer` at creation time,
-  while the asset layer heals a `Sound` **in place** (identity preserved). A
-  clip taken before an evict/reload cycle therefore pinned the evicted buffer in
-  memory — defeating the eviction — and went on playing stale audio afterwards.
-  Sub-sounds are now bound to the sound they were cut from and read its buffer
-  at playback time: they follow it through evict and reload, report its
-  `loadState`/`audioBuffer`, and report `duration: 0` while it has no payload.
-- **`SceneInteraction.suspend()`/`resume()`** now actually detach/reattach
-  observed roots and captures (previously no-op stubs) — a retained scene no
-  longer keeps receiving pointer dispatch alongside whichever scene is now
-  active.
-- **`SceneAudio.play()`** now gates playback requested while the scope is
-  `Preparing`/`Ready`/`Suspended`, queuing it until the scene next activates,
-  instead of starting audio for a scene that might never finish activating.
-- **A throwing lifecycle listener** (`Scene.onActivate`/`onSuspend`,
-  `Director.onStateChange`/`onChangeScene`/`onStartScene`/`onStopScene`) no
-  longer aborts the remaining listeners or corrupts the `Signal`'s internal
-  dispatch state — every listener runs, a throw is reported through
-  `Application.onError` per-listener instead of propagating.
-- **Multi-touch gesture recognition.** A lifted touch (`pointerup`) was never
-  removed from the two-touch set, so the remaining touch's next move still
-  attempted (broken) two-touch processing; the rotation delta was a naive
-  subtraction, so a move across the ±180° seam (`+179°` → `-179°`) reported
-  `-358°` instead of `+2°`; and `InputManager` reused the recognizer's own
-  scratch center `Vector` for its dispatch instead of owning one.
-- **Spatial audio voice lifecycle and math.** A duplicate same-timestamp
-  velocity sample no longer erases real movement (while a genuinely later
-  stationary tick still zeroes it); the Doppler ratio actively restores to `1`
-  when the factor drops to `0` or the source becomes coincident with the
-  listener, instead of leaving a stale shift applied; `refDistance`,
-  `maxDistance`, `rolloffFactor`, cone angles/gain, and `velocity` clamp to the
-  Web Audio `PannerNode`'s valid ranges and reject `NaN`/`±Infinity` instead of
-  propagating them into the graph, with `refDistance`/`maxDistance` clamped
-  independently (coupling them could force the two equal and divide by zero in
-  the default `'linear'` distance model); and clearing `position`/`follow` now
-  genuinely de-spatializes a voice — the panner is disconnected, the direct
-  source-to-output route restored, and the voice unregistered from the
-  per-frame tick set — rather than leaving a silently-still-wired panner
-  running.
-- **A failed catalog leaf can be retried.** Re-adopting one via
-  `get()`/`load()` was a silent no-op, leaving it `'failed'` forever; it is now
-  a retry request that re-arms the leaf, heals every co-handle/value-ref
-  sharing its key, and re-drives exactly one fetch (foreground or background,
-  matching the request). When the key's payload is already resident, the retry
-  re-runs `parse()` against it rather than refetching — so a value ref whose
-  own `parse()` failed re-fails honestly instead of stranding at `'loading'`
-  with no fetch in flight. A leaf that was never adopted before counts as a
-  retry too: a second scene claiming the same catalog after the first load
-  failed handed the loader a brand-new `'idle'` leaf, which joined the failed
-  key, flipped to `'loading'`, and hung there because nothing restarted the
-  fetch. Whether an adoption is a retry is now decided by the source's own
-  failed handles, not by the state of whichever leaf asked — and that holds for
-  seamless handles and value refs (`AssetRef`) alike, so a second scene
-  re-claiming a previously-failed JSON/text/binary asset recovers instead of
-  hanging.
-- **`Loader.inspect()` reports `'failed'`, not `'ready'`,** for a value key
-  whose fetch succeeded but whose own `parse()` failed: the raw payload is
-  stored either way, so a resident payload alone never means "readable".
-- **A child's `zIndex` write no longer invalidates `Container.children`.** It
-  changes neither document order nor any child index, so the `children`
-  snapshot keeps the reference stability its contract promises and the
-  paint-order view alone is recomputed.
-- **`Container.addChild()`/`addChildAt()` reject an already-`destroy()`ed
-  child** instead of linking it into the tree anyway. The prior guard only
-  warned, and only under `__DEV__` — a production build attached the
-  destroyed node silently, where it either rendered nothing (skipped by the
-  render-plan collect step) or replayed freed transform/bounds state. The
-  check is now an always-on `invariant` throw, matching the existing
-  ancestor-cycle guard, so a use-after-destroy attach fails the same way in
-  every build instead of degrading quietly in production only.
-- **`WebGpuMeshRenderer.onDisconnect()` no longer destroys buffers a
-  still-open pass draws against.** Since the pass-cursor sweep, a mesh flush
-  no longer ends the WebGPU render pass; disconnecting the renderer on its
-  own (mid-frame, outside `WebGpuBackend.destroy()`/device loss, both of
-  which already drop the pass first) could leave its own draws recorded into
-  a pass that was still open and unsubmitted, then free the vertex, index,
-  uniform and instanced buffers they read — a destroyed-buffer validation
-  error whenever something later submitted that pass. `onDisconnect()` now
-  ends its own open pass first when it holds the renderer's draws.
-- **`WebGpuTextRenderer`'s shared retained quad-index buffer no longer grows
-  out from under a still-open pass.** The grow branch of
-  `_ensureRetainedQuadIndexBuffer()` destroyed the current buffer
-  unconditionally; an earlier retained replay in the same still-open pass
-  could already have a draw bound to it, so freeing it invalidated the whole
-  merged command buffer at the next submit. Growth now ends the open pass
-  first when it already holds draws.
+- **Scene pause now actually stops `Sound` playback.**
+- **A `Sound.clip()`/`Sound.sprite()` sub-sound now survives eviction and reload.**
+- **`SceneInteraction.suspend()`/`resume()`**
+- **`SceneAudio.play()`**
+- **A throwing lifecycle listener.**
+- **Multi-touch gesture recognition.**
+- **Spatial audio voice lifecycle and math.**
+- **A failed catalog leaf can be retried.**
+- **`Loader.inspect()` reports `'failed'`, not `'ready'`,.**
+- **A child's `zIndex` write no longer invalidates `Container.children`.**
+- **`Container.addChild()`/`addChildAt()` reject an already-`destroy()`ed child.**
+- **`WebGpuMeshRenderer.onDisconnect()` no longer destroys buffers a still-open pass draws against.**
+- **`WebGpuTextRenderer`'s shared retained quad-index buffer no longer grows out from under a still-open pass.**
 
 ### Docs
 
-- Added the **Chords and sequences** input guide chapter covering
-  `ChordAction`/`SequenceAction` pattern syntax, timing options, and their
-  interaction with the scene availability gate.
-- Migrated `examples/`, `@codexo/exojs-react`, the `create-exo-app`
-  game-starter template, and the `runtime`/`recipes`/`integrations` guides to
-  the `change()`/`restore()`/`unload()`/`preload()` navigation API and the
-  class-based `SceneTransition`/`PhasedSceneTransition` system.
-- Fixed a batch of guide chapters across `assets`/`audio`/`debugging`/`effects`/
-  `getting-started`/`input`/`recipes`/`rendering`/`runtime` that still taught
-  the removed `load(loader)`/`init(loader)` scene-hook signature; samples now
-  match `load(data)`/`init(data)` and reach the loader through `this.loader`
-  (scene-scoped) or `this.app.loader` (application-lifetime).
+- **Added the **Chords and sequences** input guide chapter covering `ChordAction`/`SequenceAction` pattern syntax, timing options, and their interaction with the scene availability gate.**
+- **Migrated `examples/`, `@codexo/exojs-react`, the `create-exo-app` game-starter template, and the `runtime`/`recipes`/`integrations` guides to the `change()`/`restore()`/`unload()`/`preload()` navigation API and the class-based `SceneTransition`/`PhasedSceneTransition` system.**
+- **Fixed a batch of guide chapters across `assets`/`audio`/`debugging`/`effects`/ `getting-started`/`input`/`recipes`/`rendering`/`runtime` that still taught the removed `load(loader)`/`init(loader)` scene-hook signature; samples now match `load(data)`/`init(data)` and reach the loader through `this.loader` (scene-scoped) or `this.app.loader` (application-lifetime).**
 
 ## [0.15.3] - 2026-07-09
 

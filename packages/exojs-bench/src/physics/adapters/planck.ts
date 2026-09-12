@@ -144,7 +144,10 @@ export const createPlanckAdapter = async (): Promise<PhysicsAdapter> => {
       // converts it per body itself, so the shared pivot goes in unchanged - the
       // same pivot the other three arms are given.
       for (const joint of scene.joints) {
-        created.createJoint(new P.RevoluteJoint({}, table[joint.bodyA]!, table[joint.bodyB]!, { x: joint.x, y: joint.y }));
+        // Box2D's own default, written out for the same reason the other arms
+        // write it out: the scene requires it, so no arm is left resting on a
+        // default that a library release could change.
+        created.createJoint(new P.RevoluteJoint({ collideConnected: false }, table[joint.bodyA]!, table[joint.bodyB]!, { x: joint.x, y: joint.y }));
       }
 
       stepIndex = 0;

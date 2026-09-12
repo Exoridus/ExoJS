@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 
 import { mutationSignature, selectMutationIndices, wobbleOffsetAt } from '../../shared/mutation';
+import { phaserCovers } from '../coverage';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
 import { isParticleLifecycle, isParticles, PARTICLE_ALPHA, PARTICLE_LIFETIME, PARTICLE_STEP, particleSeedAt } from '../particles';
 import { isPickingScene, PICK_RECT_SIZE, pickPointAt, pickRectAt } from '../picking';
@@ -16,17 +17,8 @@ import {
 } from '../sceneAssets';
 import type { TilemapExtent } from '../tilemap';
 import { isTilemap, isTilemapEditing, TILE_SIZE, tileIdAt, tilemapCameraAt, tilemapCameraFrameFor, tilemapEditsAt, tilemapExtent } from '../tilemap';
-import {
-  hasFullViewportLeaves,
-  isChurning,
-  isTextArchetype,
-  isTextUpdating,
-  leafAlpha,
-  pointerQueriesPerFrame,
-  textForLeaf,
-  usesRenderTargets,
-} from '../traits';
-import { GRID_MARGIN, gridLayout, gridPosition, isScrolling, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '../world';
+import { hasFullViewportLeaves, isChurning, isTextArchetype, isTextUpdating, leafAlpha, pointerQueriesPerFrame, textForLeaf } from '../traits';
+import { GRID_MARGIN, gridLayout, gridPosition, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '../world';
 
 /**
  * Phaser 4.2 arm of the rendering benchmark.
@@ -349,14 +341,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
     },
 
     coversArchetype(spec: ArchetypeSpec): boolean {
-      // This arm builds a fixed, viewport-sized scene with a static camera. A
-      // scrolling archetype would silently render as an ordinary fully-visible
-      // one here, i.e. a row that looks comparable and is not - so the arm sits
-      // the archetype out instead.
-      //
-      // Render-target archetypes remain out until their Phaser semantics are
-      // validated against the shared filter/mask contract.
-      return !isScrolling(spec) && !usesRenderTargets(spec);
+      return phaserCovers(spec);
     },
 
     async init(canvas: HTMLCanvasElement, target: Backend): Promise<void> {

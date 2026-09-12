@@ -33,8 +33,18 @@ export interface PhysicsArmReport {
  * sit within an order of magnitude of the clamp.
  */
 export interface PhysicsClockReport {
-  /** Smallest non-zero difference two consecutive `performance.now()` calls produced, in milliseconds. */
-  readonly resolutionMs: number;
+  /**
+   * Smallest non-zero difference two consecutive `performance.now()` calls
+   * produced, in milliseconds, or `null` where the probe observed none.
+   *
+   * `null` is the absence of the reading and never a fine clock. It used to be
+   * stored as `0`, which every consumer that divides by it or compares against
+   * it then read as a perfectly resolving clock: the batch size collapsed to one
+   * step and the coarse-timing note could not be computed, so a cell measured
+   * without a known grid looked better qualified than one measured with a
+   * coarse but known one.
+   */
+  readonly resolutionMs: number | null;
   /** Whether the page is cross-origin isolated, which is what lifts the coarse clamp. */
   readonly crossOriginIsolated: boolean;
 }

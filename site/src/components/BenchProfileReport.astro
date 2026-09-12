@@ -64,21 +64,6 @@ const webgl1Blocks = backends.flatMap(backend => {
     return table === null ? [] : [{ backend, table }];
 });
 
-/**
- * The node count the rendering rows were measured at.
- *
- * A backend picks its own count from the archetype ladders, so the note only
- * states one figure where the backends agreed on it and names them separately
- * where they did not.
- */
-const headlineCounts = [...new Set(backends.map(backend => backend.headlineCount).filter((count): count is number => count !== null))];
-const renderingCountNote =
-    headlineCounts.length === 1
-        ? `Every row is measured at ${String(headlineCounts[0])} nodes`
-        : `Rows are measured at ${backends
-              .map(backend => `${String(backend.headlineCount ?? 0)} nodes on ${BACKEND_LABELS[backend.backend]}`)
-              .join(' and ')}`;
-
 const excluded = backends.flatMap(backend => backend.excluded.map(entry => ({ backend: backend.backend, ...entry })));
 
 /** The machine is one across the pooled runs, so the first run's stamps name it for all of them. */
@@ -128,10 +113,14 @@ const libraries = (isRendering ? rendering?.libraries ?? [] : physics?.libraries
         </p>
     )}
 
-    {/* The view already names its domain and its unit, so the block carries only what the tab cannot say: the size the rows were measured at. */}
+    {/*
+     * No global load note. Every row states its own load in its own column,
+     * because the rows are not measured at one: a scenario carries its own
+     * ladder, and a sentence claiming one figure for the table was wrong for
+     * most of the rows under it and unwritable for the rest.
+     */}
     {isRendering && renderingTable.rows.length > 0 && (
         <section class="block">
-            <p class="note">{renderingCountNote}, chosen from the archetype ladders before any timing was read.</p>
             <BenchComparisonTable table={renderingTable} label="Rendering comparisons per backend and arm" />
         </section>
     )}
@@ -239,7 +228,7 @@ const libraries = (isRendering ? rendering?.libraries ?? [] : physics?.libraries
                             <span class="detail">
                                 {physicsHost.host.cpuCount} logical cores, {physicsHost.host.os} {physicsHost.host.arch}, {physicsHost.browser}{' '}
                                 {physicsHost.browserVersion}, fixed step {(physicsHost.fixedDelta * 1000).toFixed(2)} ms, clock resolution{' '}
-                                {physicsHost.clock.resolutionMs} ms
+                                {physicsHost.clock.resolutionMs === null ? 'not observed' : `${String(physicsHost.clock.resolutionMs)} ms`}
                                 {physicsHost.clock.crossOriginIsolated ? ', cross-origin isolated' : ''}
                             </span>
                         </dd>

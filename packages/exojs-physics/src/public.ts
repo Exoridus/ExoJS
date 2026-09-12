@@ -9,7 +9,7 @@ export { Collider } from './Collider';
 export type { ContactModifier, ContactModifierContext } from './ContactModifier';
 export type { CollisionEvent, ContactPoint, SensorEvent } from './events';
 export { DistanceJoint, type DistanceJointOptions } from './joints/DistanceJoint';
-export { Joint } from './joints/Joint';
+export { Joint, type JointOptions } from './joints/Joint';
 export { MouseJoint, type MouseJointOptions } from './joints/MouseJoint';
 export { PrismaticJoint, type PrismaticJointOptions } from './joints/PrismaticJoint';
 export { RevoluteJoint, type RevoluteJointOptions } from './joints/RevoluteJoint';

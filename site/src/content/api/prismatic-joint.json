@@ -6,11 +6,11 @@
   "subsystem": "physics",
   "importPath": "@codexo/exojs-physics",
   "tier": "stable",
-  "memberCount": 10,
+  "memberCount": 11,
   "counts": {
     "constructors": 1,
     "methods": 0,
-    "properties": 9,
+    "properties": 10,
     "events": 0
   },
   "sections": [
@@ -125,6 +125,27 @@
           "params": [],
           "returnType": null,
           "description": "Second constrained body."
+        },
+        {
+          "name": "collideConnected",
+          "signature": "collideConnected: boolean",
+          "signatureTokens": [
+            {
+              "text": "collideConnected",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether bodyA and bodyB also collide with each other; see JointOptions.collideConnected."
         },
         {
           "name": "enabled",

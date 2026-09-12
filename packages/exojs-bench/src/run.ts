@@ -13,6 +13,7 @@ import { parseArgs } from './shared/args';
 import { createCheckpointWriter } from './shared/checkpoint';
 import type { PlatformDeclaration } from './shared/provenance';
 import { parsePlatformDeclaration, PLATFORM_DECLARATION_SYNTAX, readPlatformVersion } from './shared/provenance';
+import { printTextTable } from './shared/table';
 import { PHYSICS_LIBRARY_ARMS } from './shared/viteServer';
 import type { RunPlan } from './suite/plan';
 import { parseSuite, resolveSuitePlan } from './suite/plan';
@@ -443,14 +444,43 @@ const runRenderingDomain = async (args: Map<string, string>, selector: DomainSel
 
   writeReport(data, outDir);
 
-  // Structural sanity summary: per-frame draw calls per arm/archetype/node count.
-  console.log('\n=== Per-frame draw calls (structural sanity) ===');
+  // Per-cell summary. Grouped by scenario and load so the arms of one row sit
+  // under one another: the comparison a reader is after is between arms, and the
+  // matrix is emitted arm-major.
+  console.log('\n=== Results ===');
 
-  for (const result of data.results) {
-    console.log(
-      `  ${result.spec.engine.padEnd(6)} ${result.spec.config.padEnd(9)} ${result.spec.backend.padEnd(6)} ${result.spec.archetype.padEnd(15)} n=${String(result.spec.nodeCount).padStart(7)} drawCalls=${String(result.structural.drawCalls).padStart(8)} cpuMsMedian=${result.cpuMsMedian.toFixed(3)} cpuMsP95=${result.cpuMsP95.toFixed(3).padStart(8)} status=${result.status}${isHitching(result) ? ' HITCHING' : ''}`,
-    );
-  }
+  printTextTable(
+    [
+      { header: 'scenario' },
+      { header: 'load', align: 'right' },
+      { header: 'backend' },
+      { header: 'arm' },
+      { header: 'cpu ms', align: 'right' },
+      { header: 'cpu p95', align: 'right' },
+      { header: 'draws', align: 'right' },
+      { header: 'status' },
+    ],
+    [...data.results]
+      .sort(
+        (left, right) =>
+          left.spec.archetype.localeCompare(right.spec.archetype) ||
+          left.spec.nodeCount - right.spec.nodeCount ||
+          left.spec.backend.localeCompare(right.spec.backend) ||
+          left.spec.engine.localeCompare(right.spec.engine) ||
+          left.spec.config.localeCompare(right.spec.config),
+      )
+      .map(result => [
+        result.spec.archetype,
+        String(result.spec.nodeCount),
+        result.spec.backend,
+        `${result.spec.engine} ${result.spec.config}`,
+        result.cpuMsMedian.toFixed(3),
+        `${result.cpuMsP95.toFixed(3)}${isHitching(result) ? ' hitching' : ''}`,
+        String(result.structural.drawCalls),
+        result.status,
+      ]),
+    { groupBy: 0 },
+  );
 
   console.log(`\nReport written to ${outDir} (results.json, results.csv, results.md)`);
 };
@@ -565,7 +595,7 @@ const runPhysicsDomain = async (args: Map<string, string>, selector: DomainSelec
 
   console.log('\n=== Provenance ===');
   console.log(
-    `  browser=${data.provenance.browser}/${data.provenance.browserVersion} cpu="${data.provenance.host.cpu}" (${String(data.provenance.host.cpuCount)} logical) os=${data.provenance.host.os} platformVersion=${String(data.provenance.host.platformVersion.major)} (${data.provenance.host.platformVersion.source}) prerelease=${String(data.provenance.prerelease.value)} (${data.provenance.prerelease.source}) engine=${data.provenance.engineVersion} fixedDelta=${String(data.provenance.fixedDelta)} clock=${(data.provenance.clock.resolutionMs * 1000).toFixed(1)}us (isolated=${String(data.provenance.clock.crossOriginIsolated)})`,
+    `  browser=${data.provenance.browser}/${data.provenance.browserVersion} cpu="${data.provenance.host.cpu}" (${String(data.provenance.host.cpuCount)} logical) os=${data.provenance.host.os} platformVersion=${String(data.provenance.host.platformVersion.major)} (${data.provenance.host.platformVersion.source}) prerelease=${String(data.provenance.prerelease.value)} (${data.provenance.prerelease.source}) engine=${data.provenance.engineVersion} fixedDelta=${String(data.provenance.fixedDelta)} clock=${data.provenance.clock.resolutionMs === null ? 'not-observed' : `${(data.provenance.clock.resolutionMs * 1000).toFixed(1)}us`} (isolated=${String(data.provenance.clock.crossOriginIsolated)})`,
   );
 
   if (!data.provenance.clock.crossOriginIsolated) {
@@ -576,12 +606,46 @@ const runPhysicsDomain = async (args: Map<string, string>, selector: DomainSelec
 
   writePhysicsReport(data, outDir);
 
-  console.log('\n=== Per-step time (median) + structural ===');
+  console.log('\n=== Results ===');
 
-  for (const result of data.results) {
-    console.log(
-      `  ${result.spec.engine.padEnd(14)} ${result.spec.config.padEnd(7)} ${result.spec.archetype.padEnd(20)} n=${String(result.spec.bodyCount).padStart(6)} bodies=${String(result.structural.bodyCount).padStart(6)} contacts=${String(result.structural.contactCount).padStart(6)} stepMsMedian=${result.stepMsMedian.toFixed(4)} stepMsP95=${result.stepMsP95.toFixed(4)} steps/sample=${String(result.stepsPerSample).padStart(3)} status=${result.status}${result.note === undefined ? '' : ` (${result.note})`}`,
-    );
+  printTextTable(
+    [
+      { header: 'scenario' },
+      { header: 'bodies', align: 'right' },
+      { header: 'arm' },
+      { header: 'step ms', align: 'right' },
+      { header: 'step p95', align: 'right' },
+      { header: 'simulated', align: 'right' },
+      { header: 'contacts', align: 'right' },
+      { header: 'steps/sample', align: 'right' },
+      { header: 'status' },
+    ],
+    [...data.results]
+      .sort(
+        (left, right) =>
+          left.spec.archetype.localeCompare(right.spec.archetype) ||
+          left.spec.bodyCount - right.spec.bodyCount ||
+          left.spec.engine.localeCompare(right.spec.engine) ||
+          left.spec.config.localeCompare(right.spec.config),
+      )
+      .map(result => [
+        result.spec.archetype,
+        String(result.spec.bodyCount),
+        `${result.spec.engine} ${result.spec.config}`,
+        result.stepMsMedian.toFixed(4),
+        result.stepMsP95.toFixed(4),
+        String(result.structural.bodyCount),
+        String(result.structural.contactCount),
+        String(result.stepsPerSample),
+        result.status,
+      ]),
+    { groupBy: 0 },
+  );
+
+  // Notes are per cell and long enough that a column would set the table's width
+  // from the worst one, so they follow it instead.
+  for (const result of data.results.filter(entry => entry.note !== undefined)) {
+    console.log(`  note  ${result.spec.engine} ${result.spec.config} ${result.spec.archetype} n=${String(result.spec.bodyCount)}: ${result.note ?? ''}`);
   }
 
   console.log(`\nReport written to ${outDir} (results.json, results.csv, results.md)`);

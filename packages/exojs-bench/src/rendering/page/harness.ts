@@ -11,6 +11,7 @@ import { createExoJsAdapter } from '../adapters/exojs';
 import { ARCHETYPES } from '../archetypes';
 import type { CellResult, CellSpec, EngineAdapter, StructuralCounters } from '../EngineAdapter';
 import { attachWebGl2Probe, attachWebGpuProbe, type StructuralProbe } from '../structural';
+import { expectedLayoutRects, isUiLayoutScene, layoutDigest } from '../uiLayout';
 import type { GpuFrameTimer } from './gpuFrameTimer';
 import {
   createWebGl2GpuTimer,
@@ -403,16 +404,45 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
     // context AFTER engine init (the device/context does not exist earlier), so an
     // engine that cached its draw/bind method references at init would bypass the
     // wrappers and silently report zero - an undercount masquerading as truth.
-    // Every archetype places drawable, on-screen sprites, so a non-empty cell MUST
-    // issue at least one draw; a zero here means the probe was bypassed, not that
-    // the scene drew nothing. Fail loudly rather than report the undercount.
+    // Every archetype that draws places drawable, on-screen sprites, so a
+    // non-empty cell MUST issue at least one draw; a zero there means the probe
+    // was bypassed, not that the scene drew nothing. Fail loudly rather than
+    // report the undercount. The UI-layout archetype is the one scene that
+    // genuinely submits nothing - it measures a box-tree solve, and its leaves
+    // are layout boxes with no painted surface - so it has no draw for the
+    // check to find and is exempt rather than given a quad to satisfy it.
     // (Pre-wrapping the WebGL2 context BEFORE init was rejected: creating the
     // context early would freeze the attributes the engine sets on its first
     // getContext - e.g. antialias - changing what is measured.)
-    if (structuralNote === null && spec.nodeCount > 0 && probe.counters.drawCalls === 0) {
+    if (structuralNote === null && spec.nodeCount > 0 && !isUiLayoutScene(archetype) && probe.counters.drawCalls === 0) {
       throw new Error(
         `Structural probe recorded 0 draw calls for a non-empty ${spec.backend} scene (engine='${spec.engine}' config='${spec.config}' archetype='${spec.archetype}' n=${spec.nodeCount}); the probe wrappers were bypassed — counts are untrustworthy.`,
       );
+    }
+
+    // Geometry check for the UI-layout archetype, outside the timed bracket. The
+    // arms are allowed to reach the boxes through different public layout
+    // algorithms, so what has to match is the RESULT: the rectangles the shared
+    // definition prescribes for the pass the arm last resolved. An arm that
+    // resolved a smaller tree, skipped a reflow or distributed the leftover
+    // space differently is faster for a reason that is not a faster layout
+    // engine, and is stopped here rather than published.
+    if (isUiLayoutScene(archetype)) {
+      const reported = adapter.layoutDigest?.();
+
+      if (reported === undefined) {
+        console.warn(
+          `[baseline] arm engine='${spec.engine}' config='${spec.config}' reports no layout digest; the UI-layout geometry is UNVERIFIED for this arm (see EngineAdapter.layoutDigest).`,
+        );
+      } else {
+        const expected = layoutDigest(expectedLayoutRects(spec.nodeCount, reported.pass));
+
+        if (reported.digest !== expected) {
+          throw new Error(
+            `UI-layout geometry mismatch: engine='${spec.engine}' config='${spec.config}' resolved pass ${String(reported.pass)} of archetype='${spec.archetype}' n=${String(spec.nodeCount)} to digest ${String(reported.digest)}, but the shared definition prescribes ${String(expected)}. The arm laid out a different scene, so its timing is not comparable.`,
+          );
+        }
+      }
     }
 
     const { structural, note: unevenNote } = perFrameStructural(probe.counters, measuredFrames);

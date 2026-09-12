@@ -180,7 +180,7 @@ export const startViteServer = async (version: string): Promise<ViteDevServer> =
  * instead of letting it reject - except a determinism divergence, which the page
  * reports as its own outcome kind and which fails the run.
  */
-const runCellInPage = async (page: import('playwright').Page, spec: PhysicsCellSpec, resolutionMs: number): Promise<PhysicsCellResult> => {
+const runCellInPage = async (page: import('playwright').Page, spec: PhysicsCellSpec, resolutionMs: number | null): Promise<PhysicsCellResult> => {
   let outcome;
 
   try {
@@ -207,7 +207,7 @@ const runCellInPage = async (page: import('playwright').Page, spec: PhysicsCellS
 const runCellOrWedge = async (
   page: import('playwright').Page,
   spec: PhysicsCellSpec,
-  resolutionMs: number,
+  resolutionMs: number | null,
 ): Promise<PhysicsCellResult | typeof CELL_WEDGED> => {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<typeof CELL_WEDGED>(resolvePromise => {
@@ -374,11 +374,15 @@ export const runPhysicsMatrix = async (
       clock,
       caveats: [
         `Step time is CPU wall-clock per step() over the timed window (median/p95), measured in one ${browserName} page (same-run discipline). No number here was taken in Node.`,
-        `The page's performance.now() resolves to ${(clock.resolutionMs * 1000).toFixed(1)}us (cross-origin isolated: ${String(clock.crossOriginIsolated)}). A cell whose step is too fast to time individually at that resolution batches steps per timing sample and records the batch as stepsPerSample; median and p95 are then per-step averages over that batch.`,
+        clock.resolutionMs === null
+          ? `The page's performance.now() step could not be observed (cross-origin isolated: ${String(clock.crossOriginIsolated)}), so no cell was batched against a grid and no comparison here publishes a factor. An unobserved clock is the absence of the reading, not a fine one.`
+          : `The page's performance.now() resolves to ${(clock.resolutionMs * 1000).toFixed(1)}us (cross-origin isolated: ${String(clock.crossOriginIsolated)}). A cell whose step is too fast to time individually at that resolution batches steps per timing sample and records the batch as stepsPerSample; median and p95 are then per-step averages over that batch.`,
         'Scenes are warmed to steady state before timing; the per-cell warmupSteps/timedSteps counts are recorded for honesty.',
         'All arms build the byte-identical scene (bodies, positions, shapes, sizes, static/dynamic split, gravity, perturbed-body set) from the shared deterministic RNG, and the perturbed-body selection is asserted equal across arms before each cell is timed.',
         'Each arm runs at its own engine defaults for solver iterations, contact model and sleeping - those engine differences are the measured quantity in a native-vs-adapter comparison, disclosed per arm below.',
         'Arm roles: matter-js, planck and nape-js are the JAVASCRIPT PEERS exojs-physics is compared against; rapier is a Rust/WASM engine and stands as the REFERENCE CEILING for what leaving JavaScript buys, not as a peer a JS solver is expected to match.',
+        "Jointed bodies do not collide with each other. The joint scene pins each link at the edge it shares with the next, so whether that pair ALSO registers a contact is a configuration choice and not a property of the scene - and the libraries disagree about it at their defaults. Every arm that exposes the switch is set explicitly (exojs collideConnected=false, planck collideConnected=false, rapier setContactsEnabled(false), nape Constraint.ignore=true) so the row measures the constraint work and not each engine's contact margin at a touching edge. matter-js exposes no per-constraint switch and is left at its defaults, where it produces no contact between the links of this scene; its figure is published on that basis rather than on a configured one.",
+        'Jointed bodies do not collide with each other. The joint scene pins each link at the edge it shares with the next, so whether that pair ALSO registers a contact is a configuration choice rather than a property of the scene - and the libraries disagree about it at their defaults. Every arm that exposes the switch is set explicitly (exojs collideConnected=false, planck collideConnected=false, rapier setContactsEnabled(false), nape Constraint.ignore=true), so the row measures constraint work and not each engine contact margin at a touching edge. matter-js exposes no per-constraint switch and is left at its defaults, where it produces no contact between the links of this scene; its figure is published on that basis rather than on a configured one.',
         ...(unavailableArms.length > 0
           ? [
               `Arms this browser could not run, recorded as unavailable cells rather than omitted: ${unavailableArms.map(arm => `${arm.engine} (${arm.reason})`).join('; ')}`,
