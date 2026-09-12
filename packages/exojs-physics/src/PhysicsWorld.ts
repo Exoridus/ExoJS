@@ -632,10 +632,35 @@ export class PhysicsWorld implements BodyOwner {
    */
   public addJoint<T extends Joint>(joint: T): T {
     this._assertAlive();
+
+    if (joint.bodyA === joint.bodyB) {
+      throw new Error('PhysicsWorld.addJoint: a joint needs two different bodies.');
+    }
+
+    if (joint.bodyA.destroyed || joint.bodyB.destroyed) {
+      throw new Error('PhysicsWorld.addJoint: a joint cannot constrain a destroyed body.');
+    }
+
     joint.bodyA.wake();
     joint.bodyB.wake();
 
     this._defer(() => {
+      // Checked here rather than above: the bodies may legitimately be added in
+      // the same dispatch as the joint, and the command queue is FIFO, so this
+      // is the first point at which their membership is settled. A joint whose
+      // bodies belong to another world would key its pair on ids that world
+      // handed out, which name a different pair here.
+      if (joint.bodyA._isForeignTo(this) || joint.bodyB._isForeignTo(this)) {
+        throw new Error('PhysicsWorld.addJoint: a joint cannot constrain a body of another world.');
+      }
+
+      // Destroying a body in the same dispatch that added the joint is
+      // legitimate, and the joint is then simply never registered - dropped
+      // rather than refused, because the caller did nothing wrong.
+      if (joint.bodyA.destroyed || joint.bodyB.destroyed) {
+        return;
+      }
+
       if (!this._joints.includes(joint)) {
         this._joints.push(joint);
         this._holdPairApart(joint, 1);
@@ -667,7 +692,9 @@ export class PhysicsWorld implements BodyOwner {
    * so the set describes the joints the world is actually stepping.
    */
   private _holdPairApart(joint: Joint, delta: 1 | -1): void {
-    if (joint.collideConnected) {
+    // An unattached body carries no id, so it can be in no pair. A single-body
+    // joint's private anchor is the case that reaches this.
+    if (joint.collideConnected || joint.bodyA.id < 0 || joint.bodyB.id < 0) {
       return;
     }
 
@@ -1349,7 +1376,16 @@ export class PhysicsWorld implements BodyOwner {
 
         // Sweep against every other body (static, kinematic, dynamic) under the
         // discrete narrow phase's rules: sensors never block, filtered pairs never collide.
-        if (target.isSensor || other.body === body || !shouldCollide(collider.filter, target.filter)) {
+        // The same pair filter the discrete path applies. CCD is a second
+        // collision path, not a second collision semantics: a bullet whose
+        // joint took it out of collision with its neighbour must not be stopped
+        // by that neighbour's swept shape either.
+        if (
+          target.isSensor ||
+          other.body === body ||
+          !shouldCollide(collider.filter, target.filter) ||
+          this._uncollidableJointPairs.has(bodyPairKey(body.id, other.body.id))
+        ) {
           continue;
         }
 
@@ -1421,12 +1457,34 @@ export class PhysicsWorld implements BodyOwner {
   }
 
   private _teardownBody(body: PhysicsBody): void {
+    // Before the colliders and the id go: a joint left behind would constrain a
+    // destroyed body every step, and its entry in the uncollidable-pair map
+    // would keep suppressing collision for an id the world is free to hand out
+    // again.
+    this._removeJointsOf(body);
+
     for (const collider of body.colliders) {
       this._detachCollider(collider);
     }
 
     this._bindings.unbind(body);
     body._markDestroyed();
+  }
+
+  /** Drop every joint incident to `body`, releasing the pair claims they held. */
+  private _removeJointsOf(body: PhysicsBody): void {
+    for (let index = this._joints.length - 1; index >= 0; index -= 1) {
+      const joint = this._joints[index];
+
+      if (joint === undefined || (joint.bodyA !== body && joint.bodyB !== body)) {
+        continue;
+      }
+
+      this._joints.splice(index, 1);
+      this._holdPairApart(joint, -1);
+      // The body on the other side loses a constraint it was resting against.
+      (joint.bodyA === body ? joint.bodyB : joint.bodyA).wake();
+    }
   }
 
   private _removeCollider(collider: Collider): void {

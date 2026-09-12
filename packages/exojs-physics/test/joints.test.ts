@@ -740,3 +740,120 @@ describe('connected-body collision', () => {
     expect(Number.isFinite(previous.y)).toBe(true);
   });
 });
+
+/**
+ * What a joint's presence in a world means for the bodies it constrains.
+ *
+ * These are the seams the pair-keyed collision suppression made load-bearing.
+ * Body ids are world-scoped and reused, so a claim left behind by a destroyed
+ * body would suppress collision for whatever body inherits its id - a defect
+ * with no visible cause at the point it appears.
+ */
+describe('joint lifecycle', () => {
+  const boxBody = (world: PhysicsWorld, x: number, y: number, type: 'static' | 'dynamic' = 'dynamic'): PhysicsBody =>
+    world.add(new PhysicsBody({ type, position: { x, y }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+
+  it('refuses a joint between one body and itself', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const body = boxBody(world, 0, 0);
+
+    expect(() => world.addJoint(new RevoluteJoint({ bodyA: body, bodyB: body, anchor: { x: 0, y: 0 } }))).toThrow(/two different bodies/);
+  });
+
+  it('refuses a joint that constrains a destroyed body', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const a = boxBody(world, 0, 0);
+    const b = boxBody(world, 40, 0);
+
+    world.destroyBody(b);
+
+    expect(() => world.addJoint(new RevoluteJoint({ bodyA: a, bodyB: b, anchor: { x: 20, y: 0 } }))).toThrow(/destroyed body/);
+  });
+
+  it('refuses a joint whose bodies belong to another world', () => {
+    // Ids are handed out per world, so a pair key built from two worlds' bodies
+    // names a pair that exists in neither.
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const other = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const mine = boxBody(world, 0, 0);
+    const theirs = boxBody(other, 40, 0);
+
+    expect(() => world.addJoint(new RevoluteJoint({ bodyA: mine, bodyB: theirs, anchor: { x: 20, y: 0 } }))).toThrow(/another world/);
+  });
+
+  it('drops the joints of a destroyed body, and the pair claims they held', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, enableSleeping: false });
+    const a = boxBody(world, 0, 0);
+    const b = boxBody(world, 10, 0);
+
+    world.addJoint(new RevoluteJoint({ bodyA: a, bodyB: b, anchor: { x: 5, y: 0 }, collideConnected: false }));
+    world.step(FRAME);
+    expect(world.joints).toHaveLength(1);
+    expect(world.backend.contactGraph.solidContacts).toHaveLength(0);
+
+    world.destroyBody(b);
+    world.step(FRAME);
+
+    expect(world.joints).toHaveLength(0);
+
+    // The claim is gone with the joint, so a body that arrives at the freed id
+    // collides normally.
+    const replacement = boxBody(world, 10, 0);
+
+    world.step(FRAME);
+
+    expect(replacement.destroyed).toBe(false);
+    expect(world.backend.contactGraph.solidContacts.length).toBeGreaterThan(0);
+  });
+
+  it('counts one joint once however often it is added', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, enableSleeping: false });
+    const a = boxBody(world, 0, 0);
+    const b = boxBody(world, 10, 0);
+    const joint = new RevoluteJoint({ bodyA: a, bodyB: b, anchor: { x: 5, y: 0 }, collideConnected: false });
+
+    world.addJoint(joint);
+    world.addJoint(joint);
+    world.step(FRAME);
+    expect(world.joints).toHaveLength(1);
+
+    // One removal has to be enough: a second registration that also bumped the
+    // pair count would leave the pair suppressed forever.
+    world.removeJoint(joint);
+    world.step(FRAME);
+
+    expect(world.joints).toHaveLength(0);
+    expect(world.backend.contactGraph.solidContacts.length).toBeGreaterThan(0);
+  });
+
+  it('survives removing one joint twice', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, enableSleeping: false });
+    const a = boxBody(world, 0, 0);
+    const b = boxBody(world, 10, 0);
+    const joint = world.addJoint(new RevoluteJoint({ bodyA: a, bodyB: b, anchor: { x: 5, y: 0 }, collideConnected: false }));
+
+    world.step(FRAME);
+    world.removeJoint(joint);
+    world.removeJoint(joint);
+    world.step(FRAME);
+
+    expect(world.joints).toHaveLength(0);
+    expect(world.backend.contactGraph.solidContacts.length).toBeGreaterThan(0);
+  });
+
+  it('keeps a bullet from sweeping into the body its joint took it out of collision with', () => {
+    // CCD is a second collision path, not a second collision semantics: without
+    // the same filter a swept bullet is stopped by a neighbour the discrete path
+    // is not allowed to collide it with.
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 }, enableSleeping: false });
+    const wall = boxBody(world, 400, 0, 'static');
+    const bullet = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, isBullet: true, colliders: [{ shape: new BoxShape(8, 8) }] }));
+
+    world.addJoint(new RevoluteJoint({ bodyA: wall, bodyB: bullet, anchor: { x: 0, y: 0 }, collideConnected: false }));
+    bullet.linearVelocityX = 60_000; // far enough in one step to sweep clean through the wall
+
+    world.step(FRAME);
+
+    expect(world.backend.contactGraph.solidContacts).toHaveLength(0);
+  });
+});
