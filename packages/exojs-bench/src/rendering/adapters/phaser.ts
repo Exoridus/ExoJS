@@ -17,15 +17,7 @@ import {
 } from '../sceneAssets';
 import type { TilemapExtent } from '../tilemap';
 import { isTilemap, isTilemapEditing, TILE_SIZE, tileIdAt, tilemapCameraAt, tilemapCameraFrameFor, tilemapEditsAt, tilemapExtent } from '../tilemap';
-import {
-  hasFullViewportLeaves,
-  isChurning,
-  isTextArchetype,
-  isTextUpdating,
-  leafAlpha,
-  pointerQueriesPerFrame,
-  textForLeaf,
-} from '../traits';
+import { hasFullViewportLeaves, isChurning, isTextArchetype, isTextUpdating, leafAlpha, pointerQueriesPerFrame, textForLeaf } from '../traits';
 import { GRID_MARGIN, gridLayout, gridPosition, VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '../world';
 
 /**
