@@ -476,6 +476,7 @@ const ARCHETYPE_DESCRIPTIONS: Readonly<Record<string, string>> = {
   'particles-lifecycle': 'A steady particle effect: ageing, movement, fading and respawning.',
   'interaction-picking': 'A block of point queries against a field of interactive rectangles; stresses the hit-test index.',
   'fx-blur': 'A separable two-pass Gaussian over a fixed area; stresses the target passes a filter runs.',
+  'ui-layout-update': 'Nested boxes of fixed-size widgets re-solved after a tenth of them resize; stresses the layout engine, and nothing is drawn.',
 };
 
 /**
@@ -517,6 +518,7 @@ const ARCHETYPE_TITLES: Readonly<Record<string, string>> = {
   'particles-lifecycle': 'Particle effect',
   'interaction-picking': 'Hit testing',
   'fx-blur': 'Blur effect',
+  'ui-layout-update': 'Interface layout',
   'box-stack': 'Box stack',
   'many-dynamic': 'Many active bodies',
   'mixed-static-dynamic': 'Static level, falling bodies',
