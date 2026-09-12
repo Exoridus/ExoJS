@@ -48,7 +48,10 @@ import { openingLoad } from '../lib/bench-cards';
 const splitAtClause = (text: string): readonly [string, string | undefined] => {
     const at = text.indexOf('; ');
 
-    return at === -1 ? [text, undefined] : [`${text.slice(0, at)}.`, text.slice(at + 2)];
+    // The lead keeps no sentence-ending period: at full width the two clauses
+    // are printed back together as the one sentence they were written as, and
+    // the period belongs only to the shortened form.
+    return at === -1 ? [text, undefined] : [text.slice(0, at), text.slice(at + 2)];
 };
 
 interface Props {
@@ -60,16 +63,21 @@ interface Props {
 const { card, domain } = Astro.props;
 const opening = openingLoad(card);
 const description = archetypeDescription(card.id);
-const [lead, descriptionRest] = description === undefined ? [undefined, undefined] : splitAtClause(description);
+const [descriptionLead, descriptionRest] = description === undefined ? [undefined, undefined] : splitAtClause(description);
 
 /**
- * The lead clause, unless it only repeats the title.
+ * True where the lead clause only repeats the title.
  *
- * `Changing labels; stresses per-frame text invalidation and layout.` reduces to
- * `Changing labels.` under a heading that already says `Changing labels`, which
- * on a phone spends a line saying nothing.
+ * `Changing labels; stresses per-frame text invalidation and layout.` reduces
+ * to `Changing labels` under a heading that already says it. At full width the
+ * sentence is printed whole regardless - it was written as one sentence and
+ * reads as one - and only the shortened phone form has a line to lose to it.
  */
-const descriptionLead = lead !== undefined && lead.replace(/\.$/, '').toLowerCase() === archetypeTitle(card.id).toLowerCase() ? undefined : lead;
+const leadRepeatsTitle =
+    descriptionLead !== undefined && descriptionLead.replace(/\.$/, '').toLowerCase() === archetypeTitle(card.id).toLowerCase();
+
+/** True where the shortened description would end without punctuation, so the phone layout can supply it. */
+const leadNeedsStop = descriptionLead !== undefined && !descriptionLead.endsWith('.');
 const anchor = `${domain}-${card.id}${card.backend === undefined ? '' : `-${card.backend}`}`;
 
 /**
@@ -104,7 +112,16 @@ const hasMarkers = card.loads.some(load => load.arms.some(arm => arm.overFrameBu
 
 /** The states this card has to explain, so the notes are written once per card rather than per row. */
 const explained = [
-    ...(hasMarkers ? [{ id: 'frame-budget', label: `Past the frame (!)`, note: FRAME_BUDGET_NOTE }] : []),
+    ...(hasMarkers ? [{ id: 'frame-budget', label: 'Past the frame', note: FRAME_BUDGET_NOTE }] : []),
+    ...(card.loads.some(load => load.withheld !== undefined)
+        ? [
+              {
+                  id: 'withheld',
+                  label: 'Not comparable',
+                  note: "Every library's own time is published; the comparison between them is not. See the reason below.",
+              },
+          ]
+        : []),
     ...[...new Set(card.loads.flatMap(load => load.arms.filter(arm => !arm.quantitative).map(arm => arm.outcome)))].map(outcome => ({
         id: outcome,
         label: OUTCOME_STATUS[outcome],
@@ -145,19 +162,15 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
           * is rewritten and nothing is lost.
           */}
         {description !== undefined && (
-            <p class:list={['what', { 'lead-only': descriptionLead === undefined }]}>
-                {descriptionLead !== undefined && <span class="what-lead">{descriptionLead}</span>}
-                {descriptionRest !== undefined && (
-                    <span class="what-rest">
-                        {descriptionLead === undefined ? '' : '; '}
-                        {descriptionRest}
-                    </span>
-                )}
+            <p class:list={['what', { 'repeats-title': leadRepeatsTitle }]}>
+                {descriptionLead !== undefined && <span class:list={['what-lead', { stop: leadNeedsStop }]}>{descriptionLead}</span>}
+                {descriptionRest !== undefined && <span class="what-rest">; {descriptionRest}</span>}
             </p>
         )}
     </header>
 
-    {card.loads.length > 1 ? (
+    {/* The chips are the control; the load a single-load card sits on is stated once, in the meta row below. */}
+    {card.loads.length > 1 && (
         <div class="loads" role="group" aria-label="Load">
             {card.loads.map(load => (
                 <button type="button" class="load" data-load={load.id} aria-pressed={load.id === opening?.id ? 'true' : 'false'}>
@@ -165,8 +178,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
                 </button>
             ))}
         </div>
-    ) : (
-        opening !== undefined && <p class="at">{opening.label}</p>
     )}
 
     {/*
@@ -177,14 +188,26 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
       */}
     {card.loads.map(load => (
         <div class="bench-load-panel" data-load={load.id} hidden={load.id !== opening?.id}>
-            {load.withheld !== undefined && (
-                <p class="withheld">
-                    <b>Not comparable</b>
-                    <span>Each library's own time is published; the comparison between them is withheld.</span>
-                </p>
-            )}
-
-            {load.measuredArms !== null && <p class="coverage">{load.measuredArms} libraries measured</p>}
+            {/*
+              * One meta row: what the load is on the left, what to know about it
+              * on the right. These were three stacked paragraphs, which on a
+              * phone spent three lines saying what belongs on one - and the
+              * explanation each of them carried is one tap away in the details.
+              */}
+            <p class="meta">
+                <span class="at">{card.loads.length > 1 ? '' : load.label}</span>
+                {load.withheld !== undefined ? (
+                    <button type="button" class="status withheld" data-explains={noteId(load.id, 'withheld')} aria-describedby={noteId(load.id, 'withheld')}>
+                        Not comparable
+                    </button>
+                ) : statesOf(load).length > 0 ? (
+                    <button type="button" class="status" data-explains={noteId(load.id, statesOf(load)[0] ?? 'absent')} aria-describedby={noteId(load.id, statesOf(load)[0] ?? 'absent')}>
+                        {OUTCOME_STATUS[statesOf(load)[0] ?? 'absent']}
+                    </button>
+                ) : (
+                    load.measuredArms !== null && <span class="status quiet">{load.measuredArms} libraries</span>
+                )}
+            </p>
 
             <ul class="arms">
                 {load.arms.map(arm => (
@@ -210,6 +233,13 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
                                 <>
                                     <b>{formatMs(arm.ms)}</b>
                                     <span class="unit">ms</span>
+                                    {/*
+                                      * A dot, not a boxed exclamation mark. The
+                                      * figure beside it already says the scene
+                                      * does not fit in a frame; a warning badge
+                                      * on top of it reads as a defect report.
+                                      * The control it is drawn on is unchanged.
+                                      */}
                                     {arm.overFrameBudget && (
                                         <button
                                             type="button"
@@ -217,7 +247,7 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
                                             data-explains={noteId(load.id, 'frame-budget')}
                                             aria-describedby={noteId(load.id, 'frame-budget')}
                                         >
-                                            <span class="glyph" aria-hidden="true">!</span>
+                                            <span class="glyph" aria-hidden="true">&#8226;</span>
                                             <span class="sr">{FRAME_BUDGET_NOTE}</span>
                                         </button>
                                     )}
@@ -236,22 +266,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
               * labelling the first as timing-limited claims a measurement.
               * The sentence lives in the note the chip opens.
               */}
-            {/*
-              * Suppressed on a withheld row: these words are the ladder's
-              * verdicts, and a row that publishes no comparison must not print
-              * `clear loss` beside one arm of it. The withheld note above says
-              * what the row is instead.
-              */}
-            {load.withheld === undefined && statesOf(load).length > 0 && (
-                <p class="states">
-                    {statesOf(load).map(state => (
-                        <button type="button" class="mark" data-explains={noteId(load.id, state)} aria-describedby={noteId(load.id, state)}>
-                            {OUTCOME_STATUS[state]}
-                        </button>
-                    ))}
-                </p>
-            )}
-
             <details class="more">
                 <summary>Details</summary>
                 <p class="context">
@@ -284,7 +298,7 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         border: 1px solid var(--color-border);
         border-radius: 0.75rem;
         padding: 1rem 1.1rem 1.1rem;
-        background: var(--color-surface);
+        background: var(--color-card);
         display: flex;
         flex-direction: column;
         gap: 0.65rem;
@@ -328,38 +342,38 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         font-weight: 650;
     }
 
-    .at {
-        margin: 0;
-        font-size: 0.78rem;
-        color: var(--color-text-muted);
-    }
-
-    .coverage {
-        margin: 0 0 0.4rem;
-        font-size: 0.76rem;
-        color: var(--color-text-muted);
-    }
-
-    .withheld {
+    .meta {
         display: flex;
         flex-wrap: wrap;
         align-items: baseline;
-        gap: 0.3rem 0.5rem;
-        margin: 0 0 0.5rem;
+        justify-content: space-between;
+        gap: 0.3rem 0.75rem;
+        margin: 0 0 0.45rem;
         font-size: 0.78rem;
         color: var(--color-text-muted);
     }
 
-    .withheld b {
-        padding: 0.15rem 0.4rem;
-        border: 1px solid currentcolor;
-        border-radius: 0.3rem;
-        font-size: 0.72rem;
-        font-weight: 600;
+    .at {
+        margin: 0;
     }
 
-    .withheld span {
-        flex: 1 1 12rem;
+    /* The row's one fact about itself, on the right where the times end. */
+    .status {
+        font: inherit;
+        font-size: 0.72rem;
+        padding: 0.1rem 0.4rem;
+        border-radius: 0.3rem;
+        border: 1px solid var(--color-border);
+        background: transparent;
+        color: var(--color-text-muted);
+        cursor: pointer;
+        margin-left: auto;
+    }
+
+    .status.quiet {
+        border-color: transparent;
+        padding-inline: 0;
+        cursor: default;
     }
 
     .why {
@@ -484,9 +498,12 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
     }
 
     .mark.over {
-        margin-left: 0.25rem;
+        margin-left: 0.3rem;
+        padding: 0;
+        border: 0;
         color: var(--amber);
-        font-weight: 700;
+        font-size: 1rem;
+        line-height: 0.6;
     }
 
     .sr {
@@ -496,13 +513,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         overflow: hidden;
         clip-path: inset(50%);
         white-space: nowrap;
-    }
-
-    .states {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.3rem;
-        margin: 0.5rem 0 0;
     }
 
     .notes {
@@ -556,7 +566,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
 
     @media (max-width: 34rem) {
         .arm {
-            grid-template-columns: 4.5rem 1fr calc(var(--bench-time-ch, 4) * 1ch + 3rem);
             font-size: 0.78rem;
         }
 
@@ -580,27 +589,39 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         .card {
             border: 0;
             border-radius: 0;
-            padding: 0.9rem 0 0;
+            padding: 0.75rem 0 0;
             background: none;
             box-shadow: none;
+            gap: 0.45rem;
         }
 
-        /* The rule belongs between sections, so the first one does not open with one. */
+        /*
+         * One rule between sections, inset from the container's own edges: a
+         * line running the full width reads as the top border of another card,
+         * which is the impression the shared container exists to remove.
+         */
         .card + .card {
-            border-top: 1px solid var(--color-border);
+            border-top: 1px solid var(--color-border-soft);
+            margin-top: 0.35rem;
+            padding-top: 1rem;
         }
 
         .what-rest {
             display: none;
         }
 
-        /* Nothing left to print once the lead clause was only the title again. */
-        .what.lead-only {
+        /* The clause that carried the sentence's period is hidden here, so the half that remains ends itself. */
+        .what-lead.stop::after {
+            content: '.';
+        }
+
+        /* Nothing worth a line once the lead clause is only the title again and the rest is hidden. */
+        .what.repeats-title {
             display: none;
         }
 
         .what {
-            margin-top: 0.15rem;
+            margin-top: 0.1rem;
         }
 
         .load {
@@ -610,6 +631,43 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
 
         .more > summary {
             font-size: 0.78rem;
+        }
+
+        /*
+         * Label and time on one line, the bar on its own beneath it.
+         *
+         * A three-column row hands the bar whatever is left after a name and a
+         * figure, which at 390px is about half the card; given the row to
+         * itself it is the full width, and the two orders of magnitude between
+         * the fastest and the slowest arm have somewhere to be seen.
+         */
+        .arm {
+            grid-template-columns: 1fr auto;
+            align-items: baseline;
+            gap: 0.15rem 0.5rem;
+        }
+
+        /*
+         * Placed explicitly. The track sits between the name and the time in
+         * the DOM, so auto-placement pushes a full-width track onto its own row
+         * and the time onto a third one - three lines per library.
+         */
+        .name {
+            grid-area: 1 / 1;
+            color: var(--color-text);
+        }
+
+        .time {
+            grid-area: 1 / 2;
+        }
+
+        .track {
+            grid-area: 2 / 1 / 3 / -1;
+            height: 0.4rem;
+        }
+
+        .arms {
+            gap: 0.5rem;
         }
     }
 </style>

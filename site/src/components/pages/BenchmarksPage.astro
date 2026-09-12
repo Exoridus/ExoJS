@@ -273,8 +273,23 @@ const leading = browsers[0];
 </script>
 
 <style>
+    /*
+     * Card surfaces on this page sit a step above the canvas rather than on
+     * pure white.
+     *
+     * The light theme's surface is 100% lightness and its canvas is 98.5%, so a
+     * page made almost entirely of cards had a border doing all the separating
+     * and no plane behind it. Scoped here rather than retuned in the theme: the
+     * tokens are the whole site's, and this is one page's layering.
+     */
     .bench-prose {
         max-width: none;
+    }
+
+    /* Light only: the dark theme's canvas and surface already sit a readable step apart. */
+    :global(html[data-theme='light']) .bench-prose {
+        --color-card: color-mix(in oklab, var(--color-surface) 65%, var(--color-surface-2));
+        --bg-elevated: var(--color-card);
     }
 
     /* The docs reading measure belongs to prose pages; here it would wrap short notes beside full-width cards. */
@@ -433,11 +448,17 @@ const leading = browsers[0];
      * `BenchResultCard`.
      */
     @media (max-width: 52rem) {
+        /*
+         * Ground and radius carry the container; the border does not. A visible
+         * outline down both sides of a container this tall is a contour a
+         * reader follows for screens at a time, and in the light theme it is
+         * the longest line on the page.
+         */
         .cards {
             grid-template-columns: minmax(0, 1fr);
             gap: 0;
-            padding: 0.2rem 1rem 1rem;
-            border: 1px solid var(--line-soft);
+            padding: 0.35rem 0.9rem 0.9rem;
+            border: 0;
             border-radius: var(--r-3);
             background: var(--bg-elevated);
         }
