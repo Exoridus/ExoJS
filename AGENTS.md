@@ -18,6 +18,8 @@ Use `CONTRIBUTING.md` when a task touches repository conventions such as imports
 package boundaries, distribution, build constants, or public API conventions.
 Read package-local documentation when working inside that package.
 
+Prose is written in long lines: pull request descriptions, guides, `docs/`, READMEs, commit bodies. Break a line at the end of a paragraph or where the break carries meaning, never at a column width. Commits are their Conventional Commits subject (with `!` for a breaking change); the detail goes into the pull request description, which the changelog links to and does not copy.
+
 `.workspace/` is private working context, not repository authority. Plans,
 research, reviews, and temporary design artifacts belong there by default.
 Agents may use relevant files there as context, but they are not part of the

@@ -3,12 +3,11 @@
  * release instead of edited by hand in every pull request.
  *
  * Every squash merge carries a Conventional Commits subject with the pull
- * request number and the pull request description as its body, so the
- * changelog can be assembled at the cut: the type files the entry under a
- * Keep a Changelog heading, the subject becomes the headline, the body the
- * prose. Pull requests never touch `CHANGELOG.md`, which is what used to make
- * two of them conflict whenever both landed an entry at the top of the same
- * section.
+ * request number, so the changelog can be assembled at the cut: the type files
+ * the entry under a Keep a Changelog heading, a `!` marks it breaking, the
+ * subject becomes the line, and the pull request link is where the detail lives.
+ * Pull requests never touch `CHANGELOG.md`, which is what used to make two of
+ * them conflict whenever both landed an entry at the top of the same section.
  *
  * Kept apart from the cut script so it can be tested; nothing here touches git
  * except {@link readCommitsSince}.
@@ -104,52 +103,20 @@ export const mentionedPullRequests = (section: string): Set<number> => {
   return found;
 };
 
-const indentBody = (body: string): string =>
-  body
-    .split('\n')
-    .map(line => (line.trim().length === 0 ? '' : `  ${line}`))
-    .join('\n')
-    .replace(/\n{3,}/gu, '\n\n');
-
 /**
- * Split a body into its opening paragraph and everything after it.
+ * One line per entry: the headline and the pull request it came from.
  *
- * A pull request description is written to be read once, by a reviewer with the
- * diff open. A release is read by someone deciding whether to upgrade, and
- * pasting a dozen such descriptions end to end leaves them several thousand
- * words of prose with no shape - the entries stop being scannable and the
- * release page becomes a wall. The opening paragraph is the part that answers
- * "what changed"; the rest is the reasoning, the measurements and the
- * follow-ups, which belong in the release but not in front of it.
+ * The body is not rendered on purpose. A squash commit's body is the pull
+ * request description, and a changelog that inlines it stops being a changelog:
+ * fifteen descriptions end to end are several thousand words with no shape, and
+ * the one thing release notes are for - a quick read of what changed - is gone.
+ * The description stays where it was written, one click away behind the link.
  */
-const splitSummary = (body: string): { summary: string; detail: string } => {
-  const trimmed = body.trim();
-  const separator = trimmed.indexOf('\n\n');
-
-  return separator === -1 ? { summary: trimmed, detail: '' } : { summary: trimmed.slice(0, separator).trim(), detail: trimmed.slice(separator).trim() };
-};
-
 const renderEntry = (entry: ChangelogEntry, repoUrl: string): string => {
   const link = entry.pullRequest !== null ? ` ([#${entry.pullRequest}](${repoUrl}/pull/${entry.pullRequest}))` : '';
   const flag = entry.breaking ? 'BREAKING: ' : '';
-  const head = `- **${flag}${entry.title}.**${link}`;
 
-  if (entry.body.length === 0) {
-    return head;
-  }
-
-  const { summary, detail } = splitSummary(entry.body);
-  const rendered = [head, indentBody(summary)];
-
-  if (detail.length > 0) {
-    // A fold rather than a cut: everything the description said is still in the
-    // release, one click away, and still in `CHANGELOG.md` for anyone reading
-    // the file. The blank line after the `<summary>` tag is what makes the
-    // Markdown inside render instead of appearing as source.
-    rendered.push(indentBody(['<details>', '<summary>Details</summary>', '', detail, '', '</details>'].join('\n')));
-  }
-
-  return rendered.join('\n');
+  return `- **${flag}${entry.title}.**${link}`;
 };
 
 /**
