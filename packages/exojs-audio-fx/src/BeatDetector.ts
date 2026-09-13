@@ -198,7 +198,10 @@ export class BeatDetector {
   private _beatPhase = 0;
   private _nextBeatTime = 0;
   private _confidence = 0;
+  private _phaseConfidence = 0;
   private _gridStability = 0;
+  private _analysisTime = 0;
+  private _analysisLatency = 0;
   private _tempoCandidates: readonly TempoCandidate[] = [];
   private _rms = 0;
   private _onsetStrength = 0;
@@ -316,8 +319,51 @@ export class BeatDetector {
   public get confidence(): number {
     return this._confidence;
   }
+
+  /**
+   * How well recent onsets support the beat grid's phase, 0 to 1, or 0 before
+   * the grid locks.
+   *
+   * Distinct from {@link confidence}, which reports how sure the detector is of
+   * the tempo. A metronomic loop at a wrong-by-an-octave tempo reads high
+   * confidence and high phase confidence; a rubato passage at a known tempo
+   * reads high confidence and low phase confidence. Gate anything that must
+   * land exactly on the beat - a scored hit, a quantised trigger - on this
+   * rather than on {@link confidence}.
+   */
+  public get phaseConfidence(): number {
+    return this._phaseConfidence;
+  }
+
   public get gridStability(): number {
     return this._gridStability;
+  }
+
+  /**
+   * The `AudioContext.currentTime` of the newest sample the current state
+   * describes. 0 until the first state message arrives.
+   *
+   * Every timestamp this detector reports - this one, {@link BeatInfo.audioTime},
+   * {@link nextBeatTime}, {@link lookahead} - is on the audio context's clock,
+   * so `AudioOutputClock` converts them to the `performance.now()` timeline
+   * without further correction.
+   */
+  public get analysisTime(): number {
+    return this._analysisTime;
+  }
+
+  /**
+   * Seconds between {@link analysisTime} and the moment the main thread
+   * received that state, measured rather than assumed.
+   *
+   * Covers the analysis hop and the worklet-to-main-thread delivery together,
+   * and is quantised to the context's render-quantum boundary, so treat it as
+   * a budget figure rather than an exact age. It says nothing about the output
+   * path: what a listener hears lags the analysed audio by the output latency
+   * on top, which `AudioOutputClock` reports.
+   */
+  public get analysisLatency(): number {
+    return this._analysisLatency;
   }
   public get rms(): number {
     return this._rms;
@@ -473,11 +519,14 @@ export class BeatDetector {
     const message = event.data as Record<string, unknown>;
     switch (message.type) {
       case 'state':
+        this._analysisTime = (message.analysisTime as number) ?? 0;
+        this._analysisLatency = Math.max(0, (this._workletNode?.context.currentTime ?? this._analysisTime) - this._analysisTime);
         this._tempo = (message.tempo as number) ?? 0;
         this._beatPhase = (message.beatPhase as number) ?? 0;
         this._nextBeatTime = (message.nextBeatTime as number) ?? 0;
         this._nextDownbeatTime = (message.nextDownbeatTime as number) ?? 0;
         this._confidence = (message.confidence as number) ?? 0;
+        this._phaseConfidence = (message.phaseConfidence as number) ?? 0;
         this._gridStability = (message.gridStability as number) ?? 0;
         this._tempoCandidates = Object.freeze((message.tempoCandidates as TempoCandidate[]) ?? []);
         this._rms = (message.rms as number) ?? 0;

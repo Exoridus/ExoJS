@@ -39,9 +39,11 @@ const makeState = (tempo: number, timeSec: number, confidence = 0.8): StateMessa
   return {
     type: 'state',
     _audioTimeSec: timeSec,
+    analysisTime: timeSec,
     tempo,
     beatPhase: 0,
     confidence,
+    phaseConfidence: confidence,
     gridStability: confidence,
     tempoCandidates: [{ bpm: tempo, score: 0.9 }],
     rms: 0.3,
