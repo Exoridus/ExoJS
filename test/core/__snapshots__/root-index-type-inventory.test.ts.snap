@@ -820,6 +820,7 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "meshIndexBytes: variable",
   "meshIndexFormatFor: variable",
   "musicType: variable",
+  "onAppInitialized: variable",
   "onAudioContextReady: variable",
   "onAudioPlaybackBlocked: variable",
   "orderCompressedFormats: variable",

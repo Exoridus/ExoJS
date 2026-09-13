@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 86,
+  "memberCount": 87,
   "counts": {
     "constructors": 0,
     "methods": 52,
-    "properties": 34,
+    "properties": 35,
     "events": 0
   },
   "sections": [
@@ -3825,6 +3825,47 @@
           "params": [],
           "returnType": null,
           "description": "The built-in music asset type."
+        },
+        {
+          "name": "onAppInitialized",
+          "signature": "onAppInitialized: Signal<[app]>",
+          "signatureTokens": [
+            {
+              "text": "onAppInitialized",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "app",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires once for every Application that finishes starting up, for tooling that does not own the application it wants to reach: a devtools panel, an inspector overlay, a probe script driving a page it did not write. Dispatched from Application.start once the render backend is initialized and Application.capabilities has settled, and before the initial scene navigation - so a listener is attached in time to observe the first scene load. An application that is constructed but never started never reaches this point and is never announced. Each application is announced at most once, however often it is stopped and started again. **Development builds only.** The dispatch is compiled out of production builds, where this signal therefore never fires. The signal object itself still exists, so importing it is safe in any build - it simply stays silent. This is the engine's one deliberate process-wide hook, and it exists for tooling rather than for application code: an application that wants to know about its own startup already has await app.start(). It is a notification, **not** a registry - nothing here holds a list of live applications, so a listener added after an application started will not hear about it. A handler must not retain the application beyond its Application.destroy: what is handed out is a live instance, and keeping it alive past its teardown pins its backend, loader and audio context with it. Hold what you need from it, or drop the reference when the application goes down. ts import { onAppInitialized } from '@codexo/exojs'; onAppInitialized.add(app => { console.log(ExoJS running on ${app.backend.backendType}); }); "
         },
         {
           "name": "onAudioContextReady",

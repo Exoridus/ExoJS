@@ -51,6 +51,7 @@ export type {
   WebGl2BackendConfig,
   WebGpuBackendConfig,
 } from '#core/application/ApplicationOptions';
+export { onAppInitialized } from '#core/application/devHooks';
 export type { PhasedSceneTransitionOptions, SceneTransitionPhaseContext, SceneTransitionPhaseRequirements } from '#core/scene/PhasedSceneTransition';
 export { PhasedSceneTransition } from '#core/scene/PhasedSceneTransition';
 export { Scene } from '#core/scene/Scene';
