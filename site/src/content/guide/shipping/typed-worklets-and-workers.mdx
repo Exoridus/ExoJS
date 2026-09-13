@@ -136,13 +136,22 @@ self.onmessage = (event: MessageEvent<number>): void => {
 ```
 
 ```ts
+import { InlineWorker } from '@codexo/exojs';
+
 import workerSource from './generator.worker.ts?worker';
 
-const url = URL.createObjectURL(new Blob([workerSource], { type: 'text/javascript' }));
-const worker = new Worker(url);
+const generator = new InlineWorker(workerSource, { name: 'generator' });
+
+generator.worker.onmessage = (event: MessageEvent<{ tag: string; value: number }>): void => {
+    console.log(event.data.value);
+};
+
+generator.postMessage(30);
 ```
 
-The emitted source is classic-script compatible, so a plain `new Worker(url)` works and `{ type: 'module' }` is never required.
+`InlineWorker` owns the object URL for you: it builds the Blob, constructs the worker, revokes the URL again, and terminates on `destroy()`. It adds no message protocol - `generator.worker` is the real `Worker`, so `onmessage`, transfer lists and structured clone behave exactly as they always do.
+
+The emitted source is classic-script compatible, so a plain `new Worker(url)` works too and `{ type: 'module' }` is never required.
 
 ## Type-checking the two odd scopes
 
@@ -165,4 +174,4 @@ Creating a worker or worklet from an object URL is a `blob:` script load. A Cont
 
 The query, not the filename, selects the transform. `./saturator.worklet.ts` imported without `?worklet` is still an ordinary module, so a unit test can import the processor's helpers directly.
 
-What you get from the query is a `string`, and nothing more. Turning it into a Blob, an object URL, an `AudioWorkletNode` or a `Worker` stays your code - the plugin has no opinion about lifetime, termination or messaging.
+What you get from the query is a `string`, and nothing more. The plugin itself has no opinion about lifetime, termination or messaging; ExoJS supplies the two runtime helpers that string usually needs - `InlineWorker` for the worker half and `registerAudioWorkletProcessor` for the worklet half - and anything beyond them stays your code.

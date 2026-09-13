@@ -146,7 +146,7 @@ const url = URL.createObjectURL(new Blob([workerSource], { type: 'text/javascrip
 const worker = new Worker(url);
 ```
 
-The emitted source is classic-script compatible, so a plain `new Worker(url)` works and `{ type: 'module' }` is never required.
+The emitted source is classic-script compatible, so a plain `new Worker(url)` works and `{ type: 'module' }` is never required. ExoJS itself ships `InlineWorker`, which wraps those two lines together with URL revocation and termination.
 
 ## API
 

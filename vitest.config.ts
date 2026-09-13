@@ -227,6 +227,9 @@ export default defineConfig({
             // The asset browser suite needs a real IndexedDB and runs in the
             // browser-assets-chromium project; jsdom implements none of it.
             'test/assets/browser/**/*.test.ts',
+            // `InlineWorker` needs a real Worker and a real object URL, neither
+            // of which jsdom has; browser-core-chromium runs this suite.
+            'test/core/browser/**/*.test.ts',
           ],
         }),
         plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin],
@@ -755,6 +758,27 @@ export default defineConfig({
           // The offline round trip drives a real `Loader`, which reaches engine
           // modules that read the bare build-flag globals - see the setup file.
           setupFiles: browserSetupFiles,
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright({ launchOptions: { channel: 'chromium' } }),
+            instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
+
+      // ── browser-core-chromium - core surfaces jsdom cannot host ──────────
+      // `InlineWorker` owns a Blob URL and a real `Worker`, and jsdom provides
+      // neither. The node lane stubs both to pin the lifetime and error
+      // contract; only a browser can show that a `?worker` source string
+      // actually runs, imports and all.
+      {
+        ...browserBase,
+        test: {
+          name: 'browser-core-chromium',
+          globals: true,
+          setupFiles: browserSetupFiles,
+          include: ['test/core/browser/**/*.test.ts'],
           browser: {
             enabled: true,
             headless: true,

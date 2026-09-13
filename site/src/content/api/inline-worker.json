@@ -1,0 +1,298 @@
+{
+  "title": "InlineWorker",
+  "description": "Runs a worker from a JavaScript source string instead of a separate script file, and owns the lifetime of the object URL that makes that possible. The intended source is the string emitted by the `?worker` import of `@codexo/exojs-build`, which inlines a TypeScript worker module and its imports as one classic script. Nothing about this class requires that build step, though: any self-contained classic-script source works. ```ts import workerSource from './generator.worker.ts?worker'; const worker = new InlineWorker(workerSource, { name: 'generator' }); worker.worker.onmessage = (event) => console.log(event.data); worker.postMessage(42); ``` There is no message protocol here: worker is the real `Worker`, so `onmessage`, `onerror`, `addEventListener` and structured clone behave exactly as they do without this class. postMessage is a convenience that additionally rejects use after destroy. The source runs as a **classic** script, so it cannot use `import`. Emitted `?worker` sources already satisfy this. A page whose Content-Security-Policy omits `blob:` from `worker-src` (or `child-src`/`default-src` as the fallback) blocks the construction; the error thrown by the constructor names that cause.",
+  "symbol": "InlineWorker",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Runs a worker from a JavaScript source string instead of a separate script file, and owns the lifetime of the object URL that makes that possible.",
+        "The intended source is the string emitted by the `?worker` import of `@codexo/exojs-build`, which inlines a TypeScript worker module and its imports as one classic script. Nothing about this class requires that build step, though: any self-contained classic-script source works.",
+        "```ts import workerSource from './generator.worker.ts?worker';",
+        "const worker = new InlineWorker(workerSource, { name: 'generator' });",
+        "worker.worker.onmessage = (event) => console.log(event.data); worker.postMessage(42); ```",
+        "There is no message protocol here: worker is the real `Worker`, so `onmessage`, `onerror`, `addEventListener` and structured clone behave exactly as they do without this class. postMessage is a convenience that additionally rejects use after destroy.",
+        "The source runs as a **classic** script, so it cannot use `import`. Emitted `?worker` sources already satisfy this.",
+        "A page whose Content-Security-Policy omits `blob:` from `worker-src` (or `child-src`/`default-src` as the fallback) blocks the construction; the error thrown by the constructor names that cause."
+      ],
+      "importLine": "import { InlineWorker } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(source: string, options: InlineWorkerOptions): InlineWorker",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InlineWorkerOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InlineWorker",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "InlineWorkerOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "InlineWorker",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Terminate the worker immediately, discarding queued and in-flight work. Idempotent."
+        },
+        {
+          "name": "postMessage",
+          "signature": "postMessage(message: unknown, transfer?: readonly Transferable[]): void",
+          "signatureTokens": [
+            {
+              "text": "postMessage",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "message",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "transfer",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Transferable",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "message",
+              "type": "unknown",
+              "optional": false
+            },
+            {
+              "name": "transfer",
+              "type": "readonly Transferable[]",
+              "optional": true
+            }
+          ],
+          "returnType": "void",
+          "description": "Post message to the worker, transferring ownership of everything in transfer."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "worker",
+          "signature": "worker: Worker",
+          "signatureTokens": [
+            {
+              "text": "worker",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Worker",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The underlying worker. Attach listeners and transfer ownership of objects through this. Remains valid until destroy, which terminates it."
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether destroy has already run."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/InlineWorker.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/InlineWorker.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/InlineWorker.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/InlineWorker.ts"
+}
