@@ -134,6 +134,36 @@ A few things to keep in mind when working with audio-driven visuals:
 - Beat detector events are dispatched from the worklet processor to the main thread. They arrive asynchronously and may be arbitrarily close to or slightly behind the visual frame; the worklet's internal temporal resolution is finer than `requestAnimationFrame` cadence. The polling getters (`pulse`, `justBeat`, `subdivisionPhase`) sample the detector's most recent cached state on the main thread.
 - `justBeat` is `true` for at most one or two visual frames per beat (with the default 30ms window at 60fps). If your frame rate drops below ~30fps, you may miss a `justBeat` window. For critical beat-triggered effects, prefer the `onBeat` signal — it is dispatched per beat and delivered on the main thread.
 
+## Lining audio up with the frame clock
+
+Web Audio schedules in `AudioContext.currentTime` and your frame loop measures in `performance.now()`. The two are different clocks with different origins, and `currentTime` runs ahead of what the listener actually hears by the length of the output path. Subtracting one from the other gives a number that looks plausible and is wrong by tens of milliseconds - enough to visibly desynchronise a rhythm game.
+
+`AudioOutputClock` correlates them:
+
+```ts
+import { AudioOutputClock } from '@codexo/exojs';
+
+const clock = new AudioOutputClock();
+
+/** How long from now until the listener hears the sample scheduled for `contextTime`. */
+const msUntilHeard = (contextTime: number): number => clock.contextToPerformanceTime(contextTime) - performance.now();
+```
+
+Where the browser supports `AudioContext.getOutputTimestamp()`, the correlation names the sample the device is playing at this instant, so the converted time already accounts for the output path and needs no latency arithmetic of your own. Where it does not, the clock pairs `currentTime` with `performance.now()` and marks the snapshot `'estimated'` so you can tell the two cases apart:
+
+```ts
+import { AudioOutputClock } from '@codexo/exojs';
+
+const snapshot = new AudioOutputClock().snapshot();
+
+if (snapshot.source === 'estimated') {
+    // No output timestamp here: the correlation leads the true output by roughly
+    // `outputLatency`, which this environment may not report either.
+}
+```
+
+Display latency is deliberately outside this: only your code knows how far ahead of the photons its render loop runs, so the decision of which frame to draw a beat on stays yours.
+
 ## Examples
 
 <a id="audio-visualisation"></a>
