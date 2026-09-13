@@ -9,8 +9,9 @@
  */
 import { describe, expect, test } from 'vitest';
 
-import type { Application, RenderingApplicationOptions } from '#core/Application';
-import { resolveRenderingOptions } from '#core/Application';
+import type { Application } from '#core/Application';
+import type { RenderingApplicationOptions } from '#core/application/ApplicationOptions';
+import { resolveRenderingOptions } from '#core/application/ApplicationOptions';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
 import { createFakeWebGl2Context, GlRecorder, installFakeWebGl2Globals } from '../perf/rendering/fakeWebGl2';

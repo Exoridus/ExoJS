@@ -1,4 +1,4 @@
-import type { RenderingApplicationOptions } from '#core/Application';
+import type { RenderingApplicationOptions } from '#core/application/ApplicationOptions';
 import { materializeRendererBindings } from '#extensions/materialize';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import type { RenderBackend } from '#rendering/RenderBackend';

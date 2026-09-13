@@ -5,7 +5,8 @@
  * coupled GL state across modules. Known deviation, candidate for extraction.
  */
 /* eslint-disable max-lines */
-import type { Application, CanvasAlphaMode, RenderingApplicationOptions } from '#core/Application';
+import type { Application } from '#core/Application';
+import type { CanvasAlphaMode, RenderingApplicationOptions } from '#core/application/ApplicationOptions';
 import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
 import { Matrix } from '#math/Matrix';
