@@ -3,6 +3,7 @@ import { TweenSystem } from '#animation/TweenSystem';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { AudioSystem } from '#audio/AudioSystem';
+import { ApplicationErrorReporter, maxConsecutiveFrameErrors, type RecentErrorEntry } from '#core/application/ApplicationErrors';
 import {
   type ApplicationOptions,
   defaultBackendConfig,
@@ -41,7 +42,6 @@ import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAd
 import { isDomCanvas, type RenderSurface } from '#platform/RenderSurface';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import { RenderError, type RenderErrorCode } from '#rendering/RenderError';
 import { type CaptureOptions, RenderingContext } from '#rendering/RenderingContext';
 import { type RenderNode } from '#rendering/RenderNode';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -53,7 +53,6 @@ import { Color } from './Color';
 import { Connectivity } from './Connectivity';
 import { DestroyScope } from './DestroyScope';
 import { assert, invariant } from './dev';
-import { showDevErrorOverlay } from './devErrorOverlay';
 import { FixedTimestep } from './FixedTimestep';
 import { hello, logger } from './Logger';
 import { Perf } from './Perf';
@@ -91,26 +90,9 @@ export enum ApplicationState {
   Destroyed = 'destroyed',
 }
 
-/**
- * One entry of the bounded {@link Application.recentErrors} ring buffer -
- * a JSON-friendly snapshot of an engine error (feeds future debug dumps).
- */
-export interface RecentErrorEntry {
-  /** `Date.now()` at the moment the error was recorded. */
-  readonly time: number;
-  readonly message: string;
-  /** Machine-readable failure class - present for {@link RenderError}s. */
-  readonly code?: RenderErrorCode;
-  readonly stack?: string;
-}
-
 const maxDeltaMs = 100;
 /** Default fixed-timestep size in milliseconds (60 Hz). */
 const defaultFixedStepMs = 1000 / 60;
-/** Consecutive failing frames tolerated before the frame guard halts the loop. */
-const maxConsecutiveFrameErrors = 3;
-/** Bounded size of the {@link Application.recentErrors} ring buffer. */
-const maxRecentErrors = 20;
 /**
  * How long {@link Application.destroy} waits for scene teardown before it
  * gives up on it and releases the rest of the engine anyway.
@@ -330,8 +312,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   /** Resolved {@link ApplicationOptions.autoClear} - read once per frame. */
   private _autoClear = true;
   private _cursor = 'default';
-  private _consecutiveFrameErrors = 0;
-  private readonly _recentErrors: RecentErrorEntry[] = [];
+  private readonly _errors: ApplicationErrorReporter;
   /** Whether {@link Application.platform} was created here - an injected one is not ours to destroy. */
   private readonly _ownsPlatform: boolean;
   private readonly _ownsConnectivity: boolean;
@@ -375,6 +356,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._ownsCanvas = canvasOptions.element === undefined;
     this.canvas = canvas;
     this.element = isDomCanvas(canvas) ? canvas : null;
+    this._errors = new ApplicationErrorReporter(this.onError, this.element);
     // Ahead of the backend, which acquires its context from a surface that has
     // to carry its real backing-store size by then. The policy, if any, gets
     // its turn once there is a render target for its first commit to resize.
@@ -750,7 +732,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * debug dump. See {@link Application.onError} for live notification.
    */
   public get recentErrors(): readonly RecentErrorEntry[] {
-    return this._recentErrors;
+    return this._errors.recent;
   }
 
   /**
@@ -1241,7 +1223,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
           Perf.clearMeasures(systemsMeasure);
         }
 
-        this._consecutiveFrameErrors = 0;
+        this._errors.resetFrameErrors();
       } catch (error) {
         this._handleFrameError(error);
       } finally {
@@ -1256,71 +1238,22 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Frame-guard error pipeline: normalize → log → ring buffer → `onError` →
-   * dev banner → halt after {@link maxConsecutiveFrameErrors} consecutive
-   * failing frames. Deliberately does NOT call {@link Application.stop} on
-   * halt - unloading the scene could rethrow the same error.
+   * Frame-guard reaction: hand the failure to the error reporter and halt the
+   * loop once it reports the guard's tolerance exhausted. Deliberately does
+   * NOT call {@link Application.stop} on halt - unloading the scene could
+   * rethrow the same error.
    */
   private _handleFrameError(error: unknown): void {
-    const normalized = error instanceof Error ? error : new Error(String(error));
-
-    this._consecutiveFrameErrors++;
-
-    const fatal = this._consecutiveFrameErrors >= maxConsecutiveFrameErrors;
-
-    this._reportError(normalized, fatal);
-
-    if (fatal) {
-      this._stopFrameLoop();
-      this._setState(ApplicationState.Stopped);
-      logger.error(`Frame loop halted after ${maxConsecutiveFrameErrors} consecutive frame errors.`, { source: 'core', error: normalized });
-    }
-  }
-
-  /**
-   * Async render-error pipeline ({@link RenderBackend.onRenderError}): same
-   * log + ring buffer + `onError` + banner steps as the frame guard, but no
-   * consecutive-failure counting - async validation errors do not break the
-   * frame loop, and the backend already deduplicates them.
-   */
-  private _handleAsyncRenderError(error: RenderError): void {
-    // The backend already logged this at its first occurrence (and dedupes
-    // repeats), so the shared pipeline must NOT log it a second time.
-    this._reportError(error, false, true);
-  }
-
-  /**
-   * Shared error-pipeline steps: log, ring buffer, `onError`, dev banner.
-   * `alreadyLogged` skips the console log for errors the backend logged at
-   * source (async render errors) so they are not double-logged.
-   */
-  private _reportError(error: Error, fatal: boolean, alreadyLogged = false): void {
-    const isRenderError = error instanceof RenderError;
-
-    if (!alreadyLogged) {
-      logger.error(error.message, { source: isRenderError ? 'rendering' : 'core', error });
+    if (!this._errors.recordFrameError(error)) {
+      return;
     }
 
-    this._recentErrors.push({
-      time: Date.now(),
-      message: error.message,
-      ...(isRenderError && { code: error.code }),
-      ...(error.stack !== undefined && { stack: error.stack }),
+    this._stopFrameLoop();
+    this._setState(ApplicationState.Stopped);
+    logger.error(`Frame loop halted after ${maxConsecutiveFrameErrors} consecutive frame errors.`, {
+      source: 'core',
+      error: error instanceof Error ? error : new Error(String(error)),
     });
-
-    if (this._recentErrors.length > maxRecentErrors) {
-      this._recentErrors.shift();
-    }
-
-    this.onError.dispatch(error);
-
-    if (__DEV__) {
-      const detail = isRenderError && error.detail !== null ? `\n${error.detail}` : '';
-
-      if (this.element !== null) {
-        showDevErrorOverlay(this.element, `${error.message}${detail}`, { fatal });
-      }
-    }
   }
 
   /**
@@ -1872,7 +1805,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this.onBackendRestored.dispatch();
       },
       onRenderError: error => {
-        this._handleAsyncRenderError(error);
+        this._errors.recordRenderError(error);
       },
     });
   }

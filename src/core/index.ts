@@ -1,4 +1,3 @@
-export type { RecentErrorEntry } from './Application';
 export { Application, ApplicationState } from './Application';
 export type { BuildInfo } from './BuildInfo';
 export { buildInfo } from './BuildInfo';
@@ -40,6 +39,7 @@ export type {
   ValueOf,
 } from './types';
 export { type Milliseconds, type Seconds, Time } from './units';
+export type { RecentErrorEntry } from '#core/application/ApplicationErrors';
 export type {
   ApplicationOptions,
   AutoBackendConfig,
