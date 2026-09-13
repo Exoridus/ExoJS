@@ -1039,6 +1039,32 @@ describe('Application lifecycle / getters / sizing', () => {
       expect(app.options.canvas?.height).toBe(300);
       expect(onResizeHandler).toHaveBeenCalledWith(400, 300, app);
     });
+
+    test('an onResize listener already sees the new base resolution in options.canvas', async () => {
+      const { Application } = await loadHarness();
+      const app = new Application({ backend: { type: 'webgl2' }, canvas: { width: 200, height: 100 } });
+      const seen: Array<[number | undefined, number | undefined]> = [];
+
+      app.onResize.add(() => {
+        seen.push([app.options.canvas?.width, app.options.canvas?.height]);
+      });
+
+      app.resize(400, 300);
+
+      expect(seen).toEqual([[400, 300]]);
+    });
+
+    test('construction without a sizing policy commits the base geometry once, silently', async () => {
+      const { Application, webglManager } = await loadHarness();
+      const app = new Application({ backend: { type: 'webgl2' }, canvas: { width: 200, height: 100 } });
+
+      // The base commit runs ahead of the backend, so the backend never hears
+      // about geometry it was created at - and there is no policy whose attach
+      // could move it.
+      expect(webglManager.resize).not.toHaveBeenCalled();
+      expect(app.width).toBe(200);
+      expect(app.canvas.width).toBe(200);
+    });
   });
 
   // -------------------------------------------------------------------------

@@ -339,7 +339,7 @@ export class WebGpuBackend implements RenderBackend {
       this._clearColor.copy(clearColor);
     }
 
-    // Core renderers are bound via buildCoreRendererBindings in Application.createBackend.
+    // Core renderers are bound via buildCoreRendererBindings when the application creates the backend.
     this.resize(width, height);
   }
 

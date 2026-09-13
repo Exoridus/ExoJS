@@ -161,6 +161,28 @@ describe('ApplicationSizing', () => {
     expect(sizing.policy).toBe(second);
   });
 
+  test('attaching the first policy over the base commit reports nothing when nothing moved', () => {
+    const { sizing, element, commits } = createSizing({ hasPolicy: false });
+
+    sizing.attachPolicy(null);
+
+    expect(commits).toEqual([]);
+    expect(element.style.width).toBe('800px');
+  });
+
+  test('attaching a real first policy reports only what that policy commits', () => {
+    const { sizing, commits } = createSizing({ hasPolicy: true });
+    const policy = new RecordingSizing();
+
+    sizing.attachPolicy(policy);
+
+    expect(commits).toEqual([]);
+
+    policy.commit(fullMetrics(500));
+
+    expect(commits).toEqual([[500, 500]]);
+  });
+
   test('re-assigning the active policy detaches and re-attaches it, so it re-reads its host', () => {
     const { sizing } = createSizing({ hasPolicy: true });
     const policy = new RecordingSizing();

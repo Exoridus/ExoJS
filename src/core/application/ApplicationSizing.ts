@@ -142,6 +142,19 @@ export class ApplicationSizing {
   }
 
   /**
+   * Install the first policy, when there is nothing to swap out.
+   *
+   * Not the setter: that reclaims the CSS box the previous policy wrote before
+   * it re-derives, and at this point the box in place is the base commit's
+   * own. Reclaiming it would make the re-derivation look like a change and
+   * report a commit for geometry that never moved.
+   */
+  public attachPolicy(policy: CanvasSizing | null): void {
+    this._policy = policy;
+    this._applyPolicy();
+  }
+
+  /**
    * Move to a new base resolution and re-derive the geometry from it.
    *
    * Under a policy that tracks its surroundings the base resolution is a

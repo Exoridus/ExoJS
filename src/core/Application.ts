@@ -469,7 +469,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // remaining subsystem, because a policy that observes its parent holds a
       // ResizeObserver, and a DOM node holding an observer whose callback closes
       // over a half-built application is a live leak rather than an inert one.
-      this._geometry.policy = canvasOptions.sizing ?? null;
+      this._geometry.attachPolicy(canvasOptions.sizing ?? null);
       this._geometry.watchPixelRatio(this.platform);
       this.input = constructed.track(new InputSystem(this));
       this.interaction = constructed.track(new InteractionSystem(this));
@@ -1261,13 +1261,17 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public resize(width: number, height: number): this {
     assert(width > 0 && height > 0, `Application.resize() dimensions must be positive (got ${width}×${height}).`);
 
-    this._geometry.rebase(width, height);
+    // Ahead of the rebase, which dispatches `onResize` synchronously: a
+    // listener reading `options.canvas` has to see the resolution it is being
+    // told about, not the previous one.
     this.options.canvas = {
       ...this.options.canvas,
       width,
       height,
       pixelRatio: this._geometry.pixelRatio,
     };
+
+    this._geometry.rebase(width, height);
 
     return this;
   }

@@ -91,7 +91,7 @@ export const supportsPointerEvents: boolean = typeof PointerEvent !== 'undefined
  * string - jsdom, for one, reports `AppleWebKit` with no `Safari/` token.
  *
  * A UA test rather than a capability probe, used only where a defect has no
- * feature to detect - see `Application.canUseWebGpu`, which keeps WebKit off a
+ * feature to detect - see `canUseWebGpu` in the backend selection, which keeps WebKit off a
  * WebGPU implementation that renders incorrectly without reporting an error.
  *
  * @param userAgent - The UA string to classify.
