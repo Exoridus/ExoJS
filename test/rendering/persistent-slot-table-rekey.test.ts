@@ -37,7 +37,7 @@ const sourceOf = (root: Container, sprites: readonly Sprite[]): RenderRootSource
     scope.items.push(sprites[i]!, i, 0, 0, 0, 16, 16);
   }
 
-  const source = new RenderRootSource();
+  const source = new RenderRootSource(root);
 
   source.adopt(root, scope, 0, 0, 0, 0);
 

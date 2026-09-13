@@ -1,6 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import { FrameLoop } from '#core/application/FrameLoop';
+import { NodeDirtyIndex } from '#core/nodeDirtyIndex';
 import { Scene } from '#core/scene/Scene';
 import { Time } from '#core/units';
 import type { PlatformAdapter } from '#platform/PlatformAdapter';
@@ -259,6 +260,7 @@ describe('Application', () => {
     // initializer (`= Time.seconds(0)`) never runs - stand in with a real Time so
     // the frame path stays type-honest.
     rawApp['_frameDelta'] = Time.seconds(0);
+    rawApp['_dirtyIndex'] = new NodeDirtyIndex();
     rawApp['onFrame'] = { dispatch: vi.fn() };
     rawApp['onFixedFrame'] = { dispatch: vi.fn() };
 

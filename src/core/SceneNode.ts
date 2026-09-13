@@ -25,7 +25,7 @@ import { Vector } from '#math/Vector';
 import type { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 
-import { DirtyChannel, nodeDirtyIndex } from './nodeDirtyIndex';
+import { detachedNodeDirtyIndex, DirtyChannel, type NodeDirtyIndex } from './nodeDirtyIndex';
 import { nextNodeRevision, NodeRevision } from './NodeRevision';
 import type { Stage } from './Stage';
 
@@ -82,58 +82,6 @@ const localPoint = new Vector();
  * epoch stamps (0) are never spuriously "current".
  */
 let dirtyWalkEpoch = 1;
-
-/**
- * Process-wide count of live transform-group boundaries ({@link RetainedContainer}).
- * The transform-move seam ({@link SceneNode._notifyEnclosingRetainedGroup})
- * walks to the nearest boundary on EVERY own-transform mutation; when no boundary
- * exists anywhere (the common case - most scenes use no RetainedContainer) that
- * walk would run to the root for nothing. Gating on this count makes the seam O(1)
- * for boundary-free scenes. Maintained by RetainedContainer's construct/destroy via
- * {@link registerTransformGroupBoundary}/{@link unregisterTransformGroupBoundary}.
- *
- * Invariant: this must never UNDER-count (a missed enqueue is a stale-render bug),
- * so it counts from construction - a boundary that is constructed but never attached
- * only makes the seam over-walk (correctness-safe), and a skipped destroy keeps the
- * count high (also safe).
- */
-let transformGroupBoundaryCount = 0;
-
-/** @internal - a transform-group boundary was created; arm the transform-move seam. */
-export const registerTransformGroupBoundary = (): void => {
-  transformGroupBoundaryCount++;
-};
-
-/** @internal - a transform-group boundary was destroyed; disarm if it was the last. */
-export const unregisterTransformGroupBoundary = (): void => {
-  if (transformGroupBoundaryCount > 0) {
-    transformGroupBoundaryCount--;
-  }
-};
-
-/**
- * Live automatic render-root representations, the render-root counterpart of
- * {@link transformGroupBoundaryCount}. A root's recorded rows are patched by the
- * same seam, but a root is NOT a transform-group boundary, so the boundary count
- * alone would leave the walk short-circuited for a scene that has no group at
- * all - which is exactly the scene the automatic representation exists for.
- *
- * Same never-under-count invariant: counted from representation creation, so an
- * over-count only makes the seam over-walk.
- */
-let retainedRenderRootCount = 0;
-
-/** @internal - a render root created its representation; arm the transform-move seam. */
-export const registerRetainedRenderRoot = (): void => {
-  retainedRenderRootCount++;
-};
-
-/** @internal - a render root released its representation; disarm if it was the last. */
-export const unregisterRetainedRenderRoot = (): void => {
-  if (retainedRenderRootCount > 0) {
-    retainedRenderRootCount--;
-  }
-};
 
 /**
  * Sentinel `parentVersion` used by {@link SceneNode.getGlobalTransform} when
@@ -930,10 +878,10 @@ export class SceneNode implements Collidable {
     this._orientedBounds?.destroy();
 
     // Last, after the unlink: detaching is itself a change and would re-enter
-    // an entry this node no longer needs. The index is process-wide and only
-    // ages entries out as frames advance, so a node destroyed with the frame
-    // loop already gone would otherwise stay reachable through it forever.
-    nodeDirtyIndex.release(this);
+    // an entry this node no longer needs. An index only ages entries out as
+    // frames advance, so a node destroyed with the frame loop already gone
+    // would otherwise stay reachable through it forever.
+    this._dirtyIndex().release(this);
   }
 
   /**
@@ -943,7 +891,26 @@ export class SceneNode implements Collidable {
    * @internal
    */
   public _setStage(stage: Stage | null): void {
+    if (this._stage !== stage) {
+      // The entry this node holds names a bucket in the index it is leaving.
+      // Dropping it there keeps the old index from pinning a node it can no
+      // longer be asked about, and stops the stale generation and slot from
+      // being read against the new index's buckets.
+      this._dirtyIndex().release(this);
+    }
+
     this._stage = stage;
+  }
+
+  /**
+   * @internal - the changed-record index this node marks into, and the one
+   * every consumer that answers for it reads. Resolved from the owning stage on
+   * each use rather than cached, so a node that moves between applications - or
+   * in and out of a tree - never writes into an index its consumers do not
+   * read.
+   */
+  public _dirtyIndex(): NodeDirtyIndex {
+    return this._stage?.dirtyIndex ?? detachedNodeDirtyIndex;
   }
 
   /** @internal - the owning {@link Stage}, or `null` when this node is detached. */
@@ -1136,8 +1103,10 @@ export class SceneNode implements Collidable {
     const revision = nextNodeRevision();
     const epoch = dirtyWalkEpoch;
 
-    if (transformGroupBoundaryCount > 0 || retainedRenderRootCount > 0) {
-      nodeDirtyIndex.mark(this, channels);
+    const index = this._dirtyIndex();
+
+    if (index.armed) {
+      index.mark(this, channels);
     }
 
     this._nodeRevision.touchContent(revision);
@@ -1168,8 +1137,10 @@ export class SceneNode implements Collidable {
     // Only the node whose child list changed is marked, not the ancestor chain:
     // a consumer resolves an entry by walking UP from it to the nearest scope it
     // owns, so stamping the chain would hand it the same answer several times.
-    if (transformGroupBoundaryCount > 0 || retainedRenderRootCount > 0) {
-      nodeDirtyIndex.mark(this, DirtyChannel.Structure);
+    const index = this._dirtyIndex();
+
+    if (index.armed) {
+      index.mark(this, DirtyChannel.Structure);
     }
 
     this._nodeRevision.touchStructure(revision);
@@ -1246,15 +1217,17 @@ export class SceneNode implements Collidable {
    * map hit rather than the mutator a walk.
    *
    * Runs on every own-transform mutation, so it must not allocate - and
-   * short-circuits to a single pair of count checks while no consumer of either
-   * kind exists anywhere.
+   * short-circuits to one index resolve and one branch while this node's tree
+   * holds no retained consumer.
    */
   private _notifyEnclosingRetainedGroup(): void {
-    if (transformGroupBoundaryCount === 0 && retainedRenderRootCount === 0) {
+    const index = this._dirtyIndex();
+
+    if (!index.armed) {
       return;
     }
 
-    nodeDirtyIndex.mark(this, DirtyChannel.Transform);
+    index.mark(this, DirtyChannel.Transform);
   }
 
   private _setPositionDirty(): void {

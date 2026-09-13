@@ -463,7 +463,7 @@ export class Container extends RenderNode {
       return;
     }
 
-    this._stage = stage;
+    super._setStage(stage);
 
     for (const child of this._childList) {
       child._setStage(stage);

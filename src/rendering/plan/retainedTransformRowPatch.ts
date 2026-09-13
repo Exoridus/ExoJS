@@ -1,4 +1,4 @@
-import { DirtyChannel, nodeDirtyIndex } from '#core/nodeDirtyIndex';
+import { DirtyChannel } from '#core/nodeDirtyIndex';
 import type { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { resolveRendererFor } from '#rendering/rendererLookup';
@@ -129,7 +129,7 @@ export const forEachMovedNode = (
   owns: (node: RenderNode) => boolean,
   visit: (node: RenderNode, record: RetainedFragmentDraw | undefined) => boolean,
 ): boolean =>
-  nodeDirtyIndex.readSince(fragment.transformCursor, DirtyChannel.Transform, node => {
+  fragment.dirtyIndex.readSince(fragment.transformCursor, DirtyChannel.Transform, node => {
     const moved = node as unknown as RenderNode;
     const record = fragment.recordedDraw(moved as unknown as Drawable);
 
@@ -299,7 +299,7 @@ export const reconcileRetainedTintRows = (fragment: RetainedGroupFragment, root:
   const patchable = bundle !== null && typeof bundle.patchTintRow === 'function' && bundle.transformRowBase !== undefined;
   const base = fragment.recordedRowBase();
 
-  const applied = nodeDirtyIndex.readSince(fragment.contentCursor, DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect, (node, marked) => {
+  const applied = fragment.dirtyIndex.readSince(fragment.contentCursor, DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect, (node, marked) => {
     const changed = node as unknown as RenderNode;
     const drawable = changed as unknown as Drawable;
     const rowIndex = fragment.recordedRowIndex(drawable);

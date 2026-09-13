@@ -62,9 +62,17 @@ export class RetainedRootRepresentation {
    * is at most {@link MAX_CAPTURE_SLOTS} long, so a linear scan is the whole
    * lookup and the order doubles as the eviction order.
    */
-  private readonly _captureSlots: RetainedCaptureSlot[] = [new RetainedCaptureSlot()];
+  private readonly _captureSlots: RetainedCaptureSlot[];
   /** The slot the current draw reads and writes; see {@link selectCaptureSlot}. */
-  private _capture: RetainedCaptureSlot = this._captureSlots[0]!;
+  private _capture: RetainedCaptureSlot;
+  /** The render root this representation belongs to; every product below it answers for that subtree. */
+  private readonly _root: RenderNode;
+
+  public constructor(root: RenderNode) {
+    this._root = root;
+    this._captureSlots = [new RetainedCaptureSlot(root)];
+    this._capture = this._captureSlots[0]!;
+  }
 
   /**
    * Point this representation at the product held for `backend` drawing into
@@ -107,7 +115,7 @@ export class RetainedRootRepresentation {
   }
 
   private _addSlot(): RetainedCaptureSlot {
-    const slot = new RetainedCaptureSlot();
+    const slot = new RetainedCaptureSlot(this._root);
 
     this._captureSlots.push(slot);
 
@@ -267,7 +275,7 @@ export class RetainedRootRepresentation {
 
   /** The persistent items, created on first use. */
   public ensureSource(): RenderRootSource {
-    return (this._source ??= new RenderRootSource());
+    return (this._source ??= new RenderRootSource(this._root));
   }
 
   /** This root's membership state, or `null` while it has never selected. */

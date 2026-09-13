@@ -71,7 +71,7 @@ describe('WebGPU persistent slots: a root containing Video', () => {
     rootScope.items.push(sprite, 0, 0, 0, 0, 16, 16);
     rootScope.items.push(video, 1, 0, 32, 0, 48, 16);
 
-    const source = new RenderRootSource();
+    const source = new RenderRootSource(root);
 
     source.adopt(root, rootScope, 0, 0, 0, 0);
 
@@ -102,7 +102,7 @@ describe('WebGPU persistent slots: a root containing Video', () => {
 
     rootScope.items.push(video, 0, 0, 0, 0, 16, 16);
 
-    const source = new RenderRootSource();
+    const source = new RenderRootSource(root);
 
     source.adopt(root, rootScope, 0, 0, 0, 0);
 

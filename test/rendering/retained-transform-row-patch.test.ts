@@ -1,5 +1,5 @@
 import { Color } from '#core/Color';
-import { nodeDirtyIndex } from '#core/nodeDirtyIndex';
+import { detachedNodeDirtyIndex } from '#core/nodeDirtyIndex';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
@@ -466,7 +466,7 @@ describe('automatic render-root representation: incremental transform rows', () 
     reachSpliceTier(root, harness);
 
     leaf.invalidateContent();
-    nodeDirtyIndex.advance();
+    detachedNodeDirtyIndex.advance();
     leaf.setPosition(40, 40);
     playFrame(root, harness.backend);
 

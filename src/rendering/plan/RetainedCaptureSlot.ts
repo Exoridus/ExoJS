@@ -31,7 +31,7 @@ export type RenderTargetIdentity = RenderBackend['renderTarget'];
  * @internal
  */
 export class RetainedCaptureSlot {
-  public readonly fragment = new RetainedGroupFragment();
+  public readonly fragment: RetainedGroupFragment;
 
   private _hasCapture = false;
   private _contentRevision = -1;
@@ -92,6 +92,10 @@ export class RetainedCaptureSlot {
   private _observedTransform = -1;
   private _observedView: View | null = null;
   private _observedViewUpdateId = -1;
+
+  public constructor(root: RenderNode) {
+    this.fragment = new RetainedGroupFragment(root);
+  }
 
   /**
    * Settle the CONTENT channel for a frame whose content revision moved:

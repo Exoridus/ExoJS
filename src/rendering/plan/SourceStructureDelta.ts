@@ -1,4 +1,4 @@
-import { DirtyChannel, nodeDirtyIndex } from '#core/nodeDirtyIndex';
+import { DirtyChannel } from '#core/nodeDirtyIndex';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
 
@@ -173,7 +173,7 @@ export class SourceStructureDelta implements SourceDeltaTargets {
     targets.length = 0;
     seen.clear();
 
-    const attributed = nodeDirtyIndex.readSince(cursor, DirtyChannel.Structure, marked => {
+    const attributed = source.dirtyIndex.readSince(cursor, DirtyChannel.Structure, marked => {
       const scope = source.scopeOfNode(marked);
 
       if (scope !== null && !seen.has(scope)) {
@@ -190,7 +190,7 @@ export class SourceStructureDelta implements SourceDeltaTargets {
 
     this._pruneNestedTargets(source, root);
 
-    return nodeDirtyIndex.readSince(cursor, DirtyChannel.Transform | DirtyChannel.Content | DirtyChannel.Tint, marked => {
+    return source.dirtyIndex.readSince(cursor, DirtyChannel.Transform | DirtyChannel.Content | DirtyChannel.Tint, marked => {
       const scope = source.scopeOfNode(marked);
 
       return scope === null || this._covers(source, scope, root);

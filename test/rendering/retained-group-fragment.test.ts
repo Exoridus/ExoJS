@@ -1,4 +1,4 @@
-import { DirtyChannel, nodeDirtyIndex } from '#core/nodeDirtyIndex';
+import { detachedNodeDirtyIndex, DirtyChannel } from '#core/nodeDirtyIndex';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { type MaterialKey } from '#rendering/material/MaterialKey';
@@ -69,7 +69,7 @@ const pooledDrawables = (fragment: RetainedGroupFragment): Array<Drawable | unde
 
 describe('RetainedGroupFragment', () => {
   test('isClean is false before any capture; hasCapture reflects lifecycle', () => {
-    const fragment = new RetainedGroupFragment();
+    const fragment = new RetainedGroupFragment(new Container());
 
     expect(fragment.hasCapture).toBe(false);
     expect(fragment.isClean(1, 1, fakeBackendA)).toBe(false);
@@ -77,7 +77,7 @@ describe('RetainedGroupFragment', () => {
   });
 
   test('isClean requires content, structure and backend to match — and nothing else (no view key)', () => {
-    const fragment = new RetainedGroupFragment();
+    const fragment = new RetainedGroupFragment(new Container());
     const drawable = new Drawable();
 
     fragment.capture(5, 3, fakeBackendA, [makeScopeDrawEntry(drawable)]);
@@ -105,7 +105,7 @@ describe('RetainedGroupFragment', () => {
   });
 
   test('captures each top-level draw nodeIndex and looks it up by drawable (row map)', () => {
-    const fragment = new RetainedGroupFragment();
+    const fragment = new RetainedGroupFragment(new Container());
     const spriteA = new Drawable();
     const spriteB = new Drawable();
 
@@ -123,7 +123,7 @@ describe('RetainedGroupFragment', () => {
   });
 
   test('recordedRowIndex rebuilds after a recapture (fresh row assignment)', () => {
-    const fragment = new RetainedGroupFragment();
+    const fragment = new RetainedGroupFragment(new Container());
     const sprite = new Drawable();
 
     fragment.capture(1, 1, fakeBackendA, [makeScopeDrawEntry(sprite, 4)]);
@@ -139,14 +139,14 @@ describe('RetainedGroupFragment', () => {
     // The fragment keeps no queue of its own any more: it keeps the point in
     // the shared index it has caught up to, and everything marked after that is
     // still owed to it.
-    const fragment = new RetainedGroupFragment();
+    const fragment = new RetainedGroupFragment(new Container());
     const a = new Drawable();
 
     fragment.markTransformsSeen();
 
     expect(fragment.hasUnseenTransformMarks()).toBe(false);
 
-    nodeDirtyIndex.mark(a, DirtyChannel.Transform);
+    detachedNodeDirtyIndex.mark(a, DirtyChannel.Transform);
 
     expect(fragment.hasUnseenTransformMarks()).toBe(true);
 
@@ -160,13 +160,13 @@ describe('RetainedGroupFragment', () => {
   test('a fragment that never accounted for anything is unprovable rather than quietly up to date', () => {
     // A fresh cursor cannot claim that nothing moved: it has no evidence either
     // way, and the caller has to re-collect instead of replaying.
-    const fragment = new RetainedGroupFragment();
+    const fragment = new RetainedGroupFragment(new Container());
 
     expect(fragment.transformMarksProvable).toBe(false);
   });
 
   test('invalidate() clears the capture', () => {
-    const fragment = new RetainedGroupFragment();
+    const fragment = new RetainedGroupFragment(new Container());
     const drawable = new Drawable();
 
     fragment.capture(1, 1, fakeBackendA, [makeScopeDrawEntry(drawable)]);
@@ -180,7 +180,7 @@ describe('RetainedGroupFragment', () => {
   });
 
   test('invalidate() releases the pooled strong reference to drawables so they can GC', () => {
-    const fragment = new RetainedGroupFragment();
+    const fragment = new RetainedGroupFragment(new Container());
     const drawable = new Drawable();
 
     fragment.capture(1, 1, fakeBackendA, [makeScopeDrawEntry(drawable)]);
@@ -344,7 +344,7 @@ class LeafDrawable extends Drawable {
 class SnapshotProbeContainer extends BoundaryContainer {
   // Snapshotting is fragment-owned: the probe captures its scope entries into
   // a fragment exactly like RetainedContainer does.
-  public readonly probeFragment = new RetainedGroupFragment();
+  public readonly probeFragment = new RetainedGroupFragment(this);
   public lastSnapshot: readonly RetainedFragmentEntry[] | null = null;
 
   protected override _collectContent(builder: RenderPlanBuilder): void {

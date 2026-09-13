@@ -1,4 +1,4 @@
-import { DirtyChannel, nodeDirtyIndex } from '#core/nodeDirtyIndex';
+import { detachedNodeDirtyIndex, DirtyChannel } from '#core/nodeDirtyIndex';
 import type { SceneNode } from '#core/SceneNode';
 import { Container } from '#rendering/Container';
 
@@ -6,7 +6,7 @@ import { Container } from '#rendering/Container';
 const readSince = (cursor: number, channels: number = DirtyChannel.Transform): SceneNode[] => {
   const seen: SceneNode[] = [];
 
-  nodeDirtyIndex.readSince(cursor, channels, node => {
+  detachedNodeDirtyIndex.readSince(cursor, channels, node => {
     seen.push(node);
 
     return true;
@@ -17,27 +17,27 @@ const readSince = (cursor: number, channels: number = DirtyChannel.Transform): S
 
 /** Every node the index still holds a reference to, across all of its buckets. */
 const retainedNodes = (): unknown[] => {
-  const buckets = (nodeDirtyIndex as unknown as Record<string, unknown>)['_buckets'] as Array<{ nodes: unknown[] }>;
+  const buckets = (detachedNodeDirtyIndex as unknown as Record<string, unknown>)['_buckets'] as Array<{ nodes: unknown[] }>;
 
   return buckets.flatMap(bucket => bucket.nodes.filter(node => node !== null));
 };
 
 beforeEach(() => {
-  nodeDirtyIndex.reset();
+  detachedNodeDirtyIndex.reset();
 });
 
 afterEach(() => {
-  nodeDirtyIndex.reset();
+  detachedNodeDirtyIndex.reset();
 });
 
 describe('NodeDirtyIndex', () => {
   test('a mark is visible to a cursor taken before it and invisible to one taken after', () => {
     const node = new Container();
-    const before = nodeDirtyIndex.sequence;
+    const before = detachedNodeDirtyIndex.sequence;
 
-    nodeDirtyIndex.mark(node, DirtyChannel.Transform);
+    detachedNodeDirtyIndex.mark(node, DirtyChannel.Transform);
 
-    const after = nodeDirtyIndex.sequence;
+    const after = detachedNodeDirtyIndex.sequence;
 
     expect(readSince(before)).toEqual([node]);
     expect(readSince(after)).toEqual([]);
@@ -51,11 +51,11 @@ describe('NodeDirtyIndex', () => {
     // though the node already had an entry in that generation.
     const node = new Container();
 
-    nodeDirtyIndex.mark(node, DirtyChannel.Transform);
+    detachedNodeDirtyIndex.mark(node, DirtyChannel.Transform);
 
-    const between = nodeDirtyIndex.sequence;
+    const between = detachedNodeDirtyIndex.sequence;
 
-    nodeDirtyIndex.mark(node, DirtyChannel.Transform);
+    detachedNodeDirtyIndex.mark(node, DirtyChannel.Transform);
 
     expect(readSince(between)).toEqual([node]);
 
@@ -64,10 +64,10 @@ describe('NodeDirtyIndex', () => {
 
   test('a node marked a thousand times in one generation holds one entry', () => {
     const node = new Container();
-    const before = nodeDirtyIndex.sequence;
+    const before = detachedNodeDirtyIndex.sequence;
 
     for (let index = 0; index < 1000; index++) {
-      nodeDirtyIndex.mark(node, DirtyChannel.Transform);
+      detachedNodeDirtyIndex.mark(node, DirtyChannel.Transform);
     }
 
     expect(readSince(before)).toEqual([node]);
@@ -79,11 +79,11 @@ describe('NodeDirtyIndex', () => {
     // A consumer that writes on every visit - a renderer patching its own
     // private row - would otherwise do the work twice for one moved node.
     const node = new Container();
-    const before = nodeDirtyIndex.sequence;
+    const before = detachedNodeDirtyIndex.sequence;
 
-    nodeDirtyIndex.mark(node, DirtyChannel.Transform);
-    nodeDirtyIndex.advance();
-    nodeDirtyIndex.mark(node, DirtyChannel.Transform);
+    detachedNodeDirtyIndex.mark(node, DirtyChannel.Transform);
+    detachedNodeDirtyIndex.advance();
+    detachedNodeDirtyIndex.mark(node, DirtyChannel.Transform);
 
     expect(readSince(before)).toEqual([node]);
 
@@ -98,13 +98,13 @@ describe('NodeDirtyIndex', () => {
     const node = new Container();
     const seen: number[] = [];
 
-    nodeDirtyIndex.mark(node, DirtyChannel.Content);
+    detachedNodeDirtyIndex.mark(node, DirtyChannel.Content);
 
-    const between = nodeDirtyIndex.sequence;
+    const between = detachedNodeDirtyIndex.sequence;
 
-    nodeDirtyIndex.mark(node, DirtyChannel.Tint);
+    detachedNodeDirtyIndex.mark(node, DirtyChannel.Tint);
 
-    nodeDirtyIndex.readSince(between, DirtyChannel.Content | DirtyChannel.Tint, (_node, marked) => {
+    detachedNodeDirtyIndex.readSince(between, DirtyChannel.Content | DirtyChannel.Tint, (_node, marked) => {
       seen.push(marked);
 
       return true;
@@ -117,21 +117,21 @@ describe('NodeDirtyIndex', () => {
 
   test('an effect mark is its own channel: read apart from content, and not mistaken for it', () => {
     const node = new Container();
-    const before = nodeDirtyIndex.sequence;
+    const before = detachedNodeDirtyIndex.sequence;
 
-    nodeDirtyIndex.mark(node, DirtyChannel.Effect);
+    detachedNodeDirtyIndex.mark(node, DirtyChannel.Effect);
 
     const seen: number[] = [];
 
-    nodeDirtyIndex.readSince(before, DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect, (_node, marked) => {
+    detachedNodeDirtyIndex.readSince(before, DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect, (_node, marked) => {
       seen.push(marked);
 
       return true;
     });
 
     expect(seen).toEqual([DirtyChannel.Effect]);
-    expect(nodeDirtyIndex.hasMarksSince(before, DirtyChannel.Content)).toBe(false);
-    expect(nodeDirtyIndex.hasMarksSince(before, DirtyChannel.Effect)).toBe(true);
+    expect(detachedNodeDirtyIndex.hasMarksSince(before, DirtyChannel.Content)).toBe(false);
+    expect(detachedNodeDirtyIndex.hasMarksSince(before, DirtyChannel.Effect)).toBe(true);
   });
 
   test('a mark on one channel does not erase an unread mark on another', () => {
@@ -140,14 +140,14 @@ describe('NodeDirtyIndex', () => {
     // content mark tells the reader nothing but a move happened, and a retained
     // product replays a stale recording for as long as the node keeps moving.
     const node = new Container();
-    const before = nodeDirtyIndex.sequence;
+    const before = detachedNodeDirtyIndex.sequence;
     const seen: number[] = [];
 
-    nodeDirtyIndex.mark(node, DirtyChannel.Content);
-    nodeDirtyIndex.advance();
-    nodeDirtyIndex.mark(node, DirtyChannel.Transform);
+    detachedNodeDirtyIndex.mark(node, DirtyChannel.Content);
+    detachedNodeDirtyIndex.advance();
+    detachedNodeDirtyIndex.mark(node, DirtyChannel.Transform);
 
-    nodeDirtyIndex.readSince(before, DirtyChannel.Content | DirtyChannel.Tint, (_node, marked) => {
+    detachedNodeDirtyIndex.readSince(before, DirtyChannel.Content | DirtyChannel.Tint, (_node, marked) => {
       seen.push(marked);
 
       return true;
@@ -161,13 +161,13 @@ describe('NodeDirtyIndex', () => {
 
   test('a mark on one channel does not erase an unread mark made on another in the same generation', () => {
     const node = new Container();
-    const before = nodeDirtyIndex.sequence;
+    const before = detachedNodeDirtyIndex.sequence;
     const seen: number[] = [];
 
-    nodeDirtyIndex.mark(node, DirtyChannel.Content);
-    nodeDirtyIndex.mark(node, DirtyChannel.Transform);
+    detachedNodeDirtyIndex.mark(node, DirtyChannel.Content);
+    detachedNodeDirtyIndex.mark(node, DirtyChannel.Transform);
 
-    nodeDirtyIndex.readSince(before, DirtyChannel.Content | DirtyChannel.Tint, (_node, marked) => {
+    detachedNodeDirtyIndex.readSince(before, DirtyChannel.Content | DirtyChannel.Tint, (_node, marked) => {
       seen.push(marked);
 
       return true;
@@ -180,9 +180,9 @@ describe('NodeDirtyIndex', () => {
 
   test('marks are filtered by channel', () => {
     const moved = new Container();
-    const before = nodeDirtyIndex.sequence;
+    const before = detachedNodeDirtyIndex.sequence;
 
-    nodeDirtyIndex.mark(moved, DirtyChannel.Transform);
+    detachedNodeDirtyIndex.mark(moved, DirtyChannel.Transform);
 
     expect(readSince(before, DirtyChannel.Transform)).toEqual([moved]);
     expect(readSince(before, 1 << 5)).toEqual([]);
@@ -193,13 +193,13 @@ describe('NodeDirtyIndex', () => {
   test('a visit that stops the walk reports the read as incomplete', () => {
     const first = new Container();
     const second = new Container();
-    const before = nodeDirtyIndex.sequence;
+    const before = detachedNodeDirtyIndex.sequence;
     const seen: SceneNode[] = [];
 
-    nodeDirtyIndex.mark(first, DirtyChannel.Transform);
-    nodeDirtyIndex.mark(second, DirtyChannel.Transform);
+    detachedNodeDirtyIndex.mark(first, DirtyChannel.Transform);
+    detachedNodeDirtyIndex.mark(second, DirtyChannel.Transform);
 
-    const complete = nodeDirtyIndex.readSince(before, DirtyChannel.Transform, node => {
+    const complete = detachedNodeDirtyIndex.readSince(before, DirtyChannel.Transform, node => {
       seen.push(node);
 
       return false;
@@ -217,17 +217,17 @@ describe('NodeDirtyIndex', () => {
     // than the window gets `false` and rebuilds, instead of a partial answer it
     // cannot tell from a complete one.
     const node = new Container();
-    const stale = nodeDirtyIndex.sequence;
+    const stale = detachedNodeDirtyIndex.sequence;
 
-    nodeDirtyIndex.mark(node, DirtyChannel.Transform);
+    detachedNodeDirtyIndex.mark(node, DirtyChannel.Transform);
 
     for (let generation = 0; generation < 16; generation++) {
-      nodeDirtyIndex.advance();
-      nodeDirtyIndex.mark(node, DirtyChannel.Transform);
+      detachedNodeDirtyIndex.advance();
+      detachedNodeDirtyIndex.mark(node, DirtyChannel.Transform);
     }
 
-    expect(nodeDirtyIndex.covers(stale)).toBe(false);
-    expect(nodeDirtyIndex.readSince(stale, DirtyChannel.Transform, () => true)).toBe(false);
+    expect(detachedNodeDirtyIndex.covers(stale)).toBe(false);
+    expect(detachedNodeDirtyIndex.readSince(stale, DirtyChannel.Transform, () => true)).toBe(false);
 
     node.destroy();
   });
@@ -238,15 +238,15 @@ describe('NodeDirtyIndex', () => {
     // through its parent link, the whole graph it belonged to - for the life of
     // the process, long after `covers()` stopped answering for it.
     const node = new Container();
-    const stale = nodeDirtyIndex.sequence;
+    const stale = detachedNodeDirtyIndex.sequence;
 
-    nodeDirtyIndex.mark(node, DirtyChannel.Transform);
+    detachedNodeDirtyIndex.mark(node, DirtyChannel.Transform);
 
     for (let generation = 0; generation < 8; generation++) {
-      nodeDirtyIndex.advance();
+      detachedNodeDirtyIndex.advance();
     }
 
-    expect(nodeDirtyIndex.covers(stale)).toBe(false);
+    expect(detachedNodeDirtyIndex.covers(stale)).toBe(false);
     expect(retainedNodes()).not.toContain(node);
 
     node.destroy();
@@ -258,7 +258,7 @@ describe('NodeDirtyIndex', () => {
     // destroyed application performs no further advance at all.
     const node = new Container();
 
-    nodeDirtyIndex.mark(node, DirtyChannel.Transform);
+    detachedNodeDirtyIndex.mark(node, DirtyChannel.Transform);
 
     expect(retainedNodes()).toContain(node);
 
@@ -270,10 +270,10 @@ describe('NodeDirtyIndex', () => {
   test('a read still reports the marks that outlived a destroyed neighbour', () => {
     const first = new Container();
     const second = new Container();
-    const before = nodeDirtyIndex.sequence;
+    const before = detachedNodeDirtyIndex.sequence;
 
-    nodeDirtyIndex.mark(first, DirtyChannel.Transform);
-    nodeDirtyIndex.mark(second, DirtyChannel.Transform);
+    detachedNodeDirtyIndex.mark(first, DirtyChannel.Transform);
+    detachedNodeDirtyIndex.mark(second, DirtyChannel.Transform);
 
     first.destroy();
 
@@ -283,6 +283,6 @@ describe('NodeDirtyIndex', () => {
   });
 
   test('a fresh cursor of -1 is never covered, so nothing starts out silently up to date', () => {
-    expect(nodeDirtyIndex.covers(-1)).toBe(false);
+    expect(detachedNodeDirtyIndex.covers(-1)).toBe(false);
   });
 });
