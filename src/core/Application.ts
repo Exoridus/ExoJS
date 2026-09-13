@@ -138,6 +138,19 @@ const systemsMeasure = 'exojs:systems';
  * `document.hidden` is true (still consumes RAF callbacks but skips
  * scene update + render). Useful for games; leave off for tools and
  * background-active simulations.
+ *
+ * **Several applications on one page** are a supported shape, and each owns its
+ * surface, backend, scene stack, core systems, extension set, asset loader,
+ * frame loop, RNG and changed-record index. Two applications therefore neither
+ * rotate each other's retained-plan window nor make each other's scene
+ * mutations record anything.
+ *
+ * What they do share is the process: the Web Audio context (deliberately, since
+ * a browser admits only a few) and the monotonic revision counters the scene
+ * graph stamps nodes with, which advance faster with a second application but
+ * are only ever compared per node. A scene node belongs to exactly one
+ * application at a time, and moving one across is an ordinary reparent - its
+ * retained state travels with it.
  */
 export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public readonly options: ApplicationOptions<Registry>;
