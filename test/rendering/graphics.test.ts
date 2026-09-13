@@ -3,6 +3,7 @@ import { LinearGradient } from '#rendering/gradient/LinearGradient';
 import { RadialGradient } from '#rendering/gradient/RadialGradient';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { Graphics } from '#rendering/primitives/Graphics';
+import { GraphicsPath } from '#rendering/primitives/GraphicsPath';
 import type { RenderNode } from '#rendering/RenderNode';
 import { DataTexture } from '#rendering/texture/DataTexture';
 
@@ -48,6 +49,101 @@ describe('Graphics', () => {
     expect(graphics.children.length).toBeGreaterThanOrEqual(2);
     expect(graphics.currentPoint.x).toBeCloseTo(10, 4);
     expect(graphics.currentPoint.y).toBeCloseTo(2, 4);
+  });
+
+  describe('drawShape', () => {
+    const triangle = (): GraphicsPath => new GraphicsPath().moveTo(0, 0).lineTo(20, 0).lineTo(10, 20).closePath();
+
+    test('paints one fill mesh per subpath', () => {
+      const graphics = new Graphics();
+
+      graphics.fillColor = new Color(255, 0, 0);
+      graphics.drawShape(new GraphicsPath().rect(0, 0, 10, 10).rect(20, 0, 10, 10));
+
+      expect(graphics.children.length).toBe(2);
+    });
+
+    test('adds a stroke mesh alongside the fill only while lineWidth is set', () => {
+      const filled = new Graphics();
+
+      filled.fillColor = new Color(255, 0, 0);
+      filled.drawShape(triangle());
+
+      expect(filled.children.length).toBe(1);
+
+      const stroked = new Graphics();
+
+      stroked.fillColor = new Color(255, 0, 0);
+      stroked.lineWidth = 2;
+      stroked.drawShape(triangle());
+
+      expect(stroked.children.length).toBe(2);
+    });
+
+    test('fills an unclosed subpath against the line back to its start', () => {
+      const open = new Graphics();
+      const closed = new Graphics();
+
+      open.fillColor = new Color(0, 255, 0);
+      closed.fillColor = new Color(0, 255, 0);
+
+      open.drawShape(new GraphicsPath().moveTo(0, 0).lineTo(20, 0).lineTo(10, 20));
+      closed.drawShape(triangle());
+
+      expect(open.children.length).toBe(1);
+      expect((open.children[0] as Mesh).vertices).toEqual((closed.children[0] as Mesh).vertices);
+    });
+
+    test('strokes a closed subpath all the way round', () => {
+      const open = new Graphics();
+      const closed = new Graphics();
+
+      open.lineWidth = 2;
+      closed.lineWidth = 2;
+
+      open.drawShape(new GraphicsPath().moveTo(0, 0).lineTo(20, 0).lineTo(10, 20));
+      closed.drawShape(triangle());
+
+      // The closing edge back to the start is a segment the open path lacks.
+      expect((closed.children[0] as Mesh).vertices.length).toBeGreaterThan((open.children[0] as Mesh).vertices.length);
+    });
+
+    test('draws nothing for a subpath with too few points', () => {
+      const graphics = new Graphics();
+
+      graphics.fillColor = new Color(255, 255, 255);
+      graphics.lineWidth = 2;
+      graphics.drawShape(new GraphicsPath().moveTo(5, 5));
+
+      expect(graphics.children.length).toBe(0);
+    });
+
+    test('never hands its own vertices to the mesh it builds', () => {
+      const graphics = new Graphics();
+      const path = new GraphicsPath().rect(0, 0, 10, 10);
+
+      graphics.fillColor = new Color(255, 255, 255);
+      graphics.drawShape(path);
+
+      const before = [...path.contours()[0]!.points];
+
+      graphics.drawShape(path);
+
+      expect(path.contours()[0]!.points).toEqual(before);
+    });
+
+    test('forwards the tolerance to the flattening', () => {
+      const coarse = new Graphics();
+      const fine = new Graphics();
+      const path = new GraphicsPath().circle(0, 0, 100);
+
+      coarse.fillColor = new Color(255, 255, 255);
+      fine.fillColor = new Color(255, 255, 255);
+      coarse.drawShape(path, 8);
+      fine.drawShape(path, 0.05);
+
+      expect((fine.children[0] as Mesh).vertices.length).toBeGreaterThan((coarse.children[0] as Mesh).vertices.length * 2);
+    });
   });
 
   describe('fill and stroke styles', () => {
