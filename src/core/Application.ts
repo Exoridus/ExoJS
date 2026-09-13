@@ -14,6 +14,7 @@ import {
 } from '#core/application/ApplicationOptions';
 import { ApplicationSizing } from '#core/application/ApplicationSizing';
 import { type BackendType, createBackend, resolveBackendType } from '#core/application/backendSelection';
+import { onAppInitialized } from '#core/application/devHooks';
 import { defaultFixedStepMs, FrameLoop } from '#core/application/FrameLoop';
 import { createDefaultCanvas, isRenderSurface } from '#core/applicationCanvas';
 import { JobScheduler } from '#core/JobScheduler';
@@ -286,6 +287,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private _autoClear = true;
   private _cursor = 'default';
   private readonly _errors: ApplicationErrorReporter;
+  /** Whether {@link onAppInitialized} has already announced this application. */
+  private _announced = false;
   /** Whether {@link Application.platform} was created here - an injected one is not ours to destroy. */
   private readonly _ownsPlatform: boolean;
   private readonly _ownsConnectivity: boolean;
@@ -964,6 +967,14 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       await Promise.resolve();
 
       this._capabilities = await capabilitiesPromise;
+
+      // Ahead of the initial navigation, so tooling is attached in time to see
+      // the first scene load. Once per application: a later `start()` after a
+      // `stop()` is a restart, not a second application.
+      if (__DEV__ && !this._announced) {
+        this._announced = true;
+        onAppInitialized.dispatch(this);
+      }
 
       if (target !== undefined) {
         // `target`'s implementation-level type is a union (registered key
