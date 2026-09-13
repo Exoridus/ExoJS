@@ -39,7 +39,7 @@ export type {
   ValueOf,
 } from './types';
 export { type Milliseconds, type Seconds, Time } from './units';
-export type { RecentErrorEntry } from '#core/application/ApplicationErrors';
+export type { RecentErrorEntry } from '#core/application/ApplicationErrorReporter';
 export type {
   ApplicationOptions,
   AutoBackendConfig,

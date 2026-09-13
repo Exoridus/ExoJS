@@ -2,7 +2,7 @@
  * `ApplicationErrorReporter` on its own: the history, the dispatch and the
  * consecutive-failure count that the frame guard halts on.
  */
-import { ApplicationErrorReporter, maxConsecutiveFrameErrors } from '#core/application/ApplicationErrors';
+import { ApplicationErrorReporter, maxConsecutiveFrameErrors } from '#core/application/ApplicationErrorReporter';
 import { Signal } from '#core/Signal';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { RenderError } from '#rendering/RenderError';

@@ -3,7 +3,7 @@ import { TweenSystem } from '#animation/TweenSystem';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { AudioSystem } from '#audio/AudioSystem';
-import { ApplicationErrorReporter, maxConsecutiveFrameErrors, type RecentErrorEntry } from '#core/application/ApplicationErrors';
+import { ApplicationErrorReporter, maxConsecutiveFrameErrors, type RecentErrorEntry } from '#core/application/ApplicationErrorReporter';
 import {
   type ApplicationOptions,
   defaultBackendConfig,
