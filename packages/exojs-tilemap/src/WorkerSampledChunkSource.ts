@@ -1,3 +1,5 @@
+import { InlineWorker } from '@codexo/exojs';
+
 import type { ChunkPayload, ChunkSource } from './ChunkSource';
 import type { TileLayer } from './TileLayer';
 import type { ResolvedTile } from './types';
@@ -116,30 +118,24 @@ interface PendingRequest {
  * lifecycle hook, so nothing ties the two together automatically. Call it
  * yourself alongside your own `ChunkStreamer.destroy()` call.
  *
- * Implementation note: `workerSource` is Blob-URL'd into a real `Worker`
- * (`new Blob([workerSource])` → `URL.createObjectURL` → `new Worker(url)`) -
- * the same technique {@link import('@codexo/exojs').WorkletEffect} already
- * uses for AudioWorklet processors. This is bundler-agnostic (no special
- * config needed in Vite/webpack/etc.) but requires a Content-Security-Policy
- * that permits `blob:` in `worker-src` (or `script-src` as a fallback) if
- * your deployment sets one.
+ * `workerSource` runs through {@link import('@codexo/exojs').InlineWorker},
+ * so it needs no bundler support of its own but does need a
+ * Content-Security-Policy that permits `blob:` in `worker-src` if your
+ * deployment sets one; the constructor names that cause when it is refused.
  * @advanced
  */
 export const createWorkerSampledChunkSource = (layer: TileLayer, options: WorkerSampledChunkSourceOptions): ChunkSource & { destroy(): void } => {
   const mapValueToTile = options.mapValueToTile.bind(options);
 
-  const blob = new Blob([options.workerSource], { type: 'application/javascript' });
-  const url = URL.createObjectURL(blob);
-  const worker = new Worker(url);
-  URL.revokeObjectURL(url);
+  const inline = new InlineWorker(options.workerSource, { name: 'exojs-tilemap-chunk-sampler' });
+  const worker = inline.worker;
 
   if (options.initMessage !== undefined) {
-    worker.postMessage(options.initMessage);
+    inline.postMessage(options.initMessage);
   }
 
   let requestCounter = 0;
   const pending = new Map<number, PendingRequest>();
-  let destroyed = false;
 
   const composePayload = (values: Float64Array, request: PendingRequest): ChunkPayload | null => {
     const { cx, cy, chunkWidth, chunkHeight } = request;
@@ -193,7 +189,7 @@ export const createWorkerSampledChunkSource = (layer: TileLayer, options: Worker
 
   return {
     getChunk(cx: number, cy: number): Promise<ChunkPayload | null> {
-      if (destroyed) {
+      if (inline.destroyed) {
         return Promise.reject(new Error('WorkerSampledChunkSource: getChunk() called after destroy().'));
       }
 
@@ -204,19 +200,18 @@ export const createWorkerSampledChunkSource = (layer: TileLayer, options: Worker
       return new Promise<ChunkPayload | null>((resolve, reject) => {
         pending.set(requestId, { resolve, reject, cx, cy, chunkWidth, chunkHeight });
         const request: WorkerRequestMessage = { requestId, cx, cy, chunkWidth, chunkHeight };
-        worker.postMessage(request);
+        inline.postMessage(request);
       });
     },
 
     destroy(): void {
-      if (destroyed) return;
-      destroyed = true;
+      if (inline.destroyed) return;
       const error = new Error('WorkerSampledChunkSource destroyed.');
       for (const entry of pending.values()) {
         entry.reject(error);
       }
       pending.clear();
-      worker.terminate();
+      inline.destroy();
     },
   };
 };
