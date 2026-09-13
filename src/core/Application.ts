@@ -11,6 +11,7 @@ import {
   defaultLoaderFetchOptions,
   resolveRenderingOptions,
 } from '#core/application/ApplicationOptions';
+import { type BackendType, createBackend, resolveBackendType } from '#core/application/backendSelection';
 import { createDefaultCanvas, isRenderSurface, resolveAutoPixelRatio, watchAutoPixelRatio } from '#core/applicationCanvas';
 import { JobScheduler } from '#core/JobScheduler';
 import { SceneDirector } from '#core/scene/SceneDirector';
@@ -26,8 +27,9 @@ import {
 import { defaultSerializationRegistry, SerializationRegistry } from '#core/serialization/SerializationRegistry';
 import type { CanvasSizing, CanvasSizingContext, CanvasSizingHostMetrics, CanvasSizingMetrics } from '#core/sizing/CanvasSizing';
 import type { Extension, ExtensionDisposer } from '#extensions/Extension';
+import type { RendererBinding } from '#extensions/Extension';
 import { disposeExtensions, installExtensions } from '#extensions/lifetime';
-import { materializeAssetTypes, materializeRendererBindings, materializeSerializerBindings } from '#extensions/materialize';
+import { materializeAssetTypes, materializeSerializerBindings } from '#extensions/materialize';
 import { buildSnapshot, type ExtensionSnapshot } from '#extensions/snapshot';
 import { InputSystem } from '#input/InputSystem';
 import { InteractionSystem } from '#input/InteractionSystem';
@@ -44,8 +46,6 @@ import { type CaptureOptions, RenderingContext } from '#rendering/RenderingConte
 import { type RenderNode } from '#rendering/RenderNode';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
-import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
-import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { Capabilities } from './Capabilities';
 import { Clock } from './Clock';
@@ -62,7 +62,7 @@ import type { System } from './System';
 import { SystemOrder } from './SystemOrder';
 import { SystemRegistry } from './SystemRegistry';
 import { type Seconds, seconds } from './units';
-import { canvasSourceToDataUrl, isWebKitUserAgent } from './utils';
+import { canvasSourceToDataUrl } from './utils';
 
 /**
  * Lifecycle state of an {@link Application}, in the same vocabulary
@@ -489,12 +489,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       materializeAssetTypes(this.loader, [...coreAssetTypes, ...this._snapshot.assets]);
       materializeSerializerBindings(this.serializers, this._snapshot.serializers);
 
-      this._backendType = this.resolveInitialBackendType();
+      this._backendType = resolveBackendType(this.options.backend);
       // `createBackend` rolls back a backend whose renderer bindings throw on
       // its own - it also runs from the post-construction backend fallback,
       // where there is no construction scope - and rethrows without assigning,
       // so that failure never reaches the scope as a tracked item.
-      this._backend = constructed.track(this.createBackend(this._backendType, this._snapshot));
+      this._backend = constructed.track(this._createBackend(this._backendType));
       this._rendering = constructed.track(new RenderingContext(this._backend));
 
       // After the backend, because a policy commits its first geometry as it
@@ -1852,76 +1852,29 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     }
   }
 
-  private resolveInitialBackendType(): 'webgl2' | 'webgpu' {
-    const backendType = this.options.backend?.type;
-
-    if (backendType === 'webgl2') {
-      return 'webgl2';
-    }
-
-    if (backendType === 'webgpu') {
-      return 'webgpu';
-    }
-
-    return this.canUseWebGpu() ? 'webgpu' : 'webgl2';
+  /**
+   * The renderer bindings this application equips a backend with: the core set
+   * derived from the resolved rendering options, followed by every binding the
+   * extension snapshot contributed. Rebuilt per backend, because the
+   * WebGPU-to-WebGL2 fallback constructs a second one.
+   */
+  private _rendererBindings(): readonly RendererBinding[] {
+    return [...buildCoreRendererBindings(this.options.rendering ?? {}), ...this._snapshot.renderers];
   }
 
-  private createBackend(backendType: 'webgl2' | 'webgpu', snapshot: ExtensionSnapshot): RenderBackend {
-    const renderingOptions = this.options.rendering ?? {};
-    const coreBindings = buildCoreRendererBindings(renderingOptions);
-    const allBindings = [...coreBindings, ...snapshot.renderers];
-
-    if (backendType === 'webgpu') {
-      const backend = new WebGpuBackend(this);
-
-      backend.onDeviceLost.add(() => {
+  /** Build a backend of `backendType`, wired to this application's lifecycle signals. */
+  private _createBackend(backendType: BackendType): RenderBackend {
+    return createBackend(this, backendType, this._rendererBindings(), {
+      onLost: () => {
         this.onBackendLost.dispatch();
-      });
-      backend.onDeviceRestored.add(() => {
+      },
+      onRestored: () => {
         this.onBackendRestored.dispatch();
-      });
-      backend.onRenderError.add(error => {
+      },
+      onRenderError: error => {
         this._handleAsyncRenderError(error);
-      });
-
-      try {
-        materializeRendererBindings(backend, allBindings);
-      } catch (error) {
-        try {
-          backend.destroy();
-        } catch {
-          /* cleanup failure is secondary */
-        }
-        throw error;
-      }
-
-      return backend;
-    }
-
-    const backend = new WebGl2Backend(this);
-
-    backend.onContextLost.add(() => {
-      this.onBackendLost.dispatch();
+      },
     });
-    backend.onContextRestored.add(() => {
-      this.onBackendRestored.dispatch();
-    });
-    backend.onRenderError.add(error => {
-      this._handleAsyncRenderError(error);
-    });
-
-    try {
-      materializeRendererBindings(backend, allBindings);
-    } catch (error) {
-      try {
-        backend.destroy();
-      } catch {
-        /* cleanup failure is secondary */
-      }
-      throw error;
-    }
-
-    return backend;
   }
 
   private async initializeBackend(): Promise<void> {
@@ -1935,7 +1888,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
       this._backend.destroy();
       this._backendType = 'webgl2';
-      this._backend = this.createBackend(this._backendType, this._snapshot);
+      this._backend = this._createBackend(this._backendType);
 
       // Swap in a rendering context bound to the rebuilt backend. Everything
       // holding the outgoing context has to be repointed, not just the field:
@@ -1976,24 +1929,5 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       textureFormats: this._backend.supportedTextureFormats,
       resolution: this._backend.rootResolution,
     };
-  }
-
-  /**
-   * Whether `backend: 'auto'` should pick WebGPU. Presence of `navigator.gpu`
-   * is necessary but not sufficient: WebKit ships a WebGPU implementation that
-   * renders this engine incorrectly - SDF text draws as an empty frame, and
-   * repeated runs of the parity matrix fail a different set of scenes each
-   * time, which points at the driver rather than at engine code. Neither has a
-   * feature flag to test, and both produce a broken picture with no error, so
-   * `auto` keeps WebKit on WebGL2, where the same scenes render correctly.
-   *
-   * This is not a permanent verdict. `backend: 'webgpu'` still selects it
-   * explicitly for anyone testing WebKit's implementation, and the check should
-   * go once the parity matrix comes back clean there.
-   */
-  private canUseWebGpu(): boolean {
-    const gpuNavigator = navigator as Navigator & Partial<{ gpu: GPU }>;
-
-    return !!gpuNavigator.gpu && !isWebKitUserAgent(navigator.userAgent);
   }
 }
