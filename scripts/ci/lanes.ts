@@ -72,12 +72,12 @@ export const LANES: readonly Lane[] = [
     id: 'webgl',
     stage: 'test',
     when: 'browserWebgl2',
-    run: 'pnpm test:browser:webgl && pnpm test:browser:build && pnpm test:browser:assets',
-    ciRun: `pnpm test:browser:webgl ${junit('webgl')} && pnpm test:browser:build && pnpm test:browser:assets`,
+    run: 'pnpm test:browser:webgl && pnpm test:browser:build && pnpm test:browser:assets && pnpm test:browser:core',
+    ciRun: `pnpm test:browser:webgl ${junit('webgl')} && pnpm test:browser:build && pnpm test:browser:assets && pnpm test:browser:core`,
     coverageRun:
       `pnpm test:browser:webgl ${junit('webgl')} --coverage --coverage.reporter=lcov --coverage.reporter=text-summary ` +
       '--coverage.thresholds.statements=0 --coverage.thresholds.branches=0 --coverage.thresholds.functions=0 --coverage.thresholds.lines=0 ' +
-      '&& pnpm test:browser:build && pnpm test:browser:assets',
+      '&& pnpm test:browser:build && pnpm test:browser:assets && pnpm test:browser:core',
     browser: 'chromium',
     local: 'browser',
     junit: true,

@@ -311,6 +311,8 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "InferLoadedEntry: type alias",
   "InferLoadedMap: type alias",
   "InferSceneData: type alias",
+  "InlineWorker: class",
+  "InlineWorkerOptions: interface",
   "InputAlternation: type alias",
   "InputApplicationOptions: interface",
   "InputBinding: class",

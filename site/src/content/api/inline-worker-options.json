@@ -1,0 +1,75 @@
+{
+  "title": "InlineWorkerOptions",
+  "description": "Options for InlineWorker.",
+  "symbol": "InlineWorkerOptions",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for InlineWorker."
+      ],
+      "importLine": "import { InlineWorkerOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "name",
+          "signature": "name?: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Value for the worker's self.name. Surfaces in DevTools thread lists and in error reports, so a descriptive name is worth setting when a page runs more than one worker."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/InlineWorker.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/InlineWorker.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/InlineWorker.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/InlineWorker.ts"
+}
