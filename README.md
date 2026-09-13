@@ -132,8 +132,7 @@ npm run dev
 npm install @codexo/exojs
 ```
 
-ExoJS ships as ESM — use `import` syntax with a modern bundler or runtime. Prebuilt IIFE bundles are included for CDN and script-tag usage: `dist/exo.iife.js` (the core) and `dist/exo.full.iife.js` (core plus every extension except React), both on the global `Exo`.
-Optional packages install independently — add only what your project needs:
+ExoJS ships as ESM — use `import` syntax with a modern bundler or runtime. Prebuilt IIFE bundles are included for CDN and script-tag usage: `dist/exo.iife.js` (the core) and `dist/exo.full.iife.js` (core plus every extension except React), both on the global `Exo`. Optional packages install independently — add only what your project needs:
 
 ```bash
 npm install @codexo/exojs-physics
@@ -215,19 +214,14 @@ new Application({ backend: { type: 'auto' } }); // default
 
 ## Development
 
-Prerequisites: Node 24 (`.nvmrc`; `devEngines` in `package.json` refuses any other major) and
-pnpm (`packageManager` pins the version; with Corepack enabled, or any installed pnpm 10+, it
-switches itself).
+Prerequisites: Node 24 (`.nvmrc`; `devEngines` in `package.json` refuses any other major) and pnpm (`packageManager` pins the version; with Corepack enabled, or any installed pnpm 10+, it switches itself).
 
 ```bash
 pnpm bootstrap:dev   # dependencies, git hooks, every build, the bench competitors, a Chromium
 pnpm doctor          # what is missing, and the command that fixes it
 ```
 
-`pnpm bootstrap` alone is what CI runs: dependencies and the build tooling, nothing else. It
-installs with scripts disabled, so whether a clone ends up with git hooks depends on whether pnpm
-ran an install of its own first - and it builds nothing. `pnpm doctor` reports the actual state
-either way.
+`pnpm bootstrap` alone is what CI runs: dependencies and the build tooling, nothing else. It installs with scripts disabled, so whether a clone ends up with git hooks depends on whether pnpm ran an install of its own first - and it builds nothing. `pnpm doctor` reports the actual state either way.
 
 ```bash
 pnpm typecheck

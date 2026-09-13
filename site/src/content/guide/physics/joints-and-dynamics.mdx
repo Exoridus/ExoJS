@@ -8,17 +8,11 @@ import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # Joints, sleeping & CCD
 
-This chapter builds on [Physics basics](/ExoJS/en/guide/physics/physics-basics/) — a
-[`PhysicsWorld`](/ExoJS/en/api/physics-world/) stepped from `Scene.fixedUpdate`, with
-static and dynamic bodies. Here we connect those bodies with **joints**, let bodies at
-rest **sleep**, and stop fast bodies from **tunnelling** with continuous collision.
+This chapter builds on [Physics basics](/ExoJS/en/guide/physics/physics-basics/) — a [`PhysicsWorld`](/ExoJS/en/api/physics-world/) stepped from `Scene.fixedUpdate`, with static and dynamic bodies. Here we connect those bodies with **joints**, let bodies at rest **sleep**, and stop fast bodies from **tunnelling** with continuous collision.
 
 ## Joints
 
-A [`Joint`](/ExoJS/en/api/joint/) is a constraint between two bodies, solved alongside
-contacts in the sub-step loop. The pattern is always the same: construct the joint,
-then register it with `world.addJoint(...)`. Remove it with `world.removeJoint(joint)`,
-which wakes both bodies so they respond to the lost constraint.
+A [`Joint`](/ExoJS/en/api/joint/) is a constraint between two bodies, solved alongside contacts in the sub-step loop. The pattern is always the same: construct the joint, then register it with `world.addJoint(...)`. Remove it with `world.removeJoint(joint)`, which wakes both bodies so they respond to the lost constraint.
 
 <SourceSnippet
   source="examples/guides/joints-and-dynamics/joint-lifecycle.ts"
@@ -27,15 +21,11 @@ which wakes both bodies so they respond to the lost constraint.
   title="examples/guides/joints-and-dynamics/joint-lifecycle.ts"
 />
 
-Many joints take a `hertz` (and `dampingRatio`) pair: leaving `hertz` at `0` makes the
-constraint **rigid**, while `hertz > 0` turns it into a **damped spring** at that
-frequency. Anchors are given in **world space at construction** and stored body-locally,
-so they travel with the bodies afterwards.
+Many joints take a `hertz` (and `dampingRatio`) pair: leaving `hertz` at `0` makes the constraint **rigid**, while `hertz > 0` turns it into a **damped spring** at that frequency. Anchors are given in **world space at construction** and stored body-locally, so they travel with the bodies afterwards.
 
 ### Distance joints
 
-A [`DistanceJoint`](/ExoJS/en/api/distance-joint/) holds two anchor points a fixed
-`length` apart — a rigid rod by default, or a spring with `hertz > 0`:
+A [`DistanceJoint`](/ExoJS/en/api/distance-joint/) holds two anchor points a fixed `length` apart — a rigid rod by default, or a spring with `hertz > 0`:
 
 <SourceSnippet
   source="examples/guides/joints-and-dynamics/distance-joint.ts"
@@ -44,9 +34,7 @@ A [`DistanceJoint`](/ExoJS/en/api/distance-joint/) holds two anchor points a fix
   title="examples/guides/joints-and-dynamics/distance-joint.ts"
 />
 
-Specifying `minLength` and/or `maxLength` turns it into a **rope/limit**: the bodies move
-freely while the separation is within the band and the joint only engages (rigidly) at the
-bounds:
+Specifying `minLength` and/or `maxLength` turns it into a **rope/limit**: the bodies move freely while the separation is within the band and the joint only engages (rigidly) at the bounds:
 
 <SourceSnippet
   source="examples/guides/joints-and-dynamics/distance-limits.ts"
@@ -57,9 +45,7 @@ bounds:
 
 ### Revolute joints
 
-A [`RevoluteJoint`](/ExoJS/en/api/revolute-joint/) pins a shared `anchor` point on two
-bodies — a hinge they rotate freely about. Enable a **motor** to drive the relative
-angular velocity, or a **limit** to clamp the swing:
+A [`RevoluteJoint`](/ExoJS/en/api/revolute-joint/) pins a shared `anchor` point on two bodies — a hinge they rotate freely about. Enable a **motor** to drive the relative angular velocity, or a **limit** to clamp the swing:
 
 <SourceSnippet
   source="examples/guides/joints-and-dynamics/revolute-joint.ts"
@@ -70,9 +56,7 @@ angular velocity, or a **limit** to clamp the swing:
 
 ### Weld joints
 
-A [`WeldJoint`](/ExoJS/en/api/weld-joint/) rigidly locks the relative position **and**
-orientation of two bodies, so they move as one rigid body. Both locks default to rigid;
-set `linearHertz` / `angularHertz` for a springy weld:
+A [`WeldJoint`](/ExoJS/en/api/weld-joint/) rigidly locks the relative position **and** orientation of two bodies, so they move as one rigid body. Both locks default to rigid; set `linearHertz` / `angularHertz` for a springy weld:
 
 <SourceSnippet
   source="examples/guides/joints-and-dynamics/weld-joint.ts"
@@ -83,10 +67,7 @@ set `linearHertz` / `angularHertz` for a springy weld:
 
 ### Prismatic joints
 
-A [`PrismaticJoint`](/ExoJS/en/api/prismatic-joint/) constrains a body to **slide along
-one axis** relative to another — perpendicular translation and rotation are locked. It
-takes an `axis` (normalised internally) and supports a linear motor (`maxMotorForce`) and
-translation limits:
+A [`PrismaticJoint`](/ExoJS/en/api/prismatic-joint/) constrains a body to **slide along one axis** relative to another — perpendicular translation and rotation are locked. It takes an `axis` (normalised internally) and supports a linear motor (`maxMotorForce`) and translation limits:
 
 <SourceSnippet
   source="examples/guides/joints-and-dynamics/prismatic-joint.ts"
@@ -97,9 +78,7 @@ translation limits:
 
 ### Wheel joints
 
-A [`WheelJoint`](/ExoJS/en/api/wheel-joint/) is the vehicle primitive: the wheel is free to
-**spin**, sprung along a **suspension axis** (a soft spring via `hertz` / `dampingRatio`),
-and locked **laterally**. A rotation motor drives it:
+A [`WheelJoint`](/ExoJS/en/api/wheel-joint/) is the vehicle primitive: the wheel is free to **spin**, sprung along a **suspension axis** (a soft spring via `hertz` / `dampingRatio`), and locked **laterally**. A rotation motor drives it:
 
 <SourceSnippet
   source="examples/guides/joints-and-dynamics/wheel-joint.ts"
@@ -110,9 +89,7 @@ and locked **laterally**. A rotation motor drives it:
 
 ### Mouse joints
 
-A [`MouseJoint`](/ExoJS/en/api/mouse-joint/) softly pulls a single body's grab point toward
-a movable `target` — the cursor-drag primitive. It is a single-body constraint; reassign
-`target` each frame to drag, and bound the pull with `maxForce` (so heavy bodies lag):
+A [`MouseJoint`](/ExoJS/en/api/mouse-joint/) softly pulls a single body's grab point toward a movable `target` — the cursor-drag primitive. It is a single-body constraint; reassign `target` each frame to drag, and bound the pull with `maxForce` (so heavy bodies lag):
 
 <SourceSnippet
   source="examples/guides/joints-and-dynamics/mouse-joint.ts"
@@ -121,8 +98,7 @@ a movable `target` — the cursor-drag primitive. It is a single-body constraint
   title="examples/guides/joints-and-dynamics/mouse-joint.ts"
 />
 
-Both jointed bodies share one **sleep island**, so a jointed pair sleeps and wakes
-together — which brings us to sleeping.
+Both jointed bodies share one **sleep island**, so a jointed pair sleeps and wakes together — which brings us to sleeping.
 
 ## Sleeping
 
@@ -130,23 +106,11 @@ together — which brings us to sleeping.
 Bodies that are jointed or touching belong to one island, so `allowSleep = false` on a single body keeps every body connected to it awake too, and a group only settles once all of its members qualify. Reason about sleep at the island level, not the individual body.
 </Callout>
 
-A body that has stayed below the velocity thresholds long enough is put to **sleep**: it
-stops integrating and is skipped by the solver until something wakes it. In a scene with
-many resting bodies — a settled stack, scattered debris — this is a large CPU saving, and
-it removes the last traces of resting jitter.
+A body that has stayed below the velocity thresholds long enough is put to **sleep**: it stops integrating and is skipped by the solver until something wakes it. In a scene with many resting bodies — a settled stack, scattered debris — this is a large CPU saving, and it removes the last traces of resting jitter.
 
-Sleeping is **island-aware**: connected bodies (touching contacts and joints form an
-island) sleep and wake as a unit, so a tower never half-sleeps. A body wakes the instant it
-is touched by an awake body, hit by an `applyImpulse`/`applyForce`, or moved with
-`setTransform`.
+Sleeping is **island-aware**: connected bodies (touching contacts and joints form an island) sleep and wake as a unit, so a tower never half-sleeps. A body wakes the instant it is touched by an awake body, hit by an `applyImpulse`/`applyForce`, or moved with `setTransform`.
 
-Low velocity alone is not enough. A body that landed hard is overlapping the ground by more
-than one step of push-out, and the solver corrects that overlap at a speed below the sleep
-threshold — so an island also stays awake while any of its solid contacts still carries
-more penetration than a resting contact keeps. A body therefore always comes to rest on the
-surface rather than embedded in it, at the cost of a fraction of a second of extra
-simulation after a fast impact. Sensor overlaps and contacts a `contactModifier` disabled
-are not solved and never delay sleep.
+Low velocity alone is not enough. A body that landed hard is overlapping the ground by more than one step of push-out, and the solver corrects that overlap at a speed below the sleep threshold — so an island also stays awake while any of its solid contacts still carries more penetration than a resting contact keeps. A body therefore always comes to rest on the surface rather than embedded in it, at the cost of a fraction of a second of extra simulation after a fast impact. Sensor overlaps and contacts a `contactModifier` disabled are not solved and never delay sleep.
 
 It is on by default; tune it through `PhysicsWorld` options:
 
@@ -157,8 +121,7 @@ It is on by default; tune it through `PhysicsWorld` options:
   title="examples/guides/joints-and-dynamics/sleeping.ts"
 />
 
-Per body, opt a single body out with `allowSleep = false` (it, and its whole island, stay
-awake), read `isSleeping`, or force it awake with `wake()`:
+Per body, opt a single body out with `allowSleep = false` (it, and its whole island, stay awake), read `isSleeping`, or force it awake with `wake()`:
 
 <SourceSnippet
   source="examples/guides/joints-and-dynamics/sleeping.ts"
@@ -169,11 +132,7 @@ awake), read `isSleeping`, or force it awake with `wake()`:
 
 ## Continuous collision (bullet mode)
 
-The solver runs detection **once per fixed step**, so a body that travels farther than an
-obstacle is thick in a single step can pass straight through it — tunnelling. For fast
-projectiles, flag the body as a **bullet** (`isBullet`) and it is swept along its motion
-each step against every other body; if the sweep would cross a surface, the body is clamped
-just short of it and its velocity is resolved about the surface normal:
+The solver runs detection **once per fixed step**, so a body that travels farther than an obstacle is thick in a single step can pass straight through it — tunnelling. For fast projectiles, flag the body as a **bullet** (`isBullet`) and it is swept along its motion each step against every other body; if the sweep would cross a surface, the body is clamped just short of it and its velocity is resolved about the surface normal:
 
 <SourceSnippet
   source="examples/guides/joints-and-dynamics/bullet-bodies.ts"
@@ -182,15 +141,9 @@ just short of it and its velocity is resolved about the surface normal:
   title="examples/guides/joints-and-dynamics/bullet-bodies.ts"
 />
 
-`isBullet` is a plain flag you can toggle at runtime (`bullet.isBullet = true`). The impact
-response is a **velocity reflect** about the true surface normal: a non-bouncy body slides
-along the surface (keeping its tangential velocity), while a bouncy one (`restitution` near
-`1`) rebounds elastically. The swept test runs against static, kinematic **and** dynamic
-bodies; sensors never block.
+`isBullet` is a plain flag you can toggle at runtime (`bullet.isBullet = true`). The impact response is a **velocity reflect** about the true surface normal: a non-bouncy body slides along the surface (keeping its tangential velocity), while a bouncy one (`restitution` near `1`) rebounds elastically. The swept test runs against static, kinematic **and** dynamic bodies; sensors never block.
 
-The whole shape is swept, not just its centre, so a large body cannot clip a corner its
-centre line happened to miss. The cast is exact for a translation and covers every solid
-shape against every shape kind:
+The whole shape is swept, not just its centre, so a large body cannot clip a corner its centre line happened to miss. The cast is exact for a translation and covers every solid shape against every shape kind:
 
 | Moving shape | Swept against |
 |---|---|
@@ -203,13 +156,9 @@ A segment or a chain is level structure: it is what a bullet is swept *against*,
 
 ## Contact modifier
 
-Filters decide **whether** two colliders may touch at all; the contact modifier decides what
-a contact that already exists **does this step**. It runs once per solid contact per fixed
-step, after collision detection and before the solver, and it is where one-way platforms,
-conditional friction and per-pair material overrides live.
+Filters decide **whether** two colliders may touch at all; the contact modifier decides what a contact that already exists **does this step**. It runs once per solid contact per fixed step, after collision detection and before the solver, and it is where one-way platforms, conditional friction and per-pair material overrides live.
 
-A world has at most one modifier — it mutates simulation state, so a multi-listener signal
-would make the result depend on registration order:
+A world has at most one modifier — it mutates simulation state, so a multi-listener signal would make the result depend on registration order:
 
 <SourceSnippet
   source="examples/guides/joints-and-dynamics/contact-modifier.ts"
@@ -218,24 +167,13 @@ would make the result depend on registration order:
   title="examples/guides/joints-and-dynamics/contact-modifier.ts"
 />
 
-`enabled`, `friction` and `restitution` are the three controls. Everything else on the
-contact — the two colliders, the two bodies, the A→B normal, the manifold point count and
-the deepest penetration — is read-only, and the object itself is reused for every contact,
-so read what you need inside the callback rather than storing it.
+`enabled`, `friction` and `restitution` are the three controls. Everything else on the contact — the two colliders, the two bodies, the A→B normal, the manifold point count and the deepest penetration — is read-only, and the object itself is reused for every contact, so read what you need inside the callback rather than storing it.
 
-The values are re-derived from the two colliders before every step (`√(fA × fB)` for
-friction, `max(rA, rB)` for restitution), so a change applies to that step only and nothing
-leaks into the next one.
+The values are re-derived from the two colliders before every step (`√(fA × fB)` for friction, `max(rA, rB)` for restitution), so a change applies to that step only and nothing leaks into the next one.
 
-Setting `enabled = false` skips the contact in the solver: no impulse, no push-out. The
-contact is still geometrically touching, so `onCollisionStart`/`onCollisionEnd` keep
-describing the real geometry — the modifier changes the response, not the detection. A
-disabled contact also does **not** join its two bodies into one sleeping island, and its
-warm-start impulses are dropped, so re-enabling it starts from zero instead of releasing a
-stale impulse.
+Setting `enabled = false` skips the contact in the solver: no impulse, no push-out. The contact is still geometrically touching, so `onCollisionStart`/`onCollisionEnd` keep describing the real geometry — the modifier changes the response, not the detection. A disabled contact also does **not** join its two bodies into one sleeping island, and its warm-start impulses are dropped, so re-enabling it starts from zero instead of releasing a stale impulse.
 
-That is the whole of a one-way platform. Sample the direction of travel at the start of the
-step and ignore the contact while the character is moving upward:
+That is the whole of a one-way platform. Sample the direction of travel at the start of the step and ignore the contact while the character is moving upward:
 
 <SourceSnippet
   source="examples/guides/joints-and-dynamics/one-way-platform.ts"
@@ -248,35 +186,19 @@ step and ignore the contact while the character is moving upward:
 Reading `player.linearVelocityY` *inside* the callback looks equivalent but is not: the solver's push-out gives a resting body a hair of upward velocity, which flips the rule on and off every step and leaves the character sunk into the platform. Decide once per step from the state you already have.
 </Callout>
 
-The modifier never sees sensor overlaps — a sensor produces no contact to solve. Use
-`onSensorEnter`/`onSensorExit` for those.
+The modifier never sees sensor overlaps — a sensor produces no contact to solve. Use `onSensorEnter`/`onSensorExit` for those.
 
 ## What the solver is built for
 
-ExoJS Physics ships **one** solver configuration, tuned for plausible, stable, cheap game
-physics. It is not a scientific integrator, and it does not grow a quality switch: the
-advanced options you already met — `subStepCount`, `contactHertz`, `dampingRatio`,
-`fixedDelta`, `enableSleeping`, `isBullet` — are the whole tuning surface.
+ExoJS Physics ships **one** solver configuration, tuned for plausible, stable, cheap game physics. It is not a scientific integrator, and it does not grow a quality switch: the advanced options you already met — `subStepCount`, `contactHertz`, `dampingRatio`, `fixedDelta`, `enableSleeping`, `isBullet` — are the whole tuning surface.
 
-That default has a shape worth knowing, because it decides whether a scene will look
-right or merely finite:
+That default has a shape worth knowing, because it decides whether a scene will look right or merely finite:
 
-**Inside the envelope.** Gravity and accelerations in the range ordinary 2D games use.
-Shapes within a couple of orders of magnitude of each other. Mass differences up to
-roughly two orders of magnitude inside one pile of touching bodies. Stacks tens of
-bodies tall. Fast bodies flagged `isBullet`. Here a visible failure is a bug, not a
-limit — report it.
+**Inside the envelope.** Gravity and accelerations in the range ordinary 2D games use. Shapes within a couple of orders of magnitude of each other. Mass differences up to roughly two orders of magnitude inside one pile of touching bodies. Stacks tens of bodies tall. Fast bodies flagged `isBullet`. Here a visible failure is a bug, not a limit — report it.
 
-**Degraded but stable.** Push any of those further and accuracy gets visibly worse
-while the simulation stays finite: resting contacts sit deeper, a squeezed light body
-sinks into what supports it, a tall stack under a heavy load compresses. Nothing
-explodes, nothing freezes half-buried, but it stops looking convincing.
+**Degraded but stable.** Push any of those further and accuracy gets visibly worse while the simulation stays finite: resting contacts sit deeper, a squeezed light body sinks into what supports it, a tall stack under a heavy load compresses. Nothing explodes, nothing freezes half-buried, but it stops looking convincing.
 
-**Out of scope.** Guaranteed non-penetration, mass ratios in the thousands against thin
-geometry, rotation-only continuous collision, shapes spanning many orders of magnitude
-in one world, or a result that has to match an offline reference. These are jobs for a
-specialised engine, and ExoJS deliberately lets them go rather than growing a mode for
-them.
+**Out of scope.** Guaranteed non-penetration, mass ratios in the thousands against thin geometry, rotation-only continuous collision, shapes spanning many orders of magnitude in one world, or a result that has to match an offline reference. These are jobs for a specialised engine, and ExoJS deliberately lets them go rather than growing a mode for them.
 
 Four behaviours follow from the design, and knowing them explains most surprises:
 
@@ -293,9 +215,5 @@ A heavy body resting on a light one degrades gradually. What decides whether it 
 
 ## Where to go next
 
-- **API reference:** [`DistanceJoint`](/ExoJS/en/api/distance-joint/),
-  [`RevoluteJoint`](/ExoJS/en/api/revolute-joint/), [`WeldJoint`](/ExoJS/en/api/weld-joint/),
-  [`PrismaticJoint`](/ExoJS/en/api/prismatic-joint/), [`WheelJoint`](/ExoJS/en/api/wheel-joint/),
-  [`MouseJoint`](/ExoJS/en/api/mouse-joint/) and [`PhysicsWorld`](/ExoJS/en/api/physics-world/).
-- **Start here:** [Physics basics](/ExoJS/en/guide/physics/physics-basics/) covers worlds,
-  bodies, colliders, stepping and sprite binding.
+- **API reference:** [`DistanceJoint`](/ExoJS/en/api/distance-joint/), [`RevoluteJoint`](/ExoJS/en/api/revolute-joint/), [`WeldJoint`](/ExoJS/en/api/weld-joint/), [`PrismaticJoint`](/ExoJS/en/api/prismatic-joint/), [`WheelJoint`](/ExoJS/en/api/wheel-joint/), [`MouseJoint`](/ExoJS/en/api/mouse-joint/) and [`PhysicsWorld`](/ExoJS/en/api/physics-world/).
+- **Start here:** [Physics basics](/ExoJS/en/guide/physics/physics-basics/) covers worlds, bodies, colliders, stepping and sprite binding.

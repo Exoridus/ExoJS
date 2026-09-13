@@ -1,7 +1,6 @@
 # ExoJS brand assets
 
-Optimised SVG brand assets, served from `/ExoJS/brand/`. Masters are kept
-outside the repo (design source); these are the SVGO-optimised web copies.
+Optimised SVG brand assets, served from `/ExoJS/brand/`. Masters are kept outside the repo (design source); these are the SVGO-optimised web copies.
 
 ## Marks (icon)
 
@@ -22,10 +21,7 @@ outside the repo (design source); these are the SVGO-optimised web copies.
 
 ## Favicons (generated, in `site/public/`)
 
-`favicon.svg`, `favicon.ico` (48/32/16), `favicon-96x96.png`,
-`apple-touch-icon.png` (180), `icon-192.png`, `icon-512.png` — all rasterised
-from `mark-e-dot-dark.svg`. The `<link>` tags live in `site/src/layouts/AppShell.astro`;
-the PWA `icon-192/512` are referenced (relative) from `site/public/site.webmanifest`.
+`favicon.svg`, `favicon.ico` (48/32/16), `favicon-96x96.png`, `apple-touch-icon.png` (180), `icon-192.png`, `icon-512.png` — all rasterised from `mark-e-dot-dark.svg`. The `<link>` tags live in `site/src/layouts/AppShell.astro`; the PWA `icon-192/512` are referenced (relative) from `site/public/site.webmanifest`.
 
 ## Regenerate
 

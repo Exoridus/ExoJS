@@ -11,8 +11,7 @@ import Callout from '../../../components/Callout.astro';
 
 `ParticleSystem` is a `Drawable` that manages thousands of animated sprites with data-oriented performance. Instead of creating and destroying individual `Sprite` instances per particle, the system stores particle state in parallel typed arrays (Struct-of-Arrays) and mutates them in bulk. This keeps the work per-particle extremely lean — no allocations, no GC pressure, no per-sprite transform tree overhead.
 
-> **Note:** `ParticleSystem` ships as an official ExoJS extension package.
-> Install `@codexo/exojs-particles` alongside `@codexo/exojs`:
+> **Note:** `ParticleSystem` ships as an official ExoJS extension package. Install `@codexo/exojs-particles` alongside `@codexo/exojs`:
 > ```sh
 > npm install @codexo/exojs @codexo/exojs-particles
 > ```
