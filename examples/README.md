@@ -16,11 +16,5 @@ Framework-agnostic ExoJS example sources and shared assets.
 
 ## Catalog ordering & levels
 
-- **Array order in `examples.json` is the curated display order** — the playground
-  sidebar and every other consumer render categories in `CHAPTERS` order and the
-  examples of a category exactly in array order. Order each category
-  didactically (simple → complex), never alphabetically; new examples are
-  inserted where they fit the learning arc, not appended.
-- **Every example carries a `level`** (`intro` | `intermediate` | `advanced`).
-  The playground badges `intro` and `advanced` in the sidebar; `intermediate`
-  is the unbadged default.
+- **Array order in `examples.json` is the curated display order** — the playground sidebar and every other consumer render categories in `CHAPTERS` order and the examples of a category exactly in array order. Order each category didactically (simple → complex), never alphabetically; new examples are inserted where they fit the learning arc, not appended.
+- **Every example carries a `level`** (`intro` | `intermediate` | `advanced`). The playground badges `intro` and `advanced` in the sidebar; `intermediate` is the unbadged default.

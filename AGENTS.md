@@ -4,44 +4,30 @@
 
 ExoJS is a TypeScript-first browser 2D runtime for games and interactive apps.
 
-Core (`@codexo/exojs`) lives at the repository root. Official extensions,
-integrations, tooling, and benchmarks live under `packages/`.
+Core (`@codexo/exojs`) lives at the repository root. Official extensions, integrations, tooling, and benchmarks live under `packages/`.
 
 Preserve package boundaries and keep Core independent from optional extensions.
 
 ## Working context
 
-Inspect the code and tests relevant to the task first. Do not read large
-repository documents by default.
+Inspect the code and tests relevant to the task first. Do not read large repository documents by default.
 
-Use `CONTRIBUTING.md` when a task touches repository conventions such as imports,
-package boundaries, distribution, build constants, or public API conventions.
-Read package-local documentation when working inside that package.
+Use `CONTRIBUTING.md` when a task touches repository conventions such as imports, package boundaries, distribution, build constants, or public API conventions. Read package-local documentation when working inside that package.
 
 Prose is written in long lines: pull request descriptions, guides, `docs/`, READMEs, commit bodies. Break a line at the end of a paragraph or where the break carries meaning, never at a column width. Commits are their Conventional Commits subject (with `!` for a breaking change); the detail goes into the pull request description, which the changelog links to and does not copy.
 
-`.workspace/` is private working context, not repository authority. Plans,
-research, reviews, and temporary design artifacts belong there by default.
-Agents may use relevant files there as context, but they are not part of the
-repository, public architecture, or API contract. Never reference them from
-committed source, tests, documentation, or generated public artifacts. Do not
-commit `.workspace/` content unless explicitly requested.
+`.workspace/` is private working context, not repository authority. Plans, research, reviews, and temporary design artifacts belong there by default. Agents may use relevant files there as context, but they are not part of the repository, public architecture, or API contract. Never reference them from committed source, tests, documentation, or generated public artifacts. Do not commit `.workspace/` content unless explicitly requested.
 
-If a decision becomes a durable public or architectural contract, promote the
-relevant conclusion to an appropriate tracked repository document rather than
-referencing `.workspace/` from source.
+If a decision becomes a durable public or architectural contract, promote the relevant conclusion to an appropriate tracked repository document rather than referencing `.workspace/` from source.
 
 ## Architecture and package boundaries
 
 - Keep Core independent from official extension packages.
 - Cross-package dependencies use public package entry points.
-- Follow the repository import policy in `CONTRIBUTING.md`; do not reach into
-  another package's private source.
-- Keep extensions opt-in and side-effect-free unless an existing contract
-  explicitly requires otherwise.
+- Follow the repository import policy in `CONTRIBUTING.md`; do not reach into another package's private source.
+- Keep extensions opt-in and side-effect-free unless an existing contract explicitly requires otherwise.
 - Do not introduce global registries or hidden cross-package ownership.
-- Treat public exports, runtime behavior, serialized values, and TypeScript
-  contracts as API decisions rather than implementation details.
+- Treat public exports, runtime behavior, serialized values, and TypeScript contracts as API decisions rather than implementation details.
 
 ## Public API and developer experience
 
@@ -62,69 +48,44 @@ Do not expose internal machinery merely to make an implementation easier.
 
 Prefer self-explanatory code.
 
-Add inline comments only for non-obvious correctness or safety requirements,
-invariants, lifecycle/ordering constraints, compatibility workarounds, or
-intentional deviations from normal practice. Explain why the obvious
-implementation would be wrong, not what the code visibly does.
+Add inline comments only for non-obvious correctness or safety requirements, invariants, lifecycle/ordering constraints, compatibility workarounds, or intentional deviations from normal practice. Explain why the obvious implementation would be wrong, not what the code visibly does.
 
-Treat JSDoc as concise user-facing API documentation. Write from the caller's
-perspective in neutral prose suitable for direct reuse in an API reference or
-developer guide. Document only behavior, contracts, constraints, important
-side effects, ownership/lifetime rules, and non-obvious edge cases callers need
-to know.
+Treat JSDoc as concise user-facing API documentation. Write from the caller's perspective in neutral prose suitable for direct reuse in an API reference or developer guide. Document only behavior, contracts, constraints, important side effects, ownership/lifetime rules, and non-obvious edge cases callers need to know.
 
-Do not restate names, types, signatures, return types, or obvious behavior.
-Internal implementation commentary should be minimal even when JSDoc syntax is
-used for tooling.
+Do not restate names, types, signatures, return types, or obvious behavior. Internal implementation commentary should be minimal even when JSDoc syntax is used for tooling.
 
-Never put development provenance in source comments or API documentation:
-tasks, commits, issues/PRs, branches/worktrees, conversation or agent history,
-private workspace references, or machine-specific paths. Preserve durable
-technical rationale only.
+Never put development provenance in source comments or API documentation: tasks, commits, issues/PRs, branches/worktrees, conversation or agent history, private workspace references, or machine-specific paths. Preserve durable technical rationale only.
 
-Developer-facing source documentation is English and uses ASCII punctuation;
-non-ASCII characters are allowed only when technically meaningful.
+Developer-facing source documentation is English and uses ASCII punctuation; non-ASCII characters are allowed only when technically meaningful.
 
 ## Performance and correctness
 
 Do not optimize speculatively.
 
-For hot rendering, input, audio, scene-graph, or allocation paths, preserve
-existing allocation and lifetime constraints and measure changes when
-performance is materially affected.
+For hot rendering, input, audio, scene-graph, or allocation paths, preserve existing allocation and lifetime constraints and measure changes when performance is materially affected.
 
 Do not trade correctness or API clarity for an unmeasured optimization.
 
-Keep WebGL2/WebGPU behavior aligned where the feature is expected to support
-both backends.
+Keep WebGL2/WebGPU behavior aligned where the feature is expected to support both backends.
 
 ## Tests and validation
 
 During iteration, run the smallest relevant validation:
 
 - named test files, never a whole Vitest project;
-- a single gate group (`pnpm gates typecheck` / `lint` / `sync` / `site`),
-  never `pnpm gates all`;
+- a single gate group (`pnpm gates typecheck` / `lint` / `sync` / `site`), never `pnpm gates all`;
 - the affected package's typecheck.
 
-Never run a full test project or the full gate set to find out what a change
-broke. Re-run only the check that was red, on the files that were red.
+Never run a full test project or the full gate set to find out what a change broke. Re-run only the check that was red, on the files that were red.
 
-Before completion, run `pnpm lanes` to see which lanes the change requires,
-run those, and run `git diff --check`.
+Before completion, run `pnpm lanes` to see which lanes the change requires, run those, and run `git diff --check`.
 
-Do not run a full suite immediately before pushing. The pre-push hook already
-runs `verify:quick` plus the lanes `scripts/ci/lanes.ts` selects for
-the pushed range, so a full local run beforehand is the same work twice.
+Do not run a full suite immediately before pushing. The pre-push hook already runs `verify:quick` plus the lanes `scripts/ci/lanes.ts` selects for the pushed range, so a full local run beforehand is the same work twice.
 
-Do not weaken, delete, skip, or baseline a failing test or gate merely to make
-the change pass without establishing that the expectation itself is wrong.
+Do not weaken, delete, skip, or baseline a failing test or gate merely to make the change pass without establishing that the expectation itself is wrong.
 
 ## Scope
 
-Keep changes scoped to the requested problem. Local cleanup is appropriate when
-necessary for the change or when touching an immediately adjacent violation;
-do not turn a bounded task into repository-wide cleanup.
+Keep changes scoped to the requested problem. Local cleanup is appropriate when necessary for the change or when touching an immediately adjacent violation; do not turn a bounded task into repository-wide cleanup.
 
-Final reports should be concise: summarize the change, validation performed,
-and any remaining limitation.
+Final reports should be concise: summarize the change, validation performed, and any remaining limitation.

@@ -1,7 +1,6 @@
 # @codexo/exojs-tiled
 
-Official ExoJS extension for loading [Tiled](https://mapeditor.org) maps (`.tmj` JSON format)
-into a generic runtime `TileMap` or a typed parsed source model.
+Official ExoJS extension for loading [Tiled](https://mapeditor.org) maps (`.tmj` JSON format) into a generic runtime `TileMap` or a typed parsed source model.
 
 ## Installation
 
@@ -9,10 +8,7 @@ into a generic runtime `TileMap` or a typed parsed source model.
 npm install @codexo/exojs @codexo/exojs-tilemap @codexo/exojs-tiled
 ```
 
-Both `@codexo/exojs` and `@codexo/exojs-tilemap` are **peer** dependencies, so install them
-explicitly alongside the adapter. Nothing is pulled in transitively: strict package managers
-(pnpm, Yarn PnP) will not resolve an unlisted peer, and npm's auto-install of peers still leaves
-the versions outside your control. Keep the engine and every adapter on the same version.
+Both `@codexo/exojs` and `@codexo/exojs-tilemap` are **peer** dependencies, so install them explicitly alongside the adapter. Nothing is pulled in transitively: strict package managers (pnpm, Yarn PnP) will not resolve an unlisted peer, and npm's auto-install of peers still leaves the versions outside your control. Keep the engine and every adapter on the same version.
 
 If you want the generic tilemap runtime without the Tiled adapter:
 
@@ -34,10 +30,7 @@ npm install @codexo/exojs @codexo/exojs-tilemap
 
 ## Usage — common case
 
-Register the extension, load a `.tmj` map into a generic runtime `TileMap`, and render it. One
-extension enables **both** loading and rendering — `tiledExtension` depends on `tilemapExtension`,
-so the tile chunk renderer bindings are materialised automatically (no manual `tilemapExtension`
-registration):
+Register the extension, load a `.tmj` map into a generic runtime `TileMap`, and render it. One extension enables **both** loading and rendering — `tiledExtension` depends on `tilemapExtension`, so the tile chunk renderer bindings are materialised automatically (no manual `tilemapExtension` registration):
 
 ```ts
 import { Application } from '@codexo/exojs';
@@ -51,9 +44,7 @@ const map = await app.loader.load(Asset.type('tileMap', 'maps/world.tmj'));
 app.scenes.root.addChild(new TileMapNode(map));
 ```
 
-`TileMapNode` and `TileLayerNode` are the same classes exported by `@codexo/exojs-tilemap` (see its
-[README](https://www.npmjs.com/package/@codexo/exojs-tilemap) for the rendering/culling model and
-actor interleaving). `instanceof TileMap` holds across both import paths.
+`TileMapNode` and `TileLayerNode` are the same classes exported by `@codexo/exojs-tilemap` (see its [README](https://www.npmjs.com/package/@codexo/exojs-tilemap) for the rendering/culling model and actor interleaving). `instanceof TileMap` holds across both import paths.
 
 ## Usage — advanced parsed-source case
 
@@ -66,14 +57,11 @@ const source = await app.loader.load(Asset.type('tiledSource', 'maps/world.tmj')
 const map = source.toTileMap();
 ```
 
-Both paths are semantically equivalent. The runtime binding (`TileMap`) uses the Loader-managed
-source-model sub-load internally, so concurrent or duplicate loads are deduplicated.
+Both paths are semantically equivalent. The runtime binding (`TileMap`) uses the Loader-managed source-model sub-load internally, so concurrent or duplicate loads are deduplicated.
 
 ## Extension dependency
 
-`tiledExtension.dependencies` includes `tilemapExtension` from `@codexo/exojs-tilemap`.
-Passing `tiledExtension` to `ApplicationOptions.extensions` is sufficient — `buildSnapshot`
-traverses the dependency graph automatically.
+`tiledExtension.dependencies` includes `tilemapExtension` from `@codexo/exojs-tilemap`. Passing `tiledExtension` to `ApplicationOptions.extensions` is sufficient — `buildSnapshot` traverses the dependency graph automatically.
 
 ## Asset loading
 
@@ -81,10 +69,8 @@ traverses the dependency graph automatically.
 
 1. Fetch and validate the `.tmj` file.
 2. Resolve each tileset entry (fetches external `.tsj` files via the Loader cache).
-3. Load atlas images (`tileset.image`) and per-tile images (collection-of-images tilesets)
-   via `loader.load(imageUrl)` — the Loader deduplicates identical URLs.
-4. Validate GID ranges (no duplicates, no overlaps, all layer GIDs covered) — throws
-   `TiledFormatError` on any inconsistency.
+3. Load atlas images (`tileset.image`) and per-tile images (collection-of-images tilesets) via `loader.load(imageUrl)` — the Loader deduplicates identical URLs.
+4. Validate GID ranges (no duplicates, no overlaps, all layer GIDs covered) — throws `TiledFormatError` on any inconsistency.
 
 The runtime binding additionally calls `TiledMap.toTileMap()` to produce the generic `TileMap`.
 
@@ -144,8 +130,7 @@ tileset.getProperty(name); // → TiledPropertyData | undefined
 
 ### `TiledLayer` subclasses
 
-All layers extend `TiledLayer` (base: `id`, `name`, `class`, `visible`, `opacity`, `x`, `y`,
-`offsetX/Y`, `parallaxX/Y`, `tintColor`, `properties`, `getProperty(name)`).
+All layers extend `TiledLayer` (base: `id`, `name`, `class`, `visible`, `opacity`, `x`, `y`, `offsetX/Y`, `parallaxX/Y`, `tintColor`, `properties`, `getProperty(name)`).
 
 | Subclass           | `type`          | Extra fields                                                        |
 | ------------------ | --------------- | ------------------------------------------------------------------- |
@@ -156,19 +141,13 @@ All layers extend `TiledLayer` (base: `id`, `name`, `class`, `visible`, `opacity
 
 ### `TiledObject`
 
-Shape discriminants: `point` (boolean), `ellipse` (boolean), `polygon`, `polyline`, `text`,
-`gid` (tile object). If none are set, the object is a plain rectangle.
+Shape discriminants: `point` (boolean), `ellipse` (boolean), `polygon`, `polyline`, `text`, `gid` (tile object). If none are set, the object is a plain rectangle.
 
-`TiledObject.type` is the object's **class**, normalised across Tiled versions: 1.9 wrote it as
-`class` in the JSON, every other version as `type`. A file carries one of the two, so `class` wins
-when present and non-empty. That string is also the dispatch key a
-[`MapObjectSpawner`](https://www.npmjs.com/package/@codexo/exojs-tilemap) sees.
+`TiledObject.type` is the object's **class**, normalised across Tiled versions: 1.9 wrote it as `class` in the JSON, every other version as `type`. A file carries one of the two, so `class` wins when present and non-empty. That string is also the dispatch key a [`MapObjectSpawner`](https://www.npmjs.com/package/@codexo/exojs-tilemap) sees.
 
 ## Texture ownership
 
-Textures for tileset images are loaded via the Loader and remain in the Loader cache.
-`TiledMap.destroy()` releases the parsed source model's reference but does **not** unload textures.
-The Loader handles texture lifecycle (including deduplication across maps that share tilesets).
+Textures for tileset images are loaded via the Loader and remain in the Loader cache. `TiledMap.destroy()` releases the parsed source model's reference but does **not** unload textures. The Loader handles texture lifecycle (including deduplication across maps that share tilesets).
 
 ## Core compatibility
 

@@ -47,8 +47,7 @@ create-exo-app <project-name> [--template <name>] [--force]
   --force     overwrite an existing non-empty directory
 ```
 
-When run interactively (TTY) without `--template`, the CLI prompts for a template choice.  
-In non-TTY / CI environments it defaults to `minimal` automatically.
+When run interactively (TTY) without `--template`, the CLI prompts for a template choice. In non-TTY / CI environments it defaults to `minimal` automatically.
 
 ## License
 

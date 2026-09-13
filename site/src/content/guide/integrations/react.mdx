@@ -8,38 +8,24 @@ import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # React integration
 
-The official `@codexo/exojs-react` package lets you host an ExoJS
-[`Application`](/ExoJS/en/api/application/) inside a React component tree: it owns the
-canvas, manages the app lifecycle for you, switches [`Scene`](/ExoJS/en/api/scene/)s
-declaratively, and lets React HUD overlays read the running app through context.
+The official `@codexo/exojs-react` package lets you host an ExoJS [`Application`](/ExoJS/en/api/application/) inside a React component tree: it owns the canvas, manages the app lifecycle for you, switches [`Scene`](/ExoJS/en/api/scene/)s declaratively, and lets React HUD overlays read the running app through context.
 
-It is a plain **React binding**, not an engine extension — it registers no engine bindings and
-nothing to wire into `ApplicationOptions`. You use it from `.tsx` files alongside the rest of
-your React UI.
+It is a plain **React binding**, not an engine extension — it registers no engine bindings and nothing to wire into `ApplicationOptions`. You use it from `.tsx` files alongside the rest of your React UI.
 
-> **Note:** This package sits next to the core engine and needs React as a peer. Install all
-> three:
+> **Note:** This package sits next to the core engine and needs React as a peer. Install all three:
 > ```sh
 > npm install @codexo/exojs @codexo/exojs-react react
 > ```
-> `@codexo/exojs` and `react` (>= 18) are peer dependencies; `react-dom` is the usual host
-> renderer. The package ships pre-built ESM with type declarations and type-checks against both
-> `@types/react` 18 and 19.
+> `@codexo/exojs` and `react` (>= 18) are peer dependencies; `react-dom` is the usual host renderer. The package ships pre-built ESM with type declarations and type-checks against both `@types/react` 18 and 19.
 
 ## Two layers
 
-The package is intentionally split into two layers — pick the one that matches how much DOM
-control you want:
+The package is intentionally split into two layers — pick the one that matches how much DOM control you want:
 
-- **`useExoApplication` — headless.** A hook that creates and owns the `Application` and binds
-  it to a `<canvas>` **you** render. It produces no DOM of its own, so you keep full control over
-  the canvas element, its container, and its styling.
-- **`<ExoCanvas>` — batteries-included.** A component that renders a positioned wrapper `<div>`
-  plus a React-managed `<canvas>`, and provides the app to descendants via context. HUD overlays
-  and the declarative scene API work out of the box.
+- **`useExoApplication` — headless.** A hook that creates and owns the `Application` and binds it to a `<canvas>` **you** render. It produces no DOM of its own, so you keep full control over the canvas element, its container, and its styling.
+- **`<ExoCanvas>` — batteries-included.** A component that renders a positioned wrapper `<div>` plus a React-managed `<canvas>`, and provides the app to descendants via context. HUD overlays and the declarative scene API work out of the box.
 
-`<ExoCanvas>` is built on top of `useExoApplication`; everything below the scene API applies to
-both.
+`<ExoCanvas>` is built on top of `useExoApplication`; everything below the scene API applies to both.
 
 ## The headless hook
 
@@ -52,33 +38,21 @@ both.
   title="packages/exojs-react/examples/guides/headless-hook.tsx"
 />
 
-The hook returns `{ app, canvasRef }`: `app` is the `Application` (or `null` until the canvas
-mounts and the app is created), and `canvasRef` is a stable ref you attach to the `<canvas>` the
-app should bind to. The optional `onReady` callback fires once each time an app is created.
+The hook returns `{ app, canvasRef }`: `app` is the `Application` (or `null` until the canvas mounts and the app is created), and `canvasRef` is a stable ref you attach to the `<canvas>` the app should bind to. The optional `onReady` callback fires once each time an app is created.
 
 ### Lifecycle and reactivity
 
-`options` is an `ExoApplicationOptions` — the same shape as `ApplicationOptions`, but the
-`canvas.element` / `canvas.mount` fields are managed for you (the hook binds the app to the
-canvas it references). You still pass `canvas.width`, `canvas.height`, `canvas.sizing`,
-`clearColor`, `backend`, and so on.
+`options` is an `ExoApplicationOptions` — the same shape as `ApplicationOptions`, but the `canvas.element` / `canvas.mount` fields are managed for you (the hook binds the app to the canvas it references). You still pass `canvas.width`, `canvas.height`, `canvas.sizing`, `clearColor`, `backend`, and so on.
 
-The hook treats most options as captured-at-creation, but live-syncs a few without tearing the
-app down:
+The hook treats most options as captured-at-creation, but live-syncs a few without tearing the app down:
 
-- The app is **recreated** only when the render `backend` changes — WebGL2 ↔ WebGPU cannot be
-  hot-swapped, so this is the one identity option.
+- The app is **recreated** only when the render `backend` changes — WebGL2 ↔ WebGPU cannot be hot-swapped, so this is the one identity option.
 - `canvas.width` / `canvas.height` are applied **live** via `app.resize(...)`.
-- `clearColor` is applied **live** via the `app.clearColor` setter (keyed on its channel values,
-  so a fresh `Color` with identical channels does not re-assign).
-- Options without a live setter (`canvas.pixelRatio`, `seed`, `extensions`, …) are captured at
-  creation. Change the `backend` or remount to apply them.
-- `canvas.sizing` is captured at creation as well. A sizing policy is an object, so a fresh
-  instance on every render would detach and re-attach the previous one each time; assign
-  `app.sizing` yourself to switch strategies at runtime.
+- `clearColor` is applied **live** via the `app.clearColor` setter (keyed on its channel values, so a fresh `Color` with identical channels does not re-assign).
+- Options without a live setter (`canvas.pixelRatio`, `seed`, `extensions`, …) are captured at creation. Change the `backend` or remount to apply them.
+- `canvas.sizing` is captured at creation as well. A sizing policy is an object, so a fresh instance on every render would detach and re-attach the previous one each time; assign `app.sizing` yourself to switch strategies at runtime.
 
-On unmount the hook calls `app.destroy()`. The engine never removes a canvas it did not create,
-so React stays the sole owner of the `<canvas>` element.
+On unmount the hook calls `app.destroy()`. The engine never removes a canvas it did not create, so React stays the sole owner of the `<canvas>` element.
 
 <Callout type="pitfall" title="Don't fight a sizing policy with inline style">
 With no `canvas.sizing` the engine only ever writes the base resolution onto the canvas, so you may style it freely. A sizing policy owns the canvas's `width`/`height` styles — size the wrapper and let the policy observe it, rather than setting your own inline `style` on the canvas.
@@ -86,9 +60,7 @@ With no `canvas.sizing` the engine only ever writes the base resolution onto the
 
 ## The batteries-included canvas
 
-`<ExoCanvas>` renders a `position: relative` wrapper `<div>` containing the canvas, and provides
-the app via context so descendants (HUD, the scene API) can reach it. Because the wrapper is
-positioned, absolutely-positioned children sit over the canvas with no extra setup.
+`<ExoCanvas>` renders a `position: relative` wrapper `<div>` containing the canvas, and provides the app via context so descendants (HUD, the scene API) can reach it. Because the wrapper is positioned, absolutely-positioned children sit over the canvas with no extra setup.
 
 <SourceSnippet
   source="packages/exojs-react/examples/guides/exo-canvas.tsx"
@@ -101,10 +73,8 @@ Props:
 
 - `options` — the `ExoApplicationOptions` forwarded to the app (same reactivity as above).
 - `onReady` — called once each time the app is (re)created.
-- Layout props (`style`, `className`, and any other `<div>` attributes) apply to the **wrapper**,
-  which is the element a `canvas.sizing` policy measures. Size the wrapper to size the canvas.
-- `canvasProps` — forwarded to the inner `<canvas>` (its own `style`/`className`); `ref`,
-  `width`, and `height` are managed by the engine and cannot be set here.
+- Layout props (`style`, `className`, and any other `<div>` attributes) apply to the **wrapper**, which is the element a `canvas.sizing` policy measures. Size the wrapper to size the canvas.
+- `canvasProps` — forwarded to the inner `<canvas>` (its own `style`/`className`); `ref`, `width`, and `height` are managed by the engine and cannot be set here.
 - `children` — rendered as an overlay once the app exists, with the app available via context.
 
 <Callout type="warning" title="Changing backend recreates the whole app">
@@ -115,13 +85,9 @@ For full control with no wrapper element, drop down to `useExoApplication`.
 
 ## Declarative scenes
 
-`<Scenes>` switches the one active scene by name. Declare each scene with `<Scene>` and select
-the active one through the `active` prop. The first activation calls `app.start(scene)` (which
-initializes the backend and starts the frame loop); later switches call
-`app.scenes.change(scene, …)` with the optional `transition`.
+`<Scenes>` switches the one active scene by name. Declare each scene with `<Scene>` and select the active one through the `active` prop. The first activation calls `app.start(scene)` (which initializes the backend and starts the frame loop); later switches call `app.scenes.change(scene, …)` with the optional `transition`.
 
-The scene classes you reference are ordinary ExoJS scenes — the React layer only decides which
-one is active:
+The scene classes you reference are ordinary ExoJS scenes — the React layer only decides which one is active:
 
 <SourceSnippet
   source="packages/exojs-react/examples/guides/scenes.ts"
@@ -137,19 +103,9 @@ one is active:
   title="packages/exojs-react/examples/guides/scene-switching.tsx"
 />
 
-Each `<Scene>` takes a unique `name`, the scene `component` class to instantiate, and optional
-`children` that render as the active scene's overlay. The `transition` (a `SceneTransition`
-instance — e.g. `new FadeSceneTransition({ duration: Time.seconds(0.3) })`) only
-applies to switches, not the first start.
-If `active` matches no `<Scene>`, the underlying engine scene is left running
-untouched (there is no public API to clear it mid-lifetime) — only the
-React-rendered HUD overlay is cleared, and a console warning is logged. This
-is a caller mismatch (an `active` name with no matching `<Scene>`), not a
-supported "show nothing" path — check `active` against your actual `<Scene
-name="...">` declarations if you see the warning.
+Each `<Scene>` takes a unique `name`, the scene `component` class to instantiate, and optional `children` that render as the active scene's overlay. The `transition` (a `SceneTransition` instance — e.g. `new FadeSceneTransition({ duration: Time.seconds(0.3) })`) only applies to switches, not the first start. If `active` matches no `<Scene>`, the underlying engine scene is left running untouched (there is no public API to clear it mid-lifetime) — only the React-rendered HUD overlay is cleared, and a console warning is logged. This is a caller mismatch (an `active` name with no matching `<Scene>`), not a supported "show nothing" path — check `active` against your actual `<Scene name="...">` declarations if you see the warning.
 
-`useActiveScene()` reads the live scene instance from the nearest `<Scenes>`, so an overlay can
-react to scene state:
+`useActiveScene()` reads the live scene instance from the nearest `<Scenes>`, so an overlay can react to scene state:
 
 <SourceSnippet
   source="packages/exojs-react/examples/guides/active-scene-hud.tsx"
@@ -158,23 +114,17 @@ react to scene state:
   title="packages/exojs-react/examples/guides/active-scene-hud.tsx"
 />
 
-For the simplest case — a single scene with no switching — use `useScene(SceneClass, deps?)`
-instead. It instantiates and activates one scene, returning the instance once it is live (or
-`null` while loading), and clears it on unmount or when `deps` change.
+For the simplest case — a single scene with no switching — use `useScene(SceneClass, deps?)` instead. It instantiates and activates one scene, returning the instance once it is live (or `null` while loading), and clears it on unmount or when `deps` change.
 
 ## Reaching the app from descendants
 
 Any component rendered inside `<ExoCanvas>` can read the running app:
 
-- `useExoApp()` returns the `Application` and **throws** an actionable error if there is no
-  `<ExoCanvas>` ancestor — use it in components that require the app.
+- `useExoApp()` returns the `Application` and **throws** an actionable error if there is no `<ExoCanvas>` ancestor — use it in components that require the app.
 - `useExoContext()` returns `Application | null` (no throw) for optional access.
-- `ExoContext` is the underlying context object, exported for advanced use (testing, custom
-  providers).
+- `ExoContext` is the underlying context object, exported for advanced use (testing, custom providers).
 
-`app.frameCount` is a plain getter the engine updates on its own frame loop — reading it
-alone does not make a component re-render. Pair `useExoApp()` with `useSignal()` to subscribe
-to `app.onFrame` and re-render on every dispatch:
+`app.frameCount` is a plain getter the engine updates on its own frame loop — reading it alone does not make a component re-render. Pair `useExoApp()` with `useSignal()` to subscribe to `app.onFrame` and re-render on every dispatch:
 
 <SourceSnippet
   source="packages/exojs-react/examples/guides/frame-counter.tsx"
@@ -185,8 +135,7 @@ to `app.onFrame` and re-render on every dispatch:
 
 ## End-to-end
 
-A small app that hosts the canvas, switches between two scenes with a fade, and overlays React
-HUD on the active scene:
+A small app that hosts the canvas, switches between two scenes with a fade, and overlays React HUD on the active scene:
 
 <SourceSnippet
   source="packages/exojs-react/examples/guides/end-to-end.tsx"
@@ -195,15 +144,10 @@ HUD on the active scene:
   title="packages/exojs-react/examples/guides/end-to-end.tsx"
 />
 
-React owns the screen state and the HUD; ExoJS owns the canvas, the renderer, and the per-frame
-loop. The two stay cleanly separated.
+React owns the screen state and the HUD; ExoJS owns the canvas, the renderer, and the per-frame loop. The two stay cleanly separated.
 
 ## Where to look next
 
-- **Package README:** [`@codexo/exojs-react`](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-react/README.md)
-  — install, the export table, and the reactivity model.
-- **Scenes & lifecycle:** the [Scenes & lifecycle](/ExoJS/en/guide/runtime/scenes-and-lifecycle/)
-  chapter explains `app.start`, `app.scenes.change`, transitions, and the hooks the React layer
-  drives for you.
-- **API reference:** the [`Application`](/ExoJS/en/api/application/) and
-  [`Scene`](/ExoJS/en/api/scene/) pages document the underlying engine surface the bindings wrap.
+- **Package README:** [`@codexo/exojs-react`](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-react/README.md) — install, the export table, and the reactivity model.
+- **Scenes & lifecycle:** the [Scenes & lifecycle](/ExoJS/en/guide/runtime/scenes-and-lifecycle/) chapter explains `app.start`, `app.scenes.change`, transitions, and the hooks the React layer drives for you.
+- **API reference:** the [`Application`](/ExoJS/en/api/application/) and [`Scene`](/ExoJS/en/api/scene/) pages document the underlying engine surface the bindings wrap.

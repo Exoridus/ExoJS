@@ -2,16 +2,9 @@
 
 Native 2D **rigid-body** runtime for [ExoJS](https://github.com/Exoridus/ExoJS).
 
-Zero production dependencies, ESM-only, version-locked with the core engine.
-It ships a fixed-step world with a warm-started **TGS-Soft** solver: shapes,
-colliders, bodies, a dynamic-AABB broad phase, a manifold-generating narrow
-phase, joints, sleeping islands, continuous collision for fast bodies, a
-per-contact modifier, collision filters, sensors, events, spatial queries,
-scene-node binding with interpolation, and a debug overlay.
+Zero production dependencies, ESM-only, version-locked with the core engine. It ships a fixed-step world with a warm-started **TGS-Soft** solver: shapes, colliders, bodies, a dynamic-AABB broad phase, a manifold-generating narrow phase, joints, sleeping islands, continuous collision for fast bodies, a per-contact modifier, collision filters, sensors, events, spatial queries, scene-node binding with interpolation, and a debug overlay.
 
-> **Library, not an extension.** Physics contributes no renderer or asset
-> bindings, so there is no `/register` entry. Construct a `PhysicsWorld`
-> directly. `@codexo/exojs` is a peer dependency.
+> **Library, not an extension.** Physics contributes no renderer or asset bindings, so there is no `/register` entry. Construct a `PhysicsWorld` directly. `@codexo/exojs` is a peer dependency.
 
 ## Install
 
@@ -75,42 +68,17 @@ class GameScene extends Scene {
 | Binding              | `bind(body, node)` — node tracks the body's position each step                                                              |
 | Debug                | `@codexo/exojs-physics/debug` → `PhysicsDebugDraw` (shapes/AABBs/contacts/normals/centres/broad-phase/joints)               |
 
-Building a level out of a tilemap? `@codexo/exojs-tilemap-physics` turns
-`@codexo/exojs-tilemap` collision geometry into static bodies and keeps them in
-sync with streamed chunks.
+Building a level out of a tilemap? `@codexo/exojs-tilemap-physics` turns `@codexo/exojs-tilemap` collision geometry into static bodies and keeps them in sync with streamed chunks.
 
 ## Determinism & non-goals
 
-Stepping is fully **caller-driven** and uses a fixed timestep with an
-accumulator (`world.step(frameDeltaSeconds)`); the same build replays a scene
-identically given the same inputs. There are **no rollback/lockstep determinism
-guarantees across builds or machines** (floating-point reality). The package is
-single-threaded and 2D only — no workers, GPU, 3D, soft bodies, fluids or
-vehicles.
+Stepping is fully **caller-driven** and uses a fixed timestep with an accumulator (`world.step(frameDeltaSeconds)`); the same build replays a scene identically given the same inputs. There are **no rollback/lockstep determinism guarantees across builds or machines** (floating-point reality). The package is single-threaded and 2D only — no workers, GPU, 3D, soft bodies, fluids or vehicles.
 
-`step()` owns its own fixed-timestep accumulator, so you can drive it from
-either the engine's `Scene.fixedUpdate` (already a constant-rate hook — the
-idiomatic choice) or straight from `Scene.update`'s raw, variable per-frame
-delta; either way `step` converts whatever it's given into the right number of
-fixed sub-steps. See the "Stepping the world" section of the
-[physics guide](https://exoridus.github.io/ExoJS/en/guide/physics/physics-basics/)
-for the details and an interpolation note (`world.timeStepper.alpha`).
+`step()` owns its own fixed-timestep accumulator, so you can drive it from either the engine's `Scene.fixedUpdate` (already a constant-rate hook — the idiomatic choice) or straight from `Scene.update`'s raw, variable per-frame delta; either way `step` converts whatever it's given into the right number of fixed sub-steps. See the "Stepping the world" section of the [physics guide](https://exoridus.github.io/ExoJS/en/guide/physics/physics-basics/) for the details and an interpolation note (`world.timeStepper.alpha`).
 
-**Broad-phase scale.** Collision detection uses a dynamic AABB tree
-(Box2D-style), incrementally updated across steps: a collider whose AABB
-stays within its stored margin is never reinserted, so the dominant cost
-tracks how much actually moved rather than the total live collider count
-(there's still a cheap linear pass over all live colliders each step). Scales
-to tens of thousands of simultaneously-live colliders.
+**Broad-phase scale.** Collision detection uses a dynamic AABB tree (Box2D-style), incrementally updated across steps: a collider whose AABB stays within its stored margin is never reinserted, so the dominant cost tracks how much actually moved rather than the total live collider count (there's still a cheap linear pass over all live colliders each step). Scales to tens of thousands of simultaneously-live colliders.
 
-**Solid and boundary geometry.** `CircleShape`, `CapsuleShape`, `PolygonShape`
-and `BoxShape` enclose an area and carry mass; `SegmentShape` and `ChainShape`
-are boundaries with no interior, so they contribute collision only and a
-`dynamic` body needs at least one solid collider alongside them. A chain is one
-authored collider that the engine solves edge by edge with shared-vertex
-adjacency, so a body slides across a seam without snagging. Two boundaries never
-collide with each other, and a boundary is never the _moving_ operand of a
-continuous shape cast — level structure is swept against, not swept.
+**Solid and boundary geometry.** `CircleShape`, `CapsuleShape`, `PolygonShape` and `BoxShape` enclose an area and carry mass; `SegmentShape` and `ChainShape` are boundaries with no interior, so they contribute collision only and a `dynamic` body needs at least one solid collider alongside them. A chain is one authored collider that the engine solves edge by edge with shared-vertex adjacency, so a body slides across a seam without snagging. Two boundaries never collide with each other, and a boundary is never the _moving_ operand of a continuous shape cast — level structure is swept against, not swept.
 
 ## License
 

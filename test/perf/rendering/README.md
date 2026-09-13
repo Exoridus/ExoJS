@@ -1,22 +1,12 @@
 # Renderer performance benchmarks
 
-Deterministic, GPU-free structural benchmarks + CPU-submission timing for the
-ExoJS renderers (Sprite, NineSliceSprite, RepeatingSprite, tilemap chunks).
+Deterministic, GPU-free structural benchmarks + CPU-submission timing for the ExoJS renderers (Sprite, NineSliceSprite, RepeatingSprite, tilemap chunks).
 
-The harness runs the **real** WebGL2 backend and renderers in Node against a
-recording fake WebGL2 context (`fakeWebGl2.ts`). The fake reflects attribute and
-uniform names from the actual GLSL and records every structurally relevant GL
-call (draw, bind, upload). Combined with the backend's own `RenderStats`, this
-yields reproducible structural metrics **without a browser or GPU** — the real
-batching, multi-texture-slot, flush, and upload code paths execute exactly as on
-hardware (only shader execution and real-driver upload cost are absent).
+The harness runs the **real** WebGL2 backend and renderers in Node against a recording fake WebGL2 context (`fakeWebGl2.ts`). The fake reflects attribute and uniform names from the actual GLSL and records every structurally relevant GL call (draw, bind, upload). Combined with the backend's own `RenderStats`, this yields reproducible structural metrics **without a browser or GPU** — the real batching, multi-texture-slot, flush, and upload code paths execute exactly as on hardware (only shader execution and real-driver upload cost are absent).
 
 ## Why a fake context, not the plan layer?
 
-Plan-level grouping (`pipelineKey:bindKey`) is **not** the same as GPU draw
-calls: the sprite renderer merges up to 16 textures into one draw via per-instance
-slots, and the "17th texture → flush" boundary lives inside the renderer. Only
-running the real renderer reproduces that. The fake context measures the truth.
+Plan-level grouping (`pipelineKey:bindKey`) is **not** the same as GPU draw calls: the sprite renderer merges up to 16 textures into one draw via per-instance slots, and the "17th texture → flush" boundary lives inside the renderer. Only running the real renderer reproduces that. The fake context measures the truth.
 
 ## Layout
 
@@ -49,21 +39,11 @@ pnpm perf renderers:browser
 
 ## Metric tiers
 
-- **Tier A — structural (deterministic, asserted in CI):** draw calls, batches,
-  instances, visible/culled nodes, texture binds, buffer uploads, uploaded
-  bytes, transform rows/uploads, geometry rebuilds. Identical across machines
-  and across WebGL2/WebGPU (same plan grouping, instance formats, flush rules).
-  Includes upload-coalescing gates: after RenderPlanPlayer's Phase 1 pre-pass,
-  N cyclic-texture flushes produce at most 1 `texSubImage2D` instead of O(N).
-- **Tier B — CPU submission timing (informational, never a CI gate):** median /
-  p95 wall-clock of `render → flush` over many frames against the fake context.
-  This is **CPU submission only** — it excludes GPU execution and real-driver
-  upload cost. Absolute values are machine-specific; use deltas between commits.
-- **Tier C — browser/GPU timing (opt-in):** real `requestAnimationFrame` /
-  timer-query timing in the browser lanes. Not part of normal CI.
+- **Tier A — structural (deterministic, asserted in CI):** draw calls, batches, instances, visible/culled nodes, texture binds, buffer uploads, uploaded bytes, transform rows/uploads, geometry rebuilds. Identical across machines and across WebGL2/WebGPU (same plan grouping, instance formats, flush rules). Includes upload-coalescing gates: after RenderPlanPlayer's Phase 1 pre-pass, N cyclic-texture flushes produce at most 1 `texSubImage2D` instead of O(N).
+- **Tier B — CPU submission timing (informational, never a CI gate):** median / p95 wall-clock of `render → flush` over many frames against the fake context. This is **CPU submission only** — it excludes GPU execution and real-driver upload cost. Absolute values are machine-specific; use deltas between commits.
+- **Tier C — browser/GPU timing (opt-in):** real `requestAnimationFrame` / timer-query timing in the browser lanes. Not part of normal CI.
 
-Wall-clock values are **never** Required-CI gates — one slower machine must not
-fail CI. Only the deterministic Tier-A stats are asserted.
+Wall-clock values are **never** Required-CI gates — one slower machine must not fail CI. Only the deterministic Tier-A stats are asserted.
 
 ## Output
 
