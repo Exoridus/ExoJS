@@ -1,0 +1,268 @@
+{
+  "title": "AudioOutputClock",
+  "description": "Converts between audio-context time and the `performance.now()` timeline, so that audio scheduled in one can be lined up with rendering, input or animation measured in the other. ```ts const clock = new AudioOutputClock(); const beatAt = clock.contextToPerformanceTime(nextBeatContextTime); ``` Where the environment offers `AudioContext.getOutputTimestamp()`, the correlation names the sample the output device is playing right now, so a context time converted through this class already accounts for the output path: a beat scheduled for `contextTime` maps to the `performance.now()` instant a listener hears it, with no latency arithmetic of your own. AudioOutputClockSnapshot.baseLatency and `outputLatency` are telemetry, not a correction to apply on top. Nothing here knows about display latency. Aligning a beat with the frame that shows it is the caller's decision, because only the caller knows how far ahead of the photons its render loop runs. Every reading is taken fresh, so long-lived instances track drift between the two clocks rather than accumulating it. Two conversions therefore need not use the identical correlation; where exactness matters more than currency, take one snapshot and do the arithmetic against it. The wall clock is never consulted - a user changing the system time cannot move an ExoJS audio correlation.",
+  "symbol": "AudioOutputClock",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 1,
+    "methods": 3,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Converts between audio-context time and the `performance.now()` timeline, so that audio scheduled in one can be lined up with rendering, input or animation measured in the other.",
+        "```ts const clock = new AudioOutputClock(); const beatAt = clock.contextToPerformanceTime(nextBeatContextTime); ```",
+        "Where the environment offers `AudioContext.getOutputTimestamp()`, the correlation names the sample the output device is playing right now, so a context time converted through this class already accounts for the output path: a beat scheduled for `contextTime` maps to the `performance.now()` instant a listener hears it, with no latency arithmetic of your own. AudioOutputClockSnapshot.baseLatency and `outputLatency` are telemetry, not a correction to apply on top.",
+        "Nothing here knows about display latency. Aligning a beat with the frame that shows it is the caller's decision, because only the caller knows how far ahead of the photons its render loop runs.",
+        "Every reading is taken fresh, so long-lived instances track drift between the two clocks rather than accumulating it. Two conversions therefore need not use the identical correlation; where exactness matters more than currency, take one snapshot and do the arithmetic against it.",
+        "The wall clock is never consulted - a user changing the system time cannot move an ExoJS audio correlation."
+      ],
+      "importLine": "import { AudioOutputClock } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(context?: AudioContext): AudioOutputClock",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioOutputClock",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "context",
+              "type": "AudioContext",
+              "optional": true
+            }
+          ],
+          "returnType": "AudioOutputClock",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "contextToPerformanceTime",
+          "signature": "contextToPerformanceTime(contextTime: number): number",
+          "signatureTokens": [
+            {
+              "text": "contextToPerformanceTime",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "contextTime",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "contextTime",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "The performance.now() instant matching contextTime, in milliseconds."
+        },
+        {
+          "name": "performanceToContextTime",
+          "signature": "performanceToContextTime(performanceTime: number): number",
+          "signatureTokens": [
+            {
+              "text": "performanceToContextTime",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "performanceTime",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "performanceTime",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "The audio-context instant matching performanceTime, in seconds."
+        },
+        {
+          "name": "snapshot",
+          "signature": "snapshot(): AudioOutputClockSnapshot",
+          "signatureTokens": [
+            {
+              "text": "snapshot",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioOutputClockSnapshot",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "AudioOutputClockSnapshot",
+          "description": "Take a fresh correlated reading."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "context",
+          "signature": "context: AudioContext",
+          "signatureTokens": [
+            {
+              "text": "context",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioContext",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The context this clock reads. Resolving the shared context creates it when none exists, the same as any other entry point into ExoJS audio."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/AudioOutputClock.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioOutputClock.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/AudioOutputClock.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioOutputClock.ts"
+}

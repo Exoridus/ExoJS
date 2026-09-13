@@ -114,6 +114,7 @@ const PLL_ACCEPT_FRAC = 0.25; // an onset within ±this·IBI of the prediction i
 const PLL_FREERUN_FRAC = 0.25; // free-run (grid) emit once the prediction is passed by this·IBI
 const PLL_RESYNC_FRAC = 0.25; // re-seed the PLL period from the ACF tempo if it drifts beyond this
 const PLL_BOOTSTRAP_MAX_AGE_IBI = 2; // bootstrap anchors to the newest onset within this many IBIs
+const PHASE_CONFIDENCE_GAIN = 0.25; // EMA weight of one beat's phase evidence in phaseConfidence
 
 // ---- DJ-drift dual-window tracking ----
 // The tracked tempo normally follows the long STABLE window (octave-safe, steady). When the
@@ -195,6 +196,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
   private _driftHops: number;
 
   private _lastBeatSample: number;
+  private _lastBeatContextTime: number;
   private _ibiSamples: number;
   private readonly _ibiHistory: Float32Array;
   private _ibiIdx: number;
@@ -210,6 +212,15 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
   private _beatsSinceStart: number;
 
   private _confidence: number;
+  private _phaseConfidence: number;
+
+  /**
+   * Context frames minus analysed samples, refreshed every render quantum.
+   * `_sampleCount` counts only samples that reached `process()`, so it stalls
+   * whenever no source is connected and cannot name a point on the context
+   * clock by itself.
+   */
+  private _frameOffset: number;
 
   private readonly _stateInterval: number;
   private _hopsSinceState: number;
@@ -316,6 +327,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
 
     // Phase state
     this._lastBeatSample = -1;
+    this._lastBeatContextTime = 0;
     this._ibiSamples = 0; // PLL-tracked inter-beat interval (samples); seeded from ACF tempo
     this._ibiHistory = new Float32Array(4); // last 4 inter-beat intervals
     this._ibiIdx = 0;
@@ -333,6 +345,8 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
 
     // Confidence
     this._confidence = 0;
+    this._phaseConfidence = 0;
+    this._frameOffset = 0;
 
     // State snapshot cadence (~20 Hz)
     const STATE_INTERVAL_HOPS = Math.round(this._sampleRate / this._hopSize / 20);
@@ -393,6 +407,8 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     const right = input[1] ?? left;
     const blockLen = left.length;
 
+    this._frameOffset = currentFrame - this._sampleCount;
+
     for (let s = 0; s < blockLen; s++) {
       // Mono downmix
       const mono = (left[s]! + right[s]!) * 0.5;
@@ -414,6 +430,11 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     }
 
     return true;
+  }
+
+  /** Audio-context seconds of an analysed sample position from the current render quantum. */
+  private _contextTimeAt(sample: number): number {
+    return (sample + this._frameOffset) / this._sampleRate;
   }
 
   private _processHop(): void {
@@ -844,7 +865,9 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
   // and the bar grid stays consistent even while provisional beats are suppressed); only the port
   // messages are gated.
   private _emitBeat(beatSample: number, flux: number): void {
-    const beatTime = beatSample / this._sampleRate;
+    const beatTime = this._contextTimeAt(beatSample);
+
+    this._lastBeatContextTime = beatTime;
 
     // Update IBI history with the current PLL period.
     this._ibiHistory[this._ibiIdx] = this._ibiSamples;
@@ -936,6 +959,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     if (onset >= 0) {
       // Bounded phase + period correction toward the matched onset.
       const error = onset - predicted;
+      this._observePhase(1 - Math.min(1, Math.abs(error) / acceptWin));
       const maxPhase = PLL_MAX_PHASE_FRAC * ibi;
       let phaseCorr = error * PLL_PHASE_GAIN;
       if (phaseCorr > maxPhase) phaseCorr = maxPhase;
@@ -948,6 +972,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
       this._ibiSamples = ibi + ibiCorr;
     } else if (this._sampleCount >= predicted + PLL_FREERUN_FRAC * ibi) {
       // Prediction passed with no matching onset → free-run on the grid (period held).
+      this._observePhase(0);
       beatSample = predicted;
     } else {
       // Inside the accept window with no onset yet - give a late onset a chance next hop.
@@ -964,6 +989,16 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     if (coasting) return;
 
     this._emitBeat(beatSample, flux);
+  }
+
+  /**
+   * Fold one beat's worth of phase evidence into the running estimate. `quality`
+   * is 1 when the matched onset landed exactly on the prediction, 0 at the edge
+   * of the accept window, and 0 for a beat the grid had to free-run because no
+   * onset supported it.
+   */
+  private _observePhase(quality: number): void {
+    this._phaseConfidence += (quality - this._phaseConfidence) * PHASE_CONFIDENCE_GAIN;
   }
 
   private _computeBeatLikelihood(flux: number): number {
@@ -1078,6 +1113,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
   private _updateConfidence(): void {
     if (this._candidates.length === 0) {
       this._confidence = 0;
+      this._phaseConfidence = 0;
       return;
     }
 
@@ -1151,9 +1187,16 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     // and the sync-critical fields stay zero until the detector has a trustworthy locked grid.
     const settled = this._locked;
     const beatInterval = this._bestBpm > 0 ? 60 / this._bestBpm : 0;
-    const currentTime = this._sampleCount / this._sampleRate;
-    const lastBeatTime = this._lastBeatSample >= 0 ? this._lastBeatSample / this._sampleRate : 0;
-    const beatPhase = beatInterval > 0 ? Math.min(1, (currentTime - lastBeatTime) / beatInterval) : 0;
+
+    // Beat phase is measured in analysed samples, not on the context clock: a
+    // source that stops feeding the node freezes the phase where it stood
+    // rather than sweeping it forward through silence nobody analysed.
+    const analysedNow = this._sampleCount / this._sampleRate;
+    const analysedLastBeat = this._lastBeatSample >= 0 ? this._lastBeatSample / this._sampleRate : 0;
+    const beatPhase = beatInterval > 0 ? Math.min(1, (analysedNow - analysedLastBeat) / beatInterval) : 0;
+
+    const analysisTime = this._contextTimeAt(this._sampleCount);
+    const lastBeatTime = this._lastBeatContextTime;
     const nextBeatTime = lastBeatTime + beatInterval;
 
     let nextDownbeatTime = nextBeatTime;
@@ -1168,9 +1211,11 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
 
     this.port.postMessage({
       type: 'state',
+      analysisTime,
       tempo: settled ? this._bestBpm : 0,
       beatPhase,
       confidence: settled ? this._confidence : 0,
+      phaseConfidence: settled ? this._phaseConfidence : 0,
       gridStability: settled ? this._confidence : 0,
       tempoCandidates: settled ? this._candidates.map(c => ({ bpm: c.bpm, score: c.score })) : [],
       rms: this._rms,

@@ -9,7 +9,9 @@
  *   5. Capture all port.postMessage output synchronously.
  *
  * Why this works:
- *   - The worklet reads sampleRate + currentFrame only in the constructor.
+ *   - The worklet reads sampleRate in the constructor and `currentFrame` once
+ *     per process() call, which this driver advances exactly as a real context
+ *     would so the emitted timestamps land on the same clock.
  *   - process() drives everything off per-sample _hopAccum / _sampleCount.
  *   - All messages are sent synchronously during process() - no macrotask race.
  *   - Block-size independence: _hopAccum counts individual samples regardless of
@@ -40,9 +42,11 @@ export interface BeatMessage {
 export interface StateMessage {
   type: 'state';
   _audioTimeSec: number;
+  analysisTime: number;
   tempo: number;
   beatPhase: number;
   confidence: number;
+  phaseConfidence: number;
   gridStability: number;
   tempoCandidates: { bpm: number; score: number }[];
   rms: number;
@@ -155,15 +159,19 @@ export const buildBeatProcessor = (): BeatProcessorCtor => {
  * @param samples     Mono Float32Array at SAMPLE_RATE (48 kHz).
  * @param options.processorOptions  Forwarded to the worklet constructor.
  * @param options.blockSize         Samples per process() call. Default 128.
+ * @param options.startFrame        Context frame the first block is rendered at,
+ *   modelling a node created on a context that has already been running.
+ *   Default 0.
  */
 export const runDetector = (
   samples: Float32Array,
   options: {
     processorOptions?: Record<string, unknown>;
     blockSize?: number;
+    startFrame?: number;
   } = {},
 ): { messages: WorkletMessage[] } => {
-  const { blockSize = 128, processorOptions = {} } = options;
+  const { blockSize = 128, processorOptions = {}, startFrame = 0 } = options;
 
   // Build (or reuse cached) processor class
   if (!_processorCtor) _processorCtor = buildBeatProcessor();
@@ -174,7 +182,7 @@ export const runDetector = (
   const prevSR = g['sampleRate'];
   const prevCF = g['currentFrame'];
   g['sampleRate'] = SAMPLE_RATE;
-  g['currentFrame'] = 0;
+  g['currentFrame'] = startFrame;
 
   const messages: WorkletMessage[] = [];
   const proc = new Processor({ processorOptions });
@@ -189,6 +197,7 @@ export const runDetector = (
   const n = samples.length;
   for (let off = 0; off < n; off += blockSize) {
     blockStartSec = off / SAMPLE_RATE;
+    g['currentFrame'] = startFrame + off;
     const end = Math.min(off + blockSize, n);
     proc.process([[samples.subarray(off, end)]], [], {});
   }

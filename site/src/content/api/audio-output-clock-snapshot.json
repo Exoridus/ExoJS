@@ -1,0 +1,179 @@
+{
+  "title": "AudioOutputClockSnapshot",
+  "description": "One correlated reading of the audio clock against the `performance.now()` timeline.",
+  "symbol": "AudioOutputClockSnapshot",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One correlated reading of the audio clock against the `performance.now()` timeline."
+      ],
+      "importLine": "import { AudioOutputClockSnapshot } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "baseLatency",
+          "signature": "baseLatency: Seconds | null",
+          "signatureTokens": [
+            {
+              "text": "baseLatency",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Processing latency the context adds between a rendered quantum and the audio subsystem, or null where the environment does not report it."
+        },
+        {
+          "name": "contextTime",
+          "signature": "contextTime: number",
+          "signatureTokens": [
+            {
+              "text": "contextTime",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Audio-context seconds, on the same scale as AudioContext.currentTime."
+        },
+        {
+          "name": "outputLatency",
+          "signature": "outputLatency: Seconds | null",
+          "signatureTokens": [
+            {
+              "text": "outputLatency",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Latency between the audio subsystem and the output device, or null where the environment does not report it - most browsers other than Chromium."
+        },
+        {
+          "name": "performanceTime",
+          "signature": "performanceTime: number",
+          "signatureTokens": [
+            {
+              "text": "performanceTime",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Milliseconds on the performance.now() timeline, naming the same instant as contextTime."
+        },
+        {
+          "name": "source",
+          "signature": "source: \"estimated\" | \"output-timestamp\"",
+          "signatureTokens": [
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"estimated\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"output-timestamp\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How the pair was obtained. 'output-timestamp' comes from AudioContext.getOutputTimestamp() and names the sample the device is actually playing. 'estimated' pairs currentTime with performance.now() read back to back, which is what the environment allows when getOutputTimestamp() is missing or has not produced a usable pair yet; it leads the true output by roughly the output latency."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/AudioOutputClock.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioOutputClock.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/AudioOutputClock.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioOutputClock.ts"
+}

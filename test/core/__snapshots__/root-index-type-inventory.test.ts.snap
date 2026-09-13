@@ -79,6 +79,8 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "AudioInputOptions: interface",
   "AudioListener: class",
   "AudioListenerTarget: type alias",
+  "AudioOutputClock: class",
+  "AudioOutputClockSnapshot: interface",
   "AudioSend: class",
   "AudioSpriteClip: interface",
   "AudioStream: class",

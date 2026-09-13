@@ -6,11 +6,11 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs-audio-fx",
   "tier": "stable",
-  "memberCount": 31,
+  "memberCount": 34,
   "counts": {
     "constructors": 1,
     "methods": 2,
-    "properties": 23,
+    "properties": 26,
     "events": 5
   },
   "sections": [
@@ -237,6 +237,48 @@
           "params": [],
           "returnType": null,
           "description": "Half-life in seconds for the pulse envelope. Mutable; default 0.15. Smaller values give a snappier pulse, larger values a longer afterglow."
+        },
+        {
+          "name": "analysisLatency",
+          "signature": "analysisLatency: number",
+          "signatureTokens": [
+            {
+              "text": "analysisLatency",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Seconds between analysisTime and the moment the main thread received that state, measured rather than assumed. Covers the analysis hop and the worklet-to-main-thread delivery together, and is quantised to the context's render-quantum boundary, so treat it as a budget figure rather than an exact age. It says nothing about the output path: what a listener hears lags the analysed audio by the output latency on top, which AudioOutputClock reports."
+        },
+        {
+          "name": "analysisTime",
+          "signature": "analysisTime: number",
+          "signatureTokens": [
+            {
+              "text": "analysisTime",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The AudioContext.currentTime of the newest sample the current state describes. 0 until the first state message arrives. Every timestamp this detector reports - this one, BeatInfo.audioTime, nextBeatTime, lookahead - is on the audio context's clock, so AudioOutputClock converts them to the performance.now() timeline without further correction."
         },
         {
           "name": "bandEnergy",
@@ -501,6 +543,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "phaseConfidence",
+          "signature": "phaseConfidence: number",
+          "signatureTokens": [
+            {
+              "text": "phaseConfidence",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How well recent onsets support the beat grid's phase, 0 to 1, or 0 before the grid locks. Distinct from confidence, which reports how sure the detector is of the tempo. A metronomic loop at a wrong-by-an-octave tempo reads high confidence and high phase confidence; a rubato passage at a known tempo reads high confidence and low phase confidence. Gate anything that must land exactly on the beat - a scored hit, a quantised trigger - on this rather than on confidence."
         },
         {
           "name": "pulse",
