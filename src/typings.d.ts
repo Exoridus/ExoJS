@@ -28,9 +28,8 @@ declare module '*?worklet' {
 }
 
 // The Web Worker counterpart: a `*.worker.ts` module bundled into one
-// classic-script-compatible string, ready for `new Blob([source])` →
-// `URL.createObjectURL` → `new Worker(url)`. See
-// `@codexo/exojs-build`.
+// classic-script-compatible string, ready to hand to `InlineWorker`. See
+// `@codexo/exojs-build` for the transform.
 declare module '*?worker' {
   const content: string;
   export default content;
