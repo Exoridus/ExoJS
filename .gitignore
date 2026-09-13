@@ -29,7 +29,10 @@ skills-lock.json
 
 # superpowers:brainstorming/writing-plans skill defaults write here — these
 # are local planning scratch, not repo artifacts. See .workspace/ below.
-docs/
+# Anchored to the repository root: unanchored, the pattern also swallowed
+# `packages/*/docs/`, and a tracked file under an ignored directory makes every
+# `git add` of it fail, which breaks the pre-commit hook for that file.
+/docs/
 
 # === Dotfiles: blanket-ignore, then allowlist tracked ones ===
 # Anything starting with `.` is ignored by default. Protects against tool
