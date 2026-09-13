@@ -10,6 +10,8 @@ import { Application, ApplicationState } from '#core/Application';
 import { Scene } from '#core/scene/Scene';
 import { SceneTransition, type SceneTransitionEnvironment, type SceneTransitionRequirements, type SceneTransitionSession } from '#core/scene/SceneTransition';
 
+import { isFrameLoopActive } from '../support/application-frame-loop';
+
 vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
   WebGl2Backend: vi.fn().mockImplementation(function () {
     return {
@@ -52,7 +54,7 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
 }));
 
 const frameLoopActive = (app: Application): boolean => {
-  return (app as unknown as Record<string, unknown>)['_frameLoopActive'] as boolean;
+  return isFrameLoopActive(app);
 };
 
 const sessionActive = (app: Application): boolean => {

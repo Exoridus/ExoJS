@@ -9,6 +9,8 @@ import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
 
+import { lastFrameTimestampOf, setFrameLoopActive } from '../support/application-frame-loop';
+
 // ---------------------------------------------------------------------------
 // Backend stubs - keep WebGL2 / WebGPU out of jsdom. The factories must be
 // inline because vi.mock() is hoisted above any variable declaration.
@@ -75,12 +77,12 @@ const forceRunning = (app: Application): void => {
   const record = app as unknown as Record<string, unknown>;
 
   record['_state'] = ApplicationState.Running;
-  record['_frameLoopActive'] = true;
+  setFrameLoopActive(app, true);
 };
 
 /** Run one frame of the real per-frame loop with a fixed `milliseconds` delta. */
 const advanceFrame = (app: Application, milliseconds: number): void => {
-  const previous = (app as unknown as Record<string, unknown>)['_lastFrameTimestamp'] as number;
+  const previous = lastFrameTimestampOf(app);
 
   app.update(previous + milliseconds);
 };

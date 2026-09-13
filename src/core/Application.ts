@@ -13,6 +13,7 @@ import {
   resolveRenderingOptions,
 } from '#core/application/ApplicationOptions';
 import { type BackendType, createBackend, resolveBackendType } from '#core/application/backendSelection';
+import { defaultFixedStepMs, FrameLoop } from '#core/application/FrameLoop';
 import { createDefaultCanvas, isRenderSurface, resolveAutoPixelRatio, watchAutoPixelRatio } from '#core/applicationCanvas';
 import { JobScheduler } from '#core/JobScheduler';
 import { SceneDirector } from '#core/scene/SceneDirector';
@@ -48,19 +49,17 @@ import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 
 import { Capabilities } from './Capabilities';
-import { Clock } from './Clock';
 import { Color } from './Color';
 import { Connectivity } from './Connectivity';
 import { DestroyScope } from './DestroyScope';
 import { assert, invariant } from './dev';
-import { FixedTimestep } from './FixedTimestep';
 import { hello, logger } from './Logger';
 import { Perf } from './Perf';
 import { Signal } from './Signal';
 import type { System } from './System';
 import { SystemOrder } from './SystemOrder';
 import { SystemRegistry } from './SystemRegistry';
-import { type Seconds, seconds } from './units';
+import type { Seconds } from './units';
 import { canvasSourceToDataUrl } from './utils';
 
 /**
@@ -90,9 +89,6 @@ export enum ApplicationState {
   Destroyed = 'destroyed',
 }
 
-const maxDeltaMs = 100;
-/** Default fixed-timestep size in milliseconds (60 Hz). */
-const defaultFixedStepMs = 1000 / 60;
 /**
  * How long {@link Application.destroy} waits for scene teardown before it
  * gives up on it and releases the rest of the engine anyway.
@@ -263,20 +259,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   private readonly _extensionDisposers: ExtensionDisposer[] = [];
 
-  private readonly _updateHandler: (timestamp: number) => void;
-  private readonly _startupClock: Clock;
-  private readonly _activeClock: Clock;
-  private readonly _frameClock: Clock;
-  /**
-   * Host timestamp of the frame the loop most recently began. The frame delta
-   * is the distance between two of these rather than two readings taken inside
-   * the callback, so a frame that starts late does not also report a short
-   * delta.
-   */
-  private _lastFrameTimestamp = 0;
-  private readonly _fixed: FixedTimestep;
-  private readonly _fixedSeconds: Seconds;
-  private _frameAlpha = 0;
+  private readonly _scheduler: FrameLoop;
 
   private _state: ApplicationState = ApplicationState.Stopped;
   /**
@@ -286,7 +269,6 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * while startup - including its initial scene navigation - is still going.
    */
   private _startPromise: Promise<this> | null = null;
-  private _frameLoopActive = false;
   /**
    * The teardown run started by the first {@link Application.destroy} call, or
    * `null` while none is. Held so every later call returns that same Promise
@@ -301,8 +283,6 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   /** Last CSS box written to the canvas element, or `null` while none has been. */
   private _cssWidth: number | null = null;
   private _cssHeight: number | null = null;
-  private _frameCount = 0;
-  private _frameRequest = 0;
   private _backendType: 'webgl2' | 'webgpu';
   private _backend: RenderBackend;
   private _rendering: RenderingContext;
@@ -412,9 +392,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // Every runtime clock reads the host through the adapter, so a platform
       // with a deterministic time source makes the whole frame loop
       // deterministic - there is no second, global clock behind it.
-      this._startupClock = new Clock(false, this.platform);
-      this._activeClock = new Clock(false, this.platform);
-      this._frameClock = new Clock(false, this.platform);
+      this._scheduler = new FrameLoop(
+        this.platform,
+        timestamp => {
+          this.update(timestamp);
+        },
+        appSettings.fixedTimeStep !== undefined ? appSettings.fixedTimeStep * 1000 : defaultFixedStepMs,
+      );
 
       // Only an adapter created here is ours to release - an injected one stays
       // the caller's on the failure path, exactly as in `destroy()`.
@@ -489,21 +473,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this.interaction = constructed.track(new InteractionSystem(this));
       this.scenes = constructed.track(new SceneDirector<Registry>(this, appSettings.scenes));
       this.random = new Random(this.options.seed);
-      this._updateHandler = (timestamp: number): void => {
-        this.update(timestamp);
-
-        // Only the scheduled callback chains the next frame. `update()` is
-        // public, so a manual call made while the loop is live would otherwise
-        // fork a second RAF chain and silently double the frame rate.
-        if (this._frameLoopActive) this._frameRequest = this.platform.requestFrame(this._updateHandler);
-      };
-
-      const fixedStepMs = this.options.fixedTimeStep !== undefined ? this.options.fixedTimeStep * 1000 : defaultFixedStepMs;
-
-      this._fixed = new FixedTimestep(fixedStepMs, FixedTimestep.deriveMaxSteps(maxDeltaMs, fixedStepMs));
-      this._fixedSeconds = seconds(fixedStepMs / 1000);
-
-      this._startupClock.start();
+      this._scheduler.startStartupClock();
 
       this._documentVisible = this.platform.documentVisible;
       this._visibilitySubscription = this.platform.onVisibilityChange(visible => {
@@ -667,9 +637,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       constructed.destroy();
     });
 
-    attempt(() => this._startupClock.destroy());
-    attempt(() => this._activeClock.destroy());
-    attempt(() => this._frameClock.destroy());
+    attempt(() => this._scheduler.destroy());
     attempt(() => this.onResize.destroy());
     attempt(() => this.onFrame.destroy());
     attempt(() => this.onFixedFrame.destroy());
@@ -711,19 +679,19 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   public get startupSeconds(): Seconds {
-    return this._startupClock.elapsedSeconds;
+    return this._scheduler.startupSeconds;
   }
 
   public get activeSeconds(): Seconds {
-    return this._activeClock.elapsedSeconds;
+    return this._scheduler.activeSeconds;
   }
 
   public get frameSeconds(): Seconds {
-    return this._frameClock.elapsedSeconds;
+    return this._scheduler.frameSeconds;
   }
 
   public get frameCount(): number {
-    return this._frameCount;
+    return this._scheduler.frameCount;
   }
 
   /**
@@ -742,12 +710,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * frame rate.
    */
   public get frameAlpha(): number {
-    return this._frameAlpha;
+    return this._scheduler.alpha;
   }
 
   /** Fixed-timestep size in seconds (see {@link ApplicationOptions.fixedTimeStep}). */
   public get fixedTimeStep(): number {
-    return this._fixed.stepMs / 1000;
+    return this._scheduler.stepMs / 1000;
   }
 
   /**
@@ -1031,7 +999,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // it and wrote its own state; promoting over that would advertise
       // `Running` for a loop that no longer schedules frames, and every later
       // `start()`/`stop()` would early-return on the lie.
-      if (this._frameLoopActive) this._setState(ApplicationState.Running);
+      if (this._scheduler.active) this._setState(ApplicationState.Running);
     } catch (error) {
       this._stopFrameLoop();
       this._setState(ApplicationState.Stopped);
@@ -1050,12 +1018,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * strict superset of `_state === Running`.
    */
   private _startFrameLoop(): void {
-    this._frameLoopActive = true;
-    this._frameRequest = this.platform.requestFrame(this._updateHandler);
-    this._lastFrameTimestamp = this.platform.now();
-    this._frameClock.restart();
-    this._fixed.reset();
-    this._activeClock.start();
+    this._scheduler.start();
   }
 
   /**
@@ -1080,14 +1043,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * two are one abort with one reason rather than two competing ones.
    */
   private _stopFrameLoop(reason: Error = new SceneNavigationAbortedError()): void {
-    if (!this._frameLoopActive) {
+    if (!this._scheduler.stop()) {
       return;
     }
-
-    this._frameLoopActive = false;
-    this.platform.cancelFrame(this._frameRequest);
-    this._activeClock.stop();
-    this._frameClock.stop();
 
     this.scenes._abortInFlightNavigation(reason);
   }
@@ -1133,11 +1091,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * elapsed delta is recorded separately in `backend.stats.rawFrameDeltaMs`.
    */
   public update(timestamp: number = this.platform.now()): this {
-    if (this._frameLoopActive) {
+    if (this._scheduler.active) {
       if (this.pauseOnHidden && !this._documentVisible) {
-        this._lastFrameTimestamp = timestamp;
-        this._frameClock.restart();
-        this._fixed.reset();
+        this._scheduler.skipFrame(timestamp);
 
         return this;
       }
@@ -1149,18 +1105,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // through the error pipeline instead of killing the RAF loop; the loop
       // halts only after `maxConsecutiveFrameErrors` consecutive failures.
       try {
-        const rawDeltaMs = Math.max(0, timestamp - this._lastFrameTimestamp);
-
-        this._lastFrameTimestamp = timestamp;
-
-        // Separate domain from the delta above: this one is the in-frame
-        // stopwatch behind `app.frameTime`, restarted at the top of the frame
-        // so a reader inside `onFrame` sees how long the frame has been
-        // running rather than how long the previous one took.
-        this._frameClock.restart();
-
-        const clampedDeltaMs = Math.min(rawDeltaMs, maxDeltaMs);
-        const frameDelta = seconds(clampedDeltaMs / 1000);
+        const { rawDeltaMs, frameDelta, fixedSteps } = this._scheduler.beginFrame(timestamp);
         const frameStart = this.platform.now();
 
         if (__DEV__) Perf.mark(frameStartMark);
@@ -1177,15 +1122,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
         // Fixed-timestep steps (0..N) for deterministic logic/physics, after input
         // so they see this frame's input and before the variable update/draw.
-        const fixedSteps = this._fixed.advance(clampedDeltaMs);
-
         for (let step = 0; step < fixedSteps; step++) {
-          this.systems._fixedUpdate(this._fixedSeconds);
-          this.scenes.fixedUpdate(this._fixedSeconds);
-          this.onFixedFrame.dispatch(this._fixedSeconds);
+          this.systems._fixedUpdate(this._scheduler.stepSeconds);
+          this.scenes.fixedUpdate(this._scheduler.stepSeconds);
+          this.onFixedFrame.dispatch(this._scheduler.stepSeconds);
         }
 
-        this._frameAlpha = this._fixed.alpha;
+        this._scheduler.captureAlpha();
 
         if (__DEV__) Perf.mark(systemsStartMark);
         this.systems._update(frameDelta);
@@ -1230,7 +1173,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this.scenes._endFrame();
         this.systems._endFrame();
 
-        if (this._frameLoopActive) this._frameCount++;
+        this._scheduler.endFrame();
       }
     }
 
@@ -1292,7 +1235,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * teardown ordering matters.
    */
   public stop(): this {
-    if (!this._frameLoopActive) {
+    if (!this._scheduler.active) {
       return this;
     }
 
@@ -1638,7 +1581,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._sizing = null;
     this._releaseDom();
 
-    if (this._frameLoopActive) {
+    if (this._scheduler.active) {
       if (this._state === ApplicationState.Running) this._setState(ApplicationState.Halting);
 
       this._stopFrameLoop();
@@ -1729,9 +1672,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this.platform.destroy();
     }
 
-    this._startupClock.destroy();
-    this._activeClock.destroy();
-    this._frameClock.destroy();
+    this._scheduler.destroy();
     this.onResize.destroy();
     this.onFrame.destroy();
     this.onFixedFrame.destroy();

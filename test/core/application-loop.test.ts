@@ -8,6 +8,8 @@
 import { Application, ApplicationState } from '#core/Application';
 import { type Seconds, Time } from '#core/units';
 
+import { frameClockOf, lastFrameTimestampOf, setFrameLoopActive, setLastFrameTimestamp, tickFrame } from '../support/application-frame-loop';
+
 // ---------------------------------------------------------------------------
 // Backend stubs - keep WebGL2 / WebGPU out of jsdom.
 // The factory functions must be inline because vi.mock() is hoisted before
@@ -111,12 +113,7 @@ const forceRunning = (app: Application): void => {
   const record = app as unknown as Record<string, unknown>;
 
   record['_state'] = ApplicationState.Running;
-  record['_frameLoopActive'] = true;
-};
-
-/** Access the private _frameClock. */
-const frameClock = (app: Application): import('#core/Clock').Clock => {
-  return (app as unknown as Record<string, unknown>)['_frameClock'] as import('#core/Clock').Clock;
+  setFrameLoopActive(app, true);
 };
 
 /**
@@ -125,7 +122,7 @@ const frameClock = (app: Application): import('#core/Clock').Clock => {
  * clock one gap ahead of the last frame is all a fixed delta needs.
  */
 const mockFrameElapsed = (app: Application, ms: number): MockInstance => {
-  const previous = (app as unknown as Record<string, unknown>)['_lastFrameTimestamp'] as number;
+  const previous = lastFrameTimestampOf(app);
   return vi.spyOn(app.platform, 'now').mockReturnValue(previous + ms);
 };
 
@@ -166,7 +163,7 @@ describe('Application.update() — loop timing', () => {
       app.pauseOnHidden = true;
       (app as unknown as Record<string, unknown>)['_documentVisible'] = false;
 
-      const restartSpy = vi.spyOn(frameClock(app), 'restart');
+      const restartSpy = vi.spyOn(frameClockOf(app), 'restart');
 
       app.update();
 
@@ -179,7 +176,7 @@ describe('Application.update() — loop timing', () => {
 
       // Through the scheduled callback, which is what chains the next frame:
       // a hidden frame skips its body but must not let the loop die.
-      ((app as unknown as Record<string, unknown>)['_updateHandler'] as (timestamp: number) => void)(0);
+      tickFrame(app);
 
       expect(rafSpy).toHaveBeenCalledTimes(1);
     });
@@ -219,7 +216,7 @@ describe('Application.update() — loop timing', () => {
       app.pauseOnHidden = true;
       (app as unknown as Record<string, unknown>)['_documentVisible'] = false;
 
-      const restartSpy = vi.spyOn(frameClock(app), 'restart');
+      const restartSpy = vi.spyOn(frameClockOf(app), 'restart');
 
       app.update();
 
@@ -352,7 +349,7 @@ describe('Application.update() — loop timing', () => {
       let nowMs = 0;
 
       vi.spyOn(target.platform, 'now').mockImplementation(() => nowMs);
-      (target as unknown as Record<string, unknown>)['_lastFrameTimestamp'] = 0;
+      setLastFrameTimestamp(target, 0);
 
       return {
         advance: (ms: number): void => {
@@ -397,7 +394,7 @@ describe('Application.update() — loop timing', () => {
         observedDeltas.push(delta * 1000);
       });
 
-      (app as unknown as Record<string, unknown>)['_lastFrameTimestamp'] = 0;
+      setLastFrameTimestamp(app, 0);
 
       app.update(16);
       app.update(48);
@@ -414,7 +411,7 @@ describe('Application.update() — loop timing', () => {
         observedDeltas.push(delta * 1000);
       });
 
-      (app as unknown as Record<string, unknown>)['_lastFrameTimestamp'] = 0;
+      setLastFrameTimestamp(app, 0);
 
       app.update();
 
@@ -546,7 +543,7 @@ describe('Application.update() — loop timing', () => {
       const record = app as unknown as Record<string, unknown>;
 
       record['_state'] = ApplicationState.Stopped;
-      record['_frameLoopActive'] = false;
+      setFrameLoopActive(app, false);
       mockFrameElapsed(app, 16);
 
       app.update();
