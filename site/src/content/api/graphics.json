@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 118,
+  "memberCount": 119,
   "counts": {
     "constructors": 1,
-    "methods": 59,
+    "methods": 60,
     "properties": 44,
     "events": 14
   },
@@ -1746,6 +1746,78 @@
           ],
           "returnType": "this",
           "description": "Fill a rounded rectangle and optionally stroke its outline if lineWidth > 0. The corner radius is clamped to half the smaller side; a radius of 0 is equivalent to drawRectangle."
+        },
+        {
+          "name": "drawShape",
+          "signature": "drawShape(path: GraphicsPath, tolerance?: number): this",
+          "signatureTokens": [
+            {
+              "text": "drawShape",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "path",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GraphicsPath",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tolerance",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "path",
+              "type": "GraphicsPath",
+              "optional": false
+            },
+            {
+              "name": "tolerance",
+              "type": "number",
+              "optional": true
+            }
+          ],
+          "returnType": "this",
+          "description": "Fill a GraphicsPath and optionally stroke it if lineWidth > 0, the retained counterpart to this class's immediate moveTo/lineTo cursor. Every subpath becomes one mesh, so segments join instead of overlapping as separate quads. Filling closes each subpath implicitly, the way a canvas fill does, so an unclosed subpath is still filled against the straight line back to its start; stroking follows what the subpath actually declares, and only a subpath closed with closePath is stroked all the way round. Subpaths of fewer than three points are stroked but not filled. tolerance is forwarded to GraphicsPath.contours: pass the size of one path unit in device pixels when the node is scaled, so curves stay smooth when magnified and stay cheap when shrunk."
         },
         {
           "name": "drawStar",

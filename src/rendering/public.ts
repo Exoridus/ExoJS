@@ -96,6 +96,7 @@ export { maxUint16VertexCount, meshIndexBytes, meshIndexFormatFor } from '#rende
 export type { MeshOptions } from '#rendering/mesh/Mesh';
 export { Mesh } from '#rendering/mesh/Mesh';
 export { Graphics } from '#rendering/primitives/Graphics';
+export { GraphicsPath, type PathContour } from '#rendering/primitives/GraphicsPath';
 export { INSTANCE_TRANSFORM_GLSL, INSTANCE_TRANSFORM_WGSL } from '#rendering/shader/instanceContract';
 export type { AnyShader, FragmentOutputCounts, ShaderOptions } from '#rendering/shader/Shader';
 export { Shader } from '#rendering/shader/Shader';

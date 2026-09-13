@@ -117,6 +117,46 @@ g.drawArc(320, 80, 30, 0, Math.PI, false);
 
 Each of these emits a `drawPath` call behind the scenes. The `currentPoint` property reflects where the pen currently sits.
 
+## Reusable paths
+
+The pen commands above draw as you call them: each segment becomes its own mesh, which is why a pen-drawn outline cannot be filled and why its segments overlap at the corners instead of joining. [`GraphicsPath`](/ExoJS/en/api/graphics-path/) is the other half of the story — a path you assemble first and draw afterwards, as one shape:
+
+```ts
+import { Color, Graphics, GraphicsPath } from '@codexo/exojs';
+
+const shield = new GraphicsPath()
+    .moveTo(0, -40)
+    .quadraticCurveTo(35, -30, 35, 0)
+    .quadraticCurveTo(35, 35, 0, 50)
+    .quadraticCurveTo(-35, 35, -35, 0)
+    .quadraticCurveTo(-35, -30, 0, -40)
+    .closePath();
+
+const g = new Graphics();
+
+g.fillColor = new Color(60, 120, 220);
+g.lineColor = Color.white;
+g.lineWidth = 3;
+g.drawShape(shield);
+```
+
+A path is a plain value. It owns no GPU resources, needs no disposal, and one path can be drawn into any number of `Graphics` objects — an icon reused across a HUD costs one path and one `drawShape` per place it appears.
+
+It also stores commands rather than vertices, which is what lets it be drawn at any size. Pass the size of one path unit in device pixels as the second argument to `drawShape` and the curves are flattened to suit:
+
+```ts
+import { Graphics, GraphicsPath } from '@codexo/exojs';
+
+const path = new GraphicsPath().circle(0, 0, 50);
+const g = new Graphics();
+
+g.scale.set(8, 8);
+// Without this the circle is flattened for its unscaled size and shows facets.
+g.drawShape(path, 1 / 8);
+```
+
+Filling closes each subpath implicitly, as a canvas fill does; stroking follows what the path declares, so only a subpath ended with `closePath()` is stroked all the way round.
+
 ## Clearing and reusing
 
 `clear()` removes all child meshes and resets the pen state (position, colors, line width). The `Graphics` object itself stays alive. This is the right pattern for per-frame redrawing:

@@ -1,0 +1,104 @@
+{
+  "title": "PathContour",
+  "description": "One flattened subpath produced by GraphicsPath.contours.",
+  "symbol": "PathContour",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One flattened subpath produced by GraphicsPath.contours."
+      ],
+      "importLine": "import { PathContour } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "closed",
+          "signature": "closed: boolean",
+          "signatureTokens": [
+            {
+              "text": "closed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the subpath was closed with GraphicsPath.closePath or by a shape command."
+        },
+        {
+          "name": "points",
+          "signature": "points: readonly number[]",
+          "signatureTokens": [
+            {
+              "text": "points",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Vertices as a flat [x0, y0, x1, y1, ...] array. The closing vertex of a closed contour is not repeated."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/primitives/GraphicsPath.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/primitives/GraphicsPath.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/primitives/GraphicsPath.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/primitives/GraphicsPath.ts"
+}
