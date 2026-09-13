@@ -1,6 +1,7 @@
 /// <reference types="@webgpu/types" />
 
-import type { Application, CanvasAlphaMode } from '#core/Application';
+import type { Application } from '#core/Application';
+import type { CanvasAlphaMode } from '#core/application/ApplicationOptions';
 import { Color } from '#core/Color';
 import { logger } from '#core/Logger';
 import { Signal } from '#core/Signal';
@@ -338,7 +339,7 @@ export class WebGpuBackend implements RenderBackend {
       this._clearColor.copy(clearColor);
     }
 
-    // Core renderers are bound via buildCoreRendererBindings in Application.createBackend.
+    // Core renderers are bound via buildCoreRendererBindings when the application creates the backend.
     this.resize(width, height);
   }
 

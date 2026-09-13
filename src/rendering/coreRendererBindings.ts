@@ -1,4 +1,4 @@
-import type { RenderingApplicationOptions } from '#core/Application';
+import type { RenderingApplicationOptions } from '#core/application/ApplicationOptions';
 import { defineRendererBinding } from '#extensions/defineRendererBinding';
 import type { RendererBinding } from '#extensions/Extension';
 import { Mesh } from '#rendering/mesh/Mesh';

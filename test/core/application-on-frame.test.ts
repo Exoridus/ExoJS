@@ -1,6 +1,8 @@
 import type { MockInstance } from 'vitest';
 
 import { Time } from '#core/units';
+
+import { installFrameLoopDoubles } from '../support/application-frame-loop';
 /**
  * Tests for Application.onFrame signal (added in 0.6.17).
  */
@@ -184,7 +186,9 @@ describe('Application.onFrame', () => {
     };
 
     rawApp['_state'] = ApplicationState.Running;
-    rawApp['_frameLoopActive'] = true;
+
+    installFrameLoopDoubles(app);
+
     rawApp['pauseOnHidden'] = false;
     rawApp['_documentVisible'] = true;
     rawApp['systems'] = { _beginFrame: vi.fn(), _endFrame: vi.fn(), _preUpdate: vi.fn(), _fixedUpdate: vi.fn(), _update: vi.fn(), _draw: vi.fn() };
@@ -195,14 +199,10 @@ describe('Application.onFrame', () => {
     rawApp['tweens'] = { _prepareFrame: vi.fn() };
     rawApp['_rendering'] = { _prepareFrame: vi.fn() };
     rawApp['_backend'] = backend;
-    rawApp['_frameClock'] = { elapsedSeconds: 0.016, restart: vi.fn() };
-    rawApp['_fixed'] = { advance: () => 0, alpha: 0 };
     // Object.create() bypasses the constructor, so the real field
     // initializer (`= Time.seconds(0)`) never runs - stand in with a real Time so
     // the frame path stays type-honest.
     rawApp['_frameDelta'] = Time.seconds(0);
-    rawApp['_updateHandler'] = vi.fn();
-    rawApp['_frameCount'] = 0;
     rawApp['onFrame'] = onFrame;
     rawApp['onFixedFrame'] = { dispatch: vi.fn() };
 

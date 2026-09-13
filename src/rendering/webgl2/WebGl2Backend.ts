@@ -5,7 +5,8 @@
  * coupled GL state across modules. Known deviation, candidate for extraction.
  */
 /* eslint-disable max-lines */
-import type { Application, CanvasAlphaMode, RenderingApplicationOptions } from '#core/Application';
+import type { Application } from '#core/Application';
+import type { CanvasAlphaMode, RenderingApplicationOptions } from '#core/application/ApplicationOptions';
 import { Color } from '#core/Color';
 import { Signal } from '#core/Signal';
 import { Matrix } from '#math/Matrix';
@@ -468,7 +469,7 @@ export class WebGl2Backend implements RenderBackend {
     this._setupContext();
     this._addEvents();
 
-    // Core renderers are bound via buildCoreRendererBindings in Application.createBackend.
+    // Core renderers are bound via buildCoreRendererBindings when the application creates the backend.
     // Connect the registry now so newly bound renderers are immediately connected.
     this.rendererRegistry.connect(this);
 

@@ -4,6 +4,7 @@ import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
 import { Time } from '#core/units';
 
+import { installFrameLoopDoubles } from '../support/application-frame-loop';
 import { frameDelta } from '../support/frame-delta';
 
 // ---------------------------------------------------------------------------
@@ -115,7 +116,7 @@ describe('AudioSystem.update()', () => {
     const preUpdateStub = (name: string): { preUpdate: () => void } => ({ preUpdate: () => callOrder.push(name) });
 
     rawApp['_state'] = ApplicationState.Running;
-    rawApp['_frameLoopActive'] = true;
+    installFrameLoopDoubles(app);
     rawApp['pauseOnHidden'] = false;
     rawApp['_documentVisible'] = true;
     rawApp['systems'] = new SystemRegistry();
@@ -156,17 +157,10 @@ describe('AudioSystem.update()', () => {
       resetStats: vi.fn().mockReturnThis(),
       stats: { frameTimeMs: 0 },
     };
-    rawApp['_frameClock'] = {
-      elapsedTime: { milliseconds: 16, seconds: 0.016 },
-      restart: vi.fn(),
-    };
-    rawApp['_fixed'] = { advance: () => 0, alpha: 0 };
     // Object.create() bypasses the constructor, so the real field
     // initializer (`= Time.seconds(0)`) never runs - stand in with a real Time so
     // the frame path stays type-honest.
     rawApp['_frameDelta'] = Time.seconds(0);
-    rawApp['_updateHandler'] = vi.fn();
-    rawApp['_frameCount'] = 0;
     rawApp['onFrame'] = { dispatch: vi.fn() };
     rawApp['onFixedFrame'] = { dispatch: vi.fn() };
 

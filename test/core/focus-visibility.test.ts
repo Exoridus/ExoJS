@@ -2,6 +2,8 @@ import type { MockInstance } from 'vitest';
 
 import { Signal } from '#core/Signal';
 
+import { installFrameLoopDoubles } from '../support/application-frame-loop';
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -259,16 +261,9 @@ describe('Application focus / visibility', () => {
 
     // Set up raw state for update()
     rawApp['_state'] = ApplicationState.Running;
-    rawApp['_frameLoopActive'] = true;
-    rawApp['_updateHandler'] = vi.fn();
-    rawApp['_frameClock'] = {
-      elapsedTime: { milliseconds: 16, seconds: 0.016 },
-      restart: vi.fn(),
-      stop: vi.fn(),
-      destroy: vi.fn(),
-    };
-    rawApp['_activeClock'] = { stop: vi.fn(), start: vi.fn(), destroy: vi.fn() };
-    rawApp['_startupClock'] = { start: vi.fn(), destroy: vi.fn() };
+
+    const { scheduler } = installFrameLoopDoubles(app);
+
     rawApp['onFrame'] = { dispatch: vi.fn(), destroy: vi.fn() };
     rawApp['onResize'] = { dispatch: vi.fn(), destroy: vi.fn() };
 
@@ -293,7 +288,7 @@ describe('Application focus / visibility', () => {
 
     // Set status/loop-flag to Stopped/false so destroy() doesn't try to stop real clocks
     rawApp['_state'] = ApplicationState.Stopped;
-    rawApp['_frameLoopActive'] = false;
+    scheduler.active = false;
     void app.destroy();
   });
 
@@ -310,16 +305,9 @@ describe('Application focus / visibility', () => {
     document.dispatchEvent(new Event('visibilitychange'));
 
     rawApp['_state'] = ApplicationState.Running;
-    rawApp['_frameLoopActive'] = true;
-    rawApp['_updateHandler'] = vi.fn();
-    rawApp['_frameClock'] = {
-      elapsedTime: { milliseconds: 16, seconds: 0.016 },
-      restart: vi.fn(),
-      stop: vi.fn(),
-      destroy: vi.fn(),
-    };
-    rawApp['_activeClock'] = { stop: vi.fn(), start: vi.fn(), destroy: vi.fn() };
-    rawApp['_startupClock'] = { start: vi.fn(), destroy: vi.fn() };
+
+    const { scheduler } = installFrameLoopDoubles(app);
+
     rawApp['onFrame'] = { dispatch: vi.fn(), destroy: vi.fn() };
     rawApp['onResize'] = { dispatch: vi.fn(), destroy: vi.fn() };
     rawApp['_backend'] = {
@@ -330,7 +318,6 @@ describe('Application focus / visibility', () => {
     };
     rawApp['interaction'] = { update: vi.fn(), preUpdate: vi.fn(), destroy: vi.fn() };
     rawApp['tweens'] = { update: vi.fn(), preUpdate: vi.fn(), destroy: vi.fn() };
-    rawApp['_frameCount'] = 0;
 
     // pauseOnHidden defaults to false
     expect(app.pauseOnHidden).toBe(false);
@@ -350,7 +337,7 @@ describe('Application focus / visibility', () => {
 
     // Set status/loop-flag to Stopped/false so destroy() doesn't try to stop real clocks
     rawApp['_state'] = ApplicationState.Stopped;
-    rawApp['_frameLoopActive'] = false;
+    scheduler.active = false;
     void app.destroy();
   });
 

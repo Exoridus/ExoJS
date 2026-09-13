@@ -1,15 +1,3 @@
-export type {
-  ApplicationOptions,
-  AutoBackendConfig,
-  BackendConfig,
-  CanvasAlphaMode,
-  CanvasApplicationOptions,
-  InputApplicationOptions,
-  RecentErrorEntry,
-  RenderingApplicationOptions,
-  WebGl2BackendConfig,
-  WebGpuBackendConfig,
-} from './Application';
 export { Application, ApplicationState } from './Application';
 export type { BuildInfo } from './BuildInfo';
 export { buildInfo } from './BuildInfo';
@@ -51,6 +39,18 @@ export type {
   ValueOf,
 } from './types';
 export { type Milliseconds, type Seconds, Time } from './units';
+export type { RecentErrorEntry } from '#core/application/ApplicationErrorReporter';
+export type {
+  ApplicationOptions,
+  AutoBackendConfig,
+  BackendConfig,
+  CanvasAlphaMode,
+  CanvasApplicationOptions,
+  InputApplicationOptions,
+  RenderingApplicationOptions,
+  WebGl2BackendConfig,
+  WebGpuBackendConfig,
+} from '#core/application/ApplicationOptions';
 export type { PhasedSceneTransitionOptions, SceneTransitionPhaseContext, SceneTransitionPhaseRequirements } from '#core/scene/PhasedSceneTransition';
 export { PhasedSceneTransition } from '#core/scene/PhasedSceneTransition';
 export { Scene } from '#core/scene/Scene';

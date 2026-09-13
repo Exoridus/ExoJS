@@ -14,7 +14,8 @@
  * Run via:  pnpm test:browser:webgl
  */
 
-import type { Application, CanvasAlphaMode } from '#core/Application';
+import type { Application } from '#core/Application';
+import type { CanvasAlphaMode } from '#core/application/ApplicationOptions';
 import { Color } from '#core/Color';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';

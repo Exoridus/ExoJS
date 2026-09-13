@@ -29,7 +29,8 @@
  * Run via:  pnpm test:browser:webgpu
  */
 
-import type { Application, CanvasAlphaMode } from '#core/Application';
+import type { Application } from '#core/Application';
+import type { CanvasAlphaMode } from '#core/application/ApplicationOptions';
 import { Color } from '#core/Color';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { DataTexture } from '#rendering/texture/DataTexture';

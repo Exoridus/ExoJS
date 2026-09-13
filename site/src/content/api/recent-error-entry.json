@@ -132,11 +132,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/Application.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts"
+        "label": "src/core/application/ApplicationErrorReporter.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/application/ApplicationErrorReporter.ts"
       }
     }
   ],
-  "sourcePath": "src/core/Application.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts"
+  "sourcePath": "src/core/application/ApplicationErrorReporter.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/application/ApplicationErrorReporter.ts"
 }

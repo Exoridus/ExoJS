@@ -1,9 +1,21 @@
 import { AnimationSystem } from '#animation/AnimationSystem';
 import { TweenSystem } from '#animation/TweenSystem';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
-import { Loader, type LoaderOptions } from '#assets/Loader';
+import { Loader } from '#assets/Loader';
 import { AudioSystem } from '#audio/AudioSystem';
-import { createDefaultCanvas, isRenderSurface, resolveAutoPixelRatio, watchAutoPixelRatio } from '#core/applicationCanvas';
+import { ApplicationErrorReporter, maxConsecutiveFrameErrors, type RecentErrorEntry } from '#core/application/ApplicationErrorReporter';
+import {
+  type ApplicationOptions,
+  defaultBackendConfig,
+  defaultCanvasSettings,
+  defaultInputSettings,
+  defaultLoaderFetchOptions,
+  resolveRenderingOptions,
+} from '#core/application/ApplicationOptions';
+import { ApplicationSizing } from '#core/application/ApplicationSizing';
+import { type BackendType, createBackend, resolveBackendType } from '#core/application/backendSelection';
+import { defaultFixedStepMs, FrameLoop } from '#core/application/FrameLoop';
+import { createDefaultCanvas, isRenderSurface } from '#core/applicationCanvas';
 import { JobScheduler } from '#core/JobScheduler';
 import { SceneDirector } from '#core/scene/SceneDirector';
 import { SceneNavigationAbortedError } from '#core/scene/sceneErrors';
@@ -16,13 +28,12 @@ import {
   type SceneRegistryShape,
 } from '#core/scene/sceneTypes';
 import { defaultSerializationRegistry, SerializationRegistry } from '#core/serialization/SerializationRegistry';
-import type { CanvasSizing, CanvasSizingContext, CanvasSizingHostMetrics, CanvasSizingMetrics } from '#core/sizing/CanvasSizing';
+import type { CanvasSizing } from '#core/sizing/CanvasSizing';
 import type { Extension, ExtensionDisposer } from '#extensions/Extension';
+import type { RendererBinding } from '#extensions/Extension';
 import { disposeExtensions, installExtensions } from '#extensions/lifetime';
-import { materializeAssetTypes, materializeRendererBindings, materializeSerializerBindings } from '#extensions/materialize';
+import { materializeAssetTypes, materializeSerializerBindings } from '#extensions/materialize';
 import { buildSnapshot, type ExtensionSnapshot } from '#extensions/snapshot';
-import type { GamepadDefinition } from '#input/gamepadDefinitions';
-import type { GamepadSlotStrategy } from '#input/InputSystem';
 import { InputSystem } from '#input/InputSystem';
 import { InteractionSystem } from '#input/InteractionSystem';
 import type { PointLike } from '#math/PointLike';
@@ -33,30 +44,24 @@ import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAd
 import { isDomCanvas, type RenderSurface } from '#platform/RenderSurface';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import { RenderError, type RenderErrorCode } from '#rendering/RenderError';
 import { type CaptureOptions, RenderingContext } from '#rendering/RenderingContext';
 import { type RenderNode } from '#rendering/RenderNode';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
-import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
-import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { Capabilities } from './Capabilities';
-import { Clock } from './Clock';
 import { Color } from './Color';
 import { Connectivity } from './Connectivity';
 import { DestroyScope } from './DestroyScope';
 import { assert, invariant } from './dev';
-import { showDevErrorOverlay } from './devErrorOverlay';
-import { FixedTimestep } from './FixedTimestep';
 import { hello, logger } from './Logger';
 import { Perf } from './Perf';
 import { Signal } from './Signal';
 import type { System } from './System';
 import { SystemOrder } from './SystemOrder';
 import { SystemRegistry } from './SystemRegistry';
-import { type Seconds, seconds } from './units';
-import { canvasSourceToDataUrl, isWebKitUserAgent } from './utils';
+import type { Seconds } from './units';
+import { canvasSourceToDataUrl } from './utils';
 
 /**
  * Lifecycle state of an {@link Application}, in the same vocabulary
@@ -86,280 +91,6 @@ export enum ApplicationState {
 }
 
 /**
- * How the finished frame composites against the page behind the canvas.
- *
- * - `'opaque'`: the canvas has no alpha channel. Whatever is behind it in the
- *   document never shows through, no matter what alpha the frame ends on.
- * - `'premultiplied'`: the canvas keeps its alpha channel and the browser
- *   composites the frame over the page with it. Combine with a
- *   {@link ApplicationOptions.clearColor} whose alpha is below `1` to let the
- *   page show through.
- *
- * This is purely about the *browser-side* composite step. It says nothing about
- * how the engine stores or blends colour internally: ExoJS renders premultiplied
- * end to end - textures, render targets and blend modes alike - under both modes.
- */
-export type CanvasAlphaMode = 'opaque' | 'premultiplied';
-
-export interface CanvasApplicationOptions {
-  /**
-   * Existing surface to render into. If omitted, Application creates a canvas
-   * element - and a canvas it created is also one it removes from the document
-   * again in {@link Application.destroy}. A surface passed in here stays
-   * yours: it is left untouched when the application goes down.
-   *
-   * An `OffscreenCanvas` is accepted and makes the application surface-only:
-   * it has no layout box, no styling and no events, so `mount`, `tabIndex` and
-   * `imageRendering` do not apply, the document-based sizing policies reject
-   * it, and the host has to supply its own
-   * {@link ApplicationOptions.platform} affordances for input. See
-   * {@link OffscreenPlatform}.
-   */
-  element?: RenderSurface;
-  /**
-   * Base (design) resolution in logical pixels, and with it the base aspect
-   * ratio. Default: 800.
-   *
-   * This is the resolution the application is authored against: the logical
-   * coordinate system starts here, {@link CanvasApplicationOptions.sizing}
-   * measures its resolution caps against it, and it is the size a canvas with
-   * no sizing policy keeps for good.
-   */
-  width?: number;
-  /** Base (design) resolution in logical pixels. See {@link CanvasApplicationOptions.width}. Default: 600. */
-  height?: number;
-  /**
-   * Device/render pixel ratio applied to the backing buffer. Default: the
-   * host `devicePixelRatio` clamped to `2` (crisp on Retina/HiDPI out of the
-   * box, capped so DPR-3 phones don't pay a 9× fill-rate cost), followed for
-   * the application's lifetime as the host's ratio changes. Pass an explicit
-   * value to override - e.g. `window.devicePixelRatio` for full native
-   * density, or `1` to force logical-pixel rendering - which also pins it, so
-   * a later host change is ignored.
-   */
-  pixelRatio?: number;
-  /** Canvas tabIndex. Default: -1, preserving current behavior. */
-  tabIndex?: number;
-  /** CSS image-rendering hint applied to the canvas style. */
-  imageRendering?: 'auto' | 'pixelated' | 'crisp-edges';
-  /**
-   * Element (or CSS selector) to append the canvas to on construction. If
-   * omitted, the canvas is created but not mounted - append it yourself.
-   */
-  mount?: HTMLElement | string;
-  /**
-   * Strategy that keeps the canvas in step with its surroundings. Omit it for a
-   * canvas that stays at `width` × `height` for good, in CSS pixels and in
-   * backing-store pixels alike, and observes nothing.
-   *
-   * The built-in policies -
-   * {@link FixedResolutionCanvasSizing}, {@link CappedResolutionCanvasSizing},
-   * {@link ResponsiveCanvasSizing} and {@link ManualCanvasSizing} - cover the
-   * usual cases; {@link CanvasSizing} is the public base class for anything
-   * else. Each instance owns its own observers, so nothing is attached for a
-   * policy that tracks nothing.
-   *
-   * An instance belongs to one application: it is attached here and detached
-   * again when {@link Application.sizing} is reassigned or the application is
-   * destroyed. The document-based policies need a canvas element with a parent,
-   * which for a canvas created by the engine means `mount` has to be given too.
-   */
-  sizing?: CanvasSizing;
-}
-
-export interface RenderingApplicationOptions {
-  /**
-   * How the canvas composites against the page. Default `'opaque'`. Honoured by
-   * both backends: WebGL2 derives the context's `alpha`/`premultipliedAlpha`
-   * from it, WebGPU its `GPUCanvasConfiguration.alphaMode`.
-   *
-   * @see {@link CanvasAlphaMode} for what the two modes do and do not control.
-   */
-  alphaMode?: CanvasAlphaMode;
-  /** WebGL2-only debug wrapper. Ignored by WebGPU. */
-  debug?: boolean;
-  /**
-   * WebGL2 context attributes. Ignored by WebGPU.
-   *
-   * Merged as **partial overrides on top of ExoJS's own WebGL defaults**
-   * (`antialias: false`, `depth: false`, `preserveDrawingBuffer: false`) -
-   * passing e.g. `{ antialias: true }` only flips that one attribute and
-   * keeps the rest of ExoJS's defaults, it never replaces the whole default
-   * set with the browser's own WebGL-spec defaults.
-   *
-   * Two attributes are not settable here because the engine owns them
-   * outright and always overrides whatever is passed:
-   * - `alpha` and `premultipliedAlpha` are derived from
-   *   {@link RenderingApplicationOptions.alphaMode}, which is the one
-   *   spelling of that contract both backends understand.
-   * - `stencil` is always forced to `true` - geometric stencil clipping
-   *   needs a stencil buffer on the root target unconditionally.
-   */
-  webglAttributes?: Omit<WebGLContextAttributes, 'alpha' | 'premultipliedAlpha' | 'stencil'>;
-  /** WebGL2 sprite renderer batch size. Ignored by WebGPU. */
-  spriteRendererBatchSize?: number;
-}
-
-export interface InputApplicationOptions {
-  gamepadDefinitions?: GamepadDefinition[];
-  gamepadSlotStrategy?: GamepadSlotStrategy;
-  pointerDistanceThreshold?: number;
-  /**
-   * Distance in design pixels a press must travel before it turns into a drag
-   * on a `draggable` node. Default `8`. Below it the press stays a click, so a
-   * draggable node can still be tapped without jittering.
-   */
-  dragThreshold?: number;
-  /**
-   * Let the browser show its own context menu over the canvas. Default
-   * `false` - a right-click is normally a game input, not a request for the
-   * browser's menu. Independent of the engine's own `contextmenu` event,
-   * which is routed through the scene graph either way.
-   */
-  allowNativeContextMenu?: boolean;
-  /**
-   * Let the browser start a text selection from a drag on the canvas. Default
-   * `false` - a drag is normally a game gesture, and a stray selection
-   * highlight over the canvas is almost never wanted.
-   */
-  allowTextSelection?: boolean;
-}
-
-export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry> = {}> {
-  /**
-   * The colour every frame starts from. Applied by the engine's own per-frame
-   * clear (see {@link ApplicationOptions.autoClear}) and readable/assignable
-   * later as {@link Application.clearColor}. Default: opaque black.
-   */
-  clearColor?: Color;
-  /**
-   * Clear the canvas to {@link ApplicationOptions.clearColor} at the start of
-   * every frame, before the scene draws. Default `true` - a scene's `draw()`
-   * therefore paints onto a fresh frame and needs no clear of its own.
-   *
-   * Set `false` for pipelines that own the whole frame themselves: feedback /
-   * trail effects that deliberately keep the previous frame, or a custom
-   * renderer that issues its own clear as part of its first pass. Nothing else
-   * changes - {@link Application.clearColor} is still the colour a manual
-   * `context.clear(app.clearColor)` would use.
-   */
-  autoClear?: boolean;
-  backend?: BackendConfig;
-  canvas?: CanvasApplicationOptions;
-  loader?: LoaderOptions;
-  rendering?: RenderingApplicationOptions;
-  input?: InputApplicationOptions;
-  /**
-   * Host seam the application runs on - surface focus and geometry, cursor,
-   * touch-action, pointer capture, gamepad polling, document visibility, frame
-   * scheduling, and input-event delivery. Defaults to a {@link BrowserPlatform}
-   * bound to the application's canvas.
-   *
-   * Pass your own to host the engine somewhere other than a plain DOM canvas,
-   * or to drive input and the frame loop from a test without monkey-patching
-   * globals. An injected adapter is *not* destroyed by
-   * {@link Application.destroy} - it stays yours to dispose.
-   */
-  platform?: PlatformAdapter;
-  /**
-   * Whether the application may reach the network, and what the host reports
-   * about it. Defaults to one built over {@link ApplicationOptions.platform}.
-   *
-   * Pass your own when something outside the application needs the same
-   * instance - a {@link ConnectivityPolicyResolver} is configured on an
-   * `AssetCache` the caller builds, which happens before an `Application`
-   * exists to own one. An injected `Connectivity` is *not* destroyed by
-   * {@link Application.destroy} - it stays yours to dispose.
-   */
-  connectivity?: Connectivity;
-  /** Seed for the per-Application {@link Application.random} RNG. Omit for a non-deterministic seed. */
-  seed?: number;
-  /**
-   * Print the one-time `ExoJS v{version}` startup banner to the console on
-   * {@link Application.start}. Development-only (no-op in production
-   * builds) and printed at most once per process regardless of how many
-   * `Application`s are constructed. Default `true`.
-   */
-  hello?: boolean;
-  /**
-   * Fixed-timestep size in **seconds** for {@link Scene.fixedUpdate} / {@link Application.onFixedFrame}.
-   * Default `1 / 60`. Must be positive.
-   */
-  fixedTimeStep?: number;
-  /**
-   * Extension selection - the only way an Application is equipped.
-   *
-   * `undefined` or `[]` → Core only. `[a, b, ...]` → Core plus exactly these.
-   *
-   * There is no global registry to fall back on: what an application can do is
-   * decided here, at its construction, and nowhere else. That is what lets two
-   * Applications in one process hold different extension sets - an editor next
-   * to its runtime preview, two canvases with different renderers, a test that
-   * must not see what a neighbouring test installed.
-   *
-   * ```ts
-   * import { tilemapExtension } from '@codexo/exojs-tilemap';
-   *
-   * const app = new Application({ extensions: [tilemapExtension] });
-   * ```
-   *
-   * Materialised once at construction.
-   */
-  extensions?: readonly Extension[];
-  /**
-   * Registry of navigable {@link Scene} constructors, keyed by a name used
-   * for diagnostics (shown in {@link UnregisteredSceneError} messages and
-   * duplicate-registration errors) and for key-based navigation. Each value
-   * is either a bare {@link Scene} subclass constructor, or a
-   * `{ scene, transition? }` descriptor pairing one with a target-bound
-   * default transition, consulted by {@link SceneDirector.change}/
-   * {@link SceneDirector.restore} whenever navigation targets this
-   * constructor without its own call-site `transition` option
-   * - see {@link SceneRegistration}. Required for any {@link Application.start} /
-   * {@link SceneDirector.change} call that targets a constructor -
-   * unregistered targets reject in development builds. Validated once at
-   * construction: every value must resolve to a {@link Scene} subclass
-   * constructor (checked without instantiating it), and no constructor may
-   * appear under more than one key.
-   */
-  scenes?: Registry;
-}
-
-export interface WebGl2BackendConfig {
-  type: 'webgl2';
-}
-
-export interface WebGpuBackendConfig {
-  type: 'webgpu';
-}
-
-export interface AutoBackendConfig {
-  type: 'auto';
-}
-
-export type BackendConfig = AutoBackendConfig | WebGl2BackendConfig | WebGpuBackendConfig;
-
-/**
- * One entry of the bounded {@link Application.recentErrors} ring buffer -
- * a JSON-friendly snapshot of an engine error (feeds future debug dumps).
- */
-export interface RecentErrorEntry {
-  /** `Date.now()` at the moment the error was recorded. */
-  readonly time: number;
-  readonly message: string;
-  /** Machine-readable failure class - present for {@link RenderError}s. */
-  readonly code?: RenderErrorCode;
-  readonly stack?: string;
-}
-
-const maxDeltaMs = 100;
-/** Default fixed-timestep size in milliseconds (60 Hz). */
-const defaultFixedStepMs = 1000 / 60;
-/** Consecutive failing frames tolerated before the frame guard halts the loop. */
-const maxConsecutiveFrameErrors = 3;
-/** Bounded size of the {@link Application.recentErrors} ring buffer. */
-const maxRecentErrors = 20;
-/**
  * How long {@link Application.destroy} waits for scene teardown before it
  * gives up on it and releases the rest of the engine anyway.
  *
@@ -381,53 +112,6 @@ const frameStartMark = 'exojs:frame:start';
 const frameMeasure = 'exojs:frame';
 const systemsStartMark = 'exojs:systems:start';
 const systemsMeasure = 'exojs:systems';
-
-const defaultBackendConfig: AutoBackendConfig = { type: 'auto' };
-const defaultCanvasSettings = {
-  width: 800,
-  height: 600,
-  pixelRatio: 1,
-  tabIndex: -1,
-} as const;
-const defaultLoaderFetchOptions: RequestInit = {
-  method: 'GET',
-  mode: 'cors',
-  cache: 'default',
-};
-const defaultRenderingSettings: Required<RenderingApplicationOptions> = {
-  alphaMode: 'opaque',
-  debug: false,
-  spriteRendererBatchSize: 4096, // ~ 262kb
-  webglAttributes: {
-    antialias: false,
-    preserveDrawingBuffer: false,
-    depth: false,
-  },
-};
-/**
- * Resolve public {@link RenderingApplicationOptions} against ExoJS's own
- * defaults. `webglAttributes` is merged as partial overrides on top of the
- * full default set (see {@link RenderingApplicationOptions.webglAttributes})
- * - everything else is a plain per-field fallback.
- *
- * @internal - shared by the constructor and by tests that need to assert on
- * the resolved options without spinning up a full {@link Application}.
- */
-export const resolveRenderingOptions = (renderingOptions: RenderingApplicationOptions): Required<RenderingApplicationOptions> => ({
-  alphaMode: renderingOptions.alphaMode ?? defaultRenderingSettings.alphaMode,
-  debug: renderingOptions.debug ?? defaultRenderingSettings.debug,
-  webglAttributes: { ...defaultRenderingSettings.webglAttributes, ...renderingOptions.webglAttributes },
-  spriteRendererBatchSize: renderingOptions.spriteRendererBatchSize ?? defaultRenderingSettings.spriteRendererBatchSize,
-});
-
-const defaultInputSettings: Required<InputApplicationOptions> = {
-  gamepadDefinitions: [],
-  gamepadSlotStrategy: 'sticky',
-  pointerDistanceThreshold: 10,
-  dragThreshold: 8,
-  allowNativeContextMenu: false,
-  allowTextSelection: false,
-};
 
 /**
  * Top-level engine instance. Owns the canvas, render backend, scene-stack
@@ -576,20 +260,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   private readonly _extensionDisposers: ExtensionDisposer[] = [];
 
-  private readonly _updateHandler: (timestamp: number) => void;
-  private readonly _startupClock: Clock;
-  private readonly _activeClock: Clock;
-  private readonly _frameClock: Clock;
-  /**
-   * Host timestamp of the frame the loop most recently began. The frame delta
-   * is the distance between two of these rather than two readings taken inside
-   * the callback, so a frame that starts late does not also report a short
-   * delta.
-   */
-  private _lastFrameTimestamp = 0;
-  private readonly _fixed: FixedTimestep;
-  private readonly _fixedSeconds: Seconds;
-  private _frameAlpha = 0;
+  private readonly _scheduler: FrameLoop;
 
   private _state: ApplicationState = ApplicationState.Stopped;
   /**
@@ -599,23 +270,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * while startup - including its initial scene navigation - is still going.
    */
   private _startPromise: Promise<this> | null = null;
-  private _frameLoopActive = false;
   /**
    * The teardown run started by the first {@link Application.destroy} call, or
    * `null` while none is. Held so every later call returns that same Promise
    * instead of starting a second teardown over already-released subsystems.
    */
   private _destroyPromise: Promise<void> | null = null;
-  private _pixelRatio: number = defaultCanvasSettings.pixelRatio;
-  private _baseWidth: number = defaultCanvasSettings.width;
-  private _baseHeight: number = defaultCanvasSettings.height;
-  private _logicalWidth: number = defaultCanvasSettings.width;
-  private _logicalHeight: number = defaultCanvasSettings.height;
-  /** Last CSS box written to the canvas element, or `null` while none has been. */
-  private _cssWidth: number | null = null;
-  private _cssHeight: number | null = null;
-  private _frameCount = 0;
-  private _frameRequest = 0;
   private _backendType: 'webgl2' | 'webgpu';
   private _backend: RenderBackend;
   private _rendering: RenderingContext;
@@ -625,8 +285,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   /** Resolved {@link ApplicationOptions.autoClear} - read once per frame. */
   private _autoClear = true;
   private _cursor = 'default';
-  private _consecutiveFrameErrors = 0;
-  private readonly _recentErrors: RecentErrorEntry[] = [];
+  private readonly _errors: ApplicationErrorReporter;
   /** Whether {@link Application.platform} was created here - an injected one is not ours to destroy. */
   private readonly _ownsPlatform: boolean;
   private readonly _ownsConnectivity: boolean;
@@ -637,8 +296,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   private readonly _ownsCanvas: boolean;
   private _visibilitySubscription: PlatformSubscription | null = null;
-  private _pixelRatioSubscription: PlatformSubscription | null = null;
-  private _sizing: CanvasSizing | null = null;
+  private _geometry!: ApplicationSizing;
   private readonly _audio: AudioSystem = new AudioSystem();
 
   public constructor(appSettings: ApplicationOptions<Registry> = {}) {
@@ -662,18 +320,28 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     assert(baseWidth > 0 && baseHeight > 0, `Application canvas dimensions must be positive (got ${baseWidth}×${baseHeight}).`);
 
-    this._pixelRatio = canvasOptions.pixelRatio ?? resolveAutoPixelRatio();
-    this._baseWidth = baseWidth;
-    this._baseHeight = baseHeight;
-    this._logicalWidth = baseWidth;
-    this._logicalHeight = baseHeight;
     this._ownsCanvas = canvasOptions.element === undefined;
     this.canvas = canvas;
     this.element = isDomCanvas(canvas) ? canvas : null;
+    this._errors = new ApplicationErrorReporter(this.onError, this.element);
     // Ahead of the backend, which acquires its context from a surface that has
-    // to carry its real backing-store size by then. The policy, if any, gets
-    // its turn once there is a render target for its first commit to resize.
-    this._commitMetrics(this._baseMetrics(canvasOptions.sizing === undefined));
+    // to carry its real backing-store size by then. The commit sink stays inert
+    // until there is a render target for it to resize; the policy, if any, gets
+    // its turn once there is.
+    this._geometry = new ApplicationSizing(this.canvas, this.element, {
+      baseWidth,
+      baseHeight,
+      pixelRatio: canvasOptions.pixelRatio,
+      hasPolicy: canvasOptions.sizing !== undefined,
+      hooks: {
+        onCommit: (logicalWidth, logicalHeight) => {
+          this._onGeometryCommit(logicalWidth, logicalHeight);
+        },
+        onPixelRatioChange: () => {
+          this.resize(this._geometry.baseWidth, this._geometry.baseHeight);
+        },
+      },
+    });
 
     if (this.element !== null) {
       if (canvasOptions.tabIndex !== undefined) {
@@ -725,9 +393,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // Every runtime clock reads the host through the adapter, so a platform
       // with a deterministic time source makes the whole frame loop
       // deterministic - there is no second, global clock behind it.
-      this._startupClock = new Clock(false, this.platform);
-      this._activeClock = new Clock(false, this.platform);
-      this._frameClock = new Clock(false, this.platform);
+      this._scheduler = new FrameLoop(
+        this.platform,
+        timestamp => {
+          this.update(timestamp);
+        },
+        appSettings.fixedTimeStep !== undefined ? appSettings.fixedTimeStep * 1000 : defaultFixedStepMs,
+      );
 
       // Only an adapter created here is ours to release - an injected one stays
       // the caller's on the failure path, exactly as in `destroy()`.
@@ -743,7 +415,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
           element: this.canvas,
           width: baseWidth,
           height: baseHeight,
-          pixelRatio: this._pixelRatio,
+          pixelRatio: this._geometry.pixelRatio,
           ...(this.element !== null && { tabIndex: this.element.tabIndex }),
           ...(canvasOptions.imageRendering !== undefined && { imageRendering: canvasOptions.imageRendering }),
         },
@@ -784,12 +456,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       materializeAssetTypes(this.loader, [...coreAssetTypes, ...this._snapshot.assets]);
       materializeSerializerBindings(this.serializers, this._snapshot.serializers);
 
-      this._backendType = this.resolveInitialBackendType();
+      this._backendType = resolveBackendType(this.options.backend);
       // `createBackend` rolls back a backend whose renderer bindings throw on
       // its own - it also runs from the post-construction backend fallback,
       // where there is no construction scope - and rethrows without assigning,
       // so that failure never reaches the scope as a tracked item.
-      this._backend = constructed.track(this.createBackend(this._backendType, this._snapshot));
+      this._backend = constructed.track(this._createBackend(this._backendType));
       this._rendering = constructed.track(new RenderingContext(this._backend));
 
       // After the backend, because a policy commits its first geometry as it
@@ -797,40 +469,18 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // remaining subsystem, because a policy that observes its parent holds a
       // ResizeObserver, and a DOM node holding an observer whose callback closes
       // over a half-built application is a live leak rather than an inert one.
-      this._attachSizing(canvasOptions.sizing ?? null);
+      this._geometry.attachPolicy(canvasOptions.sizing ?? null);
+      this._geometry.watchPixelRatio(this.platform);
       this.input = constructed.track(new InputSystem(this));
       this.interaction = constructed.track(new InteractionSystem(this));
       this.scenes = constructed.track(new SceneDirector<Registry>(this, appSettings.scenes));
       this.random = new Random(this.options.seed);
-      this._updateHandler = (timestamp: number): void => {
-        this.update(timestamp);
-
-        // Only the scheduled callback chains the next frame. `update()` is
-        // public, so a manual call made while the loop is live would otherwise
-        // fork a second RAF chain and silently double the frame rate.
-        if (this._frameLoopActive) this._frameRequest = this.platform.requestFrame(this._updateHandler);
-      };
-
-      const fixedStepMs = this.options.fixedTimeStep !== undefined ? this.options.fixedTimeStep * 1000 : defaultFixedStepMs;
-
-      this._fixed = new FixedTimestep(fixedStepMs, FixedTimestep.deriveMaxSteps(maxDeltaMs, fixedStepMs));
-      this._fixedSeconds = seconds(fixedStepMs / 1000);
-
-      this._startupClock.start();
+      this._scheduler.startStartupClock();
 
       this._documentVisible = this.platform.documentVisible;
       this._visibilitySubscription = this.platform.onVisibilityChange(visible => {
         this._onPlatformVisibilityChange(visible);
       });
-
-      // Only an auto-resolved ratio follows the host; an explicit one is the
-      // caller's fixed decision and stays where they put it.
-      if (canvasOptions.pixelRatio === undefined) {
-        this._pixelRatioSubscription = watchAutoPixelRatio(this.platform, this._pixelRatio, ratio => {
-          this._pixelRatio = ratio;
-          this.resize(this._baseWidth, this._baseHeight);
-        });
-      }
 
       this.input.onCanvasFocusChange.add(focused => {
         this.onCanvasFocusChange.dispatch(focused);
@@ -937,8 +587,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     // and both outlive us if left: the observer is held by a live DOM node,
     // and an injected platform adapter keeps the visibility subscription.
     attempt(() => {
-      this._sizing?.detach();
-      this._sizing = null;
+      this._geometry.detachPolicy();
     });
     attempt(() => {
       this._releasePlatformSubscriptions();
@@ -980,9 +629,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       constructed.destroy();
     });
 
-    attempt(() => this._startupClock.destroy());
-    attempt(() => this._activeClock.destroy());
-    attempt(() => this._frameClock.destroy());
+    attempt(() => this._scheduler.destroy());
     attempt(() => this.onResize.destroy());
     attempt(() => this.onFrame.destroy());
     attempt(() => this.onFixedFrame.destroy());
@@ -1024,19 +671,19 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   public get startupSeconds(): Seconds {
-    return this._startupClock.elapsedSeconds;
+    return this._scheduler.startupSeconds;
   }
 
   public get activeSeconds(): Seconds {
-    return this._activeClock.elapsedSeconds;
+    return this._scheduler.activeSeconds;
   }
 
   public get frameSeconds(): Seconds {
-    return this._frameClock.elapsedSeconds;
+    return this._scheduler.frameSeconds;
   }
 
   public get frameCount(): number {
-    return this._frameCount;
+    return this._scheduler.frameCount;
   }
 
   /**
@@ -1045,7 +692,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * debug dump. See {@link Application.onError} for live notification.
    */
   public get recentErrors(): readonly RecentErrorEntry[] {
-    return this._recentErrors;
+    return this._errors.recent;
   }
 
   /**
@@ -1055,12 +702,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * frame rate.
    */
   public get frameAlpha(): number {
-    return this._frameAlpha;
+    return this._scheduler.alpha;
   }
 
   /** Fixed-timestep size in seconds (see {@link ApplicationOptions.fixedTimeStep}). */
   public get fixedTimeStep(): number {
-    return this._fixed.stepMs / 1000;
+    return this._scheduler.stepMs / 1000;
   }
 
   /**
@@ -1128,13 +775,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * and can be attached again later.
    */
   public get sizing(): CanvasSizing | null {
-    return this._sizing;
+    return this._geometry.policy;
   }
 
   public set sizing(sizing: CanvasSizing | null) {
-    this._detachSizing();
-    this._sizing = sizing;
-    this._applySizing();
+    this._geometry.policy = sizing;
   }
 
   /**
@@ -1170,12 +815,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * are separate axes. {@link Application.onResize} reports every change.
    */
   public get width(): number {
-    return this._logicalWidth;
+    return this._geometry.width;
   }
 
   /** Height of the logical coordinate system. See {@link Application.width}. */
   public get height(): number {
-    return this._logicalHeight;
+    return this._geometry.height;
   }
 
   /**
@@ -1196,7 +841,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * view and the render resolution are the same size.
    */
   public get pixelRatio(): number {
-    return this._pixelRatio;
+    return this._geometry.pixelRatio;
   }
 
   /**
@@ -1219,13 +864,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * @internal
    */
   public _backingStoreToLogical(backingStoreX: number, backingStoreY: number): PointLike {
-    const backingWidth = this.canvas.width || 1;
-    const backingHeight = this.canvas.height || 1;
-
-    return {
-      x: (backingStoreX / backingWidth) * this._logicalWidth,
-      y: (backingStoreY / backingHeight) * this._logicalHeight,
-    };
+    return this._geometry.toLogical(backingStoreX, backingStoreY);
   }
 
   /**
@@ -1344,7 +983,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // it and wrote its own state; promoting over that would advertise
       // `Running` for a loop that no longer schedules frames, and every later
       // `start()`/`stop()` would early-return on the lie.
-      if (this._frameLoopActive) this._setState(ApplicationState.Running);
+      if (this._scheduler.active) this._setState(ApplicationState.Running);
     } catch (error) {
       this._stopFrameLoop();
       this._setState(ApplicationState.Stopped);
@@ -1363,12 +1002,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * strict superset of `_state === Running`.
    */
   private _startFrameLoop(): void {
-    this._frameLoopActive = true;
-    this._frameRequest = this.platform.requestFrame(this._updateHandler);
-    this._lastFrameTimestamp = this.platform.now();
-    this._frameClock.restart();
-    this._fixed.reset();
-    this._activeClock.start();
+    this._scheduler.start();
   }
 
   /**
@@ -1393,14 +1027,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * two are one abort with one reason rather than two competing ones.
    */
   private _stopFrameLoop(reason: Error = new SceneNavigationAbortedError()): void {
-    if (!this._frameLoopActive) {
+    if (!this._scheduler.stop()) {
       return;
     }
-
-    this._frameLoopActive = false;
-    this.platform.cancelFrame(this._frameRequest);
-    this._activeClock.stop();
-    this._frameClock.stop();
 
     this.scenes._abortInFlightNavigation(reason);
   }
@@ -1446,11 +1075,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * elapsed delta is recorded separately in `backend.stats.rawFrameDeltaMs`.
    */
   public update(timestamp: number = this.platform.now()): this {
-    if (this._frameLoopActive) {
+    if (this._scheduler.active) {
       if (this.pauseOnHidden && !this._documentVisible) {
-        this._lastFrameTimestamp = timestamp;
-        this._frameClock.restart();
-        this._fixed.reset();
+        this._scheduler.skipFrame(timestamp);
 
         return this;
       }
@@ -1462,18 +1089,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // through the error pipeline instead of killing the RAF loop; the loop
       // halts only after `maxConsecutiveFrameErrors` consecutive failures.
       try {
-        const rawDeltaMs = Math.max(0, timestamp - this._lastFrameTimestamp);
-
-        this._lastFrameTimestamp = timestamp;
-
-        // Separate domain from the delta above: this one is the in-frame
-        // stopwatch behind `app.frameTime`, restarted at the top of the frame
-        // so a reader inside `onFrame` sees how long the frame has been
-        // running rather than how long the previous one took.
-        this._frameClock.restart();
-
-        const clampedDeltaMs = Math.min(rawDeltaMs, maxDeltaMs);
-        const frameDelta = seconds(clampedDeltaMs / 1000);
+        const { rawDeltaMs, frameDelta, fixedSteps } = this._scheduler.beginFrame(timestamp);
         const frameStart = this.platform.now();
 
         if (__DEV__) Perf.mark(frameStartMark);
@@ -1490,15 +1106,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
         // Fixed-timestep steps (0..N) for deterministic logic/physics, after input
         // so they see this frame's input and before the variable update/draw.
-        const fixedSteps = this._fixed.advance(clampedDeltaMs);
-
         for (let step = 0; step < fixedSteps; step++) {
-          this.systems._fixedUpdate(this._fixedSeconds);
-          this.scenes.fixedUpdate(this._fixedSeconds);
-          this.onFixedFrame.dispatch(this._fixedSeconds);
+          this.systems._fixedUpdate(this._scheduler.stepSeconds);
+          this.scenes.fixedUpdate(this._scheduler.stepSeconds);
+          this.onFixedFrame.dispatch(this._scheduler.stepSeconds);
         }
 
-        this._frameAlpha = this._fixed.alpha;
+        this._scheduler.captureAlpha();
 
         if (__DEV__) Perf.mark(systemsStartMark);
         this.systems._update(frameDelta);
@@ -1536,14 +1150,14 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
           Perf.clearMeasures(systemsMeasure);
         }
 
-        this._consecutiveFrameErrors = 0;
+        this._errors.resetFrameErrors();
       } catch (error) {
         this._handleFrameError(error);
       } finally {
         this.scenes._endFrame();
         this.systems._endFrame();
 
-        if (this._frameLoopActive) this._frameCount++;
+        this._scheduler.endFrame();
       }
     }
 
@@ -1551,71 +1165,22 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Frame-guard error pipeline: normalize → log → ring buffer → `onError` →
-   * dev banner → halt after {@link maxConsecutiveFrameErrors} consecutive
-   * failing frames. Deliberately does NOT call {@link Application.stop} on
-   * halt - unloading the scene could rethrow the same error.
+   * Frame-guard reaction: hand the failure to the error reporter and halt the
+   * loop once it reports the guard's tolerance exhausted. Deliberately does
+   * NOT call {@link Application.stop} on halt - unloading the scene could
+   * rethrow the same error.
    */
   private _handleFrameError(error: unknown): void {
-    const normalized = error instanceof Error ? error : new Error(String(error));
-
-    this._consecutiveFrameErrors++;
-
-    const fatal = this._consecutiveFrameErrors >= maxConsecutiveFrameErrors;
-
-    this._reportError(normalized, fatal);
-
-    if (fatal) {
-      this._stopFrameLoop();
-      this._setState(ApplicationState.Stopped);
-      logger.error(`Frame loop halted after ${maxConsecutiveFrameErrors} consecutive frame errors.`, { source: 'core', error: normalized });
-    }
-  }
-
-  /**
-   * Async render-error pipeline ({@link RenderBackend.onRenderError}): same
-   * log + ring buffer + `onError` + banner steps as the frame guard, but no
-   * consecutive-failure counting - async validation errors do not break the
-   * frame loop, and the backend already deduplicates them.
-   */
-  private _handleAsyncRenderError(error: RenderError): void {
-    // The backend already logged this at its first occurrence (and dedupes
-    // repeats), so the shared pipeline must NOT log it a second time.
-    this._reportError(error, false, true);
-  }
-
-  /**
-   * Shared error-pipeline steps: log, ring buffer, `onError`, dev banner.
-   * `alreadyLogged` skips the console log for errors the backend logged at
-   * source (async render errors) so they are not double-logged.
-   */
-  private _reportError(error: Error, fatal: boolean, alreadyLogged = false): void {
-    const isRenderError = error instanceof RenderError;
-
-    if (!alreadyLogged) {
-      logger.error(error.message, { source: isRenderError ? 'rendering' : 'core', error });
+    if (!this._errors.recordFrameError(error)) {
+      return;
     }
 
-    this._recentErrors.push({
-      time: Date.now(),
-      message: error.message,
-      ...(isRenderError && { code: error.code }),
-      ...(error.stack !== undefined && { stack: error.stack }),
+    this._stopFrameLoop();
+    this._setState(ApplicationState.Stopped);
+    logger.error(`Frame loop halted after ${maxConsecutiveFrameErrors} consecutive frame errors.`, {
+      source: 'core',
+      error: error instanceof Error ? error : new Error(String(error)),
     });
-
-    if (this._recentErrors.length > maxRecentErrors) {
-      this._recentErrors.shift();
-    }
-
-    this.onError.dispatch(error);
-
-    if (__DEV__) {
-      const detail = isRenderError && error.detail !== null ? `\n${error.detail}` : '';
-
-      if (this.element !== null) {
-        showDevErrorOverlay(this.element, `${error.message}${detail}`, { fatal });
-      }
-    }
   }
 
   /**
@@ -1654,7 +1219,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * teardown ordering matters.
    */
   public stop(): this {
-    if (!this._frameLoopActive) {
+    if (!this._scheduler.active) {
       return this;
     }
 
@@ -1696,187 +1261,43 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public resize(width: number, height: number): this {
     assert(width > 0 && height > 0, `Application.resize() dimensions must be positive (got ${width}×${height}).`);
 
-    this._baseWidth = width;
-    this._baseHeight = height;
+    // Ahead of the rebase, which dispatches `onResize` synchronously: a
+    // listener reading `options.canvas` has to see the resolution it is being
+    // told about, not the previous one.
     this.options.canvas = {
       ...this.options.canvas,
       width,
       height,
-      pixelRatio: this._pixelRatio,
+      pixelRatio: this._geometry.pixelRatio,
     };
 
-    this._detachSizing();
-    this._applySizing();
+    this._geometry.rebase(width, height);
 
     return this;
+  }
+
+  /**
+   * Bring the render target and this application's own listeners onto a
+   * geometry the sizing unit has committed.
+   *
+   * Inert before the backend exists: the first commit runs in the constructor,
+   * ahead of the render context the later ones resize.
+   */
+  private _onGeometryCommit(logicalWidth: number, logicalHeight: number): void {
+    if (this._backend === undefined) {
+      return;
+    }
+
+    this._backend.resize(logicalWidth, logicalHeight);
+    this._rendering.resize(logicalWidth, logicalHeight);
+    this.onResize.dispatch(logicalWidth, logicalHeight, this);
   }
 
   /** Undo the host subscriptions held directly rather than through a destroy scope. */
   private _releasePlatformSubscriptions(): void {
     this._visibilitySubscription?.();
     this._visibilitySubscription = null;
-    this._pixelRatioSubscription?.();
-    this._pixelRatioSubscription = null;
-  }
-
-  /**
-   * The geometry a canvas keeps when nothing is tracking its surroundings: the
-   * base resolution in all three axes. `ownsCssBox` is false whenever a policy
-   * is in play, so the display box is left to whoever does own it - the policy
-   * itself, or the surrounding page under {@link ManualCanvasSizing}.
-   */
-  private _baseMetrics(ownsCssBox: boolean): CanvasSizingMetrics {
-    return {
-      cssWidth: ownsCssBox ? this._baseWidth : null,
-      cssHeight: ownsCssBox ? this._baseHeight : null,
-      logicalWidth: this._baseWidth,
-      logicalHeight: this._baseHeight,
-      renderWidth: this._baseWidth,
-      renderHeight: this._baseHeight,
-    };
-  }
-
-  /**
-   * Put the canvas back on the base geometry and hand it to the active policy.
-   *
-   * The base commit is not redundant with what the policy is about to do: a
-   * policy may decline to commit at all - a collapsed host, a manual one - and
-   * the surface still has to be a valid size when it does.
-   */
-  private _applySizing(): void {
-    this._applyMetrics(this._baseMetrics(this._sizing === null));
-    this._sizing?.attach(this._createSizingContext());
-  }
-
-  /** Install `sizing` as the active policy and give it the canvas. */
-  private _attachSizing(sizing: CanvasSizing | null): void {
-    this._sizing = sizing;
-    this._applySizing();
-  }
-
-  /**
-   * Release the active policy and take back the CSS box committed under it.
-   *
-   * Only a box this application wrote is cleared, which is what leaves a page
-   * that sizes the canvas itself - {@link ManualCanvasSizing} - holding the
-   * geometry it set. And it is cleared here rather than inside the policy
-   * because this is where the last committed value is remembered: a policy
-   * clearing the element directly would leave that record claiming a size the
-   * element no longer has, and the next policy to commit the very same size
-   * would then write nothing at all. A policy stays responsible for any other
-   * styling it applies itself.
-   */
-  private _detachSizing(): void {
-    this._sizing?.detach();
-
-    if (this._cssWidth === null) {
-      return;
-    }
-
-    this._cssWidth = null;
-    this._cssHeight = null;
-
-    if (this.element !== null) {
-      this.element.style.width = '';
-      this.element.style.height = '';
-    }
-  }
-
-  /**
-   * The one channel a sizing policy changes the canvas through: commit the
-   * geometry, then bring the render target and the application's own listeners
-   * onto the new logical size. A commit that changes nothing stops here rather
-   * than re-dispatching {@link Application.onResize}.
-   */
-  private _applyMetrics(metrics: CanvasSizingMetrics): void {
-    if (!this._commitMetrics(metrics)) {
-      return;
-    }
-
-    this.backend.resize(this._logicalWidth, this._logicalHeight);
-    this._rendering.resize(this._logicalWidth, this._logicalHeight);
-    this.onResize.dispatch(this._logicalWidth, this._logicalHeight, this);
-  }
-
-  /**
-   * Write `metrics` onto the surface, the CSS box and the logical size, and
-   * report whether anything actually moved.
-   *
-   * Nothing is written for a geometry that is already in place: assigning
-   * `canvas.width` discards the drawing buffer even when the value is
-   * unchanged, and a `ResizeObserver` fires for changes that leave the observed
-   * box the size it was.
-   *
-   * A non-positive size in any of the three axes is ignored outright, the CSS
-   * box included - a fixed-resolution policy keeps its logical and render sizes
-   * whatever the host does, so a collapsed host reaches this only through the
-   * display box. That is the state of a host with no layout yet, or one that
-   * has collapsed, and there is no geometry to invent for it: the previous one
-   * is kept until the host has a size again.
-   */
-  private _commitMetrics(metrics: CanvasSizingMetrics): boolean {
-    if (metrics.logicalWidth <= 0 || metrics.logicalHeight <= 0 || metrics.renderWidth <= 0 || metrics.renderHeight <= 0) {
-      return false;
-    }
-
-    if ((metrics.cssWidth !== null && metrics.cssWidth <= 0) || (metrics.cssHeight !== null && metrics.cssHeight <= 0)) {
-      return false;
-    }
-
-    const backingWidth = Math.max(1, Math.round(metrics.renderWidth * this._pixelRatio));
-    const backingHeight = Math.max(1, Math.round(metrics.renderHeight * this._pixelRatio));
-    const cssChanged =
-      metrics.cssWidth !== null && metrics.cssHeight !== null && (metrics.cssWidth !== this._cssWidth || metrics.cssHeight !== this._cssHeight);
-    const backingChanged = backingWidth !== this.canvas.width || backingHeight !== this.canvas.height;
-    const logicalChanged = metrics.logicalWidth !== this._logicalWidth || metrics.logicalHeight !== this._logicalHeight;
-
-    if (!cssChanged && !backingChanged && !logicalChanged) {
-      return false;
-    }
-
-    this._logicalWidth = metrics.logicalWidth;
-    this._logicalHeight = metrics.logicalHeight;
-
-    if (backingChanged) {
-      this.canvas.width = backingWidth;
-      this.canvas.height = backingHeight;
-    }
-
-    if (cssChanged && this.element !== null && metrics.cssWidth !== null && metrics.cssHeight !== null) {
-      this._cssWidth = metrics.cssWidth;
-      this._cssHeight = metrics.cssHeight;
-      this.element.style.width = `${metrics.cssWidth}px`;
-      this.element.style.height = `${metrics.cssHeight}px`;
-    }
-
-    return true;
-  }
-
-  /**
-   * The view of this application a {@link CanvasSizing} works against.
-   *
-   * Rebuilt for every attach rather than kept live, which is why re-assigning
-   * {@link Application.sizing} is what makes a policy re-read a host it cannot
-   * observe: the base resolution and the parent element are as they were when
-   * the policy took the context.
-   */
-  private _createSizingContext(): CanvasSizingContext {
-    return {
-      baseWidth: this._baseWidth,
-      baseHeight: this._baseHeight,
-      pixelRatio: this._pixelRatio,
-      surface: this.canvas,
-      element: this.element,
-      host: this.element?.parentElement ?? null,
-      measureHost: (): CanvasSizingHostMetrics | null => {
-        const host = this.element?.parentElement ?? null;
-
-        return host === null ? null : { width: host.clientWidth, height: host.clientHeight };
-      },
-      apply: (metrics: CanvasSizingMetrics): void => {
-        this._applyMetrics(metrics);
-      },
-    };
+    this._geometry.destroy();
   }
 
   /** Append the canvas to a mount element or CSS selector, if provided. */
@@ -1993,14 +1414,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     }
 
     this._releasePlatformSubscriptions();
-    // Detached rather than released through `_detachSizing`: the canvas shows a
-    // frozen last frame from here on, and collapsing its display box out from
-    // under that is a visible artefact. What has to go is the observation.
-    this._sizing?.detach();
-    this._sizing = null;
+    this._geometry.detachPolicy();
     this._releaseDom();
 
-    if (this._frameLoopActive) {
+    if (this._scheduler.active) {
       if (this._state === ApplicationState.Running) this._setState(ApplicationState.Halting);
 
       this._stopFrameLoop();
@@ -2091,9 +1508,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this.platform.destroy();
     }
 
-    this._startupClock.destroy();
-    this._activeClock.destroy();
-    this._frameClock.destroy();
+    this._scheduler.destroy();
     this.onResize.destroy();
     this.onFrame.destroy();
     this.onFixedFrame.destroy();
@@ -2147,76 +1562,29 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     }
   }
 
-  private resolveInitialBackendType(): 'webgl2' | 'webgpu' {
-    const backendType = this.options.backend?.type;
-
-    if (backendType === 'webgl2') {
-      return 'webgl2';
-    }
-
-    if (backendType === 'webgpu') {
-      return 'webgpu';
-    }
-
-    return this.canUseWebGpu() ? 'webgpu' : 'webgl2';
+  /**
+   * The renderer bindings this application equips a backend with: the core set
+   * derived from the resolved rendering options, followed by every binding the
+   * extension snapshot contributed. Rebuilt per backend, because the
+   * WebGPU-to-WebGL2 fallback constructs a second one.
+   */
+  private _rendererBindings(): readonly RendererBinding[] {
+    return [...buildCoreRendererBindings(this.options.rendering ?? {}), ...this._snapshot.renderers];
   }
 
-  private createBackend(backendType: 'webgl2' | 'webgpu', snapshot: ExtensionSnapshot): RenderBackend {
-    const renderingOptions = this.options.rendering ?? {};
-    const coreBindings = buildCoreRendererBindings(renderingOptions);
-    const allBindings = [...coreBindings, ...snapshot.renderers];
-
-    if (backendType === 'webgpu') {
-      const backend = new WebGpuBackend(this);
-
-      backend.onDeviceLost.add(() => {
+  /** Build a backend of `backendType`, wired to this application's lifecycle signals. */
+  private _createBackend(backendType: BackendType): RenderBackend {
+    return createBackend(this, backendType, this._rendererBindings(), {
+      onLost: () => {
         this.onBackendLost.dispatch();
-      });
-      backend.onDeviceRestored.add(() => {
+      },
+      onRestored: () => {
         this.onBackendRestored.dispatch();
-      });
-      backend.onRenderError.add(error => {
-        this._handleAsyncRenderError(error);
-      });
-
-      try {
-        materializeRendererBindings(backend, allBindings);
-      } catch (error) {
-        try {
-          backend.destroy();
-        } catch {
-          /* cleanup failure is secondary */
-        }
-        throw error;
-      }
-
-      return backend;
-    }
-
-    const backend = new WebGl2Backend(this);
-
-    backend.onContextLost.add(() => {
-      this.onBackendLost.dispatch();
+      },
+      onRenderError: error => {
+        this._errors.recordRenderError(error);
+      },
     });
-    backend.onContextRestored.add(() => {
-      this.onBackendRestored.dispatch();
-    });
-    backend.onRenderError.add(error => {
-      this._handleAsyncRenderError(error);
-    });
-
-    try {
-      materializeRendererBindings(backend, allBindings);
-    } catch (error) {
-      try {
-        backend.destroy();
-      } catch {
-        /* cleanup failure is secondary */
-      }
-      throw error;
-    }
-
-    return backend;
   }
 
   private async initializeBackend(): Promise<void> {
@@ -2230,7 +1598,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
       this._backend.destroy();
       this._backendType = 'webgl2';
-      this._backend = this.createBackend(this._backendType, this._snapshot);
+      this._backend = this._createBackend(this._backendType);
 
       // Swap in a rendering context bound to the rebuilt backend. Everything
       // holding the outgoing context has to be repointed, not just the field:
@@ -2249,8 +1617,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // where a sizing policy may have taken the logical view by now - and the
       // surface it is about to configure already carries that policy's backing
       // store.
-      this._backend.resize(this._logicalWidth, this._logicalHeight);
-      this._rendering.resize(this._logicalWidth, this._logicalHeight);
+      this._backend.resize(this._geometry.width, this._geometry.height);
+      this._rendering.resize(this._geometry.width, this._geometry.height);
 
       await this._backend.initialize();
       this.publishAssetVariantProfile();
@@ -2271,24 +1639,5 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       textureFormats: this._backend.supportedTextureFormats,
       resolution: this._backend.rootResolution,
     };
-  }
-
-  /**
-   * Whether `backend: 'auto'` should pick WebGPU. Presence of `navigator.gpu`
-   * is necessary but not sufficient: WebKit ships a WebGPU implementation that
-   * renders this engine incorrectly - SDF text draws as an empty frame, and
-   * repeated runs of the parity matrix fail a different set of scenes each
-   * time, which points at the driver rather than at engine code. Neither has a
-   * feature flag to test, and both produce a broken picture with no error, so
-   * `auto` keeps WebKit on WebGL2, where the same scenes render correctly.
-   *
-   * This is not a permanent verdict. `backend: 'webgpu'` still selects it
-   * explicitly for anyone testing WebKit's implementation, and the check should
-   * go once the parity matrix comes back clean there.
-   */
-  private canUseWebGpu(): boolean {
-    const gpuNavigator = navigator as Navigator & Partial<{ gpu: GPU }>;
-
-    return !!gpuNavigator.gpu && !isWebKitUserAgent(navigator.userAgent);
   }
 }
