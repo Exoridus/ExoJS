@@ -1,6 +1,6 @@
 import { logger } from '#core/Logger';
 import { nextNodeRevision } from '#core/NodeRevision';
-import { registerTransformGroupBoundary, unregisterTransformGroupBoundary } from '#core/SceneNode';
+import type { Stage } from '#core/Stage';
 import { Bounds } from '#math/Bounds';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
@@ -62,7 +62,7 @@ const retainedDiagnosticThreshold = 108;
  * ```
  */
 export class RetainedContainer extends Container {
-  private readonly _fragment = new RetainedGroupFragment();
+  private readonly _fragment = new RetainedGroupFragment(this);
   private _groupVersion = 0;
   private _devFragmentBuilds = 0;
   private _devFragmentInvalidations = 0;
@@ -70,10 +70,35 @@ export class RetainedContainer extends Container {
 
   public constructor() {
     super();
-    // Arm the transform-move seam: while at least one boundary is live,
-    // own-transform mutations walk to their enclosing group (see SceneNode's
-    // transformGroupBoundaryCount). Balanced by destroy().
-    registerTransformGroupBoundary();
+    // Arm the transform-move seam on this tree's index: while at least one
+    // boundary is live there, own-transform mutations below it record
+    // themselves for the group. Balanced by destroy(), and carried to another
+    // tree by _setStage().
+    this._dirtyIndex().retainConsumer();
+  }
+
+  /**
+   * @internal - hand this boundary's registration to the index of the tree it
+   * is joining. A boundary outlives any single attachment, so the arming has to
+   * travel with it; leaving it on the old index would arm an application whose
+   * consumers are gone and leave the new one unarmed, which is the one
+   * direction that renders stale.
+   */
+  public override _setStage(stage: Stage | null): void {
+    if (this._stage === stage) {
+      return;
+    }
+
+    const previous = this._dirtyIndex();
+
+    super._setStage(stage);
+
+    const next = this._dirtyIndex();
+
+    if (next !== previous) {
+      previous.releaseConsumer();
+      next.retainConsumer();
+    }
   }
 
   /**
@@ -378,7 +403,7 @@ export class RetainedContainer extends Container {
     // Balance the constructor's boundary registration exactly once (destroy may
     // be called more than once; `destroyed` flips only on the first super call).
     if (!this.destroyed) {
-      unregisterTransformGroupBoundary();
+      this._dirtyIndex().releaseConsumer();
     }
 
     // dispose(): invalidates AND releases the retained GPU bundle.

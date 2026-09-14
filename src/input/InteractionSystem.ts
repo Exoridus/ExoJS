@@ -352,8 +352,11 @@ export class InteractionSystem {
     this._focus = new FocusController(app);
     this._dragThreshold = app.options?.input?.dragThreshold ?? defaultDragThreshold;
     this._platform = app.platform;
-    this._stage = { interaction: this, focus: this._focus, app };
-    this._uiStage = { interaction: this._uiInteraction, focus: this._focus, app };
+    // Both stages carry the SAME index: they are two service bundles of one
+    // application, so a node moving between the scene tree and the UI tree must
+    // not change which index its consumers read.
+    this._stage = { interaction: this, focus: this._focus, app, dirtyIndex: app._dirtyIndex };
+    this._uiStage = { interaction: this._uiInteraction, focus: this._focus, app, dirtyIndex: app._dirtyIndex };
 
     this._onPointerDownHandler = this._handlePointerDown.bind(this);
     this._onPointerMoveHandler = this._handlePointerMove.bind(this);

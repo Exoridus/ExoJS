@@ -56,6 +56,7 @@ import { Connectivity } from './Connectivity';
 import { DestroyScope } from './DestroyScope';
 import { assert, invariant } from './dev';
 import { hello, logger } from './Logger';
+import { detachedNodeDirtyIndex, NodeDirtyIndex } from './nodeDirtyIndex';
 import { Perf } from './Perf';
 import { Signal } from './Signal';
 import type { System } from './System';
@@ -137,6 +138,19 @@ const systemsMeasure = 'exojs:systems';
  * `document.hidden` is true (still consumes RAF callbacks but skips
  * scene update + render). Useful for games; leave off for tools and
  * background-active simulations.
+ *
+ * **Several applications on one page** are a supported shape, and each owns its
+ * surface, backend, scene stack, core systems, extension set, asset loader,
+ * frame loop, RNG and changed-record index. Two applications therefore neither
+ * rotate each other's retained-plan window nor make each other's scene
+ * mutations record anything.
+ *
+ * What they do share is the process: the Web Audio context (deliberately, since
+ * a browser admits only a few) and the monotonic revision counters the scene
+ * graph stamps nodes with, which advance faster with a second application but
+ * are only ever compared per node. A scene node belongs to exactly one
+ * application at a time, and moving one across is an ordinary reparent - its
+ * retained state travels with it.
  */
 export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public readonly options: ApplicationOptions<Registry>;
@@ -175,6 +189,17 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public readonly input: InputSystem;
   public readonly interaction: InteractionSystem;
   public readonly scenes: SceneDirector<Registry>;
+  /**
+   * @internal - this application's changed-record index, reached by its scene
+   * nodes through the {@link Stage} and by their retained consumers through the
+   * nodes they answer for.
+   *
+   * Per-Application rather than per-process: the window counts in frames, so a
+   * second application sharing it would rotate every consumer's cursor out at
+   * twice the rate, and a retained consumer in one application would arm the
+   * mutation seam for every node in the other.
+   */
+  public readonly _dirtyIndex: NodeDirtyIndex = new NodeDirtyIndex();
   /** Per-Application seedable RNG. Isolated from other Applications and from the global `rand()`. */
   public readonly random: Random;
   public readonly tweens: TweenSystem = new TweenSystem();
@@ -1104,6 +1129,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         const frameStart = this.platform.now();
 
         if (__DEV__) Perf.mark(frameStartMark);
+
+        // The index counts in frames, and this is where one begins. Advancing it
+        // per render instead would rotate the window several times in a frame
+        // that draws more than one root and push every consumer out of it.
+        this._dirtyIndex.advance();
+        detachedNodeDirtyIndex.advance();
 
         this.backend.resetStats();
         this.backend.stats.rawFrameDeltaMs = rawDeltaMs;

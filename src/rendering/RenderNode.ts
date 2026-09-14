@@ -1,7 +1,8 @@
 import { Color } from '#core/Color';
 import { DirtyChannel } from '#core/nodeDirtyIndex';
-import { registerRetainedRenderRoot, SceneNode, unregisterRetainedRenderRoot } from '#core/SceneNode';
+import { SceneNode } from '#core/SceneNode';
 import { Signal } from '#core/Signal';
+import type { Stage } from '#core/Stage';
 import type { InteractionEvent, InteractionEventType } from '#input/InteractionEvent';
 import type { KeyEvent } from '#input/KeyEvent';
 import type { Circle } from '#math/Circle';
@@ -715,14 +716,41 @@ export abstract class RenderNode extends SceneNode {
    */
   public _retainedRootRepresentation(): RetainedRootRepresentation {
     if (this._retainedRoot === null) {
-      this._retainedRoot = new RetainedRootRepresentation();
-      // Arm the transform-move seam: while at least one representation is live,
-      // own-transform mutations walk their ancestor chain and offer themselves
-      // to every root above. Balanced by destroy().
-      registerRetainedRenderRoot();
+      this._retainedRoot = new RetainedRootRepresentation(this);
+      // Arm the transform-move seam on this tree's index: while at least one
+      // representation is live, own-transform mutations below the root record
+      // themselves for it. Balanced by destroy() and carried to another tree by
+      // _setStage().
+      this._dirtyIndex().retainConsumer();
     }
 
     return this._retainedRoot;
+  }
+
+  /**
+   * @internal - hand this node's retained-root registration to the index of the
+   * tree it is joining. A representation outlives any single attachment, so the
+   * arming has to travel with the node; leaving it on the old index would arm
+   * an application whose consumers are gone and leave the new one unarmed,
+   * which is the one direction that renders stale.
+   */
+  public override _setStage(stage: Stage | null): void {
+    if (this._stage === stage || this._retainedRoot === null) {
+      super._setStage(stage);
+
+      return;
+    }
+
+    const previous = this._dirtyIndex();
+
+    super._setStage(stage);
+
+    const next = this._dirtyIndex();
+
+    if (next !== previous) {
+      previous.releaseConsumer();
+      next.retainConsumer();
+    }
   }
 
   /** Part of the renderer SDK contract for extension renderers. */
@@ -1006,7 +1034,7 @@ export abstract class RenderNode extends SceneNode {
     if (this._retainedRoot !== null) {
       this._retainedRoot.dispose();
       this._retainedRoot = null;
-      unregisterRetainedRenderRoot();
+      this._dirtyIndex().releaseConsumer();
     }
     this._cacheBounds?.destroy();
     this._cacheBounds = null;

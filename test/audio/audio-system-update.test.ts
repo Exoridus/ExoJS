@@ -2,6 +2,7 @@ import { getAudioContext } from '#audio/audioContext';
 import { AudioSystem } from '#audio/AudioSystem';
 import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
+import { NodeDirtyIndex } from '#core/nodeDirtyIndex';
 import { Time } from '#core/units';
 
 import { installFrameLoopDoubles } from '../support/application-frame-loop';
@@ -161,6 +162,7 @@ describe('AudioSystem.update()', () => {
     // initializer (`= Time.seconds(0)`) never runs - stand in with a real Time so
     // the frame path stays type-honest.
     rawApp['_frameDelta'] = Time.seconds(0);
+    rawApp['_dirtyIndex'] = new NodeDirtyIndex();
     rawApp['onFrame'] = { dispatch: vi.fn() };
     rawApp['onFixedFrame'] = { dispatch: vi.fn() };
 

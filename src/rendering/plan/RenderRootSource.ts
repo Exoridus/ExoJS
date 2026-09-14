@@ -1,4 +1,4 @@
-import { DirtyChannel, nodeDirtyIndex } from '#core/nodeDirtyIndex';
+import { DirtyChannel, type NodeDirtyIndex } from '#core/nodeDirtyIndex';
 import type { SceneNode } from '#core/SceneNode';
 import type { Drawable } from '#rendering/Drawable';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -70,6 +70,12 @@ let carryEpoch = 0;
  * merely ancestry-keyed products (see {@link _ancestryStamp}).
  */
 export class RenderRootSource {
+  /**
+   * The render root these items describe. Kept to resolve {@link dirtyIndex}:
+   * the source has to read the index its own subtree marks into, and that
+   * follows the root between trees.
+   */
+  private readonly _root: RenderNode;
   private _rootScope: SourceScope | null = null;
   /** Every scope below the root, in depth-first order; index IS `scope.ordinal`. */
   private _scopes: readonly SourceScope[] = [];
@@ -154,6 +160,20 @@ export class RenderRootSource {
     }
 
     return true;
+  }
+
+  public constructor(root: RenderNode) {
+    this._root = root;
+  }
+
+  /**
+   * The index this source's change cursor is expressed in. Resolved through the
+   * root on every use, never cached: the subtree marks through the same
+   * resolution, so the two halves stay in step across an attach or a move
+   * between applications.
+   */
+  public get dirtyIndex(): NodeDirtyIndex {
+    return this._root._dirtyIndex();
   }
 
   /** The root scope, valid only while {@link isUsable} holds. */
@@ -257,7 +277,7 @@ export class RenderRootSource {
     }
 
     const liveEntries = this._liveEntryNodes;
-    const tolerable = nodeDirtyIndex.readSince(this._changeCursor, DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect, (node, marked) => {
+    const tolerable = this.dirtyIndex.readSince(this._changeCursor, DirtyChannel.Content | DirtyChannel.Tint | DirtyChannel.Effect, (node, marked) => {
       const changed = node as unknown as RenderNode;
 
       // A mark outside this subtree is another product's; only what lies on or
@@ -326,7 +346,7 @@ export class RenderRootSource {
       this._rootScope !== null &&
       this._structureRevision !== structureRevision &&
       this._ancestryStamp === ancestryStamp &&
-      nodeDirtyIndex.covers(this._changeCursor)
+      this.dirtyIndex.covers(this._changeCursor)
     );
   }
 
@@ -400,7 +420,7 @@ export class RenderRootSource {
    * subtree.
    */
   public dropCarryOfChangedItems(epoch: number): void {
-    nodeDirtyIndex.readSince(this._changeCursor, DirtyChannel.Transform | DirtyChannel.Content | DirtyChannel.Tint, marked => {
+    this.dirtyIndex.readSince(this._changeCursor, DirtyChannel.Transform | DirtyChannel.Content | DirtyChannel.Tint, marked => {
       const drawable = marked as unknown as Drawable;
 
       if (drawable._sourceCarryEpoch === epoch) {
@@ -470,7 +490,7 @@ export class RenderRootSource {
    * longer than the index's window would fail its next delta outright.
    */
   public noteSettled(): void {
-    this._changeCursor = nodeDirtyIndex.sequence;
+    this._changeCursor = this.dirtyIndex.sequence;
   }
 
   private _noteKeys(contentRevision: number, structureRevision: number, ancestryStamp: number, transformRevision: number): void {
@@ -478,7 +498,7 @@ export class RenderRootSource {
     this._structureRevision = structureRevision;
     this._ancestryStamp = ancestryStamp;
     this._transformRevision = transformRevision;
-    this._changeCursor = nodeDirtyIndex.sequence;
+    this._changeCursor = this.dirtyIndex.sequence;
   }
 
   private _indexScopesByNode(root: RenderNode): void {

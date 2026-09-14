@@ -85,13 +85,18 @@ const createBucket = (): DirtyBucket => ({ generation: -1, firstSequence: 0, las
  * The changed-record index: which nodes changed since a given point, in time
  * proportional to what recently changed rather than to the scene.
  *
- * One index for the whole process, and deliberately not one per consumer. A
- * moved node has no idea which retained products recorded it - render roots may
+ * One index per Application, and deliberately not one per consumer. A moved
+ * node has no idea which retained products recorded it - render roots may
  * overlap, a transform-group boundary may sit between them, a node may be under
  * several - so a push model has to walk the ancestor chain on every single
  * mutation and offer the node to each consumer it passes. That walk is what
  * this replaces: a mutation writes one entry, and each consumer resolves the
  * entries it cares about through the row map it already keeps.
+ *
+ * A node reaches its index through the {@link Stage} it is attached to, so a
+ * mutation and the consumer that answers for it always meet in the same index:
+ * both resolve it from the same subtree. Nodes outside an application tree
+ * share {@link detachedNodeDirtyIndex}.
  *
  * **An index, not a journal.** A node marked repeatedly holds ONE entry per
  * generation, and what carries the ordering is the node's own per-channel mark
@@ -101,19 +106,49 @@ const createBucket = (): DirtyBucket => ({ generation: -1, firstSequence: 0, las
  * number of changes. Falling out of the window is reported rather than papered
  * over: {@link covers} answers `false` and the consumer rebuilds.
  *
- * Marking is gated by the caller (see `SceneNode`'s consumer counts), so a
- * scene with no retained consumer writes nothing here.
+ * Marking is gated by {@link armed}, so a scene with no retained consumer
+ * writes nothing here.
  * @internal
  */
-class NodeDirtyIndex {
+export class NodeDirtyIndex {
   private _generation = 0;
   private _slot = 0;
   private _sequence = 0;
   private _windowStartSequence = 0;
+  private _consumerCount = 0;
   private readonly _buckets: DirtyBucket[] = Array.from({ length: RETAINED_GENERATIONS }, createBucket);
 
   public constructor() {
     this._buckets[0]!.generation = 0;
+  }
+
+  /**
+   * Whether any consumer of this index is live. Mutation paths check it before
+   * marking, so a tree with no retained product pays two loads and a branch
+   * instead of an index write.
+   */
+  public get armed(): boolean {
+    return this._consumerCount > 0;
+  }
+
+  /**
+   * Announce a consumer - a transform-group boundary or a render root's
+   * retained representation - that will read this index.
+   *
+   * Invariant: this must never UNDER-count, since a missed mark is a
+   * stale-render bug. An over-count only makes mutations write entries nobody
+   * reads, so a consumer that is retained early (or released late) is
+   * correctness-safe.
+   */
+  public retainConsumer(): void {
+    this._consumerCount++;
+  }
+
+  /** Balances {@link retainConsumer}; disarms the index when it was the last consumer. */
+  public releaseConsumer(): void {
+    if (this._consumerCount > 0) {
+      this._consumerCount--;
+    }
   }
 
   /**
@@ -367,5 +402,15 @@ class NodeDirtyIndex {
   }
 }
 
-/** The process-wide changed-record index; see {@link NodeDirtyIndex}. @internal */
-export const nodeDirtyIndex = new NodeDirtyIndex();
+/**
+ * The index for nodes that belong to no application tree - anything built
+ * before it is added to a scene, and a subtree rendered directly as a render
+ * root without ever being attached.
+ *
+ * Such a tree has no {@link Stage} to reach an application's index through, and
+ * both sides of the seam resolve to this one, so a detached render root keeps
+ * its retained tiers. Every running application advances it along with its own,
+ * which is what keeps its window from collecting marks indefinitely.
+ * @internal
+ */
+export const detachedNodeDirtyIndex = new NodeDirtyIndex();
