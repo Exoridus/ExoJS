@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 87,
+  "memberCount": 89,
   "counts": {
     "constructors": 0,
-    "methods": 52,
-    "properties": 35,
+    "methods": 53,
+    "properties": 36,
     "events": 0
   },
   "sections": [
@@ -300,6 +300,53 @@
           "params": [],
           "returnType": "OwnedNetworkHintSource",
           "description": "The browser's own network-reachability hint: navigator.onLine, kept current by the online and offline window events. What the browser reports is whether it has a usable network interface. A captive portal, a dead resolver and a firewalled origin all report as online, so this can say \"probably reachable\" and \"definitely not\", never \"reachable\". Shared by BrowserPlatform and by a standalone Connectivity, so the two window listeners and the navigator read exist once."
+        },
+        {
+          "name": "cacheApiBlockStore",
+          "signature": "cacheApiBlockStore(cacheName: string): ContainerBlockStore",
+          "signatureTokens": [
+            {
+              "text": "cacheApiBlockStore",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "cacheName",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ContainerBlockStore",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "cacheName",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "ContainerBlockStore",
+          "description": "A ContainerBlockStore over the Cache API. Per-origin and evictable, which is what a block store wants: the browser may reclaim the space at any time and the only cost is a refetch. Storage is opened lazily on first use, so constructing one costs nothing and an environment without caches (a non-secure context, a worker without the API, Node) degrades to a store that holds nothing rather than throwing."
         },
         {
           "name": "cacheHit",
@@ -3574,6 +3621,27 @@
           "params": [],
           "returnType": null,
           "description": "The built-in csv asset type."
+        },
+        {
+          "name": "DEFAULT_BLOCK_CACHE_NAME",
+          "signature": "DEFAULT_BLOCK_CACHE_NAME: \"exojs-container-blocks\"",
+          "signatureTokens": [
+            {
+              "text": "DEFAULT_BLOCK_CACHE_NAME",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"exojs-container-blocks\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The name cacheApiBlockStore opens when the caller names none."
         },
         {
           "name": "defaultUITheme",

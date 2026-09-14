@@ -1,0 +1,209 @@
+{
+  "title": "ContainerEntry",
+  "description": "One asset in a container's head. `offset` and `length` address the asset's own bytes within the uncompressed data section. `type` is the asset type name resolved against the loader's type map; `options` are forwarded to the handler's `createFromBytes`.",
+  "symbol": "ContainerEntry",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One asset in a container's head. `offset` and `length` address the asset's own bytes within the uncompressed data section. `type` is the asset type name resolved against the loader's type map; `options` are forwarded to the handler's `createFromBytes`."
+      ],
+      "importLine": "import { ContainerEntry } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "hash",
+          "signature": "hash?: string",
+          "signatureTokens": [
+            {
+              "text": "hash",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "SHA-256 of the asset's own bytes, lowercase hex. It identifies the asset rather than one particular packing of it, so repacking leaves it unchanged."
+        },
+        {
+          "name": "length",
+          "signature": "length: number",
+          "signatureTokens": [
+            {
+              "text": "length",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Byte length of the asset's own bytes."
+        },
+        {
+          "name": "mime",
+          "signature": "mime?: string",
+          "signatureTokens": [
+            {
+              "text": "mime",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Optional MIME hint (informational; the factory determines type from bytes)."
+        },
+        {
+          "name": "offset",
+          "signature": "offset: number",
+          "signatureTokens": [
+            {
+              "text": "offset",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Byte offset within the uncompressed data section; a multiple of CONTAINER_ALIGNMENT."
+        },
+        {
+          "name": "options",
+          "signature": "options?: unknown",
+          "signatureTokens": [
+            {
+              "text": "options",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Optional per-asset options forwarded to the handler."
+        },
+        {
+          "name": "source",
+          "signature": "source: string",
+          "signatureTokens": [
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The logical source this entry stands in for - the very same relative path a network load would use. The loader canonicalizes it with its own base path, so an entry resolves to the same asset identity whether it arrived through the container or over the network, and a container is never welded to the path it was built at."
+        },
+        {
+          "name": "type",
+          "signature": "type: string",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Asset type name (resolved to a constructor via the loader's type map)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/container/assetContainer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/container/assetContainer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/container/assetContainer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/container/assetContainer.ts"
+}

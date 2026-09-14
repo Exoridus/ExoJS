@@ -1,0 +1,211 @@
+{
+  "title": "ContainerBlockStore",
+  "description": "Where a reader keeps container blocks between visits. A block is addressed by its hash, never by the pack it came from, so two packs that share a block share the stored entry - which is what makes an update cost only the blocks whose contents actually changed. Every method may fail or answer nothing without that being an error: a store is an optimisation, and a reader that gets nothing back simply fetches.",
+  "symbol": "ContainerBlockStore",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Where a reader keeps container blocks between visits.",
+        "A block is addressed by its hash, never by the pack it came from, so two packs that share a block share the stored entry - which is what makes an update cost only the blocks whose contents actually changed.",
+        "Every method may fail or answer nothing without that being an error: a store is an optimisation, and a reader that gets nothing back simply fetches."
+      ],
+      "importLine": "import { ContainerBlockStore } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "get",
+          "signature": "get(hash: string): Promise<Uint8Array<ArrayBuffer> | undefined>",
+          "signatureTokens": [
+            {
+              "text": "get",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "hash",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint8Array",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "hash",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<Uint8Array<ArrayBuffer> | undefined>",
+          "description": "The stored bytes for hash, or undefined when the store does not hold them."
+        },
+        {
+          "name": "put",
+          "signature": "put(hash: string, bytes: Uint8Array): Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "put",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "hash",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "bytes",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint8Array",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "hash",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "bytes",
+              "type": "Uint8Array",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Offer bytes for hash. A store is free to decline, evict, or ignore the offer."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/container/containerBlockStore.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/container/containerBlockStore.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/container/containerBlockStore.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/container/containerBlockStore.ts"
+}

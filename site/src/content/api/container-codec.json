@@ -1,0 +1,72 @@
+{
+  "title": "ContainerCodec",
+  "description": "How a block's stored bytes are encoded. `deflate-raw` decodes through the browser's `DecompressionStream` with no dependency and no WebAssembly; `none` is what a block of already-compressed payload (PNG, KTX2, H.264, AAC, Opus) stores, where deflating a second time costs decode time and wins nothing. The field exists so a decoder that arrives for another reason can be added without a format break.",
+  "symbol": "ContainerCodec",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "How a block's stored bytes are encoded.",
+        "`deflate-raw` decodes through the browser's `DecompressionStream` with no dependency and no WebAssembly; `none` is what a block of already-compressed payload (PNG, KTX2, H.264, AAC, Opus) stores, where deflating a second time costs decode time and wins nothing. The field exists so a decoder that arrives for another reason can be added without a format break."
+      ],
+      "importLine": "import { ContainerCodec } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ContainerCodec",
+          "signature": "\"deflate-raw\" | \"none\"",
+          "signatureTokens": [
+            {
+              "text": "\"deflate-raw\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"none\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/container/assetContainer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/container/assetContainer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/container/assetContainer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/container/assetContainer.ts"
+}

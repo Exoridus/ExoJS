@@ -1,0 +1,200 @@
+{
+  "title": "ParsedContainer",
+  "description": "Result of parseContainer: the validated head plus where the block area begins.",
+  "symbol": "ParsedContainer",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Result of parseContainer: the validated head plus where the block area begins."
+      ],
+      "importLine": "import { ParsedContainer } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "blocks",
+          "signature": "blocks: readonly ContainerBlock[]",
+          "signatureTokens": [
+            {
+              "text": "blocks",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ContainerBlock",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "blockSize",
+          "signature": "blockSize: number",
+          "signatureTokens": [
+            {
+              "text": "blockSize",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Uncompressed bytes a block aims for; the writer's packing target, not a limit."
+        },
+        {
+          "name": "dataLength",
+          "signature": "dataLength: number",
+          "signatureTokens": [
+            {
+              "text": "dataLength",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Byte length of the uncompressed data section, which is what entry offsets address."
+        },
+        {
+          "name": "dataOffset",
+          "signature": "dataOffset: number",
+          "signatureTokens": [
+            {
+              "text": "dataOffset",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Byte offset of the first block within the container file."
+        },
+        {
+          "name": "entries",
+          "signature": "entries: readonly ContainerEntry[]",
+          "signatureTokens": [
+            {
+              "text": "entries",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ContainerEntry",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "version",
+          "signature": "version: number",
+          "signatureTokens": [
+            {
+              "text": "version",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/container/assetContainer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/container/assetContainer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/container/assetContainer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/container/assetContainer.ts"
+}

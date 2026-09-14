@@ -1,6 +1,6 @@
 {
   "title": "Loader",
-  "description": "Central asset management hub for ExoJS applications. The `Loader` orchestrates fetching, processing, caching, and retrieval of all engine asset types. It ships with a built-in AssetType for every first-party kind (Texture, Sound, AudioStream, Video, FontFace, HTMLImageElement, JSON, text, SVG, subtitles, binary, and WASM); an application adds its own by listing them in an extension. Assets can be loaded in two ways: - **Direct** - `loader.load(Assets.from({ hero: 'hero.png' }))` fetches immediately and resolves to the finished assets. - **Background** - pass `{ priority: LoadPriority.Background }` to `load(...)` to pre-warm assets at low priority; awaitBackground resolves once the queue drains. Once loaded, assets are stored in memory and returned from cache on subsequent `load` or get calls without re-fetching.",
+  "description": "",
   "symbol": "Loader",
   "kind": "class",
   "subsystem": "assets",
@@ -18,12 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Central asset management hub for ExoJS applications.",
-        "The `Loader` orchestrates fetching, processing, caching, and retrieval of all engine asset types. It ships with a built-in AssetType for every first-party kind (Texture, Sound, AudioStream, Video, FontFace, HTMLImageElement, JSON, text, SVG, subtitles, binary, and WASM); an application adds its own by listing them in an extension.",
-        "Assets can be loaded in two ways: - **Direct** - `loader.load(Assets.from({ hero: 'hero.png' }))` fetches immediately and resolves to the finished assets. - **Background** - pass `{ priority: LoadPriority.Background }` to `load(...)` to pre-warm assets at low priority; awaitBackground resolves once the queue drains.",
-        "Once loaded, assets are stored in memory and returned from cache on subsequent `load` or get calls without re-fetching."
-      ],
+      "paragraphs": [],
       "importLine": "import { Loader } from '@codexo/exojs'",
       "sourceLink": null
     },
@@ -1616,7 +1611,7 @@
         },
         {
           "name": "loadContainer",
-          "signature": "loadContainer(url: string): Promise<LoaderScope>",
+          "signature": "loadContainer(url: string, options?: LoadContainerOptions): Promise<LoaderScope>",
           "signatureTokens": [
             {
               "text": "loadContainer",
@@ -1637,6 +1632,26 @@
             {
               "text": "string",
               "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadContainerOptions",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -1668,10 +1683,15 @@
               "name": "url",
               "type": "string",
               "optional": false
+            },
+            {
+              "name": "options",
+              "type": "LoadContainerOptions",
+              "optional": true
             }
           ],
           "returnType": "Promise<LoaderScope>",
-          "description": "Load every asset packed into a binary container (.exoa) in a **single request**, and return the scope that owns them. A container is one file with an embedded index: its bytes are fetched once (and cached cross-session like any asset), then each slice is read through its type's own codec and factory and stored under the entry's own logical source. A container is therefore a transport, not a second naming system - an entry resolves to exactly the same asset identity as a network load of that source, so both can hold it and the payload is fetched and decoded once. The returned scope holds one ordinary claim per entry. Destroying it frees only the entries no other owner still holds, so unpacking a container can never pull an asset out from under a scene that also uses it. Use LoaderScope.loadContainer to claim the entries under an existing scope instead. Each entry's asset type must be readable from bytes alone - its AssetSourceCodec has to implement fromBytes, which every built-in type does. Throws on a malformed container, an unsupported format version, an unknown type, or a type that cannot be read from bytes."
+          "description": "Load every asset packed into a binary container (.exoa) and return the scope that owns them. A container is one file with an embedded index: its slices are read through each type's own codec and factory and stored under the entry's own logical source. A container is therefore a transport, not a second naming system - an entry resolves to exactly the same asset identity as a network load of that source, so both can hold it and the payload is fetched and decoded once. By default the file is fetched in a **single request** and cached whole, cross-session, like any other asset. Passing a ContainerBlockStore switches to the block-wise path instead: the head is read first, and only the blocks the store does not already hold are fetched. That is what makes a pack whose assets mostly did not change cost close to nothing on a second visit - at the price of the whole-file cache entry, since the two cache the same bytes at different granularity and keeping both would store them twice. Servers that do not answer byte ranges degrade to one request automatically. The returned scope holds one ordinary claim per entry. Destroying it frees only the entries no other owner still holds, so unpacking a container can never pull an asset out from under a scene that also uses it. Use LoaderScope.loadContainer to claim the entries under an existing scope instead. Each entry's asset type must be readable from bytes alone - its AssetSourceCodec has to implement fromBytes, which every built-in type does. Throws on a malformed container, an unsupported format version, an unknown type, or a type that cannot be read from bytes."
         },
         {
           "name": "peek",
