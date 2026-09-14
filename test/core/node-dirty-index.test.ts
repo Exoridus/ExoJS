@@ -15,6 +15,13 @@ const readSince = (cursor: number, channels: number = DirtyChannel.Transform): S
   return seen;
 };
 
+/** The logical size of every bucket, which is what a read walks. */
+const bucketCounts = (): number[] => {
+  const buckets = (detachedNodeDirtyIndex as unknown as Record<string, unknown>)['_buckets'] as Array<{ count: number }>;
+
+  return buckets.map(bucket => bucket.count);
+};
+
 /** Every node the index still holds a reference to, across all of its buckets. */
 const retainedNodes = (): unknown[] => {
   const buckets = (detachedNodeDirtyIndex as unknown as Record<string, unknown>)['_buckets'] as Array<{ nodes: unknown[] }>;
@@ -284,5 +291,43 @@ describe('NodeDirtyIndex', () => {
 
   test('a fresh cursor of -1 is never covered, so nothing starts out silently up to date', () => {
     expect(detachedNodeDirtyIndex.covers(-1)).toBe(false);
+  });
+
+  test('the open generation stays bounded when nothing advances the window', () => {
+    // A host that renders without the engine's frame loop never reaches a frame
+    // boundary, so the window has to rotate on its own or the open generation
+    // grows for the life of the process and every read walks all of it.
+    const nodes = Array.from({ length: 40_000 }, () => new Container());
+
+    for (const node of nodes) {
+      detachedNodeDirtyIndex.mark(node, DirtyChannel.Transform);
+    }
+
+    expect(Math.max(...bucketCounts())).toBeLessThanOrEqual(16_384);
+
+    for (const node of nodes) {
+      node.destroy();
+    }
+  });
+
+  test('a rotation forced by volume keeps the newest marks readable', () => {
+    const nodes = Array.from({ length: 20_000 }, () => new Container());
+
+    for (const node of nodes) {
+      detachedNodeDirtyIndex.mark(node, DirtyChannel.Transform);
+    }
+
+    const cursor = detachedNodeDirtyIndex.sequence;
+    const late = new Container();
+
+    detachedNodeDirtyIndex.mark(late, DirtyChannel.Transform);
+
+    expect(readSince(cursor)).toEqual([late]);
+
+    late.destroy();
+
+    for (const node of nodes) {
+      node.destroy();
+    }
   });
 });

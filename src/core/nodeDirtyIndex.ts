@@ -59,6 +59,26 @@ export const enum DirtyChannel {
 const RETAINED_GENERATIONS = 8;
 
 /**
+ * Marks one generation holds before the window rotates on its own, whatever is
+ * driving frames.
+ *
+ * Rotation is normally a frame boundary, and an application whose frame loop
+ * runs reaches one every frame. One that renders without that loop - `stop()`
+ * followed by direct `render` calls, which is how a fixed-step host or a
+ * benchmark drives the engine - reaches no frame boundary at all, and without a
+ * second bound the open generation would grow for the life of the process: the
+ * marks are never retired, so every read scans everything ever marked. The cap
+ * turns that into a bound, at the cost of retiring marks a consumer may not
+ * have read yet - which is reported through `covers` and answered by a rebuild,
+ * the same way a cursor ageing out of the window already is.
+ *
+ * Sized so that per-frame mutation never reaches it and only a bulk scene
+ * change does: a driver that marks more than this between two reads has changed
+ * more than a consumer could have patched anyway.
+ */
+const MARKS_PER_GENERATION = 16_384;
+
+/**
  * One generation's marks. `count` is the logical length; the arrays keep their
  * backing store across recycles and hold `null`/`0` in the slots above it, so
  * marking stays allocation-free once a generation's high-water mark is reached
@@ -198,6 +218,12 @@ export class NodeDirtyIndex {
    * make the repeat visible to a consumer that read in between.
    */
   public mark(node: SceneNode, channels: number): void {
+    // Rotate before the entry is placed, so the slot recorded on the node names
+    // the generation it actually lands in.
+    if (this._buckets[this._slot]!.count >= MARKS_PER_GENERATION) {
+      this.advance();
+    }
+
     const bucket = this._buckets[this._slot]!;
     const live = node._dirtyMarkGeneration >= 0 ? this._buckets[node._dirtyMarkGeneration % RETAINED_GENERATIONS]! : null;
     const held = live !== null && live.generation === node._dirtyMarkGeneration && live.nodes[node._dirtyMarkSlot] === node;
