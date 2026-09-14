@@ -33,7 +33,7 @@ class Leaf extends Drawable {
   }
 }
 
-const flaggedRenderer = { _supportsRetainedBatches: true, _supportsPersistentSlots: true };
+const flaggedRenderer = { supportsRetainedBatches: true, _supportsPersistentSlots: true };
 
 interface SlotStore extends PersistentSlotBundle {
   readonly ids: string[];

@@ -763,6 +763,16 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
         examples: ['custom-renderers/custom-triangle-renderer', 'particles/emitter-basics'],
         apiLinks: ['extension', 'application', 'application-options'],
       },
+      {
+        slug: 'renderer-sdk-contract',
+        level: 'advanced',
+        learningGoals: [
+          'keep a renderer correct inside a retained capture and on replay',
+          'opt into batch recording without promising more than the renderer can honour',
+          'own a bundle generation, a render pass and the shared transform rows correctly',
+        ],
+        prerequisites: ['debugging/authoring-extensions'],
+      },
     ],
   },
   {

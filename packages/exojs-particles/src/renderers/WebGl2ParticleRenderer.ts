@@ -109,7 +109,7 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
    * transform records for particle draws.
    * @internal
    */
-  public readonly _consumesSharedTransform = false;
+  public readonly consumesSharedTransform = false;
 
   /** Particles the GL-side vertex store is pre-sized for. A hint, not a limit. */
   private readonly _batchSize: number;

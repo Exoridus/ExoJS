@@ -112,10 +112,10 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
    * group-owned resources.
    * @internal
    */
-  public readonly _supportsRetainedBatches = true;
+  public readonly supportsRetainedBatches = true;
 
   /** Custom SpriteMaterial batches implement the live-material replay contract. @internal */
-  public _canRecordRetainedDrawable(drawable: Drawable): boolean {
+  public canRecordRetainedDrawable(drawable: Drawable): boolean {
     return (drawable as Sprite).material !== null;
   }
 
@@ -232,7 +232,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   // where the per-sprite record lives, which is what lets a camera step touch
   // just the items that entered or left.
 
-  /** Capability flag, mirroring `_supportsRetainedBatches`. @internal */
+  /** Capability flag, mirroring `supportsRetainedBatches`. @internal */
   public readonly _supportsPersistentSlots = true;
 
   /**

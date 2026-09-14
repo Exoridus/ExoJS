@@ -56,7 +56,7 @@ const createCommand = (drawable: Drawable, nodeIndex: number): DrawCommand => ({
 });
 
 const consumingRenderer = {};
-const nonConsumingRenderer = { _consumesSharedTransform: false };
+const nonConsumingRenderer = { consumesSharedTransform: false };
 
 // Mirrors the real RendererRegistry resolve-by-type used at the group-upload boundary.
 const backend = {

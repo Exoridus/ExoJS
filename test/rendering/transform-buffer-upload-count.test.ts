@@ -32,7 +32,7 @@ class NonConsumingDrawable extends Drawable {
 }
 
 const consumingRenderer = {};
-const nonConsumingRenderer = { _consumesSharedTransform: false };
+const nonConsumingRenderer = { consumesSharedTransform: false };
 
 const makeRegistry = () => ({
   resolve(drawable: Drawable): unknown {

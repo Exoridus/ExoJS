@@ -106,7 +106,7 @@ export class BackendTargetPass implements BackendRenderPass {
   }
 
   public execute(backend: RenderBackend): void {
-    const coordinator = (backend as RenderBackend & Partial<RenderPassCoordinatorHost>)._passCoordinator;
+    const coordinator = (backend as RenderBackend & Partial<RenderPassCoordinatorHost>).passCoordinator;
 
     if (coordinator) {
       const descriptor = this._descriptor;

@@ -1,0 +1,119 @@
+---
+title: 'The renderer SDK contract'
+description: 'What the engine promises a renderer, and what a renderer must promise back, at each seam of the render path.'
+---
+
+import Callout from '../../../components/Callout.astro';
+
+# The renderer SDK contract
+
+The previous chapters showed how to build a renderer and register it. This one states what the engine relies on once it is registered. Everything here is a contract in the strict sense: break it and the failure does not look like a broken renderer, it looks like the engine drawing the wrong thing somewhere else, one frame later, on one backend only.
+
+Read it when your renderer works in a simple scene and misbehaves in a real one — inside a `RetainedContainer`, behind a mask, after a context loss, or only on the second frame.
+
+## What the engine is actually doing
+
+A frame does not rebuild the render plan from the scene graph unless it has to. Four tiers answer a frame, cheapest first:
+
+| Tier | Condition | Cost |
+|---|---|---|
+| Replay | the view still fits the capture | replay recorded instructions |
+| Select | the source still describes the subtree | select from stored items |
+| Patch | only transforms or tints moved | O(k) row writes |
+| Collect | content, structure or ancestry changed | walk the scene graph |
+
+Your renderer participates in all four, and the rules below are mostly about not making a lower tier lie. A renderer that opts out of everything still works — it simply lands on the collect tier every frame, which is correct and slower.
+
+## Lifecycle
+
+`connect(backend)` acquires GPU resources, `disconnect()` releases every one of them, `render(drawable)` records into the current batch, `flush()` submits.
+
+- `disconnect()` must be repeatable and reversible. A `connect` after a `disconnect` has to rebuild everything from nothing.
+- That pair is also the context-loss path. On loss and restore the registry disconnects and reconnects every renderer; there is no separate loss hook to implement. A handle cached across `disconnect()` is a use-after-free on the next restore.
+- A renderer that was never connected must draw nothing rather than throw.
+- `destroy()`, where you have one, runs after `disconnect()` and must be safe twice.
+- Flushing when nothing was recorded must issue no GPU work.
+
+<Callout type="caution" title="You do not own the GL state you found">
+Another renderer drew before you and another will draw after. Re-establish your own program, vertex array and bindings at the start of your flush rather than assuming what is bound, and do not restore someone else's state afterwards — they will do the same.
+</Callout>
+
+## One drawable class, one renderer
+
+`RendererRegistry` maps a drawable constructor to exactly one renderer instance and throws on a second registration for the same class. Resolution walks the prototype chain, which is how `Text` and `Video` deliberately reuse the sprite renderer.
+
+This is a limitation on purpose, not an oversight. A drawable's renderer is resolved per draw on the hot path, and the lookup is a map hit plus a cached prototype walk; admitting several candidates would put a selection policy in that path and make the answer depend on state the plan layer does not carry. If you need two draw paths, branch inside your renderer, or give the second path its own drawable class.
+
+## Seam 1 — capture
+
+A render root or a `RetainedContainer` snapshots its subtree into a fragment, keyed on the node's content revision, structure revision, ancestry stamp, the backend, the render target and the view.
+
+**A capture is replayed under a view it was not taken under.** Anything your renderer resolves during a capturing collect must therefore be view-independent. Resolve a camera, a screen rect or a viewport size into recorded data and the replay will draw last frame's camera. Both pixel-snap modes are resolved in the vertex stage from a transform-row flag for exactly this reason, which is what keeps a snapped draw recordable.
+
+A barrier record — a mask, a clip, a deferred transform group — is re-dispatched live on every replay and cannot interleave with cached batch runs. A fragment containing one anywhere, at any nesting depth, stays on the entry-replay tier.
+
+## Seam 2 — batch recording
+
+Opt in by declaring the members of `RetainedBatchCapableRenderer`. They are read off your renderer instance; an absent member always means the conservative answer.
+
+```ts no-check -- sketch of the reader's own renderer; the base class and drawable type are theirs
+class ConfettiRenderer extends AbstractWebGl2BatchedRenderer {
+  public readonly supportsRetainedBatches = true;
+
+  public admitsRetainedRecording(drawable: Drawable): boolean {
+    return (drawable as Confetti).usesStaticGeometry;
+  }
+}
+```
+
+- `supportsRetainedBatches` covers your **default** draw path only.
+- `admitsRetainedRecording(drawable)` vetoes a drawable your default path cannot record, whatever its material. Implement it when your renderer would otherwise poison an open capture: without the veto the fragment is admitted, records, and is poisoned again every single frame — the group lands on the same correct tier either way and pays for a recording it can never use.
+- `canRecordRetainedDrawable(drawable)` is the extra opt-in for a drawable carrying its own material, so you can accept recording for ordinary work without promising that live custom state replays correctly.
+
+<Callout type="caution" title="The veto is cached per capture">
+`admitsRetainedRecording` is asked once per capture and re-asked only when the capture is re-keyed. It must read state that is immutable for the drawable's lifetime, or state whose mutation bumps the node's content revision. A `recordable → non-recordable` flip in between leaves the group replaying a capture your renderer can no longer honour.
+</Callout>
+
+## Seam 3 — replay
+
+Recorded batches reference a `RetainedGroupBundle` you own. One field carries the entire staleness contract:
+
+- **Bump `generation` whenever you recreate or destroy the bundle's resources** — a device restore, a growth reallocation, a destroy. Each recorded batch stores the generation it was recorded at, and a mismatch is what rejects instructions pointing at GPU state that no longer exists. A missed bump is a replay of freed resources.
+- **Row patches must not bump it.** `patchTransformRow` and `patchTintRow` overwrite one group-local row in place; the recorded instance bytes address the row by index and stay valid, so bumping would throw away a recording that is still correct. Omit the methods entirely if your backend cannot patch — the caller falls back to entry replay or a re-record.
+- `flushRowPatches` is called once per patch pass and always before submit. Implement it if your row store writes a GPU buffer directly, so the frame's upload count follows the number of dirty regions rather than the number of moved nodes. Omit it if your store defers its own upload.
+
+Set `nodeCount` on a batch whenever one render node expands into several GPU instances — a tile chunk, a nine-slice, a repeating sprite, a text run. `instanceCount` is the replay draw's instance argument, not a node count, and without `nodeCount` the recorded tier reports instances where the live and entry-replay tiers report nodes. A node is booked once, against whichever batch was open when its first instance was written.
+
+## Seam 4 — the pass coordinator
+
+Target, view, clear, the scissor stack and the stencil-clip stack belong to the backend's `passCoordinator`. Reach it through the backend when you need a pass of your own:
+
+- **Read it per call, never cache it.** A backend creates it lazily and replaces it across a context loss.
+- Treat it as optional. Generic orchestration falls back to an inline target and view save-restore when a backend has none, and your renderer has to tolerate its absence the same way.
+- Pushes and pops are stacks, and every `beginPass` needs its `endPass`. Use `withChildPass` where you can: it restores the previous target and view even if the body throws.
+- Leave the coordinator as you found it. Ending a pass the engine opened, or leaving one of yours open, corrupts the frame for everything drawn after you.
+
+## Seam 5 — transform storage
+
+The engine packs each draw command's world transform, and its tint, into shared storage keyed by `nodeIndex`.
+
+Declare `consumesSharedTransform = false` when your vertex stage never reads those rows — text and particle renderers pack their own per-node data into a private data texture or uniforms, so writing rows for them would be pure cost. Leave it unset if you read them; the default is to write, so an unknown renderer keeps working.
+
+If you do read them, carry `TRANSFORM_TEXTURE_GLSL_INCLUDE` in your shader source. The engine expands it into helpers that map a logical `nodeIndex` onto whatever the transform and tint stores currently look like, and **that mapping is the whole guarantee**. The stores' dimensions, their packing and the helpers' bodies are internal and change without notice, which is precisely why you take the directive instead of addressing texels yourself.
+
+## Proving it
+
+`describeRendererConformance` runs this contract as a suite against a binding, on the real `WebGl2Backend` over a recording fake context — real batching, real flush boundaries, real GL object lifetime, no browser and no GPU. Both official extension packages register their bindings with it, and so should yours:
+
+```ts no-check -- the binding and its drawables are the reader's own
+describeRendererConformance('Confetti', confettiBinding(), {
+  drawables: () => [new Confetti()],
+  overflowCount: 5000,
+});
+```
+
+It checks the lifecycle rules above, that a second `connect` acquires nothing further, that every GL object is released, that a foreign renderer drawing in between does not break you, that your retained verdict is stable for the same drawable, and that a frame drawn inside a capture window records a replayable batch.
+
+## The underscore
+
+A member with a leading underscore is engine plumbing and may change without notice. A member without one, exported from `@codexo/exojs/renderer-sdk`, is a contract you can build on — even where its documentation also marks it internal, which only means it is not ordinary application API. Everything named in this chapter is the second kind.

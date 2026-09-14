@@ -174,12 +174,12 @@ export class WebGpuMaskCompositor {
     // pushes the clip outermost), so the compositor may draw into a
     // stencil-enabled pass. Select the matching pipeline variant - a stencil-free
     // pipeline is incompatible with the pass's depth/stencil attachment.
-    const stencil = manager._passCoordinator.stencilActive;
+    const stencil = manager.passCoordinator.stencilActive;
     const pipeline = this._getOrCreatePipeline(targetFormat, blendMode, stencil);
 
     // The coordinator owns the GPU pass (load/clear resolution, pass count and
     // scissor are applied there) and ends + submits it below.
-    const pass = manager._passCoordinator.acquirePass().pass;
+    const pass = manager.passCoordinator.acquirePass().pass;
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, this._projectionBindGroup);
@@ -188,11 +188,11 @@ export class WebGpuMaskCompositor {
     pass.setIndexBuffer(this._indexBuffer!, 'uint16');
     pass.drawIndexed(6);
 
-    manager._passCoordinator.markPassDraws();
+    manager.passCoordinator.markPassDraws();
     manager.stats.batches++;
     manager.stats.drawCalls++;
 
-    manager._passCoordinator.endPass();
+    manager.passCoordinator.endPass();
   }
 
   private _getOrCreatePipeline(format: GPUTextureFormat, blendMode: BlendModes, stencil: boolean): GPURenderPipeline {

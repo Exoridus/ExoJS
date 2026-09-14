@@ -265,7 +265,7 @@ export class RenderingContext implements DrawContext {
   public capture(node: RenderNode, options: CaptureOptions): RenderTexture {
     const target = new RenderTexture(options.width, options.height, options.format !== undefined ? { format: options.format } : undefined);
     const view = new View(options.width / 2, options.height / 2, options.width, options.height);
-    const coordinator = (this._backend as RenderBackend & Partial<RenderPassCoordinatorHost>)._passCoordinator;
+    const coordinator = (this._backend as RenderBackend & Partial<RenderPassCoordinatorHost>).passCoordinator;
 
     if (coordinator) {
       coordinator.withChildPass(
@@ -317,7 +317,7 @@ export class RenderingContext implements DrawContext {
    * reset by this call.
    */
   public clear(color: Color): void {
-    const coordinator = (this._backend as RenderBackend & Partial<RenderPassCoordinatorHost>)._passCoordinator;
+    const coordinator = (this._backend as RenderBackend & Partial<RenderPassCoordinatorHost>).passCoordinator;
 
     if (coordinator) {
       coordinator.withChildPass(
@@ -349,7 +349,7 @@ export class RenderingContext implements DrawContext {
     const view = options.view ?? options.target.view;
 
     this._renderedViews.add(view);
-    const coordinator = (this._backend as RenderBackend & Partial<RenderPassCoordinatorHost>)._passCoordinator;
+    const coordinator = (this._backend as RenderBackend & Partial<RenderPassCoordinatorHost>).passCoordinator;
 
     if (coordinator) {
       coordinator.withChildPass(
@@ -400,7 +400,7 @@ export class RenderingContext implements DrawContext {
     const view = target.view;
 
     this._renderedViews.add(view);
-    const coordinator = (this._backend as RenderBackend & Partial<RenderPassCoordinatorHost>)._passCoordinator;
+    const coordinator = (this._backend as RenderBackend & Partial<RenderPassCoordinatorHost>).passCoordinator;
 
     if (coordinator) {
       coordinator.withChildPass(

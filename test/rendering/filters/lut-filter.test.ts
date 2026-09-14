@@ -353,7 +353,7 @@ const makeWebGpuBackend = (device: GPUDevice): RenderBackend & WebGpuBackend => 
     submit: vi.fn(),
   } as unknown as RenderBackend & WebGpuBackend;
 
-  (backend as unknown as { _passCoordinator: WebGpuPassCoordinator })._passCoordinator = new WebGpuPassCoordinator(backend as unknown as WebGpuPassBackend);
+  (backend as unknown as { passCoordinator: WebGpuPassCoordinator }).passCoordinator = new WebGpuPassCoordinator(backend as unknown as WebGpuPassBackend);
 
   return backend;
 };

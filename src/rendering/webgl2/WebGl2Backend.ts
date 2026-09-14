@@ -566,7 +566,7 @@ export class WebGl2Backend implements RenderBackend {
    *
    * Part of the renderer SDK contract for extension renderers.
    */
-  public get _passCoordinator(): WebGl2PassCoordinator {
+  public get passCoordinator(): WebGl2PassCoordinator {
     return (this._passCoordinatorInstance ??= new WebGl2PassCoordinator(this));
   }
 
@@ -953,7 +953,7 @@ export class WebGl2Backend implements RenderBackend {
     // predicate keeps non-capable renderers from ever arming a capture. If
     // one still draws inside an open capture window, poison the recording so
     // the set never validates - entry replay instead of missing draws.
-    if (this._retainedCaptures.length > 0 && (renderer as RetainedBatchCapableRenderer)._supportsRetainedBatches !== true) {
+    if (this._retainedCaptures.length > 0 && (renderer as RetainedBatchCapableRenderer).supportsRetainedBatches !== true) {
       this._poisonRetainedCaptures();
     }
 
@@ -1751,7 +1751,7 @@ export class WebGl2Backend implements RenderBackend {
 
     // A group whose every recorded batch opts out of the shared transform
     // buffer (Text bakes world positions into its own instance bytes and reads
-    // its style from a private per-node texture - `_consumesSharedTransform ===
+    // its style from a private per-node texture - `consumesSharedTransform ===
     // false`) leaves the range empty: there is nothing to rebase or store, but
     // the instance bytes and per-batch VAOs still need finalizing below.
     // Connect first: the group's transform store sizes its textures against the
@@ -1881,7 +1881,7 @@ export class WebGl2Backend implements RenderBackend {
    * Most callers are belt-and-braces for draws the collect-time recordability
    * predicate already excluded, and those never fire on a healthy frame - a
    * renderer whose non-recordable draws are decidable PER DRAWABLE states that
-   * through `_admitsRetainedRecording` so the capture is never opened at all
+   * through `admitsRetainedRecording` so the capture is never opened at all
    * (mesh geometry storage, the repeating sprite's shader path).
    *
    * One caller is not defensive and DOES fire on healthy frames: the Text

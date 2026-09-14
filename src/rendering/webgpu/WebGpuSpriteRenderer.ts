@@ -244,10 +244,10 @@ interface CustomSpriteResources {
 
 export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> implements WebGpuRetainedBatchReplayer {
   /** Retained-batch capability flag: default and live SpriteMaterial batches replay. */
-  public readonly _supportsRetainedBatches = true;
+  public readonly supportsRetainedBatches = true;
 
   /** Custom SpriteMaterial batches implement the live-material replay contract. @internal */
-  public _canRecordRetainedDrawable(drawable: Drawable): boolean {
+  public canRecordRetainedDrawable(drawable: Drawable): boolean {
     return (drawable as Sprite).material !== null;
   }
 
@@ -553,7 +553,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   // per-sprite record lives, which is what lets a camera step touch just the
   // items that entered or left.
 
-  /** Capability flag, mirroring `_supportsRetainedBatches`. @internal */
+  /** Capability flag, mirroring `supportsRetainedBatches`. @internal */
   public readonly _supportsPersistentSlots = true;
 
   /**
@@ -658,7 +658,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       return;
     }
 
-    const coordinator = backend._passCoordinator;
+    const coordinator = backend.passCoordinator;
 
     // Resolving the bindings re-uploads mutated texture content on the queue
     // timeline, which would retroactively change draws already recorded into the
@@ -716,7 +716,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
    * it, so without this the earlier draw would sample the new data.
    */
   private _endPassOnPersistentHazard(backend: WebGpuBackend, store: WebGpuPersistentSlotStore): void {
-    const coordinator = backend._passCoordinator;
+    const coordinator = backend.passCoordinator;
     const active = coordinator.activePass;
 
     if (active !== null && store.drawsInPass === active && coordinator.passHasDraws) {
@@ -985,7 +985,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
       // Open the coordinator's pass (idempotent - consecutive flushes reuse it)
       // and reserve a fresh slice of the instance arena for this batch.
-      const coordinator = backend._passCoordinator;
+      const coordinator = backend.passCoordinator;
       let active = coordinator.acquirePass();
 
       this._instanceArena.syncPass(active);
@@ -1049,7 +1049,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       const storage = backend.getTransformStorageBuffer(needCount);
       const transformBindGroup = this._getOrCreateTransformBindGroup(device, uniformBuffer, storage.buffer, storage.tintBuffer);
 
-      const stencil = backend._passCoordinator.stencilActive;
+      const stencil = backend.passCoordinator.stencilActive;
 
       if (material === null) {
         const pipeline = this._getPipeline(this._currentBlendMode!, backend.renderTargetFormat, stencil);
@@ -1078,7 +1078,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       // No drawable content but a clear is pending: open the coordinator pass so
       // createColorAttachment consumes the clear state once (submitted at the
       // next boundary).
-      backend._passCoordinator.acquirePass();
+      backend.passCoordinator.acquirePass();
     }
 
     // Retained capture: stage the exact packed bytes plus a live material
@@ -1118,7 +1118,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
    * retained group) from fragmenting the single-submit frame.
    */
   private _endPassOnProjectionChange(backend: WebGpuBackend): void {
-    const activePass = backend._passCoordinator.activePass;
+    const activePass = backend.passCoordinator.activePass;
 
     if (
       activePass !== null &&
@@ -1126,7 +1126,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       this._instanceArena.tracksPass(activePass) &&
       (activePass.viewUpdateId !== backend.view.updateId || this._groupContentChanged(backend))
     ) {
-      backend._passCoordinator.endPass();
+      backend.passCoordinator.endPass();
       this._instanceArena.resetPass();
     }
   }
@@ -1191,9 +1191,9 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
    * buffers the pass's draws read.
    */
   private _reopenPass(backend: WebGpuBackend): WebGpuActiveRenderPass {
-    backend._passCoordinator.endPass();
+    backend.passCoordinator.endPass();
 
-    const active = backend._passCoordinator.acquirePass();
+    const active = backend.passCoordinator.acquirePass();
 
     this._instanceArena.resetPass();
     this._instanceArena.syncPass(active);
@@ -1308,7 +1308,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       return;
     }
 
-    const coordinator = backend._passCoordinator;
+    const coordinator = backend.passCoordinator;
     const currentPass = coordinator.activePass;
 
     if (currentPass !== null) {

@@ -80,7 +80,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
    * instance words).
    * @internal
    */
-  public readonly _supportsRetainedBatches = true;
+  public readonly supportsRetainedBatches = true;
 
   /**
    * Veto the SHADER path at collect time. `resolvedStrategy` is derived from the
@@ -95,7 +95,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
    * unreachable through the public API and kept only as a structural safety net.
    * @internal
    */
-  public _admitsRetainedRecording(drawable: Drawable): boolean {
+  public admitsRetainedRecording(drawable: Drawable): boolean {
     return (drawable as RepeatingSprite).resolvedStrategy !== 'shader';
   }
 
@@ -199,7 +199,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     const backend = this.getBackend();
 
     // Retained recording: only the geometry path is replayable, and
-    // _admitsRetainedRecording keeps a shader-path sprite from opening a capture
+    // admitsRetainedRecording keeps a shader-path sprite from opening a capture
     // at all. A sprite's strategy cannot change after that verdict was cached
     // (readonly source), so this poison is unreachable through the public API
     // and stays only as a structural safety net: were it to fire, the window
@@ -484,7 +484,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
   }
 
   // ── Retained-batch record/replay ──────────────────────────────────────────
-  // Only geometry-path batches reach here (see _supportsRetainedBatches). Their
+  // Only geometry-path batches reach here (see supportsRetainedBatches). Their
   // 32-byte layout puts the node index at word 7 of the 8-word instance - the
   // same position the sprite renderer uses - so scan/rebase mirror it exactly.
 

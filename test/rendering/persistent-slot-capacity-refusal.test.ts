@@ -32,7 +32,7 @@ class Leaf extends Drawable {
   }
 }
 
-const flaggedRenderer = { _supportsRetainedBatches: true, _supportsPersistentSlots: true };
+const flaggedRenderer = { supportsRetainedBatches: true, _supportsPersistentSlots: true };
 
 interface PersistentHarness {
   backend: RenderBackend;

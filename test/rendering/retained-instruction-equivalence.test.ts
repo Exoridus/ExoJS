@@ -49,7 +49,7 @@ class ByteLeaf extends Drawable {
   }
 }
 
-const flaggedRenderer = { _supportsRetainedBatches: true };
+const flaggedRenderer = { supportsRetainedBatches: true };
 
 const packTint = (color: Color): number => color.r + color.g * 256 + color.b * 65536 + Math.round(color.a * 255) * 16777216;
 

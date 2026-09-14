@@ -260,7 +260,7 @@ const probeSupport = (binding: RendererBinding): BindingSupport => {
       return { kind: 'declined', reason: `create() answered a renderer whose backendType is ${String(renderer.backendType)}` };
     }
 
-    return { kind: 'supported', retained: (renderer as RetainedBatchCapableRenderer)._supportsRetainedBatches === true };
+    return { kind: 'supported', retained: (renderer as RetainedBatchCapableRenderer).supportsRetainedBatches === true };
   } catch (error: unknown) {
     return { kind: 'threw', error };
   } finally {
@@ -650,18 +650,18 @@ export const runRendererConformance = (binding: RendererBinding, options: Render
       const renderer = run.renderer as RetainedBatchCapableRenderer;
 
       for (const drawable of run.drawables) {
-        const admits = renderer._admitsRetainedRecording?.(drawable);
+        const admits = renderer.admitsRetainedRecording?.(drawable);
 
         expect(
-          renderer._admitsRetainedRecording?.(drawable),
-          `_admitsRetainedRecording is cached per capture, so it must answer the same for ${drawable.constructor.name} until the capture is re-keyed`,
+          renderer.admitsRetainedRecording?.(drawable),
+          `admitsRetainedRecording is cached per capture, so it must answer the same for ${drawable.constructor.name} until the capture is re-keyed`,
         ).toBe(admits);
 
-        const records = renderer._canRecordRetainedDrawable?.(drawable);
+        const records = renderer.canRecordRetainedDrawable?.(drawable);
 
         expect(
-          renderer._canRecordRetainedDrawable?.(drawable),
-          `_canRecordRetainedDrawable is cached per capture, so it must answer the same for ${drawable.constructor.name} until the capture is re-keyed`,
+          renderer.canRecordRetainedDrawable?.(drawable),
+          `canRecordRetainedDrawable is cached per capture, so it must answer the same for ${drawable.constructor.name} until the capture is re-keyed`,
         ).toBe(records);
       }
     });
@@ -671,7 +671,7 @@ export const runRendererConformance = (binding: RendererBinding, options: Render
     withRun(binding, options, run => {
       const renderer = run.renderer as RetainedBatchCapableRenderer;
       const scene = options.retainedScene?.(run.backend);
-      const recordable = run.drawables.filter(drawable => renderer._admitsRetainedRecording?.(drawable) !== false);
+      const recordable = run.drawables.filter(drawable => renderer.admitsRetainedRecording?.(drawable) !== false);
       const submit = (): void => {
         if (scene !== undefined) {
           scene.render(run.backend);
@@ -685,7 +685,7 @@ export const runRendererConformance = (binding: RendererBinding, options: Render
       };
 
       if (scene === undefined) {
-        expect(recordable.length, 'a renderer declaring _supportsRetainedBatches must admit at least one of its own sample drawables').toBeGreaterThan(0);
+        expect(recordable.length, 'a renderer declaring supportsRetainedBatches must admit at least one of its own sample drawables').toBeGreaterThan(0);
       }
 
       // Warm the renderer first: the capture window records flushes, and a
@@ -711,7 +711,7 @@ export const runRendererConformance = (binding: RendererBinding, options: Render
 
       expect(
         batches.length,
-        'a renderer declaring _supportsRetainedBatches must hand its flush to recordRetainedBatch while a capture window is open',
+        'a renderer declaring supportsRetainedBatches must hand its flush to recordRetainedBatch while a capture window is open',
       ).toBeGreaterThan(0);
       expect(set.isValidFor(run.backend), 'a committed recording must validate against the backend it was recorded on').toBe(true);
     });

@@ -14,7 +14,7 @@
  * `WebGpuSpriteRenderer` without noticing the consequence.
  *
  * A second, distinct WebGPU tier - retained-batch recording, gated by
- * `_supportsRetainedBatches` rather than `_supportsPersistentSlots` - is
+ * `supportsRetainedBatches` rather than `_supportsPersistentSlots` - is
  * covered further down by its own describe block; see that block's doc
  * comment for why it needs a real plan build instead of the `RenderRootSource`
  * fixture used above.
@@ -124,13 +124,13 @@ const fragmentOf = (group: RetainedContainer): RetainedGroupFragment => (group a
  * A distinct WebGPU tier from the persistent-slot one above: whether a
  * `RetainedContainer`'s captured fragment can be recorded into the WebGPU
  * retained-batch instruction set at all, gated by
- * `RetainedBatchCapableRenderer._supportsRetainedBatches` in
+ * `RetainedBatchCapableRenderer.supportsRetainedBatches` in
  * `RetainedInstructionSet.ts`. `WebGpuVideoRenderer` never declares that flag
  * either (see its class doc), so a fragment containing a `Video` must never be
  * admitted - the mechanism that keeps a retained video from freezing is that
  * it is never recorded into a retained batch in the first place. This pins
  * that mechanism against a future refactor that copies
- * `_supportsRetainedBatches = true` over from `WebGpuSpriteRenderer`.
+ * `supportsRetainedBatches = true` over from `WebGpuSpriteRenderer`.
  */
 describe('WebGPU retained-batch recording: a fragment containing Video', () => {
   test('is never recordable into the retained instruction-set tier', () => {

@@ -3,7 +3,7 @@
  *
  * The WebGL2 counterpart of `webgpu-text-retained-instruction-replay.test.ts`.
  * Text is the retained renderer that opts OUT of the shared `TransformBuffer`
- * (`_consumesSharedTransform === false`) AND, on WebGL2 only, keeps its world
+ * (`consumesSharedTransform === false`) AND, on WebGL2 only, keeps its world
  * transform CPU-baked into the recorded vertex bytes - the shipped `text.vert`
  * reads no per-node transform, because a vertex-stage texelFetch of the RGBA32F
  * data texture collapses the draw on ANGLE/D3D11 whenever a glyph atlas is
@@ -143,7 +143,7 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
     const replaySpy = vi.spyOn(backend, 'replayRetainedBatch');
 
     try {
-      expect(new WebGl2TextRenderer()._supportsRetainedBatches).toBe(true);
+      expect(new WebGl2TextRenderer().supportsRetainedBatches).toBe(true);
 
       render(backend, scene.root); // F1: collect + capture
       expect(replaySpy).not.toHaveBeenCalled();

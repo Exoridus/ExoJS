@@ -90,9 +90,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
    * recorder can capture and replay. Custom-material and dynamic-geometry
    * meshes never take that path; both are excluded at collect time (own
    * material by the predicate's own-material rule, geometry storage by
-   * {@link _admitsRetainedRecording}), so no capture opens around them.
+   * {@link admitsRetainedRecording}), so no capture opens around them.
    */
-  public readonly _supportsRetainedBatches = true;
+  public readonly supportsRetainedBatches = true;
 
   /**
    * Only a mesh backed by SHARED, STATIC {@link Geometry} is recordable: that is
@@ -113,7 +113,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
    * fragment entry.
    * @internal
    */
-  public _admitsRetainedRecording(drawable: Drawable): boolean {
+  public admitsRetainedRecording(drawable: Drawable): boolean {
     return (drawable as Mesh).geometry?.usage === 'static';
   }
 
@@ -454,9 +454,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   private _drawDynamicInstancedSingle(draw: PendingMeshDraw, backend: WebGl2Backend, connection: MeshRendererConnection): void {
     // A dynamic-geometry (non-static) mesh cannot be recorded - its geometry is
     // not the shared, persistent buffer a retained batch references, which is
-    // why _admitsRetainedRecording keeps such a mesh from ever opening a
+    // why admitsRetainedRecording keeps such a mesh from ever opening a
     // capture. A mesh's geometry cannot change after that verdict was cached
-    // (see _admitsRetainedRecording), so this poison is unreachable through the
+    // (see admitsRetainedRecording), so this poison is unreachable through the
     // public API and stays only as a structural safety net.
     if (backend._isRetainedCapturing) {
       backend._poisonRetainedCaptures();

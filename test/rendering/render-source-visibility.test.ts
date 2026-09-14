@@ -34,7 +34,7 @@ class Leaf extends Drawable {
   }
 }
 
-const flaggedRenderer = { _supportsRetainedBatches: true };
+const flaggedRenderer = { supportsRetainedBatches: true };
 
 const createBackend = (): { backend: RenderBackend; draws: string[] } => {
   const renderTarget = new RenderTarget(800, 600, true);
