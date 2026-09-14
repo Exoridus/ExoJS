@@ -55,7 +55,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
    * in {@link render}); tile chunks have no custom-material path to exclude.
    * @internal
    */
-  public readonly _supportsRetainedBatches = true;
+  public readonly supportsRetainedBatches = true;
 
   private readonly _projectionData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
   // Projection-uniform skip state: a matching (view identity, view.updateId)
@@ -176,7 +176,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     // flush. Submit it first so those draws reach the queue against live
     // buffers. Backend destroy and device loss drop the pass before disconnecting
     // renderers, so this only fires when a renderer is disconnected on its own.
-    const coordinator = this._backend?._passCoordinator ?? null;
+    const coordinator = this._backend?.passCoordinator ?? null;
 
     if (coordinator !== null && this._passDraws !== null && this._passDraws === coordinator.activePass) {
       coordinator.endPass();
@@ -364,7 +364,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     const scissor = backend.getScissorRect();
     const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
-    const coordinator = backend._passCoordinator;
+    const coordinator = backend.passCoordinator;
     // Aliased as consts so the `willDraw` predicate narrows them for the draw
     // block below (the same narrowing the inlined condition used to provide).
     const texture = this._currentTexture;
@@ -619,7 +619,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       return;
     }
 
-    const coordinator = backend._passCoordinator;
+    const coordinator = backend.passCoordinator;
 
     // Same-frame texture mutation guard: resolving the bindings below
     // re-uploads mutated content on the queue timeline BEFORE the deferred

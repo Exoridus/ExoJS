@@ -89,7 +89,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
    * renderer excludes them (view-dependent instance words).
    * @internal
    */
-  public readonly _supportsRetainedBatches = true;
+  public readonly supportsRetainedBatches = true;
 
   /**
    * Veto the SHADER path at collect time - `resolvedStrategy` is derived from
@@ -104,7 +104,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
    * unreachable through the public API and kept only as a structural safety net.
    * @internal
    */
-  public _admitsRetainedRecording(drawable: Drawable): boolean {
+  public admitsRetainedRecording(drawable: Drawable): boolean {
     return (drawable as RepeatingSprite).resolvedStrategy !== 'shader';
   }
 
@@ -287,7 +287,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     const modeY = sprite.modeY;
 
     // Retained recording: only the geometry path is replayable (see
-    // _supportsRetainedBatches), and _admitsRetainedRecording keeps a
+    // supportsRetainedBatches), and admitsRetainedRecording keeps a
     // shader-path sprite from opening a capture at all. A sprite's strategy
     // cannot change after that verdict was cached (readonly source), so this is
     // unreachable through the public API and stays only as a structural safety
@@ -432,7 +432,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     // were projected with a now-changed view transform (same View object mutated
     // between merged flushes) would retroactively re-project them; end that pass
     // first. Guarded on the arena tracking the current active pass.
-    const activePass = backend._passCoordinator.activePass;
+    const activePass = backend.passCoordinator.activePass;
     const groupChanged = this._groupContentChanged(backend);
 
     if (
@@ -441,7 +441,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
       this._instanceArena.tracksPass(activePass) &&
       (activePass.viewUpdateId !== backend.view.updateId || groupChanged)
     ) {
-      backend._passCoordinator.endPass();
+      backend.passCoordinator.endPass();
       this._instanceArena.resetPass();
     }
 
@@ -476,7 +476,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
       const batchBytes = drawShader ? this._shaderQuadCount * shaderStrideBytes : this._geoQuadCount * geoStrideBytes;
       const needCount = this._maxNodeIndex + 1;
 
-      const coordinator = backend._passCoordinator;
+      const coordinator = backend.passCoordinator;
       let active = coordinator.acquirePass();
 
       this._instanceArena.syncPass(active);
@@ -510,7 +510,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
 
       const offset = this._instanceArena.take(batchBytes);
       const instanceBuffer = this._instanceArena.buffer!;
-      const stencil = backend._passCoordinator.stencilActive;
+      const stencil = backend.passCoordinator.stencilActive;
 
       if (drawShader) {
         this._drawShaderBatch(device, backend, active.pass, stencil, instanceBuffer, offset);
@@ -518,7 +518,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
         this._drawGeoBatch(device, backend, active.pass, stencil, instanceBuffer, offset);
       }
     } else if (backend.clearRequested) {
-      backend._passCoordinator.acquirePass();
+      backend.passCoordinator.acquirePass();
     }
 
     // Batch flushes no longer submit; the backend ends the pass at boundaries.
@@ -565,7 +565,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     pass.setIndexBuffer(this._indexBuffer, 'uint16');
     pass.drawIndexed(indicesPerInstance, this._shaderQuadCount, 0, 0, 0);
 
-    backend._passCoordinator.markPassDraws();
+    backend.passCoordinator.markPassDraws();
     backend.stats.batches++;
     backend.stats.drawCalls++;
   }
@@ -604,7 +604,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     pass.setIndexBuffer(this._indexBuffer, 'uint16');
     pass.drawIndexed(indicesPerInstance, this._geoQuadCount, 0, 0, 0);
 
-    backend._passCoordinator.markPassDraws();
+    backend.passCoordinator.markPassDraws();
     backend.stats.batches++;
     backend.stats.drawCalls++;
 
@@ -631,7 +631,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
   }
 
   // ── Retained-batch record/replay ──────────────────────────────────────────
-  // Only geometry-path batches ever reach here (see _supportsRetainedBatches).
+  // Only geometry-path batches ever reach here (see supportsRetainedBatches).
   // Their 32-byte (8-word) layout puts the node index at word 7 - the same
   // position WebGpuSpriteRenderer uses - so scan/rebase mirror it exactly.
 
@@ -695,7 +695,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
       return;
     }
 
-    const coordinator = backend._passCoordinator;
+    const coordinator = backend.passCoordinator;
 
     // Same-frame texture mutation guard: resolving the bindings below re-
     // uploads mutated content on the queue timeline BEFORE the deferred

@@ -65,7 +65,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
    * tile chunks have no custom-material path to exclude.
    * @internal
    */
-  public readonly _supportsRetainedBatches = true;
+  public readonly supportsRetainedBatches = true;
 
   private readonly _shader: WebGl2Shader;
   private readonly _batchSize: number;

@@ -149,7 +149,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
    * skips writing transform records for text draws.
    * @internal
    */
-  public readonly _consumesSharedTransform = false;
+  public readonly consumesSharedTransform = false;
 
   /**
    * Retained-batch opt-in: one compatible shader/page class containing at most
@@ -165,7 +165,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
    * texture instead of the shared `TransformBuffer`.
    * @internal
    */
-  public readonly _supportsRetainedBatches = true;
+  public readonly supportsRetainedBatches = true;
 
   private readonly _sdfShader: WebGl2Shader = new WebGl2Shader(textVertSource, composeTextAtlasFragmentGlsl(textSdfFragSource));
   private readonly _msdfShader: WebGl2Shader = new WebGl2Shader(textVertSource, composeTextAtlasFragmentGlsl(textMsdfFragSource));

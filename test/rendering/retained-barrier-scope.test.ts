@@ -31,7 +31,7 @@ class RecordableLeaf extends Drawable {
   }
 }
 
-const flaggedRenderer = { _supportsRetainedBatches: true };
+const flaggedRenderer = { supportsRetainedBatches: true };
 
 /**
  * File-local fake backend. `draw` records the leaf's id together with the two

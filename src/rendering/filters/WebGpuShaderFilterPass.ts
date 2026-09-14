@@ -208,7 +208,7 @@ export class WebGpuShaderFilterPass {
     // The coordinator owns the GPU pass (it runs inside the surrounding
     // BackendTargetPass child pass, so load/clear is already resolved to
     // a clear of the output target) and ends + submits it below.
-    const pass = gpu._passCoordinator.acquirePass().pass;
+    const pass = gpu.passCoordinator.acquirePass().pass;
 
     pass.setPipeline(conn.pipeline);
     pass.setVertexBuffer(0, conn.vertexBuffer);
@@ -216,10 +216,10 @@ export class WebGpuShaderFilterPass {
     pass.setBindGroup(1, userBindGroup);
     pass.draw(4);
 
-    gpu._passCoordinator.markPassDraws();
+    gpu.passCoordinator.markPassDraws();
     gpu.stats.drawCalls++;
 
-    gpu._passCoordinator.endPass();
+    gpu.passCoordinator.endPass();
   }
 
   private _ensureConnected(backend: WebGpuBackend, output: RenderTexture): void {

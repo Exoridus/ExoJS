@@ -39,7 +39,7 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
    * has no custom-material path to exclude.
    * @internal
    */
-  public readonly _supportsRetainedBatches = true;
+  public readonly supportsRetainedBatches = true;
 
   private readonly _shader: WebGl2Shader;
   private readonly _batchSize: number;

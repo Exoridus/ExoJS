@@ -25,7 +25,7 @@ const createContext = () => {
   const executed: BackendRenderPass[] = [];
   const cleared: Array<Color | undefined> = [];
   const backend = {
-    _passCoordinator: coordinator,
+    passCoordinator: coordinator,
     execute: vi.fn(function (this: RenderBackend, pass: BackendRenderPass) {
       executed.push(pass);
       pass.execute(this);

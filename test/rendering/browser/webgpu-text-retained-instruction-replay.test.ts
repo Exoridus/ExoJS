@@ -3,7 +3,7 @@
  * replay.
  *
  * Text is the first retained renderer that opts OUT of the shared
- * `TransformBuffer` (`_consumesSharedTransform === false`): it packs its own
+ * `TransformBuffer` (`consumesSharedTransform === false`): it packs its own
  * private per-node style+transform buffer, so the group-owned
  * `TextRetainedReplayState` (node data buffer, FrameUniforms buffer, own
  * quad-index buffer) is the entire replay mechanism - there is no shared-row
@@ -153,7 +153,7 @@ describe('WebGPU renderer matrix: Text retained instruction replay cells', () =>
     const scene = buildScene();
 
     try {
-      expect(new WebGpuTextRenderer()._supportsRetainedBatches).toBe(true);
+      expect(new WebGpuTextRenderer().supportsRetainedBatches).toBe(true);
 
       if (!(await renderScene(ctx, backend, scene.root))) return; // F1: capture
       if (!(await renderScene(ctx, backend, scene.root))) return; // F2: record (slow path)

@@ -35,7 +35,7 @@ class NonConsumingDrawable extends Drawable {
 // Renderer stubs mirroring the real capability flags: consuming renderers carry
 // no flag (default consume), non-consuming renderers opt out with `false`.
 const consumingRenderer = {};
-const nonConsumingRenderer = { _consumesSharedTransform: false };
+const nonConsumingRenderer = { consumesSharedTransform: false };
 
 const material = (key: number): MaterialKey => ({
   rendererId: 1,
@@ -153,13 +153,13 @@ describe('drawCommandUsesSharedTransform', () => {
   });
 
   test('writes for renderers that explicitly consume the shared transform', () => {
-    const backend = { rendererRegistry: { resolve: () => ({ _consumesSharedTransform: true }) } } as unknown as RenderBackend;
+    const backend = { rendererRegistry: { resolve: () => ({ consumesSharedTransform: true }) } } as unknown as RenderBackend;
 
     expect(drawCommandUsesSharedTransform(command, backend)).toBe(true);
   });
 
-  test('skips renderers that opt out via _consumesSharedTransform === false', () => {
-    const backend = { rendererRegistry: { resolve: () => ({ _consumesSharedTransform: false }) } } as unknown as RenderBackend;
+  test('skips renderers that opt out via consumesSharedTransform === false', () => {
+    const backend = { rendererRegistry: { resolve: () => ({ consumesSharedTransform: false }) } } as unknown as RenderBackend;
 
     expect(drawCommandUsesSharedTransform(command, backend)).toBe(false);
   });

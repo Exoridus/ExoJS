@@ -68,7 +68,7 @@ class ParallaxProducer extends Container {
   }
 }
 
-const flaggedRenderer = { _supportsRetainedBatches: true };
+const flaggedRenderer = { supportsRetainedBatches: true };
 
 /**
  * File-local fake backend recording the drawables it is handed, in order.

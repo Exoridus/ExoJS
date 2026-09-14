@@ -62,8 +62,8 @@ class UnregisteredLeaf extends Drawable {
 }
 
 // Capability flag carrier: sprite-renderer default path only.
-const flaggedRenderer = { _supportsRetainedBatches: true };
-const retainedMaterialRenderer = { _supportsRetainedBatches: true, _canRecordRetainedDrawable: () => true };
+const flaggedRenderer = { supportsRetainedBatches: true };
+const retainedMaterialRenderer = { supportsRetainedBatches: true, canRecordRetainedDrawable: () => true };
 const unflaggedRenderer = {};
 
 // File-local fake backend (repo convention keeps test harnesses file-local).

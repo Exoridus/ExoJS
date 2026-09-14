@@ -255,7 +255,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
    * baked into vertices - uncacheable) and poisons the window from there,
    * because run length is only known at flush time.
    */
-  public readonly _supportsRetainedBatches = true;
+  public readonly supportsRetainedBatches = true;
 
   /**
    * Only a mesh backed by SHARED, STATIC {@link Geometry} can reach the
@@ -279,7 +279,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
    * fragment entry.
    * @internal
    */
-  public _admitsRetainedRecording(drawable: Drawable): boolean {
+  public admitsRetainedRecording(drawable: Drawable): boolean {
     return (drawable as Mesh).geometry?.usage === 'static';
   }
 
@@ -479,7 +479,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       return;
     }
 
-    const coordinator = backend._passCoordinator;
+    const coordinator = backend.passCoordinator;
     const material = mesh.material;
     const texture = mesh.texture ?? TextureClass.white;
     const premultiplySample = backend.shouldPremultiplyTextureSample(texture);
@@ -632,10 +632,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
   /** End (submit) the open pass and reopen a fresh one with empty cursors. */
   private _reopenInstancedBatchPass(backend: WebGpuBackend): WebGpuActiveRenderPass {
-    backend._passCoordinator.endPass();
+    backend.passCoordinator.endPass();
     this._resetInstancedBatchPass();
 
-    const active = backend._passCoordinator.acquirePass();
+    const active = backend.passCoordinator.acquirePass();
 
     this._syncInstancedBatchPass(active);
 
@@ -664,13 +664,13 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       // frame - e.g. the sprite flush right after this one - can append its
       // draws into it instead of paying for an extra pass and submit.
       if (backend.clearRequested) {
-        backend._passCoordinator.acquirePass();
+        backend.passCoordinator.acquirePass();
       }
       this._resetFrame();
       return;
     }
 
-    const coordinator = backend._passCoordinator;
+    const coordinator = backend.passCoordinator;
 
     // Phase 1: compute layout offsets RELATIVE TO THIS FLUSH (default vs. custom
     // paths use separate buffers, so default offsets are independent of custom
@@ -895,7 +895,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // coordinator's pass carries a depth/stencil attachment, so the default,
     // static-batch, and custom-material pipelines must all select their
     // stencil-enabled variants to match it.
-    const stencil = backend._passCoordinator.stencilActive;
+    const stencil = backend.passCoordinator.stencilActive;
 
     let lastShader: AnyMaterial | 'default' | 'instanced' | null = null;
     let lastBlendMode: BlendModes | null = null;
@@ -1216,7 +1216,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // flush. Submit it first so those draws reach the queue against live
     // buffers. Backend destroy and device loss drop the pass before disconnecting
     // renderers, so this only fires when a renderer is disconnected on its own.
-    const coordinator = this._backend?._passCoordinator ?? null;
+    const coordinator = this._backend?.passCoordinator ?? null;
 
     if (coordinator !== null && this._ownDrawsPass !== null && this._ownDrawsPass === coordinator.activePass) {
       coordinator.endPass();
@@ -1824,7 +1824,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       return;
     }
 
-    const coordinator = backend._passCoordinator;
+    const coordinator = backend.passCoordinator;
     const state = this._getMeshReplayState(bundle);
     const texture = payload.textures[0]!;
     const slot = payload.batchIndexInBundle ?? 0;
@@ -1909,7 +1909,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   private _ensureMeshReplayUniformCapacity(
     state: MeshRetainedReplayState,
     device: GPUDevice,
-    coordinator: WebGpuBackend['_passCoordinator'],
+    coordinator: WebGpuBackend['passCoordinator'],
     slots: number,
   ): void {
     if (state.uniformBuffer !== null && state.uniformSlotCapacity >= slots) {

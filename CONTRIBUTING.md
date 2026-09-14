@@ -234,6 +234,18 @@ Name a function for what it does: a verb first (`resolveTiledObjectAlignment`, `
 
 Existing API is reshaped only where a change touches it anyway. This rule is not a licence for a rename campaign.
 
+## The leading underscore: engine-internal, never a contract
+
+A leading underscore marks a member that belongs to the engine's own machinery, and it must mean exactly that. `SceneNode._setStage`, `RenderNode._retainedRootRepresentation` and `WebGl2Backend._acquirePersistentSlotStore` are engine plumbing: another part of the engine calls them, nothing outside the repository may.
+
+A member a renderer, backend or extension author has to implement or call is a contract instead, and carries no underscore however low-level it is. `passCoordinator`, `supportsRetainedBatches`, `canRecordRetainedDrawable`, `admitsRetainedRecording` and `consumesSharedTransform` are that kind: the tilemap and particles packages already implement or call them, so the underscore was describing the opposite of the truth. Such a member is declared on an interface that `src/renderer-sdk.ts` exports, so an author can type against it instead of guessing the shape from engine source.
+
+The two are told apart by one question: **could code outside this repository be required to write or call this?** If yes, it has no underscore, it has caller-facing JSDoc, and it is exported from the SDK barrel — even when it also carries `@internal` to keep it out of the root barrel and the application-facing API reference. If no, the underscore stays and the member may change without notice.
+
+`@internal` is orthogonal. It says "not ordinary application API", which is true of the entire renderer SDK; it does not say "not a contract".
+
+A structural flag is read off the renderer instance and an absent member means the conservative answer, so an author opts in by declaring one rather than by subclassing something. Keep that shape: it is what lets a renderer support its default path without promising more.
+
 ## Failure diagnostics: `assert`, `invariant`, typed error
 
 Every runtime failure the engine reports goes through one of three tools, and which one is right follows from a single question: **what kind of failure is this, and who can act on it?**

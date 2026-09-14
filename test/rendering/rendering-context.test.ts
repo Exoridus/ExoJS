@@ -804,7 +804,7 @@ describe('RenderingContext.drawBatch', () => {
 });
 
 describe('_renderSurfaceInto', () => {
-  test('redirects an arbitrary draw callback into the target and restores the previous target/view (legacy fallback branch — no _passCoordinator on the stub)', () => {
+  test('redirects an arbitrary draw callback into the target and restores the previous target/view (legacy fallback branch — no passCoordinator on the stub)', () => {
     const { backend, drawEvents, setRenderTargetSpy, setViewSpy, root } = createMockBackend();
     const context = new RenderingContext(backend);
     const target = new RenderTexture(64, 64);

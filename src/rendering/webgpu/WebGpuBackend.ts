@@ -538,7 +538,7 @@ export class WebGpuBackend implements RenderBackend {
    *
    * Part of the renderer SDK contract for extension renderers.
    */
-  public get _passCoordinator(): WebGpuPassCoordinator {
+  public get passCoordinator(): WebGpuPassCoordinator {
     if (this._passCoordinatorInstance === null) {
       this._passCoordinatorInstance = new WebGpuPassCoordinator(this);
       // A coordinator first reached after timing was enabled has to inherit the
@@ -892,7 +892,7 @@ export class WebGpuBackend implements RenderBackend {
     // Defensive: a draw the recorder cannot capture inside an active
     // window poisons it - the predicate excludes these at collect time, but
     // an incomplete replay stream must never be committable.
-    if (this._retainedCaptureFrames.length > 0 && (renderer as { _supportsRetainedBatches?: boolean })._supportsRetainedBatches !== true) {
+    if (this._retainedCaptureFrames.length > 0 && (renderer as { supportsRetainedBatches?: boolean }).supportsRetainedBatches !== true) {
       this._poisonActiveRetainedCaptures();
     }
 
@@ -1131,7 +1131,7 @@ export class WebGpuBackend implements RenderBackend {
     // select stencil-enabled pipeline variants while the clip is in effect.
     this._flushActiveRendererAndEndPass();
     this._setActiveRenderer(null);
-    this._passCoordinator.pushStencilClip(shape, transform);
+    this.passCoordinator.pushStencilClip(shape, transform);
 
     return this;
   }
@@ -1143,7 +1143,7 @@ export class WebGpuBackend implements RenderBackend {
 
     this._flushActiveRendererAndEndPass();
     this._setActiveRenderer(null);
-    this._passCoordinator.popStencilClip();
+    this.passCoordinator.popStencilClip();
 
     return this;
   }
@@ -1242,8 +1242,8 @@ export class WebGpuBackend implements RenderBackend {
     } else if (this._clearRequested) {
       // No active renderer but a clear is pending: open an empty coordinator
       // pass so createColorAttachment consumes the clear state once.
-      this._passCoordinator.acquirePass();
-      this._passCoordinator.endPass();
+      this.passCoordinator.acquirePass();
+      this.passCoordinator.endPass();
     }
 
     if (this._gpuTimer !== null) {
@@ -1391,7 +1391,7 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     if (index === 0) {
-      this._loadOpForPass = this._passCoordinator.resolveLoad(renderTarget, this._clearRequested);
+      this._loadOpForPass = this.passCoordinator.resolveLoad(renderTarget, this._clearRequested);
       this._clearRequested = false;
 
       const clearValue = this._clearValue;
@@ -1994,7 +1994,7 @@ export class WebGpuBackend implements RenderBackend {
    *
    * Most callers are defensive and the collect-time recordability predicate
    * keeps them unreachable - a renderer whose non-recordable draws are decidable
-   * PER DRAWABLE states that through `_admitsRetainedRecording` so no capture is
+   * PER DRAWABLE states that through `admitsRetainedRecording` so no capture is
    * opened for them at all. Two callers do fire on healthy frames and cannot be
    * pre-empted per drawable, because both are properties of how a frame's draws
    * compose into flushes rather than of any one drawable: the Text renderer's
@@ -2031,7 +2031,7 @@ export class WebGpuBackend implements RenderBackend {
     let base = 0xffffffff;
     let maxNodeIndex = 0;
     // A batch whose renderer opts out of the shared transform store
-    // (`_consumesSharedTransform === false`, e.g. Text - its per-instance
+    // (`consumesSharedTransform === false`, e.g. Text - its per-instance
     // "node index" addresses its OWN private data store, not a row in the
     // shared TransformBuffer) leaves `scanRetainedNodeIndexRange` a no-op, so
     // its `minNodeIndex`/`maxNodeIndex` stay at the unset sentinel

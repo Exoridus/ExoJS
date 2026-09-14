@@ -2,12 +2,12 @@
  * WebGPU Text retained-batch record/replay.
  *
  * Text is the first retained renderer that opts OUT of the shared
- * `TransformBuffer` (`_consumesSharedTransform === false`) - its per-vertex
+ * `TransformBuffer` (`consumesSharedTransform === false`) - its per-vertex
  * "node index" addresses its OWN private per-node style+transform buffer, so
  * the generic bundle/scan/rebase machinery has nothing to persist for it.
  * These tests pin the renderer-owned mechanism that replaces it end to end:
  *
- * - `_supportsRetainedBatches` opt-in: record on the second clean frame,
+ * - `supportsRetainedBatches` opt-in: record on the second clean frame,
  *   replay without re-collecting glyph quads on the third,
  * - camera pan and group move replay for free (no recorded-byte touch),
  * - an own-transform move patches the node's row in `TextRetainedReplayState`
@@ -318,7 +318,7 @@ describe('WebGPU Text retained-batch record/replay', () => {
       const backend = await createBackend(environment);
       const { root, group } = buildTextGroup();
 
-      expect(new WebGpuTextRenderer()._supportsRetainedBatches).toBe(true);
+      expect(new WebGpuTextRenderer().supportsRetainedBatches).toBe(true);
 
       renderFrame(backend, root); // F1: capture (no recording yet)
 

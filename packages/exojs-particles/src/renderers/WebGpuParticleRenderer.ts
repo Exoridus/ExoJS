@@ -142,7 +142,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
    * storage; the plan player skips writing transform records for particle draws.
    * @internal
    */
-  public readonly _consumesSharedTransform = false;
+  public readonly consumesSharedTransform = false;
 
   private readonly _drawCalls: WebGpuParticleDrawCall[] = [];
   private _drawCallCount = 0;
@@ -229,8 +229,8 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     // pass so createColorAttachment consumes the clear state.
     if (this._drawCallCount === 0 || maskClipsAll) {
       if (backend.clearRequested) {
-        backend._passCoordinator.acquirePass();
-        backend._passCoordinator.endPass();
+        backend.passCoordinator.acquirePass();
+        backend.passCoordinator.endPass();
       }
       this._drawCallCount = 0;
       return;
@@ -333,7 +333,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     const system = drawCall.system;
     const mode = system.renderMode;
     const resources = this._getOrCreateResources(mode, device);
-    const coordinator = backend._passCoordinator;
+    const coordinator = backend.passCoordinator;
 
     // GPU mode: the system's compute pipeline already wrote the interleaved
     // instance data into its own buffer - from its own encoder and its own
@@ -466,7 +466,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     targetVertexBytes: number,
     targetUniformSlots: number,
   ): boolean {
-    const coordinator = backend._passCoordinator;
+    const coordinator = backend.passCoordinator;
     const active = coordinator.activePass;
 
     // The texture cache is SHARED, and resolving the binding syncs dirty content

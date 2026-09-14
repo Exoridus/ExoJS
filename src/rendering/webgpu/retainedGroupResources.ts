@@ -104,7 +104,7 @@ export interface WebGpuRetainedBatchPayload {
   /**
    * Opaque, renderer-private data captured alongside this batch (Text opt-in):
    * for a renderer whose per-instance node index addresses its OWN private
-   * data store rather than the shared transform buffer (`_consumesSharedTransform
+   * data store rather than the shared transform buffer (`consumesSharedTransform
    * === false`), the generic bundle/scan/rebase machinery has nothing to persist
    * on its behalf - this field is the renderer's own escape hatch to carry
    * whatever CPU-side snapshot it needs from record time through to replay,

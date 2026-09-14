@@ -23,7 +23,7 @@ export type PatchableRetainedGroupBundle = RetainedGroupBundle & {
 /**
  * Optional per-renderer escape hatch from the generic shared-`TransformBuffer`
  * row patch: a renderer that packs its own private per-node data
- * (`_consumesSharedTransform === false`, e.g. Text - its row format and storage
+ * (`consumesSharedTransform === false`, e.g. Text - its row format and storage
  * differ from the shared buffer's) implements this instead, patching whatever it
  * owns directly. `base` is the same capture-frame row base the generic path
  * uses; a renderer whose own indexing scheme does not need it may ignore the

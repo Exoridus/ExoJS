@@ -29,7 +29,7 @@ const createBackend = (coordinator?: RenderPassCoordinator) => {
     setRenderTarget,
     setView,
     clear,
-    ...(coordinator ? { _passCoordinator: coordinator } : {}),
+    ...(coordinator ? { passCoordinator: coordinator } : {}),
   } as unknown as RenderBackend;
 
   return { backend, root, setRenderTarget, setView, clear };
