@@ -38,6 +38,49 @@ const DEFAULT_HOST = 'localhost';
 
 const readBody = async (filePath: string): Promise<Buffer> => readFile(filePath);
 
+/** One satisfiable byte range, resolved against a known body length. */
+interface ByteRange {
+  readonly start: number;
+  readonly end: number;
+}
+
+/**
+ * Resolve a `Range` header against a body of `size` bytes.
+ *
+ * `null` means "ignore the header and answer 200", which is always allowed and
+ * is what a syntactically odd or multi-range request gets - a client that asked
+ * for several ranges is served correctly by the whole body, and a dev server
+ * has no reason to build a multipart response. `'unsatisfiable'` is the one
+ * case a 416 is owed: a well-formed range that starts past the end.
+ */
+const resolveRange = (header: string | undefined, size: number): ByteRange | 'unsatisfiable' | null => {
+  if (header === undefined) return null;
+
+  const match = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
+
+  if (match === null) return null;
+
+  const [, rawStart, rawEnd] = match;
+  const hasStart = rawStart !== '';
+  const hasEnd = rawEnd !== '';
+
+  if (!hasStart && !hasEnd) return null;
+
+  // A suffix range ("-500") counts back from the end, and asking for more than
+  // the file holds is satisfied by the whole file rather than refused.
+  if (!hasStart) {
+    const suffix = Number(rawEnd);
+
+    return suffix === 0 ? 'unsatisfiable' : { start: Math.max(0, size - suffix), end: size - 1 };
+  }
+
+  const start = Number(rawStart);
+
+  if (start >= size) return 'unsatisfiable';
+
+  return { start, end: hasEnd ? Math.min(Number(rawEnd), size - 1) : size - 1 };
+};
+
 const isFile = async (filePath: string): Promise<boolean> => {
   try {
     const stats = await stat(filePath);
@@ -117,6 +160,40 @@ export const startStaticServer = async (options: StaticServerOptions): Promise<S
     response.end(headOnly ? undefined : body);
   };
 
+  /**
+   * Serve a file, honouring a `Range` request.
+   *
+   * `Accept-Ranges` is advertised on every file response, not only on a ranged
+   * one: a client decides whether to range-fetch at all from the answer to its
+   * first whole-file or HEAD request. The body is never content-encoded here,
+   * so a range always addresses the bytes on disk - which is what an `.exoa`
+   * reader depends on when it fetches a block by stored offset.
+   */
+  const sendFile = async (response: ServerResponse, request: IncomingMessage, filePath: string, headOnly: boolean): Promise<void> => {
+    const body = await readBody(filePath);
+    const contentType = contentTypeFor(filePath);
+
+    response.setHeader('Accept-Ranges', 'bytes');
+
+    const range = resolveRange(request.headers.range, body.byteLength);
+
+    if (range === null) {
+      send(response, 200, body, contentType, headOnly);
+
+      return;
+    }
+
+    if (range === 'unsatisfiable') {
+      response.setHeader('Content-Range', `bytes */${body.byteLength}`);
+      send(response, 416, Buffer.from('Range Not Satisfiable'), 'text/plain; charset=utf-8', headOnly);
+
+      return;
+    }
+
+    response.setHeader('Content-Range', `bytes ${range.start}-${range.end}/${body.byteLength}`);
+    send(response, 206, body.subarray(range.start, range.end + 1), contentType, headOnly);
+  };
+
   const handle = async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
     const method = request.method ?? 'GET';
 
@@ -141,14 +218,16 @@ export const startStaticServer = async (options: StaticServerOptions): Promise<S
     const candidate = pathname.endsWith('/') ? join(target, 'index.html') : target;
 
     if (await isFile(candidate)) {
-      send(response, 200, await readBody(candidate), contentTypeFor(candidate), headOnly);
+      await sendFile(response, request, candidate, headOnly);
 
       return;
     }
 
     if (spaFallback && (await isFile(indexPath))) {
       // A client-side route has no file of its own; the app resolves it once
-      // the document has booted.
+      // the document has booted. A range over it would address the fallback
+      // document rather than the path the client asked for, so this answers
+      // whole regardless of what was requested.
       send(response, 200, await readBody(indexPath), contentTypeFor(indexPath), headOnly);
 
       return;

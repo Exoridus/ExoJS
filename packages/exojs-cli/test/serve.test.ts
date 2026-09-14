@@ -127,6 +127,54 @@ describe('exo serve', () => {
     });
   });
 
+  test('advertises byte ranges on a file response', async () =>
+    serving({ root, port: 0 }, async server => {
+      const response = await fetch(new URL('assets/data.bin', server.url));
+
+      expect(response.headers.get('accept-ranges')).toBe('bytes');
+    }));
+
+  test('answers a byte range with 206 and exactly those bytes', async () =>
+    serving({ root, port: 0 }, async server => {
+      const response = await fetch(new URL('assets/data.bin', server.url), { headers: { Range: 'bytes=1-2' } });
+
+      expect(response.status).toBe(206);
+      expect(response.headers.get('content-range')).toBe('bytes 1-2/3');
+      expect(new Uint8Array(await response.arrayBuffer())).toEqual(new Uint8Array([2, 3]));
+    }));
+
+  test('an open-ended range runs to the last byte', async () =>
+    serving({ root, port: 0 }, async server => {
+      const response = await fetch(new URL('assets/data.bin', server.url), { headers: { Range: 'bytes=1-' } });
+
+      expect(response.status).toBe(206);
+      expect(response.headers.get('content-range')).toBe('bytes 1-2/3');
+    }));
+
+  test('a suffix range counts back from the end', async () =>
+    serving({ root, port: 0 }, async server => {
+      const response = await fetch(new URL('assets/data.bin', server.url), { headers: { Range: 'bytes=-2' } });
+
+      expect(response.status).toBe(206);
+      expect(new Uint8Array(await response.arrayBuffer())).toEqual(new Uint8Array([2, 3]));
+    }));
+
+  test('a range past the end is refused with 416 and the real size', async () =>
+    serving({ root, port: 0 }, async server => {
+      const response = await fetch(new URL('assets/data.bin', server.url), { headers: { Range: 'bytes=9-12' } });
+
+      expect(response.status).toBe(416);
+      expect(response.headers.get('content-range')).toBe('bytes */3');
+    }));
+
+  test('a range it will not serve piecewise is answered whole rather than refused', async () =>
+    serving({ root, port: 0 }, async server => {
+      const response = await fetch(new URL('assets/data.bin', server.url), { headers: { Range: 'bytes=0-0, 2-2' } });
+
+      expect(response.status).toBe(200);
+      expect(new Uint8Array(await response.arrayBuffer())).toEqual(new Uint8Array([1, 2, 3]));
+    }));
+
   test('answers a method it does not implement with 405 and Allow', async () => {
     await serving({ root, port: 0 }, async server => {
       const response = await fetch(`${server.url}index.html`, { method: 'DELETE' });

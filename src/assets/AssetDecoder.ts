@@ -250,6 +250,19 @@ export class AssetDecoder {
     return this._acquire(url, CONTAINER_NAMESPACE, containerLayout, canonicalizeSource(this._basePath, url), response => response.arrayBuffer());
   }
 
+  /**
+   * The absolute URL and request options a container read runs under.
+   *
+   * The block-wise container path does its own fetching - that is the point of
+   * it - but must still resolve the source against the loader's base path and
+   * carry the application's `fetchOptions`, exactly as every other acquisition
+   * does.
+   * @internal
+   */
+  public _containerRequest(url: string, signal?: AbortSignal): { url: string; init: RequestInit } {
+    return { url: this._resolveUrl(url), init: this._requestOptions(signal) };
+  }
+
   /** The context a factory sees for one request. */
   private _factoryContext(asset: CanonicalAsset, scope: LoaderScope, options: unknown, signal?: AbortSignal): AssetFactoryContext<unknown> {
     return {

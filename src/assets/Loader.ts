@@ -2,7 +2,8 @@ import { AssetCache } from '#assets/cache/AssetCache';
 import type { AssetCacheError } from '#assets/cache/AssetCacheError';
 import type { CacheLayout } from '#assets/cache/CacheLayout';
 import type { CacheStore } from '#assets/cache/CacheStore';
-import { decodeContainerData, parseContainer, readContainerEntry } from '#assets/container/assetContainer';
+import type { ContainerBlockStore } from '#assets/container/containerBlockStore';
+import { ContainerReader } from '#assets/container/ContainerReader';
 import type { Connectivity } from '#core/Connectivity';
 import { Signal } from '#core/Signal';
 
@@ -160,6 +161,21 @@ export interface LoadOptions {
  * public call-shape dispatch (`load`/`get`/`unload` and their internal
  * scene-scope entry points) and the foreground-batch progress signals.
  */
+/** How {@link Loader.loadContainer} fetches a container. */
+export interface LoadContainerOptions {
+  /**
+   * Where to keep the container's blocks between visits - `cacheApiBlockStore()`
+   * for the browser's own storage, or any {@link ContainerBlockStore}.
+   *
+   * Supplying one selects the block-wise path: the head is read first and only
+   * the blocks the store does not hold are fetched, so a revisit costs what
+   * actually changed. It replaces the whole-file cache entry rather than adding
+   * to it, since both hold the same bytes. Omit it to fetch and cache the file
+   * whole.
+   */
+  readonly store?: ContainerBlockStore;
+}
+
 export class Loader {
   private readonly _typeRegistry = new AssetTypeRegistry();
   private readonly _decoder: AssetDecoder;
@@ -475,16 +491,25 @@ export class Loader {
   }
 
   /**
-   * Load every asset packed into a binary container (`.exoa`) in a **single
-   * request**, and return the scope that owns them.
+   * Load every asset packed into a binary container (`.exoa`) and return the
+   * scope that owns them.
    *
-   * A container is one file with an embedded index: its bytes are fetched once
-   * (and cached cross-session like any asset), then each slice is read through
-   * its type's own codec and factory and stored under the entry's own logical
-   * source.
-   * A container is therefore a transport, not a second naming system - an entry
-   * resolves to exactly the same asset identity as a network load of that
-   * source, so both can hold it and the payload is fetched and decoded once.
+   * A container is one file with an embedded index: its slices are read through
+   * each type's own codec and factory and stored under the entry's own logical
+   * source. A container is therefore a transport, not a second naming system -
+   * an entry resolves to exactly the same asset identity as a network load of
+   * that source, so both can hold it and the payload is fetched and decoded
+   * once.
+   *
+   * By default the file is fetched in a **single request** and cached whole,
+   * cross-session, like any other asset. Passing a {@link ContainerBlockStore}
+   * switches to the block-wise path instead: the head is read first, and only
+   * the blocks the store does not already hold are fetched. That is what makes
+   * a pack whose assets mostly did not change cost close to nothing on a second
+   * visit - at the price of the whole-file cache entry, since the two cache the
+   * same bytes at different granularity and keeping both would store them
+   * twice. Servers that do not answer byte ranges degrade to one request
+   * automatically.
    *
    * The returned scope holds one ordinary claim per entry. Destroying it frees
    * only the entries no other owner still holds, so unpacking a container can
@@ -498,12 +523,13 @@ export class Loader {
    * an unknown type, or a type that cannot be read from bytes.
    *
    * @param url Path to the container file, resolved against the loader base path.
+   * @param options Where to keep blocks between visits; omitted, the whole file is fetched and cached.
    */
-  public async loadContainer(url: string): Promise<LoaderScope> {
+  public async loadContainer(url: string, options?: LoadContainerOptions): Promise<LoaderScope> {
     const scope = new LoaderScope(this, 'container', `container:${url}`);
 
     try {
-      await this._loadContainerInto(scope, url);
+      await this._loadContainerInto(scope, url, options);
     } catch (error: unknown) {
       // The scope never reaches the caller on this path, so every claim the
       // unpack already registered would stay held for the loader's lifetime
@@ -516,11 +542,29 @@ export class Loader {
     return scope;
   }
 
+  /**
+   * Open the container at `url` on whichever path `options` selects.
+   *
+   * Without a block store the bytes go through the ordinary asset acquisition -
+   * one request, the application's cache configuration and connectivity policy.
+   * With one, the reader fetches for itself so it can stop at the head and take
+   * only the blocks the store lacks, which the whole-file cache could not
+   * express.
+   */
+  private async _openContainer(url: string, options?: LoadContainerOptions): Promise<ContainerReader> {
+    if (options?.store === undefined) {
+      return ContainerReader.fromBuffer(await this._decoder._acquireContainer(url));
+    }
+
+    const request = this._decoder._containerRequest(url);
+
+    return ContainerReader.open(request.url, { store: options.store, init: request.init });
+  }
+
   /** Backs {@link loadContainer} and {@link LoaderScope.loadContainer}: unpack `url` and claim every entry under `claimer`. @internal */
-  public async _loadContainerInto(claimer: LoaderScope, url: string): Promise<void> {
-    const buffer = await this._decoder._acquireContainer(url);
-    const container = parseContainer(buffer);
-    const { entries } = container;
+  public async _loadContainerInto(claimer: LoaderScope, url: string, options?: LoadContainerOptions): Promise<void> {
+    const reader = await this._openContainer(url, options);
+    const { entries } = reader.container;
 
     // Resolve every type up front so an unknown type fails before any asset is stored.
     const resolved = entries.map(entry => {
@@ -533,17 +577,25 @@ export class Loader {
       return { entry, asset: this._canonicalize(type, entry.source, entry.options) };
     });
 
-    // Decoding happens before anything touches residency. It is the only
+    // Reading happens before anything touches residency. It is the only
     // asynchronous step in the unpack, and the claim/inject loop below must run
     // without an await between the in-flight check and the injection it guards -
     // a `get()` slipping into that gap would build a second payload for one
     // identity.
     //
-    // The whole data section is decoded at once because a block spans many
-    // entries: decoding per entry would decompress the same block once per
-    // asset it holds.
-    const data = await decodeContainerData(container, buffer);
-    const unpacked = resolved.map(({ entry, asset }) => ({ entry, asset, payload: readContainerEntry(entry, data) }));
+    // Every entry is read in one call because a block spans many of them:
+    // reading per entry would decompress the same block once per asset it
+    // holds.
+    const payloads = await reader.readEntries(resolved.map(({ entry }) => entry));
+    const unpacked = resolved.map(({ entry, asset }, index) => {
+      const payload = payloads[index];
+
+      if (payload === undefined) {
+        throw new Error(`Container "${url}" produced no bytes for "${entry.source}".`);
+      }
+
+      return { entry, asset, payload };
+    });
 
     // Claim before unpacking: an entry that is already resident (loaded over the
     // network earlier) is kept alive by this claim even though nothing stores it
