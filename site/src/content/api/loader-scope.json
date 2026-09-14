@@ -1076,7 +1076,7 @@
         },
         {
           "name": "loadContainer",
-          "signature": "loadContainer(url: string): Promise<void>",
+          "signature": "loadContainer(url: string, options?: LoadContainerOptions): Promise<void>",
           "signatureTokens": [
             {
               "text": "loadContainer",
@@ -1097,6 +1097,26 @@
             {
               "text": "string",
               "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadContainerOptions",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -1128,6 +1148,11 @@
               "name": "url",
               "type": "string",
               "optional": false
+            },
+            {
+              "name": "options",
+              "type": "LoadContainerOptions",
+              "optional": true
             }
           ],
           "returnType": "Promise<void>",

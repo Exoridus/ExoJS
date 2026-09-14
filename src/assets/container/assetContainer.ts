@@ -249,9 +249,9 @@ const readBlock = (value: unknown, i: number, expectedOffset: number, storedLimi
 
 // `BufferSource` excludes a view over a `SharedArrayBuffer`, so the stored
 // bytes have to be declared over the plain `ArrayBuffer` the container is in.
-const decodeBlock = async (block: ContainerBlock, stored: Uint8Array<ArrayBuffer>, into: Uint8Array, index: number): Promise<void> => {
+const decodeBlock = async (block: ContainerBlock, stored: Uint8Array<ArrayBuffer>, into: Uint8Array, at: number, index: number): Promise<void> => {
   if (block.codec === 'none') {
-    into.set(stored, block.offset);
+    into.set(stored, at);
 
     return;
   }
@@ -278,7 +278,7 @@ const decodeBlock = async (block: ContainerBlock, stored: Uint8Array<ArrayBuffer
         fail(`block ${index} decodes to more than the ${block.length} bytes it covers`);
       }
 
-      into.set(value, block.offset + written);
+      into.set(value, at + written);
       written += value.byteLength;
     }
   } catch (error: unknown) {
@@ -322,27 +322,56 @@ export const decodeContainerData = async (container: ParsedContainer, buffer: Ar
 
   await Promise.all(
     container.blocks.map(async (block, i) =>
-      decodeBlock(block, new Uint8Array(buffer, container.dataOffset + block.storedOffset, block.storedLength), into, i),
+      decodeBlock(block, new Uint8Array(buffer, container.dataOffset + block.storedOffset, block.storedLength), into, block.offset, i),
     ),
   );
 
   return data;
 };
 
+/**
+ * Decode one block's stored bytes into the region it covers.
+ *
+ * The block path for a reader that obtained `stored` on its own - from a byte
+ * range or from a block store - rather than from a container held whole. The
+ * result is exactly the block's `length` bytes, addressed from its `offset` in
+ * the uncompressed data section.
+ *
+ * Throws when the bytes are unreadable as the block's codec, or decode to a
+ * length other than the region the block claims to cover.
+ */
+export const decodeContainerBlock = async (block: ContainerBlock, stored: Uint8Array<ArrayBuffer>, index = 0): Promise<Uint8Array<ArrayBuffer>> => {
+  const into = new Uint8Array(new ArrayBuffer(block.length));
+
+  await decodeBlock(block, stored, into, 0, index);
+
+  return into;
+};
+
 /** Read one entry's asset bytes out of a decoded data section. */
 export const readContainerEntry = (entry: ContainerEntry, data: ArrayBuffer): ArrayBuffer => data.slice(entry.offset, entry.offset + entry.length);
 
 /**
- * Parse and validate a container's header and JSON head. Throws (never returns
- * partial or garbage data) on a bad magic, unsupported version, truncated
- * buffer, malformed head, a block table that does not tile the data section, or
- * an entry whose slice runs past it.
+ * Parse and validate a container's header and JSON head from a prefix of the
+ * file, given the file's total length.
+ *
+ * `prefix` has to reach the end of the head - a reader that guessed too small a
+ * prefix is told so by {@link containerHeadLength}, which needs only the
+ * 32-byte header. Everything past the head is validated against `totalLength`
+ * rather than against the prefix, so block extents are checked exactly as they
+ * are for a container held whole.
+ *
+ * Throws (never returns partial or garbage data) on a bad magic, unsupported
+ * version, a prefix that does not contain the whole head, a malformed head, a
+ * block table that does not tile the data section, or an entry whose slice runs
+ * past it.
  */
-export const parseContainer = (buffer: ArrayBuffer): ParsedContainer => {
-  if (buffer.byteLength < CONTAINER_HEADER_SIZE) {
-    fail(`buffer too small for a ${CONTAINER_HEADER_SIZE}-byte header (got ${buffer.byteLength})`);
+export const parseContainerHead = (prefix: ArrayBuffer, totalLength: number): ParsedContainer => {
+  if (prefix.byteLength < CONTAINER_HEADER_SIZE) {
+    fail(`buffer too small for a ${CONTAINER_HEADER_SIZE}-byte header (got ${prefix.byteLength})`);
   }
 
+  const buffer = prefix;
   const bytes = new Uint8Array(buffer);
   const view = new DataView(buffer);
 
@@ -372,8 +401,8 @@ export const parseContainer = (buffer: ArrayBuffer): ParsedContainer => {
   }
 
   const dataOffset = view.getUint32(16, true);
-  if (dataOffset < headEnd || dataOffset > buffer.byteLength) {
-    fail(`data offset ${dataOffset} is outside the container (head ends at ${headEnd}, size ${buffer.byteLength})`);
+  if (dataOffset < headEnd || dataOffset > totalLength) {
+    fail(`data offset ${dataOffset} is outside the container (head ends at ${headEnd}, size ${totalLength})`);
   }
   if (dataOffset % CONTAINER_ALIGNMENT !== 0) {
     fail(`data offset ${dataOffset} is not a multiple of ${CONTAINER_ALIGNMENT}`);
@@ -400,7 +429,7 @@ export const parseContainer = (buffer: ArrayBuffer): ParsedContainer => {
   if (!Array.isArray(head.entries)) fail('head has no "entries" array');
   if (!Array.isArray(head.blocks)) fail('head has no "blocks" array');
 
-  const storedLimit = buffer.byteLength - dataOffset;
+  const storedLimit = totalLength - dataOffset;
   const blocks: ContainerBlock[] = [];
   let dataLength = 0;
 
@@ -427,3 +456,24 @@ export const parseContainer = (buffer: ArrayBuffer): ParsedContainer => {
 
   return { version, entries, blocks, blockSize, dataOffset, dataLength };
 };
+
+/**
+ * The byte length of the whole header-plus-head prefix, read from a buffer that
+ * holds at least the 32-byte header. A reader fetches this much before it can
+ * call {@link parseContainerHead}.
+ */
+export const containerHeadLength = (headerPrefix: ArrayBuffer): number => {
+  if (headerPrefix.byteLength < CONTAINER_HEADER_SIZE) {
+    fail(`buffer too small for a ${CONTAINER_HEADER_SIZE}-byte header (got ${headerPrefix.byteLength})`);
+  }
+
+  return CONTAINER_HEADER_SIZE + new DataView(headerPrefix).getUint32(12, true);
+};
+
+/**
+ * Parse and validate a container held whole in memory.
+ *
+ * The single-request path: everything past the head is validated against the
+ * buffer itself, because the buffer is the file.
+ */
+export const parseContainer = (buffer: ArrayBuffer): ParsedContainer => parseContainerHead(buffer, buffer.byteLength);

@@ -1,0 +1,75 @@
+{
+  "title": "LoadContainerOptions",
+  "description": "How Loader.loadContainer fetches a container.",
+  "symbol": "LoadContainerOptions",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "How Loader.loadContainer fetches a container."
+      ],
+      "importLine": "import { LoadContainerOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "store",
+          "signature": "store?: ContainerBlockStore",
+          "signatureTokens": [
+            {
+              "text": "store",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ContainerBlockStore",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Where to keep the container's blocks between visits - cacheApiBlockStore() for the browser's own storage, or any ContainerBlockStore. Supplying one selects the block-wise path: the head is read first and only the blocks the store does not hold are fetched, so a revisit costs what actually changed. It replaces the whole-file cache entry rather than adding to it, since both hold the same bytes. Omit it to fetch and cache the file whole."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/Loader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/Loader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
+}

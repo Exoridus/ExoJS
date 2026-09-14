@@ -1,0 +1,100 @@
+{
+  "title": "ContainerReaderOptions",
+  "description": "How a ContainerReader is opened.",
+  "symbol": "ContainerReaderOptions",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "How a ContainerReader is opened."
+      ],
+      "importLine": "import { ContainerReaderOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "init",
+          "signature": "init?: RequestInit",
+          "signatureTokens": [
+            {
+              "text": "init",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RequestInit",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Forwarded to every request the reader makes - signal, credentials, headers."
+        },
+        {
+          "name": "store",
+          "signature": "store?: ContainerBlockStore",
+          "signatureTokens": [
+            {
+              "text": "store",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ContainerBlockStore",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Where to keep blocks between visits. Given one, a reader consults it before the network and offers it every block it fetches, which is what makes a second load of a changed pack cost only the blocks that changed."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/container/ContainerReader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/container/ContainerReader.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/container/ContainerReader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/container/ContainerReader.ts"
+}

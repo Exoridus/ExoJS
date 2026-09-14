@@ -1,0 +1,177 @@
+{
+  "title": "ContainerBlock",
+  "description": "One independently compressed run of the data section. Blocks tile the uncompressed section in order and without gaps, and a block boundary always falls on an entry boundary: a changed asset dirties its own blocks and no others, which is what makes an update proportional to what changed rather than to the size of the pack.",
+  "symbol": "ContainerBlock",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One independently compressed run of the data section.",
+        "Blocks tile the uncompressed section in order and without gaps, and a block boundary always falls on an entry boundary: a changed asset dirties its own blocks and no others, which is what makes an update proportional to what changed rather than to the size of the pack."
+      ],
+      "importLine": "import { ContainerBlock } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "codec",
+          "signature": "codec: ContainerCodec",
+          "signatureTokens": [
+            {
+              "text": "codec",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ContainerCodec",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "hash",
+          "signature": "hash: string",
+          "signatureTokens": [
+            {
+              "text": "hash",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "SHA-256 of the **stored** bytes, lowercase hex, as the writer computed it. It names the bytes that travel, which is what lets a client tell a block it already holds from one it has to fetch. Reading a container checks the shape of this field and nothing more: the digest is not recomputed, so it identifies a block rather than attesting to it. What guards a decode is the block's own framing."
+        },
+        {
+          "name": "length",
+          "signature": "length: number",
+          "signatureTokens": [
+            {
+              "text": "length",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Uncompressed byte length of that region."
+        },
+        {
+          "name": "offset",
+          "signature": "offset: number",
+          "signatureTokens": [
+            {
+              "text": "offset",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Byte offset of the region this block covers within the uncompressed data section."
+        },
+        {
+          "name": "storedLength",
+          "signature": "storedLength: number",
+          "signatureTokens": [
+            {
+              "text": "storedLength",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Stored byte length; equal to length when the codec is none."
+        },
+        {
+          "name": "storedOffset",
+          "signature": "storedOffset: number",
+          "signatureTokens": [
+            {
+              "text": "storedOffset",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Byte offset of the stored bytes, relative to the header's dataOffset."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/container/assetContainer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/container/assetContainer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/container/assetContainer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/container/assetContainer.ts"
+}
