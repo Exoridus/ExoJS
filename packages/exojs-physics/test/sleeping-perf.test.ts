@@ -22,7 +22,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { buildField, FRAME, stepTimes } from './fields';
+import { buildChains, buildField, FRAME, settle, stepTimes } from './fields';
 
 describe('physics sleeping performance', () => {
   it('5,000-mostly-sleeping field: sleeping sharply cuts step time', () => {
@@ -71,5 +71,44 @@ describe('physics sleeping performance', () => {
     // headroom for inlining variance across machines, not for a busy one.
     expect(sleptCount).toBeGreaterThan(4500);
     expect(sleepingMs).toBeLessThan(awakeMs * 0.5);
+  }, 60_000);
+
+  it('2,400-link sleeping joint field: a sleeping joint costs no per-sub-step work', () => {
+    // A jointed scene used to keep paying for its sleepers even though every
+    // joint and every body bailed out immediately: twelve passes over all the
+    // joints per step plus eight over all the bodies, an island union per joint,
+    // and a broad-phase re-sync per collider. Measured as a ratio against the
+    // identical scene held awake, that put the sleeping arm at ~1/4 of the awake
+    // cost; skipping the work outright puts it past 1/20.
+    const awake = buildChains(300, 8, { enableSleeping: false });
+
+    if (awake.world.step.toString().includes('cov_')) {
+      console.log('sleeping-joint perf gate skipped under coverage (instrumentation slows the measurement past the timeout)');
+
+      return;
+    }
+
+    for (let i = 0; i < 60; i++) {
+      awake.world.step(FRAME);
+    }
+
+    const awakeMs = stepTimes(awake.world, 120);
+    const sleeping = buildChains(300, 8);
+    const settleSteps = settle(sleeping.world, 600);
+    const sleepingMs = stepTimes(sleeping.world, 120);
+
+    console.log(
+      `2,400 links: awake ${awakeMs.toFixed(3)} ms/step vs sleeping ${sleepingMs.toFixed(3)} ms/step after ${settleSteps} settle steps (${(awakeMs / sleepingMs).toFixed(1)}× faster)`,
+    );
+
+    expect(sleeping.links.length).toBe(2400);
+    expect(sleeping.links.every(body => body.isSleeping)).toBe(true);
+
+    // The enforced bound is a fraction of the awake arm rather than a millisecond
+    // figure, for the reason the file opens with: both arms run on whatever
+    // machine this is, so the machine cancels and only the skipped work remains.
+    // 8× sits safely above the fixed per-step cost that is left (measured ~20×)
+    // and well below the ~4× the unskipped version reached.
+    expect(sleepingMs).toBeLessThan(awakeMs / 8);
   }, 60_000);
 });
