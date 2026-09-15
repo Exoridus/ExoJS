@@ -80,18 +80,6 @@ export interface CardLoad {
    * which a bar length would assert they were.
    */
   readonly withheld: string | undefined;
-  /**
-   * The libraries the block compares elsewhere and this load does not, by name;
-   * empty where it compares all of them.
-   *
-   * A card that silently shows two rows where its neighbours show four reads as
-   * a page that lost a library. Named rather than counted, because the rows
-   * already carry the names: a reader can see which libraries are present, so a
-   * figure saying how many there should be leaves them to work out the
-   * difference the page already knows. Why an arm is missing is a property of
-   * that arm's adapter and coverage and stays in the full results.
-   */
-  readonly missingArms: readonly string[];
 
   /**
    * The published verdict against the quickest competitor on this load, or
@@ -255,7 +243,6 @@ const loadOf = (row: ProfileRow): CardLoad | null => {
     count: row.count,
     ...(row.unit !== undefined && { unit: row.unit }),
     comparisons: cells.map(cell => ({ id: cell.competitor, label: armLabel(cell.competitor), cell, outcome: outcomeOf(cell) })),
-    missingArms: [],
     lead: undefined,
     withheld,
   };
@@ -328,28 +315,14 @@ const cardsOf = (sections: readonly ProfileSection[], backend?: ProfileBackendNa
     }
   }
 
-  // Named against the arms the same block published, not against a list of arms
-  // the page holds: what a comparison "should" carry is whatever that machine's
-  // run actually measured, and a profile taken against three arms must not
-  // report every one of its rows as short of a fourth.
+  // Which arms a load leaves out is stated once for the page rather than on
+  // every card that leaves one out: the rule is the same everywhere, and a
+  // reader who wants the absent arm's own story has the full results.
   const cards = [...byScenario.entries()].map(([id, card]) => ({ id, category: card.category, loads: card.loads, ...(backend !== undefined && { backend }) }));
-  const published = new Map<string, string>();
-
-  for (const card of cards) {
-    for (const load of card.loads) {
-      for (const arm of load.arms) {
-        published.set(arm.id, arm.label);
-      }
-    }
-  }
 
   return cards.map(card => ({
     ...card,
-    loads: card.loads.map(load => ({
-      ...load,
-      missingArms: [...published.entries()].filter(([id]) => !load.arms.some(arm => arm.id === id)).map(([, label]) => label),
-      lead: leadOf(load),
-    })),
+    loads: card.loads.map(load => ({ ...load, lead: leadOf(load) })),
   }));
 };
 

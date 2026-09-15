@@ -231,6 +231,23 @@ const leading = browsers[0];
                     </div>
                 ))}
 
+                {/*
+                  * Why a card holds three rows where its neighbour holds four,
+                  * said once for the page.
+                  *
+                  * It was on every card that left an arm out, which put the
+                  * same sentence on screen 27 times to explain a rule that does
+                  * not change between them - and a reader can already see which
+                  * libraries a card lists. What they cannot see is why the
+                  * others are absent, and that is what this says.
+                  */}
+                <p class="scope">
+                    A library appears in a scenario where its own API covers it and its arm does the same work as the others. One that sits a scenario out, or that would
+                    render something else in it, is left out of that card rather than compared on unequal terms. Nothing measured is discarded - <a
+                        href={`${base}${locale}/benchmarks/full/`}>all measurements</a
+                    > lists every arm and every load.
+                </p>
+
                 {/* Four destinations and no explanatory paragraphs: what each one is is what its name says. */}
                 <nav class="tools" aria-label="Benchmark data">
                     <a href={`${base}${locale}/benchmarks/full/`}>All measurements</a>
@@ -505,6 +522,13 @@ const leading = browsers[0];
 
     .more .cards {
         margin-top: var(--s-4);
+    }
+
+    .scope {
+        margin-top: var(--s-5);
+        font-size: 0.82rem;
+        color: var(--fg-muted);
+        max-width: 68ch;
     }
 
     .legend {
