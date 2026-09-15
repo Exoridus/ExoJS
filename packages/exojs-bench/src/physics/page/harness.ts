@@ -1,4 +1,5 @@
 import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
+import type { CellStatus } from '../../shared/result';
 import { median, percentile, shouldAbort } from '../../shared/timing';
 import { PHYSICS_ARCHETYPES, seedFor, STEP_DELTA } from '../archetypes';
 import type { PhysicsAdapter, PhysicsArchetypeSpec, PhysicsCellSpec } from '../PhysicsAdapter';
@@ -59,6 +60,24 @@ const TICKS_PER_SAMPLE = 20;
  * coarser number than it appears to.
  */
 const MIN_TIMED_SAMPLES = 12;
+
+/**
+ * How far past its planned step count a cell may run to clear the clock.
+ *
+ * A step cheap enough to need this is cheap enough to afford it: at the cap a
+ * five-microsecond step runs for well under a second. The bound exists for a
+ * calibration that misjudged the step, not for the steps themselves.
+ */
+const MAX_TIMED_STEPS_FACTOR = 50;
+
+/**
+ * Clock ticks below which a median is reported as no measurement at all.
+ *
+ * Four ticks is a quarter of the reported value in quantisation, which is the
+ * point past which the number describes the clock's grid more than the
+ * engine. Above it the note still says how coarse the sample was.
+ */
+const MIN_RESOLVED_TICKS = 4;
 
 /** Iterations of the resolution probe: enough distinct deltas to find the clock's grid without stalling page load. */
 const CLOCK_PROBE_ITERATIONS = 200_000;
@@ -245,25 +264,44 @@ const archetypeFor = (id: PhysicsCellSpec['archetype']): PhysicsArchetypeSpec =>
   return spec;
 };
 
+/** How a cell's timed window is batched: steps per sample, and steps in total. */
+export interface TimingPlan {
+  readonly stepsPerSample: number;
+  readonly timedSteps: number;
+}
+
 /**
  * Steps one timing sample must cover for the sample to clear the clock's grid,
- * bounded so the cell still reports a distribution.
+ * and the steps the cell runs to keep a distribution of such samples.
+ *
+ * A step too cheap for the planned window to hold enough of them is answered
+ * by running more steps, not by accepting a coarser sample: the planned count
+ * is a floor on the work, and a cell whose step costs microseconds can run
+ * thousands of them in the time a slow arm spends on one.
  */
-const resolveStepsPerSample = (estimatedStepMs: number, resolutionMs: number | null, timedSteps: number): number => {
-  const cap = Math.max(1, Math.floor(timedSteps / MIN_TIMED_SAMPLES));
+export const resolveTimingPlan = (estimatedStepMs: number, resolutionMs: number | null, plannedSteps: number): TimingPlan => {
+  const cap = Math.max(1, Math.floor(plannedSteps / MIN_TIMED_SAMPLES));
 
   // Nothing to derive a batch from. One step per sample is the only honest
   // choice, and the cell says so in its note rather than reporting a batch
   // sized against a grid nobody observed.
   if (resolutionMs === null || resolutionMs <= 0) {
-    return 1;
+    return { stepsPerSample: 1, timedSteps: plannedSteps };
   }
 
   if (estimatedStepMs <= 0) {
-    return cap;
+    return { stepsPerSample: cap, timedSteps: plannedSteps };
   }
 
-  return Math.min(cap, Math.max(1, Math.ceil((TICKS_PER_SAMPLE * resolutionMs) / estimatedStepMs)));
+  const needed = Math.max(1, Math.ceil((TICKS_PER_SAMPLE * resolutionMs) / estimatedStepMs));
+
+  if (needed <= cap) {
+    return { stepsPerSample: needed, timedSteps: plannedSteps };
+  }
+
+  const stepsPerSample = Math.min(needed, Math.floor((plannedSteps * MAX_TIMED_STEPS_FACTOR) / MIN_TIMED_SAMPLES));
+
+  return { stepsPerSample, timedSteps: stepsPerSample * MIN_TIMED_SAMPLES };
 };
 
 /**
@@ -313,14 +351,14 @@ const measureCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec, resolutionM
   const calibrationMs = performance.now() - calibrationStart;
   const calibrationSteps = spec.warmupSteps - calibrationFrom;
   const estimatedStepMs = calibrationSteps > 0 ? calibrationMs / calibrationSteps : 0;
-  const stepsPerSample = resolveStepsPerSample(estimatedStepMs, resolutionMs, spec.timedSteps);
+  const { stepsPerSample, timedSteps } = resolveTimingPlan(estimatedStepMs, resolutionMs, spec.timedSteps);
 
   const samples: number[] = [];
   let stepped = 0;
   let exceeded = false;
 
-  while (stepped < spec.timedSteps) {
-    const batch = Math.min(stepsPerSample, spec.timedSteps - stepped);
+  while (stepped < timedSteps) {
+    const batch = Math.min(stepsPerSample, timedSteps - stepped);
     const startedAt = performance.now();
 
     for (let i = 0; i < batch; i++) {
@@ -354,6 +392,23 @@ const measureCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec, resolutionM
   const achievedTicks = resolutionMs === null || resolutionMs <= 0 ? null : sampleMs / resolutionMs;
 
   const notes: string[] = [];
+  // Below the resolution floor the median is the clock's grid, not the engine,
+  // and a cell that prints it would publish a comparison of grids. It is
+  // reported as unmeasured, with the note saying why, and drops out of every
+  // verdict the way an arm that never ran does.
+  const unresolved = achievedTicks !== null && achievedTicks < MIN_RESOLVED_TICKS;
+
+  let status: CellStatus = 'ok';
+
+  if (exceeded) {
+    status = 'exceeded';
+  } else if (unresolved) {
+    status = 'unavailable';
+  }
+
+  if (timedSteps !== spec.timedSteps) {
+    notes.push(`ran ${String(timedSteps)} timed steps instead of ${String(spec.timedSteps)} so that each sample clears the clock`);
+  }
 
   if (exceeded) {
     notes.push(`aborted: last-${String(ABORT_WINDOW)}-sample median exceeded ${String(STEP_BUDGET_MS)}ms/step`);
@@ -382,7 +437,7 @@ const measureCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec, resolutionM
       stepMsP95: percentile(samples, 95),
       stepsPerSample,
       structural,
-      status: exceeded ? 'exceeded' : 'ok',
+      status,
       ...(notes.length > 0 && { note: notes.join('; ') }),
     },
   };

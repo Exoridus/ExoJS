@@ -269,11 +269,20 @@ const buildMixed = (bodies: BodyDesc[], bodyCount: number, rng: () => number): v
  *
  * The chains are laid out along X with a spacing wide enough that neighbouring
  * chains never touch, so the measured cost is constraint propagation along a
- * chain rather than contacts between chains. No RNG is consumed: a jittered
- * chain would swing differently per arm under identical solvers, and the
- * archetype is about the solver, not about the initial condition.
+ * chain rather than contacts between chains. Placement consumes no RNG: a
+ * jittered chain would swing differently per arm under identical solvers, and
+ * the archetype is about the solver, not about the initial condition. The
+ * perturbed links draw their velocity the way `many-dynamic` does, so every arm
+ * drives the same links the same way.
  */
-const buildJointChains = (bodies: BodyDesc[], joints: JointDesc[], bodyCount: number, chainLength: number): void => {
+const buildJointChains = (
+  bodies: BodyDesc[],
+  joints: JointDesc[],
+  bodyCount: number,
+  chainLength: number,
+  rng: () => number,
+  perturbed: readonly number[],
+): void => {
   const length = Math.max(1, chainLength);
   const chains = Math.max(1, Math.ceil(bodyCount / length));
   const spacing = BODY_SIZE * 4;
@@ -286,6 +295,7 @@ const buildJointChains = (bodies: BodyDesc[], joints: JointDesc[], bodyCount: nu
     bodies.push(staticBox(120 + chain * spacing, anchorY, BODY_SIZE, BODY_SIZE));
   }
 
+  const perturbedSet = new Set(perturbed);
   let placed = 0;
 
   for (let chain = 0; chain < chains && placed < bodyCount; chain++) {
@@ -295,8 +305,7 @@ const buildJointChains = (bodies: BodyDesc[], joints: JointDesc[], bodyCount: nu
     for (let link = 0; link < length && placed < bodyCount; link++) {
       const y = anchorY + (link + 1) * BODY_SIZE;
       const index = bodies.length;
-
-      bodies.push({
+      const base: BodyDesc = {
         type: 'dynamic',
         x,
         y,
@@ -304,7 +313,16 @@ const buildJointChains = (bodies: BodyDesc[], joints: JointDesc[], bodyCount: nu
         density: 1,
         friction: 0.5,
         restitution: DEFAULT_RESTITUTION,
-      });
+      };
+
+      if (perturbedSet.has(placed)) {
+        const vx = (rng() - 0.5) * 2 * PERTURB_SPEED;
+        const vy = (rng() - 0.5) * 2 * PERTURB_SPEED;
+
+        bodies.push({ ...base, perturb: { vx, vy } });
+      } else {
+        bodies.push(base);
+      }
 
       // Pivot on the seam between the two links, so the chain hangs straight and
       // every joint starts at zero error - the same initial condition on all arms.
@@ -404,7 +422,7 @@ export const describePhysicsScene = (spec: PhysicsArchetypeSpec, bodyCount: numb
       buildMixed(bodies, bodyCount, rng);
       break;
     case 'joint-chains':
-      buildJointChains(bodies, joints, bodyCount, spec.jointChainLength ?? 1);
+      buildJointChains(bodies, joints, bodyCount, spec.jointChainLength ?? 1, rng, impulsed);
       break;
   }
 

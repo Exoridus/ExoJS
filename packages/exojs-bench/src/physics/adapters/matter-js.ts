@@ -170,6 +170,8 @@ export const createMatterJsAdapter = async (): Promise<PhysicsAdapter> => {
         removeBody: body => M.Composite.remove(created.world, body),
         // `Query.ray` is a segment query, so the unit direction and distance are
         // converted back to an end point.
+        // Matter has no sleeping here, and its velocity is per step rather than per second.
+        setVelocity: (body, vx, vy) => M.Body.setVelocity(body, { x: vx * STEP_DELTA, y: vy * STEP_DELTA }),
         castRay: ray =>
           M.Query.ray(queryBodies, { x: ray.x, y: ray.y }, { x: ray.x + ray.dx * ray.maxDistance, y: ray.y + ray.dy * ray.maxDistance }).length > 0,
       });

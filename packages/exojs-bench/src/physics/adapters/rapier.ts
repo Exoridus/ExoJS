@@ -165,6 +165,7 @@ export const createRapierAdapter = async (): Promise<PhysicsAdapter> => {
         // descriptor's direction is a unit vector, so it is the distance in px.
         // `solid: true` counts a ray starting inside a shape as a hit, matching the
         // other arms' containment behaviour.
+        setVelocity: (body, vx, vy) => body.setLinvel({ x: vx, y: vy }, true),
         castRay: ray => created.castRay(new R.Ray({ x: ray.x, y: ray.y }, { x: ray.dx, y: ray.dy }), ray.maxDistance, true) !== null,
       });
       world = created;

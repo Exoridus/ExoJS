@@ -160,6 +160,10 @@ export const createPlanckAdapter = async (): Promise<PhysicsAdapter> => {
         // direction and distance are converted back to an end point. Returning 0
         // terminates on the first hit rather than walking every fixture the
         // segment crosses.
+        setVelocity: (body, vx, vy) => {
+          body.setLinearVelocity({ x: vx, y: vy });
+          body.setAwake(true);
+        },
         castRay: ray => {
           let hit = false;
 

@@ -140,7 +140,23 @@ export const PHYSICS_ARCHETYPES: readonly PhysicsArchetypeSpec[] = [
   // propagate tension to the free end (which is the behaviour worth comparing)
   // and short enough that every arm remains stable at its own default iteration
   // count.
-  { id: 'joints', scene: 'joint-chains', bodyCounts: JOINTS_COUNTS, gravity: { x: 0, y: 1_000 }, perturbFraction: 0, jointChainLength: 8 },
+  //
+  // Driven, because a hanging chain settles. Left alone, every chain is at
+  // rest well inside the warmup, every arm that sleeps has put all of its
+  // bodies to sleep, and the timed window measures the cost of a step in
+  // which nothing moves - which is where an arm's sleeping heuristics decide
+  // the cell instead of its constraint solver. A tenth of the links get their
+  // impulse back every half second, so the chains swing for the whole window
+  // and the solver propagates on every arm alike.
+  {
+    id: 'joints',
+    scene: 'joint-chains',
+    bodyCounts: JOINTS_COUNTS,
+    gravity: { x: 0, y: 1_000 },
+    perturbFraction: 0.1,
+    kickEverySteps: 30,
+    jointChainLength: 8,
+  },
   // SLEEPING VISIBILITY. Simulates the `many-dynamic` scene unchanged - same
   // layout, same perturbed impulses, same seed (`seedFor` keys on scene, not
   // archetype) - except its dynamic bodies get a resting material (nonzero

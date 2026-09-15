@@ -86,6 +86,15 @@ export const createNapeJsAdapter = async (): Promise<PhysicsAdapter> => {
         removeBody: body => {
           body.space = null;
         },
+        setVelocity: (body, vx, vy) => {
+          body.velocity = new N.Vec2(vx, vy);
+
+          // No `wake()` on the typed surface. A zero impulse with `sleepable`
+          // false is Nape's own way of rousing a body without moving it.
+          if (body.isSleeping) {
+            body.applyImpulse(new N.Vec2(0, 0), undefined, false);
+          }
+        },
         castRay: ray => {
           const result = created.rayCast(
             new N.Ray(new N.Vec2(ray.x, ray.y), new N.Vec2(ray.dx, ray.dy)),

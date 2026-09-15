@@ -15,7 +15,7 @@ import { rayForStep } from './scene';
  * to prevent.
  */
 
-/** The three engine-specific operations the shared per-step work needs from an arm. */
+/** The engine-specific operations the shared per-step work needs from an arm. */
 export interface ArmWorldOps<TBody> {
   /** Create and add a body from its descriptor, returning the arm's handle for it. */
   createBody(desc: BodyDesc): TBody;
@@ -23,6 +23,15 @@ export interface ArmWorldOps<TBody> {
   removeBody(body: TBody): void;
   /** Cast one ray; `true` when it hit something. */
   castRay(ray: RayDesc): boolean;
+  /**
+   * Set a body's linear velocity in px/s and make sure it is awake afterwards.
+   *
+   * Waking is part of the contract, not an afterthought: an engine that lets
+   * a velocity write land on a sleeping body without rousing it would take the
+   * drive and keep sleeping, and the arm would measure the same empty step the
+   * drive exists to prevent.
+   */
+  setVelocity(body: TBody, vx: number, vy: number): void;
 }
 
 /** The extra work one step of a query or churn archetype performs, plus its structural receipt. */
@@ -53,8 +62,14 @@ const IDLE: PerStepWork = {
 export const createPerStepWork = <TBody>(spec: PhysicsArchetypeSpec, scene: SceneDescription, handles: TBody[], ops: ArmWorldOps<TBody>): PerStepWork => {
   const rayCount = Math.max(0, Math.trunc(spec.raysPerStep ?? 0));
   const churnIndices = scene.churnIndices;
+  const kickEvery = Math.max(0, Math.trunc(spec.kickEverySteps ?? 0));
+  // The perturbed bodies are the ones carrying a velocity in the descriptor,
+  // so the drive re-applies exactly the impulse setup gave, to exactly the
+  // bodies setup gave it to.
+  const driven =
+    kickEvery === 0 ? [] : scene.bodies.flatMap((body, slot) => (body.perturb === undefined ? [] : [{ slot, vx: body.perturb.vx, vy: body.perturb.vy }]));
 
-  if (rayCount === 0 && churnIndices.length === 0) {
+  if (rayCount === 0 && churnIndices.length === 0 && driven.length === 0) {
     return IDLE;
   }
 
@@ -62,6 +77,16 @@ export const createPerStepWork = <TBody>(spec: PhysicsArchetypeSpec, scene: Scen
 
   return {
     run(step: number): void {
+      if (kickEvery > 0 && step % kickEvery === 0) {
+        for (const drive of driven) {
+          const body = handles[drive.slot];
+
+          if (body !== undefined) {
+            ops.setVelocity(body, drive.vx, drive.vy);
+          }
+        }
+      }
+
       // Churn first, so the rays of this step traverse the structure the churn
       // left behind rather than the one it is about to invalidate - a query
       // archetype that also churned would otherwise measure a stale tree.
