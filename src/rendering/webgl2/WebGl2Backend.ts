@@ -55,6 +55,7 @@ import {
 import { compressedPayloadOf } from '#rendering/texture/compressedPayload';
 import type { CompressedTextureFormat } from '#rendering/texture/CompressedTextureFormat';
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
+import { DepthTexture } from '#rendering/texture/DepthTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { type SamplerOptions, samplerStateKey } from '#rendering/texture/TextureOptions';
@@ -178,6 +179,12 @@ interface ManagedRenderTargetState {
    */
   attachedTextures: Array<WebGLTexture | null>;
   stencilRenderbuffer: WebGLRenderbuffer | null;
+  /**
+   * `DEPTH24_STENCIL8` texture attached in place of the renderbuffer, for a
+   * target that opted into a sampleable depth attachment. Exactly one of the
+   * two is ever non-null: they occupy the same `DEPTH_STENCIL_ATTACHMENT` slot.
+   */
+  depthStencilTexture: WebGLTexture | null;
   stencilWidth: number;
   stencilHeight: number;
 }
@@ -298,6 +305,13 @@ export class WebGl2Backend implements RenderBackend {
   private readonly _onContextRestoredHandler: () => void;
   private readonly _textureStates: Map<Texture | RenderTexture, ManagedTextureState> = new Map<Texture | RenderTexture, ManagedTextureState>();
   private readonly _renderTargetStates: Map<RenderTarget, ManagedRenderTargetState> = new Map<RenderTarget, ManagedRenderTargetState>();
+  /**
+   * Bind state for depth attachments sampled as textures. Separate from
+   * `_textureStates`: the handle belongs to the owning render target, so none of
+   * the upload, eviction or accounting machinery in there applies to it.
+   */
+  private readonly _depthTextureStates: Map<DepthTexture, ManagedTextureState> = new Map<DepthTexture, ManagedTextureState>();
+  private _depthWriteEnabled = false;
   private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
   private readonly _textureReleaseHandlers: Map<Texture, () => void> = new Map<Texture, () => void>();
   /** Context-local base-texture sampler overrides shared by custom materials. */
@@ -1590,7 +1604,61 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     this._bindRenderTarget(this._renderTarget);
-    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    if (this._renderTarget.depthTexture === null) {
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      return this;
+    }
+
+    // A depth attachment that is read back has to start each frame at the far
+    // plane, and `clear` ignores DEPTH_TEST but obeys the depth mask - so the
+    // mask goes up for the call whatever the current draw state is.
+    if (!this._depthWriteEnabled) {
+      gl.depthMask(true);
+    }
+
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    if (!this._depthWriteEnabled) {
+      gl.depthMask(false);
+    }
+
+    return this;
+  }
+
+  /**
+   * Turn depth writes on or off for the draws that follow.
+   *
+   * The comparison stays "always pass", so this never changes what is visible -
+   * it only decides whether a draw's depth reaches the target's depth
+   * attachment. On a target without one the writes go nowhere.
+   *
+   * Callers own the restore: turn it back off after the draws that need it, or
+   * everything drawn afterwards writes depth too.
+   *
+   * Part of the renderer SDK contract for extension renderers.
+   */
+  public setDepthWrite(enabled: boolean): this {
+    if (this._depthWriteEnabled === enabled) {
+      return this;
+    }
+
+    const gl = this._context;
+
+    this._depthWriteEnabled = enabled;
+
+    if (enabled) {
+      // GL discards depth writes entirely while DEPTH_TEST is off, so enabling
+      // the test is what makes the write happen; ALWAYS keeps it from also
+      // deciding visibility.
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthFunc(gl.ALWAYS);
+      gl.depthMask(true);
+    } else {
+      gl.depthMask(false);
+      gl.disable(gl.DEPTH_TEST);
+    }
 
     return this;
   }
@@ -2142,6 +2210,8 @@ export class WebGl2Backend implements RenderBackend {
     const { r, g, b, a } = this._clearColor;
 
     gl.disable(gl.DEPTH_TEST);
+    gl.depthMask(false);
+    this._depthWriteEnabled = false;
     gl.disable(gl.STENCIL_TEST);
     gl.disable(gl.CULL_FACE);
 
@@ -2387,6 +2457,7 @@ export class WebGl2Backend implements RenderBackend {
       version: -1,
       attachedTextures: [],
       stencilRenderbuffer: null,
+      depthStencilTexture: null,
       stencilWidth: 0,
       stencilHeight: 0,
     };
@@ -2493,10 +2564,20 @@ export class WebGl2Backend implements RenderBackend {
         state.stencilRenderbuffer = null;
       }
 
+      if (state.depthStencilTexture !== null) {
+        this._forgetTextureHandle(state.depthStencilTexture);
+        this._context.deleteTexture(state.depthStencilTexture);
+        state.depthStencilTexture = null;
+      }
+
       this._renderTargetStates.delete(target);
     }
 
     this._stencilStates.delete(target);
+
+    if (target.depthTexture !== null) {
+      this._depthTextureStates.delete(target.depthTexture);
+    }
 
     if (this._renderTarget === target) {
       this._renderTarget = this._rootRenderTarget;
@@ -2730,9 +2811,11 @@ export class WebGl2Backend implements RenderBackend {
         target.needsStencil = false;
       }
 
-      // Keep an existing stencil attachment sized to the (possibly resized)
-      // texture so the framebuffer stays complete during non-clip rendering.
-      if (target.needsStencil || state.stencilRenderbuffer !== null) {
+      // Keep an existing depth/stencil attachment sized to the (possibly
+      // resized) texture so the framebuffer stays complete during non-clip
+      // rendering. A target that opted into a sampleable depth attachment
+      // always carries one, clip or no clip.
+      if (target.depthTexture !== null || target.needsStencil || state.stencilRenderbuffer !== null) {
         this._syncStencilAttachment(target, state);
       }
     }
@@ -2761,24 +2844,55 @@ export class WebGl2Backend implements RenderBackend {
     const gl = this._context;
     const width = Math.max(1, target.width);
     const height = Math.max(1, target.height);
+    // A target that wants to read its depth back needs a texture in the slot; a
+    // renderbuffer is cheaper but cannot be sampled. Both are DEPTH24_STENCIL8,
+    // so the stencil clip path works either way and a clipped target pays
+    // nothing extra for opting in.
+    const sampleable = target.depthTexture !== null;
+    const allocated = sampleable ? state.depthStencilTexture !== null : state.stencilRenderbuffer !== null;
 
-    if (state.stencilRenderbuffer !== null && state.stencilWidth === width && state.stencilHeight === height) {
+    if (allocated && state.stencilWidth === width && state.stencilHeight === height) {
       return;
     }
 
-    if (state.stencilRenderbuffer === null) {
-      state.stencilRenderbuffer = gl.createRenderbuffer();
-    }
-
-    gl.bindRenderbuffer(gl.RENDERBUFFER, state.stencilRenderbuffer);
-    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, width, height);
-    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
-
     const previousFramebuffer = this._boundFramebuffer;
 
-    gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
-    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, state.stencilRenderbuffer);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
+    if (sampleable) {
+      const previousUnit = this._textureUnit;
+
+      this._setTextureUnit(renderTargetTextureSyncUnit);
+
+      if (state.depthStencilTexture === null) {
+        state.depthStencilTexture = this._createTextureHandle();
+      }
+
+      this._bindTextureHandle(state.depthStencilTexture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH24_STENCIL8, width, height, 0, gl.DEPTH_STENCIL, gl.UNSIGNED_INT_24_8, null);
+      // Depth formats are not filterable, and a depth texture left at the
+      // default LINEAR/mipmap filters is incomplete - it samples as zero rather
+      // than failing loudly.
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      this._setTextureUnit(previousUnit);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.TEXTURE_2D, state.depthStencilTexture, 0);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
+    } else {
+      if (state.stencilRenderbuffer === null) {
+        state.stencilRenderbuffer = gl.createRenderbuffer();
+      }
+
+      gl.bindRenderbuffer(gl.RENDERBUFFER, state.stencilRenderbuffer);
+      gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH24_STENCIL8, width, height);
+      gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, state.stencilRenderbuffer);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, previousFramebuffer);
+    }
 
     state.stencilWidth = width;
     state.stencilHeight = height;
@@ -2857,6 +2971,10 @@ export class WebGl2Backend implements RenderBackend {
   private _syncTexture(texture: Texture | RenderTexture): ManagedTextureState {
     assertLiveTexture(texture);
 
+    if (texture instanceof DepthTexture) {
+      return this._syncDepthTexture(texture);
+    }
+
     const state = this._getTextureState(texture);
     const version = texture instanceof RenderTexture ? texture.textureVersion : texture.version;
 
@@ -2873,6 +2991,44 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     return this._syncTextureUpload(texture, state, version);
+  }
+
+  /**
+   * Bind a target's depth attachment for sampling.
+   *
+   * There is nothing to upload or re-parameterize: the GL texture is the
+   * framebuffer's depth attachment, created and sized by
+   * {@link _syncStencilAttachment} with its sampler parameters already set.
+   */
+  private _syncDepthTexture(texture: DepthTexture): ManagedTextureState {
+    const handle = this._renderTargetStates.get(texture.target)?.depthStencilTexture ?? null;
+
+    if (handle === null) {
+      throw new RenderError({
+        code: 'validation',
+        backendType: RenderBackendType.WebGl2,
+        message: 'This render target has no depth attachment yet. Render into the target once before sampling its `depthTexture`.',
+      });
+    }
+
+    let state = this._depthTextureStates.get(texture);
+
+    if (state?.handle !== handle) {
+      state = {
+        handle,
+        samplerKey: samplerStateKey(texture.scaleMode, texture.wrapMode),
+        version: texture.version,
+        width: texture.width,
+        height: texture.height,
+        accountedBytes: 0,
+        partialUploadScratch: null,
+      };
+      this._depthTextureStates.set(texture, state);
+    }
+
+    this._bindTextureHandle(handle);
+
+    return state;
   }
 
   /**

@@ -15,6 +15,18 @@ export interface RenderTextureOptions extends Partial<TextureOptions> {
    * `nearest` sampling. The format is immutable for the texture's lifetime.
    */
   format?: ColorTextureFormat;
+
+  /**
+   * Allocate a depth attachment that survives the pass and can be sampled
+   * afterwards through {@link RenderTarget.depthTexture}. Defaults to `false`,
+   * in which case the target has no depth of its own and
+   * {@link RenderTarget.depthTexture} is `null`.
+   *
+   * It costs 4 bytes per pixel and buys nothing on its own: depth is written
+   * only by a {@link MeshMaterial} that asks for it, and never tested - what is
+   * in front of what still follows from draw order.
+   */
+  depth?: boolean;
 }
 
 /**
@@ -69,6 +81,11 @@ export class RenderTexture extends RenderTarget {
     this._premultiplyAlpha = premultiplyAlpha;
     this._generateMipMap = generateMipMap;
     this._flipY = flipY;
+
+    if (options?.depth === true) {
+      this._enableDepthTexture();
+    }
+
     this._touchTexture();
   }
 
@@ -196,6 +213,7 @@ export class RenderTexture extends RenderTarget {
       // which is why it survived: the region only stops matching the target
       // when the two are set from different sizes.
       this._defaultView.resize(width, height).setCenter(width / 2, height / 2);
+      this._syncDepthSize();
       this.updateViewport();
       this._touchTexture();
     }

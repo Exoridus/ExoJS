@@ -80,6 +80,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "CsvAssetType",
   "DEFAULT_BLOCK_CACHE_NAME",
   "DataTexture",
+  "DepthTexture",
   "DestroyScope",
   "DisplacementFilter",
   "DockContainer",

@@ -41,6 +41,8 @@ export interface WebGpuActiveRenderPass {
   readonly viewUpdateId: number;
   readonly stencilEnabled: boolean;
   readonly stencilRef: number;
+  /** Whether this pass carries a writable depth aspect. */
+  readonly depthWrites: boolean;
 }
 
 /**
@@ -100,6 +102,8 @@ export interface WebGpuPassBackend {
   _targetHasContent(target: RenderTarget): boolean;
   /** Physical (backing-store) pixel size of `target`'s colour attachment. */
   _getAttachmentPixelSize(target: RenderTarget): { readonly width: number; readonly height: number };
+  /** The depth/stencil attachment view of a target that owns a depth texture. */
+  _getDepthAttachmentView(target: RenderTarget): GPUTextureView;
 }
 
 /**
@@ -126,6 +130,8 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   private readonly _stencilStacks = new Map<RenderTarget, StencilClipEntry[]>();
   private _stencilConnected = false;
   private _stencilWriteInProgress = false;
+  private _depthWritesRequested = false;
+  private readonly _depthCleared = new Set<RenderTarget>();
   private _stencilLoadOp: GPULoadOp = 'load';
   private _stencilRef = 0;
   private _active: WebGpuActiveRenderPass | null = null;
@@ -195,6 +201,44 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   }
 
   /**
+   * Whether the passes opened from now on carry a writable depth aspect. False
+   * unless a depth-writing draw asked for one AND the bound target owns a depth
+   * attachment to write into.
+   * @internal
+   */
+  public get depthWritesActive(): boolean {
+    return this._depthWritesRequested && this._backend.renderTarget.depthTexture !== null;
+  }
+
+  /**
+   * Open the depth aspect for the draws that follow.
+   *
+   * A pass either carries a depth/stencil attachment or it does not, and every
+   * pipeline recorded into it has to agree - so the pass in progress is ended
+   * rather than extended. Pair with {@link endDepthWrites}; a draw between the
+   * two must use a pipeline built with the matching depth/stencil state.
+   * @internal
+   */
+  public beginDepthWrites(): void {
+    if (this._depthWritesRequested) {
+      return;
+    }
+
+    this.endPass();
+    this._depthWritesRequested = true;
+  }
+
+  /** Close the depth aspect again, ending the pass that carried it. @internal */
+  public endDepthWrites(): void {
+    if (!this._depthWritesRequested) {
+      return;
+    }
+
+    this.endPass();
+    this._depthWritesRequested = false;
+  }
+
+  /**
    * Whether a geometric stencil clip is currently in effect on the active
    * target. Renderers read this to select a stencil-enabled content pipeline
    * (matching the depth/stencil attachment {@link acquirePass} adds).
@@ -221,6 +265,12 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
 
     const backend = this._backend;
     const stencilEnabled = this.stencilActive;
+    const depthWrites = this.depthWritesActive;
+    // Read before the colour attachments are built: creating slot 0 resolves the
+    // load op and marks the target as holding content, so afterwards there is no
+    // way left to tell a fresh frame from a continued one - and the depth aspect
+    // has to be cleared exactly when the colour is.
+    const targetHadContent = depthWrites && backend._targetHasContent(backend.renderTarget);
     // Descriptor and attachment list are reused: `beginRenderPass` and
     // `createCommandEncoder` read their descriptors synchronously, so neither
     // has to survive the call. An effect-heavy frame opens hundreds of passes
@@ -240,7 +290,8 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     for (let index = 0; index < attachmentCount; index++) {
       this._colorAttachments[index] = backend.createColorAttachment(index);
     }
-    descriptor.depthStencilAttachment = stencilEnabled ? this._createStencilAttachment(backend.renderTarget) : undefined;
+    descriptor.depthStencilAttachment =
+      stencilEnabled || depthWrites ? this._createDepthStencilAttachment(backend.renderTarget, stencilEnabled, depthWrites, targetHadContent) : undefined;
     // Written unconditionally for the same reason as the attachment above: the
     // descriptor is reused, so a `timestampWrites` left on it by the last timed
     // pass would follow it into untimed passes and overwrite query slots whose
@@ -277,6 +328,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
       viewUpdateId: backend.view.updateId,
       stencilEnabled,
       stencilRef: this._stencilRef,
+      depthWrites,
     };
 
     return this._active;
@@ -441,6 +493,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
 
     this._stencilDepths.delete(target);
     this._stencilStacks.delete(target);
+    this._depthCleared.delete(target);
   }
 
   /**
@@ -525,26 +578,61 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     return stack;
   }
 
-  private _createStencilAttachment(target: RenderTarget): GPURenderPassDepthStencilAttachment {
-    // Size the stencil attachment to the colour attachment's physical pixels, not
-    // the target's logical size. The root canvas backing store is logical ×
-    // pixelRatio, so a logical-sized stencil buffer would mismatch the
+  private _createDepthStencilAttachment(
+    target: RenderTarget,
+    stencilEnabled: boolean,
+    depthWrites: boolean,
+    targetHadContent: boolean,
+  ): GPURenderPassDepthStencilAttachment {
+    // Size the attachment to the colour attachment's physical pixels, not the
+    // target's logical size. The root canvas backing store is logical ×
+    // pixelRatio, so a logical-sized buffer would mismatch the
     // getCurrentTexture() colour attachment at pixelRatio > 1; RenderTexture
     // targets report the same size for both, so they are unaffected.
     const { width, height } = this._backend._getAttachmentPixelSize(target);
-    const view = this._stencil.getAttachmentView(target, width, height);
-    const stencilLoadOp = this._stencilLoadOp;
+    // A target that owns a depth texture brings its own attachment, so the clip
+    // and the depth data share one buffer - and what the clip pass leaves in the
+    // depth aspect is what a later sample reads back.
+    const view = target.depthTexture !== null ? this._backend._getDepthAttachmentView(target) : this._connectedStencilAttachmentView(target, width, height);
+    const attachment: GPURenderPassDepthStencilAttachment = { view };
 
-    // Consumed once; subsequent passes within the clip scope load the buffer.
-    this._stencilLoadOp = 'load';
+    if (depthWrites) {
+      // Clear on the first pass into a target whose colour is also being
+      // cleared, load afterwards, so several passes accumulate depth instead of
+      // erasing each other.
+      if (targetHadContent && this._depthCleared.has(target)) {
+        attachment.depthLoadOp = 'load';
+      } else {
+        attachment.depthLoadOp = 'clear';
+        attachment.depthClearValue = 1;
+        this._depthCleared.add(target);
+      }
 
-    return {
-      view,
-      depthReadOnly: true,
-      stencilLoadOp,
-      stencilStoreOp: 'store',
-      stencilClearValue: 0,
-    };
+      attachment.depthStoreOp = 'store';
+    } else {
+      attachment.depthReadOnly = true;
+    }
+
+    if (stencilEnabled) {
+      attachment.stencilLoadOp = this._stencilLoadOp;
+      attachment.stencilStoreOp = 'store';
+      attachment.stencilClearValue = 0;
+
+      // Consumed once; subsequent passes within the clip scope load the buffer.
+      this._stencilLoadOp = 'load';
+    } else {
+      // The format carries a stencil aspect whether a clip is active or not, and
+      // a pass has to say what becomes of it.
+      attachment.stencilReadOnly = true;
+    }
+
+    return attachment;
+  }
+
+  private _connectedStencilAttachmentView(target: RenderTarget, width: number, height: number): GPUTextureView {
+    this._connectStencil();
+
+    return this._stencil.getAttachmentView(target, width, height);
   }
 }
 

@@ -5,6 +5,7 @@ import { packAffineMat3Std140 } from '#rendering/affinePacking';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { AnyMaterial } from '#rendering/material/Material';
+import { drawWritesDepth } from '#rendering/material/MeshMaterial';
 import type { MeshIndexArray, MeshIndexFormat } from '#rendering/mesh/indices';
 import { createIndexArray, meshIndexBytes } from '#rendering/mesh/indices';
 import type { Mesh } from '#rendering/mesh/Mesh';
@@ -29,7 +30,7 @@ import type {
 import meshShaderSourceModule from './shaders/mesh.wgsl';
 import instancedMeshShaderSourceModule from './shaders/mesh-instanced.wgsl';
 import { packSnapViewport } from './snapViewport';
-import { stencilContentDepthStencilState } from './stencilState';
+import { contentDepthStencilState } from './stencilState';
 import {
   addUserUniformBuffersInPass,
   applyUserUniformUpload,
@@ -99,18 +100,48 @@ interface MeshDrawCall {
   customDrawIndex: number; // index within the per-shader custom queue, -1 for default
 }
 
+/**
+ * How a pipeline relates to the depth aspect of the pass it runs in.
+ *
+ * A pipeline may only be used in a pass whose depth/stencil attachment matches
+ * its own declaration, so this is a cache dimension rather than a per-draw
+ * switch.
+ */
+const enum MeshDepthMode {
+  /** No depth attachment in the pass (unless a stencil clip adds one). */
+  None = 0,
+  /** The pass carries the target's depth attachment; this draw leaves it alone. */
+  Present = 1,
+  /** The pass carries it and this draw writes its window-space z into it. */
+  Write = 2,
+}
+
+/**
+ * The depth variant a draw needs: none unless the pass carries the target's
+ * depth attachment, and `Write` only for the draws that asked for it.
+ */
+const meshDepthMode = (attachmentPresent: boolean, writes: boolean): MeshDepthMode => {
+  if (!attachmentPresent) {
+    return MeshDepthMode.None;
+  }
+
+  return writes ? MeshDepthMode.Write : MeshDepthMode.Present;
+};
+
 interface MeshPipelineKey {
   readonly blendMode: BlendModes;
   readonly format: GPUTextureFormat;
   // Stencil-enabled variant: carries the depth/stencil state matching the
   // attachment the coordinator adds while a geometric clip is active.
   readonly stencil: boolean;
+  readonly depth: MeshDepthMode;
 }
 
 interface InstancedPipelineKey {
   readonly blendMode: BlendModes;
   readonly format: GPUTextureFormat;
   readonly stencil: boolean;
+  readonly depth: MeshDepthMode;
 }
 
 /**
@@ -138,7 +169,8 @@ const instanceAttributeBufferLayout = (instances: InstanceDataView): GPUVertexBu
   })),
 });
 
-const meshPipelineCacheKey = (blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): string => `${blendMode}:${format}:${stencil ? 's' : 'n'}`;
+const meshPipelineCacheKey = (blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean, depth: MeshDepthMode = MeshDepthMode.None): string =>
+  `${blendMode}:${format}:${stencil ? 's' : 'n'}:${depth}`;
 
 interface GeometryCacheEntry {
   readonly geometry: Geometry;
@@ -481,6 +513,15 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     const coordinator = backend.passCoordinator;
     const material = mesh.material;
+    const writesDepth = drawWritesDepth(material, backend.renderTarget);
+
+    // Before the pass is acquired below: a depth attachment cannot be added to a
+    // pass already open, so the switch ends it and the batch draws into a fresh
+    // one.
+    if (writesDepth) {
+      coordinator.beginDepthWrites();
+    }
+
     const texture = mesh.texture ?? TextureClass.white;
     const premultiplySample = backend.shouldPremultiplyTextureSample(texture);
     const resources = material === null ? null : this._getOrCreateCustomShaderResources(material);
@@ -559,13 +600,14 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const attributeByteOffset = attributeBytes > 0 ? this._uploadInstanceAttributes(instances!, attributeBytes) : 0;
     const renderTargetFormat = backend.renderTargetFormat;
     const stencil = coordinator.stencilActive;
+    const depth = meshDepthMode(coordinator.depthWritesActive, writesDepth);
     // The material owns its blend mode; the mesh's own overrides it when set
     // away from the default - same rule as the node and WebGL2 batch paths.
     const blendMode = material !== null && mesh.blendMode === BlendModes.Normal ? material.blendMode : mesh.blendMode;
     const pass = active.pass;
 
     if (resources === null) {
-      pass.setPipeline(this._getInstancedPipeline({ blendMode, format: renderTargetFormat, stencil }));
+      pass.setPipeline(this._getInstancedPipeline({ blendMode, format: renderTargetFormat, stencil, depth }));
       pass.setBindGroup(1, this._getTextureBindGroup(backend, texture));
     } else {
       // Planned before the pass was settled; writes only when the material's
@@ -573,7 +615,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       applyUserUniformUpload(material!, resources, device);
       addUserUniformBuffersInPass(resources.userUniform, this._instancedBatchUniformBuffersInPass);
 
-      pass.setPipeline(this._getOrCreateCustomInstancedPipeline(resources, blendMode, renderTargetFormat, stencil, instances));
+      pass.setPipeline(this._getOrCreateCustomInstancedPipeline(resources, blendMode, renderTargetFormat, stencil, instances, depth));
       pass.setBindGroup(1, this._getOrCreateMeshTextureBindGroup(resources, backend, texture, material!.sampler));
       pass.setBindGroup(2, this._getUserBindGroup(backend, material!, resources));
     }
@@ -593,6 +635,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     coordinator.markPassDraws();
     backend.stats.batches++;
     backend.stats.drawCalls++;
+
+    // The depth aspect closes with the batch that asked for it: every other
+    // renderer's pipelines are built for a pass without one.
+    if (writesDepth) {
+      coordinator.endDepthWrites();
+    }
   }
 
   /**
@@ -881,6 +929,16 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       coordinator.endPass();
     }
 
+    // Decided for the flush as a whole, not per draw: one pass either carries a
+    // depth attachment or it does not, and the draws below share a pass. Every
+    // pipeline recorded into it therefore declares depth/stencil state, whether
+    // that particular draw writes depth or not.
+    const depthPass = this._pendingWritesDepth(backend);
+
+    if (depthPass) {
+      coordinator.beginDepthWrites();
+    }
+
     // Phase 5: single render pass with one drawIndexed per mesh, switching
     // pipeline+bind groups between default and custom paths as needed. The
     // coordinator owns the GPU pass (load/clear resolution, pass count and
@@ -896,6 +954,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // static-batch, and custom-material pipelines must all select their
     // stencil-enabled variants to match it.
     const stencil = backend.passCoordinator.stencilActive;
+    const passDepth = depthPass ? MeshDepthMode.Present : MeshDepthMode.None;
 
     let lastShader: AnyMaterial | 'default' | 'instanced' | null = null;
     let lastBlendMode: BlendModes | null = null;
@@ -916,7 +975,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
           const needsPipeline = lastShader !== 'instanced' || dc.blendMode !== lastBlendMode || renderTargetFormat !== lastFormat;
 
           if (needsPipeline) {
-            pass.setPipeline(this._getInstancedPipeline({ blendMode: dc.blendMode, format: renderTargetFormat, stencil }));
+            pass.setPipeline(this._getInstancedPipeline({ blendMode: dc.blendMode, format: renderTargetFormat, stencil, depth: passDepth }));
             lastShader = 'instanced';
             lastBlendMode = dc.blendMode;
             lastFormat = renderTargetFormat;
@@ -994,7 +1053,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         const needsPipeline = lastShader !== 'default' || dc.blendMode !== lastBlendMode || renderTargetFormat !== lastFormat;
 
         if (needsPipeline) {
-          pass.setPipeline(this._getPipeline({ blendMode: dc.blendMode, format: renderTargetFormat, stencil }));
+          pass.setPipeline(this._getPipeline({ blendMode: dc.blendMode, format: renderTargetFormat, stencil, depth: passDepth }));
           lastShader = 'default';
           lastBlendMode = dc.blendMode;
           lastFormat = renderTargetFormat;
@@ -1033,7 +1092,15 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         pass.pushDebugGroup('MeshMaterial (custom)');
 
         if (needsPipeline) {
-          pass.setPipeline(this._getOrCreateCustomPipeline(resources, dc.blendMode, backend.renderTargetFormats, stencil));
+          pass.setPipeline(
+            this._getOrCreateCustomPipeline(
+              resources,
+              dc.blendMode,
+              backend.renderTargetFormats,
+              stencil,
+              drawWritesDepth(dc.customShader, backend.renderTarget) ? MeshDepthMode.Write : passDepth,
+            ),
+          );
           lastShader = dc.customShader;
           lastBlendMode = dc.blendMode;
           lastFormat = renderTargetFormat;
@@ -1084,6 +1151,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     this._defaultUniformPassSlots = uniformSlotBase + defaultDrawCalls;
     this._instancedAttributeArena.syncPass(active);
     coordinator.markPassDraws();
+
+    if (depthPass) {
+      coordinator.endDepthWrites();
+    }
 
     this._resetFrame();
   }
@@ -1351,18 +1422,23 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   }
 
   private _getPipeline(key: MeshPipelineKey): GPURenderPipeline {
-    const cacheKey = meshPipelineCacheKey(key.blendMode, key.format, key.stencil);
+    const cacheKey = meshPipelineCacheKey(key.blendMode, key.format, key.stencil, key.depth);
     let pipeline = this._pipelines.get(cacheKey);
 
     if (!pipeline) {
-      pipeline = this._device!.createRenderPipeline(this._buildPipelineDescriptor(key.blendMode, key.format, key.stencil));
+      pipeline = this._device!.createRenderPipeline(this._buildPipelineDescriptor(key.blendMode, key.format, key.stencil, key.depth));
       this._pipelines.set(cacheKey, pipeline);
     }
 
     return pipeline;
   }
 
-  private _buildPipelineDescriptor(blendMode: BlendModes, format: GPUTextureFormat, stencil = false): GPURenderPipelineDescriptor {
+  private _buildPipelineDescriptor(
+    blendMode: BlendModes,
+    format: GPUTextureFormat,
+    stencil = false,
+    depth: MeshDepthMode = MeshDepthMode.None,
+  ): GPURenderPipelineDescriptor {
     const descriptor: GPURenderPipelineDescriptor = {
       label: 'mesh:render-pipeline',
       layout: this._pipelineLayout!,
@@ -1398,8 +1474,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       },
     };
 
-    if (stencil) {
-      descriptor.depthStencil = stencilContentDepthStencilState();
+    if (stencil || depth !== MeshDepthMode.None) {
+      descriptor.depthStencil = contentDepthStencilState(stencil, depth === MeshDepthMode.Write);
     }
 
     return descriptor;
@@ -1490,6 +1566,17 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   }
 
   /** Whether any texture this flush binds would be re-uploaded or resized when synced. */
+  /** Whether any pending draw of this flush writes depth into the bound target. */
+  private _pendingWritesDepth(backend: WebGpuBackend): boolean {
+    for (let i = 0; i < this._drawCallCount; i++) {
+      if (drawWritesDepth(this._drawCalls[i]!.customShader, backend.renderTarget)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   private _flushWouldMutateTexture(backend: WebGpuBackend): boolean {
     for (let i = 0; i < this._drawCallCount; i++) {
       if (backend.textureUploadWouldMutate(this._drawCalls[i]!.texture)) {
@@ -1611,8 +1698,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     format: GPUTextureFormat,
     stencil: boolean,
     instances: InstanceDataView | null,
+    depth: MeshDepthMode = MeshDepthMode.None,
   ): GPURenderPipeline {
-    const cacheKey = `${meshPipelineCacheKey(blendMode, format, stencil)}:${instances?.layoutKey ?? ''}`;
+    const cacheKey = `${meshPipelineCacheKey(blendMode, format, stencil, depth)}:${instances?.layoutKey ?? ''}`;
     let pipeline = resources.instancedPipelines.get(cacheKey);
 
     if (pipeline !== undefined) {
@@ -1652,8 +1740,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       primitive: { topology: 'triangle-list', cullMode: 'none' },
     };
 
-    if (stencil) {
-      descriptor.depthStencil = stencilContentDepthStencilState();
+    if (stencil || depth !== MeshDepthMode.None) {
+      descriptor.depthStencil = contentDepthStencilState(stencil, depth === MeshDepthMode.Write);
     }
 
     pipeline = this._device!.createRenderPipeline(descriptor);
@@ -1878,7 +1966,14 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const active = coordinator.acquirePass();
     const pass = active.pass;
 
-    pass.setPipeline(this._getInstancedPipeline({ blendMode: payload.blendMode, format: backend.renderTargetFormat, stencil: coordinator.stencilActive }));
+    pass.setPipeline(
+      this._getInstancedPipeline({
+        blendMode: payload.blendMode,
+        format: backend.renderTargetFormat,
+        stencil: coordinator.stencilActive,
+        depth: MeshDepthMode.None,
+      }),
+    );
     pass.setBindGroup(0, bindGroup, [slot * this._uniformAlignment]);
     pass.setBindGroup(1, textureBindGroup);
     pass.setVertexBuffer(0, geometry.vertexBuffer);
@@ -2004,18 +2099,23 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   }
 
   private _getInstancedPipeline(key: InstancedPipelineKey): GPURenderPipeline {
-    const cacheKey = meshPipelineCacheKey(key.blendMode, key.format, key.stencil);
+    const cacheKey = meshPipelineCacheKey(key.blendMode, key.format, key.stencil, key.depth);
     let pipeline = this._instancedPipelines.get(cacheKey);
 
     if (!pipeline) {
-      pipeline = this._device!.createRenderPipeline(this._buildInstancedPipelineDescriptor(key.blendMode, key.format, key.stencil));
+      pipeline = this._device!.createRenderPipeline(this._buildInstancedPipelineDescriptor(key.blendMode, key.format, key.stencil, key.depth));
       this._instancedPipelines.set(cacheKey, pipeline);
     }
 
     return pipeline;
   }
 
-  private _buildInstancedPipelineDescriptor(blendMode: BlendModes, format: GPUTextureFormat, stencil = false): GPURenderPipelineDescriptor {
+  private _buildInstancedPipelineDescriptor(
+    blendMode: BlendModes,
+    format: GPUTextureFormat,
+    stencil = false,
+    depth: MeshDepthMode = MeshDepthMode.None,
+  ): GPURenderPipelineDescriptor {
     const descriptor: GPURenderPipelineDescriptor = {
       label: 'mesh:instanced-render-pipeline',
       layout: this._instancedPipelineLayout!,
@@ -2056,8 +2156,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       },
     };
 
-    if (stencil) {
-      descriptor.depthStencil = stencilContentDepthStencilState();
+    if (stencil || depth !== MeshDepthMode.None) {
+      descriptor.depthStencil = contentDepthStencilState(stencil, depth === MeshDepthMode.Write);
     }
 
     return descriptor;
@@ -2533,6 +2633,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     blendMode: BlendModes,
     formats: readonly GPUTextureFormat[],
     stencil: boolean,
+    depth: MeshDepthMode = MeshDepthMode.None,
   ): GPURenderPipeline {
     // The stencil dimension keeps the clip and no-clip variants distinct,
     // mirroring the default and static-batch caches: a stencil pipeline carries
@@ -2543,7 +2644,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // pipeline must declare one target per attachment of the pass it runs in, so
     // the same material in a one-attachment and a two-attachment pass needs two
     // pipelines.
-    const cacheKey = `${blendMode}:${formats.join(',')}:${stencil ? 's' : 'n'}`;
+    const cacheKey = `${blendMode}:${formats.join(',')}:${stencil ? 's' : 'n'}:${depth}`;
     let pipeline = resources.pipelines.get(cacheKey);
 
     if (pipeline === undefined) {
@@ -2580,11 +2681,11 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         },
       };
 
-      // While a geometric clip is active the coordinator's pass carries a
-      // depth/stencil attachment; the content pipeline must test stencil ==
-      // reference and leave depth/stencil otherwise inert to match it.
-      if (stencil) {
-        descriptor.depthStencil = stencilContentDepthStencilState();
+      // While a geometric clip is active - or while the target's own depth
+      // attachment is bound - the coordinator's pass carries a depth/stencil
+      // attachment, and the content pipeline has to declare matching state.
+      if (stencil || depth !== MeshDepthMode.None) {
+        descriptor.depthStencil = contentDepthStencilState(stencil, depth === MeshDepthMode.Write);
       }
 
       pipeline = this._device!.createRenderPipeline(descriptor);
