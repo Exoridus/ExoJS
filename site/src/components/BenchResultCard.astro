@@ -39,8 +39,7 @@
  * widths, and nothing here becomes a table.
  */
 
-import BenchMeasurementDetail from './BenchMeasurementDetail.astro';
-import { archetypeDescription, archetypeTitle, type CellOutcome, FRAME_BUDGET_NOTE, formatMs, OUTCOME_NOTES, OUTCOME_STATUS } from '../lib/bench-profiles';
+import { archetypeDescription, archetypeTitle, type CellOutcome, FRAME_BUDGET_NOTE, formatMs, OUTCOME_STATUS } from '../lib/bench-profiles';
 import type { BenchCard } from '../lib/bench-cards';
 import { openingLoad } from '../lib/bench-cards';
 
@@ -107,41 +106,6 @@ const timeCharacters = Math.max(
 );
 
 /** True where any row of the card carries a marker beside its figure, which the column has to leave room for. */
-/**
- * The states this card has to explain, so the notes are written once per card
- * rather than per row.
- *
- * The frame budget is not among them: the page carries one legend for the amber
- * figure above the cards, and repeating it inside every card that holds one put
- * the same sentence behind a dozen disclosures.
- */
-const explained = [
-    ...(card.loads.some(load => load.withheld !== undefined)
-        ? [
-              {
-                  id: 'withheld',
-                  label: 'Not comparable',
-                  note: "Every library's own time is published. The comparison between them is not, and the reason is below.",
-              },
-          ]
-        : []),
-    ...[...new Set(card.loads.flatMap(load => load.arms.filter(arm => !arm.quantitative).map(arm => arm.outcome)))].map(outcome => ({
-        id: outcome,
-        label: OUTCOME_STATUS[outcome],
-        note: OUTCOME_NOTES[outcome],
-    })),
-];
-
-/**
- * Anchor for one note, unique across the page.
- *
- * Keyed by the LOAD as well as the card: every load renders its own copy of the
- * notes, so an id carrying only the card's name appeared three times on a card
- * with three loads - and the marker then opened the first copy, which sits in a
- * load panel the reader is not looking at.
- */
-const noteId = (loadId: string, id: string): string => `${anchor}-${loadId}-note-${id}`;
-
 /**
  * The states of one load, in the card's own order.
  *
@@ -226,13 +190,11 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
                     </span>
                 )}
                 {load.withheld !== undefined ? (
-                    <button type="button" class="status withheld" data-explains={noteId(load.id, 'withheld')} aria-describedby={noteId(load.id, 'withheld')}>
+                    <span class="status withheld" title={load.withheld}>
                         Not comparable
-                    </button>
+                    </span>
                 ) : statesOf(load).length > 0 ? (
-                    <button type="button" class="status" data-explains={noteId(load.id, statesOf(load)[0] ?? 'absent')} aria-describedby={noteId(load.id, statesOf(load)[0] ?? 'absent')}>
-                        {OUTCOME_STATUS[statesOf(load)[0] ?? 'absent']}
-                    </button>
+                    <span class="status">{OUTCOME_STATUS[statesOf(load)[0] ?? 'absent']}</span>
                 ) : null}
             </p>
 
@@ -253,9 +215,7 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
                         </span>
                         <span class="time">
                             {arm.ms === null ? (
-                                <button type="button" class="state" data-explains={noteId(load.id, arm.outcome)} aria-describedby={noteId(load.id, arm.outcome)}>
-                                    {OUTCOME_STATUS[arm.outcome]}
-                                </button>
+                                <span class="state">{OUTCOME_STATUS[arm.outcome]}</span>
                             ) : (
                                 <>
                                     {/*
@@ -282,37 +242,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
                 ))}
             </ul>
 
-            {/*
-              * One chip per state the load actually carries, and the state is
-              * read off the outcome rather than off "not quantitative": a
-              * comparison nothing measured and one whose clock demonstrably
-              * could not separate two durations are different findings, and
-              * labelling the first as timing-limited claims a measurement.
-              * The sentence lives in the note the chip opens.
-              */}
-            <details class="more">
-                <summary>Details</summary>
-                <p class="context">
-                    {load.label}
-                    {load.unit === undefined && ' load'} · {card.backend === undefined ? 'Physics' : card.backend === 'webgl2' ? 'WebGL2' : 'WebGPU'}
-                </p>
-
-                {/* What every marker and state word on this card means, as text rather than as a tooltip a touch reader cannot reach. */}
-                {load.withheld !== undefined && <p class="why">{load.withheld}</p>}
-
-                {explained.length > 0 && (
-                    <dl class="notes">
-                        {explained.map(entry => (
-                            <div id={noteId(load.id, entry.id)} tabindex="-1">
-                                <dt>{entry.label}</dt>
-                                <dd>{entry.note}</dd>
-                            </div>
-                        ))}
-                    </dl>
-                )}
-
-                <BenchMeasurementDetail comparisons={load.comparisons} withheld={load.withheld !== undefined} />
-            </details>
         </div>
     ))}
 </article>
@@ -416,37 +345,12 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         cursor: default;
     }
 
-    .why {
-        margin: 0 0 0.7rem;
-        font-size: 0.78rem;
-        line-height: 1.45;
-        color: var(--color-text-muted);
-    }
-
     /* No frame, no ground: the card is already the box, and the global `.panel` rule is what used to draw a second one here. */
     .bench-load-panel {
         border: 0;
         padding: 0;
         background: none;
         box-shadow: none;
-    }
-
-    /*
-     * Two cards side by side are the same height already, because the grid
-     * stretches them - but a card holding one arm fewer ended its rows higher
-     * and left its detail floating mid-card, so the two `Details` lines sat at
-     * different heights and the pair read as misaligned. Pinning the detail to
-     * the foot puts it on one line across the row; the slack lands above it,
-     * where there is nothing to line up.
-     */
-    .bench-load-panel:not([hidden]) {
-        display: flex;
-        flex: 1;
-        flex-direction: column;
-    }
-
-    .bench-load-panel > .more {
-        margin-top: auto;
     }
 
     /* No frame of its own: the card is already a box, and a second border around the bars only narrows them. */
@@ -569,56 +473,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         white-space: nowrap;
     }
 
-    .notes {
-        margin: 0 0 0.7rem;
-        display: grid;
-        gap: 0.25rem;
-        font-size: 0.78rem;
-    }
-
-    .notes > div {
-        display: grid;
-        grid-template-columns: 8.5rem 1fr;
-        gap: 0.5rem;
-        align-items: baseline;
-    }
-
-    /* The note the marker sends the reader to is marked while it holds focus, so the jump is visible rather than silent. */
-    .notes > div:focus-visible {
-        outline: 2px solid var(--color-accent);
-        outline-offset: 2px;
-    }
-
-    .notes dt {
-        color: var(--color-text-muted);
-    }
-
-    .notes dd {
-        margin: 0;
-    }
-
-    /* Its own disclosure section, not a line trailing the results above it. */
-    .more {
-        margin-top: 0.65rem;
-        font-size: 0.82rem;
-    }
-
-    .more > summary {
-        cursor: pointer;
-        color: var(--color-text-muted);
-        width: fit-content;
-    }
-
-    .more[open] > summary {
-        margin-bottom: 0.5rem;
-    }
-
-    .context {
-        margin: 0 0 0.5rem;
-        font-size: 0.78rem;
-        color: var(--color-text-muted);
-    }
-
     @media (max-width: 34rem) {
         .arm {
             font-size: 0.78rem;
@@ -728,27 +582,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
 </style>
 
 <script>
-    /**
-     * Pressing a marker opens the card's details and moves the reader to the
-     * note that explains it.
-     *
-     * A `title` attribute is not an answer here: it is unreachable by touch and
-     * awkward by keyboard, and the sentence a reader needs is the one thing the
-     * marker cannot carry itself. The note already exists in the details, so
-     * the control reveals it rather than duplicating it into a tooltip.
-     */
-    for (const marker of document.querySelectorAll<HTMLElement>('[data-explains]')) {
-        marker.addEventListener('click', () => {
-            const note = document.getElementById(marker.dataset['explains'] ?? '');
-            const disclosure = note?.closest('details');
-
-            if (disclosure instanceof HTMLDetailsElement) disclosure.open = true;
-
-            note?.focus();
-            note?.scrollIntoView({ block: 'nearest' });
-        });
-    }
-
     // Load switching is per card and nothing else on the page depends on it, so
     // it stays a listener on the card rather than shared state. Without
     // JavaScript every panel but the opening one is `hidden`, which is the same
