@@ -49,6 +49,18 @@ describe('a figure the comparison never established', () => {
     expect(formatMs(publishedMs(cell, cell.competitorMs))).toBe('-');
   });
 
+  it('is withheld where the page could print it only as a bound', () => {
+    const cell = cellOf(0.0004, 'limited');
+
+    expect(publishedMs(cell, cell.competitorMs)).toBeNull();
+  });
+
+  it('is published where the clock refused the pair but the figure itself is printable', () => {
+    const cell = cellOf(0.2, 'limited');
+
+    expect(publishedMs(cell, cell.competitorMs)).toBe(0.2);
+  });
+
   it('is withheld even where the ladder did reach a factor from it', () => {
     // The harness can compute 23750x from a zero-ish sample; the timer check is
     // what says the two durations were never separated, and it outranks it.

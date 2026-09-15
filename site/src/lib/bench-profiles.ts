@@ -672,7 +672,7 @@ const ARCHETYPE_TITLES: Readonly<Record<string, string>> = {
  */
 const WITHHELD_SCENARIOS: Readonly<Record<string, string>> = {
   joints:
-    'The published profiles were measured before the arms agreed on whether two jointed links also collide with each other. Each library defaulted differently, so ExoJS resolved one contact per jointed pair where Matter.js, Planck and Nape-JS resolved none and Rapier one per chain, and the arms were not doing the same work. The harness now configures every arm explicitly, and the comparison returns with the next reference measurement. Until then these times stand on their own.',
+    'On the published profiles the chains had settled and every arm that sleeps was idle: Nape-JS took less than the clock resolved, and the other figures set a solver at work against one at rest. The scene now keeps the chains moving, and the comparison returns with the next reference measurement.',
 };
 
 /** Why a scenario publishes no cross-arm comparison, or `undefined` where it publishes one. */
@@ -1061,14 +1061,16 @@ export const isQuantitative = (outcome: CellOutcome): boolean => outcome !== 'ti
  * comparison the clock refused also publishes a figure that cannot be read as a
  * duration: the harness writes the arm's raw sample there, and below the grid
  * the clock resolved that sample is as likely to be zero as to be the time the
- * arm took.
+ * arm took. Such a sample is withheld whenever the page could print it only as
+ * a bound: a figure under a thousandth of a millisecond in a comparison the
+ * clock did not resolve is the clock's tick, not the arm's time.
  */
 export const publishedMs = (cell: ProfileCell, ms: number | null): number | null => {
   const measured = measuredMs(cell, ms);
 
   if (measured === null) return null;
 
-  return outcomeOf(cell) === 'timer-limited' && measured === 0 ? null : measured;
+  return outcomeOf(cell) === 'timer-limited' && Number.parseFloat(significant(measured)) === 0 ? null : measured;
 };
 
 /** The lowest and highest `exojs / competitor` ratio the pooled runs can have produced. */

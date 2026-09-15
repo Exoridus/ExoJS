@@ -182,17 +182,20 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
                 {load.arms.map(arm => (
                     <li class:list={['arm', { reference: arm.reference, absent: arm.ms === null }]}>
                         <span class="name">{arm.label}</span>
-                        <span class="track">
-                            {/*
-                              * A withheld row draws nothing. Its bars would be
-                              * durations like any other, but side by side on one
-                              * track they are read as the comparison the row is
-                              * published without.
-                              */}
-                            {load.withheld === undefined && widthOf(arm.ms, load.maxMs) !== null && (
-                                <span class="bar" style={`width:${String(widthOf(arm.ms, load.maxMs))}%`} />
-                            )}
-                        </span>
+                        {/*
+                          * A withheld row draws no track at all. Its bars would
+                          * be durations like any other, but side by side they
+                          * are read as the comparison the row is published
+                          * without, and an empty track under every row reads as
+                          * a chart that failed to draw.
+                          */}
+                        {load.withheld === undefined ? (
+                            <span class="track">
+                                {widthOf(arm.ms, load.maxMs) !== null && <span class="bar" style={`width:${String(widthOf(arm.ms, load.maxMs))}%`} />}
+                            </span>
+                        ) : (
+                            <span />
+                        )}
                         <span class="time">
                             {arm.ms === null ? (
                                 <span class="state">{OUTCOME_STATUS[arm.outcome]}</span>
@@ -307,8 +310,9 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
     /* Forced onto its own line under the status badge: the reason reads as a caption to it, not a second fact beside it. */
     .reason {
         flex-basis: 100%;
-        text-align: right;
         font-size: 0.74rem;
+        line-height: 1.45;
+        text-wrap: pretty;
     }
 
     /* No frame, no ground: the card is already the box, and the global `.panel` rule is what used to draw a second one here. */
