@@ -171,24 +171,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
               * explanation each of them carried is one tap away in the details.
               */}
             <p class="meta">
-                {/*
-                  * The gap against the quickest competitor, as a figure rather
-                  * than a sentence.
-                  *
-                  * A bar is drawn from zero against the load's slowest arm, so
-                  * where one arm is an order of magnitude behind, the two
-                  * quickest draw as stubs of the same length and the comparison
-                  * a reader came for has no visible form. This carries it
-                  * instead of the scale, and stays the profile's own figure -
-                  * see `leadOf`.
-                  */}
-                {load.lead !== undefined && (
-                    <span class="gap">
-                        <b>{load.lead.factor.toFixed(load.lead.factor < 10 ? 2 : 1)}x</b>
-                        {load.lead.ahead ? ' ahead of ' : ' behind '}
-                        {load.lead.label}
-                    </span>
-                )}
                 {load.withheld !== undefined ? (
                     <span class="status withheld" title={load.withheld}>
                         Not comparable
@@ -314,16 +296,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
     /* Inert by construction: the single-load chip states the load and controls nothing. */
     .load.solo {
         cursor: default;
-    }
-
-    /* Reads as a label on the load, not as a remark about it. */
-    .gap {
-        margin-right: auto;
-    }
-
-    .gap b {
-        color: var(--color-text);
-        font-weight: 600;
     }
 
     /* The row's one fact about itself, on the right where the times end. */

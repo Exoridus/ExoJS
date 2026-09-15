@@ -80,16 +80,6 @@ export interface CardLoad {
    * which a bar length would assert they were.
    */
   readonly withheld: string | undefined;
-
-  /**
-   * The published verdict against the quickest competitor on this load, or
-   * `undefined` where the load carries none.
-   *
-   * Read off the profile rather than divided out of the two figures beside it:
-   * a pooled run prints a verdict only where all of its runs agreed on one, and
-   * a ratio computed here would state a comparison the harness withheld.
-   */
-  readonly lead: { readonly label: string; readonly factor: number; readonly ahead: boolean } | undefined;
 }
 
 /** One scenario's card. */
@@ -247,57 +237,8 @@ const loadOf = (row: ProfileRow): CardLoad | null => {
     count: row.count,
     ...(row.unit !== undefined && { unit: row.unit }),
     comparisons: cells.map(cell => ({ id: cell.competitor, label: armLabel(cell.competitor), cell, outcome: outcomeOf(cell) })),
-    lead: undefined,
     withheld,
   };
-};
-
-/**
- * The verdict against the quickest competitor on this load.
- *
- * The quickest competitor rather than the widest gap: a card is read to find
- * out how the engine does against the best thing in the field, and the arm that
- * happens to be slowest carries no information a reader was looking for.
- *
- * Where that arm's comparison was withheld - the runs disagreed, or the clock
- * could not separate the two times - the load yields nothing at all rather than
- * falling through to the next arm down. A sentence naming a slower competitor
- * as the one to beat states a ranking the profile did not publish, and it does
- * so exactly where the real gap was too small to call.
- */
-const leadOf = (load: CardLoad): CardLoad['lead'] => {
-  if (load.withheld !== undefined) {
-    return undefined;
-  }
-
-  let quickest: { readonly arm: CardArm; readonly ms: number } | undefined;
-
-  for (const arm of load.arms) {
-    if (arm.reference || arm.ms === null) {
-      continue;
-    }
-
-    if (quickest === undefined || arm.ms < quickest.ms) {
-      quickest = { arm, ms: arm.ms };
-    }
-  }
-
-  if (quickest?.arm.quantitative !== true) {
-    return undefined;
-  }
-
-  const { arm } = quickest;
-  const verdict = load.comparisons.find(comparison => comparison.id === arm.id)?.cell.verdict;
-
-  if (verdict === undefined) {
-    return undefined;
-  }
-
-  if (verdict.factor === null || verdict.side === 'neither') {
-    return undefined;
-  }
-
-  return { label: arm.label, factor: verdict.factor, ahead: verdict.side === 'exojs' };
 };
 
 /** Group a domain's sections into one card per scenario. */
@@ -322,12 +263,7 @@ const cardsOf = (sections: readonly ProfileSection[], backend?: ProfileBackendNa
   // Which arms a load leaves out is stated once for the page rather than on
   // every card that leaves one out: the rule is the same everywhere, and a
   // reader who wants the absent arm's own story has the full results.
-  const cards = [...byScenario.entries()].map(([id, card]) => ({ id, category: card.category, loads: card.loads, ...(backend !== undefined && { backend }) }));
-
-  return cards.map(card => ({
-    ...card,
-    loads: card.loads.map(load => ({ ...load, lead: leadOf(load) })),
-  }));
+  return [...byScenario.entries()].map(([id, card]) => ({ id, category: card.category, loads: card.loads, ...(backend !== undefined && { backend }) }));
 };
 
 /** The rendering cards of one profile on one backend, or an empty list where it measured none. */
