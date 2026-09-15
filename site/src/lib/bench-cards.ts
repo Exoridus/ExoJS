@@ -81,16 +81,17 @@ export interface CardLoad {
    */
   readonly withheld: string | undefined;
   /**
-   * How many libraries this load compares against how many the block's widest
-   * row compares; `null` where it compares all of them.
+   * The libraries the block compares elsewhere and this load does not, by name;
+   * empty where it compares all of them.
    *
    * A card that silently shows two rows where its neighbours show four reads as
-   * a page that lost a library. Both figures are kept because the shortfall is
-   * the finding: a bare count states a total, and a reader cannot tell from it
-   * that anything is missing. Why an arm is missing is a property of that arm's
-   * adapter and coverage and stays in the full results.
+   * a page that lost a library. Named rather than counted, because the rows
+   * already carry the names: a reader can see which libraries are present, so a
+   * figure saying how many there should be leaves them to work out the
+   * difference the page already knows. Why an arm is missing is a property of
+   * that arm's adapter and coverage and stays in the full results.
    */
-  readonly measuredArms: { readonly measured: number; readonly of: number } | null;
+  readonly missingArms: readonly string[];
 
   /**
    * The published verdict against the quickest competitor on this load, or
@@ -254,7 +255,7 @@ const loadOf = (row: ProfileRow): CardLoad | null => {
     count: row.count,
     ...(row.unit !== undefined && { unit: row.unit }),
     comparisons: cells.map(cell => ({ id: cell.competitor, label: armLabel(cell.competitor), cell, outcome: outcomeOf(cell) })),
-    measuredArms: null,
+    missingArms: [],
     lead: undefined,
     withheld,
   };
@@ -327,18 +328,26 @@ const cardsOf = (sections: readonly ProfileSection[], backend?: ProfileBackendNa
     }
   }
 
-  // Marked against the widest row the same block published, not against a list
-  // of arms the page holds: what a comparison "should" carry is whatever that
-  // machine's run actually measured, and a profile taken against three arms
-  // must not report every one of its rows as short of a fourth.
+  // Named against the arms the same block published, not against a list of arms
+  // the page holds: what a comparison "should" carry is whatever that machine's
+  // run actually measured, and a profile taken against three arms must not
+  // report every one of its rows as short of a fourth.
   const cards = [...byScenario.entries()].map(([id, card]) => ({ id, category: card.category, loads: card.loads, ...(backend !== undefined && { backend }) }));
-  const widest = Math.max(0, ...cards.flatMap(card => card.loads.map(load => load.arms.length)));
+  const published = new Map<string, string>();
+
+  for (const card of cards) {
+    for (const load of card.loads) {
+      for (const arm of load.arms) {
+        published.set(arm.id, arm.label);
+      }
+    }
+  }
 
   return cards.map(card => ({
     ...card,
     loads: card.loads.map(load => ({
       ...load,
-      measuredArms: load.arms.length < widest ? { measured: load.arms.length, of: widest } : null,
+      missingArms: [...published.entries()].filter(([id]) => !load.arms.some(arm => arm.id === id)).map(([, label]) => label),
       lead: leadOf(load),
     })),
   }));

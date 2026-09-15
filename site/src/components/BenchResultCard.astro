@@ -44,6 +44,10 @@ import { archetypeDescription, archetypeTitle, type CellOutcome, FRAME_BUDGET_NO
 import type { BenchCard } from '../lib/bench-cards';
 import { openingLoad } from '../lib/bench-cards';
 
+/** Library names as running text, so a row states which arms are absent rather than how many are present. */
+const listArms = (names: readonly string[]): string =>
+    names.length < 2 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1] ?? ''}`;
+
 /** A scenario description split into what the scene is and what it loads, at the semicolon the descriptions carry. */
 const splitAtClause = (text: string): readonly [string, string | undefined] => {
     const at = text.indexOf('; ');
@@ -213,11 +217,7 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
                         {OUTCOME_STATUS[statesOf(load)[0] ?? 'absent']}
                     </button>
                 ) : (
-                    load.measuredArms !== null && (
-                        <span class="status quiet">
-                            {load.measuredArms.measured} of {load.measuredArms.of} libraries
-                        </span>
-                    )
+                    load.missingArms.length > 0 && <span class="status quiet">{listArms(load.missingArms)} not measured here</span>
                 )}
             </p>
 
