@@ -22,7 +22,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { buildChains, buildField, FRAME, settle, stepTimes } from './fields';
+import { bestStepTime, buildChains, buildField, FRAME, settle, stepTimes } from './fields';
 
 describe('physics sleeping performance', () => {
   it('5,000-mostly-sleeping field: sleeping sharply cuts step time', () => {
@@ -92,10 +92,12 @@ describe('physics sleeping performance', () => {
       awake.world.step(FRAME);
     }
 
-    const awakeMs = stepTimes(awake.world, 120);
+    const awakeMs = bestStepTime(awake.world, 120);
     const sleeping = buildChains(300, 8);
     const settleSteps = settle(sleeping.world, 600);
-    const sleepingMs = stepTimes(sleeping.world, 120);
+    // The sleeping arm's whole window is a few milliseconds, so one GC pause
+    // inside it would halve the measured ratio on a contended runner.
+    const sleepingMs = bestStepTime(sleeping.world, 120);
 
     console.log(
       `2,400 links: awake ${awakeMs.toFixed(3)} ms/step vs sleeping ${sleepingMs.toFixed(3)} ms/step after ${settleSteps} settle steps (${(awakeMs / sleepingMs).toFixed(1)}× faster)`,

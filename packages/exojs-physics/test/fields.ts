@@ -96,3 +96,22 @@ export const stepTimes = (world: PhysicsWorld, steps: number): number => {
 
   return (performance.now() - start) / steps;
 };
+
+/**
+ * The cheapest of `samples` consecutive {@link stepTimes} windows.
+ *
+ * A gate that compares two arms has to compare what each of them costs, not
+ * what the machine did to it: a single GC pause or a descheduled slice inside
+ * one window inflates that window's mean, and on a light arm it inflates it
+ * proportionally far more than on a heavy one. Taking the cheapest window keeps
+ * the interference out of both sides of the ratio.
+ */
+export const bestStepTime = (world: PhysicsWorld, steps: number, samples = 3): number => {
+  let best = Infinity;
+
+  for (let sample = 0; sample < samples; sample++) {
+    best = Math.min(best, stepTimes(world, steps));
+  }
+
+  return best;
+};
