@@ -289,28 +289,45 @@ export const resolveTimingPlan = (estimatedStepMs: number, resolutionMs: number 
     return { stepsPerSample: 1, timedSteps: plannedSteps };
   }
 
-  if (estimatedStepMs <= 0) {
-    return { stepsPerSample: cap, timedSteps: plannedSteps };
-  }
+  const extensionCap = Math.max(1, Math.floor((plannedSteps * MAX_TIMED_STEPS_FACTOR) / MIN_TIMED_SAMPLES));
 
-  const needed = Math.max(1, Math.ceil((TICKS_PER_SAMPLE * resolutionMs) / estimatedStepMs));
+  // A calibration block the clock returned as zero elapsed time is the
+  // cheapest step there is, not a step that needs no batching: it gets the
+  // longest batch the extension allows.
+  const needed = estimatedStepMs <= 0 ? extensionCap : Math.max(1, Math.ceil((TICKS_PER_SAMPLE * resolutionMs) / estimatedStepMs));
 
   if (needed <= cap) {
     return { stepsPerSample: needed, timedSteps: plannedSteps };
   }
 
-  const stepsPerSample = Math.min(needed, Math.floor((plannedSteps * MAX_TIMED_STEPS_FACTOR) / MIN_TIMED_SAMPLES));
+  const stepsPerSample = Math.min(needed, extensionCap);
 
   return { stepsPerSample, timedSteps: stepsPerSample * MIN_TIMED_SAMPLES };
 };
 
 /**
- * Measure one cell: build the scene, assert its cross-arm determinism, warm it
- * to steady state, then time `timedSteps` `step`s and reduce to median/p95.
+ * Whether a median sample sits on enough clock ticks to be a measurement.
  *
- * The timed window covers exactly the cell's `timedSteps`, whether they are
- * timed one at a time or in batches; the batch only decides how finely the
- * window is sampled, never how far the world advances.
+ * `achievedTicks` is `null` when the clock's grid was never observed, which
+ * leaves the median unqualified rather than unresolved.
+ */
+export const resolveSampleResolution = (
+  stepMsMedian: number,
+  stepsPerSample: number,
+  resolutionMs: number | null,
+): { readonly achievedTicks: number | null; readonly unresolved: boolean } => {
+  const achievedTicks = resolutionMs === null || resolutionMs <= 0 ? null : (stepMsMedian * stepsPerSample) / resolutionMs;
+
+  return { achievedTicks, unresolved: achievedTicks !== null && achievedTicks < MIN_RESOLVED_TICKS };
+};
+
+/**
+ * Measure one cell: build the scene, assert its cross-arm determinism, warm it
+ * to steady state, then time the planned steps and reduce to median/p95.
+ *
+ * The timed window is the cell's `timedSteps` unless the step is too cheap for
+ * a sample of them to clear the clock; then `resolveTimingPlan` lengthens the
+ * window, and the result records how many steps were timed.
  */
 const measureCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec, resolutionMs: number | null): PhysicsCellOutcome => {
   const archetype = archetypeFor(spec.archetype);
@@ -382,21 +399,15 @@ const measureCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec, resolutionM
    * Grid coverage the median's sample achieved.
    *
    * The batch is sized ONCE, from the calibration block, and is not re-derived
-   * while the cell is timed. Falling short of the target therefore says the
-   * timed window came out cheaper than calibration estimated - not that the
-   * batch hit its cap; the note reports the shortfall and leaves the cause to
-   * `stepsPerSample`, which travels with the cell.
+   * while the cell is timed. Falling short of the target says either that the
+   * timed window came out cheaper than calibration estimated or that the batch
+   * hit the extension cap; the note reports the shortfall and `stepsPerSample`
+   * travels with the cell for the reader to tell the two apart.
    */
   const stepMsMedian = median(samples);
-  const sampleMs = stepMsMedian * stepsPerSample;
-  const achievedTicks = resolutionMs === null || resolutionMs <= 0 ? null : sampleMs / resolutionMs;
+  const { achievedTicks, unresolved } = resolveSampleResolution(stepMsMedian, stepsPerSample, resolutionMs);
 
   const notes: string[] = [];
-  // Below the resolution floor the median is the clock's grid, not the engine,
-  // and a cell that prints it would publish a comparison of grids. It is
-  // reported as unmeasured, with the note saying why, and drops out of every
-  // verdict the way an arm that never ran does.
-  const unresolved = achievedTicks !== null && achievedTicks < MIN_RESOLVED_TICKS;
 
   let status: CellStatus = 'ok';
 
@@ -416,12 +427,15 @@ const measureCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec, resolutionM
 
   if (resolutionMs === null || resolutionMs <= 0) {
     notes.push('clock resolution not observed, so one step per timing sample and no quantisation figure for this cell');
-  } else if (achievedTicks !== null && achievedTicks <= 0) {
-    // A sample the clock returned as zero carries no measurement to quantify.
-    // `100 / 0` printed `Infinity% quantisation`, which reads as an enormous
-    // error bar on a number rather than as the absence of a number.
+  } else if (unresolved) {
+    // Below the resolution floor the median is the clock's grid, not the
+    // engine, and a cell that prints it would publish a comparison of grids.
+    // It is published the way a cell that never ran is - zero figures and the
+    // `unavailable` status - so one status word keeps one meaning downstream.
+    // This also covers a sample the clock returned as zero, which would
+    // otherwise print `Infinity% quantisation` below.
     notes.push(
-      `unresolved timing: a sample of ${String(stepsPerSample)} step(s) returned no elapsed time on a ${(resolutionMs * 1000).toFixed(1)}us clock, so this cell has no resolved median`,
+      `unmeasured: a sample of ${String(stepsPerSample)} step(s) spans ${(achievedTicks ?? 0).toFixed(1)} clock ticks of ${(resolutionMs * 1000).toFixed(1)}us, below the ${String(MIN_RESOLVED_TICKS)} ticks a median needs to resolve`,
     );
   } else if (achievedTicks !== null && achievedTicks < TICKS_PER_SAMPLE) {
     notes.push(
@@ -433,8 +447,8 @@ const measureCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec, resolutionM
     kind: 'measured',
     result: {
       spec,
-      stepMsMedian,
-      stepMsP95: percentile(samples, 95),
+      stepMsMedian: unresolved ? 0 : stepMsMedian,
+      stepMsP95: unresolved ? 0 : percentile(samples, 95),
       stepsPerSample,
       structural,
       status,

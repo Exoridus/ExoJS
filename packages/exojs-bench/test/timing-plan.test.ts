@@ -1,4 +1,4 @@
-import { resolveTimingPlan } from '../src/physics/page/harness';
+import { resolveSampleResolution, resolveTimingPlan } from '../src/physics/page/harness';
 
 describe('resolveTimingPlan', () => {
   test('keeps the planned window when the clock is already cleared inside it', () => {
@@ -30,5 +30,36 @@ describe('resolveTimingPlan', () => {
 
   test('times single steps when no clock resolution was observed', () => {
     expect(resolveTimingPlan(0.0005, null, 120)).toEqual({ stepsPerSample: 1, timedSteps: 120 });
+  });
+});
+
+describe('resolveTimingPlan with a zero calibration estimate', () => {
+  test('extends the window to the cap instead of sampling the planned window coarsely', () => {
+    const plan = resolveTimingPlan(0, 0.005, 120);
+
+    expect(plan.stepsPerSample).toBe(Math.floor((120 * 50) / 12));
+    expect(plan.timedSteps).toBe(plan.stepsPerSample * 12);
+  });
+
+  test('never plans an empty window for a tiny step count', () => {
+    const plan = resolveTimingPlan(0, 0.005, 1);
+
+    expect(plan.stepsPerSample).toBeGreaterThanOrEqual(1);
+    expect(plan.timedSteps).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('resolveSampleResolution', () => {
+  test('marks a median under four clock ticks as unresolved', () => {
+    // 0.0005 ms per step, 10 steps per sample, 5 us clock: one tick per sample.
+    expect(resolveSampleResolution(0.0005, 10, 0.005)).toEqual({ achievedTicks: 1, unresolved: true });
+  });
+
+  test('accepts a median at the floor', () => {
+    expect(resolveSampleResolution(0.002, 10, 0.005)).toEqual({ achievedTicks: 4, unresolved: false });
+  });
+
+  test('leaves a median unqualified when the clock was never observed', () => {
+    expect(resolveSampleResolution(0, 1, null)).toEqual({ achievedTicks: null, unresolved: false });
   });
 });
