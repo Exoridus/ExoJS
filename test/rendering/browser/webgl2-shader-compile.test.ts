@@ -15,6 +15,7 @@
 
 import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 
+import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { blurShader } from '#rendering/filters/BlurFilter';
 import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
 import { dropShadowShader } from '#rendering/filters/DropShadowFilter';
@@ -71,6 +72,7 @@ const placeholderValues: Readonly<Record<string, Readonly<Record<string, number>
  * names resolve against is generated, and only the composed form compiles.
  */
 const generatedUniformBlocks: ReadonlyMap<string, string> = new Map([
+  ['bloom-threshold.frag', generateGlslUniformDeclarations(bloomThresholdShader.uniformSchema!)],
   ['blur.frag', generateGlslUniformDeclarations(blurShader.uniformSchema!)],
   ['color-matrix.frag', generateGlslUniformDeclarations(colorMatrixShader.uniformSchema!)],
   ['drop-shadow.frag', generateGlslUniformDeclarations(dropShadowShader.uniformSchema!)],
@@ -142,6 +144,7 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['backdrop-blend.vert', 'backdrop-blend.frag'],
   // The built-in filters: one pass-through fullscreen-quad vertex stage, one
   // fragment stage each, exactly as `ShaderFilter` assembles them.
+  ['default-vertex.vert', 'bloom-threshold.frag'],
   ['default-vertex.vert', 'blur.frag'],
   ['default-vertex.vert', 'color-matrix.frag'],
   ['default-vertex.vert', 'displacement.frag'],

@@ -42,6 +42,7 @@
  * @internal Test/perf-only.
  */
 import { Container } from '#rendering/Container';
+import { BloomFilter } from '#rendering/filters/BloomFilter';
 import { BlurFilter } from '#rendering/filters/BlurFilter';
 import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import type { Filter } from '#rendering/filters/Filter';
@@ -202,6 +203,18 @@ export const FILTER_ARCHETYPES: readonly AllocationArchetype[] = [
       }),
   },
 
+  // ── PASSES per filter: one filter, a whole chain of targets ─────────────
+  {
+    id: 'filter/bloom 100',
+    rationale:
+      'A BloomFilter — one filter that borrows a chain of half-resolution targets and issues an extraction, three blits and a two-sweep blur per node. The deepest single filter there is, and the row that says whether the pool absorbs a chain or the chain allocates.',
+    warmup: WARMUP,
+    build: () =>
+      buildDecoratedSprites(100, sprite => {
+        sprite.addFilter(new BloomFilter({ strength: 4, levels: 2 }));
+      }),
+  },
+
   // ── The retained capture's cull margin ───────────────────────────────────
   // Filtered sprites parked OUTSIDE the view but inside the inflated capture
   // rect (`RETAINED_CULL_MARGIN_RATIO` = 1/16, so 80 px horizontally on a
@@ -289,6 +302,7 @@ export const FILTERED_NODE_COUNT: Readonly<Record<string, number>> = {
   'filter/stack3 100': 100,
   'filter/blur-narrow 100': 100,
   'filter/blur-wide 100': 100,
+  'filter/bloom 100': 100,
   'filter/container 1000': 1,
   'filter/container-cached 1000': 1,
 };

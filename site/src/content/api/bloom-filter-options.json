@@ -1,0 +1,175 @@
+{
+  "title": "BloomFilterOptions",
+  "description": "Construction-time options for a BloomFilter.",
+  "symbol": "BloomFilterOptions",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction-time options for a BloomFilter."
+      ],
+      "importLine": "import { BloomFilterOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "intensity",
+          "signature": "intensity?: number",
+          "signatureTokens": [
+            {
+              "text": "intensity",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How much of the extracted highlight is added back. 0 leaves the input untouched, 1 adds the full excess over the threshold, higher values push a brighter glow. Default 1."
+        },
+        {
+          "name": "levels",
+          "signature": "levels?: number",
+          "signatureTokens": [
+            {
+              "text": "levels",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Halvings between the input and the blurred level, 1..5. Raising it widens the soft base of the glow and makes the blur cheaper; lowering it keeps the glow tighter around the highlight. Default 3."
+        },
+        {
+          "name": "quality",
+          "signature": "quality?: number",
+          "signatureTokens": [
+            {
+              "text": "quality",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Tap cap for the blur, see BlurFilterOptions.quality. Derived when omitted."
+        },
+        {
+          "name": "strength",
+          "signature": "strength?: number",
+          "signatureTokens": [
+            {
+              "text": "strength",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Gaussian standard deviation of the glow in LOGICAL units - the same quantity BlurFilterOptions.strength takes, unchanged by the display's pixel ratio. Default 8."
+        },
+        {
+          "name": "threshold",
+          "signature": "threshold?: number",
+          "signatureTokens": [
+            {
+              "text": "threshold",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Luminance a pixel needs before it glows, in 0..1. Rec. 709 luma of the premultiplied input, so a half-transparent white glows like an opaque grey. The knee is soft, which puts this value in the MIDDLE of the transition rather than at a hard cut: light a little below it still contributes a little glow, and a gradient crossing it shows no edge. Default 0.8."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/filters/BloomFilter.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/BloomFilter.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/filters/BloomFilter.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/BloomFilter.ts"
+}

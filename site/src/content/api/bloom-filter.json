@@ -1,0 +1,483 @@
+{
+  "title": "BloomFilter",
+  "description": "A Filter that adds a soft glow around the bright parts of its input - bloom, in the engine's ordinary sRGB path. Pixels whose luminance passes threshold are extracted through a soft knee, spread over a chain of levels half-resolution targets, blurred by strength, and added back on top of the unchanged input. Only the EXCESS over the threshold glows, so a scene keeps its own colours instead of washing out. ```ts // A glow around the lamps, leaving everything below 70% luminance alone. world.filters = [new BloomFilter({ threshold: 0.7, intensity: 1.4, strength: 12 })]; ``` The glow reaches `strength * 3` logical units outside its input - the blur's truncation point - plus the spread the halving chain adds on its own, so a subject at rest keeps the room its glow needs. ## Range There is no HDR anywhere in the chain: the input, every intermediate and the result are eight-bit sRGB. The extraction keeps headroom for an intensity of roughly `1 / (1 - threshold)` before the glow saturates to white, which is where the effect stops getting brighter and starts getting flatter. Grading belongs to LutFilter, before or after this one. Runs on a ShaderFilter carrying both a GLSL and a WGSL source, so it works on either backend without the caller choosing one.",
+  "symbol": "BloomFilter",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 11,
+  "counts": {
+    "constructors": 1,
+    "methods": 4,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A Filter that adds a soft glow around the bright parts of its input - bloom, in the engine's ordinary sRGB path.",
+        "Pixels whose luminance passes threshold are extracted through a soft knee, spread over a chain of levels half-resolution targets, blurred by strength, and added back on top of the unchanged input. Only the EXCESS over the threshold glows, so a scene keeps its own colours instead of washing out.",
+        "```ts // A glow around the lamps, leaving everything below 70% luminance alone. world.filters = [new BloomFilter({ threshold: 0.7, intensity: 1.4, strength: 12 })]; ```",
+        "The glow reaches `strength * 3` logical units outside its input - the blur's truncation point - plus the spread the halving chain adds on its own, so a subject at rest keeps the room its glow needs.",
+        "## Range",
+        "There is no HDR anywhere in the chain: the input, every intermediate and the result are eight-bit sRGB. The extraction keeps headroom for an intensity of roughly `1 / (1 - threshold)` before the glow saturates to white, which is where the effect stops getting brighter and starts getting flatter. Grading belongs to LutFilter, before or after this one.",
+        "Runs on a ShaderFilter carrying both a GLSL and a WGSL source, so it works on either backend without the caller choosing one."
+      ],
+      "importLine": "import { BloomFilter } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: BloomFilterOptions): BloomFilter",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BloomFilterOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BloomFilter",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "BloomFilterOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "BloomFilter",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "apply",
+          "signature": "apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture, resolution: number): void",
+          "signatureTokens": [
+            {
+              "text": "apply",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "backend",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderBackend",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "input",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "output",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "resolution",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "backend",
+              "type": "RenderBackend",
+              "optional": false
+            },
+            {
+              "name": "input",
+              "type": "RenderTexture",
+              "optional": false
+            },
+            {
+              "name": "output",
+              "type": "RenderTexture",
+              "optional": false
+            },
+            {
+              "name": "resolution",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Execute one filter pass: sample from input, write the result to output. Both textures are bounds × resolution texels - NOT the drawable's logical bounding box. Any parameter a subclass expresses in pixels (a blur radius, a displacement amount) is in LOGICAL units by convention and must be multiplied by resolution before it is used as a texel offset; otherwise the effect shrinks by 1/resolution on a HiDPI display. Parameters expressed as a fraction of the target (or as pure colour maths) need no adjustment. The engine always passes resolution. It is optional for the hand-rolled case - a post-processing chain that creates its own RenderTextures and calls apply directly - where the textures are whatever size the caller made them and 1 is the honest answer."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Release any GPU-side resources held by this filter (uniform buffers, pipelines, intermediate textures). The base drops the attachment list; subclasses with GPU state (BlurFilter, ColorMatrixFilter) override and call super.destroy()."
+        },
+        {
+          "name": "getOutputBounds",
+          "signature": "getOutputBounds(input: ReadonlyRectangle, output: Rectangle): void",
+          "signatureTokens": [
+            {
+              "text": "getOutputBounds",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "input",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyRectangle",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "output",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "input",
+              "type": "ReadonlyRectangle",
+              "optional": false
+            },
+            {
+              "name": "output",
+              "type": "Rectangle",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "The blur's own truncated reach, plus what the halving chain spreads by itself: each bilinear halving pulls light one texel further and the upsample walks the same distance back, which lands inside 2^levels logical units at a resolution of one - the widest case, since a higher resolution only makes those texels smaller."
+        },
+        {
+          "name": "invalidate",
+          "signature": "invalidate(): void",
+          "signatureTokens": [
+            {
+              "text": "invalidate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Tell every node this filter is attached to that its rendered output is out of date. Call it after mutating anything that changes what the filter draws or how far it reaches - the stock filters do this from their own setters. Without it a cached or retained representation of the owning node keeps replaying the result the filter produced before the change."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "resolution",
+          "signature": "resolution: TargetResolution",
+          "signatureTokens": [
+            {
+              "text": "resolution",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TargetResolution",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolution this filter's render targets are rasterized at, in device pixels per logical unit. 'inherit' (the default) matches the surface the result is composited into, so a filtered subtree stays as sharp as its surroundings on a HiDPI display. Lower it for a filter whose output is low-frequency anyway - a heavy blur at 0.5 costs a quarter of the fragments and is hard to tell apart. A filter CHAIN shares one target size, so the whole chain runs at the lowest resolution any of its filters asks for. ts const blur = new BlurFilter({ strength: 4 }); blur.resolution = 0.5; // half-resolution blur, quarter the fill cost "
+        },
+        {
+          "name": "intensity",
+          "signature": "intensity: number",
+          "signatureTokens": [
+            {
+              "text": "intensity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How much of the extracted highlight is added back. 0 leaves the input untouched."
+        },
+        {
+          "name": "levels",
+          "signature": "levels: number",
+          "signatureTokens": [
+            {
+              "text": "levels",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Halvings between the input and the blurred level, 1..5."
+        },
+        {
+          "name": "quality",
+          "signature": "quality: number",
+          "signatureTokens": [
+            {
+              "text": "quality",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Tap cap for the blur, see BlurFilterOptions.quality."
+        },
+        {
+          "name": "strength",
+          "signature": "strength: number",
+          "signatureTokens": [
+            {
+              "text": "strength",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Gaussian standard deviation of the glow in logical units."
+        },
+        {
+          "name": "threshold",
+          "signature": "threshold: number",
+          "signatureTokens": [
+            {
+              "text": "threshold",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Luminance a pixel needs before it glows, in 0..1 - the middle of a soft transition, not a hard cut."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/filters/BloomFilter.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/BloomFilter.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/filters/BloomFilter.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/BloomFilter.ts"
+}

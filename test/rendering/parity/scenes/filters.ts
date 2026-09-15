@@ -10,11 +10,22 @@
  *
  * The colour matrix exercises an array of `vec4` followed by a `vec4`; the drop
  * shadow a `vec2` followed by a `vec4`, where the eight bytes of padding std140
- * inserts between the two is the mistake a hand-written struct makes.
+ * inserts between the two is the mistake a hand-written struct makes; the bloom
+ * three consecutive `f32`, which std140 packs into ONE 16-byte row, so a second
+ * or third field read from its own row would take the glow's knee and intensity
+ * from whatever follows the block.
+ *
+ * The bloom scene is the only one here whose result is not a single shader pass.
+ * It runs an extraction, a chain of half-resolution sprite blits, a separable
+ * blur and an additive composite, and it is the AGREEMENT of that sequence that
+ * matters: the two backends store a render texture the other way up and resolve
+ * a scaled sprite through their own samplers, so a chain that is bit-equal end
+ * to end says both walked it identically.
  */
 
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
+import { BloomFilter } from '#rendering/filters/BloomFilter';
 import { ColorMatrixFilter } from '#rendering/filters/ColorMatrixFilter';
 import { DropShadowFilter } from '#rendering/filters/DropShadowFilter';
 import { Sprite } from '#rendering/sprite/Sprite';
@@ -53,6 +64,23 @@ const square = (color: Color, x: number, y: number, size: number): Sprite => {
 const channel = (value: number, bias: number): number => Math.round(Math.min(1, Math.max(0, value / 255 + bias)) * 255);
 
 export const filterScenes: readonly Scene[] = [
+  {
+    // A white square on transparency: the fill alone passes the threshold, so
+    // everything outside it in the result is glow and nothing else.
+    name: 'filter/bloom-halo',
+    feature: 'Filter',
+    size: CANVAS,
+    fixture: 'opaque-solid',
+    nearestSampled: false,
+    build: () => {
+      const root = new Container();
+
+      root.addChild(square(Color.white, 24, 24, 16));
+      root.filters = [new BloomFilter({ threshold: 0.8, intensity: 3, strength: 4, levels: 2 })];
+
+      return root;
+    },
+  },
   {
     // The rows stay the identity and the whole grade comes from the bias
     // vector, which is the field sitting immediately after the array: a row

@@ -38,6 +38,7 @@
 
 import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 
+import { bloomThresholdShader } from '#rendering/filters/BloomFilter';
 import { blurShader } from '#rendering/filters/BlurFilter';
 import { colorMatrixShader } from '#rendering/filters/ColorMatrixFilter';
 import { dropShadowShader } from '#rendering/filters/DropShadowFilter';
@@ -83,6 +84,7 @@ const shaders: readonly ShaderEntry[] = [
   // The stock filters that declare a typed uniform schema: what a backend
   // compiles is the author's body plus the generated block, so that is what has
   // to compile.
+  { name: 'BloomFilter (generated uniform block)', source: bloomThresholdShader._resolveWgsl(filterUniformGroup)! },
   { name: 'BlurFilter (generated uniform block)', source: blurShader._resolveWgsl(filterUniformGroup)! },
   { name: 'ColorMatrixFilter (generated uniform block)', source: colorMatrixShader._resolveWgsl(filterUniformGroup)! },
   { name: 'DropShadowFilter (generated uniform block)', source: dropShadowShader._resolveWgsl(filterUniformGroup)! },
