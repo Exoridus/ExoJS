@@ -44,14 +44,13 @@ import { archetypeDescription, archetypeTitle, type CellOutcome, FRAME_BUDGET_NO
 import type { BenchCard } from '../lib/bench-cards';
 import { openingLoad } from '../lib/bench-cards';
 
-/** A scenario description split into what the scene is and what it loads, at the semicolon the descriptions carry. */
+/** A scenario description split into what the scene is and what it loads, at the full stop between the two. */
 const splitAtClause = (text: string): readonly [string, string | undefined] => {
-    const at = text.indexOf('; ');
+    const at = text.indexOf('. ');
 
-    // The lead keeps no sentence-ending period: at full width the two clauses
-    // are printed back together as the one sentence they were written as, and
-    // the period belongs only to the shortened form.
-    return at === -1 ? [text, undefined] : [text.slice(0, at), text.slice(at + 2)];
+    // The lead keeps its full stop: both clauses are whole sentences, so the
+    // shortened phone form is the first of them and needs nothing added.
+    return at === -1 ? [text, undefined] : [text.slice(0, at + 1), text.slice(at + 2)];
 };
 
 interface Props {
@@ -122,7 +121,7 @@ const explained = [
               {
                   id: 'withheld',
                   label: 'Not comparable',
-                  note: "Every library's own time is published; the comparison between them is not. See the reason below.",
+                  note: "Every library's own time is published. The comparison between them is not, and the reason is below.",
               },
           ]
         : []),
@@ -168,7 +167,7 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         {description !== undefined && (
             <p class:list={['what', { 'repeats-title': leadRepeatsTitle }]}>
                 {descriptionLead !== undefined && <span class:list={['what-lead', { stop: leadNeedsStop }]}>{descriptionLead}</span>}
-                {descriptionRest !== undefined && <span class="what-rest">; {descriptionRest}</span>}
+                {descriptionRest !== undefined && <span class="what-rest"> {descriptionRest}</span>}
             </p>
         )}
     </header>
@@ -208,6 +207,24 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
               * explanation each of them carried is one tap away in the details.
               */}
             <p class="meta">
+                {/*
+                  * The gap against the quickest competitor, as a figure rather
+                  * than a sentence.
+                  *
+                  * A bar is drawn from zero against the load's slowest arm, so
+                  * where one arm is an order of magnitude behind, the two
+                  * quickest draw as stubs of the same length and the comparison
+                  * a reader came for has no visible form. This carries it
+                  * instead of the scale, and stays the profile's own figure -
+                  * see `leadOf`.
+                  */}
+                {load.lead !== undefined && (
+                    <span class="gap">
+                        <b>{load.lead.factor.toFixed(load.lead.factor < 10 ? 2 : 1)}x</b>
+                        {load.lead.ahead ? ' ahead of ' : ' behind '}
+                        {load.lead.label}
+                    </span>
+                )}
                 {load.withheld !== undefined ? (
                     <button type="button" class="status withheld" data-explains={noteId(load.id, 'withheld')} aria-describedby={noteId(load.id, 'withheld')}>
                         Not comparable
@@ -264,23 +281,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
                     </li>
                 ))}
             </ul>
-
-            {/*
-              * The gap the card is read for, in words.
-              *
-              * A bar is drawn from zero against the load's slowest arm, so where
-              * one arm is an order of magnitude behind, the two quickest draw as
-              * two stubs of the same length and the comparison a reader came for
-              * has no visible form. The sentence carries it instead of the
-              * scale: the bars keep meaning duration, and the figure stays the
-              * profile's own - see `leadOf`.
-              */}
-            {load.lead !== undefined && (
-                <p class="lead">
-                    ExoJS is <b>{load.lead.factor.toFixed(load.lead.factor < 10 ? 2 : 1)}x</b> {load.lead.ahead ? 'faster' : 'slower'} than {load.lead.label},
-                    the quickest here
-                </p>
-            )}
 
             {/*
               * One chip per state the load actually carries, and the state is
@@ -387,17 +387,12 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         cursor: default;
     }
 
-    /*
-     * The sentence sits between the rows and the detail, where it reads as the
-     * result of what is above it rather than as a caption on the card.
-     */
-    .lead {
-        margin: 0.5rem 0 0;
-        font-size: 0.78rem;
-        color: var(--color-text-muted);
+    /* Reads as a label on the load, not as a remark about it. */
+    .gap {
+        margin-right: auto;
     }
 
-    .lead b {
+    .gap b {
         color: var(--color-text);
         font-weight: 600;
     }

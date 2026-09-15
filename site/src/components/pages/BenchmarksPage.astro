@@ -144,7 +144,7 @@ const leading = browsers[0];
                   * figure had already been read as a warning.
                   */}
                 <p class="legend">
-                    <b>Amber time</b> = over a 16.7 ms frame budget at 60 fps. The measurement is valid; the scene does not fit in one frame.
+                    <b>Orange</b> marks a time over the 16.7 ms frame budget at 60 fps. The measurement is valid. The scene does not fit in one frame.
                 </p>
 
                 {browsers.map((entry, index) => (
@@ -243,8 +243,8 @@ const leading = browsers[0];
                   */}
                 <p class="scope">
                     A library appears in a scenario where its own API covers it and its arm does the same work as the others. One that sits a scenario out, or that would
-                    render something else in it, is left out of that card rather than compared on unequal terms. Nothing measured is discarded - <a
-                        href={`${base}${locale}/benchmarks/full/`}>all measurements</a
+                    render something else in it, is left out of that card rather than compared on unequal terms. Nothing measured is discarded. <a
+                        href={`${base}${locale}/benchmarks/full/`}>All measurements</a
                     > lists every arm and every load.
                 </p>
 

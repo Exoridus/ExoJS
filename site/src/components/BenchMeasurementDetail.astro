@@ -63,16 +63,6 @@ const rangeOf = (spread: ProfileSpread): string => (formatRange(spread) === '' ?
     <p class="none">No library produced a comparable measurement at this load.</p>
 ) : (
     <div class="detail">
-        {comparisons.length > 1 && (
-            <div class="pick" role="group" aria-label="Compared library">
-                {comparisons.map(entry => (
-                    <button type="button" data-comparison={entry.id} aria-pressed={entry.id === opening?.id ? 'true' : 'false'}>
-                        vs {entry.label}
-                    </button>
-                ))}
-            </div>
-        )}
-
         {comparisons.map(entry => {
             const { cell, outcome } = entry;
             const mixed = outcome === 'unstable';
@@ -80,7 +70,7 @@ const rangeOf = (spread: ProfileSpread): string => (formatRange(spread) === '' ?
             const factor = mixed ? pooledFactor(cell) : cell.verdict.factor;
 
             return (
-                <section class="pair" data-comparison={entry.id} hidden={entry.id !== opening?.id}>
+                <section class="pair" data-comparison={entry.id}>
                     <h4>
                         ExoJS <i>vs</i> {entry.label}
                     </h4>
@@ -97,7 +87,7 @@ const rangeOf = (spread: ProfileSpread): string => (formatRange(spread) === '' ?
                             <span class="figure">{mixed ? formatApproximate(factor) : formatFactor(factor)}</span>
                         )}
                         <span class="says">
-                            {withheld ? 'Both times are published; the comparison between them is not.' : OUTCOME_NOTES[outcome]}
+                            {withheld ? 'Both times are published. The comparison between them is not.' : OUTCOME_NOTES[outcome]}
                         </span>
                     </p>
 
@@ -272,26 +262,3 @@ const rangeOf = (spread: ProfileSpread): string => (formatRange(spread) === '' ?
         }
     }
 </style>
-
-<script>
-    // Scoped to the block the click came from: several cards can be open at
-    // once, and each carries its own comparisons. Without the script the
-    // opening comparison is the one that is not `hidden`, so the block still
-    // describes a measured pair.
-    for (const detail of document.querySelectorAll<HTMLElement>('.detail')) {
-        const buttons = detail.querySelectorAll<HTMLButtonElement>('.pick button');
-        const pairs = detail.querySelectorAll<HTMLElement>('.pair');
-
-        for (const button of buttons) {
-            button.addEventListener('click', () => {
-                for (const other of buttons) {
-                    other.setAttribute('aria-pressed', String(other === button));
-                }
-
-                for (const pair of pairs) {
-                    pair.hidden = pair.dataset['comparison'] !== button.dataset['comparison'];
-                }
-            });
-        }
-    }
-</script>
