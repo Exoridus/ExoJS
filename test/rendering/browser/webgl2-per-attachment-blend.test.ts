@@ -73,13 +73,21 @@ describe('WebGL2 per-attachment blend', () => {
   test('each attachment of one draw is blended on its own terms', async ctx => {
     const backend: WebGl2Backend = await createWebGl2TestBackend(canvasSize);
 
-    if (!backend.supportsPerAttachmentBlend) {
+    // Asked of the context directly, not through the capability: a broken probe
+    // would otherwise turn the only real-GPU proof of this feature green by
+    // skipping it. A device that has the extension must run the test, and the
+    // capability must agree that it does.
+    const available = backend.context.getExtension('OES_draw_buffers_indexed') !== null;
+
+    if (!available) {
       backend.destroy();
       // eslint-disable-next-line vitest/no-disabled-tests -- runtime guard: capability, not a failure
       ctx.skip('This device has no OES_draw_buffers_indexed, so attachments cannot blend differently.');
 
       return;
     }
+
+    expect(backend.supportsPerAttachmentBlend).toBe(true);
 
     const target = new MultiRenderTarget(targetSize, targetSize, { formats: [TextureFormat.Rgba8, TextureFormat.Rgba8] });
     const context = new RenderingContext(backend);

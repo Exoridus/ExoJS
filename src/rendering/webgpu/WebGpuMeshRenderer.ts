@@ -5,7 +5,7 @@ import { packAffineMat3Std140 } from '#rendering/affinePacking';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { AnyMaterial } from '#rendering/material/Material';
-import { drawBlendModes, drawWritesDepth } from '#rendering/material/MeshMaterial';
+import { attachmentBlendModes, drawWritesDepth, resolveBlendMode } from '#rendering/material/MeshMaterial';
 import type { MeshIndexArray, MeshIndexFormat } from '#rendering/mesh/indices';
 import { createIndexArray, meshIndexBytes } from '#rendering/mesh/indices';
 import type { Mesh } from '#rendering/mesh/Mesh';
@@ -422,10 +422,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       return;
     }
 
-    // The material owns its blend mode; the mesh's own blendMode overrides it
-    // when set away from the default (Normal). Default-path meshes keep their
-    // own blendMode verbatim.
-    const blendMode = customShader !== null && mesh.blendMode === BlendModes.Normal ? customShader.blendMode : mesh.blendMode;
+    const blendMode = resolveBlendMode(mesh.blendMode, customShader);
     backend.setBlendMode(blendMode);
 
     // A mesh WITHOUT a texture samples white, which is neutral against the
@@ -624,12 +621,11 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const renderTargetFormat = backend.renderTargetFormat;
     const stencil = coordinator.stencilActive;
     const depth = meshDepthMode(coordinator.depthWritesActive, writesDepth);
-    // The material owns its blend mode; the mesh's own overrides it when set
-    // away from the default - same rule as the node and WebGL2 batch paths.
-    const blendMode = material !== null && mesh.blendMode === BlendModes.Normal ? material.blendMode : mesh.blendMode;
-    // A batch rasterizes into one attachment - this path builds a single-target
-    // pipeline - so the material's list speaks for slot 0 and nothing else.
-    const attachmentBlendMode = drawBlendModes(material)?.[0] ?? blendMode;
+    const blendMode = resolveBlendMode(mesh.blendMode, material);
+    // This path builds a single-target pipeline, and `drawInstanced` refuses a
+    // multi-attachment target for exactly that reason, so the material's list
+    // speaks for slot 0 and nothing else.
+    const attachmentBlendMode = attachmentBlendModes(material)?.[0] ?? blendMode;
     const pass = active.pass;
 
     if (resources === null) {
@@ -1120,7 +1116,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
                 backend.renderTargetFormats,
                 stencil,
                 drawWritesDepth(dc.customShader, backend.renderTarget) ? MeshDepthMode.Write : passDepth,
-                drawBlendModes(dc.customShader),
+                attachmentBlendModes(dc.customShader),
               ),
             );
             lastShader = dc.customShader;
@@ -2660,7 +2656,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     formats: readonly GPUTextureFormat[],
     stencil: boolean,
     depth: MeshDepthMode = MeshDepthMode.None,
-    attachmentBlendModes: readonly BlendModes[] | null = null,
+    attachmentModes: readonly BlendModes[] | null = null,
   ): GPURenderPipeline {
     // The stencil dimension keeps the clip and no-clip variants distinct,
     // mirroring the default and static-batch caches: a stencil pipeline carries
@@ -2672,7 +2668,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // the same material in a one-attachment and a two-attachment pass needs two
     // pipelines.
     //
-    // `attachmentBlendModes` is deliberately absent from the key: these
+    // `attachmentModes` is deliberately absent from the key: these
     // resources are cached per material, and a material's list is fixed for its
     // lifetime, so it cannot vary within one cache.
     const cacheKey = `${blendMode}:${formats.join(',')}:${stencil ? 's' : 'n'}:${depth}`;
@@ -2702,7 +2698,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
           entryPoint: 'fragmentMain',
           targets: formats.map((format, index) => ({
             format,
-            blend: getWebGpuBlendState(attachmentBlendModes?.[index] ?? blendMode),
+            blend: getWebGpuBlendState(attachmentModes?.[index] ?? blendMode),
             writeMask: GPUColorWrite.ALL,
           })),
         },

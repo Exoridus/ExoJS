@@ -19,8 +19,14 @@ import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { GpuTimer } from '#rendering/GpuTimer';
+import { attachmentBlendModesDiffer } from '#rendering/material/MeshMaterial';
 import type { Mesh } from '#rendering/mesh/Mesh';
-import { assertDrawsAllAttachments, assertSingleAttachmentCompose } from '#rendering/multiAttachmentGuard';
+import {
+  assertBatchSingleAttachment,
+  assertDrawsAllAttachments,
+  assertPerAttachmentBlendSupported,
+  assertSingleAttachmentCompose,
+} from '#rendering/multiAttachmentGuard';
 import { isMultiAttachmentTarget, MultiRenderTarget } from '#rendering/MultiRenderTarget';
 import type { PersistentSlotBundle } from '#rendering/plan/persistentSlotDraw';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/renderCommand';
@@ -970,7 +976,10 @@ export class WebGl2Backend implements RenderBackend {
     // Only consulted while a multi-attachment target is bound, so an ordinary
     // frame pays one boolean read per drawable.
     if (this._multiAttachmentTarget) {
-      assertDrawsAllAttachments(drawable, (this._renderTarget as MultiRenderTarget).attachments.length, RenderBackendType.WebGl2);
+      const attachments = (this._renderTarget as MultiRenderTarget).attachments.length;
+
+      assertDrawsAllAttachments(drawable, attachments, RenderBackendType.WebGl2);
+      assertPerAttachmentBlendSupported(drawable, attachments, this.supportsPerAttachmentBlend, RenderBackendType.WebGl2);
     }
 
     const renderer = this.rendererRegistry.resolve(drawable);
@@ -998,6 +1007,10 @@ export class WebGl2Backend implements RenderBackend {
 
     if (transforms.length < count || tints.length < count) {
       throw new Error(`drawInstanced requires ${count} transforms and tints (got ${transforms.length}/${tints.length}).`);
+    }
+
+    if (this._multiAttachmentTarget) {
+      assertBatchSingleAttachment((this._renderTarget as MultiRenderTarget).attachments.length, RenderBackendType.WebGl2);
     }
 
     const renderer = this.rendererRegistry.resolve(mesh);
@@ -1551,37 +1564,35 @@ export class WebGl2Backend implements RenderBackend {
    */
   public setAttachmentBlendModes(modes: readonly BlendModes[] | null, fallback: BlendModes): this {
     if (modes === null) {
-      return this._clearAttachmentBlendModes(this._blendMode);
+      // `fallback` and not only the cached mode: a renderer that set indexed
+      // state without a whole-draw `setBlendMode` first leaves the cache at
+      // `null`, which the setter would answer with no GL call at all.
+      return this._clearAttachmentBlendModes(this._blendMode ?? fallback);
     }
 
     const attachments = this._multiAttachmentTarget ? (this._renderTarget as MultiRenderTarget).attachments.length : 1;
-    const first = modes[0] ?? fallback;
-    let uniform = true;
 
-    for (let index = 1; index < attachments; index++) {
-      if ((modes[index] ?? fallback) !== first) {
-        uniform = false;
-        break;
-      }
-    }
-
-    if (uniform) {
+    if (!attachmentBlendModesDiffer(modes, attachments, fallback)) {
       // Nothing to distinguish, so this is an ordinary blend state - and a
       // device without the extension can still draw it.
-      this._clearAttachmentBlendModes(first);
+      const single = modes[0] ?? fallback;
 
-      return this.setBlendMode(first);
+      this._clearAttachmentBlendModes(single);
+
+      return this.setBlendMode(single);
     }
 
     const extension = this._indexedBlendExtension;
 
     if (extension === null) {
+      // Reached only by a caller that skipped the drawable-level guard: the
+      // backend entry points refuse such a draw before any state moves.
       throw new RenderError({
         code: 'unsupported-format',
         backendType: RenderBackendType.WebGl2,
         message:
           `Blending the ${attachments} colour attachments of a draw differently needs the WebGL2 extension 'OES_draw_buffers_indexed', which this context does not support. ` +
-          'Check backend.supportsPerAttachmentBlend and give every attachment the same blend mode on such a device - splitting the pass per blend group would cost the single rasterization the target exists for.',
+          'Check backend.supportsPerAttachmentBlend, and give every attachment the same blend mode where it is false.',
       });
     }
 
@@ -2351,6 +2362,10 @@ export class WebGl2Backend implements RenderBackend {
     event.preventDefault();
 
     this._contextLost = true;
+    // The extension object belongs to the dead context, so the capability it
+    // answers for is gone with it until `_reinitializeDeviceState` probes the
+    // restored one - a caller that asked in between would be told yes.
+    this._indexedBlendExtension = null;
     // The queries belong to the dead context; `_reinitializeDeviceState` mints a
     // fresh timer against the restored one if timing is still wanted.
     this._gpuTimer?.destroy();

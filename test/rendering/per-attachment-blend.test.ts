@@ -157,7 +157,9 @@ describe('WebGL2 per-attachment blend', () => {
     /** Every blend call in issue order, so a restore after an indexed draw is visible. */
     const order: string[] = [];
     const extension = {
-      blendEquationSeparateiOES: (): void => {},
+      blendEquationSeparateiOES: (index: number): void => {
+        order.push(`indexed-equation:${index}`);
+      },
       blendFuncSeparateiOES: (index: number, srcRgb: number, dstRgb: number): void => {
         indexedCalls.push({ index, src: srcRgb, dst: dstRgb });
         order.push(`indexed:${index}`);
@@ -173,6 +175,9 @@ describe('WebGL2 per-attachment blend', () => {
     mutable['blendFunc'] = (src: number, dst: number): void => {
       globalCalls.push({ src, dst });
       order.push('global');
+    };
+    mutable['blendEquation'] = (): void => {
+      order.push('global-equation');
     };
 
     return {
@@ -255,8 +260,11 @@ describe('WebGL2 per-attachment blend', () => {
 
     // Indexed state outlives the draw that set it, and the global setter caches
     // the mode it last wrote - so without an explicit reset the next sprite
-    // batch would silently inherit attachment 1's additive blending.
-    expect(harness.order.at(-1)).toBe('global');
+    // batch would silently inherit attachment 1's additive blending. Both
+    // halves have to come back: a non-indexed blendFunc resets every draw
+    // buffer's function, and only a non-indexed blendEquation resets theirs.
+    expect(harness.order.slice(-2)).toEqual(['global-equation', 'global']);
+    expect(harness.order).toContain('indexed-equation:1');
 
     mesh.destroy();
     material.destroy();
@@ -308,6 +316,85 @@ describe('WebGL2 per-attachment blend', () => {
     expect(harness.indexedCalls).toEqual([]);
 
     harness.backend.setRenderTarget(null);
+    target.destroy();
+  });
+
+  test('the refusal lands before the draw is queued, and the next frame is clean', () => {
+    harness = createBlendGlHarness(false);
+
+    const context = new RenderingContext(harness.backend);
+    const target = new MultiRenderTarget(64, 64, { formats: [TextureFormat.Rgba8, TextureFormat.Rgba8] });
+    const material = twoOutputMaterial([BlendModes.Normal, BlendModes.Additive]);
+    const mesh = new Mesh({ geometry: triangleGeometry(), material, texture: null });
+
+    expect(() => context.renderTo(mesh, { target })).toThrow(RenderError);
+
+    // A refusal thrown out of the renderer's deferred flush would leave the
+    // pooled draw behind, to replay into whatever target the frame restored
+    // next; refused at submission, nothing is queued and the following frame
+    // draws only what it was given.
+    const plain = new RenderTexture(32, 32);
+    const sprite = new Sprite(plain);
+
+    harness.backend.resetStats();
+
+    expect(() => {
+      sprite.render(harness!.backend);
+      harness!.backend.flush();
+    }).not.toThrow();
+
+    expect(harness.backend.stats.drawCalls).toBe(1);
+
+    sprite.destroy();
+    plain.destroy();
+    mesh.destroy();
+    material.destroy();
+    target.destroy();
+  });
+
+  test('a restore without a whole-draw mode of its own still resets the indexed state', () => {
+    harness = createBlendGlHarness(true);
+
+    const gl = harness.gl;
+    const target = new MultiRenderTarget(64, 64, { formats: [TextureFormat.Rgba8, TextureFormat.Rgba8] });
+
+    harness.backend.setRenderTarget(target);
+    // The state a context reinit or a renderer disconnect leaves behind: no
+    // whole-draw mode cached. An SDK renderer that reaches for indexed state
+    // from there gets a restore that has only its fallback to go on, and one
+    // trusting the cache alone would issue no GL call and leak the indexed
+    // state into every later draw.
+    harness.backend.setBlendMode(null);
+    harness.backend.setAttachmentBlendModes([BlendModes.Normal, BlendModes.Additive], BlendModes.Additive);
+
+    const beforeRestore = harness.globalCalls.length;
+
+    harness.backend.setAttachmentBlendModes(null, BlendModes.Additive);
+
+    expect(harness.globalCalls.length).toBe(beforeRestore + 1);
+    expect(harness.globalCalls.at(-1)).toEqual({ src: gl.ONE, dst: gl.ONE });
+
+    harness.backend.setRenderTarget(null);
+    target.destroy();
+  });
+
+  test('an instanced batch into a multi-attachment target is refused, not mis-pipelined', () => {
+    harness = createBlendGlHarness(true);
+
+    const target = new MultiRenderTarget(64, 64, { formats: [TextureFormat.Rgba8, TextureFormat.Rgba8] });
+    const material = twoOutputMaterial();
+    const mesh = new Mesh({ geometry: triangleGeometry(), material, texture: null });
+
+    harness.backend.setRenderTarget(target);
+
+    // Both backends build a one-target pipeline for a batch, so this is a
+    // refusal on both rather than a WebGPU validation error against a WebGL2
+    // draw that quietly wrote slot 0.
+    expect(() => harness!.backend.drawInstanced(mesh, [mesh.getGlobalTransform()], [mesh.tint], 1)).toThrow(RenderError);
+
+    harness.backend.setRenderTarget(null);
+    mesh.destroy();
+    material.destroy();
     target.destroy();
   });
 
@@ -461,6 +548,32 @@ describe('WebGPU per-attachment blend', () => {
 
       expect(blends![0]).toEqual(getWebGpuBlendState(BlendModes.Additive));
 
+      mesh.destroy();
+      material.destroy();
+      target.destroy();
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test('an instanced batch into a multi-attachment target is refused here too', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const backend = await createMockBackend(environment);
+      const target = new MultiRenderTarget(64, 64, { formats: [TextureFormat.Rgba8, TextureFormat.Rgba8] });
+      const material = twoOutputMaterial();
+      const mesh = new Mesh({ geometry: triangleGeometry(), material, texture: createCanvasTexture() });
+
+      backend.setRenderTarget(target);
+
+      // The same refusal as WebGL2: this path builds a one-target pipeline on
+      // both backends, and WebGPU would otherwise fail validation where WebGL2
+      // quietly wrote slot 0.
+      expect(() => backend.drawInstanced(mesh, [mesh.getGlobalTransform()], [mesh.tint], 1)).toThrow(RenderError);
+
+      backend.setRenderTarget(null);
       mesh.destroy();
       material.destroy();
       target.destroy();

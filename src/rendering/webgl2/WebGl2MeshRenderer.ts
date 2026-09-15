@@ -2,7 +2,7 @@ import { Matrix } from '#math/Matrix';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { AnyMaterial, UniformValue } from '#rendering/material/Material';
-import { drawBlendModes, drawWritesDepth } from '#rendering/material/MeshMaterial';
+import { attachmentBlendModes, drawWritesDepth, resolveBlendMode } from '#rendering/material/MeshMaterial';
 import type { MeshIndexArray, MeshIndexFormat } from '#rendering/mesh/indices';
 import { createIndexArray } from '#rendering/mesh/indices';
 import type { Mesh } from '#rendering/mesh/Mesh';
@@ -10,7 +10,8 @@ import { type DrawCommand, RenderEntryKind } from '#rendering/plan/renderCommand
 import type { InstanceDataView } from '#rendering/RenderBatch';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
-import { BlendModes, BufferTypes, BufferUsage, IndexElementTypes, RenderingPrimitives } from '#rendering/types';
+import type { BlendModes } from '#rendering/types';
+import { BufferTypes, BufferUsage, IndexElementTypes, RenderingPrimitives } from '#rendering/types';
 import { WebGl2Shader } from '#rendering/webgl2/WebGl2Shader';
 
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
@@ -178,10 +179,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     const backend = this.getBackend();
     const material = mesh.material;
     const shader = material === null ? this._defaultShader : this._getOrCreateCustomShader(material, connection.gl);
-    // The material owns its blend mode; the mesh's own blendMode overrides it
-    // when set away from the default (Normal). Default-path meshes keep their
-    // own blendMode verbatim.
-    const blendMode = material !== null && mesh.blendMode === BlendModes.Normal ? material.blendMode : mesh.blendMode;
+    const blendMode = resolveBlendMode(mesh.blendMode, material);
     const texture = mesh.texture ?? Texture.white;
     const command = backend.activeDrawCommand;
     const supportsInstancing = material === null ? true : this._isInstancingCompatible(shader);
@@ -257,9 +255,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       backend._poisonRetainedCaptures();
     }
 
-    // The material owns its blend mode; the mesh's own blendMode overrides it
-    // when set away from the default (Normal) - same rule as the node path.
-    const blendMode = material !== null && mesh.blendMode === BlendModes.Normal ? material.blendMode : mesh.blendMode;
+    const blendMode = resolveBlendMode(mesh.blendMode, material);
     const texture = mesh.texture ?? Texture.white;
     const cacheEntry = this._getOrCreateGeometryEntry(geometry, mesh, connection);
     const vao = this._getOrCreateStaticGeometryVao(
@@ -274,7 +270,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     const writesDepth = drawWritesDepth(material, backend.renderTarget);
 
     backend.setBlendMode(blendMode);
-    backend.setAttachmentBlendModes(drawBlendModes(material), blendMode);
+    backend.setAttachmentBlendModes(attachmentBlendModes(material), blendMode);
     backend.setDepthWrite(writesDepth);
     this._ensureNodeIndexCapacity(count);
 
@@ -524,7 +520,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     const vao = this._getOrCreateStaticGeometryVao(cacheEntry, first.shader, connection.gl, connection.dynamicNodeIndexBuffer);
 
     backend.setBlendMode(first.blendMode);
-    backend.setAttachmentBlendModes(drawBlendModes(first.material), first.blendMode);
+    backend.setAttachmentBlendModes(attachmentBlendModes(first.material), first.blendMode);
     backend.setDepthWrite(drawWritesDepth(first.material, backend.renderTarget));
 
     let maxNodeIndex = 0;
@@ -572,7 +568,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     const shader = draw.shader;
 
     backend.setBlendMode(draw.blendMode);
-    backend.setAttachmentBlendModes(drawBlendModes(draw.material), draw.blendMode);
+    backend.setAttachmentBlendModes(attachmentBlendModes(draw.material), draw.blendMode);
     backend.setDepthWrite(drawWritesDepth(draw.material, backend.renderTarget));
 
     if (shader.uniforms.has('u_projection')) {

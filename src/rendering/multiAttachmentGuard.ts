@@ -1,4 +1,5 @@
 import { logger } from '#core/Logger';
+import { attachmentBlendModes, attachmentBlendModesDiffer, resolveBlendMode } from '#rendering/material/MeshMaterial';
 import { Mesh } from '#rendering/mesh/Mesh';
 import { Sprite } from '#rendering/sprite/Sprite';
 
@@ -83,6 +84,61 @@ export const assertDrawsAllAttachments = (drawable: Drawable, attachmentCount: n
         `Attachments beyond the declared outputs would keep their previous contents (WebGL2) or be rejected at pipeline creation (WebGPU). ${remedy}`,
     });
   }
+};
+
+/**
+ * Refuse a draw whose colour attachments would blend differently on a device
+ * that cannot give each one its own blend state.
+ *
+ * Checked here, before the drawable reaches a renderer, because the refusal has
+ * to land while nothing has moved yet: a throw out of the renderer's deferred
+ * flush would leave the pooled draws and the transform slots it had already
+ * taken behind, to replay into whatever target the frame restored next.
+ *
+ * A capability refusal and not a fallback, because there is nothing to fall
+ * back to - see {@link RenderBackend.supportsPerAttachmentBlend}. Modes that
+ * all resolve to the same value are an ordinary draw and pass.
+ * @internal
+ */
+export const assertPerAttachmentBlendSupported = (drawable: Drawable, attachmentCount: number, supported: boolean, backendType: RenderBackendType): void => {
+  if (supported) {
+    return;
+  }
+
+  const material = drawable instanceof Mesh || drawable instanceof Sprite ? drawable.material : null;
+  const modes = attachmentBlendModes(material);
+
+  if (modes === null || !attachmentBlendModesDiffer(modes, attachmentCount, resolveBlendMode(drawable.blendMode, material))) {
+    return;
+  }
+
+  throw new RenderError({
+    code: 'unsupported-format',
+    backendType,
+    message:
+      `Blending the ${attachmentCount} colour attachments of a draw differently needs the WebGL2 extension 'OES_draw_buffers_indexed', which this context does not support. ` +
+      'Check backend.supportsPerAttachmentBlend, and give every attachment the same blend mode where it is false.',
+  });
+};
+
+/**
+ * Refuse an instanced batch into a multi-attachment target.
+ *
+ * Both backends build a single-target pipeline for the batch path, so the draw
+ * can only describe attachment 0. WebGPU already fails on it - a one-target
+ * pipeline in a two-attachment pass is a validation error - and WebGL2 would
+ * write whatever the shader happens to declare, which is the backend difference
+ * the multi-attachment cut exists to avoid.
+ * @internal
+ */
+export const assertBatchSingleAttachment = (attachmentCount: number, backendType: RenderBackendType): void => {
+  throw new RenderError({
+    code: 'unsupported-format',
+    backendType,
+    message:
+      `An instanced batch cannot draw into a render target with ${attachmentCount} colour attachments - the batch path builds a pipeline for one. ` +
+      'Draw the meshes individually into the multi-attachment target, or batch them into a single-attachment RenderTexture.',
+  });
 };
 
 /**

@@ -150,7 +150,7 @@ fn fragmentMain(input: VertexOutput) -> FragmentOut {
 
 The GLSL counterpart declares `layout(location = 0) out vec4 outColor;` and `layout(location = 1) out vec4 outId;`.
 
-A `SpriteMaterial` takes the same fragment shader, which is what a 2D G-buffer usually wants: the scene is already authored as sprites, so it needs no mesh geometry to write a normal or id buffer.
+A `SpriteMaterial` takes the same fragment shader, which is what a 2D G-buffer usually wants: the scene is already authored as sprites, so it needs no mesh geometry to write a normal or id buffer. Per-attachment blend modes are the one thing it does not carry — `blendModes` below is a `MeshMaterial` option, so a G-buffer that needs its slots blended differently draws through a `MeshMaterial`.
 
 A custom material is held to the same rule. The engine reads the declared output count off the shader source, and a material that declares fewer than the target has attachments is refused on both backends rather than writing slot 0 only on WebGL2 while WebGPU rejects the pipeline. Where the source uses a shape the reader cannot resolve — an array output, a return struct declared elsewhere — the draw proceeds and a development build logs a warning instead.
 </Callout>

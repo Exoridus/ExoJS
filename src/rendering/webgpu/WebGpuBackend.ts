@@ -16,7 +16,7 @@ import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { Mesh } from '#rendering/mesh/Mesh';
-import { assertDrawsAllAttachments, assertSingleAttachmentCompose } from '#rendering/multiAttachmentGuard';
+import { assertBatchSingleAttachment, assertDrawsAllAttachments, assertSingleAttachmentCompose } from '#rendering/multiAttachmentGuard';
 import { isMultiAttachmentTarget, MultiRenderTarget } from '#rendering/MultiRenderTarget';
 import type { PersistentSlotBundle } from '#rendering/plan/persistentSlotDraw';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/renderCommand';
@@ -933,6 +933,10 @@ export class WebGpuBackend implements RenderBackend {
     if (count <= 0 || mesh.vertexCount === 0 || this._deviceLost || this._device === null) {
       this._activeDrawCommand = null;
       return this;
+    }
+
+    if (this._multiAttachmentTarget) {
+      assertBatchSingleAttachment((this._renderTarget as MultiRenderTarget).attachments.length, RenderBackendType.WebGpu);
     }
 
     const renderer = this.rendererRegistry.resolve(mesh);

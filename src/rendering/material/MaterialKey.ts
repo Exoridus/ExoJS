@@ -78,10 +78,11 @@ const isTextureBinding = (value: UniformValue): value is Texture | RenderTexture
 
 /**
  * Pipeline key from shader identity, blend mode, depth-write state and the
- * per-attachment blend list, the last as a descriptor its owner built once -
- * this runs per draw, and the list never changes over a material's lifetime.
+ * per-attachment blend modes, the last as a descriptor of the list.
  * @internal
  */
+// The list arrives pre-joined because this runs per draw while the list never
+// changes over a material's lifetime, so its owner builds that string once.
 export const derivePipelineKey = (shaderId: number, blendMode: BlendModes, writesDepth = false, blendModes = ''): number => {
   const descriptor = `${shaderId}|${blendMode}|${writesDepth ? 'd' : '-'}|${blendModes}`;
 

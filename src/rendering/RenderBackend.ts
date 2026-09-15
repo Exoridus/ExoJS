@@ -104,9 +104,8 @@ export interface RenderBackend {
    * blend state is per target in a pipeline descriptor. WebGL2 reports whether
    * `OES_draw_buffers_indexed` is available, which desktop drivers generally
    * have and older mobile GPUs may not; a draw whose attachments would blend
-   * differently throws a {@link RenderError} without it, since splitting the
-   * pass per blend group would cost exactly the single rasterization a
-   * multi-attachment target exists for.
+   * differently throws a {@link RenderError} without it, because there is no
+   * fallback that keeps what a multi-attachment pass is for.
    */
   readonly supportsPerAttachmentBlend: boolean;
 
