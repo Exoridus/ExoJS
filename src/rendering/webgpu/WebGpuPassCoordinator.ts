@@ -503,6 +503,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
    * backend destroy / device loss go through `destroyStencil` instead. @internal
    */
   public resetStencil(): void {
+    this._depthWritesRequested = false;
     this._stencilDepths.clear();
     this._stencilStacks.clear();
     this._stencilWriteInProgress = false;
@@ -516,6 +517,8 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
       this._stencilConnected = false;
     }
 
+    this._depthCleared.clear();
+    this._depthWritesRequested = false;
     this._stencilDepths.clear();
     this._stencilStacks.clear();
     this._stencilWriteInProgress = false;

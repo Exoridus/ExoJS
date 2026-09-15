@@ -2563,6 +2563,13 @@ export class WebGpuBackend implements RenderBackend {
     // lazily rebuilt against the fresh device on the next clip.
     this._passCoordinatorInstance?.destroyStencil();
 
+    // Same for the depth attachments: the handles are the dead device's, and
+    // the next bind of each target allocates a fresh one.
+    for (const target of [...this._depthAttachments.keys()]) {
+      this._depthAttachments.delete(target);
+      this._dropDepthTextureState(target);
+    }
+
     this._context?.unconfigure();
     this._context = null;
     this._device = null;
@@ -2702,6 +2709,12 @@ export class WebGpuBackend implements RenderBackend {
   private _destroyManagedTextures(): void {
     for (const texture of [...this._textureStates.keys()]) {
       this._evictTexture(texture);
+    }
+
+    // Depth attachments are keyed by target, not by texture, so the loop above
+    // never reaches them - and each one is a full-size GPU texture.
+    for (const target of [...this._depthAttachments.keys()]) {
+      this._releaseDepthAttachment(target);
     }
   }
 
