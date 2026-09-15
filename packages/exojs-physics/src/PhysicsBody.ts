@@ -448,6 +448,14 @@ export class PhysicsBody {
       this.linearVelocityX = 0;
       this.linearVelocityY = 0;
       this.angularVelocity = 0;
+
+      // A sleeping body is dropped from the step's finalize pass, which is what
+      // would otherwise keep this pair collapsed - and an interpolating binding
+      // reading a stale previous transform sweeps the node across the last step
+      // it moved in, for as long as it sleeps.
+      this._previousX = this._transform.x;
+      this._previousY = this._transform.y;
+      this._previousAngle = this._transform.angle;
     } else {
       this._sleepTime = 0;
     }
