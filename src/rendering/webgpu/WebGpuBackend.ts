@@ -424,6 +424,12 @@ export class WebGpuBackend implements RenderBackend {
     return typeof reported === 'number' && reported > 0 ? reported : 1;
   }
 
+  public get supportsPerAttachmentBlend(): boolean {
+    // Blend state is declared per fragment target in a pipeline descriptor, so
+    // there is no capability behind this beyond having a device at all.
+    return this._device !== null;
+  }
+
   public get device(): GPUDevice {
     if (this._device === null) {
       throw new Error('WebGPU device is not initialized yet.');

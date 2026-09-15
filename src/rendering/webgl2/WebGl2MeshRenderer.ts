@@ -2,7 +2,7 @@ import { Matrix } from '#math/Matrix';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { AnyMaterial, UniformValue } from '#rendering/material/Material';
-import { drawWritesDepth } from '#rendering/material/MeshMaterial';
+import { drawBlendModes, drawWritesDepth } from '#rendering/material/MeshMaterial';
 import type { MeshIndexArray, MeshIndexFormat } from '#rendering/mesh/indices';
 import { createIndexArray } from '#rendering/mesh/indices';
 import type { Mesh } from '#rendering/mesh/Mesh';
@@ -274,6 +274,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     const writesDepth = drawWritesDepth(material, backend.renderTarget);
 
     backend.setBlendMode(blendMode);
+    backend.setAttachmentBlendModes(drawBlendModes(material), blendMode);
     backend.setDepthWrite(writesDepth);
     this._ensureNodeIndexCapacity(count);
 
@@ -296,6 +297,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     this._bindBaseTextureSampler(backend, material);
     vao.drawInstanced(cacheEntry.indexCount, 0, count, RenderingPrimitives.Triangles);
     this._unbindBaseTextureSampler(backend, material);
+    backend.setAttachmentBlendModes(null, blendMode);
     backend.setDepthWrite(false);
 
     backend.stats.batches++;
@@ -522,6 +524,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     const vao = this._getOrCreateStaticGeometryVao(cacheEntry, first.shader, connection.gl, connection.dynamicNodeIndexBuffer);
 
     backend.setBlendMode(first.blendMode);
+    backend.setAttachmentBlendModes(drawBlendModes(first.material), first.blendMode);
     backend.setDepthWrite(drawWritesDepth(first.material, backend.renderTarget));
 
     let maxNodeIndex = 0;
@@ -546,6 +549,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     this._bindBaseTextureSampler(backend, first.material);
     vao.drawInstanced(cacheEntry.indexCount, 0, count, RenderingPrimitives.Triangles);
     this._unbindBaseTextureSampler(backend, first.material);
+    backend.setAttachmentBlendModes(null, first.blendMode);
     backend.setDepthWrite(false);
 
     backend.stats.batches++;
@@ -568,6 +572,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     const shader = draw.shader;
 
     backend.setBlendMode(draw.blendMode);
+    backend.setAttachmentBlendModes(drawBlendModes(draw.material), draw.blendMode);
     backend.setDepthWrite(drawWritesDepth(draw.material, backend.renderTarget));
 
     if (shader.uniforms.has('u_projection')) {
@@ -625,6 +630,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     this._bindBaseTextureSampler(backend, draw.material);
     connection.dynamicVao.draw(mesh.indexCount, 0, RenderingPrimitives.Triangles);
     this._unbindBaseTextureSampler(backend, draw.material);
+    backend.setAttachmentBlendModes(null, draw.blendMode);
     backend.setDepthWrite(false);
 
     backend.stats.batches++;

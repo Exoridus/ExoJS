@@ -368,6 +368,13 @@ export class WebGl2Backend implements RenderBackend {
    */
   private _compressedFormats: Webgl2CompressedFormatSupport = { formats: [], internalFormats: new Map() };
   private _maxColorAttachments = 1;
+  /**
+   * `OES_draw_buffers_indexed`, or `null` on a device without it. Re-fetched
+   * with the context, whose extension enablement does not survive a loss.
+   */
+  private _indexedBlendExtension: OES_draw_buffers_indexed | null = null;
+  /** Whether the last draw left per-attachment blend state in the context - see {@link setAttachmentBlendModes}. */
+  private _attachmentBlendActive = false;
   /** Whether the bound target writes more than one colour attachment - see {@link draw}. */
   private _multiAttachmentTarget = false;
   /** Reused per-bind scratch for the colour-attachment handles and the draw-buffer list. */
@@ -459,6 +466,7 @@ export class WebGl2Backend implements RenderBackend {
     this._maxTextureSize = this._context.getParameter(this._context.MAX_TEXTURE_SIZE) as number;
     this._compressedFormats = probeWebgl2CompressedFormats(this._context);
     this._maxColorAttachments = readMaxColorAttachments(this._context);
+    this._indexedBlendExtension = this._context.getExtension('OES_draw_buffers_indexed');
 
     // Grab the lose-context extension up front so a later restore can act on the
     // live instance (see the field comment). `null` on backends that don't
@@ -544,6 +552,10 @@ export class WebGl2Backend implements RenderBackend {
 
   public get maxColorAttachments(): number {
     return this._maxColorAttachments;
+  }
+
+  public get supportsPerAttachmentBlend(): boolean {
+    return this._indexedBlendExtension !== null;
   }
 
   public get clearColor(): Color {
@@ -1511,35 +1523,132 @@ export class WebGl2Backend implements RenderBackend {
 
   public setBlendMode(blendMode: BlendModes | null): this {
     if (blendMode !== this._blendMode) {
-      const gl = this._context;
-
       this._blendMode = blendMode;
-
-      switch (blendMode) {
-        case BlendModes.Additive:
-          gl.blendEquation(gl.FUNC_ADD);
-          gl.blendFunc(gl.ONE, gl.ONE);
-          break;
-        case BlendModes.Subtract:
-          gl.blendEquation(gl.FUNC_ADD);
-          gl.blendFunc(gl.ZERO, gl.ONE_MINUS_SRC_COLOR);
-          break;
-        case BlendModes.Multiply:
-          gl.blendEquation(gl.FUNC_ADD);
-          gl.blendFunc(gl.DST_COLOR, gl.ONE_MINUS_SRC_ALPHA);
-          break;
-        case BlendModes.Screen:
-          gl.blendEquation(gl.FUNC_ADD);
-          gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_COLOR);
-          break;
-        default:
-          gl.blendEquation(gl.FUNC_ADD);
-          gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-          break;
-      }
+      this._applyBlendMode(blendMode, null, 0);
     }
 
     return this;
+  }
+
+  /**
+   * Give each colour attachment of the bound target its own blend state for the
+   * draws that follow, from `modes` read in attachment order. An attachment
+   * past the end of `modes` blends with `fallback`, which is what the draw
+   * would have used anyway; entries past the target's attachment count are
+   * ignored.
+   *
+   * Pass `null` for `modes` to return to one blend state for the whole draw.
+   * Callers own that restore: indexed blend state outlives the draw that set it
+   * and {@link setBlendMode} would not notice, so everything drawn afterwards
+   * keeps blending per attachment.
+   *
+   * Throws a {@link RenderError} when the modes in force differ from one
+   * another and the context has no `OES_draw_buffers_indexed` - check
+   * {@link supportsPerAttachmentBlend} first. Modes that all agree are applied
+   * as one whole-draw blend state and need no extension.
+   *
+   * Part of the renderer SDK contract for extension renderers.
+   */
+  public setAttachmentBlendModes(modes: readonly BlendModes[] | null, fallback: BlendModes): this {
+    if (modes === null) {
+      return this._clearAttachmentBlendModes(this._blendMode);
+    }
+
+    const attachments = this._multiAttachmentTarget ? (this._renderTarget as MultiRenderTarget).attachments.length : 1;
+    const first = modes[0] ?? fallback;
+    let uniform = true;
+
+    for (let index = 1; index < attachments; index++) {
+      if ((modes[index] ?? fallback) !== first) {
+        uniform = false;
+        break;
+      }
+    }
+
+    if (uniform) {
+      // Nothing to distinguish, so this is an ordinary blend state - and a
+      // device without the extension can still draw it.
+      this._clearAttachmentBlendModes(first);
+
+      return this.setBlendMode(first);
+    }
+
+    const extension = this._indexedBlendExtension;
+
+    if (extension === null) {
+      throw new RenderError({
+        code: 'unsupported-format',
+        backendType: RenderBackendType.WebGl2,
+        message:
+          `Blending the ${attachments} colour attachments of a draw differently needs the WebGL2 extension 'OES_draw_buffers_indexed', which this context does not support. ` +
+          'Check backend.supportsPerAttachmentBlend and give every attachment the same blend mode on such a device - splitting the pass per blend group would cost the single rasterization the target exists for.',
+      });
+    }
+
+    for (let index = 0; index < attachments; index++) {
+      this._applyBlendMode(modes[index] ?? fallback, extension, index);
+    }
+
+    this._attachmentBlendActive = true;
+
+    return this;
+  }
+
+  /** Put `restore` back in force as one whole-draw blend state after an indexed draw. */
+  private _clearAttachmentBlendModes(restore: BlendModes | null): this {
+    if (!this._attachmentBlendActive) {
+      return this;
+    }
+
+    this._attachmentBlendActive = false;
+    // Uncached first: `_blendMode` still names the mode in force before the
+    // indexed calls, so the setter would skip the very call that resets them.
+    this._blendMode = null;
+
+    return this.setBlendMode(restore);
+  }
+
+  /**
+   * Apply one blend mode's fixed-function state, to a single draw buffer when
+   * `extension` is given and to all of them at once when it is `null`.
+   */
+  private _applyBlendMode(blendMode: BlendModes | null, extension: OES_draw_buffers_indexed | null, attachment: number): void {
+    const gl = this._context;
+    let src: GLenum;
+    let dst: GLenum;
+
+    switch (blendMode) {
+      case BlendModes.Additive:
+        src = gl.ONE;
+        dst = gl.ONE;
+        break;
+      case BlendModes.Subtract:
+        src = gl.ZERO;
+        dst = gl.ONE_MINUS_SRC_COLOR;
+        break;
+      case BlendModes.Multiply:
+        src = gl.DST_COLOR;
+        dst = gl.ONE_MINUS_SRC_ALPHA;
+        break;
+      case BlendModes.Screen:
+        src = gl.ONE;
+        dst = gl.ONE_MINUS_SRC_COLOR;
+        break;
+      default:
+        src = gl.ONE;
+        dst = gl.ONE_MINUS_SRC_ALPHA;
+        break;
+    }
+
+    if (extension === null) {
+      gl.blendEquation(gl.FUNC_ADD);
+      gl.blendFunc(src, dst);
+
+      return;
+    }
+
+    extension.blendEquationSeparateiOES(attachment, gl.FUNC_ADD, gl.FUNC_ADD);
+    extension.blendFuncSeparateiOES(attachment, src, dst, src, dst);
   }
 
   private _setTextureUnit(unit: number): void {
@@ -2150,6 +2259,7 @@ export class WebGl2Backend implements RenderBackend {
     this._renderer = null;
     this._shader = null;
     this._blendMode = null;
+    this._attachmentBlendActive = false;
     this._boundHandles.length = 0;
     this._boundFramebuffer = null;
     this._activeDrawCommand = null;
@@ -2285,6 +2395,7 @@ export class WebGl2Backend implements RenderBackend {
     this._maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
     this._compressedFormats = probeWebgl2CompressedFormats(gl);
     this._maxColorAttachments = readMaxColorAttachments(gl);
+    this._indexedBlendExtension = gl.getExtension('OES_draw_buffers_indexed');
     // Drop the cached transform layout: it was derived from the LOST context's
     // limit, and the restored one may report a different one.
     this._transformTextureLayout = null;
@@ -2357,6 +2468,7 @@ export class WebGl2Backend implements RenderBackend {
     this._vao = null;
     this._shader = null;
     this._blendMode = null;
+    this._attachmentBlendActive = false;
     this._renderer = null;
     this._renderTarget = this._rootRenderTarget;
     this._activeDrawCommand = null;

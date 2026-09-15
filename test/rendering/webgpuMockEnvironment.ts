@@ -41,6 +41,8 @@ export interface MockWebGpuEnvironment {
   renderPassAttachmentCounts(): readonly number[];
   /** Fragment-target count of every synchronously created render pipeline, in call order. */
   pipelineTargetCounts(): readonly number[];
+  /** Blend state of each fragment target of every synchronously created pipeline, in call order. */
+  pipelineTargetBlends(): ReadonlyArray<ReadonlyArray<GPUBlendState | undefined>>;
   /** How many `beginRenderPass` descriptors carried a depth/stencil attachment. */
   depthAttachmentPasses(): number;
   /** `depthLoadOp` of every pass that carried a writable depth aspect, in call order. */
@@ -73,6 +75,7 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   const indexBufferBindings: Array<{ format: string; offset: number }> = [];
   const renderPassAttachmentCounts: number[] = [];
   const pipelineTargetCounts: number[] = [];
+  const pipelineTargetBlends: Array<Array<GPUBlendState | undefined>> = [];
   const pipelineDepthWrites: boolean[] = [];
   const depthLoadOps: string[] = [];
   const textureDescriptors: Array<{ format: string; usage: number }> = [];
@@ -137,7 +140,11 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     },
     createRenderPipeline: (descriptor: GPURenderPipelineDescriptor): GPURenderPipeline => {
       syncPipelineCount++;
-      pipelineTargetCounts.push(descriptor.fragment?.targets.length ?? 0);
+
+      const targets = [...(descriptor.fragment?.targets ?? [])];
+
+      pipelineTargetCounts.push(targets.length);
+      pipelineTargetBlends.push(targets.map(target => target?.blend));
 
       if (descriptor.depthStencil !== undefined) {
         pipelineDepthWrites.push(descriptor.depthStencil.depthWriteEnabled === true);
@@ -211,6 +218,7 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     indexBufferBindings: () => indexBufferBindings,
     renderPassAttachmentCounts: () => renderPassAttachmentCounts,
     pipelineTargetCounts: () => pipelineTargetCounts,
+    pipelineTargetBlends: () => pipelineTargetBlends,
     depthAttachmentPasses: () => depthAttachmentPasses,
     depthLoadOps: () => depthLoadOps,
     pipelineDepthWrites: () => pipelineDepthWrites,

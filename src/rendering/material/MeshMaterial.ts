@@ -34,6 +34,30 @@ export interface MeshMaterialOptions<
    * render pass, so it does not merge with the batches around it.
    */
   readonly writesDepth?: boolean;
+
+  /**
+   * Blend mode per colour attachment, in the order the fragment shader's
+   * outputs are declared. Defaults to the draw's own blend mode everywhere.
+   *
+   * What a multi-attachment pass usually wants: the albedo slot composited with
+   * alpha, the normal or id slot written straight through, because a blended
+   * normal or a blended id is not a value. An entry past the target's
+   * attachment count is ignored, and an attachment past the end of the list
+   * keeps the blend mode the draw would have used anyway - so `[Normal, Additive]`
+   * and a one-attachment target is just a normal draw.
+   *
+   * Only the fixed-function modes (`Normal`, `Additive`, `Subtract`, `Multiply`,
+   * `Screen`) can differ per attachment; a backdrop-aware mode composites
+   * through a pass of its own and blends as `Normal` here, exactly as it does
+   * inside a captured backdrop.
+   *
+   * On WebGL2 entries that differ from each other need the
+   * `OES_draw_buffers_indexed` extension, reported as
+   * {@link RenderBackend.supportsPerAttachmentBlend}; such a draw throws a
+   * {@link RenderError} on a device without it rather than picking one mode for
+   * every attachment. WebGPU always supports it.
+   */
+  readonly blendModes?: readonly BlendModes[];
 }
 
 /**
@@ -52,14 +76,24 @@ export class MeshMaterial<F extends UniformFields | undefined = undefined, B ext
   /** Whether draws with this material write into the target's depth attachment. */
   public readonly writesDepth: boolean;
 
+  /** Blend mode per colour attachment, or `null` when the draw blends as a whole. */
+  public readonly blendModes: readonly BlendModes[] | null;
+
+  // The list is fixed for the material's lifetime, so its contribution to the
+  // pipeline descriptor is built once rather than on every key read - and
+  // `pipelineKey` is read per draw.
+  private readonly _blendModesDescriptor: string;
+
   public constructor(options: MeshMaterialOptions<F, B>) {
     super(options);
 
     this.writesDepth = options.writesDepth ?? false;
+    this.blendModes = options.blendModes ?? null;
+    this._blendModesDescriptor = this.blendModes !== null ? this.blendModes.join(',') : '';
   }
 
   public override get pipelineKey(): number {
-    return derivePipelineKey(this.shader.id, this.blendMode, this.writesDepth);
+    return derivePipelineKey(this.shader.id, this.blendMode, this.writesDepth, this._blendModesDescriptor);
   }
 
   /**
@@ -84,6 +118,7 @@ export class MeshMaterial<F extends UniformFields | undefined = undefined, B ext
       readonly blendMode?: BlendModes;
       readonly sampler?: SamplerOptions | null;
       readonly writesDepth?: boolean;
+      readonly blendModes?: readonly BlendModes[];
     },
   ): MeshMaterial;
   public static from(
@@ -95,6 +130,7 @@ export class MeshMaterial<F extends UniformFields | undefined = undefined, B ext
       readonly blendMode?: BlendModes;
       readonly sampler?: SamplerOptions | null;
       readonly writesDepth?: boolean;
+      readonly blendModes?: readonly BlendModes[];
     },
   ): MeshMaterial<UniformFields | undefined, UniformBlockRecord | undefined> {
     if (sourceOrGlslVertex instanceof Shader) {
@@ -121,6 +157,7 @@ export class MeshMaterial<F extends UniformFields | undefined = undefined, B ext
       ...(glslOptions?.blendMode !== undefined ? { blendMode: glslOptions.blendMode } : {}),
       ...(glslOptions?.sampler !== undefined ? { sampler: glslOptions.sampler } : {}),
       ...(glslOptions?.writesDepth !== undefined ? { writesDepth: glslOptions.writesDepth } : {}),
+      ...(glslOptions?.blendModes !== undefined ? { blendModes: glslOptions.blendModes } : {}),
     });
   }
 }
@@ -138,3 +175,11 @@ export type AnyMeshMaterial = MeshMaterial<UniformFields | undefined, UniformBlo
  */
 export const drawWritesDepth = (material: AnyMaterial | null, target: RenderTarget): boolean =>
   material instanceof MeshMaterial && material.writesDepth && target.depthTexture !== null;
+
+/**
+ * The per-attachment blend modes a draw with `material` carries, or `null` when
+ * it blends as a whole. Returns the material's own list rather than a resolved
+ * one, so a draw that never opted in costs a type check and no allocation.
+ * @internal
+ */
+export const drawBlendModes = (material: AnyMaterial | null): readonly BlendModes[] | null => (material instanceof MeshMaterial ? material.blendModes : null);

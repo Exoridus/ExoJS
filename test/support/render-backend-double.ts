@@ -21,6 +21,8 @@ export interface RenderBackendDoubleOptions {
   readonly supportedTextureFormats?: readonly CompressedTextureFormat[];
   /** Colour attachments the double accepts in one pass. `1` when omitted. */
   readonly maxColorAttachments?: number;
+  /** Whether the double claims per-attachment blend state. `false` when omitted - the conservative answer. */
+  readonly supportsPerAttachmentBlend?: boolean;
 }
 
 /**
@@ -62,6 +64,7 @@ export const createRenderBackendDouble = (options: RenderBackendDoubleOptions = 
     maxTextureSize: options.maxTextureSize ?? 4096,
     supportedTextureFormats: options.supportedTextureFormats ?? [],
     maxColorAttachments: options.maxColorAttachments ?? 1,
+    supportsPerAttachmentBlend: options.supportsPerAttachmentBlend ?? false,
     onRenderError: new Signal<[RenderError]>(),
 
     async initialize() {

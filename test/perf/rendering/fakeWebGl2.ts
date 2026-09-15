@@ -350,8 +350,11 @@ interface FakeProgram {
  * reflection/query contract and the recorded calls; a Proxy supplies recording
  * no-ops for every other camelCase method and deterministic numbers for every
  * UPPER_SNAKE constant.
+ *
+ * `extensions` maps an extension name to the object `getExtension` answers with;
+ * anything absent from it reads as unsupported, which is the default.
  */
-export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingContext => {
+export const createFakeWebGl2Context = (recorder: GlRecorder, extensions: Readonly<Record<string, object>> = {}): WebGL2RenderingContext => {
   let handleSeq = 1;
   const newHandle = (tag: string): object => ({ __fake: tag, id: handleSeq++ });
 
@@ -447,7 +450,7 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
     getUniformLocation: (_program: FakeProgram, name: string): object => ({ __fake: 'uniformLocation', name }),
     getShaderInfoLog: (): string => '',
     getProgramInfoLog: (): string => '',
-    getExtension: (): null => null,
+    getExtension: (name: string): object | null => extensions[name] ?? null,
     getParameter: (pname: number): number => (pname === C.MAX_TEXTURE_SIZE ? fakeMaxTextureSize : 16),
     getError: (): number => C.NO_ERROR,
     isContextLost: (): boolean => false,

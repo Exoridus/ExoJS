@@ -5,7 +5,7 @@ import { packAffineMat3Std140 } from '#rendering/affinePacking';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { AnyMaterial } from '#rendering/material/Material';
-import { drawWritesDepth } from '#rendering/material/MeshMaterial';
+import { drawBlendModes, drawWritesDepth } from '#rendering/material/MeshMaterial';
 import type { MeshIndexArray, MeshIndexFormat } from '#rendering/mesh/indices';
 import { createIndexArray, meshIndexBytes } from '#rendering/mesh/indices';
 import type { Mesh } from '#rendering/mesh/Mesh';
@@ -627,6 +627,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // The material owns its blend mode; the mesh's own overrides it when set
     // away from the default - same rule as the node and WebGL2 batch paths.
     const blendMode = material !== null && mesh.blendMode === BlendModes.Normal ? material.blendMode : mesh.blendMode;
+    // A batch rasterizes into one attachment - this path builds a single-target
+    // pipeline - so the material's list speaks for slot 0 and nothing else.
+    const attachmentBlendMode = drawBlendModes(material)?.[0] ?? blendMode;
     const pass = active.pass;
 
     if (resources === null) {
@@ -638,7 +641,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       applyUserUniformUpload(material!, resources, device);
       addUserUniformBuffersInPass(resources.userUniform, this._instancedBatchUniformBuffersInPass);
 
-      pass.setPipeline(this._getOrCreateCustomInstancedPipeline(resources, blendMode, renderTargetFormat, stencil, instances, depth));
+      pass.setPipeline(this._getOrCreateCustomInstancedPipeline(resources, attachmentBlendMode, renderTargetFormat, stencil, instances, depth));
       pass.setBindGroup(1, this._getOrCreateMeshTextureBindGroup(resources, backend, texture, material!.sampler));
       pass.setBindGroup(2, this._getUserBindGroup(backend, material!, resources));
     }
@@ -1117,6 +1120,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
                 backend.renderTargetFormats,
                 stencil,
                 drawWritesDepth(dc.customShader, backend.renderTarget) ? MeshDepthMode.Write : passDepth,
+                drawBlendModes(dc.customShader),
               ),
             );
             lastShader = dc.customShader;
@@ -2656,6 +2660,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     formats: readonly GPUTextureFormat[],
     stencil: boolean,
     depth: MeshDepthMode = MeshDepthMode.None,
+    attachmentBlendModes: readonly BlendModes[] | null = null,
   ): GPURenderPipeline {
     // The stencil dimension keeps the clip and no-clip variants distinct,
     // mirroring the default and static-batch caches: a stencil pipeline carries
@@ -2666,6 +2671,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // pipeline must declare one target per attachment of the pass it runs in, so
     // the same material in a one-attachment and a two-attachment pass needs two
     // pipelines.
+    //
+    // `attachmentBlendModes` is deliberately absent from the key: these
+    // resources are cached per material, and a material's list is fixed for its
+    // lifetime, so it cannot vary within one cache.
     const cacheKey = `${blendMode}:${formats.join(',')}:${stencil ? 's' : 'n'}:${depth}`;
     let pipeline = resources.pipelines.get(cacheKey);
 
@@ -2691,9 +2700,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         fragment: {
           module: resources.shaderModule,
           entryPoint: 'fragmentMain',
-          targets: formats.map(format => ({
+          targets: formats.map((format, index) => ({
             format,
-            blend: getWebGpuBlendState(blendMode),
+            blend: getWebGpuBlendState(attachmentBlendModes?.[index] ?? blendMode),
             writeMask: GPUColorWrite.ALL,
           })),
         },
