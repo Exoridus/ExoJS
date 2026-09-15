@@ -589,7 +589,7 @@ export const loadLevel = async (loader: Loader): Promise<void> => {
 
 Re-packing after one asset changed produces a new pack name and a manifest that points at it; the blocks that did not change are already in the store, keyed by their own hash, and are never fetched again. Nothing about that is automatic for a pack loaded from a plain URL, which is the reason the manifest exists.
 
-The manifest describes packs without opening them, so `manifest.packs`, `manifest.has(name)` and `manifest.packFor('images/hero.png')` answer before a single pack byte is fetched. A name the manifest does not carry throws and names the ones it does. Pack bytes that disagree with the record - a wrong length, or a digest that is not the one stated - are an `AssetDecodeError`, the same failure any other unusable asset raises.
+The manifest describes packs without opening them, so `manifest.packs`, `manifest.has(name)` and `manifest.packFor('images/hero.png')` answer before a single pack byte is fetched. A name the manifest does not carry throws and names the ones it does. Pack bytes that disagree with the record - a wrong length, or a digest that is not the one stated - are an `AssetDecodeError`, the same failure any other unusable asset raises, and they are never written to the cache. How much is checked follows how much is read: the single-request path holds the whole file and verifies the digest, while the block-wise path verifies the length and rests on the content-addressed URL for the rest. The manifest itself is always read from the network, so it is the one asset an offline application cannot get.
 
 ## Save data with a key-value store
 

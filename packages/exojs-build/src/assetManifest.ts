@@ -105,6 +105,16 @@ export const describeContainerPack = (container: ArrayBuffer): ContainerPackDesc
 };
 
 /**
+ * Names a manifest cannot express in stable order.
+ *
+ * A JSON object puts integer-like keys first and in numeric order whatever
+ * order they were written in, so a manifest holding one would not round-trip
+ * the order this function sorts into, and two builds could produce different
+ * bytes for the same packs.
+ */
+const INTEGER_LIKE = /^\d+$/;
+
+/**
  * Put `pack` into `existing` under `name`, or start a manifest when there is
  * none.
  *
@@ -113,10 +123,17 @@ export const describeContainerPack = (container: ArrayBuffer): ContainerPackDesc
  * document diff-stable regardless of the order the packs were built in.
  *
  * @param existing The parsed contents of a manifest already on disk, or `undefined` to start one.
- * @throws Error when `existing` is not a manifest, or states a version this build does not write.
+ * @throws Error when `existing` is not a manifest, states a version this build does not write, or
+ * carries a record that is not an object; and when `name` is one a JSON object would reorder.
  */
 export const mergeAssetManifest = (existing: unknown, name: string, pack: AssetManifestPack): AssetManifestDocument => {
-  const packs: Record<string, AssetManifestPack> = {};
+  if (name === '' || INTEGER_LIKE.test(name)) {
+    throw new Error(`pack name ${JSON.stringify(name)} cannot be written in a stable order; name it with something other than digits alone`);
+  }
+
+  // A Map, not an object literal: a pack named `__proto__` assigned onto `{}`
+  // would reach the prototype setter instead of becoming an entry.
+  const packs = new Map<string, AssetManifestPack>();
 
   if (existing !== undefined) {
     if (!isRecord(existing) || !isRecord(existing.packs)) {
@@ -128,14 +145,18 @@ export const mergeAssetManifest = (existing: unknown, name: string, pack: AssetM
     }
 
     for (const [key, value] of Object.entries(existing.packs)) {
-      packs[key] = value as AssetManifestPack;
+      if (!isRecord(value)) {
+        throw new Error(`the record for pack ${JSON.stringify(key)} is not an object`);
+      }
+
+      packs.set(key, value as unknown as AssetManifestPack);
     }
   }
 
-  packs[name] = pack;
+  packs.set(name, pack);
 
   return {
     version: ASSET_MANIFEST_VERSION,
-    packs: Object.fromEntries(Object.entries(packs).sort(([a], [b]) => (a < b ? -1 : 1))),
+    packs: Object.fromEntries([...packs].sort(([a], [b]) => (a < b ? -1 : 1))),
   };
 };

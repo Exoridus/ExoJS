@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Forwarded to the request - signal, credentials, headers. The manifest is requested with cache: 'no-cache' by default, because it is the one URL in a deployment whose contents change; an init that names cache overrides that."
+          "description": "Forwarded to the request - signal, credentials, headers. The manifest is requested with cache: 'no-cache' unless this init names a cache of its own, because it is the one URL in a deployment whose contents change and an HTTP cache holding it pins the application to an earlier deployment."
         }
       ],
       "paragraphs": [],

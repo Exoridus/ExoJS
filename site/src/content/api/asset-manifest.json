@@ -1,6 +1,6 @@
 {
   "title": "AssetManifest",
-  "description": "The packs a deployment holds, addressed by logical name. A pack file is named after the hash of its own bytes, so its URL changes exactly when its contents do and it can be cached forever. The manifest is the one URL that has to be re-read: it says which file currently holds each logical pack, and describes each one - byte length, block count, the sources it carries - well enough to decide what to load before loading anything. Reading a pack through a manifest is what makes a re-packed asset set cheap for a returning client. Blocks are stored by hash, so the blocks that did not change are re-used from a ContainerBlockStore and only the changed ones are fetched.",
+  "description": "The packs a deployment holds, addressed by logical name. A pack file is named after the hash of its own bytes, so its URL changes exactly when its contents do and it can be cached forever. The manifest is the one URL that has to be re-read: it says which file currently holds each logical pack, and describes each one - byte length, block count, the sources it carries - well enough to decide what to load before loading anything. Reading a pack through a manifest is what makes a re-packed asset set cheap for a returning client. Blocks are stored by hash, so the blocks that did not change are re-used from a `ContainerBlockStore` and only the changed ones are fetched.",
   "symbol": "AssetManifest",
   "kind": "class",
   "subsystem": "assets",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "The packs a deployment holds, addressed by logical name.",
         "A pack file is named after the hash of its own bytes, so its URL changes exactly when its contents do and it can be cached forever. The manifest is the one URL that has to be re-read: it says which file currently holds each logical pack, and describes each one - byte length, block count, the sources it carries - well enough to decide what to load before loading anything.",
-        "Reading a pack through a manifest is what makes a re-packed asset set cheap for a returning client. Blocks are stored by hash, so the blocks that did not change are re-used from a ContainerBlockStore and only the changed ones are fetched."
+        "Reading a pack through a manifest is what makes a re-packed asset set cheap for a returning client. Blocks are stored by hash, so the blocks that did not change are re-used from a `ContainerBlockStore` and only the changed ones are fetched."
       ],
       "importLine": "import { AssetManifest } from '@codexo/exojs'",
       "sourceLink": null
@@ -257,7 +257,7 @@
             }
           ],
           "returnType": "Promise<AssetManifest>",
-          "description": "Fetch and validate the manifest at url. Prefer loader.loadManifest, which resolves url against the loader's base path and carries the application's request options. This is the same thing for a caller that has neither. Throws when the manifest cannot be fetched, is not JSON, states a version this build does not read, or describes a pack it cannot address."
+          "description": "Fetch and validate the manifest at url. Prefer loader.loadManifest, which resolves url against the loader's base path and carries the application's request options. This is the same thing for a caller that has neither. Throws an AssetNetworkError when the manifest cannot be fetched, and an AssetDecodeError when it is not JSON, states a version this build does not read, or describes a pack it cannot address."
         },
         {
           "name": "parse",

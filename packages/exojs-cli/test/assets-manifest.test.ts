@@ -36,11 +36,14 @@ const packOne = (value: unknown, manifest = 'assets.json'): Record<string, unkno
   return records[0]!;
 };
 
+const originalCwd = process.cwd();
+
 beforeEach(() => {
   workDir = mkdtempSync(join(tmpdir(), 'exo-manifest-'));
 });
 
 afterEach(() => {
+  process.chdir(originalCwd);
   rmSync(workDir, { recursive: true, force: true });
 });
 
@@ -130,6 +133,81 @@ describe('exo assets pack --manifest', () => {
     expect(readdirSync(workDir).filter(name => name.endsWith('.exoa'))).toEqual(['out.exoa']);
     expect(existsSync(join(workDir, 'assets.json'))).toBe(false);
   });
+
+  test('packs the way the README does: a description in one directory, the pack and manifest in another', () => {
+    mkdirSync(join(workDir, 'assets'));
+    mkdirSync(join(workDir, 'dist'));
+    write(join('assets', 'level1.json'), '{"score":42}');
+    writeFileSync(
+      join(workDir, 'assets', 'pack.json'),
+      JSON.stringify({ output: '../dist/level1.exoa', assets: [{ source: 'data/level1.json', type: 'json', file: 'level1.json' }] }),
+    );
+
+    // `output` resolves against the description, `--manifest` against the
+    // current directory: the README's example only works because both end up
+    // inside `dist/`, and this is what proves the documented pair does.
+    process.chdir(workDir);
+
+    expect(runAssetsPack(['assets/pack.json', '--manifest', 'dist/assets.json'])).toBe(0);
+
+    const record = Object.values(packs(join('dist', 'assets.json')))[0]!;
+
+    expect(Object.keys(packs(join('dist', 'assets.json')))).toEqual(['level1']);
+    expect(record.file).toMatch(/^level1\.[\da-f]{16}\.exoa$/);
+    expect(existsSync(join(workDir, 'dist', record.file as string))).toBe(true);
+  });
+
+  test('merges into a manifest holding a pack named __proto__ without reaching any prototype', () => {
+    write('a.json', '{"a":1}');
+    packOne({ output: 'ui.exoa', assets: [{ source: 'a.json', type: 'json', file: 'a.json' }] });
+
+    const existing = readManifest();
+    const record = (existing.packs as Record<string, unknown>)['ui'];
+
+    writeFileSync(join(workDir, 'assets.json'), JSON.stringify({ version: 1, packs: { ['__proto__']: record, ui: record } }));
+
+    expect(
+      runAssetsPack([
+        description({ output: 'boot.exoa', assets: [{ source: 'a.json', type: 'json', file: 'a.json' }] }),
+        '--manifest',
+        join(workDir, 'assets.json'),
+      ]),
+    ).toBe(0);
+
+    const probe = {} as Record<string, unknown>;
+
+    expect(Object.keys(packs()).sort()).toEqual(['__proto__', 'boot', 'ui']);
+    expect(probe.file).toBeUndefined();
+  });
+
+  test('a successful pack leaves no temporary file behind', () => {
+    write('a.json', '{"a":1}');
+    packOne({ output: 'level1.exoa', assets: [{ source: 'a.json', type: 'json', file: 'a.json' }] });
+
+    expect(readdirSync(workDir).filter(name => name.endsWith('.tmp'))).toEqual([]);
+    expect(readManifest().version).toBe(1);
+  });
+
+  test('a manifest that cannot be written leaves the previous one intact', () => {
+    write('a.json', '{"a":1}');
+    packOne({ output: 'level1.exoa', assets: [{ source: 'a.json', type: 'json', file: 'a.json' }] });
+
+    const before = readFileSync(join(workDir, 'assets.json'), 'utf8');
+
+    // The manifest is written to a temporary path and renamed over the real
+    // one; a directory in the way of that path is the one way to fail the write
+    // from a test without interrupting the process.
+    mkdirSync(join(workDir, 'assets.json.tmp'));
+
+    const args = [
+      description({ output: 'level2.exoa', assets: [{ source: 'a.json', type: 'json', file: 'a.json' }] }),
+      '--manifest',
+      join(workDir, 'assets.json'),
+    ];
+
+    expect(() => runAssetsPack(args)).toThrow(/cannot write/);
+    expect(readFileSync(join(workDir, 'assets.json'), 'utf8')).toBe(before);
+  });
 });
 
 describe('exo assets pack --manifest failures', () => {
@@ -170,6 +248,30 @@ describe('exo assets pack --manifest failures', () => {
     ];
 
     expect(() => runAssetsPack(args)).toThrow(/outside the manifest directory/);
+  });
+
+  test('refuses a pack name digits alone, which a JSON object would reorder', () => {
+    write('a.json', '{"a":1}');
+
+    const args = [
+      description({ name: '2024', output: 'level1.exoa', assets: [{ source: 'a.json', type: 'json', file: 'a.json' }] }),
+      '--manifest',
+      join(workDir, 'assets.json'),
+    ];
+
+    expect(() => runAssetsPack(args)).toThrow(/stable order/);
+  });
+
+  test('refuses a pack name that would not survive a file name or a URL', () => {
+    write('a.json', '{"a":1}');
+
+    const args = [
+      description({ name: '../evil', output: 'level1.exoa', assets: [{ source: 'a.json', type: 'json', file: 'a.json' }] }),
+      '--manifest',
+      join(workDir, 'assets.json'),
+    ];
+
+    expect(() => runAssetsPack(args)).toThrow(/is not a usable pack name/);
   });
 
   test('a manifest option with no value says so', () => {

@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, relative, resolve } from 'node:path';
+import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, isAbsolute, relative, resolve } from 'node:path';
 
 import { type ContainerInput, encodeContainer } from '@codexo/exojs-build/asset-container';
 import { containerPackFileName, describeContainerPack, mergeAssetManifest } from '@codexo/exojs-build/asset-manifest';
@@ -37,7 +37,12 @@ Options:
                          update the asset manifest at <path>. The pack file is
                          then immutable and may be cached forever; the manifest
                          is the one URL that changes. Read it at runtime with
-                         loader.loadManifest(url).
+                         loader.loadManifest(url). The path resolves against the
+                         current directory, while "output" resolves against the
+                         pack description, and the pack has to land inside the
+                         manifest's own directory. A pack file this replaces is
+                         left on disk: a deployment still serving the previous
+                         manifest is still handing out that name.
 
 With --manifest, the pack is named after the description's optional "name", or
 after the "output" file's stem. Packing each pack in its own invocation builds
@@ -127,14 +132,28 @@ const readPackDescription = (descriptionPath: string): PackDescription => {
   return { output: parsed.output, assets, ...(typeof parsed.name === 'string' && { name: parsed.name }) };
 };
 
-/** The logical pack name: what the description says, or the output file's stem. */
-const packName = (description: PackDescription): string => {
-  if (description.name !== undefined) return description.name;
+/**
+ * Names a pack may be listed under.
+ *
+ * The name goes into a file name and into a URL, so it is restricted to what
+ * both carry without escaping - and the leading character keeps a name from
+ * being read as an extension or a dotfile.
+ */
+const PACK_NAME = /^[A-Za-z0-9][\w.-]*$/;
 
+/** The logical pack name: what the description says, or the output file's stem. */
+const packName = (description: PackDescription, descriptionPath: string): string => {
   const base = description.output.replaceAll('\\', '/').split('/').pop() ?? description.output;
   const dot = base.lastIndexOf('.');
+  const name = description.name ?? (dot <= 0 ? base : base.slice(0, dot));
 
-  return dot <= 0 ? base : base.slice(0, dot);
+  if (!PACK_NAME.test(name)) {
+    throw new CliError(`pack description "${descriptionPath}": "${name}" is not a usable pack name`, {
+      hint: 'A pack name starts with a letter or digit and holds only letters, digits, ".", "_" and "-". Set "name" in the description to choose one.',
+    });
+  }
+
+  return name;
 };
 
 const writeContainer = (path: string, container: ArrayBuffer, shown: string): void => {
@@ -154,9 +173,13 @@ const writeContainer = (path: string, container: ArrayBuffer, shown: string): vo
 const writeAddressedPack = (manifestPath: string, outputPath: string, name: string, container: ArrayBuffer): string => {
   const pack = describeContainerPack(container);
   const packPath = resolve(dirname(outputPath), containerPackFileName(name, pack.hash));
-  const file = relative(dirname(manifestPath), packPath).replaceAll('\\', '/');
+  const relativePath = relative(dirname(manifestPath), packPath);
+  const file = relativePath.replaceAll('\\', '/');
 
-  if (file.startsWith('../')) {
+  // `relative` gives an absolute path rather than a `..` chain when the two
+  // paths share no root at all, which on Windows is every pair on different
+  // drives - so the absolute case is the one that has to be rejected first.
+  if (isAbsolute(relativePath) || file === '..' || file.startsWith('../')) {
     throw new CliError(`pack "${name}" would be written outside the manifest directory`, {
       hint: 'A manifest addresses its packs relative to itself; put it beside or above the output directory.',
     });
@@ -176,10 +199,26 @@ const writeAddressedPack = (manifestPath: string, outputPath: string, name: stri
 
   writeContainer(packPath, container, packPath);
 
+  // Written beside the manifest and renamed over it: a rename within one
+  // directory is atomic, so an interrupted build leaves the previous manifest
+  // intact rather than a half-written one that addresses no pack at all.
+  const pending = `${manifestPath}.tmp`;
+
   try {
-    writeFileSync(manifestPath, `${JSON.stringify(document, null, 2)}\n`);
+    writeFileSync(pending, `${JSON.stringify(document, null, 2)}\n`);
+    renameSync(pending, manifestPath);
   } catch (error: unknown) {
-    throw new CliError(`cannot write "${manifestPath}"`, { hint: 'Create the manifest directory first; the packer does not create it.', cause: error });
+    try {
+      rmSync(pending, { force: true });
+    } catch {
+      // A cleanup that fails must not replace the diagnosis of what actually
+      // went wrong; the leftover is named by the message below.
+    }
+
+    throw new CliError(`cannot write "${manifestPath}" (through "${pending}")`, {
+      hint: 'Create the manifest directory first; the packer does not create it.',
+      cause: error,
+    });
   }
 
   return packPath;
@@ -239,7 +278,7 @@ export const runAssetsPack = (argv: readonly string[]): number => {
   if (manifestPath === undefined) {
     writeContainer(outputPath, container, description.output);
   } else {
-    writtenPath = writeAddressedPack(manifestPath, outputPath, packName(description), container);
+    writtenPath = writeAddressedPack(manifestPath, outputPath, packName(description, descriptionPath), container);
   }
 
   // The two numbers differ by whatever the block compression won, minus the

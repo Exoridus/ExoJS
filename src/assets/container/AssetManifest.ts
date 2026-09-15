@@ -1,4 +1,5 @@
 import { AssetDecodeError } from '#assets/AssetDecodeError';
+import { fetchAsset } from '#assets/fetchAsset';
 
 /**
  * Manifest version this build reads. Refused rather than migrated, like a
@@ -34,9 +35,10 @@ export interface AssetManifestOptions {
   /**
    * Forwarded to the request - `signal`, credentials, headers.
    *
-   * The manifest is requested with `cache: 'no-cache'` by default, because it
-   * is the one URL in a deployment whose contents change; an `init` that names
-   * `cache` overrides that.
+   * The manifest is requested with `cache: 'no-cache'` unless this `init` names
+   * a `cache` of its own, because it is the one URL in a deployment whose
+   * contents change and an HTTP cache holding it pins the application to an
+   * earlier deployment.
    */
   readonly init?: RequestInit;
 }
@@ -52,28 +54,52 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 const isSize = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value >= 0;
 
 /**
+ * Base a manifest URL is normalized against when the runtime has no document of
+ * its own. Nothing is ever fetched from it: it exists so containment is decided
+ * by the same URL parser a browser would use, rather than by string matching.
+ */
+const SYNTHETIC_BASE = 'https://exojs.invalid/';
+
+/**
  * Where a pack file lives, resolved against the manifest's own URL.
  *
  * The result is an absolute URL wherever a document base exists, so the loader
  * does not resolve it a second time against its base path. A `file` is refused
- * unless it stays under the manifest's directory: a manifest describes the
- * packs deployed beside it, and one that reaches elsewhere is not describing
- * this deployment.
+ * unless the **resolved** URL stays under the manifest's directory: a manifest
+ * describes the packs deployed beside it, and one that reaches elsewhere is not
+ * describing this deployment.
+ *
+ * Containment is decided after resolution rather than on the written string,
+ * because a URL parser decodes escapes before it resolves segments - `%2e%2e`
+ * and `.%2e` are both `..` by the time anything fetches them, and a check on
+ * the raw text would pass them through.
  */
 const resolvePackUrl = (manifestUrl: string, name: string, file: unknown): string => {
   if (typeof file !== 'string' || file === '') fail(`pack "${name}" has no "file"`);
   if (file.startsWith('/') || file.includes('\\') || file.includes(':')) fail(`pack "${name}" has a "file" that is not a path beside the manifest`);
-  if (file.split('/').includes('..')) fail(`pack "${name}" has a "file" that leaves the manifest directory`);
 
-  const joined = `${manifestUrl.slice(0, manifestUrl.lastIndexOf('/') + 1)}${file}`;
+  const slash = manifestUrl.lastIndexOf('/');
+  const directory = slash === -1 ? './' : manifestUrl.slice(0, slash + 1);
+  const hasDocumentBase = typeof location !== 'undefined';
+  const base = hasDocumentBase ? location.href : SYNTHETIC_BASE;
+  let directoryUrl: URL;
+  let packUrl: URL;
 
   try {
-    return new URL(joined, typeof location === 'undefined' ? undefined : location.href).href;
+    directoryUrl = new URL(directory, base);
+    packUrl = new URL(file, directoryUrl);
   } catch {
-    // No document base to resolve against (a bare Node runtime): the joined
-    // path is still correct relative to whatever the manifest was fetched from.
-    return joined;
+    fail(`pack "${name}" has a "file" that is not a usable path`);
   }
+
+  if (!packUrl.href.startsWith(directoryUrl.href)) {
+    fail(`pack "${name}" has a "file" that leaves the manifest directory`);
+  }
+
+  // Without a document base the absolute form is built on a base that does not
+  // exist, so what goes back is the path as written - already proven to stay
+  // under the manifest's directory.
+  return hasDocumentBase ? packUrl.href : `${directory}${file}`;
 };
 
 const readPack = (name: string, value: unknown, manifestUrl: string): ManifestPack => {
@@ -102,7 +128,7 @@ const readPack = (name: string, value: unknown, manifestUrl: string): ManifestPa
  *
  * Reading a pack through a manifest is what makes a re-packed asset set cheap
  * for a returning client. Blocks are stored by hash, so the blocks that did not
- * change are re-used from a {@link ContainerBlockStore} and only the changed
+ * change are re-used from a `ContainerBlockStore` and only the changed
  * ones are fetched.
  *
  * @example
@@ -125,16 +151,16 @@ export class AssetManifest {
    * base path and carries the application's request options. This is the same
    * thing for a caller that has neither.
    *
-   * Throws when the manifest cannot be fetched, is not JSON, states a version
-   * this build does not read, or describes a pack it cannot address.
+   * Throws an `AssetNetworkError` when the manifest cannot be fetched, and an
+   * `AssetDecodeError` when it is not JSON, states a version this build does
+   * not read, or describes a pack it cannot address.
    */
   public static async open(url: string, options: AssetManifestOptions = {}): Promise<AssetManifest> {
-    const response = await fetch(url, { cache: 'no-cache', ...options.init });
-
-    if (!response.ok) {
-      fail(`"${url}" could not be fetched (HTTP ${response.status})`);
-    }
-
+    const { cache = 'no-cache', ...init } = options.init ?? {};
+    // Transport failures stay `AssetNetworkError` here as everywhere else in
+    // the loader: a manifest that did not arrive is worth retrying, while one
+    // that arrived malformed is not.
+    const response = await fetchAsset(url, { ...init, cache });
     let document: unknown;
 
     try {

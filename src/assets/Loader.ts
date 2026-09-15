@@ -182,6 +182,14 @@ export interface LoadContainerOptions {
 export interface LoadManifestOptions {
   /** Abandons the request; the rejection is an abort error, as everywhere else in the loader. */
   readonly signal?: AbortSignal;
+  /**
+   * HTTP cache mode for this one request, overriding the `'no-cache'` a
+   * manifest is read with. The application's `fetchOptions.cache` deliberately
+   * does not reach it: a manifest held by an HTTP cache pins the application to
+   * an earlier deployment, which is the one thing content-addressed packs exist
+   * to prevent.
+   */
+  readonly cache?: RequestCache;
 }
 
 export class Loader {
@@ -531,8 +539,14 @@ export class Loader {
    * an unknown type, or a type that cannot be read from bytes.
    *
    * A {@link ManifestPack} may be passed instead of a path. The pack carries the
-   * container's URL and its hash, so the bytes are checked against what the
-   * manifest states before anything is unpacked.
+   * container's URL, length and hash, and the bytes are checked against that
+   * record before anything is unpacked - a mismatch is an `AssetDecodeError`
+   * and nothing is cached. How much is checked depends on how much is read: the
+   * whole-file path holds the file and verifies the digest, while the
+   * block-wise path never holds it and verifies only the length, leaving the
+   * content-addressed URL as the statement about the bytes. The digest is also
+   * skipped where `crypto.subtle` is unavailable, which is an insecure context;
+   * the length check still runs.
    *
    * @param source Path to the container file, resolved against the loader base path, or a pack from a manifest.
    * @param options Where to keep blocks between visits; omitted, the whole file is fetched and cached.
@@ -563,8 +577,17 @@ export class Loader {
    * {@link loadContainer}, which then checks the bytes against what the manifest
    * states.
    *
-   * Throws when the manifest cannot be fetched, is not JSON, states a version
-   * this build does not read, or describes a pack it cannot address.
+   * The manifest is read straight from the network with `cache: 'no-cache'`,
+   * outside the loader's asset cache and outside its connectivity policy: it is
+   * the one document whose whole purpose is to say what the current deployment
+   * is, so a cached or policy-suppressed answer would be worse than none. The
+   * application's `fetchOptions` are carried except for `cache`, which
+   * {@link LoadManifestOptions.cache} is the only way to change. A manifest
+   * request therefore fails offline rather than resolving from a store.
+   *
+   * Throws an `AssetNetworkError` when the manifest cannot be fetched, and an
+   * `AssetDecodeError` when it is not JSON, states a version this build does
+   * not read, or describes a pack it cannot address.
    *
    * @param url Path to the manifest, resolved against the loader base path.
    *
@@ -576,7 +599,7 @@ export class Loader {
    */
   public async loadManifest(url: string, options?: LoadManifestOptions): Promise<AssetManifest> {
     const request = this._decoder._containerRequest(url, options?.signal);
-    const manifestOptions: AssetManifestOptions = { init: request.init };
+    const manifestOptions: AssetManifestOptions = { init: { ...request.init, cache: options?.cache ?? 'no-cache' } };
 
     return AssetManifest.open(request.url, manifestOptions);
   }
@@ -591,20 +614,22 @@ export class Loader {
    * express.
    *
    * A pack from a manifest is checked against its record: the whole-file path
-   * holds the bytes and verifies the digest, while the block-wise path - which
-   * never holds the whole file - checks the length and relies on the
-   * content-addressed URL for the rest.
+   * holds the bytes and verifies the digest before they are persisted, while
+   * the block-wise path - which never holds the whole file - checks the length
+   * and relies on the content-addressed URL for the rest.
    */
   private async _openContainer(source: string | ManifestPack, options?: LoadContainerOptions): Promise<ContainerReader> {
     const pack = typeof source === 'string' ? undefined : source;
     const url = typeof source === 'string' ? source : source.url;
 
     if (options?.store === undefined) {
-      const buffer = await this._decoder._acquireContainer(url);
+      // Verification runs inside the acquisition, on the network leg, so bytes
+      // that fail it are never written to the asset cache - a poisoned record
+      // under a content-addressed key would fail every later load from cache,
+      // where no network answer could correct it.
+      const verify = pack === undefined ? undefined : async (bytes: ArrayBuffer): Promise<void> => verifyPackBytes(pack, bytes);
 
-      if (pack !== undefined) await verifyPackBytes(pack, buffer);
-
-      return ContainerReader.fromBuffer(buffer);
+      return ContainerReader.fromBuffer(await this._decoder._acquireContainer(url, verify));
     }
 
     const request = this._decoder._containerRequest(url);

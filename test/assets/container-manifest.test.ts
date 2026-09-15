@@ -3,11 +3,16 @@ import { containerPackFileName, describeContainerPack } from '@codexo/exojs-buil
 
 import { Asset } from '#assets/Asset';
 import { AssetDecodeError } from '#assets/AssetDecodeError';
+import { AssetNetworkError } from '#assets/AssetNetworkError';
+import { AssetCache } from '#assets/cache/AssetCache';
+import { parseContainer } from '#assets/container/assetContainer';
 import { AssetManifest } from '#assets/container/AssetManifest';
 import type { ContainerBlockStore } from '#assets/container/containerBlockStore';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
-import { Loader } from '#assets/Loader';
+import { Loader, type LoaderOptions } from '#assets/Loader';
 import { materializeAssetTypes } from '#extensions/materialize';
+
+import { createCacheStoreDouble } from './cache-test-doubles';
 
 /** Distinct, incompressible bytes, so a block is stored uncoded and two entries never coincide. */
 const noise = (length: number, seed: number): Uint8Array => {
@@ -121,12 +126,25 @@ const recordingStore = (): ContainerBlockStore & { readonly held: Map<string, Ui
   };
 };
 
-const createLoader = (): Loader => {
-  const loader = new Loader({ basePath: '/assets/' });
+const createLoader = (options: Omit<LoaderOptions, 'basePath'> = {}): Loader => {
+  const loader = new Loader({ basePath: '/assets/', ...options });
 
   materializeAssetTypes(loader, coreAssetTypes);
 
   return loader;
+};
+
+/** Flip one byte inside the first block's stored region, which the head locates exactly. */
+const corruptFirstBlock = (container: ArrayBuffer): Uint8Array => {
+  const parsed = parseContainer(container);
+  const block = parsed.blocks[0]!;
+  const bytes = new Uint8Array(container.slice(0));
+  const at = parsed.dataOffset + block.storedOffset;
+
+  expect(block.codec).toBe('none');
+  bytes[at] = bytes[at]! ^ 0xff;
+
+  return bytes;
 };
 
 afterEach(() => {
@@ -204,19 +222,66 @@ describe('AssetManifest', () => {
     expect(file).toBeDefined();
   });
 
-  test('refuses a pack file that would escape the manifest directory', async () => {
-    const deployment = deploy({ level1: threePacked(2) });
+  test('a manifest that cannot be fetched is a transport failure, not a decode failure', async () => {
+    serve(deploy({}));
 
-    serve(deployment, { version: 1, packs: { level1: { ...deployment.document.packs['level1'], file: '../secret.exoa' } } });
+    await expect(AssetManifest.open('/assets/absent.json')).rejects.toThrow(AssetNetworkError);
+  });
+
+  test('carries a pack named __proto__ as an ordinary entry, without reaching any prototype', async () => {
+    const deployment = deploy({ level1: threePacked(2) });
+    const record = deployment.document.packs['level1']!;
+
+    serve(deployment, { version: 1, packs: { ['__proto__']: record, level1: record } });
+
+    const manifest = await AssetManifest.open(MANIFEST_PATH);
+    const probe = {} as Record<string, unknown>;
+
+    expect(manifest.packs.map(pack => pack.name).sort()).toEqual(['__proto__', 'level1']);
+    expect(probe.file).toBeUndefined();
+    expect(probe.hash).toBeUndefined();
+  });
+});
+
+/**
+ * A manifest is fetched from the network, so every field in it is input a
+ * hostile deployment could have written. Each row is a document the reader has
+ * to refuse rather than address.
+ */
+describe.each([
+  ['a percent-encoded traversal', { file: '%2e%2e/%2e%2e/secret.exoa' }],
+  ['a half-encoded traversal', { file: '.%2e/secret.exoa' }],
+  ['a plain traversal', { file: '../secret.exoa' }],
+  ['an absolute URL', { file: 'http://evil.example/secret.exoa' }],
+  ['a protocol-relative URL', { file: '//evil.example/secret.exoa' }],
+  ['a root-relative path', { file: '/secret.exoa' }],
+  ['a backslash path', { file: 'sub\\secret.exoa' }],
+  ['no file at all', { file: undefined }],
+  ['a negative byteLength', { byteLength: -1 }],
+  ['a fractional byteLength', { byteLength: 12.5 }],
+  ['a byteLength that is not a number', { byteLength: Number.NaN }],
+  ['a negative blockCount', { blockCount: -3 }],
+  ['a hash that is not 64 hex characters', { hash: 'abc' }],
+  ['a hash in upper case', { hash: 'A'.repeat(64) }],
+  ['entries that are not strings', { entries: [1, 2] }],
+  ['no entries at all', { entries: undefined }],
+])('a manifest with %s', (_what, overrides: Record<string, unknown>) => {
+  test('is refused', async () => {
+    const deployment = deploy({ level1: threePacked(2) });
+    const record = { ...deployment.document.packs['level1'], ...overrides };
+
+    serve(deployment, { version: 1, packs: { level1: record } });
 
     await expect(AssetManifest.open(MANIFEST_PATH)).rejects.toThrow(AssetDecodeError);
   });
+});
 
-  test('a manifest that cannot be fetched says so', async () => {
-    serve(deploy({}));
+test('a manifest whose pack record is not an object is refused', async () => {
+  const deployment = deploy({ level1: threePacked(2) });
 
-    await expect(AssetManifest.open('/assets/absent.json')).rejects.toThrow(AssetDecodeError);
-  });
+  serve(deployment, { version: 1, packs: { level1: 'level1.exoa' } });
+
+  await expect(AssetManifest.open(MANIFEST_PATH)).rejects.toThrow(AssetDecodeError);
 });
 
 describe('loading a pack through a manifest', () => {
@@ -232,13 +297,14 @@ describe('loading a pack through a manifest', () => {
   });
 
   test('refuses pack bytes whose hash is not the one the manifest states', async () => {
-    const deployment = deploy({ level1: threePacked(2) });
-    const [path, file] = [...deployment.files.entries()][0]!;
+    const container = threePacked(2);
+    const deployment = deploy({ level1: container });
+    const [path] = [...deployment.files.keys()];
 
-    // One byte inside an uncoded block: the container still parses and decodes,
-    // so nothing but the manifest's digest can tell these bytes from the right ones.
-    file[file.byteLength - 1] = file[file.byteLength - 1]! ^ 0xff;
-    deployment.files.set(path, file);
+    // One byte inside an uncoded block, located through the head: the container
+    // still parses and still decodes, so nothing but the manifest's digest can
+    // tell these bytes from the right ones.
+    deployment.files.set(path!, corruptFirstBlock(container));
     serve(deployment);
 
     const loader = createLoader();
@@ -287,5 +353,90 @@ describe('loading a pack through a manifest', () => {
     expect(requests.filter(request => request.path.endsWith('.exoa'))).toHaveLength(2);
     expect(store.hits).toHaveLength(2);
     expect(store.held.size).toBe(4);
+  });
+
+  test('bytes that fail the digest are never cached, so a corrected pack still loads', async () => {
+    const container = threePacked(2);
+    const deployment = deploy({ level1: container });
+    const [path] = [...deployment.files.keys()];
+    const good = deployment.files.get(path!)!;
+    const store = createCacheStoreDouble();
+
+    deployment.files.set(path!, corruptFirstBlock(container));
+    serve(deployment);
+
+    const loader = createLoader({ cache: new AssetCache({ stores: store }) });
+    const manifest = await loader.loadManifest('assets.json');
+
+    await expect(loader.loadContainer(manifest.pack('level1'))).rejects.toThrow(AssetDecodeError);
+    // Nothing was persisted: a record under a content-addressed key would be
+    // served to every later load, where no network answer could correct it.
+    expect(store.records.size).toBe(0);
+
+    deployment.files.set(path!, good);
+
+    await loader.loadContainer(manifest.pack('level1'));
+
+    expect(new Uint8Array(loader.get(Asset.type('binary', 'b.bin')).value)).toEqual(noise(1500, 2));
+  });
+
+  test('checks the length even where crypto.subtle is unavailable', async () => {
+    const deployment = deploy({ level1: threePacked(2) });
+    const record = deployment.document.packs['level1']!;
+
+    serve(deployment, { version: 1, packs: { level1: { ...record, byteLength: (record.byteLength as number) + 16 } } });
+    vi.spyOn(globalThis, 'crypto', 'get').mockReturnValue({ subtle: undefined } as unknown as Crypto);
+
+    const loader = createLoader();
+    const manifest = await loader.loadManifest('assets.json');
+
+    await expect(loader.loadContainer(manifest.pack('level1'))).rejects.toThrow(/bytes, but the manifest states/);
+  });
+
+  test('accepts bytes an insecure context cannot hash, having checked what it can', async () => {
+    const container = threePacked(2);
+    const deployment = deploy({ level1: container });
+    const [path] = [...deployment.files.keys()];
+
+    deployment.files.set(path!, corruptFirstBlock(container));
+    serve(deployment);
+    vi.spyOn(globalThis, 'crypto', 'get').mockReturnValue({ subtle: undefined } as unknown as Crypto);
+
+    const loader = createLoader();
+    const manifest = await loader.loadManifest('assets.json');
+
+    // The digest is the only thing that could have caught this, and without
+    // `crypto.subtle` there is none: degrading beats refusing to load at all.
+    await loader.loadContainer(manifest.pack('level1'));
+
+    expect(loader.get(Asset.type('binary', 'b.bin')).value.byteLength).toBe(1500);
+  });
+
+  test('a pack the server does not have is a transport failure on the block path too', async () => {
+    const deployment = deploy({ level1: threePacked(2) });
+    const record = deployment.document.packs['level1']!;
+
+    serve(deployment, { version: 1, packs: { level1: { ...record, file: 'level1.0000000000000000.exoa' } } });
+
+    const loader = createLoader();
+    const manifest = await loader.loadManifest('assets.json');
+
+    await expect(loader.loadContainer(manifest.pack('level1'), { store: recordingStore() })).rejects.toThrow(AssetNetworkError);
+  });
+
+  test("the application's fetchOptions cannot pin the manifest to the HTTP cache", async () => {
+    const { requests } = serve(deploy({ level1: threePacked(2) }));
+
+    await createLoader({ fetchOptions: { cache: 'force-cache' } }).loadManifest('assets.json');
+
+    expect(requests[0]?.cache).toBe('no-cache');
+  });
+
+  test('a caller that asks for a cache mode on the manifest gets it', async () => {
+    const { requests } = serve(deploy({ level1: threePacked(2) }));
+
+    await createLoader().loadManifest('assets.json', { cache: 'reload' });
+
+    expect(requests[0]?.cache).toBe('reload');
   });
 });
