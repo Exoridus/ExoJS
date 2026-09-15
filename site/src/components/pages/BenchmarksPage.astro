@@ -32,10 +32,8 @@
  */
 
 import BenchResultCard from '../BenchResultCard.astro';
-import BenchLocalProbe from '../BenchLocalProbe.astro';
 import DocsLayout from '../../layouts/DocsLayout.astro';
 import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
-import { appInfo } from '../../lib/app-info';
 import { PHYSICS_HEADLINE_SCENARIOS, physicsCards, RENDERING_HEADLINE_SCENARIOS, renderingCards, selectCards } from '../../lib/bench-cards';
 import {
     BACKEND_LABELS,
@@ -91,8 +89,7 @@ const leading = browsers[0];
         {leading === undefined ? (
             <p class="empty">
                 No measurements are published yet. The reference measurement is {REPRODUCTION_RUNS} separate runs on one machine after a release is tagged,
-                pooled into a single profile file in the repository; until then there is nothing here to read.{' '}
-                <a href={`${base}${locale}/benchmarks/methodology/`}>The terms they will be published under</a> already apply.
+                pooled into a single profile file in the repository. Until then there is nothing here to read.
             </p>
         ) : (
             <>
@@ -247,16 +244,6 @@ const leading = browsers[0];
                         href={`${base}${locale}/benchmarks/full/`}>All measurements</a
                     > lists every arm and every load.
                 </p>
-
-                {/* Four destinations and no explanatory paragraphs: what each one is is what its name says. */}
-                <nav class="tools" aria-label="Benchmark data">
-                    <a href={`${base}${locale}/benchmarks/full/`}>All measurements</a>
-                    <a href={`${base}${locale}/benchmarks/methodology/`}>Methodology</a>
-                    <a href="#run-locally">Run locally</a>
-                    <a href={`${appInfo.repositoryUrl}/tree/main/packages/exojs-bench/results`}>JSON</a>
-                </nav>
-
-                <BenchLocalProbe />
             </>
         )}
     </div>
@@ -554,16 +541,5 @@ const leading = browsers[0];
         color: var(--amber);
         font-weight: 650;
     }
-
-    .tools {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--s-2) var(--s-4);
-        margin-top: var(--s-4);
-        padding-top: var(--s-3);
-        border-top: 1px solid var(--line-soft);
-        font-size: 0.88rem;
-    }
-
 
 </style>

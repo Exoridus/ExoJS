@@ -159,17 +159,16 @@ const headlineOrFirst = (cards: readonly BenchCard[], preferred: readonly string
 };
 
 /**
- * The arms of one comparable load, quickest first.
+ * The arms of one load, quickest first.
  *
  * The section says "lower is better", so the row reads top-down as best to
- * worst; ExoJS is found by its colour rather than by always being the first
- * line. Arms without a figure to rank by keep their canonical order behind
- * the ranked ones, and a withheld load is never handed to this at all - it
- * publishes no ranking, so it prints none.
+ * worst. ExoJS is found by its colour rather than by always being the first
+ * line, and arms without a figure to rank by keep their canonical order behind
+ * the ranked ones.
  */
 const fastestFirst = (arms: readonly CardArm[]): readonly CardArm[] =>
   [...arms]
-    .map((arm, index) => ({ arm, index, ms: arm.quantitative && arm.ms !== null && Number.isFinite(arm.ms) ? arm.ms : null }))
+    .map((arm, index) => ({ arm, index, ms: arm.ms !== null && Number.isFinite(arm.ms) ? arm.ms : null }))
     .sort((a, b) => {
       if (a.ms === null || b.ms === null) {
         return (a.ms === null ? 1 : 0) - (b.ms === null ? 1 : 0) || a.index - b.index;
@@ -227,7 +226,12 @@ const loadOf = (row: ProfileRow): CardLoad | null => {
   // A withheld row loses its quantitative treatment wholesale rather than per
   // arm: the doubt is about the comparison, so no arm in it may keep a bar.
   const canonical = [reference, ...cells.map(competitorArm)].map(arm => (withheld === undefined ? arm : { ...arm, quantitative: false }));
-  const arms = withheld === undefined ? fastestFirst(canonical) : canonical;
+  // Sorted even where the comparison is withheld. The order is the reader's way
+  // through the rows and the same one on every card, and leaving a withheld
+  // load in canonical order does not stop anyone ranking four printed numbers,
+  // it only makes them do it by eye. That these times are not a ranking is said
+  // where it belongs, on the load's own marker.
+  const arms = fastestFirst(canonical);
   // Every published figure sets the scale, because the bars are durations: an
   // arm whose PAIR the clock could not separate still took the time it reports,
   // and leaving it out of the maximum would draw it past the end of its track.
