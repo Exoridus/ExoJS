@@ -594,7 +594,7 @@ const ARCHETYPE_DESCRIPTIONS: Readonly<Record<string, string>> = {
   'mixed-static-dynamic': 'Dynamic bodies falling onto static level geometry. Models a common game mix.',
   raycast: 'A mixed scene plus repeated rays. Isolates query throughput.',
   'body-churn': 'Bodies rebuilt every step. Stresses broad-phase repair and lifecycle work.',
-  joints: 'Constraint chains. Stresses impulse propagation through joints.',
+  joints: 'Constraint chains, periodically re-driven so the arms never settle to sleep. Stresses impulse propagation through joints.',
   'settling-pile': 'A dissipating pile. Exposes steady-state settling and sleeping behavior.',
   'dynamic-all': 'Every sprite moving every frame. Stresses transform and upload work at full mutation.',
   'fill-layers': 'Stacked translucent full-screen layers. Stresses blended fill.',

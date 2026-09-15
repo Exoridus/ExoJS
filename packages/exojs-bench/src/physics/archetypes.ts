@@ -73,6 +73,10 @@ const BODY_CHURN_COUNTS = [800, 1_500, 2_400] as const;
  * the frame therefore takes an order of magnitude more bodies than the
  * contact-bound archetypes need, which is itself the finding.
  *
+ * Those medians were placed on the archetype's earlier settling scene, before
+ * it was given its periodic re-drive (see `PHYSICS_ARCHETYPES`'s `joints`
+ * entry), and are pending re-measurement under the driven scene.
+ *
  * It is the one ladder that leaves the low thousands, and it can:
  * `@codexo/exojs-physics` runs a stateless O(n log n) sort-and-sweep broad phase
  * with no spatial hash, so counts this high would leave the regime the matrix

@@ -49,6 +49,16 @@ describe('createPerStepWork drive', () => {
     expect(kicks.slice(0, atZero)).toEqual(driven.map(entry => ({ slot: entry.slot, vx: entry.perturb?.vx, vy: entry.perturb?.vy })));
   });
 
+  test('throws for a drive cadence with no perturbed body to drive', () => {
+    const misconfigured: PhysicsArchetypeSpec = { ...joints, perturbFraction: 0 };
+    const scene = describePhysicsScene(misconfigured, 4_500, seedFor(misconfigured.scene, 4_500));
+    const { handles, ops } = recordingOps();
+
+    scene.bodies.forEach((_, index) => handles.push(index));
+
+    expect(() => createPerStepWork(misconfigured, scene, handles, ops)).toThrow(/kickEverySteps/);
+  });
+
   test('is idle for an archetype that neither drives, churns nor casts', () => {
     const stack = PHYSICS_ARCHETYPES.find(archetype => archetype.id === 'box-stack') as PhysicsArchetypeSpec;
     const scene = describePhysicsScene(stack, 1_500, seedFor(stack.scene, 1_500));

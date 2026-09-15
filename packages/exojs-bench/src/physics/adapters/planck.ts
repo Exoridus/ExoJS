@@ -156,14 +156,14 @@ export const createPlanckAdapter = async (): Promise<PhysicsAdapter> => {
         removeBody: body => {
           created.destroyBody(body);
         },
-        // `World.rayCast` is a segment query driven by a callback, so the unit
-        // direction and distance are converted back to an end point. Returning 0
-        // terminates on the first hit rather than walking every fixture the
-        // segment crosses.
         setVelocity: (body, vx, vy) => {
           body.setLinearVelocity({ x: vx, y: vy });
           body.setAwake(true);
         },
+        // `World.rayCast` is a segment query driven by a callback, so the unit
+        // direction and distance are converted back to an end point. Returning 0
+        // terminates on the first hit rather than walking every fixture the
+        // segment crosses.
         castRay: ray => {
           let hit = false;
 

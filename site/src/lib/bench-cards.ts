@@ -13,7 +13,7 @@
  * assembled to suit the numbers inside it.
  */
 
-import type { BenchProfileDocument, LoadUnit, ProfileBackendName, ProfileCell, ProfileRow, ProfileSection } from './bench-profiles';
+import type { BenchProfileDocument, ProfileBackendName, ProfileCell, ProfileRow, ProfileSection } from './bench-profiles';
 import { armLabel, formatLoad, isQuantitative, orderArms, outcomeOf, publishedMs, withheldScenario } from './bench-profiles';
 
 /** One arm's time on one load of one scenario. */
@@ -42,17 +42,6 @@ export interface CardArm {
   readonly quantitative: boolean;
 }
 
-/** One competitor's comparison on one load, for the detail a card opens. */
-export interface CardComparison {
-  /** Arm id, e.g. `pixi`. */
-  readonly id: string;
-  /** Human label, e.g. `PixiJS`. */
-  readonly label: string;
-  /** The published cell, verbatim - the detail and the row are the same measurement by construction. */
-  readonly cell: ProfileCell;
-  readonly outcome: ReturnType<typeof outcomeOf>;
-}
-
 /** One selectable load of one scenario. */
 export interface CardLoad {
   /** Stable id within the scenario, used as the control's value. */
@@ -65,12 +54,6 @@ export interface CardLoad {
   readonly arms: readonly CardArm[];
   /** Largest plottable figure on this load, for scaling the bars. */
   readonly maxMs: number;
-  /** Scene size this load was measured at. */
-  readonly count: number;
-  /** What `count` counts, where the row states one. */
-  readonly unit?: LoadUnit;
-  /** The published comparisons behind the row, in the same arm order. */
-  readonly comparisons: readonly CardComparison[];
   /**
    * Why this load publishes no cross-arm comparison, or `undefined` where it
    * publishes one; see `withheldScenario`.
@@ -234,9 +217,6 @@ const loadOf = (row: ProfileRow): CardLoad | null => {
     primary: row.primary ?? false,
     arms,
     maxMs: plotted.length > 0 ? Math.max(...plotted) : 0,
-    count: row.count,
-    ...(row.unit !== undefined && { unit: row.unit }),
-    comparisons: cells.map(cell => ({ id: cell.competitor, label: armLabel(cell.competitor), cell, outcome: outcomeOf(cell) })),
     withheld,
   };
 };

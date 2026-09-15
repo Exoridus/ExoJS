@@ -69,6 +69,13 @@ export const createPerStepWork = <TBody>(spec: PhysicsArchetypeSpec, scene: Scen
   const driven =
     kickEvery === 0 ? [] : scene.bodies.flatMap((body, slot) => (body.perturb === undefined ? [] : [{ slot, vx: body.perturb.vx, vy: body.perturb.vy }]));
 
+  // A drive cadence with nothing to drive is a misconfigured archetype, not an
+  // idle one: falling through to IDLE would silently measure a plain solver
+  // step under the archetype's name instead of the drive it was written for.
+  if (kickEvery > 0 && driven.length === 0) {
+    throw new Error(`archetype '${spec.id}' sets kickEverySteps but no scene body carries a perturb velocity to drive`);
+  }
+
   if (rayCount === 0 && churnIndices.length === 0 && driven.length === 0) {
     return IDLE;
   }

@@ -25,18 +25,14 @@
  * pair, so tagging four arms says the same thing four times about a comparison
  * only some of them are in.
  *
- * The detail each load opens is rendered from that load's own comparisons, so
- * the load, the backend and the profile a reader is looking at cannot come
- * apart from the ones the numbers were read out of.
- *
  * Below the width at which the grid becomes one column, the card gives up its
  * own frame and becomes a SECTION of the domain's single card, separated from
  * its neighbours by a rule. Six framed cards in a column is six visual restarts
  * of the same structure - border, padding, title block, gap - where the frame
  * has nothing left to separate horizontally, and the section headings carry the
  * grouping on their own. The chrome is only dropped, not the structure: the
- * rows, the load control and the per-scenario detail are identical at both
- * widths, and nothing here becomes a table.
+ * rows and the load control are identical at both widths, and nothing here
+ * becomes a table.
  */
 
 import { archetypeDescription, archetypeTitle, type CellOutcome, FRAME_BUDGET_NOTE, formatMs, OUTCOME_STATUS } from '../lib/bench-profiles';
@@ -66,16 +62,14 @@ const [descriptionLead, descriptionRest] = description === undefined ? [undefine
 /**
  * True where the lead clause only repeats the title.
  *
- * `Changing labels; stresses per-frame text invalidation and layout.` reduces
- * to `Changing labels` under a heading that already says it. At full width the
+ * `Changing labels. Stresses per-frame text invalidation and layout.` reduces
+ * to `Changing labels.` under a heading that already says it. At full width the
  * sentence is printed whole regardless - it was written as one sentence and
  * reads as one - and only the shortened phone form has a line to lose to it.
  */
 const leadRepeatsTitle =
     descriptionLead !== undefined && descriptionLead.replace(/\.$/, '').toLowerCase() === archetypeTitle(card.id).toLowerCase();
 
-/** True where the shortened description would end without punctuation, so the phone layout can supply it. */
-const leadNeedsStop = descriptionLead !== undefined && !descriptionLead.endsWith('.');
 const anchor = `${domain}-${card.id}${card.backend === undefined ? '' : `-${card.backend}`}`;
 
 /**
@@ -105,7 +99,6 @@ const timeCharacters = Math.max(
     ...card.loads.flatMap(load => load.arms.map(arm => (arm.ms === null ? OUTCOME_STATUS[arm.outcome].length : formatMs(arm.ms).length))),
 );
 
-/** True where any row of the card carries a marker beside its figure, which the column has to leave room for. */
 /**
  * The states of one load, in the card's own order.
  *
@@ -122,15 +115,15 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
     <header>
         <h3>{archetypeTitle(card.id)}</h3>
         {/*
-          * Split at the semicolon the descriptions already carry: the clause
+          * Split at the full stop the descriptions already carry: the clause
           * before it says what the scene is, the clause after it says which
           * part of the renderer it loads. Narrow, only the first is worth two
-          * lines of a phone screen, and the second is one tap away - so nothing
-          * is rewritten and nothing is lost.
+          * lines of a phone screen, so the second is dropped there and read in
+          * full at the width where it fits.
           */}
         {description !== undefined && (
             <p class:list={['what', { 'repeats-title': leadRepeatsTitle }]}>
-                {descriptionLead !== undefined && <span class:list={['what-lead', { stop: leadNeedsStop }]}>{descriptionLead}</span>}
+                {descriptionLead !== undefined && <span class="what-lead">{descriptionLead}</span>}
                 {descriptionRest !== undefined && <span class="what-rest"> {descriptionRest}</span>}
             </p>
         )}
@@ -165,20 +158,25 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
     {card.loads.map(load => (
         <div class="bench-load-panel" data-load={load.id} hidden={load.id !== opening?.id}>
             {/*
-              * One meta row: what the load is on the left, what to know about it
-              * on the right. These were three stacked paragraphs, which on a
-              * phone spent three lines saying what belongs on one - and the
-              * explanation each of them carried is one tap away in the details.
+              * The load's own note about itself: why its comparison is
+              * withheld, or what state every arm on it shares. Nothing to say
+              * leaves no row, so the paragraph is only rendered where there
+              * is something to read - an always-present element with nothing
+              * inside it is invisible on screen but still there for `:empty`
+              * and similar checks to miss.
               */}
-            <p class="meta">
-                {load.withheld !== undefined ? (
-                    <span class="status withheld" title={load.withheld}>
-                        Not comparable
-                    </span>
-                ) : statesOf(load).length > 0 ? (
-                    <span class="status">{OUTCOME_STATUS[statesOf(load)[0] ?? 'absent']}</span>
-                ) : null}
-            </p>
+            {(load.withheld !== undefined || statesOf(load).length > 0) && (
+                <p class="meta">
+                    {load.withheld !== undefined ? (
+                        <>
+                            <span class="status withheld">Not comparable</span>
+                            <span class="reason">{load.withheld}</span>
+                        </>
+                    ) : (
+                        <span class="status">{OUTCOME_STATUS[statesOf(load)[0] ?? 'absent']}</span>
+                    )}
+                </p>
+            )}
 
             <ul class="arms">
                 {load.arms.map(arm => (
@@ -288,11 +286,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         color: var(--color-text-muted);
     }
 
-    /* The status is the row's only occupant now that the load reads as a chip. */
-    .meta:empty {
-        display: none;
-    }
-
     /* Inert by construction: the single-load chip states the load and controls nothing. */
     .load.solo {
         cursor: default;
@@ -311,10 +304,11 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         margin-left: auto;
     }
 
-    .status.quiet {
-        border-color: transparent;
-        padding-inline: 0;
-        cursor: default;
+    /* Forced onto its own line under the status badge: the reason reads as a caption to it, not a second fact beside it. */
+    .reason {
+        flex-basis: 100%;
+        text-align: right;
+        font-size: 0.74rem;
     }
 
     /* No frame, no ground: the card is already the box, and the global `.panel` rule is what used to draw a second one here. */
@@ -419,23 +413,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         font-size: 0.76rem;
     }
 
-    /*
-     * A real control, not a glyph with a `title`: pressing it opens the card's
-     * details and moves the reader to the note that says what the mark means,
-     * which is reachable by touch and by keyboard. A `title` is neither.
-     */
-    .mark {
-        font: inherit;
-        font-size: 0.68rem;
-        line-height: 1;
-        padding: 0.15rem 0.35rem;
-        border-radius: 0.3rem;
-        border: 1px solid currentcolor;
-        background: transparent;
-        color: var(--color-text-muted);
-        cursor: pointer;
-    }
-
     .sr {
         position: absolute;
         width: 1px;
@@ -452,11 +429,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
 
         .time {
             font-size: 0.86rem;
-        }
-
-        .notes > div {
-            grid-template-columns: 1fr;
-            gap: 0.1rem;
         }
     }
 
@@ -491,11 +463,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
             display: none;
         }
 
-        /* The clause that carried the sentence's period is hidden here, so the half that remains ends itself. */
-        .what-lead.stop::after {
-            content: '.';
-        }
-
         /* Nothing worth a line once the lead clause is only the title again and the rest is hidden. */
         .what.repeats-title {
             display: none;
@@ -508,10 +475,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         .load {
             font-size: 0.72rem;
             padding: 0.15rem 0.45rem;
-        }
-
-        .more > summary {
-            font-size: 0.78rem;
         }
 
         /*
@@ -557,8 +520,8 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
     // Load switching is per card and nothing else on the page depends on it, so
     // it stays a listener on the card rather than shared state. Without
     // JavaScript every panel but the opening one is `hidden`, which is the same
-    // thing the buttons toggle - so the card still shows a real measured load,
-    // with the detail of that same load inside it.
+    // thing the buttons toggle - so the card still shows one real measured
+    // load's rows rather than an empty panel.
     for (const card of document.querySelectorAll<HTMLElement>('.card')) {
         const buttons = card.querySelectorAll<HTMLButtonElement>('.load');
         const panels = card.querySelectorAll<HTMLElement>('.bench-load-panel');

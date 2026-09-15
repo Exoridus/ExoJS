@@ -80,6 +80,11 @@ export const createNapeJsAdapter = async (): Promise<PhysicsAdapter> => {
         constraint.space = created;
       }
 
+      // Reused across every kick rather than allocated per call: `applyImpulse`
+      // consumes the impulse synchronously and keeps no reference to it, and
+      // the vector is always the same zero, so one instance serves the whole run.
+      const zeroImpulse = new N.Vec2(0, 0);
+
       stepIndex = 0;
       perStep = createPerStepWork(spec, scene, table, {
         createBody,
@@ -87,12 +92,14 @@ export const createNapeJsAdapter = async (): Promise<PhysicsAdapter> => {
           body.space = null;
         },
         setVelocity: (body, vx, vy) => {
-          body.velocity = new N.Vec2(vx, vy);
+          // `velocity` is a live Vec2, so writing through it in place drives the
+          // body without allocating a new one on every kick.
+          body.velocity.setxy(vx, vy);
 
           // No `wake()` on the typed surface. A zero impulse with `sleepable`
           // false is Nape's own way of rousing a body without moving it.
           if (body.isSleeping) {
-            body.applyImpulse(new N.Vec2(0, 0), undefined, false);
+            body.applyImpulse(zeroImpulse, undefined, false);
           }
         },
         castRay: ray => {
