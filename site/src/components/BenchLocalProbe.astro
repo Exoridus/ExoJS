@@ -7,8 +7,8 @@
         <p class="eyebrow">One local test, not a published comparison</p>
         <h2 id="local-probe-title">Run on this device</h2>
         <p>
-            Runs a short WebGL2 workload in this browser and reports this device's own frame cost and capabilities. It measures ExoJS alone against nothing,
-            is not a cross-library reference run, and is never mixed into the published comparisons.
+            Raises a WebGL2 workload in this browser until a frame no longer fits in 16.7 ms, and reports the load this device carried at 60 fps. It measures one
+            fixed workload rather than ExoJS against anything, is not a cross-library reference run, and is never mixed into the published comparisons.
         </p>
     </div>
     <div class="local-probe-actions">
@@ -18,16 +18,16 @@
     <canvas class="probe-canvas" data-local-canvas width="640" height="360" aria-hidden="true"></canvas>
     <dl class="local-results" data-local-results hidden>
         <div>
-            <dt>CPU submission</dt>
-            <dd data-local-cpu>-</dd>
+            <dt>Quads at 60 fps</dt>
+            <dd data-local-quads>-</dd>
         </div>
         <div>
-            <dt data-local-gpu-label>GPU-inclusive frame</dt>
-            <dd data-local-gpu>-</dd>
+            <dt>Frame at that load</dt>
+            <dd data-local-frame>-</dd>
         </div>
         <div>
-            <dt>Frame budget</dt>
-            <dd data-local-budget>-</dd>
+            <dt>Next step up</dt>
+            <dd data-local-over>-</dd>
         </div>
         <div>
             <dt>Capabilities</dt>
@@ -42,17 +42,34 @@
     const localResults = document.querySelector('[data-local-results]');
     const localCanvas = document.querySelector('[data-local-canvas]');
 
+    /** One 60 fps frame, and the ceiling the ramp searches against. */
+    const FRAME_BUDGET_MS = 16.7;
+
+/**
+     * Quads held in the vertex buffer, which fixes what the probe costs a
+     * visitor in memory: 500,000 positions is 4 MB.
+     */
+    const BUFFER_QUADS = 500000;
+
+    /**
+     * Largest load the ramp will try.
+     *
+     * Reached by drawing the buffer repeatedly rather than by holding a buffer
+     * this size - a current desktop GPU carries a few million quads inside a
+     * frame, and a buffer that went there directly would cost half a gigabyte
+     * to answer one question. A device that carries the whole ceiling reports
+     * it as a floor, because what the probe found is that it ran out of
+     * workload before the device ran out of budget.
+     */
+    const MAX_QUADS = 64000000;
+
     const median = values => {
         const sorted = [...values].sort((a, b) => a - b);
         return sorted[Math.floor(sorted.length / 2)] ?? 0;
     };
 
-    const percentile = (values, p) => {
-        const sorted = [...values].sort((a, b) => a - b);
-        return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] ?? 0;
-    };
-
     const formatMs = value => (value < 0.005 ? '<0.01 ms' : `${value.toFixed(2)} ms`);
+    const formatCount = value => value.toLocaleString('en-US');
 
     const compile = (gl, type, source) => {
         const shader = gl.createShader(type);
@@ -63,12 +80,12 @@
         return shader;
     };
 
-    const runLocalProbe = () => {
+    const runLocalProbe = onStep => {
         if (!(localCanvas instanceof HTMLCanvasElement)) throw new Error('Probe canvas is unavailable.');
         const gl = localCanvas.getContext('webgl2', { antialias: false, powerPreference: 'high-performance' });
         if (gl === null) throw new Error('WebGL2 is unavailable in this browser.');
 
-        const vertex = compile(gl, gl.VERTEX_SHADER, '#version 300 es\nin vec2 position;\nvoid main(){gl_Position=vec4(position,0.0,1.0);gl_PointSize=1.0;}');
+        const vertex = compile(gl, gl.VERTEX_SHADER, '#version 300 es\nin vec2 position;\nvoid main(){gl_Position=vec4(position,0.0,1.0);gl_PointSize=4.0;}');
         const fragment = compile(gl, gl.FRAGMENT_SHADER, '#version 300 es\nprecision highp float;\nout vec4 color;\nvoid main(){color=vec4(0.25,0.65,1.0,1.0);}');
         const program = gl.createProgram();
         if (program === null) throw new Error('Could not create WebGL2 program.');
@@ -77,9 +94,8 @@
         gl.linkProgram(program);
         if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) ?? 'WebGL2 program linking failed.');
 
-        const count = 100_000;
-        const positions = new Float32Array(count * 2);
-        for (let index = 0; index < count; index += 1) {
+        const positions = new Float32Array(BUFFER_QUADS * 2);
+        for (let index = 0; index < BUFFER_QUADS; index += 1) {
             positions[index * 2] = ((index * 37) % 1000) / 500 - 1;
             positions[index * 2 + 1] = ((index * 91) % 1000) / 500 - 1;
         }
@@ -91,55 +107,97 @@
         gl.enableVertexAttribArray(location);
         gl.vertexAttribPointer(location, 2, gl.FLOAT, false, 0, 0);
 
-        const timer = gl.getExtension('EXT_disjoint_timer_query_webgl2');
-        const cpuSamples = [];
-        const wallSamples = [];
-        // A timer query is answered by the driver some frames after it is ended, so
-        // the queries are drained after the loop; reading one straight back leaves
-        // every sample unavailable and the arm silently untimed.
-        const pending = [];
-        const sample = () => {
-            const start = performance.now();
-            const query = timer === null ? null : gl.createQuery();
-            if (query !== null && timer !== null) gl.beginQuery(timer.TIME_ELAPSED_EXT, query);
-            gl.clearColor(0.02, 0.03, 0.06, 1);
-            gl.clear(gl.COLOR_BUFFER_BIT);
-            gl.drawArrays(gl.POINTS, 0, count);
-            if (query !== null && timer !== null) gl.endQuery(timer.TIME_ELAPSED_EXT);
-            const submitted = performance.now();
-            gl.finish();
-            const finished = performance.now();
-            cpuSamples.push(submitted - start);
-            wallSamples.push(finished - start);
-            if (query !== null) pending.push(query);
+        const readback = new Uint8Array(4);
+
+        /**
+         * Wall time for one frame's worth of work, never submission time: the
+         * question is what the device completes inside a frame, and submission
+         * returns long before the GPU has drawn anything.
+         *
+         * The single-pixel read is what makes that true. This canvas is never
+         * presented - it is one transparent pixel off to the side - and without
+         * a read the driver is free to defer or drop the draw entirely, which
+         * reports two million quads as under a hundredth of a millisecond.
+         * `finish()` alone does not force it.
+         */
+        const frameAt = count => {
+            const samples = [];
+
+            for (let index = 0; index < 8; index += 1) {
+                const started = performance.now();
+                gl.clearColor(0.02, 0.03, 0.06, 1);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+                for (let drawn = 0; drawn < count; drawn += BUFFER_QUADS) {
+                    gl.drawArrays(gl.POINTS, 0, Math.min(BUFFER_QUADS, count - drawn));
+                }
+
+                gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, readback);
+                const elapsed = performance.now() - started;
+
+                if (index >= 3) samples.push(elapsed);
+            }
+
+            return median(samples);
         };
 
-        for (let index = 0; index < 20; index += 1) sample();
-        cpuSamples.length = 0;
-        wallSamples.length = 0;
-        for (const query of pending.splice(0)) gl.deleteQuery(query);
+        frameAt(50000);
 
         const started = performance.now();
-        for (let index = 0; index < 60; index += 1) sample();
-        const elapsed = performance.now() - started;
+        let carried = 0;
+        let carriedMs = 0;
+        let over = MAX_QUADS;
+        let overMs = null;
+        let count = 50000;
 
-        const gpuSamples = [];
-        const disjoint = timer !== null && gl.getParameter(timer.GPU_DISJOINT_EXT);
-        for (const query of pending) {
-            if (!disjoint && gl.getQueryParameter(query, gl.QUERY_RESULT_AVAILABLE)) {
-                gpuSamples.push(Number(gl.getQueryParameter(query, gl.QUERY_RESULT)) / 1_000_000);
+        // Double until a frame misses the budget, then halve the gap twice. Two
+        // refinements put the answer inside about a quarter of the true ceiling,
+        // which is the precision a single headline figure can carry anyway.
+        while (count <= MAX_QUADS) {
+            if (onStep) onStep(count);
+
+            const ms = frameAt(count);
+
+            if (ms > FRAME_BUDGET_MS) {
+                over = count;
+                overMs = ms;
+                break;
             }
-            gl.deleteQuery(query);
+
+            carried = count;
+            carriedMs = ms;
+
+            if (count === MAX_QUADS) break;
+
+            count = Math.min(count * 2, MAX_QUADS);
+        }
+
+        if (overMs !== null) {
+            for (let step = 0; step < 2; step += 1) {
+                const midpoint = Math.floor((carried + over) / 2);
+
+                if (midpoint <= carried || midpoint >= over) break;
+
+                if (onStep) onStep(midpoint);
+
+                const ms = frameAt(midpoint);
+
+                if (ms > FRAME_BUDGET_MS) {
+                    over = midpoint;
+                    overMs = ms;
+                } else {
+                    carried = midpoint;
+                    carriedMs = ms;
+                }
+            }
         }
 
         return {
-            cpu: median(cpuSamples),
-            // Without a timer query the honest second figure is the wall time a
-            // frame took to reach `finish()`, never the submission time again.
-            gpu: gpuSamples.length > 0 ? median(gpuSamples) : median(wallSamples),
-            gpuP95: gpuSamples.length > 0 ? percentile(gpuSamples, 0.95) : null,
-            elapsed,
-            gpuTimed: gpuSamples.length > 0,
+            carried,
+            carriedMs,
+            over: overMs === null ? null : over,
+            overMs,
+            ceiling: overMs === null,
+            elapsed: performance.now() - started,
             webgpu: 'gpu' in navigator,
         };
     };
@@ -147,21 +205,26 @@
     localProbe?.addEventListener('click', () => {
         if (!(localStatus instanceof HTMLElement) || !(localResults instanceof HTMLElement) || !(localProbe instanceof HTMLButtonElement)) return;
         localProbe.disabled = true;
-        localStatus.textContent = 'Running 60 frames...';
+        localStatus.textContent = 'Raising the load...';
+
         try {
-            const result = runLocalProbe();
-            const cpu = localResults.querySelector('[data-local-cpu]');
-            const gpu = localResults.querySelector('[data-local-gpu]');
-            const gpuLabel = localResults.querySelector('[data-local-gpu-label]');
-            const budget = localResults.querySelector('[data-local-budget]');
+            const result = runLocalProbe(count => {
+                localStatus.textContent = `Trying ${formatCount(count)} quads...`;
+            });
+            const quads = localResults.querySelector('[data-local-quads]');
+            const frame = localResults.querySelector('[data-local-frame]');
+            const overCell = localResults.querySelector('[data-local-over]');
             const capabilities = localResults.querySelector('[data-local-capabilities]');
-            if (cpu) cpu.textContent = formatMs(result.cpu);
-            if (gpu) gpu.textContent = formatMs(result.gpu);
-            if (gpuLabel) gpuLabel.textContent = result.gpuTimed ? 'GPU execution' : 'GPU-inclusive frame';
-            if (budget) budget.textContent = result.gpu < 0.005 ? '<0.1% of 16.7 ms' : `${((result.gpu / 16.7) * 100).toFixed(1)}% of 16.7 ms`;
+
+            if (quads) quads.textContent = result.ceiling ? `${formatCount(result.carried)}+` : formatCount(result.carried);
+            if (frame) frame.textContent = formatMs(result.carriedMs);
+            if (overCell) overCell.textContent = result.over === null ? 'not reached' : `${formatCount(result.over)} took ${formatMs(result.overMs)}`;
             if (capabilities) capabilities.textContent = `WebGL2 · ${result.webgpu ? 'WebGPU available' : 'WebGPU unavailable'} · ${navigator.hardwareConcurrency ?? '?'} logical cores`;
+
             localResults.hidden = false;
-            localStatus.textContent = `Complete in ${result.elapsed.toFixed(0)} ms`;
+            localStatus.textContent = result.ceiling
+                ? `Carried the probe's largest load in ${result.elapsed.toFixed(0)} ms`
+                : `Complete in ${result.elapsed.toFixed(0)} ms`;
         } catch (error) {
             localStatus.textContent = error instanceof Error ? error.message : 'Local probe failed.';
         } finally {

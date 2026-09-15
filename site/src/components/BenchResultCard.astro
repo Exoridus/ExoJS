@@ -108,11 +108,15 @@ const timeCharacters = Math.max(
 );
 
 /** True where any row of the card carries a marker beside its figure, which the column has to leave room for. */
-const hasMarkers = card.loads.some(load => load.arms.some(arm => arm.overFrameBudget));
-
-/** The states this card has to explain, so the notes are written once per card rather than per row. */
+/**
+ * The states this card has to explain, so the notes are written once per card
+ * rather than per row.
+ *
+ * The frame budget is not among them: the page carries one legend for the amber
+ * figure above the cards, and repeating it inside every card that holds one put
+ * the same sentence behind a dozen disclosures.
+ */
 const explained = [
-    ...(hasMarkers ? [{ id: 'frame-budget', label: 'Past the frame', note: FRAME_BUDGET_NOTE }] : []),
     ...(card.loads.some(load => load.withheld !== undefined)
         ? [
               {
@@ -245,15 +249,10 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
                                       * what it is, a time larger than one frame.
                                       */}
                                     {arm.overFrameBudget ? (
-                                        <button
-                                            type="button"
-                                            class="figure over"
-                                            data-explains={noteId(load.id, 'frame-budget')}
-                                            aria-describedby={noteId(load.id, 'frame-budget')}
-                                        >
+                                        <b class="over">
                                             {formatMs(arm.ms)}
                                             <span class="sr">{FRAME_BUDGET_NOTE}</span>
-                                        </button>
+                                        </b>
                                     ) : (
                                         <b>{formatMs(arm.ms)}</b>
                                     )}
@@ -525,14 +524,8 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
     }
 
     /* A figure past the frame budget, drawn as the same figure in the warning hue - same box, same alignment, no glyph. */
-    .figure.over {
-        font: inherit;
-        font-weight: 650;
-        padding: 0;
-        border: 0;
-        background: none;
+    .time b.over {
         color: var(--amber);
-        cursor: pointer;
     }
 
     .arm.absent .time {

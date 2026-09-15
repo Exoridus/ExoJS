@@ -829,8 +829,18 @@ const RUNG_LABELS: Readonly<Record<string, string>> = {
 };
 
 /** What each run concluded, in run order, as a readable list. */
-export const describeRungs = (rungs: readonly string[]): string =>
-  rungs.map((rung, index) => `run ${String(index + 1)}: ${RUNG_LABELS[rung] ?? rung}`).join(', ');
+export const describeRungs = (rungs: readonly string[]): string => {
+  const first = rungs[0];
+
+  // Three runs that agreed are one finding, and naming each of them prints that
+  // finding three times. They are only worth listing where they differ, which
+  // is also the only case a reader has to look at run by run.
+  if (first !== undefined && rungs.every(rung => rung === first)) {
+    return rungs.length === 1 ? (RUNG_LABELS[first] ?? first) : `all ${String(rungs.length)} runs: ${RUNG_LABELS[first] ?? first}`;
+  }
+
+  return rungs.map((rung, index) => `run ${String(index + 1)}: ${RUNG_LABELS[rung] ?? rung}`).join(', ');
+};
 
 /** Which way one run's rung fell, for showing the pooled runs as marks rather than as a sentence. */
 export type RungSide = 'exojs' | 'neither' | 'competitor';

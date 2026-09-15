@@ -16,7 +16,6 @@
  */
 
 import {
-    armLabel,
     describeRungs,
     formatApproximate,
     formatBand,
@@ -24,8 +23,6 @@ import {
     formatMs,
     formatRange,
     formatSpread,
-    frameShare,
-    FRAME_BUDGET_MS,
     isQuantitative,
     isWideSpread,
     OUTCOME_NOTES,
@@ -81,8 +78,6 @@ const rangeOf = (spread: ProfileSpread): string => (formatRange(spread) === '' ?
             const mixed = outcome === 'unstable';
             const band = mixed ? ratioBand(cell) : null;
             const factor = mixed ? pooledFactor(cell) : cell.verdict.factor;
-            const referenceMs = publishedMs(cell, cell.referenceMs);
-            const competitorMs = publishedMs(cell, cell.competitorMs);
 
             return (
                 <section class="pair" data-comparison={entry.id} hidden={entry.id !== opening?.id}>
@@ -108,12 +103,6 @@ const rangeOf = (spread: ProfileSpread): string => (formatRange(spread) === '' ?
 
                     <dl>
                         <div>
-                            <dt>median</dt>
-                            <dd>
-                                {formatMs(referenceMs)} vs {formatMs(competitorMs)} ms
-                            </dd>
-                        </div>
-                        <div>
                             <dt>p95</dt>
                             <dd>
                                 {formatMs(publishedMs(cell, cell.referenceP95Ms))} vs {formatMs(publishedMs(cell, cell.competitorP95Ms))} ms
@@ -133,22 +122,6 @@ const rangeOf = (spread: ProfileSpread): string => (formatRange(spread) === '' ?
                                 <dd>{formatBand(band)}</dd>
                             </div>
                         )}
-                        <div>
-                            <dt>{FRAME_BUDGET_MS} ms frame</dt>
-                            <dd>
-                                {[
-                                    { name: 'ExoJS', share: frameShare(referenceMs) },
-                                    { name: armLabel(cell.competitor), share: frameShare(competitorMs) },
-                                ].map(share => (
-                                    <span class="budget-row">
-                                        <em>{share.name}</em>
-                                        <b class:list={[share.share !== null && share.share > 100 && 'warn']}>
-                                            {share.share === null ? '-' : `${share.share.toFixed(1)}%`}
-                                        </b>
-                                    </span>
-                                ))}
-                            </dd>
-                        </div>
                         <div>
                             <dt>runs</dt>
                             <dd>
@@ -262,17 +235,6 @@ const rangeOf = (spread: ProfileSpread): string => (formatRange(spread) === '' ?
     dd {
         margin: 0;
         font-variant-numeric: tabular-nums;
-    }
-
-    .budget-row {
-        display: inline-flex;
-        gap: 0.35rem;
-        margin-right: 0.9rem;
-    }
-
-    .budget-row em {
-        font-style: normal;
-        color: var(--color-text-muted);
     }
 
     .warn {
