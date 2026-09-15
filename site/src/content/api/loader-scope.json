@@ -1076,7 +1076,7 @@
         },
         {
           "name": "loadContainer",
-          "signature": "loadContainer(url: string, options?: LoadContainerOptions): Promise<void>",
+          "signature": "loadContainer(source: ManifestPack | string, options?: LoadContainerOptions): Promise<void>",
           "signatureTokens": [
             {
               "text": "loadContainer",
@@ -1087,11 +1087,19 @@
               "kind": "punctuation"
             },
             {
-              "text": "url",
+              "text": "source",
               "kind": "param"
             },
             {
               "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ManifestPack",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
               "kind": "punctuation"
             },
             {
@@ -1145,8 +1153,8 @@
           ],
           "params": [
             {
-              "name": "url",
-              "type": "string",
+              "name": "source",
+              "type": "ManifestPack | string",
               "optional": false
             },
             {

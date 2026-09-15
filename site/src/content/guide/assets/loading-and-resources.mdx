@@ -47,6 +47,7 @@ The forms above say how to name an asset; these are the calls that fetch, look u
 | Wait for one asset, or for a type without a placeholder (`music`, `bmFont`, …)  | `await loader.load(Asset.type('music', path))` | The resolved resource                                                                     | Yes                                     |
 | Wait for a whole catalog at once                                                | `await loader.load(catalog)`                  | The catalog, its leaves healed in place                                                   | Yes, one per entry                      |
 | Unpack a packed `.exoa` container in one request                                | `await loader.loadContainer('pack.exoa')`     | A new scope owning every entry; entries resolve to the same identities as network loads   | Yes, one per entry, held by that scope  |
+| Find out which packs a deployment ships, and where they are now                 | `await loader.loadManifest('assets.json')`    | An `AssetManifest`; `manifest.pack(name)` addresses one for `loadContainer`                | No                                      |
 | Check whether something is already resident without fetching                   | `loader.peek('hero.png')`                     | The resource, or `undefined`                                                              | No                                      |
 | Let one asset go before its owner ends                                          | `scope.release(handle)`                       | Nothing; the handle stays valid and heals again on the next `get()`                       | Drops this scope's claim                |
 | Let everything an owner holds go                                                | `scope.destroy()` / the scene ending          | Nothing; assets other owners still hold stay resident                                     | Drops all of that owner's claims        |
@@ -552,6 +553,43 @@ Values are stored through the structured-clone algorithm, so strings, `ArrayBuff
 A database written under an earlier physical schema is **emptied on first open**. Cached representations are re-fetchable by definition, so they are discarded rather than migrated.
 
 [`MemoryCacheStore`](/ExoJS/en/api/memory-cache-store/) is the in-process counterpart: it holds values by reference for the lifetime of the page, which makes it a good front tier and the obvious choice in tests.
+
+## Packs and the asset manifest
+
+A `.exoa` container is compressed in **blocks**, and a block boundary always falls on an entry boundary, so changing one asset changes that asset's blocks and no others. Passing a [`ContainerBlockStore`](/ExoJS/en/api/container-block-store/) to `loadContainer` is what turns that into traffic: the head is read first, and only the blocks the store does not already hold are fetched.
+
+That only pays off if a returning client can tell that the pack changed without downloading it. The **asset manifest** is what makes it so. `exo assets pack <pack-description> --manifest dist/assets.json` writes each pack under a name derived from the hash of its own bytes (`level1.4b17e9a02c8d1f35.exoa`) and keeps a small JSON document beside the packs that says which file currently holds each logical pack:
+
+```json
+{
+  "version": 1,
+  "packs": {
+    "level1": {
+      "file": "level1.4b17e9a02c8d1f35.exoa",
+      "hash": "4b17e9a02c8d1f35...",
+      "byteLength": 812345,
+      "blockCount": 4,
+      "entries": ["images/hero.png", "data/level1.json"]
+    }
+  }
+}
+```
+
+A pack's URL therefore changes exactly when its bytes change, which means the pack file can be served with an immutable cache lifetime and the manifest is the one URL a client has to re-read. Read it with `loadManifest` and hand the pack to `loadContainer`:
+
+```ts
+import { cacheApiBlockStore, type Loader } from '@codexo/exojs';
+
+export const loadLevel = async (loader: Loader): Promise<void> => {
+  const manifest = await loader.loadManifest('assets.json');
+
+  await loader.loadContainer(manifest.pack('level1'), { store: cacheApiBlockStore() });
+};
+```
+
+Re-packing after one asset changed produces a new pack name and a manifest that points at it; the blocks that did not change are already in the store, keyed by their own hash, and are never fetched again. Nothing about that is automatic for a pack loaded from a plain URL, which is the reason the manifest exists.
+
+The manifest describes packs without opening them, so `manifest.packs`, `manifest.has(name)` and `manifest.packFor('images/hero.png')` answer before a single pack byte is fetched. A name the manifest does not carry throws and names the ones it does. Pack bytes that disagree with the record - a wrong length, or a digest that is not the one stated - are an `AssetDecodeError`, the same failure any other unusable asset raises.
 
 ## Save data with a key-value store
 

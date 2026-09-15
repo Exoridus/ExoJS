@@ -2,7 +2,9 @@ import { AssetCache } from '#assets/cache/AssetCache';
 import type { AssetCacheError } from '#assets/cache/AssetCacheError';
 import type { CacheLayout } from '#assets/cache/CacheLayout';
 import type { CacheStore } from '#assets/cache/CacheStore';
+import { AssetManifest, type AssetManifestOptions, type ManifestPack } from '#assets/container/AssetManifest';
 import type { ContainerBlockStore } from '#assets/container/containerBlockStore';
+import { verifyPackBytes, verifyPackLength } from '#assets/container/containerIntegrity';
 import { ContainerReader } from '#assets/container/ContainerReader';
 import type { Connectivity } from '#core/Connectivity';
 import { Signal } from '#core/Signal';
@@ -174,6 +176,12 @@ export interface LoadContainerOptions {
    * whole.
    */
   readonly store?: ContainerBlockStore;
+}
+
+/** How {@link Loader.loadManifest} fetches a manifest. */
+export interface LoadManifestOptions {
+  /** Abandons the request; the rejection is an abort error, as everywhere else in the loader. */
+  readonly signal?: AbortSignal;
 }
 
 export class Loader {
@@ -522,14 +530,18 @@ export class Loader {
    * type does. Throws on a malformed container, an unsupported format version,
    * an unknown type, or a type that cannot be read from bytes.
    *
-   * @param url Path to the container file, resolved against the loader base path.
+   * A {@link ManifestPack} may be passed instead of a path. The pack carries the
+   * container's URL and its hash, so the bytes are checked against what the
+   * manifest states before anything is unpacked.
+   *
+   * @param source Path to the container file, resolved against the loader base path, or a pack from a manifest.
    * @param options Where to keep blocks between visits; omitted, the whole file is fetched and cached.
    */
-  public async loadContainer(url: string, options?: LoadContainerOptions): Promise<LoaderScope> {
-    const scope = new LoaderScope(this, 'container', `container:${url}`);
+  public async loadContainer(source: string | ManifestPack, options?: LoadContainerOptions): Promise<LoaderScope> {
+    const scope = new LoaderScope(this, 'container', `container:${typeof source === 'string' ? source : source.url}`);
 
     try {
-      await this._loadContainerInto(scope, url, options);
+      await this._loadContainerInto(scope, source, options);
     } catch (error: unknown) {
       // The scope never reaches the caller on this path, so every claim the
       // unpack already registered would stay held for the loader's lifetime
@@ -543,27 +555,70 @@ export class Loader {
   }
 
   /**
-   * Open the container at `url` on whichever path `options` selects.
+   * Read the asset manifest at `url`: which packs this deployment holds, and
+   * which file currently carries each of them.
+   *
+   * A pack file is named after the hash of its own bytes, so it can be cached
+   * forever and the manifest is the one URL worth re-reading. Hand the pack to
+   * {@link loadContainer}, which then checks the bytes against what the manifest
+   * states.
+   *
+   * Throws when the manifest cannot be fetched, is not JSON, states a version
+   * this build does not read, or describes a pack it cannot address.
+   *
+   * @param url Path to the manifest, resolved against the loader base path.
+   *
+   * @example
+   * ```ts
+   * const manifest = await loader.loadManifest('assets.json');
+   * const level = await loader.loadContainer(manifest.pack('level1'), { store: cacheApiBlockStore() });
+   * ```
+   */
+  public async loadManifest(url: string, options?: LoadManifestOptions): Promise<AssetManifest> {
+    const request = this._decoder._containerRequest(url, options?.signal);
+    const manifestOptions: AssetManifestOptions = { init: request.init };
+
+    return AssetManifest.open(request.url, manifestOptions);
+  }
+
+  /**
+   * Open the container `source` addresses, on whichever path `options` selects.
    *
    * Without a block store the bytes go through the ordinary asset acquisition -
    * one request, the application's cache configuration and connectivity policy.
    * With one, the reader fetches for itself so it can stop at the head and take
    * only the blocks the store lacks, which the whole-file cache could not
    * express.
+   *
+   * A pack from a manifest is checked against its record: the whole-file path
+   * holds the bytes and verifies the digest, while the block-wise path - which
+   * never holds the whole file - checks the length and relies on the
+   * content-addressed URL for the rest.
    */
-  private async _openContainer(url: string, options?: LoadContainerOptions): Promise<ContainerReader> {
+  private async _openContainer(source: string | ManifestPack, options?: LoadContainerOptions): Promise<ContainerReader> {
+    const pack = typeof source === 'string' ? undefined : source;
+    const url = typeof source === 'string' ? source : source.url;
+
     if (options?.store === undefined) {
-      return ContainerReader.fromBuffer(await this._decoder._acquireContainer(url));
+      const buffer = await this._decoder._acquireContainer(url);
+
+      if (pack !== undefined) await verifyPackBytes(pack, buffer);
+
+      return ContainerReader.fromBuffer(buffer);
     }
 
     const request = this._decoder._containerRequest(url);
+    const reader = await ContainerReader.open(request.url, { store: options.store, init: request.init });
 
-    return ContainerReader.open(request.url, { store: options.store, init: request.init });
+    if (pack !== undefined) verifyPackLength(pack, reader.byteLength);
+
+    return reader;
   }
 
-  /** Backs {@link loadContainer} and {@link LoaderScope.loadContainer}: unpack `url` and claim every entry under `claimer`. @internal */
-  public async _loadContainerInto(claimer: LoaderScope, url: string, options?: LoadContainerOptions): Promise<void> {
-    const reader = await this._openContainer(url, options);
+  /** Backs {@link loadContainer} and {@link LoaderScope.loadContainer}: unpack `source` and claim every entry under `claimer`. @internal */
+  public async _loadContainerInto(claimer: LoaderScope, source: string | ManifestPack, options?: LoadContainerOptions): Promise<void> {
+    const reader = await this._openContainer(source, options);
+    const url = typeof source === 'string' ? source : source.url;
     const { entries } = reader.container;
 
     // Resolve every type up front so an unknown type fails before any asset is stored.

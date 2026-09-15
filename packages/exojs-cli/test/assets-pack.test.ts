@@ -17,13 +17,13 @@ const write = (name: string, contents: string | Uint8Array): string => {
   return path;
 };
 
-const writeManifest = (manifest: unknown): string => write('pack.json', JSON.stringify(manifest));
+const writeDescription = (description: unknown): string => write('pack.json', JSON.stringify(description));
 
-/** Pack `manifest` and return the container bytes `exo assets pack` wrote. */
-const pack = (manifest: unknown): ArrayBuffer => {
-  const manifestPath = writeManifest(manifest);
+/** Pack `description` and return the container bytes `exo assets pack` wrote. */
+const pack = (description: unknown): ArrayBuffer => {
+  const descriptionPath = writeDescription(description);
 
-  expect(runAssetsPack([manifestPath])).toBe(0);
+  expect(runAssetsPack([descriptionPath])).toBe(0);
 
   const bytes = readFileSync(join(workDir, 'out.exoa'));
 
@@ -154,44 +154,44 @@ describe('exo assets pack round trip', () => {
 });
 
 describe('exo assets pack failures', () => {
-  test('a missing manifest argument says what to pass', () => {
-    expect(() => runAssetsPack([])).toThrow('a manifest path is required');
+  test('a missing pack description argument says what to pass', () => {
+    expect(() => runAssetsPack([])).toThrow('a pack description path is required');
   });
 
-  test('an unreadable manifest names the path', () => {
-    expect(() => runAssetsPack([join(workDir, 'absent.json')])).toThrow(/cannot read manifest ".*absent\.json"/);
+  test('an unreadable pack description names the path', () => {
+    expect(() => runAssetsPack([join(workDir, 'absent.json')])).toThrow(/cannot read pack description ".*absent\.json"/);
   });
 
-  test('a manifest that is not JSON says so', () => {
+  test('a pack description that is not JSON says so', () => {
     expect(() => runAssetsPack([write('pack.json', '{not json')])).toThrow(/is not valid JSON/);
   });
 
-  test('a manifest without an output is rejected', () => {
-    expect(() => runAssetsPack([writeManifest({ assets: [] })])).toThrow(/needs a non-empty string "output"/);
+  test('a pack description without an output is rejected', () => {
+    expect(() => runAssetsPack([writeDescription({ assets: [] })])).toThrow(/needs a non-empty string "output"/);
   });
 
-  test('a manifest without an assets array is rejected', () => {
-    expect(() => runAssetsPack([writeManifest({ output: 'out.exoa' })])).toThrow(/needs an "assets" array/);
+  test('a pack description without an assets array is rejected', () => {
+    expect(() => runAssetsPack([writeDescription({ output: 'out.exoa' })])).toThrow(/needs an "assets" array/);
   });
 
   test('an asset entry missing a field names the field and the entry index', () => {
-    const manifest = { output: 'out.exoa', assets: [{ source: 'a', type: 'json' }] };
+    const description = { output: 'out.exoa', assets: [{ source: 'a', type: 'json' }] };
 
-    expect(() => runAssetsPack([writeManifest(manifest)])).toThrow(/asset 0 needs a non-empty string "file"/);
+    expect(() => runAssetsPack([writeDescription(description)])).toThrow(/asset 0 needs a non-empty string "file"/);
   });
 
   test('an asset file that cannot be read names the source it belongs to', () => {
-    const manifest = { output: 'out.exoa', assets: [{ source: 'data/gone.json', type: 'json', file: 'gone.json' }] };
+    const description = { output: 'out.exoa', assets: [{ source: 'data/gone.json', type: 'json', file: 'gone.json' }] };
 
-    expect(() => runAssetsPack([writeManifest(manifest)])).toThrow('cannot read "gone.json" for "data/gone.json"');
+    expect(() => runAssetsPack([writeDescription(description)])).toThrow('cannot read "gone.json" for "data/gone.json"');
   });
 
-  test('the command takes no options', () => {
+  test('an option the command does not define is refused rather than ignored', () => {
     write('level.json', '{}');
 
-    const manifest = { output: 'out.exoa', assets: [{ source: 'data/level.json', type: 'json', file: 'level.json' }] };
+    const description = { output: 'out.exoa', assets: [{ source: 'data/level.json', type: 'json', file: 'level.json' }] };
 
-    expect(() => runAssetsPack([writeManifest(manifest), '--compress'])).toThrow(/unknown option "--compress"/);
+    expect(() => runAssetsPack([writeDescription(description), '--compress'])).toThrow(/unknown option "--compress"/);
   });
 });
 

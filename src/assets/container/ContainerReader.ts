@@ -104,6 +104,11 @@ export class ContainerReader {
     return this._source.ranged;
   }
 
+  /** Byte length of the whole container file, however much of it this reader has actually read. */
+  public get byteLength(): number {
+    return this._source.byteLength;
+  }
+
   /** The entry for `source`, or `undefined` when the container does not hold it. */
   public entry(source: string): ContainerEntry | undefined {
     return this.container.entries.find(entry => entry.source === source);

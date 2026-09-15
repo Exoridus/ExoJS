@@ -6,11 +6,11 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 9,
+  "memberCount": 10,
   "counts": {
     "constructors": 0,
     "methods": 7,
-    "properties": 2,
+    "properties": 3,
     "events": 0
   },
   "sections": [
@@ -527,6 +527,27 @@
           "params": [],
           "returnType": null,
           "description": "The validated head: entries, blocks and where the data section begins."
+        },
+        {
+          "name": "byteLength",
+          "signature": "byteLength: number",
+          "signatureTokens": [
+            {
+              "text": "byteLength",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Byte length of the whole container file, however much of it this reader has actually read."
         },
         {
           "name": "ranged",

@@ -1,3 +1,4 @@
+import type { ManifestPack } from '#assets/container/AssetManifest';
 import { Signal } from '#core/Signal';
 import type { Destroyable } from '#core/types';
 
@@ -178,10 +179,10 @@ export class LoaderScope implements Destroyable {
    *
    * See {@link Loader.loadContainer} for the format and identity contract.
    */
-  public loadContainer(url: string, options?: LoadContainerOptions): Promise<void> {
+  public loadContainer(source: string | ManifestPack, options?: LoadContainerOptions): Promise<void> {
     this._assertLive('loadContainer');
 
-    return this._loader._loadContainerInto(this, url, options);
+    return this._loader._loadContainerInto(this, source, options);
   }
 
   /**

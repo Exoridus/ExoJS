@@ -1,0 +1,75 @@
+{
+  "title": "AssetManifestOptions",
+  "description": "How a manifest is fetched.",
+  "symbol": "AssetManifestOptions",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "How a manifest is fetched."
+      ],
+      "importLine": "import { AssetManifestOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "init",
+          "signature": "init?: RequestInit",
+          "signatureTokens": [
+            {
+              "text": "init",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RequestInit",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Forwarded to the request - signal, credentials, headers. The manifest is requested with cache: 'no-cache' by default, because it is the one URL in a deployment whose contents change; an init that names cache overrides that."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/container/AssetManifest.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/container/AssetManifest.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/container/AssetManifest.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/container/AssetManifest.ts"
+}

@@ -1,0 +1,188 @@
+{
+  "title": "ManifestPack",
+  "description": "One pack a manifest carries.",
+  "symbol": "ManifestPack",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One pack a manifest carries."
+      ],
+      "importLine": "import { ManifestPack } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "blockCount",
+          "signature": "blockCount: number",
+          "signatureTokens": [
+            {
+              "text": "blockCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "byteLength",
+          "signature": "byteLength: number",
+          "signatureTokens": [
+            {
+              "text": "byteLength",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "entries",
+          "signature": "entries: readonly string[]",
+          "signatureTokens": [
+            {
+              "text": "entries",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Logical sources the pack carries, in the order its head lists them."
+        },
+        {
+          "name": "hash",
+          "signature": "hash: string",
+          "signatureTokens": [
+            {
+              "text": "hash",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "SHA-256 of the whole container file, lowercase hex. The pack's file name carries a prefix of it, which is what makes the URL change exactly when the bytes do, and what lets the file be served with an immutable cache lifetime."
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Logical name the manifest lists the pack under - stable across re-packs, unlike the file name."
+        },
+        {
+          "name": "url",
+          "signature": "url: string",
+          "signatureTokens": [
+            {
+              "text": "url",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Where the pack file is, resolved against the manifest's own URL."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/container/AssetManifest.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/container/AssetManifest.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/container/AssetManifest.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/container/AssetManifest.ts"
+}

@@ -35,6 +35,11 @@
       "import": "./dist/esm/assetContainer.js",
       "default": "./dist/esm/assetContainer.js"
     },
+    "./asset-manifest": {
+      "types": "./dist/esm/assetManifest.d.ts",
+      "import": "./dist/esm/assetManifest.js",
+      "default": "./dist/esm/assetManifest.js"
+    },
     "./client": {
       "types": "./client.d.ts"
     },
