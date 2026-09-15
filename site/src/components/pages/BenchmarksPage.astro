@@ -135,6 +135,18 @@ const leading = browsers[0];
                     })}
                 </div>
 
+                {/*
+                  * One legend for the page, above the cards rather than after
+                  * them. The mark it explains is on a figure in almost every
+                  * card, so repeating the sentence per card would put it on
+                  * screen more often than the thing it describes - but printed
+                  * below the last card it arrived long after the first amber
+                  * figure had already been read as a warning.
+                  */}
+                <p class="legend">
+                    <b>Amber time</b> = over a 16.7 ms frame budget at 60 fps. The measurement is valid; the scene does not fit in one frame.
+                </p>
+
                 {browsers.map((entry, index) => (
                     <div class="browser-panel" data-browser={entry.browser} hidden={index !== 0}>
                         <section id={index === 0 ? 'rendering' : undefined} class="domain">
@@ -218,15 +230,6 @@ const leading = browsers[0];
                         </section>
                     </div>
                 ))}
-
-                {/*
-                  * One legend for the page. The mark it explains is on a figure
-                  * in almost every card, and repeating the sentence there would
-                  * put it on screen more often than the thing it describes.
-                  */}
-                <p class="legend">
-                    <b>Amber time</b> = over a 16.7 ms frame budget at 60 fps. The measurement is valid; the scene does not fit in one frame.
-                </p>
 
                 {/* Four destinations and no explanatory paragraphs: what each one is is what its name says. */}
                 <nav class="tools" aria-label="Benchmark data">
@@ -505,7 +508,8 @@ const leading = browsers[0];
     }
 
     .legend {
-        margin-top: var(--s-5) !important;
+        margin-top: var(--s-4) !important;
+        margin-bottom: var(--s-4);
         font-size: 0.82rem;
         color: var(--fg-muted);
     }

@@ -81,15 +81,26 @@ export interface CardLoad {
    */
   readonly withheld: string | undefined;
   /**
-   * How many libraries this load compares, where that is fewer than the block's
-   * widest row; `null` where it compares all of them.
+   * How many libraries this load compares against how many the block's widest
+   * row compares; `null` where it compares all of them.
    *
    * A card that silently shows two rows where its neighbours show four reads as
-   * a page that lost a library. The figure says how many were measured; why an
-   * arm is missing is a property of that arm's adapter and coverage and stays
-   * in the full results.
+   * a page that lost a library. Both figures are kept because the shortfall is
+   * the finding: a bare count states a total, and a reader cannot tell from it
+   * that anything is missing. Why an arm is missing is a property of that arm's
+   * adapter and coverage and stays in the full results.
    */
-  readonly measuredArms: number | null;
+  readonly measuredArms: { readonly measured: number; readonly of: number } | null;
+
+  /**
+   * The published verdict against the quickest competitor on this load, or
+   * `undefined` where the load carries none.
+   *
+   * Read off the profile rather than divided out of the two figures beside it:
+   * a pooled run prints a verdict only where all of its runs agreed on one, and
+   * a ratio computed here would state a comparison the harness withheld.
+   */
+  readonly lead: { readonly label: string; readonly factor: number; readonly ahead: boolean } | undefined;
 }
 
 /** One scenario's card. */
@@ -244,8 +255,57 @@ const loadOf = (row: ProfileRow): CardLoad | null => {
     ...(row.unit !== undefined && { unit: row.unit }),
     comparisons: cells.map(cell => ({ id: cell.competitor, label: armLabel(cell.competitor), cell, outcome: outcomeOf(cell) })),
     measuredArms: null,
+    lead: undefined,
     withheld,
   };
+};
+
+/**
+ * The verdict against the quickest competitor on this load.
+ *
+ * The quickest competitor rather than the widest gap: a card is read to find
+ * out how the engine does against the best thing in the field, and the arm that
+ * happens to be slowest carries no information a reader was looking for.
+ *
+ * Where that arm's comparison was withheld - the runs disagreed, or the clock
+ * could not separate the two times - the load yields nothing at all rather than
+ * falling through to the next arm down. A sentence naming a slower competitor
+ * as the one to beat states a ranking the profile did not publish, and it does
+ * so exactly where the real gap was too small to call.
+ */
+const leadOf = (load: CardLoad): CardLoad['lead'] => {
+  if (load.withheld !== undefined) {
+    return undefined;
+  }
+
+  let quickest: { readonly arm: CardArm; readonly ms: number } | undefined;
+
+  for (const arm of load.arms) {
+    if (arm.reference || arm.ms === null) {
+      continue;
+    }
+
+    if (quickest === undefined || arm.ms < quickest.ms) {
+      quickest = { arm, ms: arm.ms };
+    }
+  }
+
+  if (quickest?.arm.quantitative !== true) {
+    return undefined;
+  }
+
+  const { arm } = quickest;
+  const verdict = load.comparisons.find(comparison => comparison.id === arm.id)?.cell.verdict;
+
+  if (verdict === undefined) {
+    return undefined;
+  }
+
+  if (verdict.factor === null || verdict.side === 'neither') {
+    return undefined;
+  }
+
+  return { label: arm.label, factor: verdict.factor, ahead: verdict.side === 'exojs' };
 };
 
 /** Group a domain's sections into one card per scenario. */
@@ -276,7 +336,11 @@ const cardsOf = (sections: readonly ProfileSection[], backend?: ProfileBackendNa
 
   return cards.map(card => ({
     ...card,
-    loads: card.loads.map(load => ({ ...load, measuredArms: load.arms.length < widest ? load.arms.length : null })),
+    loads: card.loads.map(load => ({
+      ...load,
+      measuredArms: load.arms.length < widest ? { measured: load.arms.length, of: widest } : null,
+      lead: leadOf(load),
+    })),
   }));
 };
 

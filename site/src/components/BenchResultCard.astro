@@ -169,16 +169,25 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         )}
     </header>
 
-    {/* The chips are the control; the load a single-load card sits on is stated once, in the meta row below. */}
-    {card.loads.length > 1 && (
-        <div class="loads" role="group" aria-label="Load">
-            {card.loads.map(load => (
+    {/*
+      * The load reads as a chip whatever the card holds. A single load printed
+      * as running text beside the figures put the same fact in two shapes on
+      * one page - a control on cards that scale, a sentence on cards that do
+      * not - and a reader comparing two cards had to notice which shape they
+      * were looking at before they could read the load off either. One load is
+      * not a control, so it is not a button; it is the same chip, inert.
+      */}
+    <div class="loads" role={card.loads.length > 1 ? 'group' : undefined} aria-label={card.loads.length > 1 ? 'Load' : undefined}>
+        {card.loads.length > 1 ? (
+            card.loads.map(load => (
                 <button type="button" class="load" data-load={load.id} aria-pressed={load.id === opening?.id ? 'true' : 'false'}>
                     {load.label}
                 </button>
-            ))}
-        </div>
-    )}
+            ))
+        ) : (
+            <span class="load solo">{opening?.label}</span>
+        )}
+    </div>
 
     {/*
       * `bench-load-panel` rather than `panel`: the global stylesheet gives
@@ -195,7 +204,6 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
               * explanation each of them carried is one tap away in the details.
               */}
             <p class="meta">
-                <span class="at">{card.loads.length > 1 ? '' : load.label}</span>
                 {load.withheld !== undefined ? (
                     <button type="button" class="status withheld" data-explains={noteId(load.id, 'withheld')} aria-describedby={noteId(load.id, 'withheld')}>
                         Not comparable
@@ -205,7 +213,11 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
                         {OUTCOME_STATUS[statesOf(load)[0] ?? 'absent']}
                     </button>
                 ) : (
-                    load.measuredArms !== null && <span class="status quiet">{load.measuredArms} libraries</span>
+                    load.measuredArms !== null && (
+                        <span class="status quiet">
+                            {load.measuredArms.measured} of {load.measuredArms.of} libraries
+                        </span>
+                    )
                 )}
             </p>
 
@@ -259,6 +271,23 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
                     </li>
                 ))}
             </ul>
+
+            {/*
+              * The gap the card is read for, in words.
+              *
+              * A bar is drawn from zero against the load's slowest arm, so where
+              * one arm is an order of magnitude behind, the two quickest draw as
+              * two stubs of the same length and the comparison a reader came for
+              * has no visible form. The sentence carries it instead of the
+              * scale: the bars keep meaning duration, and the figure stays the
+              * profile's own - see `leadOf`.
+              */}
+            {load.lead !== undefined && (
+                <p class="lead">
+                    ExoJS is <b>{load.lead.factor.toFixed(load.lead.factor < 10 ? 2 : 1)}x</b> {load.lead.ahead ? 'faster' : 'slower'} than {load.lead.label},
+                    the quickest here
+                </p>
+            )}
 
             {/*
               * One chip per state the load actually carries, and the state is
@@ -348,15 +377,36 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         display: flex;
         flex-wrap: wrap;
         align-items: baseline;
-        justify-content: space-between;
+        justify-content: flex-end;
         gap: 0.3rem 0.75rem;
         margin: 0 0 0.45rem;
         font-size: 0.78rem;
         color: var(--color-text-muted);
     }
 
-    .at {
-        margin: 0;
+    /* The status is the row's only occupant now that the load reads as a chip. */
+    .meta:empty {
+        display: none;
+    }
+
+    /* Inert by construction: the single-load chip states the load and controls nothing. */
+    .load.solo {
+        cursor: default;
+    }
+
+    /*
+     * The sentence sits between the rows and the detail, where it reads as the
+     * result of what is above it rather than as a caption on the card.
+     */
+    .lead {
+        margin: 0.5rem 0 0;
+        font-size: 0.78rem;
+        color: var(--color-text-muted);
+    }
+
+    .lead b {
+        color: var(--color-text);
+        font-weight: 600;
     }
 
     /* The row's one fact about itself, on the right where the times end. */
@@ -391,6 +441,24 @@ const statesOf = (load: BenchCard['loads'][number]): readonly CellOutcome[] => [
         padding: 0;
         background: none;
         box-shadow: none;
+    }
+
+    /*
+     * Two cards side by side are the same height already, because the grid
+     * stretches them - but a card holding one arm fewer ended its rows higher
+     * and left its detail floating mid-card, so the two `Details` lines sat at
+     * different heights and the pair read as misaligned. Pinning the detail to
+     * the foot puts it on one line across the row; the slack lands above it,
+     * where there is nothing to line up.
+     */
+    .bench-load-panel:not([hidden]) {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+    }
+
+    .bench-load-panel > .more {
+        margin-top: auto;
     }
 
     /* No frame of its own: the card is already a box, and a second border around the bars only narrows them. */
